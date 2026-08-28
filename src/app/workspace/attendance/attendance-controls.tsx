@@ -18,12 +18,13 @@ function currentPosition(): Promise<LocationMeasurement | undefined> {
 export function AttendanceControls({ initialOpen, startedAt, gpsEnabled, attendanceEnabled, pointCount }: { initialOpen: boolean; startedAt?: string; gpsEnabled: boolean; attendanceEnabled: boolean; pointCount: number }) {
   const [message, setMessage] = useState<string>();
   const [locationState, setLocationState] = useState(gpsEnabled ? "Preparing GPS…" : "GPS tracking is off");
+  const [trackingStopped, setTrackingStopped] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const lastSent = useRef(0);
 
   useEffect(() => {
-    if (!initialOpen || !gpsEnabled || !("geolocation" in navigator)) {
+    if (!initialOpen || !gpsEnabled || trackingStopped || !("geolocation" in navigator)) {
       if (gpsEnabled && !("geolocation" in navigator)) queueMicrotask(() => setLocationState("GPS is unavailable in this browser"));
       return;
     }
@@ -33,11 +34,14 @@ export function AttendanceControls({ initialOpen, startedAt, gpsEnabled, attenda
       lastSent.current = now;
       setLocationState("GPS tracking active");
       void uploadLocationPointAction({ latitude: coords.latitude, longitude: coords.longitude, accuracyMeters: coords.accuracy, capturedAt: new Date(timestamp).toISOString() }).then((result) => {
-        if (!result.ok) setLocationState(result.error ?? "GPS update failed");
+        if (!result.ok) {
+          setLocationState(result.error ?? "GPS update failed");
+          setTrackingStopped(true);
+        }
       });
     }, (error) => setLocationState(error.code === 1 ? "Location permission denied" : error.code === 3 ? "Location request timed out" : "Location unavailable"), { enableHighAccuracy: true, timeout: LOCATION_CONFIG.watchTimeoutMs, maximumAge: LOCATION_CONFIG.watchMaximumAgeMs });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [gpsEnabled, initialOpen]);
+  }, [gpsEnabled, initialOpen, trackingStopped]);
 
   const submit = (ending: boolean) => startTransition(async () => {
     setMessage(gpsEnabled ? "Requesting current location…" : undefined);
