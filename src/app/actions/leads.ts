@@ -1,0 +1,7 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { createLead,createLeadFromVisit,editLead,transitionLead } from "@/lib/leads/service";
+export type LeadActionState={error?:string;success?:string};
+const fields=(f:FormData)=>({title:f.get("title"),customerId:f.get("customerId"),contactName:f.get("contactName"),phone:f.get("phone"),email:f.get("email"),companyName:f.get("companyName"),source:f.get("source")||"MANUAL",estimatedValue:f.get("estimatedValue"),currencyCode:f.get("currencyCode")||"INR",followUpAt:f.get("followUpAt"),notes:f.get("notes"),assignedUserId:f.get("assignedUserId")});
+export async function saveLead(_:LeadActionState,f:FormData):Promise<LeadActionState>{try{if(f.get("visitId")){const all=fields(f);const{source,customerId,...safe}=all;void source;void customerId;await createLeadFromVisit({...safe,visitId:f.get("visitId")});}else if(f.get("leadId"))await editLead({...fields(f),leadId:f.get("leadId"),version:f.get("version")} as never);else await createLead(fields(f) as never);revalidatePath("/workspace/leads");return{success:"Lead saved."};}catch{return{error:"Unable to save the lead. Check its details and your access."};}}
+export async function moveLead(_:LeadActionState,f:FormData):Promise<LeadActionState>{try{await transitionLead({leadId:f.get("leadId"),version:f.get("version"),toStage:f.get("toStage"),lostReason:f.get("lostReason")} as never);revalidatePath("/workspace/leads");return{success:"Pipeline updated."};}catch{return{error:"Unable to move this lead. Refresh and try again."};}}

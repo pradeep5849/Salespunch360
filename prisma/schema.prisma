@@ -27,6 +27,34 @@ enum CheckoutSentiment {
   NEGATIVE
 }
 
+enum LeadStage {
+  NEW
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+enum LeadSource {
+  MANUAL
+  CUSTOMER_VISIT
+  REFERRAL
+  PHONE
+  EMAIL
+  WEBSITE
+  OTHER
+}
+enum LeadActivityType {
+  CREATED
+  UPDATED
+  ASSIGNED
+  STAGE_CHANGED
+  FOLLOW_UP_CHANGED
+  WON
+  LOST
+  REOPENED
+}
+
 model Company {
   id                 String             @id @default(uuid()) @db.Uuid
   name               String
@@ -44,6 +72,8 @@ model Company {
   locationPoints     LocationPoint[]
   customers          Customer[]
   customerVisits     CustomerVisit[]
+  leads              Lead[]
+  leadActivities     LeadActivity[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -67,6 +97,11 @@ model User {
   attendances  Attendance[]
   locationPoints LocationPoint[]
   customerVisits CustomerVisit[]
+  assignedLeads Lead[] @relation("LeadAssignee")
+  createdLeads Lead[] @relation("LeadCreator")
+  leadActivities LeadActivity[] @relation("LeadActor")
+  previousLeadAssignments LeadActivity[] @relation("PreviousLeadAssignee")
+  newLeadAssignments LeadActivity[] @relation("NewLeadAssignee")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -115,6 +150,7 @@ model Customer {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   visits        CustomerVisit[]
+  leads         Lead[]
 
   @@index([companyId, name])
   @@index([companyId, createdAt])
@@ -144,12 +180,73 @@ model CustomerVisit {
   visitNotes            String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
+  leads                 Lead[]
 
   @@index([companyId, checkedInAt])
   @@index([companyId, userId, checkedInAt])
   @@index([companyId, customerId, checkedInAt])
   @@index([companyId, userId, checkedOutAt])
   @@map("customer_visits")
+}
+
+model Lead {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  customerId String? @db.Uuid
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceVisitId String? @db.Uuid
+  sourceVisit CustomerVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId String @db.Uuid
+  assignedUser User @relation("LeadAssignee", fields: [assignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdByUserId String @db.Uuid
+  createdByUser User @relation("LeadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title String @db.VarChar(200)
+  contactName String? @db.VarChar(150)
+  phone String? @db.VarChar(30)
+  email String? @db.VarChar(320)
+  companyName String? @db.VarChar(200)
+  source LeadSource @default(MANUAL)
+  stage LeadStage @default(NEW)
+  estimatedValue Decimal? @db.Decimal(18, 2)
+  currencyCode String @default("INR") @db.Char(3)
+  followUpAt DateTime?
+  notes String? @db.VarChar(5000)
+  lostReason String? @db.VarChar(1000)
+  wonAt DateTime?
+  lostAt DateTime?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activities LeadActivity[]
+  @@index([companyId, stage])
+  @@index([companyId, assignedUserId])
+  @@index([companyId, followUpAt])
+  @@index([companyId, createdAt])
+  @@index([customerId])
+  @@index([sourceVisitId])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actorUserId String @db.Uuid
+  actorUser User @relation("LeadActor", fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type LeadActivityType
+  fromStage LeadStage?
+  toStage LeadStage?
+  previousAssignedUserId String? @db.Uuid
+  previousAssignedUser User? @relation("PreviousLeadAssignee", fields: [previousAssignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  newAssignedUserId String? @db.Uuid
+  newAssignedUser User? @relation("NewLeadAssignee", fields: [newAssignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now())
+  @@index([leadId, createdAt])
+  @@index([companyId, createdAt])
+  @@map("lead_activities")
 }
 
 model LocationPoint {
