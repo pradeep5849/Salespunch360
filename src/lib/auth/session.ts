@@ -4,6 +4,7 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { createSessionToken, hashSessionToken } from "./crypto";
+import { canAuthenticate } from "./eligibility";
 
 const COOKIE_NAME = "sp360_session";
 const SESSION_DAYS = 30;
@@ -36,10 +37,16 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    select: { expiresAt: true, user: { select: { id: true, name: true, email: true, role: true, companyId: true } } },
+    select: { expiresAt: true, user: { select: { id: true, name: true, email: true, role: true, companyId: true, isActive: true } } },
   });
-  if (!session || session.expiresAt <= new Date()) return null;
-  return session.user;
+  if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user)) return null;
+  return {
+    id: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    role: session.user.role,
+    companyId: session.user.companyId,
+  };
 });
 
 export async function revokeCurrentSession() {

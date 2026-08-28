@@ -44,6 +44,9 @@ model User {
   email        String    @unique
   passwordHash String
   role         Role
+  phone        String?
+  employeeCode String?
+  isActive     Boolean   @default(true)
   managerId    String?   @db.Uuid
   manager      User?     @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   reports      User[]    @relation("ManagerReports")
@@ -52,7 +55,9 @@ model User {
   updatedAt    DateTime  @updatedAt
 
   @@index([companyId, role])
+  @@index([companyId, isActive, role])
   @@index([managerId])
+  @@unique([companyId, employeeCode])
   @@map("users")
 }
 

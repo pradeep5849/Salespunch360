@@ -5,6 +5,11 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+export const strongPasswordSchema = z.string().min(12).max(200)
+  .regex(/[a-z]/, "Password must contain a lowercase letter")
+  .regex(/[A-Z]/, "Password must contain an uppercase letter")
+  .regex(/[0-9]/, "Password must contain a number");
+
 export function normalizeCompanySlug(value: string) {
   return value.trim().toLowerCase();
 }
@@ -16,10 +21,7 @@ export const registrationSchema = z.object({
   ),
   adminName: z.string().trim().min(2).max(120),
   adminEmail: z.string().trim().email().transform((value) => value.toLowerCase()),
-  adminPassword: z.string().min(12).max(200)
-    .regex(/[a-z]/, "Password must contain a lowercase letter")
-    .regex(/[A-Z]/, "Password must contain an uppercase letter")
-    .regex(/[0-9]/, "Password must contain a number"),
+  adminPassword: strongPasswordSchema,
   confirmPassword: z.string().min(1).max(200),
 }).strict().superRefine((data, context) => {
   if (data.adminPassword !== data.confirmPassword) {

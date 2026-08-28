@@ -1,6 +1,6 @@
 # SalesPunch360
 
-SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains the completed **Stage 1 foundation** and **Stage 2 company registration with free-trial onboarding**.
+SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains the completed **Stage 1 foundation**, **Stage 2 company registration and trials**, and **Stage 3 employee management**.
 
 ## Stack
 
@@ -65,6 +65,16 @@ The lifecycle enum supports `TRIAL`, `ACTIVE`, `EXPIRED`, and `SUSPENDED` withou
 
 Registration errors do not expose database details or identify which unique record conflicted. The action explicitly maps allowed fields, uses a honeypot, and applies a best-effort per-process rate guard. A distributed deployment should replace that guard with shared infrastructure. Role, company UUID, lifecycle status, timestamps, duration, and entitlements are never accepted from browser input.
 
+## Stage 3 employee management
+
+Authenticated `COMPANY_ADMIN` users manage their tenant's `MANAGER` and `SALES` users at `/workspace/employees`. The screen provides employee counts, filters, creation, profile editing, Manager assignment, activation/deactivation, and administrator-driven password reset. `User` remains the identity and employee record; Stage 3 adds optional normalized phone and company-scoped employee code fields plus an active lifecycle flag.
+
+Every list and mutation derives `companyId` from the authenticated administrator session and combines the employee UUID with that tenant and the allowed employee roles. The browser cannot assign a role, company UUID, active state, or lifecycle data. Company administrators, platform administrators, and foreign-tenant users are excluded from employee operations. A Sales employee may have zero or one Manager; selectable Managers must be active `MANAGER` users in the same tenant. Deactivating a Manager preserves existing Sales relationships for continuity but removes that Manager from new assignment choices.
+
+Creation and reactivation use the Stage 2 effective lifecycle status and centralized trial entitlements. For trials, active users are limited to 1 Manager and 5 Sales employees. `EXPIRED` and `SUSPENDED` companies retain visible records but cannot create or reactivate employees. `ACTIVE` companies are temporarily unlimited in Stage 3; paid-plan seat enforcement is postponed to Stage 9. Each seat-sensitive transaction locks the company row with PostgreSQL `FOR UPDATE`, then evaluates lifecycle, counts active seats, and writes while holding that lock, preventing concurrent requests for the same company from trivially exceeding a trial allowance.
+
+Deactivation is a soft update (`isActive = false`) and atomically revokes all database sessions for the employee. Both new sign-in and session resolution reject inactive identities. Administrator password resets reuse the Argon2id password policy and atomically revoke all existing employee sessions. Stage 3 intentionally does not add forgot-password, OTP, or email reset flows.
+
 ## Environment variables
 
 | Variable | Required | Description |
@@ -89,7 +99,9 @@ npx prisma migrate status     # inspect migration state
 
 The initial migration includes constraints and triggers not expressible directly in Prisma schema syntax. Preserve those protections in future migrations.
 
-## Completed scope through Stage 2
+Stage 3 is applied by the committed `20260828020000_stage_3_employee_management` migration. Run `npx prisma migrate deploy` in a deployed environment or `npx prisma migrate dev` against a development PostgreSQL database; never edit the committed Stage 1 or Stage 2 migrations.
+
+## Completed scope through Stage 3
 
 - TypeScript/ESLint/Next.js foundation and validated environment
 - PostgreSQL schema for `Company`, `User`, and `Session`
@@ -102,7 +114,12 @@ The initial migration includes constraints and triggers not expressible directly
 - Responsive self-service company registration and automatic secure sign-in
 - Server-controlled 15-day lifecycle calculation and centralized trial entitlements
 - Minimal company-admin trial status and allowance display
+- Tenant-scoped Manager and Sales employee listing, filters, creation, and editing
+- Active/inactive employee lifecycle with session revocation
+- Same-company active-Manager assignment for Sales employees
+- Trial-seat enforcement protected by a PostgreSQL company-row lock
+- Company-admin password reset with strong validation and session revocation
 
 ## Postponed features
 
-Stage 2 does **not** implement manager or Sales employee creation, employee management/assignment, leads, attendance, GPS, check-ins/check-outs, customers, reports, geofencing, expenses, targets, notifications, payment gateways, paid subscriptions, invoices, payment history, package modification, final dashboards, or native mobile apps. These belong to later explicitly approved stages.
+Stage 3 does **not** implement attendance, GPS/background location, distance calculations, check-ins/check-outs, customers, leads or pipelines, expenses or travel allowances, reports, geofencing, targets, notifications, payment gateways, paid subscriptions or paid-seat enforcement, invoices, payment history, final dashboards, or native mobile apps. These belong to later explicitly approved stages.
