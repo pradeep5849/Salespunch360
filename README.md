@@ -1,6 +1,6 @@
 # SalesPunch360
 
-SalesPunch360 is a secure, multi-tenant sales operations platform. This repository contains the completed Stage 1–5 foundation through company registration, employees, attendance/GPS, and customer field visits.
+SalesPunch360 is a secure, multi-tenant sales operations platform. This repository contains the completed Stage 1–7 product through company registration, employees, attendance/GPS, customer field visits, leads, and historical reports.
 
 ## Stack
 
@@ -171,3 +171,19 @@ Active stages can move forward or backward through a dedicated transactional tra
 Mutations lock the tenant-scoped lead row and conditionally check an incrementing `version`; state and its activity commit atomically, so stale/concurrent transitions or reassignment cannot silently overwrite one another. Structured history captures creation, updates, assignment, follow-up, stage changes, won/lost, and reopening. Composite tenant foreign keys and an append-only database trigger protect ownership and audit integrity. Indexed company/stage, assignee, follow-up, creation, customer, visit, and activity paths form the Stage 7 report foundation without implementing reports.
 
 Deploy with `npx prisma migrate deploy`, then verify with `npx prisma migrate status` and regenerate the client with `npm run prisma:generate`. The new migration is `20260828050000_stage_6_leads_pipeline`; earlier migrations are unchanged. Stage 6 intentionally postpones final reports and dashboards, reminders, expenses, routes/geofencing, collections, targets, billing, and native applications.
+
+## Stage 7 — Secure historical reports
+
+The protected `/workspace/reports` hub links the normal and advanced Check-in, Attendance, GPS Route, and Lead/Pipeline reports. Complex reads live in reusable `src/lib/reports` services rather than page components. Each service derives company identity from the authenticated session, resolves a current-hierarchy employee scope, validates browser filters, and applies that same scope to summary and paginated detail queries. Company Admin sees current-tenant Manager and Sales history, including inactive employees; Manager sees self plus Sales currently assigned directly to that Manager; Sales is fixed to self even if an employee query parameter is supplied. Reassignment changes Manager visibility immediately. `SUPER_ADMIN` has no implicit reporting tenant.
+
+Report calendar boundaries and display use the centralized `Asia/Kolkata` Stage 7 reporting timezone while database timestamps remain UTC. This single configuration seam can become a company preference later. The default window is the latest seven calendar days, the maximum is 366 days, detail pages default to 25 rows with a maximum of 100, and deterministic timestamp-plus-ID ordering protects pagination. URL filters are refresh-safe but are always parsed and authorized again on the server. Interactive aggregate calculation has a 10,000-record safety ceiling and asks users to narrow filters rather than loading unlimited history.
+
+Check-in rows derive status and duration from stored check-in/checkout timestamps, count only real `Lead.sourceVisitId` links, and use the existing Haversine function for customer-reference distance without making geofence claims. Advanced reporting classifies the earliest company/customer visit as **FIRST VISIT** and later records as **REPEAT VISIT**, ordered deterministically by `checkedInAt`, then UUID. No counters or repeat flags are stored.
+
+Attendance totals include completed durations only; open sessions are presented without a fabricated end. GPS routes validate tenant, visible employee, attendance, point, and visit ownership before returning sensitive coordinates. Points use deterministic sequence/time/ID order and the shared Haversine route calculation. The responsive no-secret SVG route view marks start, latest/end, and directly linked customer check-ins during the session. It uses accepted browser points: GPS accuracy varies, browser background suspension creates gaps, collection cannot be guaranteed after an app/browser is killed, and routes are not fraud-proof.
+
+Lead reporting filters stage, source, follow-up state, assignee, text, and reporting date. Pipeline value is the Decimal sum for NEW, QUALIFIED, PROPOSAL, and NEGOTIATION; won value is WON only; LOST is excluded. Conversion is explicitly `WON / all leads in the selected scope` with numerator and denominator, and visit-generated totals require `sourceVisitId`. Follow-up day boundaries use the reporting timezone. Money is read and aggregated using Prisma Decimal and is never persisted as floating point.
+
+The Stage 4–6 schema already contains the required company/time, company/user/time, customer/time, attendance-point order, lead creation/stage/assignee/follow-up, and visit-source indexes, so Stage 7 adds no redundant schema or empty migration. Existing migrations and database integrity triggers remain unchanged. Reports are private authenticated pages; no public links, exports, coordinate logging, mutable aggregates, API keys, PDF generation, or CSV export were added.
+
+Stage 7 is limited to reports. Expenses, reimbursement, geofence enforcement or breach reports, targets, custom forms/report builders, collections, reminders/notifications, billing, native applications, and all other Stage 8+ work remain postponed.

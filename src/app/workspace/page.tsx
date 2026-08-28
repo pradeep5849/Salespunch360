@@ -34,6 +34,7 @@ export default async function WorkspacePage() {
         {(user.role === "COMPANY_ADMIN" || user.role === "MANAGER" || user.role === "SALES") && <Link className="employees-link-card" href="/workspace/customers"><span>Customer directory</span><strong>{user.role === "COMPANY_ADMIN" ? "Manage customers" : "Find customers"} →</strong></Link>}
         {(user.role === "COMPANY_ADMIN" || user.role === "MANAGER" || user.role === "SALES") && <Link className="employees-link-card" href="/workspace/leads"><span>Sales pipeline</span><strong>Manage leads →</strong></Link>}
         {(user.role === "COMPANY_ADMIN" || user.role === "MANAGER" || user.role === "SALES") && <Link className="employees-link-card" href="/workspace/check-ins"><span>Field customer activity</span><strong>{user.role === "COMPANY_ADMIN" ? "View visits" : "Customer check-in"} →</strong></Link>}
+        {(user.role === "COMPANY_ADMIN" || user.role === "MANAGER" || user.role === "SALES") && <Link className="employees-link-card" href="/workspace/reports"><span>Historical reporting</span><strong>Open reports →</strong></Link>}
         {trial?.isInTrial && (
           <section className="trial-card">
             <div><p className="eyebrow">Free Trial</p><h2>{trial.remainingDays} days remaining</h2><p className="muted">Ends {trial.trialEndsAt!.toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" })}</p></div>
