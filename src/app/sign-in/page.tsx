@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getAuthenticatedUser } from "@/lib/auth/session";
 import { SignInForm } from "./sign-in-form";
 
@@ -27,6 +28,7 @@ export default async function SignInPage() {
           <h2>Sign in to your workspace</h2>
           <p className="muted">Use your company account to continue.</p>
           <SignInForm />
+          <p className="register-link">New to SalesPunch360? <Link href="/register">Start your free trial</Link></p>
           <p className="support">Need access? Contact your company administrator.</p>
         </div>
       </section>

@@ -1,6 +1,6 @@
 # SalesPunch360
 
-SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains **Stage 1 only**: the platform foundation, authentication, tenant boundaries, registration service, and a minimal protected workspace.
+SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains the completed **Stage 1 foundation** and **Stage 2 company registration with free-trial onboarding**.
 
 ## Stack
 
@@ -14,7 +14,7 @@ SalesPunch360 is a secure, multi-tenant sales operations platform for teams that
 
 Application routes and server actions live in `src/app`. Database access is centralized in `src/lib/db.ts`. Authentication, input schemas, sessions, authorization, and registration are separated under `src/lib/auth`. Prisma owns the data model and migrations under `prisma`.
 
-The Stage 1 interface intentionally includes only a branded sign-in screen and protected workspace placeholder. Registration is a server service rather than a public UI.
+The interface intentionally remains minimal: branded sign-in and registration screens plus a protected workspace placeholder with company trial information.
 
 ## Tenant isolation
 
@@ -46,7 +46,24 @@ npx prisma migrate dev
 npm run dev
 ```
 
-Open `http://localhost:3000`. Create the initial company administrator by calling the server-only `registerCompany` service from a trusted provisioning path or script. No public registration UI is included in Stage 1.
+Open `http://localhost:3000/register` to create a company and its initial administrator, or `/sign-in` for an existing account.
+
+## Stage 2 registration and trial flow
+
+Self-service customers visit `/register`, provide company and administrator details, and submit them to a server action. Zod normalizes the slug and email, validates password confirmation, rejects unknown/mass-assigned fields, and passes only the approved properties to the atomic registration service. The transaction checks uniqueness, calculates trial timestamps using the server clock, creates the company, hashes the password with Argon2id, and creates its forced `COMPANY_ADMIN`. The existing opaque database-session service then signs in the administrator and redirects to `/workspace`.
+
+New self-service companies receive:
+
+- `subscriptionStatus = TRIAL`
+- `trialStartedAt` from the server clock
+- `trialEndsAt` exactly 15 × 24 hours after the start
+- **1 COMPANY_ADMIN**, **1 MANAGER allowance**, **5 SALES allowance**, and **15 days**
+
+The initial company administrator is not a paid seat. Manager and Sales employee creation remains postponed to Stage 3. Entitlements are centralized in `src/lib/trial/config.ts`, rather than duplicated in UI code, so a future `SUPER_ADMIN` configuration source can replace the defaults.
+
+The lifecycle enum supports `TRIAL`, `ACTIVE`, `EXPIRED`, and `SUSPENDED` without implementing payments. Existing Stage 1 companies are safely migrated to `SUSPENDED` with null trial dates rather than receiving an invented trial. Runtime status does not trust the stored enum alone: a `TRIAL` company is effectively expired when server time is greater than or equal to `trialEndsAt`. Remaining days are the ceiling of positive remaining milliseconds divided by 24 hours.
+
+Registration errors do not expose database details or identify which unique record conflicted. The action explicitly maps allowed fields, uses a honeypot, and applies a best-effort per-process rate guard. A distributed deployment should replace that guard with shared infrastructure. Role, company UUID, lifecycle status, timestamps, duration, and entitlements are never accepted from browser input.
 
 ## Environment variables
 
@@ -72,7 +89,7 @@ npx prisma migrate status     # inspect migration state
 
 The initial migration includes constraints and triggers not expressible directly in Prisma schema syntax. Preserve those protections in future migrations.
 
-## Stage 1 scope
+## Completed scope through Stage 2
 
 - TypeScript/ESLint/Next.js foundation and validated environment
 - PostgreSQL schema for `Company`, `User`, and `Session`
@@ -82,7 +99,10 @@ The initial migration includes constraints and triggers not expressible directly
 - Tenant- and role-aware server authorization helpers
 - HTTP security headers without disabling future browser geolocation
 - Responsive branded sign-in and minimal workspace placeholder
+- Responsive self-service company registration and automatic secure sign-in
+- Server-controlled 15-day lifecycle calculation and centralized trial entitlements
+- Minimal company-admin trial status and allowance display
 
 ## Postponed features
 
-Stage 1 does **not** implement trial activation, subscriptions, billing, payments, employee-management UI, leads, attendance, GPS, check-ins/check-outs, reports, geofencing, expenses, targets, notifications, or final dashboards. These belong to later explicitly approved stages.
+Stage 2 does **not** implement manager or Sales employee creation, employee management/assignment, leads, attendance, GPS, check-ins/check-outs, customers, reports, geofencing, expenses, targets, notifications, payment gateways, paid subscriptions, invoices, payment history, package modification, final dashboards, or native mobile apps. These belong to later explicitly approved stages.

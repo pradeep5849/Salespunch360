@@ -14,14 +14,25 @@ enum Role {
   SALES
 }
 
-model Company {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
 
+model Company {
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String
+  slug               String             @unique
+  trialStartedAt     DateTime?
+  trialEndsAt        DateTime?
+  subscriptionStatus SubscriptionStatus @default(SUSPENDED)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  users              User[]
+
+  @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
 }
 
