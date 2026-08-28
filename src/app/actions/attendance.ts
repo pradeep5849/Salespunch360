@@ -31,7 +31,7 @@ export async function uploadLocationPointAction(point: LocationMeasurement & { c
 
 export async function updateOperationsAction(formData: FormData) {
   try {
-    await updateCompanyOperations({ attendanceEnabled: formData.get("attendanceEnabled") === "on", gpsTrackingEnabled: formData.get("gpsTrackingEnabled") === "on" });
+    await updateCompanyOperations({ attendanceEnabled: formData.get("attendanceEnabled") === "on", gpsTrackingEnabled: formData.get("gpsTrackingEnabled") === "on", checkoutRequiredBeforeNextCheckIn: formData.get("checkoutRequiredBeforeNextCheckIn") === "on" });
   } catch { return; }
   revalidatePath("/workspace/settings");
   revalidatePath("/workspace/attendance");

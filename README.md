@@ -1,6 +1,6 @@
 # SalesPunch360
 
-SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains the completed **Stage 1 foundation**, **Stage 2 company registration and trials**, **Stage 3 employee management**, and **Stage 4 attendance/GPS foundation**.
+SalesPunch360 is a secure, multi-tenant sales operations platform. This repository contains the completed Stage 1–5 foundation through company registration, employees, attendance/GPS, and customer field visits.
 
 ## Stack
 
@@ -85,6 +85,18 @@ When GPS is enabled and attendance is open, the mobile-first client uses `watchP
 
 Browser geolocation is privacy-conscious but cannot reliably continue after the page or browser is killed or heavily backgrounded. Stage 4 makes no background-tracking guarantee. The server ownership model and point format remain suitable for a future native client with reliable background collection.
 
+## Stage 5 customers and field visits
+
+`Customer` is a tenant-owned directory record with optional contact details and optional paired reference coordinates. Company Admins create and edit customers; Managers and Sales securely search their own company directory for visits. Customer IDs are always combined with authenticated `companyId`, and reference coordinates remain separate from actual visit-event coordinates.
+
+Active Managers and Sales employees check in at `/workspace/check-ins`. Every check-in and checkout requires a current browser GPS measurement even when continuous GPS Tracking is disabled. If Attendance is enabled, check-in also requires the employee's server-resolved open attendance and links it without accepting an attendance ID from the browser. Server timestamps remain authoritative. Checkout requires a target visit UUID, strict `POSITIVE`, `NEUTRAL`, or `NEGATIVE` sentiment, optional bounded remarks, and the authenticated employee's current GPS.
+
+`checkoutRequiredBeforeNextCheckIn` defaults on and is controlled only by Company Admin. Check-in locks the employee row before evaluating attendance and pending visits, so concurrent starts cannot trivially bypass the setting. When the setting is off, multiple explicitly pending visits are supported. Checkout locks the selected visit and conditionally updates only the authenticated employee's own-company open record, preventing double completion and IDOR checkout.
+
+Repeat status is derived from prior visit count rather than stored as a mutable flag. Haversine distance from actual check-in coordinates to optional customer reference coordinates is available for later reporting but does not enforce a geofence. Company Admin visibility is company-scoped; Manager visibility includes only the Manager's own visits and directly assigned Sales users. The schema supports later duration, completion, sentiment, coordinate, date-range, employee, customer, and repeat-visit reporting without implementing final reports or lead metrics.
+
+Customer and employee coordinates are sensitive: the application does not log coordinate payloads, collects visit GPS only for an authenticated check-in/checkout operation, preserves history, and does not claim fraud-proof verification.
+
 ## Environment variables
 
 | Variable | Required | Description |
@@ -113,7 +125,9 @@ Stage 3 is applied by the committed `20260828020000_stage_3_employee_management`
 
 Stage 4 is applied by `20260828030000_stage_4_attendance_gps` using the same migration commands. It adds company settings, attendance/location tables, tenant triggers, coordinate constraints, route indexes, and the one-open-attendance partial unique index without modifying earlier migrations.
 
-## Completed scope through Stage 4
+Stage 5 is applied by `20260828040000_stage_5_customers_visits`. It adds the customer directory, visits, checkout sentiment enum, mandatory-checkout setting, ownership triggers, coordinate/timestamp consistency constraints, and reporting-oriented indexes.
+
+## Completed scope through Stage 5
 
 - TypeScript/ESLint/Next.js foundation and validated environment
 - PostgreSQL schema for `Company`, `User`, and `Session`
@@ -136,7 +150,12 @@ Stage 4 is applied by `20260828030000_stage_4_attendance_gps` using the same mig
 - Tenant-protected GPS route-point capture with offline timestamp tolerance and throttling
 - PostgreSQL enforcement for attendance/location tenant consistency and one open session
 - Company Admin/Manager current-attendance visibility and route-distance foundation
+- Tenant-owned customer management and secure employee search
+- Mandatory-GPS customer check-in and checkout with attendance linkage
+- Configurable mandatory checkout, checkout sentiment/remarks, and visit notes
+- Repeat-visit and customer-reference-distance foundations
+- Company Admin and assigned-team Manager operational visit visibility
 
 ## Postponed features
 
-Stage 4 does **not** implement customer check-ins/check-outs, guaranteed native/background tracking, customers, leads or pipelines, expenses or travel allowances, finished reports, geofencing, targets, notifications, payment gateways, paid subscriptions or paid-seat enforcement, invoices, payment history, final dashboards, or native mobile apps. These belong to later explicitly approved stages.
+Stage 5 does **not** implement leads or pipeline stages, quotations, won/lost outcomes, lead metrics, expenses, reimbursement, geofence enforcement, final check-in/attendance/GPS reports, analytics, notifications, billing, invoices, or native mobile apps. These belong to later explicitly approved stages.

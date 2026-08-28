@@ -106,5 +106,5 @@ export async function updateCompanyOperations(raw: unknown) {
 export async function getCompanyOperations() {
   const admin = await requireRole("COMPANY_ADMIN");
   if (!admin.companyId) throw new AttendancePolicyError("DISABLED");
-  return db.company.findFirst({ where: { id: admin.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true } });
+  return db.company.findFirst({ where: { id: admin.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true, checkoutRequiredBeforeNextCheckIn: true } });
 }

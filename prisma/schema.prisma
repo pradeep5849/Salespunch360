@@ -21,6 +21,12 @@ enum SubscriptionStatus {
   SUSPENDED
 }
 
+enum CheckoutSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
 model Company {
   id                 String             @id @default(uuid()) @db.Uuid
   name               String
@@ -30,11 +36,14 @@ model Company {
   subscriptionStatus SubscriptionStatus @default(SUSPENDED)
   attendanceEnabled  Boolean            @default(true)
   gpsTrackingEnabled Boolean            @default(false)
+  checkoutRequiredBeforeNextCheckIn Boolean @default(true)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   users              User[]
   attendances        Attendance[]
   locationPoints     LocationPoint[]
+  customers          Customer[]
+  customerVisits     CustomerVisit[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -57,6 +66,7 @@ model User {
   sessions     Session[]
   attendances  Attendance[]
   locationPoints LocationPoint[]
+  customerVisits CustomerVisit[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -84,10 +94,62 @@ model Attendance {
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
   locationPoints      LocationPoint[]
+  customerVisits      CustomerVisit[]
 
   @@index([companyId, startedAt])
   @@index([companyId, userId, startedAt])
   @@map("attendances")
+}
+
+model Customer {
+  id            String          @id @default(uuid()) @db.Uuid
+  companyId     String          @db.Uuid
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  visits        CustomerVisit[]
+
+  @@index([companyId, name])
+  @@index([companyId, createdAt])
+  @@map("customers")
+}
+
+model CustomerVisit {
+  id                    String             @id @default(uuid()) @db.Uuid
+  companyId             String             @db.Uuid
+  company               Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  userId                String             @db.Uuid
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  customerId            String             @db.Uuid
+  customer              Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attendanceId          String?            @db.Uuid
+  attendance            Attendance?        @relation(fields: [attendanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  checkedInAt           DateTime           @default(now())
+  checkInLatitude       Float
+  checkInLongitude      Float
+  checkInAccuracyMeters Float
+  checkedOutAt          DateTime?
+  checkOutLatitude      Float?
+  checkOutLongitude     Float?
+  checkOutAccuracyMeters Float?
+  checkoutSentiment     CheckoutSentiment?
+  checkoutRemarks       String?
+  visitNotes            String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([companyId, checkedInAt])
+  @@index([companyId, userId, checkedInAt])
+  @@index([companyId, customerId, checkedInAt])
+  @@index([companyId, userId, checkedOutAt])
+  @@map("customer_visits")
 }
 
 model LocationPoint {

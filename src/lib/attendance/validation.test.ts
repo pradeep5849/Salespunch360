@@ -19,6 +19,6 @@ describe("attendance and location validation", () => {
   });
 
   it("rejects browser-controlled company settings fields", () => {
-    expect(companyOperationsSchema.safeParse({ attendanceEnabled: true, gpsTrackingEnabled: false, companyId: "other" }).success).toBe(false);
+    expect(companyOperationsSchema.safeParse({ attendanceEnabled: true, gpsTrackingEnabled: false, checkoutRequiredBeforeNextCheckIn: true, companyId: "other" }).success).toBe(false);
   });
 });

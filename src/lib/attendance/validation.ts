@@ -16,4 +16,5 @@ export const locationPointSchema = coordinateSchema.extend({
 export const companyOperationsSchema = z.object({
   attendanceEnabled: z.boolean(),
   gpsTrackingEnabled: z.boolean(),
+  checkoutRequiredBeforeNextCheckIn: z.boolean(),
 }).strict();
