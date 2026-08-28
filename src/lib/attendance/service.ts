@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/authorization";
 import { haversineDistanceMeters, calculateRouteDistanceMeters } from "@/lib/location/geo";
 import { AttendancePolicyError, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
 import { attendanceMeasurementSchema, companyOperationsSchema, locationPointSchema } from "./validation";
+import { evaluateGeofence } from "@/lib/geofence/policy";
 
 async function requireEmployee() {
   const user = await requireRole("MANAGER", "SALES");
@@ -14,7 +15,7 @@ export async function getCurrentAttendance() {
   const user = await requireEmployee();
   const [attendance, company] = await Promise.all([
     db.attendance.findFirst({ where: { companyId: user.companyId, userId: user.id, endedAt: null }, include: { _count: { select: { locationPoints: true } } } }),
-    db.company.findFirst({ where: { id: user.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true } }),
+    db.company.findFirst({ where: { id: user.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true, attendanceGeofenceEnabled: true } }),
   ]);
   if (!company) throw new AttendancePolicyError("DISABLED");
   return { attendance, settings: company };
@@ -23,21 +24,29 @@ export async function getCurrentAttendance() {
 export async function startAttendance(raw: unknown) {
   const user = await requireEmployee();
   const { location } = attendanceMeasurementSchema.parse(raw);
-  return db.$transaction(async (tx) => {
+  const result=await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
     const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, role: { in: ["MANAGER", "SALES"] }, isActive: true }, select: { id: true } });
     if (!employee) throw new AttendancePolicyError("DISABLED");
-    const company = await tx.company.findFirst({ where: { id: user.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true } });
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR SHARE`;
+    const company = await tx.company.findFirst({ where: { id: user.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true,attendanceGeofenceEnabled:true,attendanceReferenceLatitude:true,attendanceReferenceLongitude:true,attendanceGeofenceRadiusMeters:true } });
     if (!company?.attendanceEnabled) throw new AttendancePolicyError("DISABLED");
     const open = await tx.attendance.findFirst({ where: { companyId: user.companyId, userId: user.id, endedAt: null }, select: { id: true } });
     if (open) throw new AttendancePolicyError("ALREADY_OPEN");
-    const acceptedLocation = company.gpsTrackingEnabled ? location : undefined;
-    return tx.attendance.create({ data: {
+    if(company.attendanceGeofenceEnabled){
+      if(!location||company.attendanceReferenceLatitude==null||company.attendanceReferenceLongitude==null||company.attendanceGeofenceRadiusMeters==null)throw new AttendancePolicyError("GEOFENCE_CONFIGURATION");
+      const verdict=evaluateGeofence(location,{latitude:company.attendanceReferenceLatitude,longitude:company.attendanceReferenceLongitude},company.attendanceGeofenceRadiusMeters);
+      if(!verdict.allowed)return {blocked:{companyId:user.companyId,employeeId:user.id,type:verdict.type,action:"ATTENDANCE_START" as const,referenceLatitude:company.attendanceReferenceLatitude,referenceLongitude:company.attendanceReferenceLongitude,actualLatitude:location.latitude,actualLongitude:location.longitude,accuracyMeters:location.accuracyMeters,allowedRadiusMeters:company.attendanceGeofenceRadiusMeters,distanceMeters:verdict.distanceMeters}};
+    }
+    const acceptedLocation = company.gpsTrackingEnabled||company.attendanceGeofenceEnabled ? location : undefined;
+    return {attendance:await tx.attendance.create({ data: {
       companyId: user.companyId, userId: user.id, startedAt: new Date(),
       startLatitude: acceptedLocation?.latitude, startLongitude: acceptedLocation?.longitude,
       startAccuracyMeters: acceptedLocation?.accuracyMeters,
-    } });
+    } })};
   });
+  if("blocked" in result&&result.blocked){const blocked=result.blocked;await db.geofenceEvent.create({data:blocked});throw new AttendancePolicyError(blocked.type);}
+  return result.attendance;
 }
 
 export async function endAttendance(raw: unknown) {

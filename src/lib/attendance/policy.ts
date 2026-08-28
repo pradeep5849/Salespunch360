@@ -1,7 +1,7 @@
 import { LOCATION_CONFIG } from "@/lib/location/config";
 
 export class AttendancePolicyError extends Error {
-  constructor(public readonly code: "DISABLED" | "NO_OPEN_ATTENDANCE" | "ALREADY_OPEN" | "GPS_DISABLED" | "CAPTURE_TIME_INVALID" | "THROTTLED") {
+  constructor(public readonly code: "DISABLED" | "NO_OPEN_ATTENDANCE" | "ALREADY_OPEN" | "GPS_DISABLED" | "CAPTURE_TIME_INVALID" | "THROTTLED" | "GEOFENCE_CONFIGURATION" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY") {
     super(code);
   }
 }

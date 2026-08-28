@@ -8,7 +8,7 @@ export type AttendanceActionResult = { ok: boolean; error?: string; ignored?: bo
 
 export async function startAttendanceAction(location?: LocationMeasurement): Promise<AttendanceActionResult> {
   try { await startAttendance({ location }); }
-  catch { return { ok: false, error: "Unable to start attendance. Check company settings or your current session." }; }
+  catch (error) { const code=error instanceof Error?error.message:"";return { ok: false, error: code==="OUTSIDE_RADIUS"?"You are outside the attendance geofence.":code==="INSUFFICIENT_ACCURACY"?"Location accuracy is insufficient for this geofence.":code==="GEOFENCE_CONFIGURATION"?"Attendance geofence configuration is incomplete.":"Unable to start attendance. Check company settings or your current session." }; }
   revalidatePath("/workspace/attendance");
   return { ok: true };
 }

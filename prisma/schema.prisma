@@ -54,6 +54,23 @@ enum LeadActivityType {
   LOST
   REOPENED
 }
+enum GeofenceEventType {
+  OUTSIDE_RADIUS
+  INSUFFICIENT_ACCURACY
+}
+enum GeofenceAction {
+  ATTENDANCE_START
+  CUSTOMER_CHECK_IN
+}
+enum TargetMetric {
+  WON_LEADS_COUNT
+  WON_LEADS_VALUE
+}
+enum TargetPeriodType {
+  MONTHLY
+  QUARTERLY
+  CUSTOM
+}
 
 model Company {
   id                 String             @id @default(uuid()) @db.Uuid
@@ -65,6 +82,12 @@ model Company {
   attendanceEnabled  Boolean            @default(true)
   gpsTrackingEnabled Boolean            @default(false)
   checkoutRequiredBeforeNextCheckIn Boolean @default(true)
+  attendanceGeofenceEnabled Boolean @default(false)
+  attendanceReferenceLatitude Float?
+  attendanceReferenceLongitude Float?
+  attendanceGeofenceRadiusMeters Int?
+  customerCheckInGeofenceEnabled Boolean @default(false)
+  customerCheckInGeofenceRadiusMeters Int?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   users              User[]
@@ -74,6 +97,8 @@ model Company {
   customerVisits     CustomerVisit[]
   leads              Lead[]
   leadActivities     LeadActivity[]
+  geofenceEvents     GeofenceEvent[]
+  salesTargets       SalesTarget[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -102,6 +127,9 @@ model User {
   leadActivities LeadActivity[] @relation("LeadActor")
   previousLeadAssignments LeadActivity[] @relation("PreviousLeadAssignee")
   newLeadAssignments LeadActivity[] @relation("NewLeadAssignee")
+  geofenceEvents GeofenceEvent[] @relation("GeofenceEmployee")
+  assignedTargets SalesTarget[] @relation("TargetAssignee")
+  createdTargets SalesTarget[] @relation("TargetCreator")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -130,6 +158,7 @@ model Attendance {
   updatedAt           DateTime        @updatedAt
   locationPoints      LocationPoint[]
   customerVisits      CustomerVisit[]
+  geofenceEvents      GeofenceEvent[]
 
   @@index([companyId, startedAt])
   @@index([companyId, userId, startedAt])
@@ -151,6 +180,7 @@ model Customer {
   updatedAt     DateTime        @updatedAt
   visits        CustomerVisit[]
   leads         Lead[]
+  geofenceEvents GeofenceEvent[]
 
   @@index([companyId, name])
   @@index([companyId, createdAt])
@@ -281,4 +311,55 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+model GeofenceEvent {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  employeeId String @db.Uuid
+  employee User @relation("GeofenceEmployee",fields:[employeeId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  type GeofenceEventType
+  action GeofenceAction
+  customerId String? @db.Uuid
+  customer Customer? @relation(fields:[customerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  attendanceId String? @db.Uuid
+  attendance Attendance? @relation(fields:[attendanceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  referenceLatitude Float
+  referenceLongitude Float
+  actualLatitude Float
+  actualLongitude Float
+  accuracyMeters Float?
+  allowedRadiusMeters Int
+  distanceMeters Float?
+  occurredAt DateTime @default(now())
+  @@index([companyId,occurredAt])
+  @@index([companyId,employeeId,occurredAt])
+  @@index([companyId,action,occurredAt])
+  @@index([customerId,occurredAt])
+  @@map("geofence_events")
+}
+
+model SalesTarget {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  assignedUserId String @db.Uuid
+  assignedUser User @relation("TargetAssignee",fields:[assignedUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  createdByUserId String @db.Uuid
+  createdByUser User @relation("TargetCreator",fields:[createdByUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  metric TargetMetric
+  periodType TargetPeriodType
+  startDate DateTime @db.Date
+  endDate DateTime @db.Date
+  targetValue Decimal @db.Decimal(18,2)
+  currencyCode String @default("INR") @db.Char(3)
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([companyId,assignedUserId,metric,startDate,endDate])
+  @@index([companyId,assignedUserId])
+  @@index([companyId,startDate,endDate])
+  @@index([companyId,metric])
+  @@map("sales_targets")
 }
