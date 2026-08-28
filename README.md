@@ -1,6 +1,6 @@
 # SalesPunch360
 
-SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains the completed **Stage 1 foundation**, **Stage 2 company registration and trials**, and **Stage 3 employee management**.
+SalesPunch360 is a secure, multi-tenant sales operations platform for teams that need a reliable foundation for future field-sales workflows. This repository contains the completed **Stage 1 foundation**, **Stage 2 company registration and trials**, **Stage 3 employee management**, and **Stage 4 attendance/GPS foundation**.
 
 ## Stack
 
@@ -75,6 +75,16 @@ Creation and reactivation use the Stage 2 effective lifecycle status and central
 
 Deactivation is a soft update (`isActive = false`) and atomically revokes all database sessions for the employee. Both new sign-in and session resolution reject inactive identities. Administrator password resets reuse the Argon2id password policy and atomically revoke all existing employee sessions. Stage 3 intentionally does not add forgot-password, OTP, or email reset flows.
 
+## Stage 4 attendance and GPS foundation
+
+Each company has server-resolved `attendanceEnabled` and `gpsTrackingEnabled` controls at `/workspace/settings`; only `COMPANY_ADMIN` can change them. Attendance defaults on and GPS defaults off. Managers and Sales employees operate only their own attendance at `/workspace/attendance`, while Company Admins and Managers can view current company attendance state. Server timestamps are authoritative for attendance start/end, and a PostgreSQL partial unique index guarantees at most one open attendance per user.
+
+Attendance and location records intentionally carry `companyId` alongside `userId`. Application queries derive both identities from the authenticated session, and migration triggers enforce that attendance users and location attendance ownership match the stored tenant. Disabling attendance prevents new starts but does not trap an existing open session; employees can still end it. Disabling GPS stops new route points without deleting history. Deactivating an employee preserves any open historical record without inventing an end time, while inactive authentication prevents further attendance operations until an administrator reactivates the employee.
+
+When GPS is enabled and attendance is open, the mobile-first client uses `watchPosition`, reports permission/unavailable/timeout states, and stops its watcher when the component closes, attendance ends, or the rendered GPS setting is disabled. Coordinates are range-checked, device `capturedAt` is distinguished from server `receivedAt`, and captures are limited to a 24-hour offline window with five minutes of future clock tolerance. The server accepts points at a centralized minimum 15-second interval or after at least 10 meters of movement. A Haversine route-distance service provides the reporting foundation without adding customer check-ins.
+
+Browser geolocation is privacy-conscious but cannot reliably continue after the page or browser is killed or heavily backgrounded. Stage 4 makes no background-tracking guarantee. The server ownership model and point format remain suitable for a future native client with reliable background collection.
+
 ## Environment variables
 
 | Variable | Required | Description |
@@ -101,7 +111,9 @@ The initial migration includes constraints and triggers not expressible directly
 
 Stage 3 is applied by the committed `20260828020000_stage_3_employee_management` migration. Run `npx prisma migrate deploy` in a deployed environment or `npx prisma migrate dev` against a development PostgreSQL database; never edit the committed Stage 1 or Stage 2 migrations.
 
-## Completed scope through Stage 3
+Stage 4 is applied by `20260828030000_stage_4_attendance_gps` using the same migration commands. It adds company settings, attendance/location tables, tenant triggers, coordinate constraints, route indexes, and the one-open-attendance partial unique index without modifying earlier migrations.
+
+## Completed scope through Stage 4
 
 - TypeScript/ESLint/Next.js foundation and validated environment
 - PostgreSQL schema for `Company`, `User`, and `Session`
@@ -119,7 +131,12 @@ Stage 3 is applied by the committed `20260828020000_stage_3_employee_management`
 - Same-company active-Manager assignment for Sales employees
 - Trial-seat enforcement protected by a PostgreSQL company-row lock
 - Company-admin password reset with strong validation and session revocation
+- Company-level attendance and GPS feature controls
+- Employee-owned attendance start/end with server-authoritative timestamps
+- Tenant-protected GPS route-point capture with offline timestamp tolerance and throttling
+- PostgreSQL enforcement for attendance/location tenant consistency and one open session
+- Company Admin/Manager current-attendance visibility and route-distance foundation
 
 ## Postponed features
 
-Stage 3 does **not** implement attendance, GPS/background location, distance calculations, check-ins/check-outs, customers, leads or pipelines, expenses or travel allowances, reports, geofencing, targets, notifications, payment gateways, paid subscriptions or paid-seat enforcement, invoices, payment history, final dashboards, or native mobile apps. These belong to later explicitly approved stages.
+Stage 4 does **not** implement customer check-ins/check-outs, guaranteed native/background tracking, customers, leads or pipelines, expenses or travel allowances, finished reports, geofencing, targets, notifications, payment gateways, paid subscriptions or paid-seat enforcement, invoices, payment history, final dashboards, or native mobile apps. These belong to later explicitly approved stages.
