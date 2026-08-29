@@ -16,7 +16,7 @@ export async function register(_: RegistrationState, formData: FormData): Promis
 
   const input = {
     companyName: formData.get("companyName"),
-    companySlug: formData.get("companySlug"),
+    teamStructure: formData.get("teamStructure"),
     adminName: formData.get("adminName"),
     adminEmail: formData.get("adminEmail"),
     adminPassword: formData.get("adminPassword"),

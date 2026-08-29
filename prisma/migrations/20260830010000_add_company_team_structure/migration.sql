@@ -1,0 +1,4 @@
+CREATE TYPE "TeamStructure" AS ENUM ('MANAGERS_AND_SALES', 'SALES_ONLY');
+
+ALTER TABLE "companies"
+ADD COLUMN "teamStructure" "TeamStructure" NOT NULL DEFAULT 'MANAGERS_AND_SALES';

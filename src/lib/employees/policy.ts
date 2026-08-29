@@ -2,7 +2,7 @@ import type { Role, SubscriptionStatus } from "@prisma/client";
 import { DEFAULT_TRIAL_ENTITLEMENTS } from "@/lib/trial/config";
 
 export class EmployeePolicyError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "INVALID_MANAGER" | "LIFECYCLE_BLOCKED" | "SEAT_LIMIT") {
+  constructor(public readonly code: "NOT_FOUND" | "INVALID_MANAGER" | "MANAGERS_DISABLED" | "LIFECYCLE_BLOCKED" | "SEAT_LIMIT") {
     super(code);
   }
 }

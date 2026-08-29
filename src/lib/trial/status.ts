@@ -1,7 +1,7 @@
 import type { Company, SubscriptionStatus } from "@prisma/client";
-import { DEFAULT_TRIAL_ENTITLEMENTS, TRIAL_DURATION_MS } from "./config";
+import { trialEntitlementsFor, TRIAL_DURATION_MS } from "./config";
 
-type CompanyLifecycle = Pick<Company, "trialStartedAt" | "trialEndsAt" | "subscriptionStatus">;
+type CompanyLifecycle = Pick<Company, "trialStartedAt" | "trialEndsAt" | "subscriptionStatus" | "teamStructure">;
 
 export type TrialStatus = {
   isInTrial: boolean;
@@ -20,6 +20,7 @@ export function calculateTrialEndsAt(startedAt: Date) {
 }
 
 export function getTrialStatus(company: CompanyLifecycle, now = new Date()): TrialStatus {
+  const entitlements = trialEntitlementsFor(company.teamStructure);
   const hasTrialDates = company.trialStartedAt !== null && company.trialEndsAt !== null;
   const timeExpired = !company.trialEndsAt || now.getTime() >= company.trialEndsAt.getTime();
   const isTrialLifecycle = company.subscriptionStatus === "TRIAL";
@@ -35,7 +36,7 @@ export function getTrialStatus(company: CompanyLifecycle, now = new Date()): Tri
     remainingDays: Math.ceil(remainingMs / (24 * 60 * 60 * 1_000)),
     subscriptionStatus: company.subscriptionStatus,
     effectiveStatus: isTrialExpired ? "EXPIRED" : company.subscriptionStatus,
-    managerAllowance: DEFAULT_TRIAL_ENTITLEMENTS.manager,
-    salesAllowance: DEFAULT_TRIAL_ENTITLEMENTS.sales,
+    managerAllowance: entitlements.manager,
+    salesAllowance: entitlements.sales,
   };
 }

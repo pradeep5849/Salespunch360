@@ -33,7 +33,7 @@ async function lockAndLoadCompany(tx: Prisma.TransactionClient, companyId: strin
   await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id" = ${companyId}::uuid FOR UPDATE`;
   const company = await tx.company.findFirst({
     where: { id: companyId },
-    select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true },
+    select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true },
   });
   if (!company) throw new EmployeePolicyError("NOT_FOUND");
   return company;
@@ -68,10 +68,10 @@ export async function getEmployeeManagementContext() {
   const { companyId } = await requireCompanyAdmin();
   const [employees, company] = await Promise.all([
     db.user.findMany({ where: { companyId, role: { in: employeeRoles } }, select: employeeSelect, orderBy: [{ isActive: "desc" }, { name: "asc" }] }),
-    db.company.findFirst({ where: { id: companyId }, select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true } }),
+    db.company.findFirst({ where: { id: companyId }, select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true } }),
   ]);
   if (!company) throw new EmployeePolicyError("NOT_FOUND");
-  return { employees, trial: getTrialStatus(company) };
+  return { employees, trial: getTrialStatus(company), teamStructure: company.teamStructure };
 }
 
 async function createEmployee(role: "MANAGER" | "SALES", raw: CreateManagerInput | CreateSalesInput) {
@@ -79,8 +79,11 @@ async function createEmployee(role: "MANAGER" | "SALES", raw: CreateManagerInput
   const data = role === "MANAGER" ? createManagerSchema.parse(raw) : createSalesSchema.parse(raw);
   const passwordHash = await hashPassword(data.password);
   return db.$transaction(async (tx) => {
+    const company = await lockAndLoadCompany(tx, companyId);
+    if (company.teamStructure === "SALES_ONLY" && role === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
     await enforceAvailableSeat(tx, companyId, role);
     const requestedManagerId = "managerId" in data && typeof data.managerId === "string" ? data.managerId : undefined;
+    if (company.teamStructure === "SALES_ONLY" && requestedManagerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     const managerId = role === "SALES" ? await loadAssignableManager(tx, companyId, requestedManagerId) : null;
     return tx.user.create({
       data: { companyId, role, isActive: true, name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId },
@@ -96,9 +99,10 @@ export async function editEmployee(raw: EditEmployeeInput) {
   const { companyId } = await requireCompanyAdmin();
   const data = editEmployeeSchema.parse(raw);
   return db.$transaction(async (tx) => {
-    await lockAndLoadCompany(tx, companyId);
+    const company = await lockAndLoadCompany(tx, companyId);
     const employee = await tx.user.findFirst({ where: { id: data.employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true, managerId: true } });
     assertManagedEmployee(companyId, employee);
+    if (company.teamStructure === "SALES_ONLY" && data.managerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     if (employee.role === "MANAGER" && data.managerId) throw new EmployeePolicyError("INVALID_MANAGER");
     const managerId = employee.role === "SALES" && data.managerId !== undefined
       ? data.managerId === employee.managerId
@@ -134,8 +138,10 @@ export async function reactivateEmployee(raw: unknown) {
   const { companyId } = await requireCompanyAdmin();
   const { employeeId } = employeeIdSchema.parse(raw);
   await db.$transaction(async (tx) => {
+    const company = await lockAndLoadCompany(tx, companyId);
     const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true } });
     assertManagedEmployee(companyId, employee);
+    if (company.teamStructure === "SALES_ONLY" && employee.role === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
     if (employee.isActive) return;
     await enforceAvailableSeat(tx, companyId, employee.role as "MANAGER" | "SALES");
     const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: employee.role, isActive: false }, data: { isActive: true } });

@@ -12,15 +12,9 @@ export const strongPasswordSchema = z.string().min(12).max(200)
   .regex(/[A-Z]/, "Password must contain an uppercase letter")
   .regex(/[0-9]/, "Password must contain a number");
 
-export function normalizeCompanySlug(value: string) {
-  return value.trim().toLowerCase();
-}
-
 export const registrationSchema = z.object({
   companyName: z.string().trim().min(2).max(120),
-  companySlug: z.string().transform(normalizeCompanySlug).pipe(
-    z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and single hyphens only").min(2).max(63),
-  ),
+  teamStructure: z.enum(["MANAGERS_AND_SALES", "SALES_ONLY"]),
   adminName: z.string().trim().min(2).max(120),
   adminEmail: emailSchema,
   adminPassword: strongPasswordSchema,

@@ -12,7 +12,7 @@ export default async function WorkspacePage() {
   const company = user.role === "COMPANY_ADMIN" && user.companyId
     ? await db.company.findUnique({
         where: { id: user.companyId },
-        select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true },
+        select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true },
       })
     : null;
   const trial = company ? getTrialStatus(company) : null;
@@ -41,7 +41,7 @@ export default async function WorkspacePage() {
         {trial?.isInTrial && (
           <section className="trial-card">
             <div><p className="eyebrow">Free Trial</p><h2>{trial.remainingDays} days remaining</h2><p className="muted">Ends {trial.trialEndsAt!.toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" })}</p></div>
-            <div className="allowances"><div><strong>{trial.managerAllowance}</strong><span>Manager allowance</span></div><div><strong>{trial.salesAllowance}</strong><span>Sales allowance</span></div></div>
+            <div className="allowances">{company?.teamStructure === "MANAGERS_AND_SALES" && <div><strong>{trial.managerAllowance}</strong><span>Manager allowance</span></div>}<div><strong>{trial.salesAllowance}</strong><span>Sales allowance</span></div></div>
           </section>
         )}
         {trial?.isTrialExpired && <section className="trial-card expired"><div><p className="eyebrow">Free Trial</p><h2>Trial expired</h2><p className="muted">Your trial ended {trial.trialEndsAt!.toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" })}.</p></div></section>}

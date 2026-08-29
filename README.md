@@ -50,7 +50,7 @@ Open `http://localhost:3000/register` to create a company and its initial admini
 
 ## Stage 2 registration and trial flow
 
-Self-service customers visit `/register`, provide company and administrator details, and submit them to a server action. Zod normalizes the slug and email, validates password confirmation, rejects unknown/mass-assigned fields, and passes only the approved properties to the atomic registration service. The transaction checks uniqueness, calculates trial timestamps using the server clock, creates the company, hashes the password with Argon2id, and creates its forced `COMPANY_ADMIN`. The existing opaque database-session service then signs in the administrator and redirects to `/workspace`.
+Self-service customers visit `/register`, provide company, team structure, and administrator details, and submit them to a server action. Zod normalizes the email, validates password confirmation, rejects unknown/mass-assigned fields, and passes only approved properties to the atomic registration service. The server generates a unique URL-safe internal slug; customers never choose or supply it. The transaction checks email uniqueness, calculates trial timestamps using the server clock, creates the company, hashes the password with Argon2id, and creates its forced `COMPANY_ADMIN`. The existing opaque database-session service then signs in the administrator and redirects to `/workspace`.
 
 New self-service companies receive:
 
