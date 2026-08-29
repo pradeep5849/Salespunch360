@@ -71,6 +71,46 @@ enum TargetPeriodType {
   QUARTERLY
   CUSTOM
 }
+enum BillingPeriod {
+ MONTHLY
+ SIX_MONTH
+ YEARLY
+}
+enum BillingRole {
+ MANAGER
+ SALES
+}
+enum PaidSubscriptionStatus {
+ ACTIVE
+ EXPIRED
+ CANCELLED
+ SUSPENDED
+}
+enum BillingOrderStatus {
+ PENDING
+ PAID
+ FAILED
+ CANCELLED
+ EXPIRED
+}
+enum PaymentStatus {
+ CREATED
+ AUTHORIZED
+ CAPTURED
+ FAILED
+ REFUNDED
+}
+enum BillingAuditType {
+ PRICING_CHANGED
+ ORDER_CREATED
+ PAYMENT_CAPTURED
+ PAYMENT_FAILED
+ SUBSCRIPTION_ACTIVATED
+ SUBSCRIPTION_RENEWED
+ SEATS_CHANGED
+ SUPER_ADMIN_OVERRIDE
+ SUBSCRIPTION_SUSPENDED
+}
 
 model Company {
   id                 String             @id @default(uuid()) @db.Uuid
@@ -99,6 +139,10 @@ model Company {
   leadActivities     LeadActivity[]
   geofenceEvents     GeofenceEvent[]
   salesTargets       SalesTarget[]
+  subscriptions CompanySubscription[]
+  billingOrders BillingOrder[]
+  payments PaymentTransaction[]
+  billingAudits BillingAuditEvent[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -130,6 +174,9 @@ model User {
   geofenceEvents GeofenceEvent[] @relation("GeofenceEmployee")
   assignedTargets SalesTarget[] @relation("TargetAssignee")
   createdTargets SalesTarget[] @relation("TargetCreator")
+  createdPrices BillingPrice[] @relation("PriceCreator")
+  createdBillingOrders BillingOrder[] @relation("OrderCreator")
+  billingAuditEvents BillingAuditEvent[] @relation("BillingAuditActor")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -362,4 +409,99 @@ model SalesTarget {
   @@index([companyId,startDate,endDate])
   @@index([companyId,metric])
   @@map("sales_targets")
+}
+
+model BillingPrice {
+ id String @id @default(uuid()) @db.Uuid
+ role BillingRole
+ period BillingPeriod
+ amount Decimal @db.Decimal(18,2)
+ currency String @default("INR") @db.Char(3)
+ effectiveFrom DateTime @default(now())
+ effectiveUntil DateTime?
+ createdByUserId String? @db.Uuid
+ createdByUser User? @relation("PriceCreator",fields:[createdByUserId],references:[id],onDelete:Restrict)
+ createdAt DateTime @default(now())
+ @@index([role,period,effectiveFrom])
+ @@map("billing_prices")
+}
+model CompanySubscription {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ company Company @relation(fields:[companyId],references:[id],onDelete:Restrict)
+ status PaidSubscriptionStatus
+ billingPeriod BillingPeriod
+ managerSeats Int
+ salesSeats Int
+ startsAt DateTime
+ endsAt DateTime
+ sourceOrderId String? @unique @db.Uuid
+ sourceOrder BillingOrder? @relation(fields:[sourceOrderId],references:[id],onDelete:Restrict)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([companyId,status,endsAt])
+ @@map("company_subscriptions")
+}
+model BillingOrder {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ company Company @relation(fields:[companyId],references:[id],onDelete:Restrict)
+ createdByUserId String @db.Uuid
+ createdByUser User @relation("OrderCreator",fields:[createdByUserId],references:[id],onDelete:Restrict)
+ billingPeriod BillingPeriod
+ managerSeats Int
+ salesSeats Int
+ managerUnitPrice Decimal @db.Decimal(18,2)
+ salesUnitPrice Decimal @db.Decimal(18,2)
+ currency String @db.Char(3)
+ subtotal Decimal @db.Decimal(18,2)
+ taxAmount Decimal @default(0) @db.Decimal(18,2)
+ totalAmount Decimal @db.Decimal(18,2)
+ status BillingOrderStatus @default(PENDING)
+ provider String @default("UNCONFIGURED") @db.VarChar(40)
+ providerOrderId String? @unique @db.VarChar(200)
+ idempotencyKey String @unique @db.VarChar(100)
+ paidAt DateTime?
+ expiresAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ payments PaymentTransaction[]
+ subscription CompanySubscription?
+ @@index([companyId,createdAt])
+ @@map("billing_orders")
+}
+model PaymentTransaction {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ company Company @relation(fields:[companyId],references:[id],onDelete:Restrict)
+ orderId String @db.Uuid
+ order BillingOrder @relation(fields:[orderId],references:[id],onDelete:Restrict)
+ provider String @db.VarChar(40)
+ providerPaymentId String @unique @db.VarChar(200)
+ amount Decimal @db.Decimal(18,2)
+ currency String @db.Char(3)
+ status PaymentStatus
+ capturedAt DateTime?
+ failureCode String? @db.VarChar(100)
+ failureMessage String? @db.VarChar(500)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([companyId,createdAt])
+ @@index([orderId])
+ @@map("payment_transactions")
+}
+model BillingAuditEvent {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String? @db.Uuid
+ company Company? @relation(fields:[companyId],references:[id],onDelete:Restrict)
+ actorUserId String? @db.Uuid
+ actorUser User? @relation("BillingAuditActor",fields:[actorUserId],references:[id],onDelete:Restrict)
+ type BillingAuditType
+ entityId String? @db.Uuid
+ reason String? @db.VarChar(500)
+ metadata Json?
+ occurredAt DateTime @default(now())
+ @@index([companyId,occurredAt])
+ @@index([type,occurredAt])
+ @@map("billing_audit_events")
 }

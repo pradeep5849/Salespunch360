@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/authorization";
 import { checkInSchema, checkoutSchema, type CheckInInput, type CheckoutInput } from "./validation";
 import { assertPendingVisitAllowed, customerReferenceDistanceMeters, repeatVisitSummary, resolveAttendanceId, VisitPolicyError } from "./policy";
 import { evaluateGeofence } from "@/lib/geofence/policy";
+import { assertOperationalWrite } from "@/lib/billing/entitlement";
 
 async function requireFieldEmployee() {
   const user = await requireRole("MANAGER", "SALES");
@@ -12,6 +13,7 @@ async function requireFieldEmployee() {
 
 export async function checkIn(raw: CheckInInput) {
   const user = await requireFieldEmployee();
+  await assertOperationalWrite(user.companyId);
   const data = checkInSchema.parse(raw);
   const result=await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;

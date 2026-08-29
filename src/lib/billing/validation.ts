@@ -1,0 +1,4 @@
+import {z} from 'zod';
+export const orderRequestSchema=z.object({billingPeriod:z.enum(['MONTHLY','SIX_MONTH','YEARLY']),managerSeats:z.coerce.number().int().min(0).max(10000),salesSeats:z.coerce.number().int().min(0).max(10000),idempotencyKey:z.string().min(16).max(100).regex(/^[A-Za-z0-9_-]+$/)}).strict().refine(v=>v.managerSeats+v.salesSeats>0,'At least one billable seat is required');
+export const priceChangeSchema=z.object({role:z.enum(['MANAGER','SALES']),period:z.enum(['MONTHLY','SIX_MONTH','YEARLY']),amount:z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).refine(v=>Number(v)>0),currency:z.literal('INR')}).strict();
+export const overrideSchema=z.object({companyId:z.string().uuid(),status:z.enum(['ACTIVE','SUSPENDED']),billingPeriod:z.enum(['MONTHLY','SIX_MONTH','YEARLY']),managerSeats:z.coerce.number().int().min(0).max(10000),salesSeats:z.coerce.number().int().min(0).max(10000),endsAt:z.string().datetime(),reason:z.string().trim().min(10).max(500)}).strict();

@@ -1,0 +1,4 @@
+import {Prisma,type BillingPeriod} from '@prisma/client';
+export function calculateOrder(managerSeats:number,salesSeats:number,managerPrice:Prisma.Decimal,salesPrice:Prisma.Decimal){const subtotal=managerPrice.mul(managerSeats).plus(salesPrice.mul(salesSeats)),taxAmount=new Prisma.Decimal(0);return{subtotal,taxAmount,totalAmount:subtotal.plus(taxAmount)}}
+export function addBillingPeriod(start:Date,period:BillingPeriod){const months=period==='MONTHLY'?1:period==='SIX_MONTH'?6:12,y=start.getUTCFullYear(),m=start.getUTCMonth(),d=start.getUTCDate(),h=start.getUTCHours(),min=start.getUTCMinutes(),targetMonth=m+months,last=new Date(Date.UTC(y,targetMonth+1,0)).getUTCDate();return new Date(Date.UTC(y,targetMonth,Math.min(d,last),h,min,start.getUTCSeconds(),start.getUTCMilliseconds()))}
+export function renewalWindow(now:Date,currentEnd:Date|null){return currentEnd&&currentEnd>now?currentEnd:now}

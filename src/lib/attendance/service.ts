@@ -4,6 +4,7 @@ import { haversineDistanceMeters, calculateRouteDistanceMeters } from "@/lib/loc
 import { AttendancePolicyError, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
 import { attendanceMeasurementSchema, companyOperationsSchema, locationPointSchema } from "./validation";
 import { evaluateGeofence } from "@/lib/geofence/policy";
+import { assertOperationalWrite } from "@/lib/billing/entitlement";
 
 async function requireEmployee() {
   const user = await requireRole("MANAGER", "SALES");
@@ -23,6 +24,7 @@ export async function getCurrentAttendance() {
 
 export async function startAttendance(raw: unknown) {
   const user = await requireEmployee();
+  await assertOperationalWrite(user.companyId);
   const { location } = attendanceMeasurementSchema.parse(raw);
   const result=await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;

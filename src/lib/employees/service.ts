@@ -42,6 +42,8 @@ async function lockAndLoadCompany(tx: Prisma.TransactionClient, companyId: strin
 async function enforceAvailableSeat(tx: Prisma.TransactionClient, companyId: string, role: "MANAGER" | "SALES") {
   const company = await lockAndLoadCompany(tx, companyId);
   const activeCount = await tx.user.count({ where: { companyId, role, isActive: true } });
+  const now=new Date(),paid=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"}});
+  if(paid){const limit=role==="MANAGER"?paid.managerSeats:paid.salesSeats;if(activeCount>=limit)throw new EmployeePolicyError("SEAT_LIMIT");return;}
   assertCanActivate(getTrialStatus(company).effectiveStatus, role, activeCount);
 }
 
