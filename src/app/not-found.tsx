@@ -1,0 +1,1 @@
+import Link from 'next/link';export default function NotFound(){return <main className="safe-error"><h1>Page not found</h1><p>The requested page is unavailable or outside your authorized scope.</p><Link href="/workspace">Return to workspace</Link></main>}

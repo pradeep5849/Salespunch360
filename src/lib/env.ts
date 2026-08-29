@@ -1,13 +1,4 @@
 import { z } from "zod";
-
-const environmentSchema = z.object({
-  DATABASE_URL: z.string().url().startsWith("postgresql://"),
-  AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-});
-
-export const env = environmentSchema.parse({
-  DATABASE_URL: process.env.DATABASE_URL,
-  AUTH_SECRET: process.env.AUTH_SECRET,
-  NODE_ENV: process.env.NODE_ENV,
-});
+const bool=z.enum(['true','false']).transform(v=>v==='true');
+export const environmentSchema=z.object({DATABASE_URL:z.string().url().refine(v=>v.startsWith('postgresql://')||v.startsWith('postgres://'),'DATABASE_URL must be PostgreSQL'),AUTH_SECRET:z.string().min(32).refine(v=>!/(change-me|replace-with|test-secret)/i.test(v),'AUTH_SECRET must not be a placeholder'),NODE_ENV:z.enum(['development','test','production']).default('development'),APP_URL:z.string().url(),TRUST_PROXY:bool.default('false'),PAYMENT_PROVIDER:z.enum(['UNCONFIGURED']).default('UNCONFIGURED')}).superRefine((v,c)=>{if(v.NODE_ENV==='production'&&new URL(v.APP_URL).protocol!=='https:')c.addIssue({code:'custom',path:['APP_URL'],message:'Production APP_URL must use HTTPS'});if(v.NODE_ENV==='production'&&v.AUTH_SECRET.length<48)c.addIssue({code:'custom',path:['AUTH_SECRET'],message:'Production AUTH_SECRET must be at least 48 characters'})});
+export const env=environmentSchema.parse({DATABASE_URL:process.env.DATABASE_URL,AUTH_SECRET:process.env.AUTH_SECRET,NODE_ENV:process.env.NODE_ENV,APP_URL:process.env.APP_URL??(process.env.NODE_ENV==='production'?undefined:'http://localhost:3000'),TRUST_PROXY:process.env.TRUST_PROXY??'false',PAYMENT_PROVIDER:process.env.PAYMENT_PROVIDER??'UNCONFIGURED'});

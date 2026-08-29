@@ -505,3 +505,11 @@ model BillingAuditEvent {
  @@index([type,occurredAt])
  @@map("billing_audit_events")
 }
+model RateLimitBucket {
+ key String @id @db.VarChar(128)
+ count Int
+ resetsAt DateTime
+ updatedAt DateTime @updatedAt
+ @@index([resetsAt])
+ @@map("rate_limit_buckets")
+}
