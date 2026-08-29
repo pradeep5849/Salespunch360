@@ -9,6 +9,8 @@ permissions:
 jobs:
   deploy-migrations:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -29,8 +31,6 @@ jobs:
         run: npm run prisma:validate
 
       - name: Deploy Prisma migrations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "Required DATABASE_URL repository secret is unavailable." >&2
