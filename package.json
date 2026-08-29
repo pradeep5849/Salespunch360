@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "provision:initial-super-admin": "tsx scripts/provision-initial-super-admin.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate"
   },
@@ -30,6 +31,7 @@
     "eslint-config-next": "^16.3.3",
     "prisma": "6.12.0",
     "typescript": "^5.9.2",
+    "tsx": "^4.20.5",
     "vitest": "^3.2.4"
   },
   "engines": {

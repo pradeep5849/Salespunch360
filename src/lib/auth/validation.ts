@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+export const emailSchema = z.string().trim().email().transform((value) => value.toLowerCase());
+
 export const loginSchema = z.object({
-  email: z.string().trim().email().transform((value) => value.toLowerCase()),
+  email: emailSchema,
   password: z.string().min(1).max(200),
 });
 
@@ -20,7 +22,7 @@ export const registrationSchema = z.object({
     z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and single hyphens only").min(2).max(63),
   ),
   adminName: z.string().trim().min(2).max(120),
-  adminEmail: z.string().trim().email().transform((value) => value.toLowerCase()),
+  adminEmail: emailSchema,
   adminPassword: strongPasswordSchema,
   confirmPassword: z.string().min(1).max(200),
 }).strict().superRefine((data, context) => {
