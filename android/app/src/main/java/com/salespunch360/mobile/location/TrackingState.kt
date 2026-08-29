@@ -1,0 +1,2 @@
+package com.salespunch360.mobile.location
+enum class TrackingState(val label:String){ACTIVE("Tracking active"),ATTENDANCE_REQUIRED("Attendance not started"),COMPANY_DISABLED("GPS tracking disabled by company"),LOCATION_PERMISSION("Location permission required"),BACKGROUND_PERMISSION("Background location permission required"),LOCATION_DISABLED("Location services disabled"),WAITING("Waiting for GPS"),POOR_ACCURACY("Poor GPS accuracy"),OFFLINE("Offline — locations waiting to sync"),SESSION_EXPIRED("Session expired")}

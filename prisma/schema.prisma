@@ -163,6 +163,7 @@ model User {
   manager      User?     @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   reports      User[]    @relation("ManagerReports")
   sessions     Session[]
+  mobileSessions MobileSession[]
   attendances  Attendance[]
   locationPoints LocationPoint[]
   customerVisits CustomerVisit[]
@@ -340,10 +341,12 @@ model LocationPoint {
   capturedAt     DateTime
   receivedAt     DateTime   @default(now())
   sequenceNumber Int
+  clientPointId  String? @db.Uuid
 
   @@unique([attendanceId, sequenceNumber])
   @@index([companyId, userId, capturedAt])
   @@index([attendanceId, capturedAt])
+  @@unique([companyId, userId, clientPointId])
   @@map("location_points")
 }
 
@@ -358,6 +361,21 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+model MobileSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash    String   @unique @db.Char(64)
+  expiresAt    DateTime
+  lastUsedAt   DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("mobile_sessions")
 }
 
 model GeofenceEvent {

@@ -11,3 +11,12 @@ coverage/
 prisma/dev.db*
 *.tsbuildinfo
 next-env.d.ts
+
+# Android
+android/.gradle/
+android/**/build/
+android/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
