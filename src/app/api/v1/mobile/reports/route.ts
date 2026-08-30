@@ -1,0 +1,2 @@
+import {authenticateMobileToken} from '@/lib/mobile/auth';import {mobileReport} from '@/lib/mobile/reports';import {mobileJson} from '@/lib/mobile/http';
+export async function GET(r:Request){try{const user=await authenticateMobileToken(r.headers.get('authorization')),url=new URL(r.url),type=url.searchParams.get('type')??'';url.searchParams.delete('type');return mobileJson(await mobileReport(user,type,Object.fromEntries(url.searchParams)))}catch(e){return mobileJson({error:e instanceof Error?e.message:'INVALID_REPORT'},400)}}

@@ -17,10 +17,16 @@ import kotlinx.serialization.Serializable
 @Serializable data class EmployeeActiveRequest(val employeeId:String,val isActive:Boolean)
 @Serializable data class Customer(val id:String,val name:String,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val latitude:Double?=null,val longitude:Double?=null)
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
-@Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val customer:Customer)
+@Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val leadCount:Int=0,val customer:Customer)
 @Serializable data class FieldContext(val customers:List<Customer>,val visits:List<FieldVisit>)
 @Serializable data class CheckInRequest(val action:String="CHECK_IN",val customerId:String,val location:LocationPayload,val visitNotes:String?=null)
 @Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
+@Serializable enum class LeadStage{NEW,QUALIFIED,PROPOSAL,NEGOTIATION,WON,LOST}
+@Serializable data class LeadPerson(val id:String?=null,val name:String)
+@Serializable data class LeadSummary(val id:String,val title:String,val stage:LeadStage,val source:String,val version:Int,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val followUpAt:String?=null,val notes:String?=null,val lostReason:String?=null,val assignedUserId:String,val assignedUser:LeadPerson,val customer:LeadPerson?=null,val sourceVisitId:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR")
+@Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
+@Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
+@Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)
 @Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class LocationPayload(val latitude:Double,val longitude:Double,val accuracyMeters:Double?=null,val clientPointId:String?=null,val capturedAt:String?=null)

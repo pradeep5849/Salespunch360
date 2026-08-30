@@ -2,10 +2,10 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { durationMs, referenceDistance, visitKind } from "./metrics";
 import { parseReportFilters, type SearchParams } from "./validation";
-import { reportActor, reportEmployeeOptions, resolveEmployeeScope } from "./scope";
+import { reportActor, reportEmployeeOptions, resolveEmployeeScope, type ReportActor } from "./scope";
 
-export async function checkInReport(raw:SearchParams, advanced=false) {
-  const actor=await reportActor(), filters=parseReportFilters(raw), userIds=await resolveEmployeeScope(actor,filters.employeeId);
+export async function checkInReport(raw:SearchParams, advanced=false,providedActor?:ReportActor) {
+  const actor=providedActor??await reportActor(), filters=parseReportFilters(raw), userIds=await resolveEmployeeScope(actor,filters.employeeId);
   const status=raw.status === "COMPLETED" || raw.status === "PENDING" ? raw.status : "ALL";
   const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,userId:{in:userIds},checkedInAt:{gte:filters.start,lt:filters.endExclusive},...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="PENDING"?{checkedOutAt:null}:{}),...(filters.q?{customer:{name:{contains:filters.q,mode:"insensitive"}}}:{})};
   const [total,completed,pending,leadAgg,visits,employees]=await Promise.all([

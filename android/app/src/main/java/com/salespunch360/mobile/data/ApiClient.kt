@@ -28,6 +28,12 @@ class ApiClient(private val session:SecureSession){
  suspend fun fieldContext()=json.decodeFromString<FieldContext>(call("api/v1/mobile/field"))
  suspend fun checkIn(customerId:String,location:LocationPayload,notes:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckInRequest(customerId=customerId,location=location,visitNotes=notes)))
  suspend fun checkout(visitId:String,location:LocationPayload,sentiment:VisitSentiment,remarks:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckoutRequest(visitId=visitId,location=location,sentiment=sentiment,remarks=remarks)))
+ suspend fun leads()=json.decodeFromString<List<LeadSummary>>(call("api/v1/mobile/leads"))
+ suspend fun lead(id:String)=json.decodeFromString<LeadSummary>(call("api/v1/mobile/leads?id=$id"))
+ suspend fun leadFromVisit(visitId:String,title:String)=json.decodeFromString<LeadSummary>(call("api/v1/mobile/leads","POST",json.encodeToString(LeadFromVisitRequest(visitId=visitId,title=title))))
+ suspend fun transitionLead(id:String,version:Int,stage:LeadStage,reason:String?)=call("api/v1/mobile/leads","POST",json.encodeToString(LeadTransitionRequest(leadId=id,version=version,toStage=stage,lostReason=reason)))
+ suspend fun updateFollowUp(id:String,at:String?,notes:String?)=call("api/v1/mobile/leads","POST",json.encodeToString(LeadFollowUpRequest(leadId=id,followUpAt=at,notes=notes)))
+ suspend fun report(type:String)=json.parseToJsonElement(call("api/v1/mobile/reports?type=$type")).jsonObject
 }
 class ApiException(val status:Int,val code:String?=null):Exception("API request failed")
 class ForbiddenMobileRoleException:Exception("Mobile role is not allowed")

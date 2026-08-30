@@ -3,11 +3,11 @@ import { db } from "@/lib/db";
 import { leadValues } from "./metrics";
 import { indiaDateBoundary, parseReportFilters, type SearchParams } from "./validation";
 import { REPORT_TIME_ZONE } from "./config";
-import { reportActor, reportEmployeeOptions, resolveEmployeeScope } from "./scope";
+import { reportActor, reportEmployeeOptions, resolveEmployeeScope, type ReportActor } from "./scope";
 
 const stages=["NEW","QUALIFIED","PROPOSAL","NEGOTIATION","WON","LOST"] as const;const sources=["MANUAL","CUSTOMER_VISIT","REFERRAL","PHONE","EMAIL","WEBSITE","OTHER"] as const;
-export async function leadReport(raw:SearchParams){
- const actor=await reportActor(),filters=parseReportFilters(raw),ids=await resolveEmployeeScope(actor,filters.employeeId),stage=stages.includes(raw.stage as LeadStage)?raw.stage as LeadStage:undefined,source=sources.includes(raw.source as LeadSource)?raw.source as LeadSource:undefined,follow=typeof raw.followUp==="string"?raw.followUp:"ALL";
+export async function leadReport(raw:SearchParams,providedActor?:ReportActor){
+ const actor=providedActor??await reportActor(),filters=parseReportFilters(raw),ids=await resolveEmployeeScope(actor,filters.employeeId),stage=stages.includes(raw.stage as LeadStage)?raw.stage as LeadStage:undefined,source=sources.includes(raw.source as LeadSource)?raw.source as LeadSource:undefined,follow=typeof raw.followUp==="string"?raw.followUp:"ALL";
  const now=new Date(),todayText=new Intl.DateTimeFormat("en-CA",{timeZone:REPORT_TIME_ZONE}).format(now),todayStart=indiaDateBoundary(todayText),tomorrow=indiaDateBoundary(todayText,true);
  const followUpAt=follow==="OVERDUE"?{lt:todayStart}:follow==="TODAY"?{gte:todayStart,lt:tomorrow}:follow==="UPCOMING"?{gte:tomorrow}:follow==="NONE"?null:undefined;
  const where:Prisma.LeadWhereInput={companyId:actor.companyId,assignedUserId:{in:ids},createdAt:{gte:filters.start,lt:filters.endExclusive},stage,source,followUpAt,...(filters.q?{OR:[{title:{contains:filters.q,mode:"insensitive"}},{companyName:{contains:filters.q,mode:"insensitive"}},{contactName:{contains:filters.q,mode:"insensitive"}},{customer:{name:{contains:filters.q,mode:"insensitive"}}}]}:{})};

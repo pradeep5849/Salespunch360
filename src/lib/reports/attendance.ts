@@ -3,10 +3,10 @@ import { db } from "@/lib/db";
 import { calculateRouteDistanceMeters } from "@/lib/location/geo";
 import { durationMs, orderedRoute } from "./metrics";
 import { parseReportFilters, type SearchParams } from "./validation";
-import { reportActor, reportEmployeeOptions, resolveEmployeeScope } from "./scope";
+import { reportActor, reportEmployeeOptions, resolveEmployeeScope, type ReportActor } from "./scope";
 
-export async function attendanceReport(raw:SearchParams){
- const actor=await reportActor(),filters=parseReportFilters(raw),userIds=await resolveEmployeeScope(actor,filters.employeeId);const status=raw.status==="COMPLETED"||raw.status==="OPEN"?raw.status:"ALL";
+export async function attendanceReport(raw:SearchParams,providedActor?:ReportActor){
+ const actor=providedActor??await reportActor(),filters=parseReportFilters(raw),userIds=await resolveEmployeeScope(actor,filters.employeeId);const status=raw.status==="COMPLETED"||raw.status==="OPEN"?raw.status:"ALL";
  const where:Prisma.AttendanceWhereInput={companyId:actor.companyId,userId:{in:userIds},startedAt:{gte:filters.start,lt:filters.endExclusive},...(status==="COMPLETED"?{endedAt:{not:null}}:status==="OPEN"?{endedAt:null}:{})};
  const [total,completed,open,aggregates,records,employees]=await Promise.all([db.attendance.count({where}),db.attendance.count({where:{...where,endedAt:{not:null}}}),db.attendance.count({where:{...where,endedAt:null}}),db.attendance.findMany({where:{...where,endedAt:{not:null}},select:{startedAt:true,endedAt:true},take:10001}),db.attendance.findMany({where,include:{user:{select:{name:true,role:true}},locationPoints:{select:{id:true,latitude:true,longitude:true,sequenceNumber:true,capturedAt:true},orderBy:[{sequenceNumber:"asc"},{capturedAt:"asc"},{id:"asc"}]}},orderBy:[{startedAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),reportEmployeeOptions(actor)]);
  if(aggregates.length>10000)throw new Error("Report summary exceeds the interactive record limit; narrow the filters.");
