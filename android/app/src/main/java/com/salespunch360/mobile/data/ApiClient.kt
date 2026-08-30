@@ -34,6 +34,20 @@ class ApiClient(private val session:SecureSession){
  suspend fun transitionLead(id:String,version:Int,stage:LeadStage,reason:String?)=call("api/v1/mobile/leads","POST",json.encodeToString(LeadTransitionRequest(leadId=id,version=version,toStage=stage,lostReason=reason)))
  suspend fun updateFollowUp(id:String,at:String?,notes:String?)=call("api/v1/mobile/leads","POST",json.encodeToString(LeadFollowUpRequest(leadId=id,followUpAt=at,notes=notes)))
  suspend fun report(type:String)=json.parseToJsonElement(call("api/v1/mobile/reports?type=$type")).jsonObject
+ suspend fun report(type:String,start:String?,end:String?,employeeId:String?):kotlinx.serialization.json.JsonObject {
+  fun enc(value:String)=java.net.URLEncoder.encode(value,"UTF-8")
+  val parameters=mutableListOf("type=${enc(type)}")
+  start?.let { parameters += "start=${enc(it)}" }
+  end?.let { parameters += "end=${enc(it)}" }
+  employeeId?.let { parameters += "employeeId=${enc(it)}" }
+  return json.parseToJsonElement(call("api/v1/mobile/reports?${parameters.joinToString("&")}")).jsonObject
+ }
+ suspend fun company()=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company"))
+ suspend fun updateOperations(data:OperationsSettings)=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company","PATCH",json.encodeToString(CompanyUpdateRequest("operations",data))))
+ suspend fun updateGeofence(data:GeofenceSettings)=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company","PATCH",json.encodeToString(CompanyUpdateRequest("geofence",data))))
+ suspend fun targets()=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets"))
+ suspend fun createTarget(data:TargetRequest)=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets","POST",json.encodeToString(data)))
+ suspend fun editTarget(data:EditTargetRequest)=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets","PATCH",json.encodeToString(data)))
 }
 class ApiException(val status:Int,val code:String?=null):Exception("API request failed")
 class ForbiddenMobileRoleException:Exception("Mobile role is not allowed")
