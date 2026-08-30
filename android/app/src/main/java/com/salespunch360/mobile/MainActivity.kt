@@ -1,30 +1,25 @@
 package com.salespunch360.mobile
-import android.Manifest
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Business
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.salespunch360.mobile.data.*
-import com.salespunch360.mobile.location.TrackingService
-class MainActivity:ComponentActivity(){override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContent{MaterialTheme(colorScheme=lightColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF176B5B))){Surface(Modifier.fillMaxSize()){App()}}}}}
-@Composable fun App(vm:MainViewModel=viewModel()){val state by vm.state.collectAsStateWithLifecycle();val context=LocalContext.current;when{state.loading->Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator()};state.bootstrap==null->LoginScreen(state.error,vm::login);else->Shell(state.bootstrap!!,state.error,{vm.attendance(true){val b=state.bootstrap!!;if(b.user.role!=MobileRole.COMPANY_ADMIN&&b.features.gpsTrackingEnabled)TrackingService.start(context)}},{vm.attendance(false){TrackingService.stop(context)}},vm::logout)}}
-@Composable fun LoginScreen(error:String?,login:(String,String)->Unit){var id by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var show by remember{mutableStateOf(false)};Column(Modifier.fillMaxSize().padding(28.dp),verticalArrangement=Arrangement.Center){Text("SalesPunch360",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary);Text("TRACK. PUNCH. PERFORM.",style=MaterialTheme.typography.labelLarge);Spacer(Modifier.height(36.dp));OutlinedTextField(id,{id=it},Modifier.fillMaxWidth(),label={Text("Email / Mobile Number")},singleLine=true);Spacer(Modifier.height(12.dp));OutlinedTextField(password,{password=it},Modifier.fillMaxWidth(),label={Text("Password")},visualTransformation=if(show)VisualTransformation.None else PasswordVisualTransformation(),trailingIcon={TextButton(onClick={show=!show}){Text(if(show)"Hide" else "Show")}},singleLine=true);error?.let{Text(it,color=MaterialTheme.colorScheme.error)};Button({login(id,password)},Modifier.fillMaxWidth().padding(top=20.dp),enabled=id.isNotBlank()&&password.length>=8){Text("Sign In")};TextButton({},enabled=false){Text("Forgot password — contact your administrator")};Text("New company? Start your free trial at salespunch360.com",style=MaterialTheme.typography.bodySmall)}}
-object RoleNavigation{fun destinations(role:MobileRole)=when(role){MobileRole.COMPANY_ADMIN->listOf("Dashboard","Employees","Attendance","Live Tracking","Customers / Visits","Leads","Reports","Targets","Billing / Subscription","Settings");MobileRole.MANAGER->listOf("Dashboard","My Attendance","Team","Live Tracking","Customers / Visits","Leads","Reports","Targets");MobileRole.SALES->listOf("Home","Attendance","Customers","Check-in / Checkout","Leads","Targets","My Reports")}}
-@OptIn(ExperimentalMaterial3Api::class) @Composable fun Shell(data:Bootstrap,error:String?,start:()->Unit,end:()->Unit,logout:()->Unit){var permissionGranted by remember{mutableStateOf(false)};val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){grants->permissionGranted=grants[Manifest.permission.ACCESS_FINE_LOCATION]==true;if(permissionGranted)start()};Scaffold(topBar={TopAppBar(title={Row(verticalAlignment=Alignment.Center){Icon(Icons.Default.Business,null);Spacer(Modifier.width(10.dp));Column{Text(data.company.name);Text(data.user.name+" · "+data.user.role.name.replace('_',' '),style=MaterialTheme.typography.labelSmall)}}},actions={TextButton(onClick=logout){Text("Logout")}})}){padding->LazyColumn(Modifier.padding(padding).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{error?.let{Text(it,color=MaterialTheme.colorScheme.error)};if(data.user.role!=MobileRole.COMPANY_ADMIN){Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){Text("Attendance & GPS",fontWeight=FontWeight.Bold);Text(when{!data.features.attendanceEnabled->"Attendance disabled by company";data.attendance==null&&!permissionGranted->"Attendance not started · precise location permission required";data.attendance==null->"Attendance not started";data.features.gpsTrackingEnabled->"Tracking ready — foreground notification remains visible";else->"GPS tracking disabled by company"});Row{Button(onClick={permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))},enabled=data.attendance==null&&data.features.attendanceEnabled&&data.entitlement.operationalWritesAllowed){Text("Start")};Spacer(Modifier.width(8.dp));OutlinedButton(onClick=end,enabled=data.attendance!=null){Text("End")}}}}}else Text("Administrative accounts are never background tracked.")};items(RoleNavigation.destinations(data.user.role)){name->OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){Text(name,fontWeight=FontWeight.SemiBold);Text(if(name in listOf("Dashboard","Home","Attendance","My Attendance"))"Available foundation" else "Prepared for a later mobile stage",style=MaterialTheme.typography.bodySmall)}}};item{Text("Powered by SalesPunch360",style=MaterialTheme.typography.labelSmall)}}}
+import com.salespunch360.mobile.ui.AppTheme
+import com.salespunch360.mobile.ui.AuthenticatedApp
+import com.salespunch360.mobile.ui.LoadingScreen
+import com.salespunch360.mobile.ui.LoginScreen
+import com.salespunch360.mobile.ui.RetryScreen
+
+class MainActivity:ComponentActivity(){override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContent{AppTheme{SalesPunchAppRoot()}}}}
+
+@Composable fun SalesPunchAppRoot(vm:MainViewModel=viewModel()){
+ val state=vm.state.collectAsStateWithLifecycle().value
+ when(state.status){
+  AppStatus.STARTING->LoadingScreen("Securing your session…")
+  AppStatus.SIGNED_OUT->LoginScreen(state.message,state.submitting,vm::clearMessage,vm::login)
+  AppStatus.RECOVERABLE_ERROR->RetryScreen(state.message?:"Unable to connect",vm::validateSession,vm::logout)
+  AppStatus.AUTHENTICATED->state.bootstrap?.let{AuthenticatedApp(it,state.message,vm::clearMessage,{start,done->vm.attendance(start,done)},vm::logout)}?:LoadingScreen()
+ }
+}
