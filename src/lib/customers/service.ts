@@ -10,6 +10,9 @@ async function requireCompanyViewer() {
 
 export async function searchCustomers(query = "") {
   const { companyId } = await requireCompanyViewer();
+  return searchCustomersForCompany(companyId,query);
+}
+export async function searchCustomersForCompany(companyId:string,query="") {
   const term = query.trim().slice(0, 100);
   return db.customer.findMany({ where: { companyId, ...(term ? { OR: [{ name: { contains: term, mode: "insensitive" } }, { contactPerson: { contains: term, mode: "insensitive" } }] } : {}) }, orderBy: { name: "asc" }, take: 100 });
 }

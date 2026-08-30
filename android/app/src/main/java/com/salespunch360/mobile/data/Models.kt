@@ -15,6 +15,12 @@ import kotlinx.serialization.Serializable
 @Serializable data class EmployeeContext(val employees:List<Employee>,val teamStructure:TeamStructure,val entitlement:EmployeeEntitlement)
 @Serializable data class CreateEmployeeRequest(val role:MobileRole,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String,val managerId:String?=null)
 @Serializable data class EmployeeActiveRequest(val employeeId:String,val isActive:Boolean)
+@Serializable data class Customer(val id:String,val name:String,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val latitude:Double?=null,val longitude:Double?=null)
+@Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
+@Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val customer:Customer)
+@Serializable data class FieldContext(val customers:List<Customer>,val visits:List<FieldVisit>)
+@Serializable data class CheckInRequest(val action:String="CHECK_IN",val customerId:String,val location:LocationPayload,val visitNotes:String?=null)
+@Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
 @Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class LocationPayload(val latitude:Double,val longitude:Double,val accuracyMeters:Double?=null,val clientPointId:String?=null,val capturedAt:String?=null)

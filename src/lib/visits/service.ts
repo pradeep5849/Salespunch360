@@ -13,6 +13,9 @@ async function requireFieldEmployee() {
 
 export async function checkIn(raw: CheckInInput) {
   const user = await requireFieldEmployee();
+  return checkInForUser(user,raw);
+}
+export async function checkInForUser(user:{id:string;companyId:string},raw:unknown) {
   await assertOperationalWrite(user.companyId);
   const data = checkInSchema.parse(raw);
   const result=await db.$transaction(async (tx) => {
@@ -44,6 +47,9 @@ export async function checkIn(raw: CheckInInput) {
 
 export async function checkout(raw: CheckoutInput) {
   const user = await requireFieldEmployee();
+  return checkoutForUser(user,raw);
+}
+export async function checkoutForUser(user:{id:string;companyId:string},raw:unknown) {
   const data = checkoutSchema.parse(raw);
   return db.$transaction(async (tx) => {
     const candidate = await tx.customerVisit.findFirst({ where: { id: data.visitId, companyId: user.companyId, userId: user.id, checkedOutAt: null }, select: { id: true } });
@@ -61,6 +67,9 @@ export async function checkout(raw: CheckoutInput) {
 export async function getOwnPendingVisits() {
   const user = await requireFieldEmployee();
   return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id, checkedOutAt: null }, include: { customer: true }, orderBy: { checkedInAt: "desc" } });
+}
+export async function getOwnVisitHistoryForUser(user:{id:string;companyId:string}) {
+  return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id }, select:{id:true,checkedInAt:true,checkedOutAt:true,visitNotes:true,checkoutSentiment:true,checkoutRemarks:true,customer:{select:{id:true,name:true,contactPerson:true,address:true,phone:true}}}, orderBy: { checkedInAt: "desc" },take:50 });
 }
 
 export async function getVisibleRecentVisits() {

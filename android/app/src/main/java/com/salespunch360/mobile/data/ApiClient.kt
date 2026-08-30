@@ -25,6 +25,9 @@ class ApiClient(private val session:SecureSession){
  suspend fun employees()=json.decodeFromString<EmployeeContext>(call("api/v1/mobile/employees"))
  suspend fun createEmployee(request:CreateEmployeeRequest)=json.decodeFromString<Employee>(call("api/v1/mobile/employees","POST",json.encodeToString(request)))
  suspend fun setEmployeeActive(employeeId:String,isActive:Boolean)=call("api/v1/mobile/employees","PATCH",json.encodeToString(EmployeeActiveRequest(employeeId,isActive)))
+ suspend fun fieldContext()=json.decodeFromString<FieldContext>(call("api/v1/mobile/field"))
+ suspend fun checkIn(customerId:String,location:LocationPayload,notes:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckInRequest(customerId=customerId,location=location,visitNotes=notes)))
+ suspend fun checkout(visitId:String,location:LocationPayload,sentiment:VisitSentiment,remarks:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckoutRequest(visitId=visitId,location=location,sentiment=sentiment,remarks=remarks)))
 }
 class ApiException(val status:Int,val code:String?=null):Exception("API request failed")
 class ForbiddenMobileRoleException:Exception("Mobile role is not allowed")

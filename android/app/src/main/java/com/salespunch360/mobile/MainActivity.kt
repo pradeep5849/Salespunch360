@@ -20,6 +20,6 @@ class MainActivity:ComponentActivity(){override fun onCreate(savedInstanceState:
   AppStatus.STARTING->LoadingScreen("Securing your session…")
   AppStatus.SIGNED_OUT->LoginScreen(state.message,state.submitting,vm::clearMessage,vm::login)
   AppStatus.RECOVERABLE_ERROR->RetryScreen(state.message?:"Unable to connect",vm::validateSession,vm::logout)
-  AppStatus.AUTHENTICATED->state.bootstrap?.let{AuthenticatedApp(it,state.message,vm::clearMessage,{start,done->vm.attendance(start,done)},vm::logout)}?:LoadingScreen()
+  AppStatus.AUTHENTICATED->state.bootstrap?.let{AuthenticatedApp(it,state.message,vm::clearMessage,{start,location,done->vm.attendance(start,location,done)},vm::logout)}?:LoadingScreen()
  }
 }
