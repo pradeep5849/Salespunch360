@@ -66,6 +66,10 @@ export async function listEmployees(filter: "ALL" | "MANAGERS" | "SALES" | "ACTI
 
 export async function getEmployeeManagementContext() {
   const { companyId } = await requireCompanyAdmin();
+  return getEmployeeManagementContextForCompany(companyId);
+}
+
+export async function getEmployeeManagementContextForCompany(companyId: string) {
   const [employees, company] = await Promise.all([
     db.user.findMany({ where: { companyId, role: { in: employeeRoles } }, select: employeeSelect, orderBy: [{ isActive: "desc" }, { name: "asc" }] }),
     db.company.findFirst({ where: { id: companyId }, select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true } }),
@@ -74,8 +78,7 @@ export async function getEmployeeManagementContext() {
   return { employees, trial: getTrialStatus(company), teamStructure: company.teamStructure };
 }
 
-async function createEmployee(role: "MANAGER" | "SALES", raw: CreateManagerInput | CreateSalesInput) {
-  const { companyId } = await requireCompanyAdmin();
+async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SALES", raw: unknown) {
   const data = role === "MANAGER" ? createManagerSchema.parse(raw) : createSalesSchema.parse(raw);
   const passwordHash = await hashPassword(data.password);
   return db.$transaction(async (tx) => {
@@ -92,8 +95,10 @@ async function createEmployee(role: "MANAGER" | "SALES", raw: CreateManagerInput
   });
 }
 
-export const createManager = (input: CreateManagerInput) => createEmployee("MANAGER", input);
-export const createSalesEmployee = (input: CreateSalesInput) => createEmployee("SALES", input);
+export async function createManager(input: CreateManagerInput) { const {companyId}=await requireCompanyAdmin(); return createEmployeeForCompany(companyId,"MANAGER",input); }
+export async function createSalesEmployee(input: CreateSalesInput) { const {companyId}=await requireCompanyAdmin(); return createEmployeeForCompany(companyId,"SALES",input); }
+export const createManagerForCompany=(companyId:string,input:unknown)=>createEmployeeForCompany(companyId,"MANAGER",input);
+export const createSalesEmployeeForCompany=(companyId:string,input:unknown)=>createEmployeeForCompany(companyId,"SALES",input);
 
 export async function editEmployee(raw: EditEmployeeInput) {
   const { companyId } = await requireCompanyAdmin();
@@ -119,6 +124,9 @@ export async function editEmployee(raw: EditEmployeeInput) {
 
 export async function deactivateEmployee(raw: unknown) {
   const { companyId } = await requireCompanyAdmin();
+  return deactivateEmployeeForCompany(companyId,raw);
+}
+export async function deactivateEmployeeForCompany(companyId:string,raw:unknown) {
   const { employeeId } = employeeIdSchema.parse(raw);
   await db.$transaction(async (tx) => {
     await lockAndLoadCompany(tx, companyId);
@@ -136,6 +144,9 @@ export async function deactivateEmployeeInTransaction(tx: Prisma.TransactionClie
 
 export async function reactivateEmployee(raw: unknown) {
   const { companyId } = await requireCompanyAdmin();
+  return reactivateEmployeeForCompany(companyId,raw);
+}
+export async function reactivateEmployeeForCompany(companyId:string,raw:unknown) {
   const { employeeId } = employeeIdSchema.parse(raw);
   await db.$transaction(async (tx) => {
     const company = await lockAndLoadCompany(tx, companyId);
