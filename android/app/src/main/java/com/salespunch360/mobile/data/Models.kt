@@ -3,7 +3,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class LoginRequest(val identifier:String,val password:String)
 @Serializable data class LoginResponse(val accessToken:String,val expiresAt:String,val bootstrap:Bootstrap)
 @Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val entitlement:Entitlement,val attendance:Attendance?)
-@Serializable data class MobileUser(val id:String,val name:String,val role:MobileRole)
+@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val role:MobileRole)
 @Serializable enum class MobileRole{COMPANY_ADMIN,MANAGER,SALES}
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null)
@@ -37,7 +37,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
 @Serializable enum class LeadStage{NEW,QUALIFIED,PROPOSAL,NEGOTIATION,WON,LOST}
 @Serializable data class LeadPerson(val id:String?=null,val name:String)
-@Serializable data class LeadSummary(val id:String,val title:String,val stage:LeadStage,val source:String,val version:Int,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val followUpAt:String?=null,val notes:String?=null,val lostReason:String?=null,val assignedUserId:String,val assignedUser:LeadPerson,val customer:LeadPerson?=null,val sourceVisitId:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR")
+@Serializable data class LeadActivity(val id:String,val type:String,val fromStage:LeadStage?=null,val toStage:LeadStage?=null,val previousAssignedUserId:String?=null,val newAssignedUserId:String?=null,val createdAt:String,val actorUser:LeadPerson)
+@Serializable data class LeadSummary(val id:String,val title:String,val stage:LeadStage,val source:String,val version:Int,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val followUpAt:String?=null,val notes:String?=null,val lostReason:String?=null,val assignedUserId:String,val assignedUser:LeadPerson,val customer:LeadPerson?=null,val sourceVisitId:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val activities:List<LeadActivity> = emptyList())
 @Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
 @Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
 @Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)

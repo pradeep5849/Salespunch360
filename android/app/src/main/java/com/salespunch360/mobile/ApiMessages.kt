@@ -1,0 +1,4 @@
+package com.salespunch360.mobile
+import com.salespunch360.mobile.data.ApiException
+import java.io.IOException
+fun apiMessage(error:Exception,fallback:String)=when{error is IOException->"You're offline. Reconnect and try again.";error is ApiException&&error.status==401->"Your session expired. Please sign in again.";error is ApiException&&error.status==403->"You don't have permission for this action.";error is ApiException&&error.status==429->"Too many requests. Please wait and try again.";error is ApiException&&error.status>=500->"The service is temporarily unavailable. Please try again.";error is ApiException&&error.code=="STALE"->"This record changed. Refresh and try again.";error is ApiException&&error.code!=null->error.code.replace('_',' ').lowercase().replaceFirstChar{it.uppercase()};else->fallback}

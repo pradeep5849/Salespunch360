@@ -1,0 +1,1 @@
+<resources><style name="Theme.SalesPunch360.Starting" parent="Theme.SalesPunch360"><item name="android:windowSplashScreenBackground">#F7FAF8</item><item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_sp360_foreground</item><item name="android:windowSplashScreenIconBackgroundColor">#176B5B</item></style></resources>

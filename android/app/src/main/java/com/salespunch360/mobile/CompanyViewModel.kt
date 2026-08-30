@@ -16,5 +16,5 @@ class CompanyViewModel(app:Application):AndroidViewModel(app){
  fun saveOperations(data:OperationsSettings)=save{api.updateOperations(data)}
  fun saveGeofence(data:GeofenceSettings)=save{api.updateGeofence(data)}
  private fun save(block:suspend()->CompanyContext)=viewModelScope.launch{_state.value=_state.value.copy(saving=true,message=null);_state.value=try{CompanyState(context=block(),loading=false,message="Saved authoritative company settings.")}catch(e:Exception){_state.value.copy(saving=false,message=error(e))}}
- private fun error(e:Exception)=if(e is ApiException&&e.code!=null)e.code.replace('_',' ').lowercase().replaceFirstChar{it.uppercase()} else "Company information couldn't be loaded."
+ private fun error(e:Exception)=apiMessage(e,"Company information couldn't be loaded.")
 }

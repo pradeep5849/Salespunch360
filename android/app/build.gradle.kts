@@ -1,8 +1,10 @@
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose"); id("org.jetbrains.kotlin.plugin.serialization"); id("com.google.devtools.ksp") }
 android { namespace="com.salespunch360.mobile"; compileSdk=35
- defaultConfig { applicationId="com.salespunch360.mobile"; minSdk=26; targetSdk=35; versionCode=1; versionName="1.0-A"; testInstrumentationRunner="androidx.test.runner.AndroidJUnitRunner"; buildConfigField("String","API_BASE_URL","\"https://salespunch360.com/\"") }
+ defaultConfig { applicationId="com.salespunch360.mobile"; minSdk=26; targetSdk=35; versionCode=2; versionName="0.9.0"; testInstrumentationRunner="androidx.test.runner.AndroidJUnitRunner"; buildConfigField("String","API_BASE_URL","\"https://salespunch360.com/\"") }
  buildFeatures { compose=true; buildConfig=true }
- buildTypes { debug { buildConfigField("String","API_BASE_URL","\"http://10.0.2.2:3000/\"") }; release { isMinifyEnabled=true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),"proguard-rules.pro") } }
+ val releaseStore=System.getenv("ANDROID_KEYSTORE_PATH");val releaseAlias=System.getenv("ANDROID_KEY_ALIAS");val releaseStorePassword=System.getenv("ANDROID_KEYSTORE_PASSWORD");val releaseKeyPassword=System.getenv("ANDROID_KEY_PASSWORD")
+ if(listOf(releaseStore,releaseAlias,releaseStorePassword,releaseKeyPassword).all{!it.isNullOrBlank()})signingConfigs.create("production"){storeFile=file(releaseStore!!);keyAlias=releaseAlias;storePassword=releaseStorePassword;keyPassword=releaseKeyPassword}
+ buildTypes { debug { buildConfigField("String","API_BASE_URL","\"http://10.0.2.2:3000/\"") }; release { isMinifyEnabled=true; signingConfig=signingConfigs.findByName("production"); proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),"proguard-rules.pro") } }
  compileOptions { sourceCompatibility=JavaVersion.VERSION_17; targetCompatibility=JavaVersion.VERSION_17 }; kotlinOptions { jvmTarget="17" }
 }
 dependencies {

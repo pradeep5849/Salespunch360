@@ -36,5 +36,5 @@ export async function mobileBootstrap(user:MobilePrincipal){
     effectiveEntitlement(user.companyId),
   ]);
   if(!company)throw new Error('MOBILE_UNAUTHORIZED');
-  return{user:{id:user.id,name:user.name,role:user.role},company:{name:company.name,logoUrl:null},teamStructure:company.teamStructure,features:{attendanceEnabled:company.attendanceEnabled,gpsTrackingEnabled:company.gpsTrackingEnabled},entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage},attendance};
+  return{user:{id:user.id,name:user.name,email:user.email,role:user.role},company:{name:company.name,logoUrl:null},teamStructure:company.teamStructure,features:{attendanceEnabled:company.attendanceEnabled,gpsTrackingEnabled:company.gpsTrackingEnabled},entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage},attendance};
 }
