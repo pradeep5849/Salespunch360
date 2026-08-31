@@ -13,8 +13,9 @@ export default async function SignInPage() {
     <main className="login-page">
       <section className="login-card">
         <BrandLogo />
+        <p className="login-tagline">Field force management, simplified</p>
         <h1>Welcome Back!</h1>
-        <p>Sign in to continue</p>
+        <p className="login-subtitle">Sign in to continue</p>
         <SignInForm />
         <p className="register-link">Don&apos;t have an account? <Link href="/register">Register Now</Link></p>
       </section>

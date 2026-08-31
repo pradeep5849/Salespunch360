@@ -17,9 +17,9 @@ export function SignInForm() {
   return (
     <form action={formAction} className="sign-in-form">
       <label htmlFor="email">Email</label>
-      <input id="email" name="email" type="email" autoComplete="email" required placeholder="you@company.com" />
+      <input id="email" name="email" type="email" autoComplete="email" required placeholder="Email" />
       <label htmlFor="password">Password</label>
-      <div className="password-field"><input id="password" name="password" type={showPassword?"text":"password"} autoComplete="current-password" required /><button type="button" aria-label={showPassword?"Hide password":"Show password"} aria-pressed={showPassword} aria-controls="password" onClick={()=>setShowPassword(v=>!v)}><PasswordIcon visible={showPassword}/></button></div>
+      <div className="password-field"><input id="password" name="password" type={showPassword?"text":"password"} autoComplete="current-password" required placeholder="Password" /><button type="button" aria-label={showPassword?"Hide password":"Show password"} aria-pressed={showPassword} aria-controls="password" onClick={()=>setShowPassword(v=>!v)}><PasswordIcon visible={showPassword}/></button></div>
       <label className="remember-me"><input name="remember" type="checkbox" value="true" /> <span>Remember me</span></label>
       {state.error && <p className="form-error" role="alert">{state.error}</p>}
       <button type="submit" disabled={pending}>{pending ? "Signing in…" : "Sign In"}</button>
