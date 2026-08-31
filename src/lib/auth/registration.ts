@@ -29,6 +29,8 @@ export async function registerCompany(input: RegistrationInput) {
         subscriptionStatus: "TRIAL",
         trialStartedAt,
         trialEndsAt,
+        primaryContactName: data.adminName,
+        contactEmail: data.adminEmail,
       },
     });
     const user = await tx.user.create({

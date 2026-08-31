@@ -41,6 +41,8 @@ describe("registration trial setup", () => {
 
     expect(company.trialEndsAt!.getTime() - company.trialStartedAt!.getTime()).toBe(TRIAL_DURATION_MS);
     expect(company.subscriptionStatus).toBe("TRIAL");
+    expect(company.primaryContactName).toBe(base.adminName);
+    expect(company.contactEmail).toBe(base.adminEmail);
     expect(tx.company.create).toHaveBeenCalledTimes(1);
     expect(tx.user.create).toHaveBeenCalledTimes(1);
     expect(user.role).toBe("COMPANY_ADMIN");
