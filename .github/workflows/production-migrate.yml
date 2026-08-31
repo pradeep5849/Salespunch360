@@ -12,8 +12,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Check out repository
+      - name: Check out production candidate
         uses: actions/checkout@v4
+        with:
+          ref: production-candidate
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
