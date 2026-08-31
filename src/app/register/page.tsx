@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "@/lib/auth/session";
 import { RegistrationForm } from "./registration-form";
+import { BrandLogo } from "@/components/brand-logo";
 
 export const metadata: Metadata = { title: "Start free trial" };
 
@@ -11,7 +12,7 @@ export default async function RegisterPage() {
   return (
     <main className="register-shell">
       <header className="register-header">
-        <Link className="logo" href="/"><span>SP</span> SalesPunch360</Link>
+        <BrandLogo />
         <p>Already have an account? <Link href="/sign-in">Sign in</Link></p>
       </header>
       <section className="register-intro">
