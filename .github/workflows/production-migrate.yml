@@ -1,0 +1,43 @@
+name: Production Database Migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out production candidate
+        uses: actions/checkout@v4
+        with:
+          ref: production-candidate
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check migration status before deployment
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx --no-install prisma migrate status
+
+      - name: Deploy pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx --no-install prisma migrate deploy
+
+      - name: Verify migration status after deployment
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx --no-install prisma migrate status
