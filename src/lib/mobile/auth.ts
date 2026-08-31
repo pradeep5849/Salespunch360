@@ -31,10 +31,11 @@ export async function revokeMobileToken(authorization:string|null){
 
 export async function mobileBootstrap(user:MobilePrincipal){
   const [company,attendance,entitlement]=await Promise.all([
-    db.company.findUnique({where:{id:user.companyId},select:{name:true,teamStructure:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),
+    db.company.findUnique({where:{id:user.companyId},select:{name:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,teamStructure:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),
     user.role==='COMPANY_ADMIN'?Promise.resolve(null):db.attendance.findFirst({where:{companyId:user.companyId,userId:user.id,endedAt:null},select:{id:true,startedAt:true}}),
     effectiveEntitlement(user.companyId),
   ]);
   if(!company)throw new Error('MOBILE_UNAUTHORIZED');
-  return{user:{id:user.id,name:user.name,email:user.email,role:user.role},company:{name:company.name,logoUrl:null},teamStructure:company.teamStructure,features:{attendanceEnabled:company.attendanceEnabled,gpsTrackingEnabled:company.gpsTrackingEnabled},entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage},attendance};
+  const address=[company.addressLine1,company.addressLine2,company.locality,company.city,company.state,company.postalCode,company.country].filter(Boolean).join(', ');
+  return{user:{id:user.id,name:user.name,email:user.email,role:user.role},company:{name:company.name,logoUrl:null,address:address||null},teamStructure:company.teamStructure,features:{attendanceEnabled:company.attendanceEnabled,gpsTrackingEnabled:company.gpsTrackingEnabled},entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage},attendance};
 }

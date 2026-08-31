@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val role:MobileRole)
 @Serializable enum class MobileRole{COMPANY_ADMIN,MANAGER,SALES}
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
-@Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null)
+@Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
+@Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)
 @Serializable data class Features(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean)
 @Serializable data class Entitlement(val state:String,val operationalWritesAllowed:Boolean,val managerLimit:Int=0,val salesLimit:Int=0,val managerUsage:Int=0,val salesUsage:Int=0)
 @Serializable data class CompanySettings(val name:String,val teamStructure:TeamStructure,val subscriptionStatus:String,val trialStartedAt:String?=null,val trialEndsAt:String?=null,val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val checkoutRequiredBeforeNextCheckIn:Boolean,val attendanceGeofenceEnabled:Boolean,val attendanceReferenceLatitude:String?=null,val attendanceReferenceLongitude:String?=null,val attendanceGeofenceRadiusMeters:Int?=null,val customerCheckInGeofenceEnabled:Boolean,val customerCheckInGeofenceRadiusMeters:Int?=null)
