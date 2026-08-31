@@ -7,7 +7,11 @@ export const coordinateSchema = z.object({
   accuracyMeters: z.number().finite().min(0).max(LOCATION_CONFIG.maximumAccuracyMeters).optional(),
 }).strict();
 
-export const attendanceMeasurementSchema = z.object({ location: coordinateSchema.optional() }).strict();
+export const attendanceLocationSchema = coordinateSchema.extend({
+  capturedAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)),
+}).strict();
+
+export const attendanceMeasurementSchema = z.object({ location: attendanceLocationSchema.optional() }).strict();
 
 export const locationPointSchema = coordinateSchema.extend({
   capturedAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)),

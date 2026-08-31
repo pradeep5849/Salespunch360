@@ -5,19 +5,19 @@ import { useRouter } from "next/navigation";
 import { endAttendanceAction, startAttendanceAction, uploadLocationPointAction } from "@/app/actions/attendance";
 import { LOCATION_CONFIG } from "@/lib/location/config";
 
-type LocationMeasurement = { latitude: number; longitude: number; accuracyMeters: number };
+type LocationMeasurement = { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string };
 
-function currentPosition(): Promise<LocationMeasurement | undefined> {
-  if (!("geolocation" in navigator)) return Promise.resolve(undefined);
-  return new Promise((resolve) => navigator.geolocation.getCurrentPosition(
-    ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude, accuracyMeters: coords.accuracy }),
-    () => resolve(undefined), { enableHighAccuracy: true, timeout: LOCATION_CONFIG.watchTimeoutMs, maximumAge: LOCATION_CONFIG.watchMaximumAgeMs },
+function currentPosition(): Promise<LocationMeasurement> {
+  if (!("geolocation" in navigator)) return Promise.reject(new Error("Browser location is unavailable. Use a supported browser and enable location services."));
+  return new Promise((resolve,reject) => navigator.geolocation.getCurrentPosition(
+    ({ coords, timestamp }) => resolve({ latitude: coords.latitude, longitude: coords.longitude, accuracyMeters: coords.accuracy, capturedAt: new Date(timestamp).toISOString() }),
+    (error) => reject(new Error(error.code===1?"Location permission was denied. Allow location access before starting attendance.":error.code===3?"Location timed out. Move to an open area, enable location services, and try again.":"Current location is unavailable. Enable location services and try again.")), { enableHighAccuracy: true, timeout: LOCATION_CONFIG.watchTimeoutMs, maximumAge: 0 },
   ));
 }
 
 export function AttendanceControls({ initialOpen, startedAt, gpsEnabled, attendanceEnabled, pointCount }: { initialOpen: boolean; startedAt?: string; gpsEnabled: boolean; attendanceEnabled: boolean; pointCount: number }) {
   const [message, setMessage] = useState<string>();
-  const [locationState, setLocationState] = useState(gpsEnabled ? "Preparing GPS…" : "GPS tracking is off");
+  const [locationState, setLocationState] = useState(initialOpen&&gpsEnabled ? "Starting GPS tracking…" : gpsEnabled ? "GPS required to start" : "GPS tracking off");
   const [trackingStopped, setTrackingStopped] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -44,11 +44,12 @@ export function AttendanceControls({ initialOpen, startedAt, gpsEnabled, attenda
   }, [gpsEnabled, initialOpen, trackingStopped]);
 
   const submit = (ending: boolean) => startTransition(async () => {
-    setMessage(gpsEnabled ? "Requesting current location…" : undefined);
-    const location = gpsEnabled ? await currentPosition() : undefined;
+    setMessage(gpsEnabled ? "Requesting a fresh location…" : undefined);
+    let location:LocationMeasurement|undefined;
+    if(gpsEnabled){try{location=await currentPosition();}catch(error){setMessage(error instanceof Error?error.message:"Location is required.");return;}}
     const result = ending ? await endAttendanceAction(location) : await startAttendanceAction(location);
     if (!result.ok) setMessage(result.error); else router.refresh();
   });
 
-  return <section className={`attendance-card ${initialOpen ? "open" : ""}`}><div><span className="attendance-state">{initialOpen ? "WORK SESSION ACTIVE" : "NOT WORKING"}</span><h2>{initialOpen && startedAt ? `Started ${new Date(startedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Ready when you are"}</h2><p>{locationState}{initialOpen && gpsEnabled ? ` · ${pointCount} route points stored` : ""}</p></div><button className={initialOpen ? "end-button" : "start-button"} disabled={pending || (!initialOpen && !attendanceEnabled)} onClick={() => submit(initialOpen)}>{pending ? "Please wait…" : initialOpen ? "End attendance" : attendanceEnabled ? "Start attendance" : "Attendance disabled"}</button>{message && <p className="attendance-message" role="status">{message}</p>}<small>Location is collected only during an open work session when company GPS tracking is enabled. Browser tracking may stop if this page is closed or heavily backgrounded.</small></section>;
+  return <section className={`attendance-card compact ${initialOpen ? "open" : ""}`}><div className="attendance-summary"><div><span className="attendance-state">{initialOpen ? "ON ATTENDANCE" : "ATTENDANCE OFF"}</span><strong>{initialOpen&&startedAt?`Started ${new Date(startedAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`:"Ready to start"}</strong><small>{locationState}{initialOpen&&gpsEnabled?` · ${pointCount} points`:""}</small></div><button className={initialOpen?"end-button":"start-button"} disabled={pending||(!initialOpen&&!attendanceEnabled)} onClick={()=>submit(initialOpen)}>{pending?"Please wait…":initialOpen?"End Attendance":attendanceEnabled?"Start Attendance":"Attendance disabled"}</button></div>{message&&<p className="attendance-message" role="status">{message}</p>}</section>;
 }

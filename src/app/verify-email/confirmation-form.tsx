@@ -1,0 +1,4 @@
+"use client";
+import {useActionState}from"react";
+import {confirmVerification,type VerificationActionState}from"@/app/actions/email-verification";
+export function ConfirmationForm({token,validShape}:{token:string;validShape:boolean}){const[state,action,pending]=useActionState(confirmVerification,{} as VerificationActionState);if(state.status)return <p className={state.status==="success"?"form-success":"form-error"} role="status">{state.message}</p>;if(!validShape)return <p className="form-error">This verification link is invalid, expired, or already used.</p>;return <form action={action}><input type="hidden" name="token" value={token}/><p>Confirm that you want to verify this Company Admin email address.</p><button className="primary-button" disabled={pending}>{pending?"Verifying…":"Verify email"}</button></form>}

@@ -46,7 +46,10 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     } else {
       return safeError;
     }
-  } catch {
+  } catch (error) {
+    const code=error instanceof Error?error.message:"";
+    if(code==="EMAIL_VERIFICATION_REQUIRED")return{error:"Verify your email to unlock employee creation."};
+    if(code==="COMPANY_PROFILE_REQUIRED")return{error:"Complete your company profile to unlock employee creation."};
     return safeError;
   }
   revalidatePath("/workspace/employees");

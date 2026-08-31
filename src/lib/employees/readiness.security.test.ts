@@ -1,0 +1,14 @@
+import{beforeEach,describe,expect,it,vi}from"vitest";
+const mocks=vi.hoisted(()=>({transaction:vi.fn(),query:vi.fn(),company:vi.fn(),userFind:vi.fn(),count:vi.fn(),create:vi.fn(),subscription:vi.fn(),update:vi.fn()}));
+vi.mock("@/lib/db",()=>({db:{$transaction:mocks.transaction}}));vi.mock("@/lib/auth/crypto",()=>({hashPassword:vi.fn().mockResolvedValue("hash")}));
+import{createManagerForCompany,reactivateEmployeeForCompany}from"./service";
+const companyId="11111111-1111-4111-8111-111111111111",adminId="22222222-2222-4222-8222-222222222222",employeeId="33333333-3333-4333-8333-333333333333";
+const complete={subscriptionStatus:"ACTIVE",trialStartedAt:null,trialEndsAt:null,teamStructure:"MANAGERS_AND_SALES",name:"Acme",addressLine1:"1 Main",city:"Pune",state:"MH",postalCode:"411001",country:"India",primaryContactName:"Admin",primaryPhone:"9999999999",contactEmail:"admin@example.com"};
+const input={name:"Manager",email:"manager@example.com",password:"StrongPassword1",confirmPassword:"StrongPassword1"};
+beforeEach(()=>{vi.clearAllMocks();mocks.company.mockResolvedValue(complete);mocks.userFind.mockResolvedValue({emailVerifiedAt:new Date()});mocks.count.mockResolvedValue(0);mocks.subscription.mockResolvedValue({managerSeats:2,salesSeats:2});mocks.create.mockResolvedValue({id:employeeId});mocks.update.mockResolvedValue({count:1});mocks.transaction.mockImplementation(async(fn)=>fn({$queryRaw:mocks.query,company:{findFirst:mocks.company},user:{findFirst:mocks.userFind,count:mocks.count,create:mocks.create,updateMany:mocks.update},companySubscription:{findFirst:mocks.subscription}}))});
+describe("employee readiness gates",()=>{
+ it("requires the mandatory acting Company Admin to be verified",async()=>{mocks.userFind.mockResolvedValueOnce({emailVerifiedAt:null});await expect(createManagerForCompany(companyId,input,adminId)).rejects.toThrow("EMAIL_VERIFICATION_REQUIRED");expect(mocks.create).not.toHaveBeenCalled()});
+ it("requires a complete authoritative company profile",async()=>{mocks.company.mockResolvedValue({...complete,addressLine1:null});await expect(createManagerForCompany(companyId,input,adminId)).rejects.toThrow("COMPANY_PROFILE_REQUIRED");expect(mocks.create).not.toHaveBeenCalled()});
+ it("creates only after readiness and entitlement checks",async()=>{await expect(createManagerForCompany(companyId,input,adminId)).resolves.toMatchObject({id:employeeId});expect(mocks.count).toHaveBeenCalled();expect(mocks.create).toHaveBeenCalled()});
+ it("applies readiness before reactivation",async()=>{mocks.userFind.mockResolvedValueOnce({emailVerifiedAt:null});await expect(reactivateEmployeeForCompany(companyId,{employeeId},adminId)).rejects.toThrow("EMAIL_VERIFICATION_REQUIRED");expect(mocks.update).not.toHaveBeenCalled()});
+});

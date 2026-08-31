@@ -18,6 +18,8 @@ describe("attendance and location validation", () => {
     expect(locationPointSchema.safeParse({ latitude: 10, longitude: 20, capturedAt: "not-a-date" }).success).toBe(false);
   });
 
+  it("requires a valid capture timestamp whenever an attendance location is supplied",()=>{const point={latitude:0,longitude:0,accuracyMeters:0,capturedAt:new Date().toISOString()};expect(attendanceMeasurementSchema.safeParse({location:point}).success).toBe(true);expect(attendanceMeasurementSchema.safeParse({location:{latitude:0,longitude:0}}).success).toBe(false);expect(attendanceMeasurementSchema.safeParse({location:{...point,capturedAt:"bad"}}).success).toBe(false)});
+
   it("rejects browser-controlled company settings fields", () => {
     expect(companyOperationsSchema.safeParse({ attendanceEnabled: true, gpsTrackingEnabled: false, checkoutRequiredBeforeNextCheckIn: true, companyId: "other" }).success).toBe(false);
   });

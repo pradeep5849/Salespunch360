@@ -2,7 +2,7 @@
 
 ## Release-candidate identity and branding
 
-The application is version code **2**, version name **0.9.0**. Release builds use `https://salespunch360.com/`; debug emulator builds use `http://10.0.2.2:3000/`. Production cleartext traffic remains disabled.
+The application is version code **2**, version name **0.9.0**. Release builds use `https://www.salespunch360.com/`; debug emulator builds use `http://10.0.2.2:3000/`. Production cleartext traffic remains disabled; the debug network policy permits cleartext only for the emulator host.
 
 No approved graphical SalesPunch360 logo was present. The launcher and startup screen therefore use a temporary, original geometric **SP** initials treatment, not a final corporate logo. Replace the adaptive-icon foreground and startup badge after an approved asset is supplied; preserve customer-company identity inside authenticated screens.
 

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/authorization";
 import { hashPassword } from "@/lib/auth/crypto";
 import { getTrialStatus } from "@/lib/trial/status";
+import { profileComplete } from "@/lib/company/profile";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
 import {
   createManagerSchema,
@@ -33,10 +34,17 @@ async function lockAndLoadCompany(tx: Prisma.TransactionClient, companyId: strin
   await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id" = ${companyId}::uuid FOR UPDATE`;
   const company = await tx.company.findFirst({
     where: { id: companyId },
-    select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true },
+    select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true, name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true },
   });
   if (!company) throw new EmployeePolicyError("NOT_FOUND");
   return company;
+}
+
+async function enforceAdminReadiness(tx:Prisma.TransactionClient,companyId:string,adminId:string){
+  const admin=await tx.user.findFirst({where:{companyId,role:"COMPANY_ADMIN",id:adminId},select:{emailVerifiedAt:true}});
+  if(!admin?.emailVerifiedAt)throw new EmployeePolicyError("EMAIL_VERIFICATION_REQUIRED");
+  const company=await lockAndLoadCompany(tx,companyId);
+  if(!profileComplete(company))throw new EmployeePolicyError("COMPANY_PROFILE_REQUIRED");
 }
 
 async function enforceAvailableSeat(tx: Prisma.TransactionClient, companyId: string, role: "MANAGER" | "SALES") {
@@ -78,10 +86,11 @@ export async function getEmployeeManagementContextForCompany(companyId: string) 
   return { employees, trial: getTrialStatus(company), teamStructure: company.teamStructure };
 }
 
-async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SALES", raw: unknown) {
+async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SALES", raw: unknown, adminId:string) {
   const data = role === "MANAGER" ? createManagerSchema.parse(raw) : createSalesSchema.parse(raw);
   const passwordHash = await hashPassword(data.password);
   return db.$transaction(async (tx) => {
+    await enforceAdminReadiness(tx,companyId,adminId);
     const company = await lockAndLoadCompany(tx, companyId);
     if (company.teamStructure === "SALES_ONLY" && role === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
     await enforceAvailableSeat(tx, companyId, role);
@@ -95,10 +104,10 @@ async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SA
   });
 }
 
-export async function createManager(input: CreateManagerInput) { const {companyId}=await requireCompanyAdmin(); return createEmployeeForCompany(companyId,"MANAGER",input); }
-export async function createSalesEmployee(input: CreateSalesInput) { const {companyId}=await requireCompanyAdmin(); return createEmployeeForCompany(companyId,"SALES",input); }
-export const createManagerForCompany=(companyId:string,input:unknown)=>createEmployeeForCompany(companyId,"MANAGER",input);
-export const createSalesEmployeeForCompany=(companyId:string,input:unknown)=>createEmployeeForCompany(companyId,"SALES",input);
+export async function createManager(input: CreateManagerInput) { const actor=await requireCompanyAdmin(); return createEmployeeForCompany(actor.companyId,"MANAGER",input,actor.id); }
+export async function createSalesEmployee(input: CreateSalesInput) { const actor=await requireCompanyAdmin(); return createEmployeeForCompany(actor.companyId,"SALES",input,actor.id); }
+export const createManagerForCompany=(companyId:string,input:unknown,adminId:string)=>createEmployeeForCompany(companyId,"MANAGER",input,adminId);
+export const createSalesEmployeeForCompany=(companyId:string,input:unknown,adminId:string)=>createEmployeeForCompany(companyId,"SALES",input,adminId);
 
 export async function editEmployee(raw: EditEmployeeInput) {
   const { companyId } = await requireCompanyAdmin();
@@ -123,13 +132,15 @@ export async function editEmployee(raw: EditEmployeeInput) {
 }
 
 export async function deactivateEmployee(raw: unknown) {
-  const { companyId } = await requireCompanyAdmin();
-  return deactivateEmployeeForCompany(companyId,raw);
+  const actor = await requireCompanyAdmin();
+  return deactivateEmployeeForCompany(actor.companyId,raw,actor.id);
 }
-export async function deactivateEmployeeForCompany(companyId:string,raw:unknown) {
+export async function deactivateEmployeeForCompany(companyId:string,raw:unknown,adminId:string) {
   const { employeeId } = employeeIdSchema.parse(raw);
   await db.$transaction(async (tx) => {
     await lockAndLoadCompany(tx, companyId);
+    const admin=await tx.user.findFirst({where:{id:adminId,companyId,role:"COMPANY_ADMIN"},select:{id:true}});
+    if(!admin)throw new EmployeePolicyError("NOT_FOUND");
     await deactivateEmployeeInTransaction(tx, companyId, employeeId);
   });
 }
@@ -140,15 +151,17 @@ export async function deactivateEmployeeInTransaction(tx: Prisma.TransactionClie
     const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, data: { isActive: false } });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
     await tx.session.deleteMany({ where: { userId: employeeId } });
+    await tx.mobileSession.deleteMany({ where: { userId: employeeId } });
 }
 
 export async function reactivateEmployee(raw: unknown) {
-  const { companyId } = await requireCompanyAdmin();
-  return reactivateEmployeeForCompany(companyId,raw);
+  const actor = await requireCompanyAdmin();
+  return reactivateEmployeeForCompany(actor.companyId,raw,actor.id);
 }
-export async function reactivateEmployeeForCompany(companyId:string,raw:unknown) {
+export async function reactivateEmployeeForCompany(companyId:string,raw:unknown,adminId:string) {
   const { employeeId } = employeeIdSchema.parse(raw);
   await db.$transaction(async (tx) => {
+    await enforceAdminReadiness(tx,companyId,adminId);
     const company = await lockAndLoadCompany(tx, companyId);
     const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true } });
     assertManagedEmployee(companyId, employee);
@@ -173,4 +186,5 @@ export async function resetEmployeePasswordInTransaction(tx: Prisma.TransactionC
     const updated = await tx.user.updateMany({ where: { id: employee.id, companyId, role: { in: employeeRoles } }, data: { passwordHash } });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
     await tx.session.deleteMany({ where: { userId: employee.id } });
+    await tx.mobileSession.deleteMany({ where: { userId: employee.id } });
 }

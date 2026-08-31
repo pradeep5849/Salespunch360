@@ -136,6 +136,22 @@ model Company {
   customerCheckInGeofenceRadiusMeters Int?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+  addressLine1       String?
+  addressLine2       String?
+  locality           String?
+  city               String?
+  state              String?
+  postalCode         String?
+  country            String?
+  primaryContactName String?
+  primaryPhone       String?
+  contactEmail       String?
+  alternatePhone     String?
+  website            String?
+  gstin              String?
+  pan                 String?
+  registrationNumber String?
+  description        String?
   users              User[]
   attendances        Attendance[]
   locationPoints     LocationPoint[]
@@ -186,12 +202,28 @@ model User {
   billingAuditEvents BillingAuditEvent[] @relation("BillingAuditActor")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  emailVerifiedAt DateTime?
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([companyId, role])
   @@index([companyId, isActive, role])
   @@index([managerId])
   @@unique([companyId, employeeCode])
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash String   @unique @db.Char(64)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 model Attendance {

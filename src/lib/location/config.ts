@@ -6,4 +6,6 @@ export const LOCATION_CONFIG = Object.freeze({
   maximumAccuracyMeters: 10_000,
   maximumCaptureAgeMs: 24 * 60 * 60 * 1_000,
   maximumFutureSkewMs: 5 * 60 * 1_000,
+  attendanceStartMaximumAgeMs: 2 * 60 * 1_000,
+  attendanceStartMaximumFutureSkewMs: 30 * 1_000,
 });

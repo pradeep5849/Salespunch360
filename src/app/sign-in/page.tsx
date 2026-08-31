@@ -11,7 +11,7 @@ export default async function SignInPage() {
   return (
     <main className="auth-shell">
       <section className="brand-panel">
-        <a className="logo" href="https://salespunch360.com" aria-label="SalesPunch360 home">
+        <a className="logo" href="https://www.salespunch360.com" aria-label="SalesPunch360 home">
           <span>SP</span> SalesPunch360
         </a>
         <div>

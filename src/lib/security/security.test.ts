@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {environmentSchema} from '@/lib/env';
 import {isTrustedOrigin} from './request';
 
-const production={DATABASE_URL:'postgresql://db.example/salespunch360',AUTH_SECRET:'a-production-secret-that-is-deliberately-longer-than-forty-eight-characters',NODE_ENV:'production' as const,APP_URL:'https://salespunch360.com',TRUST_PROXY:'true',PAYMENT_PROVIDER:'UNCONFIGURED' as const};
+const production={DATABASE_URL:'postgresql://db.example/salespunch360',AUTH_SECRET:'a-production-secret-that-is-deliberately-longer-than-forty-eight-characters',NODE_ENV:'production' as const,APP_URL:'https://www.salespunch360.com',TRUST_PROXY:'true',PAYMENT_PROVIDER:'UNCONFIGURED' as const,SMTP_HOST:'smtp.hostinger.com',SMTP_PORT:'465',SMTP_SECURE:'true',SMTP_USER:'noreply@salespunch360.com',SMTP_PASSWORD:'a-real-secret-password',MAIL_FROM:'noreply@salespunch360.com'};
 
 describe('production safety',()=>{
   it('accepts a complete HTTPS production configuration',()=>expect(environmentSchema.safeParse(production).success).toBe(true));
@@ -10,6 +10,9 @@ describe('production safety',()=>{
   it('rejects short production signing secrets',()=>expect(environmentSchema.safeParse({...production,AUTH_SECRET:'short'}).success).toBe(false));
   it('rejects non-PostgreSQL databases',()=>expect(environmentSchema.safeParse({...production,DATABASE_URL:'mysql://db.example/app'}).success).toBe(false));
   it('cannot enable a test payment provider',()=>expect(environmentSchema.safeParse({...production,PAYMENT_PROVIDER:'TEST'}).success).toBe(false));
+  it('rejects non-Hostinger production SMTP hosts',()=>expect(environmentSchema.safeParse({...production,SMTP_HOST:'smtp.example.test'}).success).toBe(false));
+  it('rejects non-465 production SMTP ports',()=>expect(environmentSchema.safeParse({...production,SMTP_PORT:'587'}).success).toBe(false));
+  it('rejects production SMTP without implicit TLS',()=>expect(environmentSchema.safeParse({...production,SMTP_SECURE:'false'}).success).toBe(false));
 });
 
 describe('browser mutation origins',()=>{

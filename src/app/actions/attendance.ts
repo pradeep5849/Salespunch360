@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { endAttendance, startAttendance, updateCompanyOperations, uploadLocationPoint } from "@/lib/attendance/service";
 
-type LocationMeasurement = { latitude: number; longitude: number; accuracyMeters?: number };
+type LocationMeasurement = { latitude: number; longitude: number; accuracyMeters?: number; capturedAt: string };
 export type AttendanceActionResult = { ok: boolean; error?: string; ignored?: boolean };
 
 export async function startAttendanceAction(location?: LocationMeasurement): Promise<AttendanceActionResult> {
   try { await startAttendance({ location }); }
-  catch (error) { const code=error instanceof Error?error.message:"";return { ok: false, error: code==="OUTSIDE_RADIUS"?"You are outside the attendance geofence.":code==="INSUFFICIENT_ACCURACY"?"Location accuracy is insufficient for this geofence.":code==="GEOFENCE_CONFIGURATION"?"Attendance geofence configuration is incomplete.":"Unable to start attendance. Check company settings or your current session." }; }
+  catch (error) { const code=error instanceof Error?error.message:"";return { ok: false, error: code==="GPS_REQUIRED"?"A fresh location is required before attendance can start.":code==="OUTSIDE_RADIUS"?"You are outside the attendance geofence.":code==="INSUFFICIENT_ACCURACY"?"Location accuracy is insufficient for this geofence.":code==="GEOFENCE_CONFIGURATION"?"Attendance geofence configuration is incomplete.":"Unable to start attendance. Check company settings or your current session." }; }
   revalidatePath("/workspace/attendance");
   return { ok: true };
 }

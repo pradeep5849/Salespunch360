@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/authorization";
 import { haversineDistanceMeters, calculateRouteDistanceMeters } from "@/lib/location/geo";
-import { AttendancePolicyError, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
+import { AttendancePolicyError, assertAttendanceStartFresh, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
 import { attendanceMeasurementSchema, companyOperationsSchema, locationPointSchema } from "./validation";
 import { evaluateGeofence } from "@/lib/geofence/policy";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
@@ -26,6 +26,7 @@ export async function startAttendance(raw: unknown) {
   const user = await requireEmployee();
   await assertOperationalWrite(user.companyId);
   const { location } = attendanceMeasurementSchema.parse(raw);
+  if(location)assertAttendanceStartFresh(location.capturedAt);
   const result=await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
     const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, role: { in: ["MANAGER", "SALES"] }, isActive: true }, select: { id: true } });
@@ -33,6 +34,7 @@ export async function startAttendance(raw: unknown) {
     await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR SHARE`;
     const company = await tx.company.findFirst({ where: { id: user.companyId }, select: { attendanceEnabled: true, gpsTrackingEnabled: true,attendanceGeofenceEnabled:true,attendanceReferenceLatitude:true,attendanceReferenceLongitude:true,attendanceGeofenceRadiusMeters:true } });
     if (!company?.attendanceEnabled) throw new AttendancePolicyError("DISABLED");
+    if(company.gpsTrackingEnabled&&!location)throw new AttendancePolicyError("GPS_REQUIRED");
     const open = await tx.attendance.findFirst({ where: { companyId: user.companyId, userId: user.id, endedAt: null }, select: { id: true } });
     if (open) throw new AttendancePolicyError("ALREADY_OPEN");
     if(company.attendanceGeofenceEnabled){
@@ -93,7 +95,7 @@ export async function getAttendanceOverview() {
   const viewer = await requireRole("COMPANY_ADMIN", "MANAGER");
   if (!viewer.companyId) throw new AttendancePolicyError("DISABLED");
   return db.user.findMany({
-    where: { companyId: viewer.companyId, role: { in: ["MANAGER", "SALES"] } },
+    where: { companyId: viewer.companyId, ...(viewer.role==="MANAGER"?{role:"SALES" as const,managerId:viewer.id}:{role:{in:["MANAGER","SALES"] as ("MANAGER"|"SALES")[]}}) },
     select: { id: true, name: true, role: true, isActive: true, attendances: { where: { endedAt: null }, take: 1, select: { id: true, startedAt: true, _count: { select: { locationPoints: true } } } } },
     orderBy: { name: "asc" },
   });

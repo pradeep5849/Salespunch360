@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
 import { getTrialStatus } from "@/lib/trial/status";
 import Link from "next/link";
+import { VerificationResend } from "./verification-resend";
+import { profileComplete } from "@/lib/company/profile";
 
 export const metadata: Metadata = { title: "Workspace" };
 
@@ -12,7 +14,7 @@ export default async function WorkspacePage() {
   const company = user.role === "COMPANY_ADMIN" && user.companyId
     ? await db.company.findUnique({
         where: { id: user.companyId },
-        select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true },
+        select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true,name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:user.id},select:{emailVerifiedAt:true},take:1} },
       })
     : null;
   const trial = company ? getTrialStatus(company) : null;
@@ -28,6 +30,9 @@ export default async function WorkspacePage() {
           <div><strong>{user.email}</strong><p>{user.role.replaceAll("_", " ")}</p></div>
           <span className="status">Authenticated</span>
         </div>
+        {user.role==="COMPANY_ADMIN"&&!company?.users[0]?.emailVerifiedAt&&<section className="readiness-alert"><div><strong>Verify your email to unlock employee creation.</strong><p>Use the secure link sent to {user.email}.</p></div><VerificationResend/></section>}
+        {user.role==="COMPANY_ADMIN"&&company&&!profileComplete(company)&&<Link className="readiness-alert" href="/workspace/company-profile"><div><strong>Complete your company profile</strong><p>Required business and contact details must be saved before employees can be created or reactivated.</p></div><span>Complete profile →</span></Link>}
+        {user.role === "COMPANY_ADMIN" && <Link className="employees-link-card" href="/workspace/company-profile"><span>Company identity</span><strong>Edit company profile →</strong></Link>}
         {user.role === "SUPER_ADMIN" && <Link className="employees-link-card" href="/admin/billing"><span>Platform administration</span><strong>Open billing administration →</strong></Link>}
         {user.role === "COMPANY_ADMIN" && <Link className="employees-link-card" href="/workspace/employees"><span>Team management</span><strong>Manage employees →</strong></Link>}
         {(user.role === "COMPANY_ADMIN" || user.role === "MANAGER" || user.role === "SALES") && <Link className="employees-link-card" href="/workspace/attendance"><span>Field work sessions</span><strong>{user.role === "COMPANY_ADMIN" ? "View attendance" : "Open attendance"} →</strong></Link>}

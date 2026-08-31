@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertAttendanceOwnership, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
+import { assertAttendanceOwnership, assertAttendanceStartFresh, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
 
 describe("attendance ownership and GPS acceptance", () => {
   it("rejects attendance owned by another employee or company", () => {
@@ -14,6 +14,8 @@ describe("attendance ownership and GPS acceptance", () => {
     expect(() => assertCaptureTime(new Date("2026-08-27T11:59:59.000Z"), now)).toThrow("CAPTURE_TIME_INVALID");
     expect(() => assertCaptureTime(new Date("2026-08-28T12:06:00.000Z"), now)).toThrow("CAPTURE_TIME_INVALID");
   });
+
+  it("enforces the tighter attendance-start freshness window",()=>{const now=new Date("2026-08-28T12:00:00.000Z");expect(()=>assertAttendanceStartFresh(new Date("2026-08-28T11:58:01.000Z"),now)).not.toThrow();expect(()=>assertAttendanceStartFresh(new Date("2026-08-28T11:57:59.000Z"),now)).toThrow("CAPTURE_TIME_INVALID");expect(()=>assertAttendanceStartFresh(new Date("2026-08-28T12:00:31.000Z"),now)).toThrow("CAPTURE_TIME_INVALID")});
 
   it("throttles stationary rapid points but accepts elapsed or moved points", () => {
     const previous = { latitude: 10, longitude: 20, capturedAt: new Date("2026-08-28T12:00:00Z") };

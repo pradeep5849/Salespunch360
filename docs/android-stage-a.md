@@ -1,6 +1,6 @@
 # Android Stage A architecture
 
-`android/` is one native Kotlin application using Jetpack Compose, Material 3, lifecycle-aware state, coroutines, Room, WorkManager, Play Services Location, secure preferences, and a visible Android location foreground service. It is not a WebView or PWA. Production networking is HTTPS-only to `salespunch360.com`; the debug emulator build alone uses `10.0.2.2` for local development. Certificate validation is never disabled.
+`android/` is one native Kotlin application using Jetpack Compose, Material 3, lifecycle-aware state, coroutines, Room, WorkManager, Play Services Location, secure preferences, and a visible Android location foreground service. It is not a WebView or PWA. Production networking is HTTPS-only to `www.salespunch360.com`; the debug emulator build alone uses `10.0.2.2` for local development. Certificate validation is never disabled.
 
 ## Identity, roles, and branding
 

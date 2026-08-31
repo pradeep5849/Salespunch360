@@ -20,7 +20,7 @@ class ApiClient(private val session:SecureSession){
  suspend fun login(identifier:String,password:String):Bootstrap{val raw=call("api/v1/mobile/auth/login","POST",json.encodeToString(LoginRequest(identifier,password)),false);val root=json.parseToJsonElement(raw).jsonObject;val bootstrap=decodeBootstrap(raw,"bootstrap");session.save(root["accessToken"]!!.jsonPrimitive.content,bootstrap.user.id);return bootstrap}
  suspend fun bootstrap()=decodeBootstrap(call("api/v1/mobile/bootstrap"))
  suspend fun logout(){try{call("api/v1/mobile/auth/logout","POST")}finally{session.clear()}}
- suspend fun attendance(action:String,location:LocationPayload?)=call("api/v1/mobile/attendance","POST",json.encodeToString(AttendanceRequest(action,location)))
+ suspend fun attendance(action:String,location:LocationPayload?)=call("api/v1/mobile/attendance","POST",json.encodeToString(attendanceRequest(action,location)))
  suspend fun upload(point:LocationPayload)=call("api/v1/mobile/locations","POST",json.encodeToString(point))
  suspend fun employees()=json.decodeFromString<EmployeeContext>(call("api/v1/mobile/employees"))
  suspend fun createEmployee(request:CreateEmployeeRequest)=json.decodeFromString<Employee>(call("api/v1/mobile/employees","POST",json.encodeToString(request)))

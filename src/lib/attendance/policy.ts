@@ -1,7 +1,7 @@
 import { LOCATION_CONFIG } from "@/lib/location/config";
 
 export class AttendancePolicyError extends Error {
-  constructor(public readonly code: "DISABLED" | "NO_OPEN_ATTENDANCE" | "ALREADY_OPEN" | "GPS_DISABLED" | "CAPTURE_TIME_INVALID" | "THROTTLED" | "GEOFENCE_CONFIGURATION" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY") {
+  constructor(public readonly code: "DISABLED" | "NO_OPEN_ATTENDANCE" | "ALREADY_OPEN" | "GPS_DISABLED" | "GPS_REQUIRED" | "CAPTURE_TIME_INVALID" | "THROTTLED" | "GEOFENCE_CONFIGURATION" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY") {
     super(code);
   }
 }
@@ -15,6 +15,13 @@ export function assertAttendanceOwnership(authenticated: { id: string; companyId
 export function assertCaptureTime(capturedAt: Date, now = new Date()) {
   const delta = now.getTime() - capturedAt.getTime();
   if (delta > LOCATION_CONFIG.maximumCaptureAgeMs || delta < -LOCATION_CONFIG.maximumFutureSkewMs) {
+    throw new AttendancePolicyError("CAPTURE_TIME_INVALID");
+  }
+}
+
+export function assertAttendanceStartFresh(capturedAt: Date, now = new Date()) {
+  const delta = now.getTime() - capturedAt.getTime();
+  if (delta > LOCATION_CONFIG.attendanceStartMaximumAgeMs || delta < -LOCATION_CONFIG.attendanceStartMaximumFutureSkewMs) {
     throw new AttendancePolicyError("CAPTURE_TIME_INVALID");
   }
 }

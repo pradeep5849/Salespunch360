@@ -5,6 +5,7 @@ import { createSession } from "@/lib/auth/session";
 import { registerCompany } from "@/lib/auth/registration";
 import {assertTrustedOrigin,consumeRateLimit,requestFingerprint} from "@/lib/security/request";
 import { registrationSchema } from "@/lib/auth/validation";
+import { issueEmailVerification } from "@/lib/auth/email-verification";
 
 export type RegistrationState = { error?: string; fieldErrors?: Record<string, string[]> };
 
@@ -29,6 +30,7 @@ export async function register(_: RegistrationState, formData: FormData): Promis
 
   try {
     const { user } = await registerCompany(parsed.data);
+    try { await issueEmailVerification(user.id, user.email); } catch { /* Account remains usable; authenticated resend is available. */ }
     await createSession(user.id);
   } catch {
     return { error: "Unable to create your account. Check your details or try again later." };
