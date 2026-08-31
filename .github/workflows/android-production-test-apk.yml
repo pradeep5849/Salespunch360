@@ -1,0 +1,106 @@
+name: Android production test APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Run Android unit tests and lint
+        working-directory: android
+        run: ./gradlew --no-daemon testReleaseUnitTest lintRelease
+
+      - name: Build unsigned release APK
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Zip-align, temporarily sign, and verify release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          readonly BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/35.0.0"
+          readonly UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          readonly ALIGNED_APK="$RUNNER_TEMP/SalesPunch360-production-test-aligned.apk"
+          readonly KEYSTORE="$RUNNER_TEMP/SalesPunch360-production-test.p12"
+          readonly FINAL_APK="$GITHUB_WORKSPACE/SalesPunch360-production-test.apk"
+          readonly KEY_ALIAS="production-test"
+          trap 'rm -f "$KEYSTORE" "$ALIGNED_APK"' EXIT
+
+          export KEYSTORE_PASSWORD="$(openssl rand -hex 32)"
+          export KEY_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+
+          keytool -genkeypair -noprompt \
+            -keystore "$KEYSTORE" \
+            -storetype JKS \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 3072 \
+            -validity 30 \
+            -dname "CN=SalesPunch360 Temporary Test, OU=CI, O=SalesPunch360, C=US"
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --out "$FINAL_APK" \
+            "$ALIGNED_APK"
+
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$FINAL_APK"
+          "$BUILD_TOOLS/zipalign" -c -p 4 "$FINAL_APK"
+
+      - name: Verify production connection and network security
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          readonly APK="SalesPunch360-production-test.apk"
+          readonly APK_STRINGS="$RUNNER_TEMP/SalesPunch360-production-test.strings"
+          readonly MANIFEST="$RUNNER_TEMP/SalesPunch360-production-test-manifest.xml"
+
+          unzip -p "$APK" | strings > "$APK_STRINGS"
+          grep -Fq "https://www.salespunch360.com/" "$APK_STRINGS"
+          if grep -Eiq '10\.0\.2\.2|localhost' "$APK_STRINGS"; then
+            echo "The final APK contains a forbidden development host." >&2
+            exit 1
+          fi
+
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer" manifest print "$APK" > "$MANIFEST"
+          grep -Eq 'android:usesCleartextTraffic="false"|usesCleartextTraffic="false"' "$MANIFEST"
+
+      - name: Upload production test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SalesPunch360-production-test-apk
+          path: SalesPunch360-production-test.apk
+          if-no-files-found: error
+          retention-days: 7
