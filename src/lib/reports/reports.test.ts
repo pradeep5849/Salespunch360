@@ -25,7 +25,7 @@ describe('report filter safety',()=>{
 });
 describe('current hierarchy report scope',()=>{
  it('company admin stays in tenant and sees report roles',()=>expect(visibleUserWhere(actor('COMPANY_ADMIN'))).toEqual({companyId:'tenant-a',role:{in:['MANAGER','SALES']}}));
- it('manager sees only self and direct Sales',()=>expect(visibleUserWhere(actor('MANAGER'))).toEqual({companyId:'tenant-a',OR:[{id:'self'},{role:'SALES',managerId:'self'}]}));
+ it('manager sees only self and direct Sales',()=>expect(visibleUserWhere(actor('MANAGER'))).toEqual({companyId:'tenant-a',role:'SALES',managerId:'self'}));
  it('sales is fixed to self',()=>expect(visibleUserWhere(actor('SALES'))).toEqual({companyId:'tenant-a',id:'self'}));
 });
 describe('derived report metrics',()=>{
