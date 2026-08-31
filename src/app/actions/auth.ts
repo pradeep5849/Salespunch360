@@ -20,7 +20,7 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
   if (!canAuthenticate(user) || !user || !(await verifyPassword(user.passwordHash, parsed.data.password))) {
     return { error: "Invalid email or password." };
   }
-  await createSession(user.id);
+  await createSession(user.id, formData.get("remember") === "true");
   redirect("/workspace");
 }
 

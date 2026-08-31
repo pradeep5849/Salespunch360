@@ -14,9 +14,9 @@ export default async function SignInPage() {
       <section className="login-card">
         <BrandLogo />
         <h1>Welcome Back!</h1>
-        <p>Sign in to continue to your workspace</p>
+        <p>Sign in to continue</p>
         <SignInForm />
-        <p className="register-link">Don’t have an account? <Link href="/register">Register now</Link></p>
+        <p className="register-link">Don&apos;t have an account? <Link href="/register">Register Now</Link></p>
       </section>
       <p className="login-copyright">© 2026 SalesPunch360. All rights reserved.</p>
     </main>

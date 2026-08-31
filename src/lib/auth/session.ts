@@ -17,7 +17,7 @@ export type AuthenticatedUser = {
   companyId: string | null;
 };
 
-const cookieOptions = (expires: Date) => ({
+const cookieOptions = (expires?: Date) => ({
   httpOnly: true,
   sameSite: "lax" as const,
   secure: env.NODE_ENV === "production",
@@ -25,11 +25,11 @@ const cookieOptions = (expires: Date) => ({
   expires,
 });
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, remember = true) {
   const token = createSessionToken();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await db.session.create({ data: { userId, tokenHash: hashSessionToken(token), expiresAt } });
-  (await cookies()).set(COOKIE_NAME, token, cookieOptions(expiresAt));
+  (await cookies()).set(COOKIE_NAME, token, cookieOptions(remember ? expiresAt : undefined));
 }
 
 export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | null> => {
