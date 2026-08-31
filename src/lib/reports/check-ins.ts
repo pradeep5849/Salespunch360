@@ -6,13 +6,13 @@ import { reportActor, reportEmployeeOptions, resolveEmployeeScope, type ReportAc
 
 export async function checkInReport(raw:SearchParams, advanced=false,providedActor?:ReportActor) {
   const actor=providedActor??await reportActor(), filters=parseReportFilters(raw), userIds=await resolveEmployeeScope(actor,filters.employeeId);
-  const status=raw.status === "COMPLETED" || raw.status === "PENDING" ? raw.status : "ALL";
-  const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,userId:{in:userIds},checkedInAt:{gte:filters.start,lt:filters.endExclusive},...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="PENDING"?{checkedOutAt:null}:{}),...(filters.q?{customer:{name:{contains:filters.q,mode:"insensitive"}}}:{})};
-  const [total,completed,pending,leadAgg,visits,employees]=await Promise.all([
+  const status=raw.status === "COMPLETED" || raw.status === "PENDING" ? raw.status : "ALL",customerId=typeof raw.customerId==="string"?raw.customerId:undefined;
+  const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,userId:{in:userIds},checkedInAt:{gte:filters.start,lt:filters.endExclusive},...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="PENDING"?{checkedOutAt:null}:{}),...(customerId?{customerId}:{})};
+  const [total,completed,pending,leadAgg,visits,employees,customers]=await Promise.all([
     db.customerVisit.count({where}), db.customerVisit.count({where:{...where,checkedOutAt:{not:null}}}), db.customerVisit.count({where:{...where,checkedOutAt:null}}),
     db.lead.count({where:{companyId:actor.companyId,sourceVisit:{is:where}}}),
     db.customerVisit.findMany({where,include:{user:{select:{name:true,role:true}},customer:{select:{name:true,latitude:true,longitude:true}},_count:{select:{leads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
-    reportEmployeeOptions(actor)
+    reportEmployeeOptions(actor), db.customer.findMany({where:{companyId:actor.companyId},select:{id:true,name:true},orderBy:{name:"asc"}})
   ]);
   const rows=await Promise.all(visits.map(async v=>{
     const prior=advanced?await db.customerVisit.findMany({where:{companyId:actor.companyId,customerId:v.customerId,OR:[{checkedInAt:{lt:v.checkedInAt}},{checkedInAt:v.checkedInAt,id:{lt:v.id}}]},select:{id:true,checkedInAt:true},take:1}):[];
@@ -34,5 +34,5 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
         AND v."checkedInAt">=${filters.start} AND v."checkedInAt"<${filters.endExclusive} ${statusSql} ${customerSql}`);
     firstVisits=Number(kinds.first);repeatVisits=Number(kinds.repeat);
   }
-  return {actor,filters,status,employees,rows,totalPages:Math.max(1,Math.ceil(total/filters.pageSize)),summary:{total,completed,pending,leadsGenerated:leadAgg,firstVisits,repeatVisits}};
+  return {actor,filters,status,customerId,customers,employees,rows,totalPages:Math.max(1,Math.ceil(total/filters.pageSize)),summary:{total,completed,pending,leadsGenerated:leadAgg,firstVisits,repeatVisits}};
 }

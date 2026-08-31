@@ -33,15 +33,7 @@ export function RegistrationForm() {
         </div>
       </div>
       <div className="form-section">
-        <div className="section-heading"><span>2</span><div><h2>Choose your team structure</h2><p>Choose how Sales employees report. Your Company Admin always keeps company-wide visibility and control.</p></div></div>
-        <div className="team-structure-options">
-          <label><input type="radio" name="teamStructure" value="MANAGERS_AND_SALES" required /><span><strong>Managers + Sales</strong><b>Company Admin → Managers → Sales Employees</b><small>Sales employees handle attendance, GPS tracking, customer visits, check-ins/check-outs, leads, follow-ups, expenses, targets, and other sales activities. They can be assigned to a Manager, who manages only their assigned Sales employees. The Company Admin can always directly view and manage every Manager, every Sales employee, all activity, performance, and reports.</small></span></label>
-          <label><input type="radio" name="teamStructure" value="SALES_ONLY" required /><span><strong>Sales Only</strong><b>Company Admin → Sales Employees</b><small>There is no Manager layer. Sales employees report directly to the Company Admin, who directly monitors and manages attendance, GPS activity, customer visits, check-ins/check-outs, leads, follow-ups, expenses, targets, performance, and reports.</small></span></label>
-        </div>
-        <FieldError errors={state.fieldErrors?.teamStructure} />
-      </div>
-      <div className="form-section">
-        <div className="section-heading"><span>3</span><div><h2>Administrator information</h2><p>This account will manage your whole company, regardless of the team structure selected.</p></div></div>
+        <div className="section-heading"><span>2</span><div><h2>Administrator information</h2><p>This account will manage your company. Team structure is selected after email verification.</p></div></div>
         <div className="field-grid">
           <div className="field full"><label htmlFor="adminName">Full name</label><input id="adminName" name="adminName" required maxLength={120} autoComplete="name" placeholder="Alex Morgan" /><FieldError errors={state.fieldErrors?.adminName} /></div>
           <div className="field full"><label htmlFor="adminEmail">Email address</label><input id="adminEmail" name="adminEmail" type="email" required autoComplete="email" placeholder="alex@company.com" /><FieldError errors={state.fieldErrors?.adminEmail} /></div>

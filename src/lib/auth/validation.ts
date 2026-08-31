@@ -14,7 +14,6 @@ export const strongPasswordSchema = z.string().min(12).max(200)
 
 export const registrationSchema = z.object({
   companyName: z.string().trim().min(2).max(120),
-  teamStructure: z.enum(["MANAGERS_AND_SALES", "SALES_ONLY"]),
   adminName: z.string().trim().min(2).max(120),
   adminEmail: emailSchema,
   adminPassword: strongPasswordSchema,

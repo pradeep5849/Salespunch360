@@ -4,7 +4,6 @@ import { loginSchema, registrationSchema } from "./validation";
 describe("authentication validation", () => {
   const validRegistration = {
     companyName: "Acme",
-    teamStructure: "MANAGERS_AND_SALES",
     adminName: "Ada Admin",
     adminEmail: "ada@acme.com",
     adminPassword: "StrongPassword1",
@@ -27,7 +26,7 @@ describe("authentication validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires a valid team structure and email address", () => {
+  it("rejects a registration team structure and requires a valid email address", () => {
     expect(registrationSchema.safeParse({ ...validRegistration, teamStructure: "FORGED" }).success).toBe(false);
     expect(registrationSchema.safeParse({ ...validRegistration, adminEmail: "invalid" }).success).toBe(false);
   });

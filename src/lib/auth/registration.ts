@@ -23,7 +23,9 @@ export async function registerCompany(input: RegistrationInput) {
       data: {
         name: data.companyName,
         slug: generateCompanySlug(data.companyName),
-        teamStructure: data.teamStructure,
+        // Team structure is deliberately chosen during verified company setup.
+        // The schema default is safe because employee creation remains blocked
+        // until all required company details (including that explicit choice) save.
         subscriptionStatus: "TRIAL",
         trialStartedAt,
         trialEndsAt,

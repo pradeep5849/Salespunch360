@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { REPORT_TIME_ZONE } from "@/lib/reports/config";
+import { GoogleRouteMap } from "./google-route-map";
 
 export const dateTime=(date:Date|null)=>date?new Intl.DateTimeFormat("en-IN",{timeZone:REPORT_TIME_ZONE,dateStyle:"medium",timeStyle:"short"}).format(date):"—";
 export const duration=(ms:number|null)=>ms==null?"Open / pending":`${Math.floor(ms/3600000)}h ${Math.floor((ms%3600000)/60000)}m`;
@@ -12,7 +13,5 @@ export function ErrorState({error}:{error:unknown}){return <main className="repo
 
 type MapPoint={latitude:number;longitude:number};
 export function RouteMap({points,overlays}:{points:MapPoint[];overlays:{id:string;checkInLatitude:number;checkInLongitude:number;customer:{name:string}}[]}){
- if(!points.length)return <div className="empty-state">No accepted GPS points exist for this attendance session.</div>;
- const all=[...points,...overlays.map(o=>({latitude:o.checkInLatitude,longitude:o.checkInLongitude}))],lats=all.map(p=>p.latitude),lngs=all.map(p=>p.longitude),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLng=Math.min(...lngs),maxLng=Math.max(...lngs),x=(v:number)=>30+(v-minLng)/(maxLng-minLng||1)*740,y=(v:number)=>330-(v-minLat)/(maxLat-minLat||1)*300;
- return <figure className="route-map"><svg viewBox="0 0 800 360" role="img" aria-label="Historical GPS route map"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#dfe7dc"/></pattern></defs><rect width="800" height="360" fill="#f2f6ed"/><rect width="800" height="360" fill="url(#grid)"/><polyline points={points.map(p=>`${x(p.longitude)},${y(p.latitude)}`).join(" ")} fill="none" stroke="#2864ec" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>{overlays.map(o=><g key={o.id}><circle cx={x(o.checkInLongitude)} cy={y(o.checkInLatitude)} r="8" fill="#f59e0b"><title>{o.customer.name}</title></circle></g>)}<circle cx={x(points[0].longitude)} cy={y(points[0].latitude)} r="10" fill="#16a34a"/><circle cx={x(points.at(-1)!.longitude)} cy={y(points.at(-1)!.latitude)} r="10" fill="#dc2626"/></svg><figcaption><span>● Start</span><span>● End/latest</span><span>● Customer check-in</span></figcaption></figure>
+ return <GoogleRouteMap points={points} markers={overlays.map(o=>({latitude:o.checkInLatitude,longitude:o.checkInLongitude,label:`Check-in: ${o.customer.name}`}))}/>;
 }

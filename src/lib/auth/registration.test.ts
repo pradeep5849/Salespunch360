@@ -35,14 +35,10 @@ beforeEach(() => {
 });
 
 describe("registration trial setup", () => {
-  it.each([
-    ["MANAGERS_AND_SALES", 1, 5],
-    ["SALES_ONLY", 0, 5],
-  ] as const)("creates one 15-day %s trial with structure-specific allowances", async (teamStructure, managerAllowance, salesAllowance) => {
+  it("creates one 15-day trial without accepting a registration team structure", async () => {
     const tx = transactionHarness();
-    const { company, user } = await registerCompany({ ...base, teamStructure });
+    const { company, user } = await registerCompany(base);
 
-    expect(company.teamStructure).toBe(teamStructure);
     expect(company.trialEndsAt!.getTime() - company.trialStartedAt!.getTime()).toBe(TRIAL_DURATION_MS);
     expect(company.subscriptionStatus).toBe("TRIAL");
     expect(tx.company.create).toHaveBeenCalledTimes(1);
@@ -50,8 +46,9 @@ describe("registration trial setup", () => {
     expect(user.role).toBe("COMPANY_ADMIN");
     expect(tx.companySubscription.create).not.toHaveBeenCalled();
 
-    const trial = getTrialStatus(company, company.trialStartedAt!);
-    expect(trial.managerAllowance).toBe(managerAllowance);
-    expect(trial.salesAllowance).toBe(salesAllowance);
+    expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.not.objectContaining({teamStructure:expect.anything()})}));
+    const trial = getTrialStatus({...company,teamStructure:"MANAGERS_AND_SALES"}, company.trialStartedAt!);
+    expect(trial.managerAllowance).toBe(1);
+    expect(trial.salesAllowance).toBe(5);
   });
 });

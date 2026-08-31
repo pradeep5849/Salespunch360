@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { createSession, revokeCurrentSession } from "@/lib/auth/session";
-import { verifyPassword } from "@/lib/auth/crypto";
-import { loginSchema } from "@/lib/auth/validation";
+import { createSession, revokeAllUserSessions, revokeCurrentSession } from "@/lib/auth/session";
+import { hashPassword, verifyPassword } from "@/lib/auth/crypto";
+import { loginSchema, strongPasswordSchema } from "@/lib/auth/validation";
+import { requireUser } from "@/lib/auth/authorization";
 import { canAuthenticate } from "@/lib/auth/eligibility";
 import {assertTrustedOrigin,consumeRateLimit,requestFingerprint} from "@/lib/security/request";
 
@@ -27,4 +28,18 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
 export async function signOut() {
   await revokeCurrentSession();
   redirect("/sign-in");
+}
+
+export type ChangePasswordState={error?:string;success?:string};
+export async function changePassword(_:ChangePasswordState,formData:FormData):Promise<ChangePasswordState>{
+  await assertTrustedOrigin();
+  const actor=await requireUser(),current=String(formData.get("currentPassword")||""),next=String(formData.get("newPassword")||""),confirmation=String(formData.get("confirmPassword")||"");
+  if(next!==confirmation)return{error:"New password and confirmation do not match."};
+  const valid=strongPasswordSchema.safeParse(next);if(!valid.success)return{error:valid.error.issues[0]?.message||"New password does not meet the password policy."};
+  const user=await db.user.findUnique({where:{id:actor.id},select:{passwordHash:true}});
+  if(!user||!await verifyPassword(user.passwordHash,current))return{error:"Current password is incorrect."};
+  if(await verifyPassword(user.passwordHash,next))return{error:"New password must be different from the current password."};
+  await db.user.update({where:{id:actor.id},data:{passwordHash:await hashPassword(next)}});
+  await revokeAllUserSessions(actor.id);
+  return{success:"Password changed. Sign in again with your new password."};
 }
