@@ -13,6 +13,11 @@ export function proxy(request:NextRequest){
   const host=requestHost(request);
   if(host!=="salespunch360.com")return NextResponse.next();
   if(request.nextUrl.pathname.startsWith("/api/"))return NextResponse.json({error:"CANONICAL_API_HOST_REQUIRED"},{status:421});
+  // Never redirect a mutation at the application layer. In particular, Next.js
+  // Server Actions use POST requests whose redirect protocol must be handled by
+  // Next itself; turning that POST into an HTTP redirect can make a reverse
+  // proxy attempt (and fail) to fetch the redirect response.
+  if(request.method!=="GET"&&request.method!=="HEAD")return NextResponse.next();
   const canonical=request.nextUrl.clone();canonical.protocol="https:";canonical.host="www.salespunch360.com";
   return NextResponse.redirect(canonical,308);
 }
