@@ -31,6 +31,11 @@ enum CheckoutSentiment {
   NEUTRAL
   NEGATIVE
 }
+enum VisitType {
+  NEW
+  FOLLOW_UP
+  CUSTOMER
+}
 
 enum LeadStage {
   NEW
@@ -189,6 +194,7 @@ model User {
   attendances  Attendance[]
   locationPoints LocationPoint[]
   customerVisits CustomerVisit[]
+  assignedCustomers Customer[] @relation("CustomerAssignee")
   assignedLeads Lead[] @relation("LeadAssignee")
   createdLeads Lead[] @relation("LeadCreator")
   leadActivities LeadActivity[] @relation("LeadActor")
@@ -255,6 +261,8 @@ model Customer {
   id            String          @id @default(uuid()) @db.Uuid
   companyId     String          @db.Uuid
   company       Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId String?         @db.Uuid
+  assignedUser   User?           @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   name          String
   contactPerson String?
   phone         String?
@@ -270,6 +278,7 @@ model Customer {
 
   @@index([companyId, name])
   @@index([companyId, createdAt])
+  @@index([companyId, assignedUserId])
   @@map("customers")
 }
 
@@ -280,7 +289,13 @@ model CustomerVisit {
   userId                String             @db.Uuid
   user                  User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   customerId            String             @db.Uuid
-  customer              Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  customer              Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leadId                String?             @db.Uuid
+  lead                  Lead?               @relation("VisitLead", fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  visitType             VisitType           @default(CUSTOMER)
+  contactName           String?             @db.VarChar(160)
+  contactPhone          String?             @db.VarChar(30)
+  photoDataUrl          String?
   attendanceId          String?            @db.Uuid
   attendance            Attendance?        @relation(fields: [attendanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   checkedInAt           DateTime           @default(now())
@@ -296,11 +311,12 @@ model CustomerVisit {
   visitNotes            String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
-  leads                 Lead[]
+  sourceLeads           Lead[]              @relation("LeadSourceVisit")
 
   @@index([companyId, checkedInAt])
   @@index([companyId, userId, checkedInAt])
   @@index([companyId, customerId, checkedInAt])
+  @@index([companyId, leadId, checkedInAt])
   @@index([companyId, userId, checkedOutAt])
   @@map("customer_visits")
 }
@@ -312,7 +328,8 @@ model Lead {
   customerId String? @db.Uuid
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   sourceVisitId String? @db.Uuid
-  sourceVisit CustomerVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceVisit CustomerVisit? @relation("LeadSourceVisit", fields: [sourceVisitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  visits CustomerVisit[] @relation("VisitLead")
   assignedUserId String @db.Uuid
   assignedUser User @relation("LeadAssignee", fields: [assignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   createdByUserId String @db.Uuid

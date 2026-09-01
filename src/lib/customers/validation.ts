@@ -9,6 +9,7 @@ export const customerFields = {
   email: z.preprocess((value) => typeof value === "string" && value.trim() === "" ? undefined : value, z.string().trim().email().transform((value) => value.toLowerCase()).optional()),
   address: optionalText(500), latitude: optionalCoordinate(-90, 90), longitude: optionalCoordinate(-180, 180),
 };
+export const assignCustomerSchema=z.object({customerId:z.string().uuid(),assignedUserId:z.string().uuid()}).strict();
 
 const coordinatePair = (data: { latitude?: number; longitude?: number }, context: z.RefinementCtx) => {
   if ((data.latitude === undefined) !== (data.longitude === undefined)) context.addIssue({ code: "custom", path: ["latitude"], message: "Provide both latitude and longitude" });

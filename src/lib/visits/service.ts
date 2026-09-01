@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/authorization";
-import { checkInSchema, checkoutSchema, type CheckInInput, type CheckoutInput } from "./validation";
+import { checkInSchema, checkoutSchema, fieldCheckInSchema, type CheckInInput, type CheckoutInput } from "./validation";
 import { assertPendingVisitAllowed, customerReferenceDistanceMeters, repeatVisitSummary, resolveAttendanceId, VisitPolicyError } from "./policy";
 import { evaluateGeofence } from "@/lib/geofence/policy";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
@@ -15,6 +15,20 @@ export async function checkIn(raw: CheckInInput) {
   const user = await requireFieldEmployee();
   return checkInForUser(user,raw);
 }
+export async function fieldCheckIn(raw:unknown){const user=await requireFieldEmployee();await assertOperationalWrite(user.companyId);const d=fieldCheckInSchema.parse(raw);return db.$transaction(async tx=>{
+ await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${user.id}::uuid FOR UPDATE`;
+ const employee=await tx.user.findFirst({where:{id:user.id,companyId:user.companyId,isActive:true,role:{in:["MANAGER","SALES"]}},select:{id:true}});if(!employee)throw new VisitPolicyError("VISIT_NOT_FOUND");
+ const company=await tx.company.findUnique({where:{id:user.companyId},select:{attendanceEnabled:true,checkoutRequiredBeforeNextCheckIn:true}});if(!company)throw new VisitPolicyError("VISIT_NOT_FOUND");
+ const attendance=await tx.attendance.findFirst({where:{companyId:user.companyId,userId:user.id,endedAt:null},select:{id:true}});const attendanceId=resolveAttendanceId(company.attendanceEnabled,attendance);
+ const pending=await tx.customerVisit.count({where:{companyId:user.companyId,userId:user.id,checkedOutAt:null}});assertPendingVisitAllowed(company.checkoutRequiredBeforeNextCheckIn,pending);
+ let customerId:string|undefined,leadId:string|undefined,name:string|undefined,phone:string|undefined;
+ if(d.visitType==="FOLLOW_UP"){const lead=await tx.lead.findFirst({where:{id:d.leadId,companyId:user.companyId,assignedUserId:user.id},select:{id:true,customerId:true,contactName:true,title:true,phone:true}});if(!lead)throw new VisitPolicyError("VISIT_NOT_FOUND");leadId=lead.id;customerId=lead.customerId??(await tx.customer.create({data:{companyId:user.companyId,assignedUserId:user.id,name:lead.contactName??lead.title,phone:lead.phone}})).id;name=lead.contactName??lead.title;phone=lead.phone??undefined;}
+ if(d.visitType==="CUSTOMER"){const customer=await tx.customer.findFirst({where:{id:d.customerId,companyId:user.companyId,assignedUserId:user.id},select:{id:true,name:true,phone:true}});if(!customer)throw new VisitPolicyError("CUSTOMER_NOT_FOUND");customerId=customer.id;name=customer.name;phone=customer.phone??undefined;}
+ if(d.visitType==="NEW"){name=d.name;phone=d.phone;customerId=(await tx.customer.create({data:{companyId:user.companyId,assignedUserId:user.id,name,phone}})).id;if(phone){await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${user.companyId+'|'+phone}))`;const existing=await tx.lead.findFirst({where:{companyId:user.companyId,phone:{equals:phone,mode:"insensitive"}},select:{id:true}});if(existing)leadId=existing.id;else{const lead=await tx.lead.create({data:{companyId:user.companyId,assignedUserId:user.id,createdByUserId:user.id,title:name,contactName:name,phone,source:"CUSTOMER_VISIT"}});leadId=lead.id;await tx.leadActivity.create({data:{companyId:user.companyId,leadId:lead.id,actorUserId:user.id,type:"CREATED",newAssignedUserId:user.id,toStage:"NEW"}});}}}
+ if(!customerId)throw new VisitPolicyError("CUSTOMER_NOT_FOUND");
+ const visit=await tx.customerVisit.create({data:{companyId:user.companyId,userId:user.id,customerId,leadId,attendanceId,visitType:d.visitType,contactName:name,contactPhone:phone,photoDataUrl:d.photoDataUrl,visitNotes:d.visitNotes,checkInLatitude:d.location.latitude,checkInLongitude:d.location.longitude,checkInAccuracyMeters:d.location.accuracyMeters}});
+ if(d.visitType==="NEW"&&leadId)await tx.lead.updateMany({where:{id:leadId,companyId:user.companyId,sourceVisitId:null},data:{sourceVisitId:visit.id}});return visit;
+ });}
 export async function checkInForUser(user:{id:string;companyId:string},raw:unknown) {
   await assertOperationalWrite(user.companyId);
   const data = checkInSchema.parse(raw);
@@ -69,7 +83,7 @@ export async function getOwnPendingVisits() {
   return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id, checkedOutAt: null }, include: { customer: true }, orderBy: { checkedInAt: "desc" } });
 }
 export async function getOwnVisitHistoryForUser(user:{id:string;companyId:string}) {
-  return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id }, select:{id:true,checkedInAt:true,checkedOutAt:true,visitNotes:true,checkoutSentiment:true,checkoutRemarks:true,_count:{select:{leads:true}},customer:{select:{id:true,name:true,contactPerson:true,address:true,phone:true}}}, orderBy: { checkedInAt: "desc" },take:50 });
+  return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id }, select:{id:true,checkedInAt:true,checkedOutAt:true,visitNotes:true,checkoutSentiment:true,checkoutRemarks:true,_count:{select:{sourceLeads:true}},customer:{select:{id:true,name:true,contactPerson:true,address:true,phone:true}}}, orderBy: { checkedInAt: "desc" },take:50 });
 }
 
 export async function getVisibleRecentVisits() {

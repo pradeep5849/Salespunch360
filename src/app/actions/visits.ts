@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkIn, checkout } from "@/lib/visits/service";
+import { checkIn, checkout, fieldCheckIn } from "@/lib/visits/service";
 
 type GPS = { latitude: number; longitude: number; accuracyMeters: number };
 export type VisitActionResult = { ok: boolean; error?: string };
+export async function fieldCheckInAction(input:unknown):Promise<VisitActionResult>{try{await fieldCheckIn(input);}catch(error){const code=error instanceof Error?error.message:"";return{ok:false,error:code==="ATTENDANCE_REQUIRED"?"Start attendance before check-in.":code==="CHECKOUT_REQUIRED"?"Checkout the current visit before starting another.":"Unable to add check-in. Verify the selection, GPS, and required photo."};}revalidatePath("/workspace");revalidatePath("/workspace/check-ins");revalidatePath("/workspace/leads");return{ok:true};}
 
 export async function checkInAction(input: { customerId: string; visitNotes?: string; location: GPS }): Promise<VisitActionResult> {
   try { await checkIn(input); }

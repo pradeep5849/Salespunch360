@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createCustomer, editCustomer } from "@/lib/customers/service";
+import { assignCustomer, createCustomer, editCustomer } from "@/lib/customers/service";
 import { createCustomerSchema, editCustomerSchema } from "@/lib/customers/validation";
+
+export async function assignCustomerAction(formData:FormData){await assignCustomer({customerId:formData.get("customerId"),assignedUserId:formData.get("assignedUserId")});revalidatePath("/workspace/customers");}
 
 export type CustomerActionState = { error?: string; success?: string };
 export async function manageCustomer(_: CustomerActionState, formData: FormData): Promise<CustomerActionState> {
