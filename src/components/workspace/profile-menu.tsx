@@ -1,9 +1,4 @@
-import Link from "next/link";
-import {signOut} from "@/app/actions/auth";
-
-export const PROFILE_MENU_ITEMS = ["Company Details", "Change Password", "Logout"] as const;
-
-export function ProfileMenu({name,role}:{name:string;role:"COMPANY_ADMIN"|"MANAGER"|"SALES"}){
-  const label=role==="COMPANY_ADMIN"?"Company Admin":role==="MANAGER"?"Manager":"Sales";
-  return <details className="profile-menu"><summary className="user-chip"><b>{name.charAt(0).toUpperCase()}</b><span><strong>{name}</strong><small>{label}</small></span></summary><div><Link href="/workspace/company-profile">{PROFILE_MENU_ITEMS[0]}</Link><Link href="/workspace/change-password">{PROFILE_MENU_ITEMS[1]}</Link><form action={signOut}><button>{PROFILE_MENU_ITEMS[2]}</button></form></div></details>;
-}
+"use client";
+import {useEffect,useRef} from "react";import Link from "next/link";import {signOut} from "@/app/actions/auth";
+export const PROFILE_MENU_ITEMS=["Company Details","Change Password","Logout"] as const;
+export function ProfileMenu({name,role,open,onToggle,onClose}:{name:string;role:"COMPANY_ADMIN"|"MANAGER"|"SALES";open:boolean;onToggle:()=>void;onClose:()=>void}){const label=role==="COMPANY_ADMIN"?"Company Admin":role==="MANAGER"?"Manager":"Sales",root=useRef<HTMLDivElement>(null);useEffect(()=>{if(!open)return;const outside=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))onClose()},escape=(e:KeyboardEvent)=>{if(e.key==="Escape")onClose()};document.addEventListener("pointerdown",outside);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("pointerdown",outside);document.removeEventListener("keydown",escape)}},[open,onClose]);return <div className="profile-menu" ref={root}><button type="button" className="user-chip" aria-expanded={open} aria-haspopup="menu" onClick={onToggle}><b>{name.charAt(0).toUpperCase()}</b><span><strong>{name}</strong><small>{label}</small></span></button>{open&&<div role="menu"><Link href="/workspace/company-profile" onClick={onClose}>{PROFILE_MENU_ITEMS[0]}</Link><Link href="/workspace/change-password" onClick={onClose}>{PROFILE_MENU_ITEMS[1]}</Link><form action={signOut} onSubmit={onClose}><button>{PROFILE_MENU_ITEMS[2]}</button></form></div>}</div>}

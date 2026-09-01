@@ -1,8 +1,11 @@
 import { requireUser } from "@/lib/auth/authorization";
-import { ProfileMenu } from "@/components/workspace/profile-menu";
+import { WorkspaceHeader } from "@/components/workspace/workspace-header";
+import { db } from "@/lib/db";
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const user=await requireUser();
   const role=user.role;
-  return <>{children}{(role==="COMPANY_ADMIN"||role==="MANAGER"||role==="SALES")&&<div className="workspace-profile-global"><ProfileMenu name={user.name} role={role}/></div>}</>;
+  if(role!=="COMPANY_ADMIN"&&role!=="MANAGER"&&role!=="SALES")return <>{children}</>;
+  const company=user.companyId?await db.company.findUnique({where:{id:user.companyId},select:{name:true}}):null;
+  return <><WorkspaceHeader name={user.name} role={role} companyName={company?.name||"SalesPunch360"}/>{children}</>;
 }

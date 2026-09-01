@@ -16,16 +16,14 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
  const requestedLive=raw.liveEmployee,liveUserId=actor.role!=="SALES"&&requestedLive&&allowed.has(requestedLive)?requestedLive:undefined;
  const today=new Date();today.setUTCHours(0,0,0,0);
  const teamIds=actor.role==="SALES"?[actor.id]:employees.map(e=>e.id);
- const [company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,latestLocation,targets]=await Promise.all([
+ const [company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,latestLocation]=await Promise.all([
   db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{name:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,subscriptionStatus:true,trialEndsAt:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),
   actor.role==="COMPANY_ADMIN"?null:db.attendance.findFirst({where:{companyId:actor.companyId,userId:actor.id,endedAt:null},include:{_count:{select:{locationPoints:true}}}}),
   db.customerVisit.findMany({where:{companyId:actor.companyId,userId:checkUserId?checkUserId:{in:teamIds},checkedOutAt:{not:null}},orderBy:[{checkedOutAt:"desc"},{id:"desc"}],take:8,select:{id:true,checkedInAt:true,checkedOutAt:true,checkInLatitude:true,checkInLongitude:true,checkoutSentiment:true,checkoutRemarks:true,visitNotes:true,user:{select:{name:true}},customer:{select:{name:true,address:true}}}}),
   db.attendance.count({where:{companyId:actor.companyId,userId:{in:teamIds},startedAt:{gte:today}}}),
   db.customerVisit.count({where:{companyId:actor.companyId,userId:{in:teamIds},checkedInAt:{gte:today}}}),
   db.lead.count({where:{companyId:actor.companyId,assignedUserId:{in:teamIds},createdAt:{gte:today}}}),
-  liveUserId?db.locationPoint.findFirst({where:{companyId:actor.companyId,userId:liveUserId},orderBy:[{capturedAt:"desc"},{sequenceNumber:"desc"}],select:{latitude:true,longitude:true,capturedAt:true,user:{select:{name:true}}}}):null,
-  actor.role==="SALES"?db.salesTarget.findMany({where:{companyId:actor.companyId,assignedUserId:actor.id,startDate:{lte:new Date()},endDate:{gte:new Date()}},select:{id:true,metric:true,targetValue:true,startDate:true,endDate:true},take:5}):[]
+  liveUserId?db.locationPoint.findFirst({where:{companyId:actor.companyId,userId:liveUserId},orderBy:[{capturedAt:"desc"},{sequenceNumber:"desc"}],select:{latitude:true,longitude:true,capturedAt:true,user:{select:{name:true}}}}):null
  ]);
- const targetProgress=await Promise.all(targets.map(async target=>{const where={companyId:actor.companyId,assignedUserId:actor.id,stage:"WON" as const,wonAt:{gte:target.startDate,lte:target.endDate}};const actual=target.metric==="WON_LEADS_COUNT"?await db.lead.count({where}):Number((await db.lead.aggregate({where,_sum:{estimatedValue:true}}))._sum.estimatedValue??0);return{...target,actual}}));
- return{actor,company,employees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,latestLocation,targets:targetProgress};
+ return{actor,company,employees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,latestLocation};
 }
