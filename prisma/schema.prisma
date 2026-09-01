@@ -31,6 +31,7 @@ enum CheckoutSentiment {
   NEUTRAL
   NEGATIVE
 }
+
 enum VisitType {
   NEW
   FOLLOW_UP
@@ -45,6 +46,7 @@ enum LeadStage {
   WON
   LOST
 }
+
 enum LeadSource {
   MANUAL
   CUSTOMER_VISIT
@@ -54,6 +56,7 @@ enum LeadSource {
   WEBSITE
   OTHER
 }
+
 enum LeadActivityType {
   CREATED
   UPDATED
@@ -64,168 +67,181 @@ enum LeadActivityType {
   LOST
   REOPENED
 }
+
 enum GeofenceEventType {
   OUTSIDE_RADIUS
   INSUFFICIENT_ACCURACY
 }
+
 enum GeofenceAction {
   ATTENDANCE_START
   CUSTOMER_CHECK_IN
 }
+
 enum TargetMetric {
   WON_LEADS_COUNT
   WON_LEADS_VALUE
 }
+
 enum TargetPeriodType {
   MONTHLY
   QUARTERLY
   CUSTOM
 }
+
 enum BillingPeriod {
- MONTHLY
- SIX_MONTH
- YEARLY
+  MONTHLY
+  SIX_MONTH
+  YEARLY
 }
+
 enum BillingRole {
- MANAGER
- SALES
+  MANAGER
+  SALES
 }
+
 enum PaidSubscriptionStatus {
- ACTIVE
- EXPIRED
- CANCELLED
- SUSPENDED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  SUSPENDED
 }
+
 enum BillingOrderStatus {
- PENDING
- PAID
- FAILED
- CANCELLED
- EXPIRED
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
 }
+
 enum PaymentStatus {
- CREATED
- AUTHORIZED
- CAPTURED
- FAILED
- REFUNDED
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
 }
+
 enum BillingAuditType {
- PRICING_CHANGED
- ORDER_CREATED
- PAYMENT_CAPTURED
- PAYMENT_FAILED
- SUBSCRIPTION_ACTIVATED
- SUBSCRIPTION_RENEWED
- SEATS_CHANGED
- SUPER_ADMIN_OVERRIDE
- SUBSCRIPTION_SUSPENDED
+  PRICING_CHANGED
+  ORDER_CREATED
+  PAYMENT_CAPTURED
+  PAYMENT_FAILED
+  SUBSCRIPTION_ACTIVATED
+  SUBSCRIPTION_RENEWED
+  SEATS_CHANGED
+  SUPER_ADMIN_OVERRIDE
+  SUBSCRIPTION_SUSPENDED
 }
 
 model Company {
-  id                 String             @id @default(uuid()) @db.Uuid
-  name               String
-  slug               String             @unique
-  teamStructure      TeamStructure      @default(MANAGERS_AND_SALES)
-  trialStartedAt     DateTime?
-  trialEndsAt        DateTime?
-  subscriptionStatus SubscriptionStatus @default(SUSPENDED)
-  attendanceEnabled  Boolean            @default(true)
-  gpsTrackingEnabled Boolean            @default(false)
-  checkoutRequiredBeforeNextCheckIn Boolean @default(true)
-  attendanceGeofenceEnabled Boolean @default(false)
-  attendanceReferenceLatitude Float?
-  attendanceReferenceLongitude Float?
-  attendanceGeofenceRadiusMeters Int?
-  customerCheckInGeofenceEnabled Boolean @default(false)
+  id                                  String                @id @default(uuid()) @db.Uuid
+  name                                String
+  slug                                String                @unique
+  teamStructure                       TeamStructure         @default(MANAGERS_AND_SALES)
+  trialStartedAt                      DateTime?
+  trialEndsAt                         DateTime?
+  subscriptionStatus                  SubscriptionStatus    @default(SUSPENDED)
+  attendanceEnabled                   Boolean               @default(true)
+  gpsTrackingEnabled                  Boolean               @default(false)
+  checkoutRequiredBeforeNextCheckIn   Boolean               @default(true)
+  attendanceGeofenceEnabled           Boolean               @default(false)
+  attendanceReferenceLatitude         Float?
+  attendanceReferenceLongitude        Float?
+  attendanceGeofenceRadiusMeters      Int?
+  customerCheckInGeofenceEnabled      Boolean               @default(false)
   customerCheckInGeofenceRadiusMeters Int?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  addressLine1       String?
-  addressLine2       String?
-  locality           String?
-  city               String?
-  state              String?
-  postalCode         String?
-  country            String?
-  primaryContactName String?
-  primaryPhone       String?
-  contactEmail       String?
-  alternatePhone     String?
-  website            String?
-  gstin              String?
-  pan                 String?
-  registrationNumber String?
-  description        String?
-  users              User[]
-  attendances        Attendance[]
-  locationPoints     LocationPoint[]
-  customers          Customer[]
-  customerVisits     CustomerVisit[]
-  leads              Lead[]
-  leadActivities     LeadActivity[]
-  geofenceEvents     GeofenceEvent[]
-  salesTargets       SalesTarget[]
-  subscriptions CompanySubscription[]
-  billingOrders BillingOrder[]
-  payments PaymentTransaction[]
-  billingAudits BillingAuditEvent[]
+  createdAt                           DateTime              @default(now())
+  updatedAt                           DateTime              @updatedAt
+  addressLine1                        String?
+  addressLine2                        String?
+  locality                            String?
+  city                                String?
+  state                               String?
+  postalCode                          String?
+  country                             String?
+  primaryContactName                  String?
+  primaryPhone                        String?
+  contactEmail                        String?
+  alternatePhone                      String?
+  website                             String?
+  gstin                               String?
+  pan                                 String?
+  registrationNumber                  String?
+  description                         String?
+  users                               User[]
+  attendances                         Attendance[]
+  locationPoints                      LocationPoint[]
+  customers                           Customer[]
+  customerVisits                      CustomerVisit[]
+  leads                               Lead[]
+  leadActivities                      LeadActivity[]
+  geofenceEvents                      GeofenceEvent[]
+  salesTargets                        SalesTarget[]
+  subscriptions                       CompanySubscription[]
+  billingOrders                       BillingOrder[]
+  payments                            PaymentTransaction[]
+  billingAudits                       BillingAuditEvent[]
+  VisitPhoto                          VisitPhoto[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
 }
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  companyId    String?   @db.Uuid
-  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name         String
-  email        String    @unique
-  passwordHash String
-  role         Role
-  phone        String?
-  employeeCode String?
-  isActive     Boolean   @default(true)
-  managerId    String?   @db.Uuid
-  manager      User?     @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  reports      User[]    @relation("ManagerReports")
-  sessions     Session[]
-  mobileSessions MobileSession[]
-  attendances  Attendance[]
-  locationPoints LocationPoint[]
-  customerVisits CustomerVisit[]
-  assignedCustomers Customer[] @relation("CustomerAssignee")
-  assignedLeads Lead[] @relation("LeadAssignee")
-  createdLeads Lead[] @relation("LeadCreator")
-  leadActivities LeadActivity[] @relation("LeadActor")
-  previousLeadAssignments LeadActivity[] @relation("PreviousLeadAssignee")
-  newLeadAssignments LeadActivity[] @relation("NewLeadAssignee")
-  geofenceEvents GeofenceEvent[] @relation("GeofenceEmployee")
-  assignedTargets SalesTarget[] @relation("TargetAssignee")
-  createdTargets SalesTarget[] @relation("TargetCreator")
-  createdPrices BillingPrice[] @relation("PriceCreator")
-  createdBillingOrders BillingOrder[] @relation("OrderCreator")
-  billingAuditEvents BillingAuditEvent[] @relation("BillingAuditActor")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  emailVerifiedAt DateTime?
+  id                      String                   @id @default(uuid()) @db.Uuid
+  companyId               String?                  @db.Uuid
+  company                 Company?                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                    String
+  email                   String                   @unique
+  passwordHash            String
+  role                    Role
+  phone                   String?
+  employeeCode            String?
+  isActive                Boolean                  @default(true)
+  managerId               String?                  @db.Uuid
+  manager                 User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  reports                 User[]                   @relation("ManagerReports")
+  sessions                Session[]
+  mobileSessions          MobileSession[]
+  attendances             Attendance[]
+  locationPoints          LocationPoint[]
+  customerVisits          CustomerVisit[]
+  visitPhotos             VisitPhoto[]
+  assignedCustomers       Customer[]               @relation("CustomerAssignee")
+  uploadedVisitPhotos     VisitPhoto[]             @relation("VisitPhotoUploader")
+  assignedLeads           Lead[]                   @relation("LeadAssignee")
+  createdLeads            Lead[]                   @relation("LeadCreator")
+  leadActivities          LeadActivity[]           @relation("LeadActor")
+  previousLeadAssignments LeadActivity[]           @relation("PreviousLeadAssignee")
+  newLeadAssignments      LeadActivity[]           @relation("NewLeadAssignee")
+  geofenceEvents          GeofenceEvent[]          @relation("GeofenceEmployee")
+  assignedTargets         SalesTarget[]            @relation("TargetAssignee")
+  createdTargets          SalesTarget[]            @relation("TargetCreator")
+  createdPrices           BillingPrice[]           @relation("PriceCreator")
+  createdBillingOrders    BillingOrder[]           @relation("OrderCreator")
+  billingAuditEvents      BillingAuditEvent[]      @relation("BillingAuditActor")
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  emailVerifiedAt         DateTime?
   emailVerificationTokens EmailVerificationToken[]
 
+  @@unique([companyId, employeeCode])
   @@index([companyId, role])
   @@index([companyId, isActive, role])
   @@index([managerId])
-  @@unique([companyId, employeeCode])
   @@map("users")
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  tokenHash String   @unique @db.Char(64)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash String    @unique @db.Char(64)
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
   @@index([expiresAt])
@@ -258,23 +274,27 @@ model Attendance {
 }
 
 model Customer {
-  id            String          @id @default(uuid()) @db.Uuid
-  companyId     String          @db.Uuid
-  company       Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  assignedUserId String?         @db.Uuid
-  assignedUser   User?           @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  name          String
-  contactPerson String?
-  phone         String?
-  email         String?
-  address       String?
-  latitude      Float?
-  longitude     Float?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  visits        CustomerVisit[]
-  leads         Lead[]
-  geofenceEvents GeofenceEvent[]
+  id                        String          @id @default(uuid()) @db.Uuid
+  companyId                 String          @db.Uuid
+  company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId            String?         @db.Uuid
+  assignedUser              User?           @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  name                      String
+  contactPerson             String?
+  phone                     String?
+  email                     String?
+  address                   String?
+  latitude                  Float?
+  longitude                 Float?
+  checkInReferenceLatitude  Float?
+  checkInReferenceLongitude Float?
+  checkInReferenceVisitId   String?         @db.Uuid
+  checkInReferenceSetAt     DateTime?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  visits                    CustomerVisit[]
+  leads                     Lead[]
+  geofenceEvents            GeofenceEvent[]
 
   @@index([companyId, name])
   @@index([companyId, createdAt])
@@ -283,35 +303,35 @@ model Customer {
 }
 
 model CustomerVisit {
-  id                    String             @id @default(uuid()) @db.Uuid
-  companyId             String             @db.Uuid
-  company               Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  userId                String             @db.Uuid
-  user                  User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  customerId            String             @db.Uuid
-  customer              Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  leadId                String?             @db.Uuid
-  lead                  Lead?               @relation("VisitLead", fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  visitType             VisitType           @default(CUSTOMER)
-  contactName           String?             @db.VarChar(160)
-  contactPhone          String?             @db.VarChar(30)
-  photoDataUrl          String?
-  attendanceId          String?            @db.Uuid
-  attendance            Attendance?        @relation(fields: [attendanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  checkedInAt           DateTime           @default(now())
-  checkInLatitude       Float
-  checkInLongitude      Float
-  checkInAccuracyMeters Float
-  checkedOutAt          DateTime?
-  checkOutLatitude      Float?
-  checkOutLongitude     Float?
+  id                     String             @id @default(uuid()) @db.Uuid
+  companyId              String             @db.Uuid
+  company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  userId                 String             @db.Uuid
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  customerId             String?            @db.Uuid
+  customer               Customer?          @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leadId                 String?            @db.Uuid
+  lead                   Lead?              @relation("VisitLead", fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  visitType              VisitType          @default(CUSTOMER)
+  contactName            String?            @db.VarChar(160)
+  contactPhone           String?            @db.VarChar(30)
+  attendanceId           String?            @db.Uuid
+  attendance             Attendance?        @relation(fields: [attendanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  checkedInAt            DateTime           @default(now())
+  checkInLatitude        Float
+  checkInLongitude       Float
+  checkInAccuracyMeters  Float
+  checkedOutAt           DateTime?
+  checkOutLatitude       Float?
+  checkOutLongitude      Float?
   checkOutAccuracyMeters Float?
-  checkoutSentiment     CheckoutSentiment?
-  checkoutRemarks       String?
-  visitNotes            String?
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  sourceLeads           Lead[]              @relation("LeadSourceVisit")
+  checkoutSentiment      CheckoutSentiment?
+  checkoutRemarks        String?
+  visitNotes             String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  sourceLeads            Lead[]             @relation("LeadSourceVisit")
+  photo                  VisitPhoto?
 
   @@index([companyId, checkedInAt])
   @@index([companyId, userId, checkedInAt])
@@ -322,36 +342,41 @@ model CustomerVisit {
 }
 
 model Lead {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  customerId String? @db.Uuid
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  sourceVisitId String? @db.Uuid
-  sourceVisit CustomerVisit? @relation("LeadSourceVisit", fields: [sourceVisitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  visits CustomerVisit[] @relation("VisitLead")
-  assignedUserId String @db.Uuid
-  assignedUser User @relation("LeadAssignee", fields: [assignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  createdByUserId String @db.Uuid
-  createdByUser User @relation("LeadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  title String @db.VarChar(200)
-  contactName String? @db.VarChar(150)
-  phone String? @db.VarChar(30)
-  email String? @db.VarChar(320)
-  companyName String? @db.VarChar(200)
-  source LeadSource @default(MANUAL)
-  stage LeadStage @default(NEW)
-  estimatedValue Decimal? @db.Decimal(18, 2)
-  currencyCode String @default("INR") @db.Char(3)
-  followUpAt DateTime?
-  notes String? @db.VarChar(5000)
-  lostReason String? @db.VarChar(1000)
-  wonAt DateTime?
-  lostAt DateTime?
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  activities LeadActivity[]
+  id                        String          @id @default(uuid()) @db.Uuid
+  companyId                 String          @db.Uuid
+  company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  customerId                String?         @db.Uuid
+  customer                  Customer?       @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceVisitId             String?         @db.Uuid
+  sourceVisit               CustomerVisit?  @relation("LeadSourceVisit", fields: [sourceVisitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  visits                    CustomerVisit[] @relation("VisitLead")
+  checkInReferenceLatitude  Float?
+  checkInReferenceLongitude Float?
+  checkInReferenceVisitId   String?         @db.Uuid
+  checkInReferenceSetAt     DateTime?
+  assignedUserId            String          @db.Uuid
+  assignedUser              User            @relation("LeadAssignee", fields: [assignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdByUserId           String          @db.Uuid
+  createdByUser             User            @relation("LeadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title                     String          @db.VarChar(200)
+  contactName               String?         @db.VarChar(150)
+  phone                     String?         @db.VarChar(30)
+  email                     String?         @db.VarChar(320)
+  companyName               String?         @db.VarChar(200)
+  source                    LeadSource      @default(MANUAL)
+  stage                     LeadStage       @default(NEW)
+  estimatedValue            Decimal?        @db.Decimal(18, 2)
+  currencyCode              String          @default("INR") @db.Char(3)
+  followUpAt                DateTime?
+  notes                     String?         @db.VarChar(5000)
+  lostReason                String?         @db.VarChar(1000)
+  wonAt                     DateTime?
+  lostAt                    DateTime?
+  version                   Int             @default(1)
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  activities                LeadActivity[]
+
   @@index([companyId, stage])
   @@index([companyId, assignedUserId])
   @@index([companyId, followUpAt])
@@ -361,22 +386,46 @@ model Lead {
   @@map("leads")
 }
 
+model VisitPhoto {
+  id                 String        @id @default(uuid()) @db.Uuid
+  companyId          String        @db.Uuid
+  company            Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  visitId            String        @unique @db.Uuid
+  visit              CustomerVisit @relation(fields: [visitId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  uploadedByUserId   String        @db.Uuid
+  uploadedByUser     User          @relation("VisitPhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  objectKey          String        @db.VarChar(500)
+  thumbnailObjectKey String        @db.VarChar(500)
+  mimeType           String        @db.VarChar(100)
+  sizeBytes          Int
+  thumbnailSizeBytes Int
+  width              Int
+  height             Int
+  createdAt          DateTime      @default(now())
+  User               User?         @relation(fields: [userId], references: [id])
+  userId             String?       @db.Uuid
+
+  @@index([companyId, createdAt])
+  @@map("visit_photos")
+}
+
 model LeadActivity {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  leadId String @db.Uuid
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  actorUserId String @db.Uuid
-  actorUser User @relation("LeadActor", fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  type LeadActivityType
-  fromStage LeadStage?
-  toStage LeadStage?
-  previousAssignedUserId String? @db.Uuid
-  previousAssignedUser User? @relation("PreviousLeadAssignee", fields: [previousAssignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  newAssignedUserId String? @db.Uuid
-  newAssignedUser User? @relation("NewLeadAssignee", fields: [newAssignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  createdAt DateTime @default(now())
+  id                     String           @id @default(uuid()) @db.Uuid
+  companyId              String           @db.Uuid
+  company                Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leadId                 String           @db.Uuid
+  lead                   Lead             @relation(fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actorUserId            String           @db.Uuid
+  actorUser              User             @relation("LeadActor", fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type                   LeadActivityType
+  fromStage              LeadStage?
+  toStage                LeadStage?
+  previousAssignedUserId String?          @db.Uuid
+  previousAssignedUser   User?            @relation("PreviousLeadAssignee", fields: [previousAssignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  newAssignedUserId      String?          @db.Uuid
+  newAssignedUser        User?            @relation("NewLeadAssignee", fields: [newAssignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt              DateTime         @default(now())
+
   @@index([leadId, createdAt])
   @@index([companyId, createdAt])
   @@map("lead_activities")
@@ -396,12 +445,12 @@ model LocationPoint {
   capturedAt     DateTime
   receivedAt     DateTime   @default(now())
   sequenceNumber Int
-  clientPointId  String? @db.Uuid
+  clientPointId  String?    @db.Uuid
 
   @@unique([attendanceId, sequenceNumber])
+  @@unique([companyId, userId, clientPointId])
   @@index([companyId, userId, capturedAt])
   @@index([attendanceId, capturedAt])
-  @@unique([companyId, userId, clientPointId])
   @@map("location_points")
 }
 
@@ -419,14 +468,14 @@ model Session {
 }
 
 model MobileSession {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @db.Uuid
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  tokenHash    String   @unique @db.Char(64)
-  expiresAt    DateTime
-  lastUsedAt   DateTime
-  revokedAt    DateTime?
-  createdAt    DateTime @default(now())
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash  String    @unique @db.Char(64)
+  expiresAt  DateTime
+  lastUsedAt DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([userId, revokedAt])
   @@index([expiresAt])
@@ -434,155 +483,168 @@ model MobileSession {
 }
 
 model GeofenceEvent {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  employeeId String @db.Uuid
-  employee User @relation("GeofenceEmployee",fields:[employeeId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  type GeofenceEventType
-  action GeofenceAction
-  customerId String? @db.Uuid
-  customer Customer? @relation(fields:[customerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  attendanceId String? @db.Uuid
-  attendance Attendance? @relation(fields:[attendanceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  referenceLatitude Float
-  referenceLongitude Float
-  actualLatitude Float
-  actualLongitude Float
-  accuracyMeters Float?
+  id                  String            @id @default(uuid()) @db.Uuid
+  companyId           String            @db.Uuid
+  company             Company           @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employeeId          String            @db.Uuid
+  employee            User              @relation("GeofenceEmployee", fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type                GeofenceEventType
+  action              GeofenceAction
+  customerId          String?           @db.Uuid
+  customer            Customer?         @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attendanceId        String?           @db.Uuid
+  attendance          Attendance?       @relation(fields: [attendanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  referenceLatitude   Float
+  referenceLongitude  Float
+  actualLatitude      Float
+  actualLongitude     Float
+  accuracyMeters      Float?
   allowedRadiusMeters Int
-  distanceMeters Float?
-  occurredAt DateTime @default(now())
-  @@index([companyId,occurredAt])
-  @@index([companyId,employeeId,occurredAt])
-  @@index([companyId,action,occurredAt])
-  @@index([customerId,occurredAt])
+  distanceMeters      Float?
+  occurredAt          DateTime          @default(now())
+
+  @@index([companyId, occurredAt])
+  @@index([companyId, employeeId, occurredAt])
+  @@index([companyId, action, occurredAt])
+  @@index([customerId, occurredAt])
   @@map("geofence_events")
 }
 
 model SalesTarget {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  assignedUserId String @db.Uuid
-  assignedUser User @relation("TargetAssignee",fields:[assignedUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  createdByUserId String @db.Uuid
-  createdByUser User @relation("TargetCreator",fields:[createdByUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  metric TargetMetric
-  periodType TargetPeriodType
-  startDate DateTime @db.Date
-  endDate DateTime @db.Date
-  targetValue Decimal @db.Decimal(18,2)
-  currencyCode String @default("INR") @db.Char(3)
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([companyId,assignedUserId,metric,startDate,endDate])
-  @@index([companyId,assignedUserId])
-  @@index([companyId,startDate,endDate])
-  @@index([companyId,metric])
+  id              String           @id @default(uuid()) @db.Uuid
+  companyId       String           @db.Uuid
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId  String           @db.Uuid
+  assignedUser    User             @relation("TargetAssignee", fields: [assignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdByUserId String           @db.Uuid
+  createdByUser   User             @relation("TargetCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  metric          TargetMetric
+  periodType      TargetPeriodType
+  startDate       DateTime         @db.Date
+  endDate         DateTime         @db.Date
+  targetValue     Decimal          @db.Decimal(18, 2)
+  currencyCode    String           @default("INR") @db.Char(3)
+  version         Int              @default(1)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([companyId, assignedUserId, metric, startDate, endDate])
+  @@index([companyId, assignedUserId])
+  @@index([companyId, startDate, endDate])
+  @@index([companyId, metric])
   @@map("sales_targets")
 }
 
 model BillingPrice {
- id String @id @default(uuid()) @db.Uuid
- role BillingRole
- period BillingPeriod
- amount Decimal @db.Decimal(18,2)
- currency String @default("INR") @db.Char(3)
- effectiveFrom DateTime @default(now())
- effectiveUntil DateTime?
- createdByUserId String? @db.Uuid
- createdByUser User? @relation("PriceCreator",fields:[createdByUserId],references:[id],onDelete:Restrict)
- createdAt DateTime @default(now())
- @@index([role,period,effectiveFrom])
- @@map("billing_prices")
+  id              String        @id @default(uuid()) @db.Uuid
+  role            BillingRole
+  period          BillingPeriod
+  amount          Decimal       @db.Decimal(18, 2)
+  currency        String        @default("INR") @db.Char(3)
+  effectiveFrom   DateTime      @default(now())
+  effectiveUntil  DateTime?
+  createdByUserId String?       @db.Uuid
+  createdByUser   User?         @relation("PriceCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt       DateTime      @default(now())
+
+  @@index([role, period, effectiveFrom])
+  @@map("billing_prices")
 }
+
 model CompanySubscription {
- id String @id @default(uuid()) @db.Uuid
- companyId String @db.Uuid
- company Company @relation(fields:[companyId],references:[id],onDelete:Restrict)
- status PaidSubscriptionStatus
- billingPeriod BillingPeriod
- managerSeats Int
- salesSeats Int
- startsAt DateTime
- endsAt DateTime
- sourceOrderId String? @unique @db.Uuid
- sourceOrder BillingOrder? @relation(fields:[sourceOrderId],references:[id],onDelete:Restrict)
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
- @@index([companyId,status,endsAt])
- @@map("company_subscriptions")
+  id            String                 @id @default(uuid()) @db.Uuid
+  companyId     String                 @db.Uuid
+  company       Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  status        PaidSubscriptionStatus
+  billingPeriod BillingPeriod
+  managerSeats  Int
+  salesSeats    Int
+  startsAt      DateTime
+  endsAt        DateTime
+  sourceOrderId String?                @unique @db.Uuid
+  sourceOrder   BillingOrder?          @relation(fields: [sourceOrderId], references: [id], onDelete: Restrict)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  @@index([companyId, status, endsAt])
+  @@map("company_subscriptions")
 }
+
 model BillingOrder {
- id String @id @default(uuid()) @db.Uuid
- companyId String @db.Uuid
- company Company @relation(fields:[companyId],references:[id],onDelete:Restrict)
- createdByUserId String @db.Uuid
- createdByUser User @relation("OrderCreator",fields:[createdByUserId],references:[id],onDelete:Restrict)
- billingPeriod BillingPeriod
- managerSeats Int
- salesSeats Int
- managerUnitPrice Decimal @db.Decimal(18,2)
- salesUnitPrice Decimal @db.Decimal(18,2)
- currency String @db.Char(3)
- subtotal Decimal @db.Decimal(18,2)
- taxAmount Decimal @default(0) @db.Decimal(18,2)
- totalAmount Decimal @db.Decimal(18,2)
- status BillingOrderStatus @default(PENDING)
- provider String @default("UNCONFIGURED") @db.VarChar(40)
- providerOrderId String? @unique @db.VarChar(200)
- idempotencyKey String @unique @db.VarChar(100)
- paidAt DateTime?
- expiresAt DateTime?
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
- payments PaymentTransaction[]
- subscription CompanySubscription?
- @@index([companyId,createdAt])
- @@map("billing_orders")
+  id               String               @id @default(uuid()) @db.Uuid
+  companyId        String               @db.Uuid
+  company          Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdByUserId  String               @db.Uuid
+  createdByUser    User                 @relation("OrderCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  billingPeriod    BillingPeriod
+  managerSeats     Int
+  salesSeats       Int
+  managerUnitPrice Decimal              @db.Decimal(18, 2)
+  salesUnitPrice   Decimal              @db.Decimal(18, 2)
+  currency         String               @db.Char(3)
+  subtotal         Decimal              @db.Decimal(18, 2)
+  taxAmount        Decimal              @default(0) @db.Decimal(18, 2)
+  totalAmount      Decimal              @db.Decimal(18, 2)
+  status           BillingOrderStatus   @default(PENDING)
+  provider         String               @default("UNCONFIGURED") @db.VarChar(40)
+  providerOrderId  String?              @unique @db.VarChar(200)
+  idempotencyKey   String               @unique @db.VarChar(100)
+  paidAt           DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  payments         PaymentTransaction[]
+  subscription     CompanySubscription?
+
+  @@index([companyId, createdAt])
+  @@map("billing_orders")
 }
+
 model PaymentTransaction {
- id String @id @default(uuid()) @db.Uuid
- companyId String @db.Uuid
- company Company @relation(fields:[companyId],references:[id],onDelete:Restrict)
- orderId String @db.Uuid
- order BillingOrder @relation(fields:[orderId],references:[id],onDelete:Restrict)
- provider String @db.VarChar(40)
- providerPaymentId String @unique @db.VarChar(200)
- amount Decimal @db.Decimal(18,2)
- currency String @db.Char(3)
- status PaymentStatus
- capturedAt DateTime?
- failureCode String? @db.VarChar(100)
- failureMessage String? @db.VarChar(500)
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
- @@index([companyId,createdAt])
- @@index([orderId])
- @@map("payment_transactions")
+  id                String        @id @default(uuid()) @db.Uuid
+  companyId         String        @db.Uuid
+  company           Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  orderId           String        @db.Uuid
+  order             BillingOrder  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  provider          String        @db.VarChar(40)
+  providerPaymentId String        @unique @db.VarChar(200)
+  amount            Decimal       @db.Decimal(18, 2)
+  currency          String        @db.Char(3)
+  status            PaymentStatus
+  capturedAt        DateTime?
+  failureCode       String?       @db.VarChar(100)
+  failureMessage    String?       @db.VarChar(500)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([companyId, createdAt])
+  @@index([orderId])
+  @@map("payment_transactions")
 }
+
 model BillingAuditEvent {
- id String @id @default(uuid()) @db.Uuid
- companyId String? @db.Uuid
- company Company? @relation(fields:[companyId],references:[id],onDelete:Restrict)
- actorUserId String? @db.Uuid
- actorUser User? @relation("BillingAuditActor",fields:[actorUserId],references:[id],onDelete:Restrict)
- type BillingAuditType
- entityId String? @db.Uuid
- reason String? @db.VarChar(500)
- metadata Json?
- occurredAt DateTime @default(now())
- @@index([companyId,occurredAt])
- @@index([type,occurredAt])
- @@map("billing_audit_events")
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String?          @db.Uuid
+  company     Company?         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  actorUserId String?          @db.Uuid
+  actorUser   User?            @relation("BillingAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  type        BillingAuditType
+  entityId    String?          @db.Uuid
+  reason      String?          @db.VarChar(500)
+  metadata    Json?
+  occurredAt  DateTime         @default(now())
+
+  @@index([companyId, occurredAt])
+  @@index([type, occurredAt])
+  @@map("billing_audit_events")
 }
+
 model RateLimitBucket {
- key String @id @db.VarChar(128)
- count Int
- resetsAt DateTime
- updatedAt DateTime @updatedAt
- @@index([resetsAt])
- @@map("rate_limit_buckets")
+  key       String   @id @db.VarChar(128)
+  count     Int
+  resetsAt  DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetsAt])
+  @@map("rate_limit_buckets")
 }

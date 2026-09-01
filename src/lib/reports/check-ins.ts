@@ -16,7 +16,7 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
   ]);
   const rows=await Promise.all(visits.map(async v=>{
     const prior=advanced?await db.customerVisit.findMany({where:{companyId:actor.companyId,customerId:v.customerId,OR:[{checkedInAt:{lt:v.checkedInAt}},{checkedInAt:v.checkedInAt,id:{lt:v.id}}]},select:{id:true,checkedInAt:true},take:1}):[];
-    return {...v,durationMs:durationMs(v.checkedInAt,v.checkedOutAt),referenceDistanceMeters:referenceDistance({latitude:v.checkInLatitude,longitude:v.checkInLongitude},v.customer),visitKind:advanced?visitKind(v,prior):undefined};
+    return {...v,durationMs:durationMs(v.checkedInAt,v.checkedOutAt),referenceDistanceMeters:v.customer?referenceDistance({latitude:v.checkInLatitude,longitude:v.checkInLongitude},v.customer):null,visitKind:advanced?visitKind(v,prior):undefined};
   }));
   let firstVisits=0,repeatVisits=0;
   if(advanced && userIds.length){

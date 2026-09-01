@@ -15,7 +15,7 @@ const coordinatePair = (data: { latitude?: number; longitude?: number }, context
   if ((data.latitude === undefined) !== (data.longitude === undefined)) context.addIssue({ code: "custom", path: ["latitude"], message: "Provide both latitude and longitude" });
 };
 
-export const createCustomerSchema = z.object(customerFields).strict().superRefine(coordinatePair);
+export const createCustomerSchema = z.object({name:customerFields.name,phone:phoneSchema.refine(Boolean,"Phone number is required")}).strict();
 export const editCustomerSchema = z.object({ customerId: z.string().uuid(), ...customerFields }).strict().superRefine(coordinatePair);
 export type CreateCustomerInput = z.input<typeof createCustomerSchema>;
 export type EditCustomerInput = z.input<typeof editCustomerSchema>;

@@ -1,0 +1,3 @@
+import{HostingerStorage}from"./hostinger";import type{PrivateStorage}from"./types";
+let instance:PrivateStorage|undefined;export function privateStorage(){if(instance)return instance;if((process.env.STORAGE_DRIVER??"hostinger")!=="hostinger")throw new Error("UNSUPPORTED_STORAGE_DRIVER");return instance=new HostingerStorage(process.env.HOSTINGER_STORAGE_PATH??"");}
+export function visitPhotoKeys(companyId:string,userId:string,visitId:string){const base=`companies/${companyId}/employees/${userId}/check-ins/${visitId}`;return{objectKey:`${base}/photo.webp`,thumbnailObjectKey:`${base}/thumb.webp`};}

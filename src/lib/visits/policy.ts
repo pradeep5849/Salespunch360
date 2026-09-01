@@ -1,7 +1,7 @@
 import { haversineDistanceMeters } from "@/lib/location/geo";
 
 export class VisitPolicyError extends Error {
-  constructor(public readonly code: "CUSTOMER_NOT_FOUND" | "ATTENDANCE_REQUIRED" | "CHECKOUT_REQUIRED" | "VISIT_NOT_FOUND" | "CUSTOMER_LOCATION_REQUIRED" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY") { super(code); }
+  constructor(public readonly code: "CUSTOMER_NOT_FOUND" | "ATTENDANCE_REQUIRED" | "CHECKOUT_REQUIRED" | "VISIT_NOT_FOUND" | "CUSTOMER_LOCATION_REQUIRED" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY"|"REPEAT_VISIT_OUTSIDE_RADIUS"|"PHOTO_REQUIRED"|"PHONE_REQUIRED"|"SUBJECT_OWNERSHIP_CONFLICT",public readonly distanceMeters?:number) { super(code); }
 }
 
 export function resolveAttendanceId(attendanceEnabled: boolean, openAttendance: { id: string } | null) {
@@ -10,7 +10,7 @@ export function resolveAttendanceId(attendanceEnabled: boolean, openAttendance: 
 }
 
 export function assertPendingVisitAllowed(required: boolean, pendingCount: number) {
-  if (required && pendingCount > 0) throw new VisitPolicyError("CHECKOUT_REQUIRED");
+  void required;if (pendingCount > 0) throw new VisitPolicyError("CHECKOUT_REQUIRED");
 }
 
 export function customerReferenceDistanceMeters(customer: { latitude: number | null; longitude: number | null }, actual: { latitude: number; longitude: number }) {
