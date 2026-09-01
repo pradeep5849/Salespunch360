@@ -1,0 +1,1 @@
+import{cleanupExpiredCheckIns}from"../src/lib/visits/retention";cleanupExpiredCheckIns().then(result=>{process.stdout.write(`${JSON.stringify(result)}\n`);}).catch(error=>{process.stderr.write(`Check-in cleanup failed: ${error instanceof Error?error.message:"UNKNOWN"}\n`);process.exitCode=1;});

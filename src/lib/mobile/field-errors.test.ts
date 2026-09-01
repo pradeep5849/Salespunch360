@@ -1,0 +1,2 @@
+import{describe,expect,it}from"vitest";import{VisitPolicyError}from"@/lib/visits/policy";import{mobileFieldErrorDetails}from"./field-errors";
+describe("mobile repeat radius errors",()=>{it("includes only the safe rounded distance",()=>expect(mobileFieldErrorDetails(new VisitPolicyError("REPEAT_VISIT_OUTSIDE_RADIUS",85.7))).toEqual({code:"REPEAT_VISIT_OUTSIDE_RADIUS",distanceMeters:86}));it("keeps configurable OUTSIDE_RADIUS separate",()=>expect(mobileFieldErrorDetails(new VisitPolicyError("OUTSIDE_RADIUS",85.7))).toEqual({code:"OUTSIDE_RADIUS",distanceMeters:undefined}))});

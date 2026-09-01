@@ -1,0 +1,1 @@
+export function mobileFieldErrorDetails(error:unknown){const code=error instanceof Error?error.message:"INVALID_INPUT",distanceMeters=code==="REPEAT_VISIT_OUTSIDE_RADIUS"&&typeof error==="object"&&error&&"distanceMeters"in error?Math.round(Number(error.distanceMeters)):undefined;return{code,distanceMeters};}

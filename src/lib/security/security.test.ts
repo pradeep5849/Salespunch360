@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {environmentSchema} from '@/lib/env';
 import {isTrustedOrigin} from './request';
 
-const production={DATABASE_URL:'postgresql://db.example/salespunch360',AUTH_SECRET:'a-production-secret-that-is-deliberately-longer-than-forty-eight-characters',NODE_ENV:'production' as const,APP_URL:'https://www.salespunch360.com',TRUST_PROXY:'true',PAYMENT_PROVIDER:'UNCONFIGURED' as const,SMTP_HOST:'smtp.hostinger.com',SMTP_PORT:'465',SMTP_SECURE:'true',SMTP_USER:'noreply@salespunch360.com',SMTP_PASSWORD:'a-real-secret-password',MAIL_FROM:'noreply@salespunch360.com'};
+const production={DATABASE_URL:'postgresql://db.example/salespunch360',AUTH_SECRET:'a-production-secret-that-is-deliberately-longer-than-forty-eight-characters',NODE_ENV:'production' as const,APP_URL:'https://www.salespunch360.com',TRUST_PROXY:'true',PAYMENT_PROVIDER:'UNCONFIGURED' as const,STORAGE_DRIVER:'hostinger' as const,HOSTINGER_STORAGE_PATH:'/srv/private/salespunch360',SMTP_HOST:'smtp.hostinger.com',SMTP_PORT:'465',SMTP_SECURE:'true',SMTP_USER:'noreply@salespunch360.com',SMTP_PASSWORD:'a-real-secret-password',MAIL_FROM:'noreply@salespunch360.com'};
 
 describe('production safety',()=>{
   it('accepts a complete HTTPS production configuration',()=>expect(environmentSchema.safeParse(production).success).toBe(true));

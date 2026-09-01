@@ -11,12 +11,12 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
   const [total,completed,pending,leadAgg,visits,employees,customers]=await Promise.all([
     db.customerVisit.count({where}), db.customerVisit.count({where:{...where,checkedOutAt:{not:null}}}), db.customerVisit.count({where:{...where,checkedOutAt:null}}),
     db.lead.count({where:{companyId:actor.companyId,sourceVisit:{is:where}}}),
-    db.customerVisit.findMany({where,include:{user:{select:{name:true,role:true}},customer:{select:{name:true,latitude:true,longitude:true}},_count:{select:{leads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
+    db.customerVisit.findMany({where,include:{user:{select:{name:true,role:true}},customer:{select:{name:true,latitude:true,longitude:true}},_count:{select:{sourceLeads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
     reportEmployeeOptions(actor), db.customer.findMany({where:{companyId:actor.companyId},select:{id:true,name:true},orderBy:{name:"asc"}})
   ]);
   const rows=await Promise.all(visits.map(async v=>{
     const prior=advanced?await db.customerVisit.findMany({where:{companyId:actor.companyId,customerId:v.customerId,OR:[{checkedInAt:{lt:v.checkedInAt}},{checkedInAt:v.checkedInAt,id:{lt:v.id}}]},select:{id:true,checkedInAt:true},take:1}):[];
-    return {...v,durationMs:durationMs(v.checkedInAt,v.checkedOutAt),referenceDistanceMeters:referenceDistance({latitude:v.checkInLatitude,longitude:v.checkInLongitude},v.customer),visitKind:advanced?visitKind(v,prior):undefined};
+    return {...v,durationMs:durationMs(v.checkedInAt,v.checkedOutAt),referenceDistanceMeters:v.customer?referenceDistance({latitude:v.checkInLatitude,longitude:v.checkInLongitude},v.customer):null,visitKind:advanced?visitKind(v,prior):undefined};
   }));
   let firstVisits=0,repeatVisits=0;
   if(advanced && userIds.length){

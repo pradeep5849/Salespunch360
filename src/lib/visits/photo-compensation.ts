@@ -1,0 +1,1 @@
+import type{PrivateStorage}from"@/lib/storage/types";export async function compensateWrittenPhoto(storage:PrivateStorage,keys:{objectKey:string;thumbnailObjectKey:string},originalError:unknown):Promise<never>{await Promise.allSettled([storage.delete(keys.objectKey),storage.delete(keys.thumbnailObjectKey)]);throw originalError;}

@@ -1,79 +1,45 @@
-import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth/authorization";
-import { checkInSchema, checkoutSchema, type CheckInInput, type CheckoutInput } from "./validation";
-import { assertPendingVisitAllowed, customerReferenceDistanceMeters, repeatVisitSummary, resolveAttendanceId, VisitPolicyError } from "./policy";
-import { evaluateGeofence } from "@/lib/geofence/policy";
-import { assertOperationalWrite } from "@/lib/billing/entitlement";
-
-async function requireFieldEmployee() {
-  const user = await requireRole("MANAGER", "SALES");
-  if (!user.companyId) throw new VisitPolicyError("VISIT_NOT_FOUND");
-  return { ...user, companyId: user.companyId };
-}
-
-export async function checkIn(raw: CheckInInput) {
-  const user = await requireFieldEmployee();
-  return checkInForUser(user,raw);
-}
-export async function checkInForUser(user:{id:string;companyId:string},raw:unknown) {
-  await assertOperationalWrite(user.companyId);
-  const data = checkInSchema.parse(raw);
-  const result=await db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
-    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id" = ${user.companyId}::uuid FOR SHARE`;
-    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, role: { in: ["MANAGER", "SALES"] } }, select: { id: true } });
-    if (!employee) throw new VisitPolicyError("VISIT_NOT_FOUND");
-    const [company, customer, attendance, pendingCount] = await Promise.all([
-      tx.company.findFirst({ where: { id: user.companyId }, select: { attendanceEnabled: true, checkoutRequiredBeforeNextCheckIn: true,customerCheckInGeofenceEnabled:true,customerCheckInGeofenceRadiusMeters:true } }),
-      tx.customer.findFirst({ where: { id: data.customerId, companyId: user.companyId }, select: { id: true, latitude: true, longitude: true } }),
-      tx.attendance.findFirst({ where: { companyId: user.companyId, userId: user.id, endedAt: null }, select: { id: true } }),
-      tx.customerVisit.count({ where: { companyId: user.companyId, userId: user.id, checkedOutAt: null } }),
-    ]);
-    if (!company || !customer) throw new VisitPolicyError("CUSTOMER_NOT_FOUND");
-    const attendanceId = resolveAttendanceId(company.attendanceEnabled, attendance);
-    assertPendingVisitAllowed(company.checkoutRequiredBeforeNextCheckIn, pendingCount);
-    if(company.customerCheckInGeofenceEnabled){
-      if(customer.latitude==null||customer.longitude==null||company.customerCheckInGeofenceRadiusMeters==null)throw new VisitPolicyError("CUSTOMER_LOCATION_REQUIRED");
-      const verdict=evaluateGeofence(data.location,{latitude:customer.latitude,longitude:customer.longitude},company.customerCheckInGeofenceRadiusMeters);
-      if(!verdict.allowed)return {blocked:{companyId:user.companyId,employeeId:user.id,type:verdict.type,action:"CUSTOMER_CHECK_IN" as const,customerId:customer.id,referenceLatitude:customer.latitude,referenceLongitude:customer.longitude,actualLatitude:data.location.latitude,actualLongitude:data.location.longitude,accuracyMeters:data.location.accuracyMeters,allowedRadiusMeters:company.customerCheckInGeofenceRadiusMeters,distanceMeters:verdict.distanceMeters}};
-    }
-    const previousVisitCount = await tx.customerVisit.count({ where: { companyId: user.companyId, customerId: customer.id } });
-    const visit = await tx.customerVisit.create({ data: { companyId: user.companyId, userId: user.id, customerId: customer.id, attendanceId, checkedInAt: new Date(), checkInLatitude: data.location.latitude, checkInLongitude: data.location.longitude, checkInAccuracyMeters: data.location.accuracyMeters, visitNotes: data.visitNotes } });
-    return { success:{ visit, ...repeatVisitSummary(previousVisitCount), customerReferenceDistanceMeters: customerReferenceDistanceMeters(customer, data.location) }};
-  });
-  if("blocked" in result&&result.blocked){const blocked=result.blocked;await db.geofenceEvent.create({data:blocked});throw new VisitPolicyError(blocked.type);}
-  return result.success;
-}
-
-export async function checkout(raw: CheckoutInput) {
-  const user = await requireFieldEmployee();
-  return checkoutForUser(user,raw);
-}
-export async function checkoutForUser(user:{id:string;companyId:string},raw:unknown) {
-  const data = checkoutSchema.parse(raw);
-  return db.$transaction(async (tx) => {
-    const candidate = await tx.customerVisit.findFirst({ where: { id: data.visitId, companyId: user.companyId, userId: user.id, checkedOutAt: null }, select: { id: true } });
-    if (!candidate) throw new VisitPolicyError("VISIT_NOT_FOUND");
-    await tx.$queryRaw`SELECT "id" FROM "customer_visits" WHERE "id" = ${data.visitId}::uuid FOR UPDATE`;
-    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, role: { in: ["MANAGER", "SALES"] } }, select: { id: true } });
-    if (!employee) throw new VisitPolicyError("VISIT_NOT_FOUND");
-    const visit = await tx.customerVisit.findFirst({ where: { id: data.visitId, companyId: user.companyId, userId: user.id, checkedOutAt: null }, select: { id: true } });
-    if (!visit) throw new VisitPolicyError("VISIT_NOT_FOUND");
-    const updated = await tx.customerVisit.updateMany({ where: { id: visit.id, companyId: user.companyId, userId: user.id, checkedOutAt: null }, data: { checkedOutAt: new Date(), checkOutLatitude: data.location.latitude, checkOutLongitude: data.location.longitude, checkOutAccuracyMeters: data.location.accuracyMeters, checkoutSentiment: data.sentiment, checkoutRemarks: data.remarks } });
-    if (updated.count !== 1) throw new VisitPolicyError("VISIT_NOT_FOUND");
-  });
-}
-
-export async function getOwnPendingVisits() {
-  const user = await requireFieldEmployee();
-  return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id, checkedOutAt: null }, include: { customer: true }, orderBy: { checkedInAt: "desc" } });
-}
-export async function getOwnVisitHistoryForUser(user:{id:string;companyId:string}) {
-  return db.customerVisit.findMany({ where: { companyId: user.companyId, userId: user.id }, select:{id:true,checkedInAt:true,checkedOutAt:true,visitNotes:true,checkoutSentiment:true,checkoutRemarks:true,_count:{select:{leads:true}},customer:{select:{id:true,name:true,contactPerson:true,address:true,phone:true}}}, orderBy: { checkedInAt: "desc" },take:50 });
-}
-
-export async function getVisibleRecentVisits() {
-  const viewer = await requireRole("COMPANY_ADMIN", "MANAGER");
-  if (!viewer.companyId) throw new VisitPolicyError("VISIT_NOT_FOUND");
-  return db.customerVisit.findMany({ where: { companyId: viewer.companyId, ...(viewer.role === "MANAGER" ? { OR: [{ userId: viewer.id }, { user: { managerId: viewer.id, role: "SALES" } }] } : {}) }, include: { customer: { select: { name: true } }, user: { select: { name: true, role: true } } }, orderBy: { checkedInAt: "desc" }, take: 50 });
-}
+import {Prisma,type Role}from"@prisma/client";
+import{randomUUID}from"node:crypto";
+import{db}from"@/lib/db";import{requireRole}from"@/lib/auth/authorization";import{assertOperationalWrite}from"@/lib/billing/entitlement";import{haversineDistanceMeters}from"@/lib/location/geo";import{privateStorage,visitPhotoKeys}from"@/lib/storage";
+import{checkoutSchema,fieldCheckInSchema,type CheckoutInput}from"./validation";import{processVisitPhoto}from"./photo";import{resolveAttendanceId,VisitPolicyError}from"./policy";
+import{compensateWrittenPhoto}from"./photo-compensation";
+type FieldUser={id:string;companyId:string;role?:Role};const RADIUS_METERS=50;
+const normalizePhone=(phone:string)=>phone.replace(/[\s().-]/g,"");
+async function requireFieldEmployee(){const user=await requireRole("MANAGER","SALES");if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");return{...user,companyId:user.companyId};}
+export function hasImmutableReference(value:{checkInReferenceLatitude:number|null;checkInReferenceLongitude:number|null;checkInReferenceSetAt:Date|null}){return value.checkInReferenceLatitude!==null&&value.checkInReferenceLongitude!==null&&value.checkInReferenceSetAt!==null;}
+export function hasReferenceVisitProvenance(value:{checkInReferenceVisitId:string|null}){return value.checkInReferenceVisitId!==null;}
+export function assertWithinImmutableReference(reference:{latitude:number;longitude:number}|null,actual:{latitude:number;longitude:number}){if(!reference)return;const distance=haversineDistanceMeters(reference,actual);if(distance>RADIUS_METERS)throw new VisitPolicyError("REPEAT_VISIT_OUTSIDE_RADIUS",distance);}
+async function persistPhoto(tx:Prisma.TransactionClient,user:FieldUser,visitId:string,file:File){const processed=await processVisitPhoto(file),keys=visitPhotoKeys(user.companyId,user.id,visitId),storage=privateStorage();await storage.put(keys.objectKey,processed.main);try{await storage.put(keys.thumbnailObjectKey,processed.thumbnail);await tx.visitPhoto.create({data:{companyId:user.companyId,visitId,uploadedByUserId:user.id,...keys,mimeType:processed.mimeType,sizeBytes:processed.main.length,thumbnailSizeBytes:processed.thumbnail.length,width:processed.width,height:processed.height}});}catch(error){await Promise.allSettled([storage.delete(keys.objectKey),storage.delete(keys.thumbnailObjectKey)]);throw error;}return keys;}
+export async function fieldCheckIn(raw:unknown,photo?:File){return fieldCheckInForUser(await requireFieldEmployee(),raw,photo);}
+export async function fieldCheckInForUser(user:FieldUser,raw:unknown,photo?:File){await assertOperationalWrite(user.companyId);const d=fieldCheckInSchema.parse(raw),visitId=randomUUID();let writtenKeys:{objectKey:string;thumbnailObjectKey:string}|undefined;try{return await db.$transaction(async tx=>{
+ await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${user.id}::uuid FOR UPDATE`;
+ const employee=await tx.user.findFirst({where:{id:user.id,companyId:user.companyId,isActive:true,role:{in:["MANAGER","SALES"]}},select:{id:true}});if(!employee)throw new VisitPolicyError("VISIT_NOT_FOUND");
+ const company=await tx.company.findUnique({where:{id:user.companyId},select:{attendanceEnabled:true}});if(!company)throw new VisitPolicyError("VISIT_NOT_FOUND");
+ const attendance=await tx.attendance.findFirst({where:{companyId:user.companyId,userId:user.id,endedAt:null},select:{id:true}}),attendanceId=resolveAttendanceId(company.attendanceEnabled,attendance);
+ if(await tx.customerVisit.count({where:{companyId:user.companyId,userId:user.id,checkedOutAt:null}}))throw new VisitPolicyError("CHECKOUT_REQUIRED");
+ let customerId:string|undefined,leadId:string|undefined,name:string|undefined,phone:string|undefined,requiresPhoto=d.visitType==="NEW";let establishStandaloneLeadReference=false;let existingCustomerLead:{id:string;assignedUserId:string;sourceVisitId:string|null;checkInReferenceLatitude:number|null;checkInReferenceLongitude:number|null;checkInReferenceVisitId:string|null;checkInReferenceSetAt:Date|null}|null=null;
+ if(d.visitType==="CUSTOMER"){
+  await tx.$queryRaw`SELECT "id" FROM "customers" WHERE "id"=${d.customerId}::uuid AND "companyId"=${user.companyId}::uuid FOR UPDATE`;
+  const customer=await tx.customer.findFirst({where:{id:d.customerId,companyId:user.companyId,assignedUserId:user.id},select:{id:true,name:true,phone:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true,checkInReferenceVisitId:true,checkInReferenceSetAt:true}});if(!customer)throw new VisitPolicyError("CUSTOMER_NOT_FOUND");
+  customerId=customer.id;name=customer.name;phone=customer.phone??undefined;let referenceValid=hasImmutableReference(customer);if(!referenceValid){const first=await tx.customerVisit.findFirst({where:{companyId:user.companyId,customerId:customer.id},orderBy:[{checkedInAt:"asc"},{id:"asc"}],select:{id:true,checkedInAt:true,checkInLatitude:true,checkInLongitude:true}});if(first){await tx.customer.update({where:{id:customer.id},data:{checkInReferenceLatitude:first.checkInLatitude,checkInReferenceLongitude:first.checkInLongitude,checkInReferenceVisitId:first.id,checkInReferenceSetAt:first.checkedInAt}});customer.checkInReferenceLatitude=first.checkInLatitude;customer.checkInReferenceLongitude=first.checkInLongitude;customer.checkInReferenceVisitId=first.id;customer.checkInReferenceSetAt=first.checkedInAt;referenceValid=true;}}requiresPhoto=!referenceValid;
+  assertWithinImmutableReference(customer.checkInReferenceLatitude===null||customer.checkInReferenceLongitude===null?null:{latitude:customer.checkInReferenceLatitude,longitude:customer.checkInReferenceLongitude},d.location);
+  existingCustomerLead=await tx.lead.findFirst({where:{companyId:user.companyId,customerId:customer.id},orderBy:{createdAt:"asc"},select:{id:true,assignedUserId:true,sourceVisitId:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true,checkInReferenceVisitId:true,checkInReferenceSetAt:true}});if(existingCustomerLead&&existingCustomerLead.assignedUserId!==user.id)throw new VisitPolicyError("SUBJECT_OWNERSHIP_CONFLICT");leadId=existingCustomerLead?.id;
+ }else if(d.visitType==="FOLLOW_UP"){
+  await tx.$queryRaw`SELECT "id" FROM "leads" WHERE "id"=${d.leadId}::uuid AND "companyId"=${user.companyId}::uuid FOR UPDATE`;
+  const lead=await tx.lead.findFirst({where:{id:d.leadId,companyId:user.companyId,assignedUserId:user.id},select:{id:true,customerId:true,title:true,contactName:true,phone:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true,checkInReferenceVisitId:true,checkInReferenceSetAt:true,customer:{select:{checkInReferenceLatitude:true,checkInReferenceLongitude:true}}}});if(!lead)throw new VisitPolicyError("VISIT_NOT_FOUND");
+  leadId=lead.id;customerId=lead.customerId??undefined;name=lead.contactName??lead.title;phone=lead.phone??undefined;if(!lead.customerId&&!hasImmutableReference(lead)){const first=await tx.customerVisit.findFirst({where:{companyId:user.companyId,leadId:lead.id},orderBy:[{checkedInAt:"asc"},{id:"asc"}],select:{id:true,checkedInAt:true,checkInLatitude:true,checkInLongitude:true}});if(first){await tx.lead.update({where:{id:lead.id},data:{checkInReferenceLatitude:first.checkInLatitude,checkInReferenceLongitude:first.checkInLongitude,checkInReferenceVisitId:first.id,checkInReferenceSetAt:first.checkedInAt}});lead.checkInReferenceLatitude=first.checkInLatitude;lead.checkInReferenceLongitude=first.checkInLongitude;lead.checkInReferenceVisitId=first.id;lead.checkInReferenceSetAt=first.checkedInAt;}else establishStandaloneLeadReference=true;}const ref=lead.customerId?lead.customer:lead;assertWithinImmutableReference(!ref||ref.checkInReferenceLatitude===null||ref.checkInReferenceLongitude===null?null:{latitude:ref.checkInReferenceLatitude,longitude:ref.checkInReferenceLongitude},d.location);
+ }else{name=d.name;phone=d.phone?normalizePhone(d.phone):undefined;if(phone){await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${user.companyId+"|"+phone}))`;const matches=await tx.lead.findMany({where:{companyId:user.companyId,phone:{equals:phone,mode:"insensitive"}},select:{id:true,assignedUserId:true,contactName:true,title:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true}});if(matches.some(x=>x.assignedUserId!==user.id))throw new VisitPolicyError("SUBJECT_OWNERSHIP_CONFLICT");const own=matches.find(x=>x.assignedUserId===user.id);if(own&&(own.contactName??own.title).trim().toLowerCase()!==name.trim().toLowerCase())throw new VisitPolicyError("SUBJECT_OWNERSHIP_CONFLICT");if(own){leadId=own.id;assertWithinImmutableReference(own.checkInReferenceLatitude===null||own.checkInReferenceLongitude===null?null:{latitude:own.checkInReferenceLatitude,longitude:own.checkInReferenceLongitude},d.location);}}}
+ if(requiresPhoto&&!photo)throw new VisitPolicyError("PHOTO_REQUIRED");
+ const visit=await tx.customerVisit.create({data:{id:visitId,companyId:user.companyId,userId:user.id,customerId,leadId,attendanceId,visitType:d.visitType,contactName:name,contactPhone:phone,visitNotes:d.visitNotes,checkInLatitude:d.location.latitude,checkInLongitude:d.location.longitude,checkInAccuracyMeters:d.location.accuracyMeters}});
+ if(photo)writtenKeys=await persistPhoto(tx,user,visit.id,photo);
+ if(d.visitType==="CUSTOMER"){
+  if(!leadId){const lead=await tx.lead.create({data:{companyId:user.companyId,customerId,assignedUserId:user.id,createdByUserId:user.id,title:name!,contactName:name,phone,source:"CUSTOMER_VISIT",sourceVisitId:visit.id,checkInReferenceLatitude:d.location.latitude,checkInReferenceLongitude:d.location.longitude,checkInReferenceVisitId:visit.id,checkInReferenceSetAt:new Date()}});leadId=lead.id;await tx.leadActivity.create({data:{companyId:user.companyId,leadId,actorUserId:user.id,type:"CREATED",newAssignedUserId:user.id,toStage:"NEW"}});}else if(existingCustomerLead){const refValid=hasImmutableReference(existingCustomerLead);await tx.lead.update({where:{id:existingCustomerLead.id},data:{...(existingCustomerLead.sourceVisitId===null?{sourceVisitId:visit.id}:{}),...(!refValid?{checkInReferenceLatitude:d.location.latitude,checkInReferenceLongitude:d.location.longitude,checkInReferenceVisitId:visit.id,checkInReferenceSetAt:new Date()}:{})}});}if(requiresPhoto)await tx.customer.update({where:{id:customerId!},data:{checkInReferenceLatitude:d.location.latitude,checkInReferenceLongitude:d.location.longitude,checkInReferenceVisitId:visit.id,checkInReferenceSetAt:new Date()}});
+ }else if(d.visitType==="NEW"&&phone&&!leadId){const lead=await tx.lead.create({data:{companyId:user.companyId,assignedUserId:user.id,createdByUserId:user.id,title:name!,contactName:name,phone,source:"CUSTOMER_VISIT",sourceVisitId:visit.id,checkInReferenceLatitude:d.location.latitude,checkInReferenceLongitude:d.location.longitude,checkInReferenceVisitId:visit.id,checkInReferenceSetAt:new Date()}});leadId=lead.id;await tx.leadActivity.create({data:{companyId:user.companyId,leadId,actorUserId:user.id,type:"CREATED",newAssignedUserId:user.id,toStage:"NEW"}});}
+ if(establishStandaloneLeadReference&&leadId)await tx.lead.update({where:{id:leadId},data:{checkInReferenceLatitude:d.location.latitude,checkInReferenceLongitude:d.location.longitude,checkInReferenceVisitId:visit.id,checkInReferenceSetAt:new Date()}});if(leadId)await tx.customerVisit.update({where:{id:visit.id},data:{leadId}});return{...visit,leadId};
+},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}catch(error){if(writtenKeys)return compensateWrittenPhoto(privateStorage(),writtenKeys,error);throw error;}}
+export async function addPhoneToVisit(raw:unknown){const user=await requireFieldEmployee(),d=fieldCheckInSchema.options[0].pick({phone:true}).extend({visitId:(await import("zod")).z.string().uuid()}).parse(raw);if(!d.phone)throw new VisitPolicyError("PHONE_REQUIRED");const phone=normalizePhone(d.phone);return db.$transaction(async tx=>{await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${user.companyId+"|"+phone}))`;const visit=await tx.customerVisit.findFirst({where:{id:d.visitId,companyId:user.companyId,userId:user.id,visitType:"NEW",leadId:null},select:{id:true,contactName:true,checkInLatitude:true,checkInLongitude:true}});if(!visit)throw new VisitPolicyError("VISIT_NOT_FOUND");if(await tx.lead.findFirst({where:{companyId:user.companyId,phone:{equals:phone,mode:"insensitive"}}}))throw new VisitPolicyError("SUBJECT_OWNERSHIP_CONFLICT");const lead=await tx.lead.create({data:{companyId:user.companyId,assignedUserId:user.id,createdByUserId:user.id,title:visit.contactName!,contactName:visit.contactName,phone,source:"CUSTOMER_VISIT",sourceVisitId:visit.id,checkInReferenceLatitude:visit.checkInLatitude,checkInReferenceLongitude:visit.checkInLongitude,checkInReferenceVisitId:visit.id,checkInReferenceSetAt:new Date()}});await tx.customerVisit.update({where:{id:visit.id},data:{leadId:lead.id,contactPhone:phone}});await tx.leadActivity.create({data:{companyId:user.companyId,leadId:lead.id,actorUserId:user.id,type:"CREATED",newAssignedUserId:user.id,toStage:"NEW"}});return lead;});}
+export async function checkIn(raw:unknown){return fieldCheckIn(raw,raw&&typeof raw==="object"&&"photo"in raw?(raw as{photo?:File}).photo:undefined);}
+export async function checkInForUser(user:FieldUser,raw:unknown){if(!raw||typeof raw!=="object")throw new VisitPolicyError("VISIT_NOT_FOUND");const value=raw as Record<string,unknown>;return fieldCheckInForUser(user,{visitType:"CUSTOMER",customerId:value.customerId,location:value.location,visitNotes:value.visitNotes},value.photo instanceof File?value.photo:undefined);}
+export async function checkout(raw:CheckoutInput){return checkoutForUser(await requireFieldEmployee(),raw);}export async function checkoutForUser(user:FieldUser,raw:unknown){const d=checkoutSchema.parse(raw);return db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "customer_visits" WHERE "id"=${d.visitId}::uuid FOR UPDATE`;const changed=await tx.customerVisit.updateMany({where:{id:d.visitId,companyId:user.companyId,userId:user.id,checkedOutAt:null},data:{checkedOutAt:new Date(),checkOutLatitude:d.location.latitude,checkOutLongitude:d.location.longitude,checkOutAccuracyMeters:d.location.accuracyMeters,checkoutSentiment:d.sentiment,checkoutRemarks:d.remarks}});if(changed.count!==1)throw new VisitPolicyError("VISIT_NOT_FOUND");});}
+export async function getOwnPendingVisits(){const user=await requireFieldEmployee();return db.customerVisit.findMany({where:{companyId:user.companyId,userId:user.id,checkedOutAt:null},include:{customer:true},orderBy:{checkedInAt:"desc"}});}export async function getOwnVisitHistoryForUser(user:FieldUser){return db.customerVisit.findMany({where:{companyId:user.companyId,userId:user.id},select:{id:true,checkedInAt:true,checkedOutAt:true,visitNotes:true,checkoutSentiment:true,checkoutRemarks:true,_count:{select:{sourceLeads:true}},customer:{select:{id:true,name:true,contactPerson:true,address:true,phone:true}}},orderBy:{checkedInAt:"desc"},take:50});}
+export async function getVisibleRecentVisits(){const viewer=await requireRole("COMPANY_ADMIN","MANAGER");if(!viewer.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");return db.customerVisit.findMany({where:{companyId:viewer.companyId,...(viewer.role==="MANAGER"?{OR:[{userId:viewer.id},{user:{managerId:viewer.id,role:"SALES"}}]}:{})},include:{customer:{select:{name:true}},user:{select:{name:true,role:true}}},orderBy:{checkedInAt:"desc"},take:50});}
