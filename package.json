@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "provision:initial-super-admin": "tsx scripts/provision-initial-super-admin.ts",
+    "cleanup:checkins": "tsx scripts/cleanup-checkins.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate"
   },

@@ -136,24 +136,24 @@ enum BillingAuditType {
 }
 
 model Company {
-  id                                  String                @id @default(uuid()) @db.Uuid
+  id                                  String                   @id @default(uuid()) @db.Uuid
   name                                String
-  slug                                String                @unique
-  teamStructure                       TeamStructure         @default(MANAGERS_AND_SALES)
+  slug                                String                   @unique
+  teamStructure                       TeamStructure            @default(MANAGERS_AND_SALES)
   trialStartedAt                      DateTime?
   trialEndsAt                         DateTime?
-  subscriptionStatus                  SubscriptionStatus    @default(SUSPENDED)
-  attendanceEnabled                   Boolean               @default(true)
-  gpsTrackingEnabled                  Boolean               @default(false)
-  checkoutRequiredBeforeNextCheckIn   Boolean               @default(true)
-  attendanceGeofenceEnabled           Boolean               @default(false)
+  subscriptionStatus                  SubscriptionStatus       @default(SUSPENDED)
+  attendanceEnabled                   Boolean                  @default(true)
+  gpsTrackingEnabled                  Boolean                  @default(false)
+  checkoutRequiredBeforeNextCheckIn   Boolean                  @default(true)
+  attendanceGeofenceEnabled           Boolean                  @default(false)
   attendanceReferenceLatitude         Float?
   attendanceReferenceLongitude        Float?
   attendanceGeofenceRadiusMeters      Int?
-  customerCheckInGeofenceEnabled      Boolean               @default(false)
+  customerCheckInGeofenceEnabled      Boolean                  @default(false)
   customerCheckInGeofenceRadiusMeters Int?
-  createdAt                           DateTime              @default(now())
-  updatedAt                           DateTime              @updatedAt
+  createdAt                           DateTime                 @default(now())
+  updatedAt                           DateTime                 @updatedAt
   addressLine1                        String?
   addressLine2                        String?
   locality                            String?
@@ -184,6 +184,8 @@ model Company {
   payments                            PaymentTransaction[]
   billingAudits                       BillingAuditEvent[]
   visitPhotos                         VisitPhoto[]
+  pendingStorageDeletions             PendingStorageDeletion[]
+  leadDeletionAudits                  LeadDeletionAudit[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -210,6 +212,7 @@ model User {
   customerVisits          CustomerVisit[]
   assignedCustomers       Customer[]               @relation("CustomerAssignee")
   uploadedVisitPhotos     VisitPhoto[]             @relation("VisitPhotoUploader")
+  leadDeletionAudits      LeadDeletionAudit[]      @relation("LeadDeletionActor")
   assignedLeads           Lead[]                   @relation("LeadAssignee")
   createdLeads            Lead[]                   @relation("LeadCreator")
   leadActivities          LeadActivity[]           @relation("LeadActor")
@@ -404,6 +407,35 @@ model VisitPhoto {
 
   @@index([companyId, createdAt])
   @@map("visit_photos")
+}
+
+model PendingStorageDeletion {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @db.Uuid
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  objectKey     String    @unique @db.VarChar(500)
+  attempts      Int       @default(0)
+  lastAttemptAt DateTime?
+  lastError     String?   @db.VarChar(100)
+  createdAt     DateTime  @default(now())
+
+  @@index([createdAt])
+  @@map("pending_storage_deletions")
+}
+
+model LeadDeletionAudit {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @db.Uuid
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actorUserId   String   @db.Uuid
+  actorUser     User     @relation("LeadDeletionActor", fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  deletedLeadId String   @db.Uuid
+  visitsDeleted Int
+  photosQueued  Int
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@map("lead_deletion_audits")
 }
 
 model LeadActivity {

@@ -1,7 +1,7 @@
 import { haversineDistanceMeters } from "@/lib/location/geo";
 
 export class VisitPolicyError extends Error {
-  constructor(public readonly code: "CUSTOMER_NOT_FOUND" | "ATTENDANCE_REQUIRED" | "CHECKOUT_REQUIRED" | "VISIT_NOT_FOUND" | "CUSTOMER_LOCATION_REQUIRED" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY"|"REPEAT_VISIT_OUTSIDE_RADIUS"|"PHOTO_REQUIRED"|"PHONE_REQUIRED"|"SUBJECT_OWNERSHIP_CONFLICT",public readonly distanceMeters?:number) { super(code); }
+  constructor(public readonly code: "CUSTOMER_NOT_FOUND" | "ATTENDANCE_REQUIRED" | "CHECKOUT_REQUIRED" | "VISIT_NOT_FOUND" | "CUSTOMER_LOCATION_REQUIRED" | "OUTSIDE_RADIUS" | "INSUFFICIENT_ACCURACY"|"REPEAT_VISIT_OUTSIDE_RADIUS"|"PHOTO_REQUIRED"|"PHONE_REQUIRED"|"SUBJECT_OWNERSHIP_CONFLICT"|"PHOTO_INVALID"|"PHOTO_STORAGE_NOT_CONFIGURED"|"PHOTO_STORAGE_UNAVAILABLE",public readonly distanceMeters?:number) { super(code); }
 }
 
 export function resolveAttendanceId(attendanceEnabled: boolean, openAttendance: { id: string } | null) {

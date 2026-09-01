@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class ApiClient(private val session:SecureSession){
@@ -27,7 +28,7 @@ class ApiClient(private val session:SecureSession){
  suspend fun createEmployee(request:CreateEmployeeRequest)=json.decodeFromString<Employee>(call("api/v1/mobile/employees","POST",json.encodeToString(request)))
  suspend fun setEmployeeActive(employeeId:String,isActive:Boolean)=call("api/v1/mobile/employees","PATCH",json.encodeToString(EmployeeActiveRequest(employeeId,isActive)))
  suspend fun fieldContext()=json.decodeFromString<FieldContext>(call("api/v1/mobile/field"))
- suspend fun checkIn(customerId:String,location:LocationPayload,notes:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckInRequest(customerId=customerId,location=location,visitNotes=notes)))
+ suspend fun checkIn(visitType:String,subjectId:String?,name:String?,phone:String?,location:LocationPayload,notes:String?,photo:ByteArray?)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("action","CHECK_IN").addFormDataPart("visitType",visitType).addFormDataPart("latitude",location.latitude.toString()).addFormDataPart("longitude",location.longitude.toString()).addFormDataPart("accuracyMeters",(location.accuracyMeters?:0.0).toString()).apply{notes?.let{addFormDataPart("visitNotes",it)};name?.let{addFormDataPart("name",it)};phone?.let{addFormDataPart("phone",it)};subjectId?.let{addFormDataPart(if(visitType=="CUSTOMER")"customerId" else "leadId",it)};photo?.let{addFormDataPart("photo","photo.webp",it.toRequestBody("image/webp".toMediaType()))}}.build();val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/field").header("Accept","application/json").apply{session.token()?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).execute().use{val raw=it.body?.string()?="{}";if(!it.isSuccessful){val code=runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull();throw ApiException(it.code,code)};raw}}
  suspend fun checkout(visitId:String,location:LocationPayload,sentiment:VisitSentiment,remarks:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckoutRequest(visitId=visitId,location=location,sentiment=sentiment,remarks=remarks)))
  suspend fun leads()=json.decodeFromString<List<LeadSummary>>(call("api/v1/mobile/leads"))
  suspend fun lead(id:String)=json.decodeFromString<LeadSummary>(call("api/v1/mobile/leads?id=$id"))
