@@ -13,13 +13,15 @@
     "provision:initial-super-admin": "tsx scripts/provision-initial-super-admin.ts",
     "cleanup:checkins": "tsx scripts/cleanup-checkins.ts",
     "prisma:generate": "prisma generate",
-    "prisma:validate": "prisma validate"
+    "prisma:validate": "prisma validate",
+    "prebuild": "prisma migrate deploy"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
     "@prisma/client": "6.12.0",
     "next": "^16.3.3",
     "nodemailer": "^9.0.6",
+    "prisma": "6.12.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sharp": "^0.34.5",
@@ -33,7 +35,6 @@
     "@types/react-dom": "^19.2.0",
     "eslint": "^9.35.0",
     "eslint-config-next": "^16.3.3",
-    "prisma": "6.12.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
