@@ -3,7 +3,6 @@ import {db} from "@/lib/db";
 import {requireRole} from "@/lib/auth/authorization";
 import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
 
-const dateText=(d:Date)=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(d);
 const businessDate=(text:string)=>new Date(`${text}T00:00:00.000Z`);
 
 export async function companyTravelSettings(){
@@ -33,11 +32,11 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
  if(changed.count!==1)throw new Error("NOT_FOUND");
 }
 
-async function calculateEmployeeDay(companyId:string,employeeId:string,date:string){
+async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string,employeeId:string,date:string){
  const start=businessDate(date),end=new Date(start.getTime()+86400000);
  // India business-date UTC boundaries: midnight IST = previous day 18:30 UTC.
  const indiaStart=new Date(start.getTime()-19800000),indiaEnd=new Date(end.getTime()-19800000);
- const points=await db.locationPoint.findMany({where:{companyId,userId:employeeId,capturedAt:{gte:indiaStart,lt:indiaEnd}},select:{id:true,attendanceId:true,latitude:true,longitude:true,accuracyMeters:true,capturedAt:true,sequenceNumber:true},orderBy:[{attendanceId:"asc"},{capturedAt:"asc"},{sequenceNumber:"asc"},{id:"asc"}]});
+ const points=await tx.locationPoint.findMany({where:{companyId,userId:employeeId,capturedAt:{gte:indiaStart,lt:indiaEnd}},select:{id:true,attendanceId:true,latitude:true,longitude:true,accuracyMeters:true,capturedAt:true,sequenceNumber:true},orderBy:[{attendanceId:"asc"},{capturedAt:"asc"},{sequenceNumber:"asc"},{id:"asc"}]});
  const byAttendance=new Map<string,typeof points>();
  for(const p of points){const a=byAttendance.get(p.attendanceId)||[];a.push(p);byAttendance.set(p.attendanceId,a)}
  return Math.round([...byAttendance.values()].reduce((sum,row)=>sum+calculateTravelDistanceMeters(row),0));
@@ -54,7 +53,7 @@ export async function reviewDailyTravel(employeeId:string,date:string,status:"AP
   const rate=employee.travelRatePerKm??company?.travelRatePerKm;
   if(!rate)throw new Error("RATE_NOT_CONFIGURED");
   // Calculation uses authoritative accepted GPS points; snapshot is stored with the decision.
-  const distanceMeters=await calculateEmployeeDay(admin.companyId,employeeId,date);
+  const distanceMeters=await calculateEmployeeDay(tx,admin.companyId,employeeId,date);
   const amount=new Prisma.Decimal(distanceMeters).div(1000).mul(rate).toDecimalPlaces(2);
   return tx.dailyTravelApproval.upsert({
    where:{companyId_employeeId_businessDate:{companyId:admin.companyId,employeeId,businessDate:businessDate(date)}},
