@@ -13,7 +13,7 @@ export async function listTargets(raw:Record<string,string|undefined>={},provide
  return {actor:a,targets:raw.status?enriched.filter(t=>t.status===raw.status):enriched,options:await targetOptions(a)};
 }
 
-function indiaMonth(now=new Date()){const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit"}).format(now).split("-").map(Number);const y=parts[0],m=parts[1];const startText=`${y}-${String(m).padStart(2,"0")}-01`,last=new Date(Date.UTC(y,m,0)).getUTCDate(),endText=`${y}-${String(m).padStart(2,"0")}-${String(last).padStart(2,"0")}`;return{startText,endText,start:indiaDateBoundary(startText),endExclusive:indiaDateBoundary(endText,true),startDate:new Date(`${startText}T00:00:00Z`),endDate:new Date(`${endText}T00:00:00Z`)}};
+function indiaMonth(now=new Date()){const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit"}).formatToParts(now),y=Number(parts.find(p=>p.type==="year")?.value),m=Number(parts.find(p=>p.type==="month")?.value);const startText=`${y}-${String(m).padStart(2,"0")}-01`,last=new Date(Date.UTC(y,m,0)).getUTCDate(),endText=`${y}-${String(m).padStart(2,"0")}-${String(last).padStart(2,"0")}`;return{startText,endText,start:indiaDateBoundary(startText),endExclusive:indiaDateBoundary(endText,true),startDate:new Date(`${startText}T00:00:00Z`),endDate:new Date(`${endText}T00:00:00Z`)}};
 
 export async function monthlyTargetRows(provided?:ReportActor){
  const a=await actor(provided),month=indiaMonth(),users=await db.user.findMany({where:{...visibleUserWhere(a),isActive:true,NOT:{role:"MANAGER",managerType:"MANAGER_ONLY"}},select:{id:true,name:true,role:true,managerType:true},orderBy:[{name:"asc"},{id:"asc"}]});
