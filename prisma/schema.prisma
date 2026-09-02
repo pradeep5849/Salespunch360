@@ -14,6 +14,10 @@ enum Role {
   SALES
 }
 
+enum PushPlatform {
+  ANDROID
+}
+
 enum TeamStructure {
   MANAGERS_AND_SALES
   SALES_ONLY
@@ -194,6 +198,7 @@ model Company {
   pendingStorageDeletions             PendingStorageDeletion[]
   leadDeletionAudits                  LeadDeletionAudit[]
   followUpTasks                       FollowUpTask[]
+  pushDevices                         PushDevice[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -215,6 +220,7 @@ model User {
   reports                 User[]                   @relation("ManagerReports")
   sessions                Session[]
   mobileSessions          MobileSession[]
+  pushDevices             PushDevice[]
   attendances             Attendance[]
   locationPoints          LocationPoint[]
   customerVisits          CustomerVisit[]
@@ -236,8 +242,8 @@ model User {
   updatedAt               DateTime                 @updatedAt
   emailVerifiedAt         DateTime?
   emailVerificationTokens EmailVerificationToken[]
-  assignedFollowUpTasks   FollowUpTask[] @relation("FollowUpTaskAssignee")
-  createdFollowUpTasks    FollowUpTask[] @relation("FollowUpTaskCreator")
+  assignedFollowUpTasks   FollowUpTask[]           @relation("FollowUpTaskAssignee")
+  createdFollowUpTasks    FollowUpTask[]           @relation("FollowUpTaskCreator")
 
   @@unique([companyId, employeeCode])
   @@index([companyId, role])
@@ -390,7 +396,7 @@ model Lead {
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt
   activities                LeadActivity[]
-  followUpTasks              FollowUpTask[]
+  followUpTasks             FollowUpTask[]
 
   @@index([companyId, stage])
   @@index([companyId, assignedUserId])
@@ -535,18 +541,39 @@ model Session {
 }
 
 model MobileSession {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  tokenHash  String    @unique @db.Char(64)
-  expiresAt  DateTime
-  lastUsedAt DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @db.Uuid
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash   String       @unique @db.Char(64)
+  expiresAt   DateTime
+  lastUsedAt  DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  pushDevices PushDevice[]
 
   @@index([userId, revokedAt])
   @@index([expiresAt])
   @@map("mobile_sessions")
+}
+
+model PushDevice {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  userId          String        @db.Uuid
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  mobileSessionId String        @db.Uuid
+  mobileSession   MobileSession @relation(fields: [mobileSessionId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  installationId  String        @unique @db.VarChar(128)
+  fcmToken        String        @unique @db.VarChar(4096)
+  platform        PushPlatform  @default(ANDROID)
+  lastSeenAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([companyId, userId])
+  @@index([mobileSessionId])
+  @@map("push_devices")
 }
 
 model GeofenceEvent {

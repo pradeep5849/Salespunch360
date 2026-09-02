@@ -20,3 +20,4 @@ android/local.properties
 *.aab
 *.jks
 *.keystore
+android/app/google-services.json

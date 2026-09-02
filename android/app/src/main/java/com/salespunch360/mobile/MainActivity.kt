@@ -1,6 +1,9 @@
 package com.salespunch360.mobile
 
 import android.os.Bundle
+import android.Manifest
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
@@ -12,7 +15,7 @@ import com.salespunch360.mobile.ui.LoadingScreen
 import com.salespunch360.mobile.ui.LoginScreen
 import com.salespunch360.mobile.ui.RetryScreen
 
-class MainActivity:ComponentActivity(){override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContent{AppTheme{SalesPunchAppRoot()}}}}
+class MainActivity:ComponentActivity(){private val notifications=registerForActivityResult(ActivityResultContracts.RequestPermission()){};override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);if(Build.VERSION.SDK_INT>=33)notifications.launch(Manifest.permission.POST_NOTIFICATIONS);setContent{AppTheme{SalesPunchAppRoot()}}}}
 
 @Composable fun SalesPunchAppRoot(vm:MainViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value

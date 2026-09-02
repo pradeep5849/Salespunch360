@@ -20,6 +20,7 @@ class ApiClient(private val session:SecureSession){
  private fun decodeBootstrap(raw:String,path:String=""):Bootstrap{val root=json.parseToJsonElement(raw).jsonObject;val payload=if(path.isEmpty())root else root[path]!!.jsonObject;val role=payload["user"]?.jsonObject?.get("role")?.jsonPrimitive?.content;if(role=="SUPER_ADMIN")throw ForbiddenMobileRoleException();return json.decodeFromJsonElement(Bootstrap.serializer(),payload)}
  suspend fun login(identifier:String,password:String):Bootstrap{val raw=call("api/v1/mobile/auth/login","POST",json.encodeToString(LoginRequest(identifier,password)),false);val root=json.parseToJsonElement(raw).jsonObject;val bootstrap=decodeBootstrap(raw,"bootstrap");session.save(root["accessToken"]!!.jsonPrimitive.content,bootstrap.user.id);return bootstrap}
  suspend fun bootstrap()=decodeBootstrap(call("api/v1/mobile/bootstrap"))
+ suspend fun registerPush(installationId:String,fcmToken:String){call("api/v1/mobile/push","POST",json.encodeToString(kotlinx.serialization.json.buildJsonObject{put("installationId",installationId);put("fcmToken",fcmToken)}))}
  suspend fun logout(){try{call("api/v1/mobile/auth/logout","POST")}finally{session.clear()}}
  suspend fun changePassword(current:String,password:String,confirm:String)=call("api/v1/mobile/auth/password","POST",json.encodeToString(PasswordChangeRequest(current,password,confirm)))
  suspend fun attendance(action:String,location:LocationPayload?)=call("api/v1/mobile/attendance","POST",json.encodeToString(attendanceRequest(action,location)))
