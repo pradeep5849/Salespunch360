@@ -119,13 +119,15 @@ export async function editEmployee(raw: EditEmployeeInput) {
     if (company.teamStructure === "SALES_ONLY" && data.managerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     if (employee.role === "MANAGER" && data.managerId) throw new EmployeePolicyError("INVALID_MANAGER");
     if (employee.role === "MANAGER" && data.managerType && data.managerType !== employee.managerType && data.managerType === "MANAGER_ONLY") {
-      const [openAttendance, openVisit, activeLead, pendingTask] = await Promise.all([
+      const [openAttendance, openVisit, activeLead, pendingTask, assignedCustomer, activeTarget] = await Promise.all([
         tx.attendance.findFirst({where:{companyId,userId:employee.id,endedAt:null},select:{id:true}}),
         tx.customerVisit.findFirst({where:{companyId,userId:employee.id,checkedOutAt:null},select:{id:true}}),
         tx.lead.findFirst({where:{companyId,assignedUserId:employee.id,stage:{in:["NEW","QUALIFIED","PROPOSAL","NEGOTIATION"]}},select:{id:true}}),
         tx.followUpTask.findFirst({where:{companyId,assignedUserId:employee.id,status:"PENDING"},select:{id:true}}),
+        tx.customer.findFirst({where:{companyId,assignedUserId:employee.id},select:{id:true}}),
+        tx.salesTarget.findFirst({where:{companyId,assignedUserId:employee.id,endDate:{gte:new Date()}},select:{id:true}}),
       ]);
-      if (openAttendance || openVisit || activeLead || pendingTask) throw new EmployeePolicyError("MANAGER_TYPE_CONFLICT");
+      if (openAttendance || openVisit || activeLead || pendingTask || assignedCustomer || activeTarget) throw new EmployeePolicyError("MANAGER_TYPE_CONFLICT");
     }
     const managerId = employee.role === "SALES" && data.managerId !== undefined
       ? data.managerId === employee.managerId
