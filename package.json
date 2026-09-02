@@ -14,7 +14,7 @@
     "cleanup:checkins": "tsx scripts/cleanup-checkins.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "prebuild": "prisma generate && prisma migrate deploy"
+    "prebuild": "prisma generate && (prisma migrate deploy || (echo \"Migration connection failed; retrying in 8s...\" && sleep 8 && prisma migrate deploy) || (echo \"Retry 2 failed; retrying in 8s...\" && sleep 8 && prisma migrate deploy) || (echo \"Retry 3 failed; retrying in 8s...\" && sleep 8 && prisma migrate deploy))"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
