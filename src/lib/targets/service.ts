@@ -25,7 +25,7 @@ export async function monthlyTargetRows(provided?:ReportActor){
    db.lead.count({where:{companyId:a.companyId,assignedUserId:u.id,createdAt:{gte:month.start,lt:month.endExclusive}}}),
    db.lead.count({where:{companyId:a.companyId,assignedUserId:u.id,stage:"WON",wonAt:{gte:month.start,lt:month.endExclusive}}})
   ]);
-  return{...u,leadTarget:Number(leadTarget?.targetValue??0),wonTarget:Number(wonTarget?.targetValue??0),created,won};
+  return{...u,leadTarget:Number(leadTarget?.targetValue??0),wonTarget:Number(wonTarget?.targetValue??0),created,won,hasTarget:Boolean(leadTarget||wonTarget)};
  }));
  return{actor:a,month,rows};
 }
