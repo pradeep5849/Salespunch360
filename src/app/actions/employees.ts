@@ -50,6 +50,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     const code=error instanceof Error?error.message:"";
     if(code==="EMAIL_VERIFICATION_REQUIRED")return{error:"Verify your email to unlock employee creation."};
     if(code==="COMPANY_PROFILE_REQUIRED")return{error:"Complete your company profile to unlock employee creation."};
+    if(code==="MANAGER_TYPE_CONFLICT")return{error:"Finish or reassign this Manager's open attendance, visit, active leads and pending follow-ups before changing to Manager Only."};
     return safeError;
   }
   revalidatePath("/workspace/employees");
