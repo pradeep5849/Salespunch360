@@ -2,7 +2,7 @@ import {beforeEach,describe,expect,it,vi} from 'vitest';
 const mocks=vi.hoisted(()=>({customers:vi.fn(),history:vi.fn(),checkIn:vi.fn(),fieldCheckIn:vi.fn(),checkout:vi.fn()}));
 vi.mock('@/lib/customers/service',()=>({searchCustomersForCompany:mocks.customers}));vi.mock('@/lib/visits/service',()=>({getOwnVisitHistoryForUser:mocks.history,checkInForUser:mocks.checkIn,fieldCheckInForUser:mocks.fieldCheckIn,checkoutForUser:mocks.checkout}));
 import {mobileCheckIn,mobileCheckout,mobileFieldCheckIn,mobileFieldContext} from './field';import type {MobilePrincipal} from './auth';
-const user=(role:MobilePrincipal['role'],companyId='company-a'):MobilePrincipal=>({id:'user-a',name:'Field',email:'field@example.com',role,companyId});
+const user=(role:MobilePrincipal['role'],companyId='company-a'):MobilePrincipal=>({id:'user-a',name:'Field',email:'field@example.com',role,managerType:role==='MANAGER'?'FIELD_MANAGER':null,companyId});
 beforeEach(()=>{vi.clearAllMocks();mocks.checkIn.mockResolvedValue({id:'visit-a',checkedInAt:new Date()});mocks.fieldCheckIn.mockResolvedValue({id:'visit-b',checkedInAt:new Date(),leadId:'lead'});mocks.customers.mockResolvedValue([{id:'customer-a',companyId:'company-a',name:'Acme',contactPerson:null,phone:null,email:null,address:null,latitude:null,longitude:null,createdAt:new Date(),updatedAt:new Date()}]);mocks.history.mockResolvedValue([])});
 describe('mobile field boundary',()=>{
  it('scopes customers and visit history to authenticated identity',async()=>{await mobileFieldContext(user('SALES'));expect(mocks.customers).toHaveBeenCalledWith('company-a','','user-a');expect(mocks.history).toHaveBeenCalledWith(expect.objectContaining({id:'user-a',companyId:'company-a'}))});
