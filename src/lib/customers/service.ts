@@ -23,16 +23,17 @@ export async function assignCustomer(raw:unknown){const admin=await requireRole(
 export async function createCustomer(raw: CreateCustomerInput) {
   const admin = await requireRole("COMPANY_ADMIN");
   if (!admin.companyId) throw new Error("NOT_AUTHORIZED");
+  const companyId = admin.companyId;
   const data = createCustomerSchema.parse(raw);
   return db.$transaction(async tx=>{
     let assigneeId:string|undefined;
     if(data.assignedUserId){
-      const assignee=await tx.user.findFirst({where:{id:data.assignedUserId,companyId:admin.companyId,isActive:true,OR:[{role:"SALES"},{role:"MANAGER",managerType:"FIELD_MANAGER"}]},select:{id:true}});
+      const assignee=await tx.user.findFirst({where:{id:data.assignedUserId,companyId,isActive:true,OR:[{role:"SALES"},{role:"MANAGER",managerType:"FIELD_MANAGER"}]},select:{id:true}});
       if(!assignee)throw new Error("INVALID_ASSIGNMENT");
       assigneeId=assignee.id;
     }
-    const customer=await tx.customer.create({data:{name:data.name,phone:data.phone,companyId:admin.companyId,assignedUserId:assigneeId}});
-    if(assigneeId)await createLeadForCustomer(tx,admin.companyId,admin.id,customer,assigneeId);
+    const customer=await tx.customer.create({data:{name:data.name,phone:data.phone,companyId,assignedUserId:assigneeId}});
+    if(assigneeId)await createLeadForCustomer(tx,companyId,admin.id,customer,assigneeId);
     return customer;
   });
 }
