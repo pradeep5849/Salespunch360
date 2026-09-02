@@ -141,7 +141,7 @@ export async function startAttendance(raw: unknown) {
     actorUserId: user.id,
     attendanceId: result.attendance.id,
     occurredAt: result.attendance.startedAt,
-  });
+  }).catch(() => undefined);
   return result.attendance;
 }
 
@@ -175,7 +175,7 @@ export async function endAttendance(raw: unknown) {
     actorUserId: user.id,
     attendanceId: attendance.id,
     occurredAt: attendance.endedAt!,
-  });
+  }).catch(() => undefined);
   return attendance;
 }
 

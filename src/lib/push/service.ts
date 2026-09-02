@@ -57,7 +57,7 @@ export async function resolvePushDevices(
     select: { id: true, fcmToken: true, userId: true },
   });
 }
-export async function deliverFieldEvent(event: FieldEvent) {
+export async function deliverFieldEvent(event: FieldEvent, now = new Date()) {
   try {
     const actor = await db.user.findFirst({
       where: { id: event.actorUserId },
@@ -66,7 +66,7 @@ export async function deliverFieldEvent(event: FieldEvent) {
     if (!actor) return;
     const devices = await resolvePushDevices(
       event.actorUserId,
-      event.occurredAt,
+      now,
     );
     if (!devices.length) return;
     const at = time(event.occurredAt);

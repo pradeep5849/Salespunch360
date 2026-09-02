@@ -1,0 +1,5 @@
+import{describe,expect,it,vi}from'vitest';
+const mocks=vi.hoisted(()=>({find:vi.fn(),revoke:vi.fn(),remove:vi.fn(),transaction:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:mocks.transaction}}));vi.mock('@/lib/auth/crypto',()=>({hashSessionToken:()=> 'hashed',createSessionToken:vi.fn(),verifyPassword:vi.fn()}));vi.mock('@/lib/billing/entitlement',()=>({effectiveEntitlement:vi.fn()}));
+import{revokeMobileToken}from'./auth';
+describe('mobile logout push privacy',()=>{it('revokes and removes devices only for the bearer MobileSession',async()=>{mocks.find.mockResolvedValue({id:'session-a'});mocks.transaction.mockImplementation(fn=>fn({mobileSession:{findUnique:mocks.find,updateMany:mocks.revoke},pushDevice:{deleteMany:mocks.remove}}));await revokeMobileToken(`Bearer ${'a'.repeat(40)}`);expect(mocks.revoke).toHaveBeenCalledWith({where:{id:'session-a',revokedAt:null},data:{revokedAt:expect.any(Date)}});expect(mocks.remove).toHaveBeenCalledWith({where:{mobileSessionId:'session-a'}})})});
