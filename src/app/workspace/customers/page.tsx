@@ -10,7 +10,7 @@ export default async function CustomersPage() {
   const user=await requireUser();
   if(!user.companyId)throw new Error("Company access required");
   const customers=user.role==="COMPANY_ADMIN"
-    ? await searchCustomersForCompany(user.companyId,"",null as unknown as string)
+    ? await searchCustomersForCompany(user.companyId,"",null)
     : await searchCustomers();
   const unassigned=user.role==="COMPANY_ADMIN"?customers.filter(c=>!c.assignedUserId):customers;
   const assignees=user.role==="COMPANY_ADMIN"?await db.user.findMany({where:{companyId:user.companyId,isActive:true,OR:[{role:"SALES"},{role:"MANAGER",managerType:"FIELD_MANAGER"}]},select:{id:true,name:true,role:true},orderBy:{name:"asc"}}):[];
