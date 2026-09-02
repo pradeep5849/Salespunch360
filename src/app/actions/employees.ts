@@ -30,7 +30,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
       if (operation === "create-manager") await createManager(parsed.data);
       else await createSalesEmployee(parsed.data);
     } else if (operation === "edit") {
-      const input = { employeeId: formData.get("employeeId"), name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"), employeeCode: formData.get("employeeCode"), managerId: formData.get("managerId"), managerType: formData.get("managerType") };
+      const input = { employeeId: formData.get("employeeId"), name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"), employeeCode: formData.get("employeeCode"), managerId: formData.get("managerId"), managerType: formData.get("managerType") ?? undefined };
       const parsed = editEmployeeSchema.safeParse(input);
       if (!parsed.success) return { error: "Review the highlighted fields.", fieldErrors: parsed.error.flatten().fieldErrors };
       await editEmployee(parsed.data);
