@@ -51,6 +51,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     if(code==="EMAIL_VERIFICATION_REQUIRED")return{error:"Verify your email to unlock employee creation."};
     if(code==="COMPANY_PROFILE_REQUIRED")return{error:"Complete your company profile to unlock employee creation."};
     if(code==="MANAGER_TYPE_CONFLICT")return{error:"Finish or reassign this Manager's open attendance, visit, active leads, pending follow-ups, assigned customers and active targets before changing to Manager Only."};
+    if(code==="PHONE_IN_USE")return{error:"This mobile number is already in use in your company."};
     return safeError;
   }
   revalidatePath("/workspace/employees");
