@@ -37,7 +37,7 @@ export async function expenseReport(raw:SearchParams,provided?:ReportActor){
  const approvalWhere={companyId:actor.companyId,employeeId:{in:ids},businessDate:{gte:dbDate(filters.startText),lte:dbDate(filters.endText)}} as const;
  const before=await db.dailyTravelApproval.findMany({where:approvalWhere,select:{id:true,employeeId:true,businessDate:true,status:true}});
  const beforeMap=new Map(before.map(a=>[`${a.employeeId}:${a.businessDate.toISOString().slice(0,10)}`,a]));
- const mutations=[];
+ const mutations: Prisma.PrismaPromise<unknown>[]=[];
  for(const r of [...daily.values()].filter(x=>x.rate)){
   const amount=new Prisma.Decimal(r.distanceMeters).div(1000).mul(r.rate!).toDecimalPlaces(2),key=`${r.employeeId}:${r.date}`,existing=beforeMap.get(key);
   if(!existing)mutations.push(db.dailyTravelApproval.create({data:{companyId:actor.companyId,employeeId:r.employeeId,businessDate:dbDate(r.date),distanceMeters:r.distanceMeters,ratePerKm:r.rate!,amount,status:"PENDING"}}));
