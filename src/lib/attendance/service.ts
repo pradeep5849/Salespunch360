@@ -19,7 +19,7 @@ import { assertOperationalWrite } from "@/lib/billing/entitlement";
 
 async function requireEmployee() {
   const user = await requireRole("MANAGER", "SALES");
-  if (!user.companyId) throw new AttendancePolicyError("DISABLED");
+  if (!user.companyId || (user.role === "MANAGER" && user.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
   return { ...user, companyId: user.companyId };
 }
 
@@ -57,9 +57,9 @@ export async function startAttendance(raw: unknown) {
         role: { in: ["MANAGER", "SALES"] },
         isActive: true,
       },
-      select: { id: true },
+      select: { id: true, managerType: true },
     });
-    if (!employee) throw new AttendancePolicyError("DISABLED");
+    if (!employee || (user.role === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
     await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR SHARE`;
     const company = await tx.company.findFirst({
       where: { id: user.companyId },
