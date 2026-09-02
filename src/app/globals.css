@@ -235,3 +235,18 @@ button, input { font:inherit; }
   .lead-stage-summary>a strong{font-size:20px;line-height:1}
   .lead-stage-summary>a span{font-size:10px;line-height:1.15;white-space:normal}
 }
+
+
+/* Admin/mobile polish: compact menu, employee stats, and dashboard selectors. */
+.dashboard-selector>select{min-width:0;flex:1;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+@media(max-width:760px){
+  .workspace-mobile-drawer-admin{padding:7px}
+  .workspace-mobile-drawer-admin a,.workspace-mobile-drawer-admin .workspace-reports-toggle{padding:8px 9px;font-size:12px;line-height:1.15}
+  .workspace-mobile-drawer-admin .workspace-report-links a{padding:7px 9px 7px 37px;font-size:10.5px}
+  .employee-stats{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none!important;gap:6px}
+  .employee-stats>div{min-width:0;padding:10px 6px}
+  .employee-stats strong{font-size:18px;line-height:1}
+  .employee-stats span{font-size:9px;line-height:1.15}
+  .employees-title{margin-bottom:10px}
+  .employee-filters{margin-top:12px}
+}
