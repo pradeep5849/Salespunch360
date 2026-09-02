@@ -1,11 +1,11 @@
 import {Prisma,type Role}from"@prisma/client";
 import{randomUUID}from"node:crypto";
-import{db}from"@/lib/db";import{requireRole}from"@/lib/auth/authorization";import{assertOperationalWrite}from"@/lib/billing/entitlement";import{haversineDistanceMeters}from"@/lib/location/geo";import{privateStorage,visitPhotoKeys}from"@/lib/storage";
+import{db}from"@/lib/db";import{requireRole,requireRoleForMutation}from"@/lib/auth/authorization";import{assertOperationalWrite}from"@/lib/billing/entitlement";import{haversineDistanceMeters}from"@/lib/location/geo";import{privateStorage,visitPhotoKeys}from"@/lib/storage";
 import{checkoutSchema,fieldCheckInSchema,type CheckoutInput}from"./validation";import{processVisitPhoto}from"./photo";import{resolveAttendanceId,VisitPolicyError}from"./policy";
 import{compensateWrittenPhoto}from"./photo-compensation";
 type FieldUser={id:string;companyId:string;role?:Role};const RADIUS_METERS=50;
 const normalizePhone=(phone:string)=>phone.replace(/[\s().-]/g,"");
-async function requireFieldEmployee(){const user=await requireRole("MANAGER","SALES");if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");return{...user,companyId:user.companyId};}
+async function requireFieldEmployee(){const user=await requireRoleForMutation("MANAGER","SALES");if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");return{...user,companyId:user.companyId};}
 export function hasImmutableReference(value:{checkInReferenceLatitude:number|null;checkInReferenceLongitude:number|null;checkInReferenceSetAt:Date|null}){return value.checkInReferenceLatitude!==null&&value.checkInReferenceLongitude!==null&&value.checkInReferenceSetAt!==null;}
 export function hasReferenceVisitProvenance(value:{checkInReferenceVisitId:string|null}){return value.checkInReferenceVisitId!==null;}
 export function assertWithinImmutableReference(reference:{latitude:number;longitude:number}|null,actual:{latitude:number;longitude:number}){if(!reference)return;const distance=haversineDistanceMeters(reference,actual);if(distance>RADIUS_METERS)throw new VisitPolicyError("REPEAT_VISIT_OUTSIDE_RADIUS",distance);}
