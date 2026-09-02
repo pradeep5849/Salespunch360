@@ -27,3 +27,27 @@ export async function leadStageCounts(selectedUserId?:string,q?:string){const a=
 export async function getLead(id:string){return getLeadForActor(await leadActor(),id);}
 export async function getLeadForActor(a:Awaited<ReturnType<typeof leadActor>>,id:string){const lead=await db.lead.findFirst({where:{id,companyId:a.companyId,...visibilityWhere(a)},include:{customer:true,assignedUser:{select:{id:true,name:true}},visits:{where:{companyId:a.companyId},include:{user:{select:{name:true}}},orderBy:{checkedInAt:"desc"}},activities:{include:{actorUser:{select:{name:true}}},orderBy:{createdAt:"desc"}}}});if(!lead||!lead.sourceVisitId||lead.visits.some(v=>v.id===lead.sourceVisitId))return lead;const source=await db.customerVisit.findFirst({where:{id:lead.sourceVisitId,companyId:a.companyId},include:{user:{select:{name:true}}}});return source?{...lead,visits:[source,...lead.visits]}:lead;}
 export async function leadOptions(){const a=await leadActor();const where:Prisma.UserWhereInput=a.role==="COMPANY_ADMIN"?{companyId:a.companyId,isActive:true,OR:[{role:"SALES"},{role:"MANAGER",managerType:"FIELD_MANAGER"}]}:a.role==="MANAGER"?{companyId:a.companyId,isActive:true,OR:[{role:"SALES",managerId:a.id},...(a.managerType==="MANAGER_ONLY"?[]:[{id:a.id,role:"MANAGER" as const,managerType:"FIELD_MANAGER" as const}])]}:{companyId:a.companyId,isActive:true,id:a.id,role:"SALES"};const users=await db.user.findMany({where,select:{id:true,name:true,role:true},orderBy:{name:"asc"}});const customers=await db.customer.findMany({where:{companyId:a.companyId},select:{id:true,name:true},orderBy:{name:"asc"},take:500});return {users,customers};}
+
+export async function leadScopeOptions(){
+ const a=await leadActor();
+ const where:Prisma.UserWhereInput=a.role==="COMPANY_ADMIN"
+  ?{companyId:a.companyId,isActive:true,role:{in:["MANAGER","SALES"]}}
+  :a.role==="MANAGER"
+    ?{companyId:a.companyId,isActive:true,OR:[{id:a.id,role:"MANAGER"},{role:"SALES",managerId:a.id}]}
+    :{companyId:a.companyId,isActive:true,id:a.id};
+ return db.user.findMany({where,select:{id:true,name:true,role:true,managerType:true},orderBy:[{role:"asc"},{name:"asc"}]});
+}
+async function selectedPendingWhere(a:Awaited<ReturnType<typeof leadActor>>,selectedUserId?:string,q?:string):Promise<Prisma.CustomerVisitWhereInput>{
+ const base=pendingVisitWhere(a);
+ if(!selectedUserId&&!q)return base;
+ let selected:Prisma.CustomerVisitWhereInput={};
+ if(selectedUserId){
+  const u=await db.user.findFirst({where:{id:selectedUserId,companyId:a.companyId,isActive:true,...(a.role==="COMPANY_ADMIN"?{role:{in:["MANAGER","SALES"]}}:a.role==="MANAGER"?{OR:[{id:a.id,role:"MANAGER"},{role:"SALES",managerId:a.id}]}:{id:a.id})},select:{id:true,role:true,managerType:true}});
+  if(!u)throw new LeadError("NOT_FOUND");
+  selected=u.role==="SALES"?{userId:u.id}:u.managerType==="MANAGER_ONLY"?{user:{role:"SALES",managerId:u.id}}:{OR:[{userId:u.id},{user:{role:"SALES",managerId:u.id}}]};
+ }
+ const search=q?{OR:[{contactName:{contains:q,mode:"insensitive" as const}},{contactPhone:{contains:q,mode:"insensitive" as const}},{customer:{name:{contains:q,mode:"insensitive" as const}}}]}:{};
+ return{AND:[base,selected,search]};
+}
+export async function listPendingVisitsScopedForActor(a:Awaited<ReturnType<typeof leadActor>>,selectedUserId?:string,q?:string){return db.customerVisit.findMany({where:await selectedPendingWhere(a,selectedUserId,q),include:{user:{select:{id:true,name:true}},customer:{select:{name:true}},photo:{select:{id:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],take:200});}
+export async function pendingVisitCountScopedForActor(a:Awaited<ReturnType<typeof leadActor>>,selectedUserId?:string,q?:string){return db.customerVisit.count({where:await selectedPendingWhere(a,selectedUserId,q)});}
