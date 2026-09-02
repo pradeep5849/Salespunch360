@@ -1,8 +1,14 @@
 "use client";
-import { useActionState, useState } from "react";
-import { assignCustomerAction, manageCustomer, type CustomerActionState } from "@/app/actions/customers";
+import Link from "next/link";
+import { assignCustomerAction } from "@/app/actions/customers";
 
-type Customer = { id:string; name:string; contactPerson:string|null; phone:string|null; email:string|null; assignedUserId:string|null };
-const initial:CustomerActionState={};
-function Fields({ customer,simple=false }:{customer?:Customer;simple?:boolean}) { return <div className="field-grid"><label className="field">Customer Name<input name="name" required defaultValue={customer?.name}/></label><label className="field">Phone Number<input name="phone" required defaultValue={customer?.phone??""}/></label>{!simple&&<><label className="field">Contact person<input name="contactPerson" defaultValue={customer?.contactPerson??""}/></label><label className="field">Email<input name="email" type="email" defaultValue={customer?.email??""}/></label></>}</div>; }
-export function CustomerManager({customers,canManage,assignees}:{customers:Customer[];canManage:boolean;assignees:{id:string;name:string;role:string}[]}) { const [state,action,pending]=useActionState(manageCustomer,initial); const [adding,setAdding]=useState(false); return <div>{canManage&&<button className="primary-button customer-add" onClick={()=>setAdding(!adding)}>Add customer</button>}{state.error&&<p className="form-error">{state.error}</p>}{state.success&&<p className="form-success">{state.success}</p>}{adding&&<form action={action} className="employee-form customer-form"><input type="hidden" name="operation" value="create"/><h2>New customer</h2><Fields simple/><button disabled={pending}>Save customer</button></form>}<div className="customer-grid">{customers.map(c=><article key={c.id}><h2>{c.name}</h2><p>{c.contactPerson||"No contact person"}</p><p>{c.phone||c.email||"No contact details"}</p>{canManage&&<form action={assignCustomerAction} className="customer-assignment"><input type="hidden" name="customerId" value={c.id}/><select name="assignedUserId" required defaultValue={c.assignedUserId??""}><option value="">Assign customer</option>{assignees.map(u=><option key={u.id} value={u.id}>{u.name} · {u.role}</option>)}</select><button>Assign</button></form>}{canManage&&<details><summary>Edit</summary><form action={action} className="employee-form"><input type="hidden" name="operation" value="edit"/><input type="hidden" name="customerId" value={c.id}/><Fields customer={c}/><button disabled={pending}>Save changes</button></form></details>}</article>)}</div></div>; }
+type Customer={id:string;name:string;phone:string|null;assignedUserId:string|null};
+export function CustomerManager({customers,canManage,assignees}:{customers:Customer[];canManage:boolean;assignees:{id:string;name:string;role:string}[]}) {
+ return <div>
+  {canManage&&<Link className="primary-button customer-add" href="/workspace/customers/new">+ Add Customer</Link>}
+  <div className="customer-grid customer-queue">
+   {customers.map(c=><article key={c.id}><h2>{c.name}</h2><p>{c.phone||"No phone number"}</p>{canManage&&<form action={assignCustomerAction} className="customer-assignment"><input type="hidden" name="customerId" value={c.id}/><select name="assignedUserId" required defaultValue=""><option value="">Assign to</option>{assignees.map(u=><option key={u.id} value={u.id}>{u.name} · {u.role==="MANAGER"?"Field Manager":"Sales"}</option>)}</select><button>Assign</button></form>}</article>)}
+  </div>
+  {!customers.length&&<div className="empty-state">{canManage?"No unassigned customers.":"No customers are assigned to you."}</div>}
+ </div>;
+}
