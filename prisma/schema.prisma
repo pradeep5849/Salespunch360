@@ -725,6 +725,9 @@ model BillingOrder {
   provider         String               @default("UNCONFIGURED") @db.VarChar(40)
   providerOrderId  String?              @unique @db.VarChar(200)
   idempotencyKey   String               @unique @db.VarChar(100)
+  retainManagerUserIds String[]          @default([]) @db.Uuid
+  retainSalesUserIds   String[]          @default([]) @db.Uuid
+  seatReductionAppliedAt DateTime?
   paidAt           DateTime?
   expiresAt        DateTime?
   createdAt        DateTime             @default(now())
