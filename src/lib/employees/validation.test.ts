@@ -9,6 +9,11 @@ describe("employee validation", () => {
     expect(result.email).toBe("morgan@example.com");
     expect(result.phone).toBe("+12025550112");
     expect(result.employeeCode).toBe("MGR-01");
+    expect(result.managerType).toBe("FIELD_MANAGER");
+  });
+
+  it("accepts an explicit Manager Only type", () => {
+    expect(createManagerSchema.parse({ ...base, managerType: "MANAGER_ONLY" }).managerType).toBe("MANAGER_ONLY");
   });
 
   it("validates Sales creation with an optional Manager", () => {
