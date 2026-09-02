@@ -9,12 +9,12 @@ import { leadReport } from "@/lib/reports/leads";
 import { reportActor } from "@/lib/reports/scope";
 import { listTargets } from "@/lib/targets/service";
 
-const MAX_ROWS=10_000;
+export const MAX_ROWS=10_000;
 const india=(date:Date|null|undefined)=>date?new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",dateStyle:"medium",timeStyle:"medium"}).format(date):"";
 type Cell=string|number|Date|null|undefined;
 type ExportData={name:string;range:string;summary:Record<string,unknown>;headers:string[];rows:Cell[][];companyId:string};
 
-async function dataFor(report:string,raw:Record<string,string>):Promise<ExportData>{
+export async function dataFor(report:string,raw:Record<string,string>):Promise<ExportData>{
  const actor=await reportActor(),all={...raw,page:"1",pageSize:String(MAX_ROWS)};let data:Omit<ExportData,"companyId">;
  if(report==="attendance"){const r=await attendanceReport(all,actor,true);if(r.summary.total>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:"Attendance Report",range:`${r.filters.startText} to ${r.filters.endText}`,summary:r.summary,headers:["Employee","Role","Started","Ended","Status","Duration minutes","GPS points","Distance km"],rows:r.rows.map(a=>[a.user.name,a.user.role,india(a.startedAt),india(a.endedAt),a.endedAt?"COMPLETED":"OPEN",a.durationMs==null?null:a.durationMs/60000,a.locationPoints.length,a.routeDistanceMeters/1000])}}
  else if(report==="check-ins"||report==="advanced-check-ins"){const advanced=report.startsWith("advanced"),r=await checkInReport(all,advanced,actor,true);if(r.summary.total>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:advanced?"Advanced Check-in Report":"Check-in Report",range:`${r.filters.startText} to ${r.filters.endText}`,summary:r.summary,headers:["Employee","Role","Customer / prospect","Check-in","Checkout","Status","Duration minutes","Visit kind","Notes","Latitude","Longitude","Reference distance km","Leads"],rows:r.rows.map(v=>[v.user.name,v.user.role,v.customer?.name||v.contactName||"Field prospect",india(v.checkedInAt),india(v.checkedOutAt),v.checkedOutAt?"COMPLETED":"PENDING",v.durationMs==null?null:v.durationMs/60000,v.visitKind,v.visitNotes,v.checkInLatitude,v.checkInLongitude,v.referenceDistanceMeters==null?null:v.referenceDistanceMeters/1000,v._count.sourceLeads])}}
