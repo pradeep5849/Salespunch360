@@ -9,9 +9,12 @@ describe("cleaned attendance travel distance",()=>{
  it("counts normal realistic movement",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",60,19.005,72),point("c",120,19.01,72)])).toBeGreaterThan(1000));
  it("gives duplicate and near-duplicate points zero distance",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",15,19,72),point("c",30,19.00001,72)])).toBe(0));
  it("rejects a teleport spike and its return",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("spike",15,20,73),point("return",30,19,72),point("b",90,19.005,72)])).toBeLessThan(600));
+ it("rejects a plausible-speed medium spike that returns to its origin",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("spike",60,19.0027,72),point("return",120,19,72),point("b",180,19.005,72)])).toBeLessThan(600));
  it("excludes poor-accuracy points",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("bad",60,20,73,500),point("b",120,19.005,72)])).toBeLessThan(600));
+ it.each([60,80,100])("prevents %i m accuracy samples from creating travel",accuracy=>expect(calculateTravelDistanceMeters([point("bad-a",0,19,72,accuracy),point("bad-b",120,19.01,72,accuracy)])).toBe(0));
  it("excludes impossible-speed segments",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",10,19.1,72)])).toBe(0));
  it("sorts out-of-order input deterministically",()=>{const points=[point("c",120,19.01,72),point("a",0,19,72),point("b",60,19.005,72)];expect(calculateTravelDistanceMeters(points)).toBeCloseTo(calculateTravelDistanceMeters([...points].reverse()),6)});
  it("does not connect locations across a long GPS gap",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",3600,19.2,72)])).toBe(0));
+ it("keeps a long stationary session with many jitter fixes near zero",()=>{const route=Array.from({length:241},(_,i)=>point(String(i),i*30,19+(i%4-1.5)*0.00005,72+(i%5-2)*0.00005,20,i));expect(calculateTravelDistanceMeters(route)).toBe(0)});
  it("keeps a realistic roughly 30 km route near its expected distance",()=>{const route=Array.from({length:31},(_,i)=>point(String(i),i*120,19+i*0.009,72,8,i));const distance=calculateTravelDistanceMeters(route);expect(distance).toBeGreaterThan(29_000);expect(distance).toBeLessThan(31_000)});
 });

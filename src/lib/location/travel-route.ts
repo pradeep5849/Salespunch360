@@ -16,11 +16,12 @@ const positiveNumber = (value: string | undefined, fallback: number) => {
 
 /** Quality limits used only for reported travel, never for point storage or geofences. */
 export const TRAVEL_ROUTE_CONFIG = Object.freeze({
-  maximumAccuracyMeters: positiveNumber(process.env.TRAVEL_MAX_ACCURACY_METERS, 100),
+  maximumAccuracyMeters: positiveNumber(process.env.TRAVEL_MAX_ACCURACY_METERS, 50),
   maximumSpeedMetersPerSecond: positiveNumber(process.env.TRAVEL_MAX_SPEED_METERS_PER_SECOND, 55),
   maximumGapMs: positiveNumber(process.env.TRAVEL_MAX_GAP_MINUTES, 30) * 60_000,
   minimumMovementMeters: positiveNumber(process.env.TRAVEL_MIN_MOVEMENT_METERS, 5),
-  uncertaintyFactor: positiveNumber(process.env.TRAVEL_ACCURACY_UNCERTAINTY_FACTOR, 0.5),
+  uncertaintyFactor: positiveNumber(process.env.TRAVEL_ACCURACY_UNCERTAINTY_FACTOR, 1),
+  minimumSpikeLegMeters: positiveNumber(process.env.TRAVEL_MIN_SPIKE_LEG_METERS, 100),
 });
 
 export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[] {
@@ -28,9 +29,20 @@ export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[]
     a.capturedAt.getTime() - b.capturedAt.getTime()
     || (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0)
     || (a.id ?? "").localeCompare(b.id ?? ""));
-  const usable = ordered.filter(point => point.accuracyMeters != null
+  const qualityPoints = ordered.filter(point => point.accuracyMeters != null
     && point.accuracyMeters >= 0
     && point.accuracyMeters <= TRAVEL_ROUTE_CONFIG.maximumAccuracyMeters);
+  const usable = qualityPoints.filter((point, index) => {
+    if (index === 0 || index === qualityPoints.length - 1) return true;
+    const previous = qualityPoints[index - 1], next = qualityPoints[index + 1];
+    const beforeMs = point.capturedAt.getTime() - previous.capturedAt.getTime();
+    const afterMs = next.capturedAt.getTime() - point.capturedAt.getTime();
+    if (beforeMs <= 0 || afterMs <= 0 || beforeMs > TRAVEL_ROUTE_CONFIG.maximumGapMs || afterMs > TRAVEL_ROUTE_CONFIG.maximumGapMs) return true;
+    const endpointUncertainty = Math.max(TRAVEL_ROUTE_CONFIG.minimumMovementMeters, ((previous.accuracyMeters ?? 0) + (next.accuracyMeters ?? 0)) * TRAVEL_ROUTE_CONFIG.uncertaintyFactor);
+    return !(haversineDistanceMeters(previous, next) <= endpointUncertainty
+      && haversineDistanceMeters(previous, point) >= TRAVEL_ROUTE_CONFIG.minimumSpikeLegMeters
+      && haversineDistanceMeters(point, next) >= TRAVEL_ROUTE_CONFIG.minimumSpikeLegMeters);
+  });
   if (!usable.length) return [];
 
   const route: T[] = [usable[0]];
