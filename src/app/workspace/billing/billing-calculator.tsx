@@ -8,7 +8,7 @@ const labels:Record<Period,string>={MONTHLY:"Monthly",SIX_MONTH:"6 Months",YEARL
 const money=(n:number)=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(n);
 
 export function BillingCalculator({managersEnabled,managerUsage,salesUsage,prices}:{managersEnabled:boolean;managerUsage:number;salesUsage:number;prices:Prices}){
- const[period,setPeriod]=useState<Period>("MONTHLY"),[managerSeats,setManagerSeats]=useState(Math.max(managersEnabled?1:0,managerUsage)),[salesSeats,setSalesSeats]=useState(Math.max(0,salesUsage));
+ const[period,setPeriod]=useState<Period>("MONTHLY"),[managerSeats,setManagerSeats]=useState(Math.max(0,managerUsage)),[salesSeats,setSalesSeats]=useState(Math.max(0,salesUsage));
  const unit=prices[period],managerSubtotal=managerSeats*unit.manager,salesSubtotal=salesSeats*unit.sales,total=managerSubtotal+salesSubtotal;
  const summary=useMemo(()=>({managerSubtotal,salesSubtotal,total}),[managerSubtotal,salesSubtotal,total]);
  return <form action={createOrderAction} className="billing-form billing-calculator">
