@@ -94,6 +94,7 @@ enum GeofenceAction {
 }
 
 enum TargetMetric {
+  LEADS_CREATED_COUNT
   WON_LEADS_COUNT
   WON_LEADS_VALUE
 }
