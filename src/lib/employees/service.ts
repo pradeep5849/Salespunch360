@@ -20,7 +20,7 @@ import {
 const employeeRoles: Role[] = ["MANAGER", "SALES"];
 const employeeSelect = {
   id: true, name: true, email: true, phone: true, employeeCode: true, role: true,
-  isActive: true, managerId: true, companyId: true,
+  isActive: true, managerId: true, managerType: true, companyId: true,
   manager: { select: { id: true, name: true, isActive: true } },
 } satisfies Prisma.UserSelect;
 
@@ -98,7 +98,7 @@ async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SA
     if (company.teamStructure === "SALES_ONLY" && requestedManagerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     const managerId = role === "SALES" ? await loadAssignableManager(tx, companyId, requestedManagerId) : null;
     return tx.user.create({
-      data: { companyId, role, isActive: true, name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId },
+      data: { companyId, role, isActive: true, name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId, managerType: role === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
       select: employeeSelect,
     });
   });
@@ -114,10 +114,19 @@ export async function editEmployee(raw: EditEmployeeInput) {
   const data = editEmployeeSchema.parse(raw);
   return db.$transaction(async (tx) => {
     const company = await lockAndLoadCompany(tx, companyId);
-    const employee = await tx.user.findFirst({ where: { id: data.employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true, managerId: true } });
+    const employee = await tx.user.findFirst({ where: { id: data.employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true, managerId: true, managerType: true } });
     assertManagedEmployee(companyId, employee);
     if (company.teamStructure === "SALES_ONLY" && data.managerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     if (employee.role === "MANAGER" && data.managerId) throw new EmployeePolicyError("INVALID_MANAGER");
+    if (employee.role === "MANAGER" && data.managerType && data.managerType !== employee.managerType && data.managerType === "MANAGER_ONLY") {
+      const [openAttendance, openVisit, activeLead, pendingTask] = await Promise.all([
+        tx.attendance.findFirst({where:{companyId,userId:employee.id,endedAt:null},select:{id:true}}),
+        tx.customerVisit.findFirst({where:{companyId,userId:employee.id,checkedOutAt:null},select:{id:true}}),
+        tx.lead.findFirst({where:{companyId,assignedUserId:employee.id,stage:{in:["NEW","QUALIFIED","PROPOSAL","NEGOTIATION"]}},select:{id:true}}),
+        tx.followUpTask.findFirst({where:{companyId,assignedUserId:employee.id,status:"PENDING"},select:{id:true}}),
+      ]);
+      if (openAttendance || openVisit || activeLead || pendingTask) throw new EmployeePolicyError("MANAGER_TYPE_CONFLICT");
+    }
     const managerId = employee.role === "SALES" && data.managerId !== undefined
       ? data.managerId === employee.managerId
         ? employee.managerId
@@ -125,7 +134,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
       : employee.managerId;
     const updated = await tx.user.updateMany({
       where: { id: employee.id, companyId, role: employee.role },
-      data: { name: data.name, email: data.email, phone: data.phone ?? null, employeeCode: data.employeeCode ?? null, managerId },
+      data: { name: data.name, email: data.email, phone: data.phone ?? null, employeeCode: data.employeeCode ?? null, managerId, managerType: employee.role === "MANAGER" ? (data.managerType ?? employee.managerType ?? "FIELD_MANAGER") : null },
     });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
   });
