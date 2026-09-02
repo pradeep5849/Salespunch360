@@ -1,5 +1,5 @@
 import type { LeadStage, Role } from "@prisma/client";
-export class LeadError extends Error { constructor(public code:"NOT_FOUND"|"INVALID_ASSIGNMENT"|"STALE"|"TERMINAL"|"INVALID_REFERENCE"){super(code)} }
+export class LeadError extends Error { constructor(public code:"NOT_FOUND"|"INVALID_ASSIGNMENT"|"STALE"|"TERMINAL"|"INVALID_REFERENCE"|"ACTIVE_FOLLOW_UP"){super(code)} }
 type Actor={id:string;role:Role}; type Assignee={id:string;role:Role;isActive:boolean;managerId:string|null};
 export function canAssign(actor:Actor,assignee:Assignee){if(!assignee.isActive||!(["MANAGER","SALES"] as Role[]).includes(assignee.role))return false;if(actor.role==="COMPANY_ADMIN")return true;if(actor.role==="SALES")return assignee.id===actor.id&&assignee.role==="SALES";return actor.role==="MANAGER"&&((assignee.id===actor.id&&assignee.role==="MANAGER")||(assignee.role==="SALES"&&assignee.managerId===actor.id));}
 export function visibilityWhere(actor:Actor){if(actor.role==="COMPANY_ADMIN")return {};if(actor.role==="MANAGER")return {OR:[{assignedUserId:actor.id},{assignedUser:{role:"SALES" as const,managerId:actor.id}}]};return {assignedUserId:actor.id};}

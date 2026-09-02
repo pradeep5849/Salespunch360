@@ -26,6 +26,37 @@ CREATE INDEX "follow_up_tasks_company_assignee_status_due_idx" ON "follow_up_tas
 CREATE INDEX "follow_up_tasks_company_lead_status_due_idx" ON "follow_up_tasks"("companyId", "leadId", "status", "dueDate");
 CREATE INDEX "follow_up_tasks_company_status_due_idx" ON "follow_up_tasks"("companyId", "status", "dueDate");
 
+CREATE FUNCTION "validate_follow_up_task_completed_visit"() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  IF NEW."completedVisitId" IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public."customer_visits" visit
+    WHERE visit."id" = NEW."completedVisitId"
+      AND visit."companyId" = NEW."companyId"
+      AND visit."leadId" = NEW."leadId"
+      AND visit."userId" = NEW."assignedUserId"
+      AND visit."visitType" = 'FOLLOW_UP'::public."VisitType"
+  ) THEN
+    RAISE EXCEPTION 'INVALID_FOLLOW_UP_TASK_VISIT_ASSOCIATION' USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "follow_up_tasks_completed_visit_invariant"
+BEFORE INSERT OR UPDATE OF "completedVisitId", "companyId", "leadId", "assignedUserId"
+ON "follow_up_tasks"
+FOR EACH ROW
+EXECUTE FUNCTION "validate_follow_up_task_completed_visit"();
+
 -- Lead.followUpAt was written through Prisma as a UTC instant into TIMESTAMP WITHOUT
 -- TIME ZONE. Interpret it as UTC, then take its Asia/Kolkata calendar date.
 INSERT INTO "follow_up_tasks" ("id", "companyId", "leadId", "assignedUserId", "createdByUserId", "dueDate", "status", "createdAt", "updatedAt")
