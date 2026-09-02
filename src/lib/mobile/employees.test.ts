@@ -4,7 +4,7 @@ vi.mock('@/lib/employees/service',()=>({getEmployeeManagementContextForCompany:m
 vi.mock('@/lib/billing/entitlement',()=>({effectiveEntitlement:mocks.entitlement}));
 import {mobileCreateEmployee,mobileEmployeeContext,mobileSetEmployeeActive} from './employees';
 import type {MobilePrincipal} from './auth';
-const principal=(role:MobilePrincipal['role'],companyId='company-a'):MobilePrincipal=>({id:'actor',name:'Admin',email:'admin@example.com',role,companyId});
+const principal=(role:MobilePrincipal['role'],companyId='company-a'):MobilePrincipal=>({id:'actor',name:'Admin',email:'admin@example.com',role,managerType:role==='MANAGER'?'FIELD_MANAGER':null,companyId});
 beforeEach(()=>{vi.clearAllMocks();mocks.context.mockResolvedValue({teamStructure:'MANAGERS_AND_SALES',employees:[{id:'employee',name:'Sam',email:'sam@example.com',phone:null,employeeCode:null,role:'SALES',isActive:true,managerId:null,manager:null}]});mocks.entitlement.mockResolvedValue({state:'TRIAL',operationalWritesAllowed:true,managerLimit:1,salesLimit:5,managerUsage:0,salesUsage:1});mocks.manager.mockResolvedValue({id:'manager',name:'Morgan',email:'m@example.com',role:'MANAGER',isActive:true});mocks.sales.mockResolvedValue({id:'sales',name:'Sam',email:'s@example.com',role:'SALES',isActive:true})});
 describe('mobile employee administration',()=>{
  it('lists only through the authenticated company boundary without sensitive fields',async()=>{const result=await mobileEmployeeContext(principal('COMPANY_ADMIN'));expect(mocks.context).toHaveBeenCalledWith('company-a');expect(JSON.stringify(result)).not.toMatch(/password|session|hash/i)});
