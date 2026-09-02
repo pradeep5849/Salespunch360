@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { ManagerType, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   createSessionToken,
@@ -15,6 +15,7 @@ export type MobilePrincipal = {
   name: string;
   email: string;
   role: "COMPANY_ADMIN" | "MANAGER" | "SALES";
+  managerType: ManagerType | null;
   companyId: string;
   mobileSessionId?: string;
 };
@@ -32,6 +33,7 @@ export async function createMobileSession(
       email: true,
       passwordHash: true,
       role: true,
+      managerType: true,
       companyId: true,
       isActive: true,
     },
@@ -62,6 +64,7 @@ export async function createMobileSession(
       name: user.name,
       email: user.email,
       role: user.role as MobilePrincipal["role"],
+      managerType: user.managerType,
       companyId: user.companyId,
     },
   };
@@ -86,6 +89,7 @@ export async function authenticateMobileToken(
           name: true,
           email: true,
           role: true,
+          managerType: true,
           companyId: true,
           isActive: true,
         },
@@ -151,7 +155,7 @@ export async function mobileBootstrap(user: MobilePrincipal) {
         gpsTrackingEnabled: true,
       },
     }),
-    user.role === "COMPANY_ADMIN"
+    user.role === "COMPANY_ADMIN" || (user.role === "MANAGER" && user.managerType === "MANAGER_ONLY")
       ? Promise.resolve(null)
       : db.attendance.findFirst({
           where: { companyId: user.companyId, userId: user.id, endedAt: null },
@@ -172,12 +176,13 @@ export async function mobileBootstrap(user: MobilePrincipal) {
     .filter(Boolean)
     .join(", ");
   return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, managerType: user.managerType },
     company: { name: company.name, logoUrl: null, address: address || null },
     teamStructure: company.teamStructure,
     features: {
       attendanceEnabled: company.attendanceEnabled,
       gpsTrackingEnabled: company.gpsTrackingEnabled,
+      fieldWorkEnabled: user.role === "SALES" || (user.role === "MANAGER" && user.managerType !== "MANAGER_ONLY"),
     },
     entitlement: {
       state: entitlement.state,
