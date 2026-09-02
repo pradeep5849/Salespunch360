@@ -13,7 +13,7 @@ export async function searchCustomers(query = "") {
   const user = await requireCompanyViewer();
   return searchCustomersForCompany(user.companyId,query,user.role==="COMPANY_ADMIN"?undefined:user.id);
 }
-export async function searchCustomersForCompany(companyId:string,query="",assignedUserId?:string) {
+export async function searchCustomersForCompany(companyId:string,query="",assignedUserId?:string|null) {
   const term = query.trim().slice(0, 100);
   return db.customer.findMany({ where: { companyId,assignedUserId, ...(term ? { OR: [{ name: { contains: term, mode: "insensitive" } }, { contactPerson: { contains: term, mode: "insensitive" } }] } : {}) }, orderBy: { name: "asc" }, take: 100 });
 }
