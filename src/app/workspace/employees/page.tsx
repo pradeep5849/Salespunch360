@@ -30,6 +30,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const managers = employees.filter((employee) => employee.role === "MANAGER");
   const activeManagers = managers.filter((employee) => employee.isActive);
   const activeSales = employees.filter((employee) => employee.role === "SALES" && employee.isActive);
+  const clientEmployee=(employee:(typeof employees)[number])=>({...employee,travelRatePerKm:employee.travelRatePerKm?.toString()??null});
 
   return (
     <main className="employees-shell">
@@ -44,7 +45,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         {(trial.isTrialExpired || trial.effectiveStatus === "SUSPENDED") && <p className="lifecycle-alert">Employee creation and reactivation are unavailable while the company is {trial.effectiveStatus.toLowerCase()}.</p>}
         {readinessError&&<p className="lifecycle-alert">{readinessError} <Link href="/workspace?setup=1&from=employees">Review requirements</Link></p>}
         <nav className="employee-filters" aria-label="Employee filters">{availableFilters.map((item) => <Link className={filter === item ? "active" : ""} key={item} href={item === "ALL" ? "/workspace/employees" : `/workspace/employees?filter=${item.toLowerCase()}`}>{item.charAt(0) + item.slice(1).toLowerCase()}</Link>)}</nav>
-        <EmployeeManager employees={visible} managers={managers} managersEnabled={managersEnabled} canAdd={!readinessError&&(trial.effectiveStatus === "TRIAL" || trial.effectiveStatus === "ACTIVE")} />
+        <EmployeeManager employees={visible.map(clientEmployee)} managers={managers.map(clientEmployee)} managersEnabled={managersEnabled} canAdd={!readinessError&&(trial.effectiveStatus === "TRIAL" || trial.effectiveStatus === "ACTIVE")} />
       </section>
     </main>
   );
