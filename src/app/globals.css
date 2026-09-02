@@ -212,3 +212,26 @@ button, input { font:inherit; }
 .pending-heading{display:block;width:100%;margin-bottom:18px}.pending-heading h2{margin:0;font-size:24px}.pending-heading p{display:block;width:100%;margin:5px 0 0;color:var(--muted);font-size:13px;white-space:normal}.lead-stage-summary>a{display:grid;gap:4px;padding:15px;border:1px solid var(--line);border-radius:10px;background:#fff;color:inherit;text-decoration:none}.lead-stage-summary>a.active{border-color:var(--blue);box-shadow:0 0 0 2px #086be822}.lead-stage-summary>a strong{font-size:24px}.lead-stage-summary>a span{color:var(--muted);font-size:11px}.personal-task-counts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.personal-task-counts a{display:flex;justify-content:space-between;padding:13px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}.personal-task-counts strong{color:var(--blue)}.task-tabs,.task-actions{display:flex;gap:8px;flex-wrap:wrap}.task-tabs a,.task-actions a,.task-actions button{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--blue);text-decoration:none;font-weight:800}.task-tabs a.active{background:var(--blue);color:#fff}.task-list{display:grid;gap:14px;margin-top:20px}.task-list>article{padding:20px;border:1px solid var(--line);border-radius:13px;background:#fff}.task-list p{color:#475467}.task-activity{display:flex;gap:5px;flex-wrap:wrap;margin:14px 0;color:var(--muted);font-size:12px}.task-actions form{margin:0}.task-actions button{cursor:pointer}
 .verification-card .brand-logo{margin:0 auto}
 .workspace-page-header{margin:0 0 24px}.workspace-page-header a{color:var(--ink);font-size:clamp(25px,4vw,38px);font-weight:800;letter-spacing:-1px;text-decoration:none}.company-identity-logo{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;overflow:hidden;border-radius:11px;background:#fff}.company-identity-logo img,.company-logo-current img{width:100%;height:100%;object-fit:contain}.company-logo-preview,.company-logo-current{display:grid;place-items:center;width:128px;height:128px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff}.company-logo-current b{font-size:40px;color:var(--blue)}.company-logo-settings form{display:grid;gap:14px}.download-excel{display:inline-flex;margin:0 0 16px;padding:10px 14px;border-radius:8px;background:#137333;color:#fff;text-decoration:none;font-weight:800}
+
+
+/* Compact Leads summary on mobile: 8 cards in a fixed 4 × 2 grid. */
+@media(max-width:760px){
+  .leads-content{padding-top:20px}
+  .leads-content .workspace-page-header{margin-bottom:14px}
+  .lead-stage-summary{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    grid-template-rows:repeat(2,72px);
+    gap:8px;
+    overflow:visible;
+    margin-bottom:16px;
+  }
+  .lead-stage-summary>a{
+    min-width:0;
+    min-height:72px;
+    padding:9px 8px;
+    gap:2px;
+    align-content:center;
+  }
+  .lead-stage-summary>a strong{font-size:20px;line-height:1}
+  .lead-stage-summary>a span{font-size:10px;line-height:1.15;white-space:normal}
+}
