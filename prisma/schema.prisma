@@ -139,6 +139,12 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum TravelApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum BillingAuditType {
   PRICING_CHANGED
   ORDER_CREATED
@@ -168,6 +174,7 @@ model Company {
   attendanceGeofenceRadiusMeters      Int?
   customerCheckInGeofenceEnabled      Boolean                  @default(false)
   customerCheckInGeofenceRadiusMeters Int?
+  travelRatePerKm                     Decimal?                 @db.Decimal(10, 2)
   createdAt                           DateTime                 @default(now())
   updatedAt                           DateTime                 @updatedAt
   addressLine1                        String?
@@ -205,6 +212,7 @@ model Company {
   leadDeletionAudits                  LeadDeletionAudit[]
   followUpTasks                       FollowUpTask[]
   pushDevices                         PushDevice[]
+  dailyTravelApprovals                DailyTravelApproval[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -221,6 +229,8 @@ model User {
   managerType             ManagerType?
   phone                   String?
   employeeCode            String?
+  travelAllowanceEnabled  Boolean                  @default(false)
+  travelRatePerKm          Decimal?                 @db.Decimal(10, 2)
   isActive                Boolean                  @default(true)
   managerId               String?                  @db.Uuid
   manager                 User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
@@ -251,6 +261,8 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   assignedFollowUpTasks   FollowUpTask[]           @relation("FollowUpTaskAssignee")
   createdFollowUpTasks    FollowUpTask[]           @relation("FollowUpTaskCreator")
+  dailyTravelApprovals    DailyTravelApproval[]    @relation("TravelApprovalEmployee")
+  reviewedTravelApprovals DailyTravelApproval[]    @relation("TravelApprovalReviewer")
 
   @@unique([companyId, employeeCode])
   @@index([companyId, role])
@@ -634,6 +646,29 @@ model SalesTarget {
   @@index([companyId, startDate, endDate])
   @@index([companyId, metric])
   @@map("sales_targets")
+}
+
+model DailyTravelApproval {
+  id                String               @id @default(uuid()) @db.Uuid
+  companyId         String               @db.Uuid
+  company           Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employeeId        String               @db.Uuid
+  employee          User                 @relation("TravelApprovalEmployee", fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  businessDate      DateTime             @db.Date
+  distanceMeters    Int
+  ratePerKm         Decimal              @db.Decimal(10, 2)
+  amount            Decimal              @db.Decimal(18, 2)
+  status            TravelApprovalStatus @default(PENDING)
+  reviewedByUserId  String?              @db.Uuid
+  reviewedBy        User?                @relation("TravelApprovalReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reviewedAt        DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([companyId, employeeId, businessDate])
+  @@index([companyId, businessDate, status])
+  @@index([employeeId, businessDate])
+  @@map("daily_travel_approvals")
 }
 
 model BillingPrice {
