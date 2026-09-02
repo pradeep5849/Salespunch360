@@ -1,13 +1,13 @@
-import type { Role } from "@prisma/client";
+import type { ManagerType, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AuthorizationError, requireRole } from "@/lib/auth/authorization";
 import { visibleUserWhere } from "./policy";
 
-export type ReportActor = { id:string; name:string; role:Role; companyId:string };
+export type ReportActor = { id:string; name:string; role:Role; managerType?:ManagerType|null; companyId:string };
 export async function reportActor(): Promise<ReportActor> {
   const user = await requireRole("COMPANY_ADMIN", "MANAGER", "SALES");
   if (!user.companyId) throw new AuthorizationError();
-  return { id:user.id, name:user.name, role:user.role, companyId:user.companyId };
+  return { id:user.id, name:user.name, role:user.role, managerType:user.managerType, companyId:user.companyId };
 }
 export async function resolveEmployeeScope(actor:ReportActor, requested?:string) {
   if (actor.role === "SALES") return [actor.id];
