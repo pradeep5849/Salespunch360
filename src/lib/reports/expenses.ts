@@ -33,16 +33,18 @@ export async function expenseReport(raw:SearchParams,provided?:ReportActor){
   if(existing)existing.distanceMeters+=distance;
   else daily.set(dayKey,{employeeId,employee:u.name,date,distanceMeters:distance,rate:u.travelRatePerKm??company?.travelRatePerKm??null});
  }
- // Every calculable employee/day gets a persistent PENDING record. Pending snapshots refresh until Admin decides.
- await db.$transaction([...daily.values()].filter(r=>r.rate).map(r=>{
-  const amount=new Prisma.Decimal(r.distanceMeters).div(1000).mul(r.rate!).toDecimalPlaces(2);
-  return db.dailyTravelApproval.upsert({
-   where:{companyId_employeeId_businessDate:{companyId:actor.companyId,employeeId:r.employeeId,businessDate:dbDate(r.date)}},
-   create:{companyId:actor.companyId,employeeId:r.employeeId,businessDate:dbDate(r.date),distanceMeters:r.distanceMeters,ratePerKm:r.rate!,amount,status:"PENDING"},
-   update:{distanceMeters:r.distanceMeters,ratePerKm:r.rate!,amount},
-  });
- }));
- const approvals=await db.dailyTravelApproval.findMany({where:{companyId:actor.companyId,employeeId:{in:ids},businessDate:{gte:dbDate(filters.startText),lte:dbDate(filters.endText)}},select:{employeeId:true,businessDate:true,distanceMeters:true,ratePerKm:true,amount:true,status:true,reviewedAt:true}});
+ // Every calculable employee/day gets a persistent PENDING record. Approved/Rejected snapshots never change automatically.
+ const approvalWhere={companyId:actor.companyId,employeeId:{in:ids},businessDate:{gte:dbDate(filters.startText),lte:dbDate(filters.endText)}} as const;
+ const before=await db.dailyTravelApproval.findMany({where:approvalWhere,select:{id:true,employeeId:true,businessDate:true,status:true}});
+ const beforeMap=new Map(before.map(a=>[`${a.employeeId}:${a.businessDate.toISOString().slice(0,10)}`,a]));
+ const mutations=[];
+ for(const r of [...daily.values()].filter(x=>x.rate)){
+  const amount=new Prisma.Decimal(r.distanceMeters).div(1000).mul(r.rate!).toDecimalPlaces(2),key=`${r.employeeId}:${r.date}`,existing=beforeMap.get(key);
+  if(!existing)mutations.push(db.dailyTravelApproval.create({data:{companyId:actor.companyId,employeeId:r.employeeId,businessDate:dbDate(r.date),distanceMeters:r.distanceMeters,ratePerKm:r.rate!,amount,status:"PENDING"}}));
+  else if(existing.status==="PENDING")mutations.push(db.dailyTravelApproval.update({where:{id:existing.id},data:{distanceMeters:r.distanceMeters,ratePerKm:r.rate!,amount}}));
+ }
+ if(mutations.length)await db.$transaction(mutations);
+ const approvals=await db.dailyTravelApproval.findMany({where:approvalWhere,select:{employeeId:true,businessDate:true,distanceMeters:true,ratePerKm:true,amount:true,status:true,reviewedAt:true}});
  const approvalMap=new Map(approvals.map(a=>[`${a.employeeId}:${a.businessDate.toISOString().slice(0,10)}`,a]));
  const rows=[...daily.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.employee.localeCompare(b.employee)).map(r=>{
   const approval=approvalMap.get(`${r.employeeId}:${r.date}`);
