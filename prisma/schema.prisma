@@ -68,6 +68,12 @@ enum LeadActivityType {
   REOPENED
 }
 
+enum FollowUpTaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 enum GeofenceEventType {
   OUTSIDE_RADIUS
   INSUFFICIENT_ACCURACY
@@ -186,6 +192,7 @@ model Company {
   visitPhotos                         VisitPhoto[]
   pendingStorageDeletions             PendingStorageDeletion[]
   leadDeletionAudits                  LeadDeletionAudit[]
+  followUpTasks                       FollowUpTask[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -228,6 +235,8 @@ model User {
   updatedAt               DateTime                 @updatedAt
   emailVerifiedAt         DateTime?
   emailVerificationTokens EmailVerificationToken[]
+  assignedFollowUpTasks   FollowUpTask[] @relation("FollowUpTaskAssignee")
+  createdFollowUpTasks    FollowUpTask[] @relation("FollowUpTaskCreator")
 
   @@unique([companyId, employeeCode])
   @@index([companyId, role])
@@ -334,6 +343,7 @@ model CustomerVisit {
   updatedAt              DateTime           @updatedAt
   sourceLeads            Lead[]             @relation("LeadSourceVisit")
   photo                  VisitPhoto?
+  completedFollowUpTask  FollowUpTask?
 
   @@index([companyId, checkedInAt])
   @@index([companyId, userId, checkedInAt])
@@ -378,6 +388,7 @@ model Lead {
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt
   activities                LeadActivity[]
+  followUpTasks              FollowUpTask[]
 
   @@index([companyId, stage])
   @@index([companyId, assignedUserId])
@@ -386,6 +397,31 @@ model Lead {
   @@index([customerId])
   @@index([sourceVisitId])
   @@map("leads")
+}
+
+model FollowUpTask {
+  id               String             @id @default(uuid()) @db.Uuid
+  companyId        String             @db.Uuid
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leadId           String             @db.Uuid
+  lead             Lead               @relation(fields: [leadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId   String             @db.Uuid
+  assignedUser     User               @relation("FollowUpTaskAssignee", fields: [assignedUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdByUserId  String             @db.Uuid
+  createdByUser    User               @relation("FollowUpTaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  dueDate          DateTime           @db.Date
+  notes            String?            @db.VarChar(2000)
+  status           FollowUpTaskStatus @default(PENDING)
+  completedVisitId String?            @unique @db.Uuid
+  completedVisit   CustomerVisit?     @relation(fields: [completedVisitId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([companyId, assignedUserId, status, dueDate])
+  @@index([companyId, leadId, status, dueDate])
+  @@index([companyId, status, dueDate])
+  @@map("follow_up_tasks")
 }
 
 model VisitPhoto {
