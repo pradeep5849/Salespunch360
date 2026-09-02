@@ -1,4 +1,4 @@
-import {Prisma,type Role,type FollowUpTaskStatus} from "@prisma/client";
+import {Prisma,type ManagerType,type Role,type FollowUpTaskStatus} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requireRole} from "@/lib/auth/authorization";
 import {assertOperationalWrite} from "@/lib/billing/entitlement";
@@ -6,7 +6,7 @@ import {canAssign,visibilityWhere} from "@/lib/leads/policy";
 import {indiaDateText,parseIndiaBusinessDate} from "./date";
 
 export class FollowUpTaskError extends Error{constructor(public code:"NOT_FOUND"|"INVALID_ASSIGNMENT"|"INVALID_STATE"|"INVALID_DATE"){super(code)}}
-export type TaskActor={id:string;companyId:string;role:Role;managerType?:string|null};
+export type TaskActor={id:string;companyId:string;role:Role;managerType?:ManagerType|null};
 export async function taskActor():Promise<TaskActor>{const user=await requireRole("COMPANY_ADMIN","MANAGER","SALES");if(!user.companyId)throw new FollowUpTaskError("NOT_FOUND");return{...user,companyId:user.companyId};}
 export function taskScope(actor:TaskActor):Prisma.FollowUpTaskWhereInput{return actor.role==="COMPANY_ADMIN"?{companyId:actor.companyId}:actor.role==="MANAGER"?(actor.managerType==="MANAGER_ONLY"?{companyId:actor.companyId,assignedUser:{role:"SALES",managerId:actor.id}}:{companyId:actor.companyId,OR:[{assignedUserId:actor.id},{assignedUser:{role:"SALES",managerId:actor.id}}]}):{companyId:actor.companyId,assignedUserId:actor.id};}
 export async function syncLeadFollowUpAt(tx:Prisma.TransactionClient,leadId:string){const first=await tx.followUpTask.findFirst({where:{leadId,status:"PENDING"},orderBy:[{dueDate:"asc"},{createdAt:"asc"},{id:"asc"}],select:{dueDate:true}});await tx.lead.update({where:{id:leadId},data:{followUpAt:first?.dueDate??null}});return first?.dueDate??null;}
