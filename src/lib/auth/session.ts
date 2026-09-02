@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { ManagerType, Role } from "@prisma/client";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "@/lib/db";
@@ -14,6 +14,7 @@ export type AuthenticatedUser = {
   name: string;
   email: string;
   role: Role;
+  managerType: ManagerType | null;
   companyId: string | null;
 };
 
@@ -37,7 +38,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    select: { expiresAt: true, user: { select: { id: true, name: true, email: true, role: true, companyId: true, isActive: true } } },
+    select: { expiresAt: true, user: { select: { id: true, name: true, email: true, role: true, managerType: true, companyId: true, isActive: true } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user)) return null;
   return {
@@ -45,6 +46,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     name: session.user.name,
     email: session.user.email,
     role: session.user.role,
+    managerType: session.user.managerType,
     companyId: session.user.companyId,
   };
 });
