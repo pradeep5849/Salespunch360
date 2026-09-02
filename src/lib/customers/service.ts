@@ -29,6 +29,6 @@ export async function editCustomer(raw: EditCustomerInput) {
   const admin = await requireRole("COMPANY_ADMIN");
   if (!admin.companyId) throw new Error("NOT_AUTHORIZED");
   const { customerId, ...data } = editCustomerSchema.parse(raw);
-  const updated = await db.customer.updateMany({ where: { id: customerId, companyId: admin.companyId }, data: { ...data, phone: data.phone ?? null, email: data.email ?? null, contactPerson: data.contactPerson ?? null, address: data.address ?? null, latitude: data.latitude ?? null, longitude: data.longitude ?? null } });
+  const updated = await db.customer.updateMany({ where: { id: customerId, companyId: admin.companyId }, data: { ...data, phone: data.phone ?? null, email: data.email ?? null, contactPerson: data.contactPerson ?? null } });
   if (updated.count !== 1) throw new Error("CUSTOMER_NOT_FOUND");
 }

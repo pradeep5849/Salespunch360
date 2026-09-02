@@ -333,6 +333,7 @@ model CustomerVisit {
   checkInLatitude        Float
   checkInLongitude       Float
   checkInAccuracyMeters  Float
+  checkInAddress         String?            @db.VarChar(1000)
   checkedOutAt           DateTime?
   checkOutLatitude       Float?
   checkOutLongitude      Float?

@@ -1,0 +1,2 @@
+import{readFileSync}from"node:fs";import{describe,expect,it}from"vitest";
+describe("Google server key isolation",()=>{it("is referenced only by server code and the environment template",()=>{const clientFiles=["src/app/workspace/page.tsx","src/app/workspace/check-ins/visit-workspace.tsx","src/app/workspace/reports/google-route-map.tsx","src/components/workspace/live-location.tsx"];for(const file of clientFiles)expect(readFileSync(file,"utf8")).not.toContain("GOOGLE_MAPS_SERVER_API_KEY");});});
