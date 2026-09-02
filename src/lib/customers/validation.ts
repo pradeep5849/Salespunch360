@@ -9,7 +9,7 @@ export const customerFields = {
 };
 export const assignCustomerSchema=z.object({customerId:z.string().uuid(),assignedUserId:z.string().uuid()}).strict();
 
-export const createCustomerSchema = z.object({name:customerFields.name,phone:phoneSchema.refine(Boolean,"Phone number is required")}).strict();
+export const createCustomerSchema = z.object({name:customerFields.name,phone:phoneSchema.refine(Boolean,"Phone number is required"),assignedUserId:z.preprocess((value)=>value===""||value===null?undefined:value,z.string().uuid().optional())}).strict();
 export const editCustomerSchema = z.object({ customerId: z.string().uuid(), ...customerFields }).strict();
 export type CreateCustomerInput = z.input<typeof createCustomerSchema>;
 export type EditCustomerInput = z.input<typeof editCustomerSchema>;
