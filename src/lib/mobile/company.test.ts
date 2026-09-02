@@ -4,7 +4,7 @@ vi.mock('@/lib/db',()=>({db:{company:{findUnique:mocks.find,updateMany:mocks.upd
 vi.mock('@/lib/billing/entitlement',()=>({effectiveEntitlement:mocks.entitlement}));
 vi.mock('@/lib/billing/service',()=>({currentPrices:mocks.prices}));
 import {mobileCompanyContext,mobileUpdateCompany} from './company';import type {MobilePrincipal} from './auth';
-const principal=(role:MobilePrincipal['role'],companyId='company-a'):MobilePrincipal=>({id:'actor',name:'Actor',email:'a@example.com',role,companyId});
+const principal=(role:MobilePrincipal['role'],companyId='company-a'):MobilePrincipal=>({id:'actor',name:'Actor',email:'a@example.com',role,managerType:role==='MANAGER'?'FIELD_MANAGER':null,companyId});
 const company={name:'Acme',teamStructure:'SALES_ONLY',subscriptionStatus:'TRIAL',trialStartedAt:new Date(),trialEndsAt:new Date(),attendanceEnabled:true,gpsTrackingEnabled:false,checkoutRequiredBeforeNextCheckIn:true,attendanceGeofenceEnabled:false,attendanceReferenceLatitude:null,attendanceReferenceLongitude:null,attendanceGeofenceRadiusMeters:null,customerCheckInGeofenceEnabled:false,customerCheckInGeofenceRadiusMeters:null};
 beforeEach(()=>{vi.clearAllMocks();mocks.find.mockResolvedValue(company);mocks.entitlement.mockResolvedValue({state:'TRIAL',trialActive:true,paidActive:false,managerLimit:0,salesLimit:5,managerUsage:0,salesUsage:1,operationalWritesAllowed:true,subscription:null});mocks.prices.mockResolvedValue([]);mocks.update.mockResolvedValue({count:1})});
 describe('mobile company administration boundary',()=>{
