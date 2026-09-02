@@ -16,7 +16,7 @@ export function indiaDateBoundary(value: string, end = false) {
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => Array.isArray(v) ? v[0] : v;
-export function parseReportFilters(raw: SearchParams, now = new Date()) {
+export function parseReportFilters(raw: SearchParams, now = new Date(), maxPageSize=REPORT_MAX_PAGE_SIZE) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: REPORT_TIME_ZONE }).format(now);
   const defaultStart = new Date(indiaDateBoundary(today).getTime() - (REPORT_DEFAULT_DAYS - 1) * 86400000);
   const startDefault = new Intl.DateTimeFormat("en-CA", { timeZone: REPORT_TIME_ZONE }).format(defaultStart);
@@ -27,6 +27,6 @@ export function parseReportFilters(raw: SearchParams, now = new Date()) {
   if (days > REPORT_MAX_DAYS) throw new ReportValidationError(`Date range cannot exceed ${REPORT_MAX_DAYS} days.`);
   const page = z.coerce.number().int().min(1).catch(1).parse(one(raw.page));
   const requestedSize = one(raw.pageSize);
-  const pageSize = requestedSize === undefined ? REPORT_DEFAULT_PAGE_SIZE : z.coerce.number().int().min(1).max(REPORT_MAX_PAGE_SIZE).parse(requestedSize);
+  const pageSize = requestedSize === undefined ? REPORT_DEFAULT_PAGE_SIZE : z.coerce.number().int().min(1).max(maxPageSize).parse(requestedSize);
   return { start, endExclusive, startText, endText, page, pageSize, employeeId: one(raw.employeeId), q: one(raw.q)?.trim() || undefined };
 }

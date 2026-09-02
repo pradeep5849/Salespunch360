@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { REPORT_TIME_ZONE } from "@/lib/reports/config";
 import { GoogleRouteMap } from "./google-route-map";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 
 export const dateTime=(date:Date|null)=>date?new Intl.DateTimeFormat("en-IN",{timeZone:REPORT_TIME_ZONE,dateStyle:"medium",timeStyle:"short"}).format(date):"—";
 export const duration=(ms:number|null)=>ms==null?"Open / pending":`${Math.floor(ms/3600000)}h ${Math.floor((ms%3600000)/60000)}m`;
 export const distance=(meters:number|null)=>meters==null?"—":meters<1000?`${Math.round(meters)} m`:`${(meters/1000).toFixed(2)} km`;
-export function ReportHeader({title,description}:{title:string;description:string}){return <><Link className="report-back" href="/workspace/reports">← Reports</Link><p className="eyebrow">Historical reporting</p><h1>{title}</h1><p className="muted">{description} Times use Asia/Kolkata.</p></>}
+export function ReportHeader({title,description}:{title:string;description:string}){return <><WorkspacePageHeader title={title} backHref="/workspace/reports" backLabel="Back to Reports"/><p className="muted">{description} Times use Asia/Kolkata.</p></>}
 export function Filters({filters,employees,children,showEmployee=true}:{filters:{startText:string;endText:string;employeeId?:string;q?:string};employees:{id:string;name:string;role:string;isActive:boolean}[];children?:React.ReactNode;showEmployee?:boolean}){return <form className="report-filters"><label>From Date<input type="date" name="start" defaultValue={filters.startText}/></label><label>To Date<input type="date" name="end" defaultValue={filters.endText}/></label>{showEmployee&&<label>Employee<select name="employeeId" defaultValue={filters.employeeId||""}>{employees.length>1&&<option value="">All authorized employees</option>}{employees.map(e=><option value={e.id} key={e.id}>{e.name} · {e.role}{e.isActive?"":" · inactive"}</option>)}</select></label>}{children}<button>View Report</button></form>}
 export function Summary({items}:{items:{label:string;value:string|number}[]}){return <section className="report-summary">{items.map(i=><article key={i.label}><strong>{i.value}</strong><span>{i.label}</span></article>)}</section>}
 export function Pagination({page,totalPages}:{page:number;totalPages:number}){return <nav className="pagination" aria-label="Report pages"><span>Page {page} of {totalPages}</span>{page>1&&<Link href={`?page=${page-1}`}>Previous</Link>}{page<totalPages&&<Link href={`?page=${page+1}`}>Next</Link>}</nav>}

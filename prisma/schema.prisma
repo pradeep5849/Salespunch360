@@ -176,6 +176,7 @@ model Company {
   pan                                 String?
   registrationNumber                  String?
   description                         String?
+  logoObjectKey                       String?                  @db.VarChar(512)
   users                               User[]
   attendances                         Attendance[]
   locationPoints                      LocationPoint[]

@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { register, type RegistrationState } from "@/app/actions/register";
 
 const initialState: RegistrationState = {};
@@ -22,6 +23,8 @@ export function RegistrationForm() {
   const [confirmation, setConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [logoPreview,setLogoPreview]=useState<string>();
+  useEffect(()=>()=>{if(logoPreview)URL.revokeObjectURL(logoPreview)},[logoPreview]);
   const confirmationEntered = confirmation.length > 0;
   const passwordsMatch = confirmationEntered && password === confirmation;
   return (
@@ -30,12 +33,13 @@ export function RegistrationForm() {
         <div className="section-heading"><span>1</span><div><h2>Company information</h2><p>Identify your team workspace.</p></div></div>
         <div className="field-grid">
           <div className="field full"><label htmlFor="companyName">Company name</label><input id="companyName" name="companyName" required maxLength={120} autoComplete="organization" placeholder="Acme Sales" /><FieldError errors={state.fieldErrors?.companyName} /></div>
+
         </div>
       </div>
       <div className="form-section">
         <div className="section-heading"><span>2</span><div><h2>Administrator information</h2><p>This account will manage your company. Team structure is selected after email verification.</p></div></div>
         <div className="field-grid">
-          <div className="field full"><label htmlFor="adminName">Full name</label><input id="adminName" name="adminName" required maxLength={120} autoComplete="name" placeholder="Alex Morgan" /><FieldError errors={state.fieldErrors?.adminName} /></div>
+          <div className="field full"><label htmlFor="companyLogo">Company Logo (optional)</label><input id="companyLogo" name="companyLogo" type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{const file=event.target.files?.[0];setLogoPreview(file?URL.createObjectURL(file):undefined)}}/><small>JPEG, PNG, or WebP. Maximum 5 MB.</small>{logoPreview&&<img className="company-logo-preview" src={logoPreview} alt="Company logo preview"/>}</div><div className="field full"><label htmlFor="adminName">Full name</label><input id="adminName" name="adminName" required maxLength={120} autoComplete="name" placeholder="Alex Morgan" /><FieldError errors={state.fieldErrors?.adminName} /></div>
           <div className="field full"><label htmlFor="adminEmail">Email address</label><input id="adminEmail" name="adminEmail" type="email" required autoComplete="email" placeholder="alex@company.com" /><FieldError errors={state.fieldErrors?.adminEmail} /></div>
           <div className="field"><label htmlFor="adminPassword">Password</label><div className="password-field"><input id="adminPassword" name="adminPassword" type={showPassword ? "text" : "password"} required minLength={12} maxLength={200} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} aria-controls="adminPassword" onClick={() => setShowPassword((visible) => !visible)}><PasswordIcon visible={showPassword} /></button></div><FieldError errors={state.fieldErrors?.adminPassword} /></div>
           <div className="field"><label htmlFor="confirmPassword">Confirm password</label><div className="password-field"><input id="confirmPassword" name="confirmPassword" type={showConfirmation ? "text" : "password"} required minLength={12} maxLength={200} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} aria-describedby={confirmationEntered ? "password-match-status" : undefined} /><button type="button" aria-label={showConfirmation ? "Hide confirmed password" : "Show confirmed password"} aria-pressed={showConfirmation} aria-controls="confirmPassword" onClick={() => setShowConfirmation((visible) => !visible)}><PasswordIcon visible={showConfirmation} /></button></div>{confirmationEntered && <span id="password-match-status" className={passwordsMatch ? "password-match" : "field-error"} role="status">{passwordsMatch ? "✓ Passwords match" : "Passwords do not match"}</span>}<FieldError errors={state.fieldErrors?.confirmPassword} /></div>

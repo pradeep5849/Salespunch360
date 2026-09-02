@@ -1,0 +1,2 @@
+import {renderToStaticMarkup} from "react-dom/server";import{describe,expect,it}from"vitest";import{WorkspacePageHeader}from"./workspace-page-header";
+describe("WorkspacePageHeader",()=>{it("renders a single title link and honors nested parents",()=>{const html=renderToStaticMarkup(<WorkspacePageHeader title="Lead detail" backHref="/workspace/leads" backLabel="Back to Leads"/>);expect(html).toContain("← Lead detail");expect(html).toContain('href="/workspace/leads"');expect(html).toContain('aria-label="Back to Leads"');expect(html).not.toMatch(/SalesPunch360|<img|>SP</)})});

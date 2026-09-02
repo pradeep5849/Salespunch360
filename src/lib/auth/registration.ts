@@ -3,6 +3,8 @@ import { hashPassword } from "./crypto";
 import { registrationSchema, type RegistrationInput } from "./validation";
 import { calculateTrialEndsAt } from "@/lib/trial/status";
 import { randomUUID } from "node:crypto";
+import { companyLogoKey } from "@/lib/company/logo";
+import { privateStorage } from "@/lib/storage";
 
 export function generateCompanySlug(companyName: string) {
   const base = companyName.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
@@ -10,9 +12,10 @@ export function generateCompanySlug(companyName: string) {
   return `${base}-${randomUUID().replaceAll("-", "")}`;
 }
 
-export async function registerCompany(input: RegistrationInput) {
+export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
   const data = registrationSchema.parse(input);
-  return db.$transaction(async (tx) => {
+  let writtenLogoKey: string | undefined;
+  try { return await db.$transaction(async (tx) => {
     const duplicateEmail = await tx.user.findUnique({ where: { email: data.adminEmail }, select: { id: true } });
     if (duplicateEmail) throw new Error("REGISTRATION_CONFLICT");
 
@@ -43,6 +46,14 @@ export async function registerCompany(input: RegistrationInput) {
       },
       select: { id: true, name: true, email: true, role: true, companyId: true },
     });
+    if (logo) {
+      writtenLogoKey = companyLogoKey(company.id);
+      await privateStorage().put(writtenLogoKey, logo);
+      await tx.company.update({ where: { id: company.id }, data: { logoObjectKey: writtenLogoKey } });
+    }
     return { company, user };
-  });
+  }); } catch (error) {
+    if (writtenLogoKey) await privateStorage().delete(writtenLogoKey).catch(() => undefined);
+    throw error;
+  }
 }

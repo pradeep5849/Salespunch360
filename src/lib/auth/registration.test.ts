@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRIAL_DURATION_MS } from "@/lib/trial/config";
 import { getTrialStatus } from "@/lib/trial/status";
 
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), hashPassword: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), hashPassword: vi.fn(), put:vi.fn(), delete:vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { $transaction: mocks.transaction } }));
 vi.mock("./crypto", () => ({ hashPassword: mocks.hashPassword }));
+vi.mock("@/lib/storage",()=>({privateStorage:()=>({put:mocks.put,delete:mocks.delete})}));
 
 import { registerCompany } from "./registration";
 
@@ -18,7 +19,7 @@ const base = {
 
 function transactionHarness() {
   const tx = {
-    company: { create: vi.fn(async ({ data }) => ({ id: "company-id", ...data })) },
+    company: { create: vi.fn(async ({ data }) => ({ id: "company-id", ...data })),update:vi.fn() },
     user: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(async () => ({ id: "admin-id", role: "COMPANY_ADMIN", companyId: "company-id" })),
@@ -32,6 +33,7 @@ function transactionHarness() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.hashPassword.mockResolvedValue("password-hash");
+  mocks.put.mockResolvedValue(undefined);mocks.delete.mockResolvedValue(undefined);
 });
 
 describe("registration trial setup", () => {
@@ -53,4 +55,6 @@ describe("registration trial setup", () => {
     expect(trial.managerAllowance).toBe(1);
     expect(trial.salesAllowance).toBe(5);
   });
+  it("stores a supplied logo at the exact key",async()=>{const tx=transactionHarness();await registerCompany(base,Buffer.from("webp"));expect(mocks.put).toHaveBeenCalledWith("Logo/company-id.webp",Buffer.from("webp"));expect(tx.company.update).toHaveBeenCalledWith({where:{id:"company-id"},data:{logoObjectKey:"Logo/company-id.webp"}})});
+  it("removes a written logo when registration fails",async()=>{const tx=transactionHarness();tx.company.update.mockRejectedValue(new Error("DB_FAILURE"));await expect(registerCompany(base,Buffer.from("webp"))).rejects.toThrow("DB_FAILURE");expect(mocks.delete).toHaveBeenCalledWith("Logo/company-id.webp")});
 });

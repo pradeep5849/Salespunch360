@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import Link from "next/link";
-import { BrandLogo } from "@/components/brand-logo";
 import { getEmployeeManagementContext } from "@/lib/employees/service";
 import { EmployeeManager } from "./employee-manager";
 import { requireRole } from "@/lib/auth/authorization";
@@ -33,9 +33,9 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
 
   return (
     <main className="employees-shell">
-      <header className="employees-header"><Link href="/workspace">← Workspace</Link><BrandLogo href="/workspace" /></header>
       <section className="employees-content">
-        <div className="employees-title"><div><p className="eyebrow">Company administration</p><h1>Employees</h1><p className="muted">{managersEnabled ? "Manage your Managers and Sales team." : "Manage Sales employees who report directly to the Company Admin."}</p></div></div>
+        <WorkspacePageHeader title="Employees" backHref="/workspace"/>
+        <div className="employees-title"><div><p className="muted">{managersEnabled ? "Manage your Managers and Sales team." : "Manage Sales employees who report directly to the Company Admin."}</p></div></div>
         <div className="employee-stats">
           {managersEnabled && <div><strong>{activeManagers.length}{trial.isInTrial ? ` / ${trial.managerAllowance}` : ""}</strong><span>Active Managers</span></div>}
           <div><strong>{activeSales.length}{trial.isInTrial ? ` / ${trial.salesAllowance}` : ""}</strong><span>Active Sales</span></div>
