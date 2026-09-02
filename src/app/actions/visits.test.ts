@@ -5,7 +5,7 @@ const mocks=vi.hoisted(()=>({fieldCheckIn:vi.fn()}));
 vi.mock("next/cache",()=>({revalidatePath:vi.fn()}));
 vi.mock("@/lib/visits/service",()=>({fieldCheckIn:mocks.fieldCheckIn,addPhoneToVisit:vi.fn(),checkIn:vi.fn(),checkout:vi.fn()}));
 import {fieldCheckInAction} from "./visits";
-import {fieldCheckInErrorMessage} from "@/lib/visits/field-checkin-errors";
+import {fieldCheckInErrorMessage,logFieldCheckInFailure} from "@/lib/visits/field-checkin-errors";
 
 const form=()=>{const value=new FormData();value.set("visitType","NEW");value.set("name","Sensitive Person");value.set("phone","9999999999");value.set("latitude","12.3456");value.set("longitude","78.9012");value.set("accuracyMeters","5");value.set("photo",new File(["secret-photo-data"],"photo.jpg",{type:"image/jpeg"}));return value;};
 
@@ -30,6 +30,8 @@ describe("field check-in action failures",()=>{
   it("preserves the repeat-radius mapping",()=>{const error=Object.assign(new Error("REPEAT_VISIT_OUTSIDE_RADIUS"),{distanceMeters:52.4});expect(fieldCheckInErrorMessage(error)).toBe("You are outside the allowed 50 m check-in radius. Current distance: 52 m.")});
 
   it("maps Zod validation failures",()=>{const result=z.object({location:z.object({latitude:z.number()})}).safeParse({location:{latitude:"private"}});expect(result.success).toBe(false);if(!result.success)expect(fieldCheckInErrorMessage(result.error)).toBe("Check the required fields, GPS, and selected visit type.")});
+
+  it("logs only a safe structured SQLSTATE from Prisma P2010 meta",()=>{const error=Object.assign(new Error("raw private database failure"),{name:"PrismaClientKnownRequestError",code:"P2010",meta:{database_error_code:"42804",message:"phone 9999999999 /private/photo.jpg"}});const logged=vi.spyOn(console,"error").mockImplementation(()=>undefined);logFieldCheckInFailure(error,"NEW");expect(logged).toHaveBeenCalledWith(expect.objectContaining({prismaCode:"P2010",databaseCode:"42804",visitType:"NEW"}));const output=JSON.stringify(logged.mock.calls[0][0]);expect(output).not.toContain("9999999999");expect(output).not.toContain("/private/photo.jpg");});
 
   it("logs only safe diagnostics and no submitted values",async()=>{const error=Object.assign(new Error("database rejected Sensitive Person at /private/storage/photo.jpg"),{name:"PrismaClientKnownRequestError",code:"P2002"});mocks.fieldCheckIn.mockRejectedValueOnce(error);const logged=vi.spyOn(console,"error").mockImplementation(()=>undefined);expect(await fieldCheckInAction(form())).toMatchObject({ok:false});expect(logged).toHaveBeenCalledOnce();const serialized=JSON.stringify(logged.mock.calls[0][0]);expect(serialized).toContain("FIELD_CHECKIN_FAILED");expect(serialized).toContain("P2002");expect(serialized).toContain("NEW");for(const secret of ["Sensitive Person","9999999999","12.3456","78.9012","secret-photo-data","/private/storage/photo.jpg"])expect(serialized).not.toContain(secret);});
 });
