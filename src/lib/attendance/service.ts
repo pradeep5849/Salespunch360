@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/authorization";
-import { haversineDistanceMeters, calculateRouteDistanceMeters } from "@/lib/location/geo";
+import { haversineDistanceMeters } from "@/lib/location/geo";
+import { calculateTravelDistanceMeters } from "@/lib/location/travel-route";
 import { AttendancePolicyError, assertAttendanceStartFresh, assertCaptureTime, shouldAcceptLocationPoint } from "./policy";
 import { attendanceMeasurementSchema, companyOperationsSchema, locationPointSchema } from "./validation";
 import { evaluateGeofence } from "@/lib/geofence/policy";
@@ -104,9 +105,9 @@ export async function getAttendanceOverview() {
 export async function getAttendanceRouteDistance(attendanceId: string) {
   const viewer = await requireRole("COMPANY_ADMIN", "MANAGER");
   if (!viewer.companyId) throw new AttendancePolicyError("DISABLED");
-  const attendance = await db.attendance.findFirst({ where: { id: attendanceId, companyId: viewer.companyId }, select: { locationPoints: { orderBy: { sequenceNumber: "asc" }, select: { latitude: true, longitude: true } } } });
+  const attendance = await db.attendance.findFirst({ where: { id: attendanceId, companyId: viewer.companyId }, select: { locationPoints: { orderBy: { sequenceNumber: "asc" }, select: { id: true, latitude: true, longitude: true, accuracyMeters: true, capturedAt: true, sequenceNumber: true } } } });
   if (!attendance) throw new AttendancePolicyError("NO_OPEN_ATTENDANCE");
-  return calculateRouteDistanceMeters(attendance.locationPoints);
+  return calculateTravelDistanceMeters(attendance.locationPoints);
 }
 
 export async function updateCompanyOperations(raw: unknown) {

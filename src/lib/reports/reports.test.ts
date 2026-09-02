@@ -40,6 +40,6 @@ describe('derived report metrics',()=>{
  it('returns no reference distance without paired customer coordinate',()=>expect(referenceDistance({latitude:0,longitude:0},{latitude:1,longitude:null})).toBeNull());
  it('calculates customer reference distance',()=>expect(referenceDistance({latitude:0,longitude:0},{latitude:0,longitude:1})).toBeGreaterThan(111000));
  it('orders GPS points by sequence then time then id',()=>{const p=(id:string,sequenceNumber:number,ms:number)=>({id,sequenceNumber,capturedAt:new Date(ms),latitude:0,longitude:0});expect(orderedRoute([p('z',2,0),p('b',1,0),p('a',1,0)]).map(x=>x.id)).toEqual(['a','b','z'])});
- it('calculates route in deterministic array order',()=>expect(routeDistance([{latitude:0,longitude:0},{latitude:0,longitude:1}])).toBeGreaterThan(111000));
+ it('calculates a quality-filtered route',()=>expect(routeDistance([{latitude:0,longitude:0,accuracyMeters:5,capturedAt:new Date(0)},{latitude:0,longitude:0.001,accuracyMeters:5,capturedAt:new Date(60_000)}])).toBeGreaterThan(100));
  it('sums active Decimal pipeline and WON value only',()=>{const v=leadValues([{stage:'NEW',estimatedValue:new Prisma.Decimal('10.10')},{stage:'WON',estimatedValue:new Prisma.Decimal('20.20')},{stage:'LOST',estimatedValue:new Prisma.Decimal('99')},{stage:'PROPOSAL',estimatedValue:null}]);expect(v.pipeline.toFixed(2)).toBe('10.10');expect(v.won.toFixed(2)).toBe('20.20')});
 });

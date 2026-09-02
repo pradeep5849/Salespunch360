@@ -1,6 +1,7 @@
 import type { LeadStage } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import { calculateRouteDistanceMeters, haversineDistanceMeters, type Coordinate } from "@/lib/location/geo";
+import { haversineDistanceMeters, type Coordinate } from "@/lib/location/geo";
+import { calculateTravelDistanceMeters, type TravelRoutePoint } from "@/lib/location/travel-route";
 
 export const durationMs = (start:Date,end:Date|null) => end ? Math.max(0,end.getTime()-start.getTime()) : null;
 export function visitKind(current:{id:string;checkedInAt:Date}, prior:{id:string;checkedInAt:Date}[]) {
@@ -12,7 +13,7 @@ export function referenceDistance(checkIn:Coordinate, customer:{latitude:number|
 export function orderedRoute<T extends Coordinate & {sequenceNumber:number;capturedAt:Date;id:string}>(points:T[]) {
   return [...points].sort((a,b)=>a.sequenceNumber-b.sequenceNumber || a.capturedAt.getTime()-b.capturedAt.getTime() || a.id.localeCompare(b.id));
 }
-export const routeDistance = (points:Coordinate[]) => calculateRouteDistanceMeters(points);
+export const routeDistance = (points:TravelRoutePoint[]) => calculateTravelDistanceMeters(points);
 export function leadValues(leads:{stage:LeadStage;estimatedValue:Prisma.Decimal|null}[]) {
   const active:LeadStage[]=["NEW","QUALIFIED","PROPOSAL","NEGOTIATION"];
   return leads.reduce((a,l)=>({pipeline:active.includes(l.stage)?a.pipeline.plus(l.estimatedValue||0):a.pipeline,won:l.stage==="WON"?a.won.plus(l.estimatedValue||0):a.won}),{pipeline:new Prisma.Decimal(0),won:new Prisma.Decimal(0)});

@@ -1,6 +1,6 @@
 import {AuthorizationError} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
-import {calculateRouteDistanceMeters} from "@/lib/location/geo";
+import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
 import {orderedRoute} from "./metrics";
 import {indiaDateBoundary,type SearchParams} from "./validation";
 import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor} from "./scope";
@@ -13,7 +13,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  const ids=await resolveEmployeeScope(actor,employeeId);if(ids.length!==1)throw new AuthorizationError();const start=indiaDateBoundary(date),end=indiaDateBoundary(date,true);
  const employee=await db.user.findFirst({where:{id:employeeId,companyId:actor.companyId},select:{id:true,name:true,role:true}});if(!employee)throw new AuthorizationError();
  const sessions=await db.attendance.findMany({where:{companyId:actor.companyId,userId:employeeId,startedAt:{lt:end},OR:[{endedAt:null},{endedAt:{gte:start}}]},include:{locationPoints:{where:{companyId:actor.companyId,userId:employeeId,capturedAt:{gte:start,lt:end}},orderBy:[{sequenceNumber:"asc"},{capturedAt:"asc"},{id:"asc"}]},customerVisits:{where:{companyId:actor.companyId,userId:employeeId,OR:[{checkedInAt:{gte:start,lt:end}},{checkedOutAt:{gte:start,lt:end}}]},include:{customer:{select:{name:true,address:true}}},orderBy:{checkedInAt:"asc"}}},orderBy:[{startedAt:"asc"},{id:"asc"}]});
- const segments=sessions.map(s=>orderedRoute(s.locationPoints));const points=segments.flat();let routeDistanceMeters=0;for(const segment of segments)routeDistanceMeters+=calculateRouteDistanceMeters(segment);
+ const segments=sessions.map(s=>orderedRoute(s.locationPoints));const points=segments.flat();let routeDistanceMeters=0;for(const segment of segments)routeDistanceMeters+=calculateTravelDistanceMeters(segment);
  const events:GpsTimelineEvent[]=[];const markers:Array<{latitude:number;longitude:number;label:string}>=[];
  for(const s of sessions){
   if(s.startedAt>=start&&s.startedAt<end){events.push({id:`${s.id}:start`,type:"ATTENDANCE_STARTED",at:s.startedAt,sessionId:s.id,latitude:s.startLatitude??undefined,longitude:s.startLongitude??undefined});if(s.startLatitude!=null&&s.startLongitude!=null)markers.push({latitude:s.startLatitude,longitude:s.startLongitude,label:"Attendance Started"})}
