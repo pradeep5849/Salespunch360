@@ -8,7 +8,7 @@ type FieldUser={id:string;companyId:string;role?:Role;managerType?:string|null};
 function assertFieldWorker(user:FieldUser){if(user.role==="MANAGER"&&user.managerType==="MANAGER_ONLY")throw new VisitPolicyError("VISIT_NOT_FOUND");}
 const normalizePhone=(phone:string)=>phone.replace(/[\s().-]/g,"");
 async function lockPhone(tx:Prisma.TransactionClient,key:string){await tx.$queryRaw<{locked:number}[]>`WITH "phone_lock" AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext(${key}))) SELECT 1::int AS "locked" FROM "phone_lock"`;}
-async function requireFieldEmployee(){const user=await requireRoleForMutation("MANAGER","SALES");if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");assertFieldWorker(user);return{...user,companyId:user.companyId};}
+async function requireFieldEmployee(){const user=await requireRoleForMutation("MANAGER","SALES");if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");const employee={...user,companyId:user.companyId};assertFieldWorker(employee);return employee;}
 export function hasImmutableReference(value:{checkInReferenceLatitude:number|null;checkInReferenceLongitude:number|null;checkInReferenceSetAt:Date|null}){return value.checkInReferenceLatitude!==null&&value.checkInReferenceLongitude!==null&&value.checkInReferenceSetAt!==null;}
 export function hasReferenceVisitProvenance(value:{checkInReferenceVisitId:string|null}){return value.checkInReferenceVisitId!==null;}
 export function assertWithinImmutableReference(reference:{latitude:number;longitude:number}|null,actual:{latitude:number;longitude:number}){if(!reference)return;const distance=haversineDistanceMeters(reference,actual);if(distance>RADIUS_METERS)throw new VisitPolicyError("REPEAT_VISIT_OUTSIDE_RADIUS",distance);}
