@@ -22,7 +22,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
         name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"),
         employeeCode: formData.get("employeeCode"), password: formData.get("password"),
         confirmPassword: formData.get("confirmPassword"),
-        ...(operation === "create-sales" ? { managerId: formData.get("managerId") } : {}),
+        ...(operation === "create-manager" ? { managerType: formData.get("managerType") } : { managerId: formData.get("managerId") }),
       };
       const schema = operation === "create-manager" ? createManagerSchema : createSalesSchema;
       const parsed = schema.safeParse(input);
@@ -30,7 +30,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
       if (operation === "create-manager") await createManager(parsed.data);
       else await createSalesEmployee(parsed.data);
     } else if (operation === "edit") {
-      const input = { employeeId: formData.get("employeeId"), name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"), employeeCode: formData.get("employeeCode"), managerId: formData.get("managerId") };
+      const input = { employeeId: formData.get("employeeId"), name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"), employeeCode: formData.get("employeeCode"), managerId: formData.get("managerId"), managerType: formData.get("managerType") };
       const parsed = editEmployeeSchema.safeParse(input);
       if (!parsed.success) return { error: "Review the highlighted fields.", fieldErrors: parsed.error.flatten().fieldErrors };
       await editEmployee(parsed.data);
