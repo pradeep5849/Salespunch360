@@ -28,7 +28,7 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
   if(!Number.isFinite(n)||n<0||n>100000)throw new Error("INVALID_RATE");
   rate=new Prisma.Decimal(n.toFixed(2));
  }
- const changed=await db.user.updateMany({where:{id:employeeId,companyId:admin.companyId,role:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate}});
+ const changed=await db.user.updateMany({where:{id:employeeId,companyId,role:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate}});
  if(changed.count!==1)throw new Error("NOT_FOUND");
 }
 
@@ -45,20 +45,21 @@ async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string
 export async function reviewDailyTravel(employeeId:string,date:string,status:"APPROVED"|"REJECTED"){
  const admin=await requireRole("COMPANY_ADMIN");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
+ const companyId=admin.companyId;
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error("INVALID_DATE");
  return db.$transaction(async tx=>{
-  const employee=await tx.user.findFirst({where:{id:employeeId,companyId:admin.companyId,role:{in:["MANAGER","SALES"]},travelAllowanceEnabled:true},select:{id:true,travelRatePerKm:true}});
+  const employee=await tx.user.findFirst({where:{id:employeeId,companyId,role:{in:["MANAGER","SALES"]},travelAllowanceEnabled:true},select:{id:true,travelRatePerKm:true}});
   if(!employee)throw new Error("NOT_FOUND");
   const company=await tx.company.findUnique({where:{id:admin.companyId},select:{travelRatePerKm:true}});
   const rate=employee.travelRatePerKm??company?.travelRatePerKm;
   if(!rate)throw new Error("RATE_NOT_CONFIGURED");
   // Calculation uses authoritative accepted GPS points; snapshot is stored with the decision.
-  const distanceMeters=await calculateEmployeeDay(tx,admin.companyId,employeeId,date);
+  const distanceMeters=await calculateEmployeeDay(tx,companyId,employeeId,date);
   const amount=new Prisma.Decimal(distanceMeters).div(1000).mul(rate).toDecimalPlaces(2);
   return tx.dailyTravelApproval.upsert({
-   where:{companyId_employeeId_businessDate:{companyId:admin.companyId,employeeId,businessDate:businessDate(date)}},
+   where:{companyId_employeeId_businessDate:{companyId,employeeId,businessDate:businessDate(date)}},
    update:{distanceMeters,ratePerKm:rate,amount,status,reviewedByUserId:admin.id,reviewedAt:new Date()},
-   create:{companyId:admin.companyId,employeeId,businessDate:businessDate(date),distanceMeters,ratePerKm:rate,amount,status,reviewedByUserId:admin.id,reviewedAt:new Date()}
+   create:{companyId,employeeId,businessDate:businessDate(date),distanceMeters,ratePerKm:rate,amount,status,reviewedByUserId:admin.id,reviewedAt:new Date()}
   });
  });
 }
