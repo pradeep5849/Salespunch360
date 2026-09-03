@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { createSession, revokeAllUserSessions, revokeCurrentSession } from "@/lib/auth/session";
+import { createSession, revokeCurrentSession } from "@/lib/auth/session";
+import { replacePasswordAndRevoke } from "@/lib/auth/session-generation";
 import { hashPassword, verifyPassword } from "@/lib/auth/crypto";
 import { loginSchema, strongPasswordSchema } from "@/lib/auth/validation";
 import { requireUser } from "@/lib/auth/authorization";
@@ -21,7 +22,7 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
   if (!canAuthenticate(user) || !user || !(await verifyPassword(user.passwordHash, parsed.data.password))) {
     return { error: "Invalid email or password." };
   }
-  await createSession(user.id, formData.get("remember") === "true");
+  await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
   redirect("/workspace");
 }
 
@@ -39,7 +40,6 @@ export async function changePassword(_:ChangePasswordState,formData:FormData):Pr
   const user=await db.user.findUnique({where:{id:actor.id},select:{passwordHash:true}});
   if(!user||!await verifyPassword(user.passwordHash,current))return{error:"Current password is incorrect."};
   if(await verifyPassword(user.passwordHash,next))return{error:"New password must be different from the current password."};
-  await db.user.update({where:{id:actor.id},data:{passwordHash:await hashPassword(next)}});
-  await revokeAllUserSessions(actor.id);
+  await replacePasswordAndRevoke(actor.id,await hashPassword(next),user.passwordHash);
   return{success:"Password changed. Sign in again with your new password."};
 }

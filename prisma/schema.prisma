@@ -226,6 +226,7 @@ model User {
   name                    String
   email                   String                   @unique
   passwordHash            String
+  sessionVersion          Int                      @default(0)
   role                    Role
   managerType             ManagerType?
   phone                   String?
@@ -552,6 +553,7 @@ model Session {
   userId    String   @db.Uuid
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   tokenHash String   @unique
+  sessionVersion Int @default(0)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
@@ -565,6 +567,7 @@ model MobileSession {
   userId      String       @db.Uuid
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   tokenHash   String       @unique @db.Char(64)
+  sessionVersion Int       @default(0)
   expiresAt   DateTime
   lastUsedAt  DateTime
   revokedAt   DateTime?

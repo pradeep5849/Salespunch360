@@ -6,6 +6,7 @@ import {
   verifyPassword,
 } from "@/lib/auth/crypto";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
+import { clearUserAuthentication, lockUser } from "@/lib/auth/session-generation";
 
 const MOBILE_ROLES: Role[] = ["COMPANY_ADMIN", "MANAGER", "SALES"];
 export const isMobileRole = (role: Role) => MOBILE_ROLES.includes(role);
@@ -48,24 +49,25 @@ export async function createMobileSession(
     throw new Error("INVALID_MOBILE_CREDENTIALS");
   const token = createSessionToken(),
     expiresAt = new Date(now.getTime() + SESSION_DAYS * 86_400_000);
-  await db.mobileSession.create({
-    data: {
-      userId: user.id,
-      tokenHash: hashSessionToken(token),
-      expiresAt,
-      lastUsedAt: now,
-    },
+  const lockedUser = await db.$transaction(async (tx) => {
+    const current = await lockUser(tx, user.id);
+    const stillValid = Boolean(current?.isActive && current.companyId && isMobileRole(current.role) && await verifyPassword(current.passwordHash, password));
+    if (!stillValid || !current?.companyId || current.role === "SUPER_ADMIN") throw new Error("INVALID_MOBILE_CREDENTIALS");
+    const rotated = await tx.user.update({ where: { id: current.id }, data: { sessionVersion: { increment: 1 } }, select: { sessionVersion: true } });
+    await clearUserAuthentication(tx, current.id);
+    await tx.mobileSession.create({ data: { userId: current.id, tokenHash: hashSessionToken(token), expiresAt, lastUsedAt: now, sessionVersion: rotated.sessionVersion } });
+    return current;
   });
   return {
     token,
     expiresAt,
     user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role as MobilePrincipal["role"],
-      managerType: user.managerType,
-      companyId: user.companyId,
+      id: lockedUser.id,
+      name: lockedUser.name,
+      email: lockedUser.email,
+      role: lockedUser.role as MobilePrincipal["role"],
+      managerType: lockedUser.managerType,
+      companyId: lockedUser.companyId!,
     },
   };
 }
@@ -83,6 +85,7 @@ export async function authenticateMobileToken(
       expiresAt: true,
       revokedAt: true,
       lastUsedAt: true,
+      sessionVersion: true,
       user: {
         select: {
           id: true,
@@ -92,6 +95,7 @@ export async function authenticateMobileToken(
           managerType: true,
           companyId: true,
           isActive: true,
+          sessionVersion: true,
         },
       },
     },
@@ -103,6 +107,7 @@ export async function authenticateMobileToken(
     !session.user.isActive ||
     !session.user.companyId ||
     !MOBILE_ROLES.includes(session.user.role)
+    || session.sessionVersion !== session.user.sessionVersion
   )
     throw new Error("MOBILE_UNAUTHORIZED");
   if (now.getTime() - session.lastUsedAt.getTime() > 300_000)
