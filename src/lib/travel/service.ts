@@ -22,6 +22,7 @@ export async function updateCompanyTravelRate(raw:unknown){
 export async function updateEmployeeTravelSettings(employeeId:string,enabled:boolean,customRate:string|null){
  const admin=await requireRole("COMPANY_ADMIN");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
+ const companyId=admin.companyId;
  let rate:Prisma.Decimal|null=null;
  if(customRate&&customRate.trim()!==""){
   const n=Number(customRate);
@@ -50,7 +51,7 @@ export async function reviewDailyTravel(employeeId:string,date:string,status:"AP
  return db.$transaction(async tx=>{
   const employee=await tx.user.findFirst({where:{id:employeeId,companyId,role:{in:["MANAGER","SALES"]},travelAllowanceEnabled:true},select:{id:true,travelRatePerKm:true}});
   if(!employee)throw new Error("NOT_FOUND");
-  const company=await tx.company.findUnique({where:{id:admin.companyId},select:{travelRatePerKm:true}});
+  const company=await tx.company.findUnique({where:{id:companyId},select:{travelRatePerKm:true}});
   const rate=employee.travelRatePerKm??company?.travelRatePerKm;
   if(!rate)throw new Error("RATE_NOT_CONFIGURED");
   // Calculation uses authoritative accepted GPS points; snapshot is stored with the decision.
