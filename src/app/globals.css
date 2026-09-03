@@ -1,6 +1,25 @@
-:root { --navy:#0b1930; --blue:#2864ec; --ink:#172033; --muted:#697386; --line:#dfe5ef; --pale:#f5f7fb; }
+:root {
+  --navy:#0b1930; --blue:#2864ec; --ink:#172033; --muted:#697386; --line:#dfe5ef; --pale:#f5f7fb;
+  --font-app:Arial, Helvetica, sans-serif;
+  --ui-control-min-height:42px;
+  --ui-control-font-size:13px;
+  --ui-control-font-weight:700;
+  --ui-control-inline-padding:14px;
+  --ui-control-radius:8px;
+  --ui-field-inline-padding:12px;
+  --menu-font-size:13px;
+  --menu-font-weight:600;
+  --menu-icon-width:20px;
+  --menu-icon-gap:12px;
+  --menu-desktop-min-height:44px;
+  --menu-desktop-inline-padding:20px;
+  --menu-mobile-min-height:42px;
+  --menu-mobile-inline-padding:12px;
+  --menu-item-radius:7px;
+  --menu-submenu-font-size:12px;
+}
 * { box-sizing:border-box; }
-html, body { margin:0; min-height:100%; font-family:Arial, Helvetica, sans-serif; color:var(--ink); background:white; }
+html, body { margin:0; min-height:100%; font-family:var(--font-app); color:var(--ink); background:white; }
 button, input { font:inherit; }
 .auth-shell { min-height:100vh; display:grid; grid-template-columns:minmax(320px, 44%) 1fr; }
 .brand-panel { color:white; padding:48px clamp(32px,5vw,80px); background:radial-gradient(circle at 15% 85%,#234c88 0,transparent 35%),linear-gradient(145deg,#071426,#112d51); display:flex; flex-direction:column; justify-content:space-between; }
@@ -237,12 +256,9 @@ button, input { font:inherit; }
 }
 
 
-/* Admin/mobile polish: compact menu, employee stats, and dashboard selectors. */
+/* Mobile employee stats and dashboard selector polish. */
 .dashboard-selector>select{min-width:0;flex:1;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
 @media(max-width:760px){
-  .workspace-mobile-drawer-admin{padding:7px}
-  .workspace-mobile-drawer-admin a,.workspace-mobile-drawer-admin .workspace-reports-toggle{padding:8px 4px 8px 9px;font-size:12px;line-height:1.15}
-  .workspace-mobile-drawer-admin .workspace-report-links a{padding:7px 4px 7px 37px;font-size:10.5px}
   .employee-stats{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none!important;gap:6px}
   .employee-stats>div{min-width:0;padding:10px 6px}
   .employee-stats strong{font-size:18px;line-height:1}
@@ -262,3 +278,164 @@ button, input { font:inherit; }
 
 @media(max-width:760px){.dash-mobile-nav nav{width:max-content!important;max-width:calc(100vw - 16px);padding:7px 4px 7px 7px!important}.dash-mobile-nav nav>a,.dash-mobile-nav .reports-menu>summary{padding-right:4px!important}.dash-mobile-nav .reports-menu>a{padding-right:4px!important}}
 .billing-retain{margin:0;padding:12px;border:1px solid var(--line);border-radius:10px}.billing-retain legend{font-weight:800}.billing-retain p{margin:0 0 8px;color:var(--muted);font-size:12px}.billing-retain label{display:flex!important;grid-template-columns:none!important;align-items:center;gap:8px;padding:7px 0}.billing-retain input{width:16px;height:16px}.billing-retain span{font-size:12px}
+
+
+/* Shared authenticated UI contracts. Role changes content, never physical sizing. */
+.dashboard-sidebar nav>a,
+.dashboard-sidebar .reports-menu>summary{
+  min-height:var(--menu-desktop-min-height);
+  display:flex;
+  align-items:center;
+  gap:var(--menu-icon-gap);
+  padding:0 var(--menu-desktop-inline-padding);
+  border-radius:0;
+  font-family:var(--font-app);
+  font-size:var(--menu-font-size);
+  font-weight:var(--menu-font-weight);
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+.dashboard-sidebar nav>a>span,
+.dashboard-sidebar .reports-menu>summary>span{
+  width:var(--menu-icon-width);
+  flex:0 0 var(--menu-icon-width);
+  text-align:center;
+  font-size:var(--menu-font-size);
+}
+.dashboard-sidebar .reports-menu>a{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  padding:0 var(--menu-desktop-inline-padding) 0 calc(var(--menu-desktop-inline-padding) + var(--menu-icon-width) + var(--menu-icon-gap))!important;
+  border-radius:0;
+  font-family:var(--font-app);
+  font-size:var(--menu-submenu-font-size)!important;
+  font-weight:var(--menu-font-weight);
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:760px){
+  .workspace-mobile-drawer a,
+  .workspace-reports-toggle,
+  .dash-mobile-nav nav>a,
+  .dash-mobile-nav .reports-menu>summary{
+    min-height:var(--menu-mobile-min-height);
+    display:flex;
+    align-items:center;
+    gap:var(--menu-icon-gap);
+    padding:0 var(--menu-mobile-inline-padding)!important;
+    border-radius:var(--menu-item-radius);
+    font-family:var(--font-app);
+    font-size:var(--menu-font-size);
+    font-weight:var(--menu-font-weight);
+    line-height:1.25;
+    overflow-wrap:anywhere;
+  }
+  .workspace-mobile-drawer a>span,
+  .workspace-reports-toggle>span,
+  .dash-mobile-nav nav>a>span,
+  .dash-mobile-nav .reports-menu>summary>span{
+    width:var(--menu-icon-width);
+    flex:0 0 var(--menu-icon-width);
+    text-align:center;
+    font-size:var(--menu-font-size);
+  }
+  .workspace-report-links a,
+  .dash-mobile-nav .reports-menu>a{
+    min-height:38px;
+    padding:0 var(--menu-mobile-inline-padding) 0 calc(var(--menu-mobile-inline-padding) + var(--menu-icon-width) + var(--menu-icon-gap))!important;
+    border-radius:var(--menu-item-radius);
+    font-family:var(--font-app);
+    font-size:var(--menu-submenu-font-size)!important;
+    font-weight:var(--menu-font-weight);
+    line-height:1.25;
+  }
+}
+
+/* Normal authenticated actions share one physical size; compact/icon controls stay opt-in. */
+.primary-button,
+.danger-button,
+.employee-actions button,
+.employee-form button:not(.close-button),
+.attendance-card button,
+.customer-search button,
+.customer-add,
+.visit-start-card button:not(.checkin-kinds button),
+.pending-visits button,
+.lead-form button,
+.lead-filters button,
+.stage-form button,
+.report-filters button,
+.target-form button,
+.billing-form button,
+.admin-price-grid button,
+.dashboard-selector button,
+.task-actions a,
+.task-actions button,
+.lead-scope-filter button,
+.monthly-target-row button,
+.expense-approval-actions button,
+.safe-error button,
+.safe-error a,
+.download-excel{
+  min-height:var(--ui-control-min-height);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:0 var(--ui-control-inline-padding);
+  border-radius:var(--ui-control-radius);
+  font-family:var(--font-app);
+  font-size:var(--ui-control-font-size);
+  font-weight:var(--ui-control-font-weight);
+  line-height:1.2;
+  text-align:center;
+  white-space:normal;
+}
+
+/* Normal authenticated fields share typography, height, padding, and radius. */
+.employee-form input,
+.employee-form select,
+.customer-search input,
+.visit-start-card input:not([type=file]),
+.visit-start-card select,
+.pending-visits input,
+.pending-visits select,
+.lead-form input,
+.lead-form select,
+.lead-filters input,
+.lead-filters select,
+.stage-form input,
+.stage-form select,
+.report-filters input,
+.report-filters select,
+.settings-fields input,
+.target-form input,
+.target-form select,
+.billing-form input,
+.billing-form select,
+.admin-price-grid input,
+.profile-form select,
+.dashboard-selector select,
+.dashboard-selector>select,
+.gps-daily-filters select,
+.lead-scope-filter input,
+.lead-scope-filter select,
+.target-metric input{
+  min-height:var(--ui-control-min-height);
+  padding:0 var(--ui-field-inline-padding);
+  border-radius:var(--ui-control-radius);
+  font-family:var(--font-app);
+  font-size:var(--ui-control-font-size);
+  line-height:1.2;
+}
+.visit-start-card textarea,
+.pending-visits textarea,
+.lead-form textarea{
+  padding:11px var(--ui-field-inline-padding);
+  border-radius:var(--ui-control-radius);
+  font-family:var(--font-app);
+  font-size:var(--ui-control-font-size);
+  line-height:1.4;
+}
