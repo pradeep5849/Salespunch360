@@ -67,21 +67,18 @@ describe("dashboard presentation policy", () => {
   it("exposes no additional-admin links backed by legacy requireRole authorization", () => {
     const p = dashboardPresentation(actor("FIELD_ADMIN", "ADMIN"));
     expect(p.canAccessLegacyRoleRoutes).toBe(false);
-    expect(p.navigationRoutes).toEqual([
-      "/workspace",
+    expect(p.navigationRoutes).toEqual(["/workspace"]);
+    for (const route of [
       "/workspace/attendance",
       "/workspace/customers",
       "/workspace/check-ins",
-    ]);
-    expect(p.navigationRoutes).not.toEqual(
-      expect.arrayContaining([
-        "/workspace/employees",
-        "/workspace/billing",
-        "/workspace/settings",
-        "/workspace/leads",
-        "/workspace/follow-up-tasks",
-        "/workspace/targets",
-      ]),
-    );
+      "/workspace/employees",
+      "/workspace/billing",
+      "/workspace/settings",
+      "/workspace/leads",
+      "/workspace/follow-up-tasks",
+      "/workspace/targets",
+    ])
+      expect(p.navigationRoutes).not.toContain(route);
   });
 });

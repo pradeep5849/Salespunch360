@@ -19,12 +19,7 @@ export function dashboardPresentation(actor: DashboardPresentationActor) {
     isPrimaryAdmin && actor.role === "COMPANY_ADMIN";
   const canAccessLegacyRoleRoutes = !isAdditionalAdmin;
   const navigationRoutes = isAdditionalAdmin
-    ? ([
-        "/workspace",
-        "/workspace/attendance",
-        "/workspace/customers",
-        "/workspace/check-ins",
-      ] as const)
+    ? (["/workspace"] as const)
     : null;
   return {
     isPrimaryAdmin,
