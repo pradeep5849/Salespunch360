@@ -19,6 +19,7 @@ import {
 } from "./validation";
 
 const employeeRoles: Role[] = ["MANAGER", "SALES"];
+export const employeeRoleDimensions = (role: "MANAGER" | "SALES") => ({ role, salesRole: role });
 const employeeSelect = {
   id: true, name: true, email: true, phone: true, employeeCode: true, role: true,
   isActive: true, managerId: true, managerType: true, companyId: true, travelAllowanceEnabled:true, travelRatePerKm:true,
@@ -107,7 +108,7 @@ async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SA
     if (company.teamStructure === "SALES_ONLY" && requestedManagerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     const managerId = role === "SALES" ? await loadAssignableManager(tx, companyId, requestedManagerId) : null;
     return tx.user.create({
-      data: { companyId, role, isActive: true, name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId, managerType: role === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
+      data: { companyId, ...employeeRoleDimensions(role), isActive: true, name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId, managerType: role === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
       select: employeeSelect,
     });
   });

@@ -11,3 +11,7 @@ Sales `PRIMARY_ADMIN` is included. Additional Sales `ADMIN` pricing is ₹250 mo
 Product editions authorize independently: `SALESPUNCH360` permits Sales only, `SALESPUNCH360_ACCOUNT` permits Account only, and `SALESPUNCH360_PLUS` permits both. The model permits a future Sales-to-Plus activation by changing the existing company edition; F2 implements neither checkout nor activation. Branch access remains a separate `ALL_BRANCHES`/`SELECTED_BRANCHES` concern and its existing database constraints are unchanged.
 
 Future retirement: after all Sales authorization call sites consume explicit Sales roles, `Role` can be reduced to platform/compatibility metadata in a separately planned migration. It must not be destructively removed during F2.
+
+## F2 correction: legacy compatibility identities
+
+The repair migration introduces `FIELD_ADMIN` as the legacy compatibility identity for an additional Sales Admin. The exact permitted mappings are: `SUPER_ADMIN` → no workspace roles; `COMPANY_ADMIN` → `PRIMARY_ADMIN`; `FIELD_ADMIN` → `ADMIN`; `MANAGER` → `MANAGER`; `SALES` → `SALES`; and `ACCOUNT_USER` → no Sales role with an Account role. Account roles remain independent and may coexist with any tenant Sales identity. The repair backfills Manager/Sales users created in the F2 gap and adds a database check against contradictory legacy/Sales identities. The original F2 migration is intentionally untouched.
