@@ -30,7 +30,7 @@ export async function applyDueSeatReductions(companyId:string,now=new Date()){
   }
 
   if(deactivateIds.length){
-   await tx.user.updateMany({where:{companyId,id:{in:deactivateIds},role:{in:["MANAGER","SALES"]}},data:{isActive:false}});
+   await tx.user.updateMany({where:{companyId,id:{in:deactivateIds},role:{in:["MANAGER","SALES"]}},data:{isActive:false,salesAccessActive:false,accountAccessActive:false}});
    await tx.session.deleteMany({where:{userId:{in:deactivateIds}}});
    await tx.mobileSession.deleteMany({where:{userId:{in:deactivateIds}}});
   }

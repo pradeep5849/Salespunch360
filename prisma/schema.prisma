@@ -262,6 +262,8 @@ model User {
   role                    Role
   salesRole               SalesRole?
   accountRole             AccountRole?
+  salesAccessActive       Boolean                  @default(false)
+  accountAccessActive     Boolean                  @default(false)
   managerType             ManagerType?
   branchAccessScope       BranchAccessScope       @default(ALL_BRANCHES)
   phone                   String?
@@ -306,6 +308,8 @@ model User {
   @@index([companyId, role])
   @@index([companyId, salesRole])
   @@index([companyId, accountRole])
+  @@index([companyId, salesAccessActive, salesRole])
+  @@index([companyId, accountAccessActive, accountRole])
   @@index([companyId, isActive, role])
   @@index([managerId])
   @@map("users")

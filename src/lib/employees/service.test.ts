@@ -16,7 +16,7 @@ describe("employee security mutations", () => {
   it("deactivation soft-disables the employee and revokes every session", async () => {
     const mock = transaction({ id: "employee", companyId: "company-a", role: "SALES", isActive: true });
     await deactivateEmployeeInTransaction(mock as unknown as Prisma.TransactionClient, "company-a", "employee");
-    expect(mock.user.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { isActive: false } }));
+    expect(mock.user.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { isActive: false, salesAccessActive: false, accountAccessActive: false } }));
     expect(mock.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
     expect(mock.mobileSession.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
   });

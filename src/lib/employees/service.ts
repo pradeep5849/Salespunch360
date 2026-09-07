@@ -5,6 +5,7 @@ import { hashPassword } from "@/lib/auth/crypto";
 import { lockUser } from "@/lib/auth/session-generation";
 import { getTrialStatus } from "@/lib/trial/status";
 import { profileComplete } from "@/lib/company/profile";
+import { hasSalesWorkspace } from "@/lib/product/edition";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
 import {
   createManagerSchema,
@@ -36,7 +37,7 @@ async function lockAndLoadCompany(tx: Prisma.TransactionClient, companyId: strin
   await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id" = ${companyId}::uuid FOR UPDATE`;
   const company = await tx.company.findFirst({
     where: { id: companyId },
-    select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true, name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true },
+    select: { subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true, teamStructure: true, productEdition:true, name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true },
   });
   if (!company) throw new EmployeePolicyError("NOT_FOUND");
   return company;
@@ -108,7 +109,7 @@ async function createEmployeeForCompany(companyId: string, role: "MANAGER" | "SA
     if (company.teamStructure === "SALES_ONLY" && requestedManagerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     const managerId = role === "SALES" ? await loadAssignableManager(tx, companyId, requestedManagerId) : null;
     return tx.user.create({
-      data: { companyId, ...employeeRoleDimensions(role), isActive: true, name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId, managerType: role === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
+      data: { companyId, ...employeeRoleDimensions(role), isActive: true, salesAccessActive: hasSalesWorkspace(company.productEdition), name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId, managerType: role === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
       select: employeeSelect,
     });
   });
@@ -170,7 +171,7 @@ export async function deactivateEmployeeForCompany(companyId:string,raw:unknown,
 export async function deactivateEmployeeInTransaction(tx: Prisma.TransactionClient, companyId: string, employeeId: string) {
     const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true } });
     assertManagedEmployee(companyId, employee);
-    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, data: { isActive: false } });
+    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, data: { isActive: false, salesAccessActive: false, accountAccessActive: false } });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
     await tx.session.deleteMany({ where: { userId: employeeId } });
     await tx.mobileSession.deleteMany({ where: { userId: employeeId } });
@@ -185,12 +186,13 @@ export async function reactivateEmployeeForCompany(companyId:string,raw:unknown,
   await db.$transaction(async (tx) => {
     await enforceAdminReadiness(tx,companyId,adminId);
     const company = await lockAndLoadCompany(tx, companyId);
-    const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true } });
+    const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, salesRole: true, isActive: true } });
     assertManagedEmployee(companyId, employee);
     if (company.teamStructure === "SALES_ONLY" && employee.role === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
     if (employee.isActive) return;
     await enforceAvailableSeat(tx, companyId, employee.role as "MANAGER" | "SALES");
-    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: employee.role, isActive: false }, data: { isActive: true } });
+    const salesAccessActive = Boolean(employee.salesRole) && hasSalesWorkspace(company.productEdition);
+    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: employee.role, isActive: false }, data: { isActive: true, salesAccessActive } });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
   });
 }

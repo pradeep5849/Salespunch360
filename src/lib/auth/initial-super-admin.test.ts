@@ -36,6 +36,8 @@ describe("initial Super Admin provisioning", () => {
         email: "admin@example.com",
         passwordHash: "generated-hash",
         role: "SUPER_ADMIN",
+        salesAccessActive: false,
+        accountAccessActive: false,
         companyId: null,
       },
       select: { id: true },

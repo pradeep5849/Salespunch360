@@ -38,6 +38,8 @@ export async function provisionInitialSuperAdminInTransaction(
       email: credentials.email,
       passwordHash,
       role: "SUPER_ADMIN",
+      salesAccessActive: false,
+      accountAccessActive: false,
       companyId: null,
     },
     select: { id: true },
