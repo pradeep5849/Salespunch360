@@ -14,4 +14,8 @@ Future retirement: after all Sales authorization call sites consume explicit Sal
 
 ## F2 correction: legacy compatibility identities
 
-The repair migration introduces `FIELD_ADMIN` as the legacy compatibility identity for an additional Sales Admin. The exact permitted mappings are: `SUPER_ADMIN` → no workspace roles; `COMPANY_ADMIN` → `PRIMARY_ADMIN`; `FIELD_ADMIN` → `ADMIN`; `MANAGER` → `MANAGER`; `SALES` → `SALES`; and `ACCOUNT_USER` → no Sales role with an Account role. Account roles remain independent and may coexist with any tenant Sales identity. The repair backfills Manager/Sales users created in the F2 gap and adds a database check against contradictory legacy/Sales identities. The original F2 migration is intentionally untouched.
+The repair migration introduces `FIELD_ADMIN` as the legacy compatibility identity for an additional Sales Admin. The exact permitted mappings are: `SUPER_ADMIN` → no workspace roles; `COMPANY_ADMIN` → `PRIMARY_ADMIN`; `FIELD_ADMIN` → `ADMIN`; `MANAGER` → `MANAGER`; `SALES` → `SALES`; and `ACCOUNT_USER` → no Sales role with an Account role. Account roles remain independent and may coexist with any tenant Sales identity. The repair backfills Manager/Sales users created in the F2 gap and adds a database check against contradictory legacy/Sales identities.
+
+## Production migration recovery
+
+The first production attempt of `20260907000000_roles_permission_foundation` failed with PostgreSQL `55P04`: `BillingRole.ADMIN` was added and consumed by the `billing_prices` insert in the same transaction. Because that migration failed and never completed successfully, its SQL now commits immediately after adding `BillingRole.ADMIN`, before any price row uses the value. Production recovery requires an operator to mark the failed migration as rolled back with Prisma before redeploying the corrected migration; credentials and recovery execution remain outside the repository.

@@ -3,6 +3,8 @@ ALTER TYPE "Role" ADD VALUE 'ACCOUNT_USER';
 CREATE TYPE "SalesRole" AS ENUM ('PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'SALES');
 CREATE TYPE "AccountRole" AS ENUM ('ACCOUNT_ADMIN', 'ACCOUNTANT', 'PROJECT_MANAGER', 'DATA_ENTRY');
 ALTER TYPE "BillingRole" ADD VALUE 'ADMIN';
+-- PostgreSQL requires the new enum value to be committed before billing prices can use it.
+COMMIT;
 
 ALTER TABLE "users" ADD COLUMN "salesRole" "SalesRole";
 ALTER TABLE "users" ADD COLUMN "accountRole" "AccountRole";
