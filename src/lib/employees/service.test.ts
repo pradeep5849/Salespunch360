@@ -17,6 +17,8 @@ describe("employee security mutations", () => {
     const mock = transaction({ id: "employee", companyId: "company-a", role: "SALES", isActive: true });
     await deactivateEmployeeInTransaction(mock as unknown as Prisma.TransactionClient, "company-a", "employee");
     expect(mock.user.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { isActive: false, salesAccessActive: false, accountAccessActive: false } }));
+    expect(mock.user.updateMany.mock.calls[0][0].data).not.toHaveProperty("salesRole");
+    expect(mock.user.updateMany.mock.calls[0][0].data).not.toHaveProperty("accountRole");
     expect(mock.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
     expect(mock.mobileSession.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
   });

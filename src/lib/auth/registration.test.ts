@@ -48,7 +48,7 @@ describe("registration trial setup", () => {
     expect(company.contactEmail).toBe(base.adminEmail);
     expect(tx.company.create).toHaveBeenCalledTimes(1);
     expect(tx.user.create).toHaveBeenCalledTimes(1);
-    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: "COMPANY_ADMIN", salesRole: "PRIMARY_ADMIN", salesAccessActive: true }) }));
+    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: "COMPANY_ADMIN", salesRole: "PRIMARY_ADMIN", salesAccessActive: true, accountAccessActive: false }) }));
     expect(tx.branch.create).toHaveBeenCalledWith({ data: { name: "Head Office", code: "HO", isPrimary: true, isActive: true, companyId: "company-id" } });
     expect(user.role).toBe("COMPANY_ADMIN");
     expect(tx.companySubscription.create).not.toHaveBeenCalled();
