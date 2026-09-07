@@ -13,6 +13,23 @@ enum Role {
   COMPANY_ADMIN
   MANAGER
   SALES
+  ACCOUNT_USER
+}
+
+/// Explicit Sales workspace identity. Kept independent from legacy Role during migration.
+enum SalesRole {
+  PRIMARY_ADMIN
+  ADMIN
+  MANAGER
+  SALES
+}
+
+/// Explicit Account workspace identity. One fixed role per user.
+enum AccountRole {
+  ACCOUNT_ADMIN
+  ACCOUNTANT
+  PROJECT_MANAGER
+  DATA_ENTRY
 }
 
 enum ManagerType {
@@ -124,6 +141,7 @@ enum BillingPeriod {
 }
 
 enum BillingRole {
+  ADMIN
   MANAGER
   SALES
 }
@@ -241,6 +259,8 @@ model User {
   passwordHash            String
   sessionVersion          Int                      @default(0)
   role                    Role
+  salesRole               SalesRole?
+  accountRole             AccountRole?
   managerType             ManagerType?
   branchAccessScope       BranchAccessScope       @default(ALL_BRANCHES)
   phone                   String?
@@ -283,6 +303,8 @@ model User {
 
   @@unique([companyId, employeeCode])
   @@index([companyId, role])
+  @@index([companyId, salesRole])
+  @@index([companyId, accountRole])
   @@index([companyId, isActive, role])
   @@index([managerId])
   @@map("users")

@@ -1,4 +1,4 @@
-import type { ManagerType, Role } from "@prisma/client";
+import type { AccountRole, ManagerType, Role, SalesRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "@/lib/db";
@@ -16,6 +16,8 @@ export type AuthenticatedUser = {
   email: string;
   role: Role;
   managerType: ManagerType | null;
+  salesRole?: SalesRole | null;
+  accountRole?: AccountRole | null;
   companyId: string | null;
 };
 
@@ -46,7 +48,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    select: { expiresAt: true, sessionVersion: true, user: { select: { id: true, name: true, email: true, role: true, managerType: true, companyId: true, isActive: true, sessionVersion: true } } },
+    select: { expiresAt: true, sessionVersion: true, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, companyId: true, isActive: true, sessionVersion: true } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user) || session.sessionVersion !== session.user.sessionVersion) return null;
   return {
@@ -55,6 +57,8 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     email: session.user.email,
     role: session.user.role,
     managerType: session.user.managerType,
+    salesRole: session.user.salesRole,
+    accountRole: session.user.accountRole,
     companyId: session.user.companyId,
   };
 });

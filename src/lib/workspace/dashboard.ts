@@ -1,5 +1,5 @@
 import type {ManagerType,Role} from "@prisma/client";
-import {AuthorizationError,requireRole} from "@/lib/auth/authorization";
+import {requireSalesWorkspace} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
 import{indiaDateText,parseIndiaBusinessDate}from"@/lib/follow-up-tasks/date";
 
@@ -10,7 +10,7 @@ export function dashboardEmployeeWhere(actor:DashboardActor){
  return{companyId:actor.companyId,id:actor.id,role:"SALES" as const,isActive:true};
 }
 export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:string}){
- const user=await requireRole("COMPANY_ADMIN","MANAGER","SALES");if(!user.companyId)throw new AuthorizationError();const actor={...user,companyId:user.companyId};
+ const user=await requireSalesWorkspace();const actor={...user,companyId:user.companyId};
  const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true},orderBy:{name:"asc"}});
  const allowed=new Set(employees.map(e=>e.id));
  const requestedCheck=raw.checkInEmployee,checkUserId=actor.role==="SALES"?actor.id:requestedCheck&&allowed.has(requestedCheck)?requestedCheck:undefined;

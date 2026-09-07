@@ -1,6 +1,8 @@
 import type { Prisma, Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser, type AuthenticatedUser } from "./session";
+import { db } from "@/lib/db";
+import { canAccessSalesWorkspace } from "./workspace-policy";
 
 export class AuthorizationError extends Error {
   constructor() { super("Not authorized"); this.name = "AuthorizationError"; }
@@ -49,4 +51,22 @@ export async function tenantWhere(where: Prisma.UserWhereInput = {}): Promise<Pr
 
 export function assertSameTenant(user: AuthenticatedUser, recordCompanyId: string) {
   if (!user.companyId || user.companyId !== recordCompanyId) throw new AuthorizationError();
+}
+
+/** Sales-only authorization boundary. Tenant membership by itself never grants Sales access. */
+export async function requireSalesWorkspace() {
+  const user = await requireUser();
+  if (!user.companyId) throw new AuthorizationError();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
+  if (!company || !canAccessSalesWorkspace(user, company.productEdition)) throw new AuthorizationError();
+  return { ...user, companyId: user.companyId };
+}
+
+/** Mutation counterpart of requireSalesWorkspace; never redirects. */
+export async function requireSalesWorkspaceForMutation() {
+  const user = await requireUserForMutation();
+  if (!user.companyId) throw new AuthorizationError();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
+  if (!company || !canAccessSalesWorkspace(user, company.productEdition)) throw new AuthorizationError();
+  return { ...user, companyId: user.companyId };
 }

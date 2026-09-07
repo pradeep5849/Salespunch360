@@ -45,6 +45,7 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         email: data.adminEmail,
         passwordHash,
         role: "COMPANY_ADMIN",
+        salesRole: "PRIMARY_ADMIN",
         companyId: company.id,
       },
       select: { id: true, name: true, email: true, role: true, companyId: true },
