@@ -1,14 +1,14 @@
-import {Prisma,type Role,type SalesRole}from"@prisma/client";
+import {Prisma,type SalesRole}from"@prisma/client";
 import{randomUUID}from"node:crypto";
 import{db}from"@/lib/db";import{deliverFieldEvent}from"@/lib/push/service";import{requirePermission,requirePermissionForMutation}from"@/lib/auth/authorization";import{assertOperationalWrite}from"@/lib/billing/entitlement";import{haversineDistanceMeters}from"@/lib/location/geo";import{privateStorage,visitPhotoKeys}from"@/lib/storage";
 import{checkoutSchema,fieldCheckInSchema,type CheckoutInput}from"./validation";import{processVisitPhoto}from"./photo";import{resolveAttendanceId,VisitPolicyError}from"./policy";
 import{indiaDateText,parseIndiaBusinessDate}from"@/lib/follow-up-tasks/date";import{syncLeadFollowUpAt}from"@/lib/follow-up-tasks/service";
 import{compensateWrittenPhoto}from"./photo-compensation";import{reverseGeocode}from"@/lib/maps/reverse-geocode";import{attachCheckInFailureStage,type CheckInFailureStage}from"./field-checkin-stage";
-type FieldUser={id:string;companyId:string;role?:Role;salesRole?:SalesRole|null;managerType?:string|null};const RADIUS_METERS=50;
-function assertFieldWorker(user:FieldUser){const role=user.salesRole??user.role;if(role!=="SALES"&&!(role==="MANAGER"&&user.managerType!=="MANAGER_ONLY"))throw new VisitPolicyError("VISIT_NOT_FOUND");}
+type FieldUser={id:string;companyId:string;salesRole:SalesRole;managerType?:string|null};const RADIUS_METERS=50;
+function assertFieldWorker(user:FieldUser){const role=user.salesRole;if(role!=="SALES"&&!(role==="MANAGER"&&user.managerType!=="MANAGER_ONLY"))throw new VisitPolicyError("VISIT_NOT_FOUND");}
 const normalizePhone=(phone:string)=>phone.replace(/[\s().-]/g,"");
 async function lockPhone(tx:Prisma.TransactionClient,key:string){await tx.$queryRaw<{locked:number}[]>`WITH "phone_lock" AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext(${key}))) SELECT 1::int AS "locked" FROM "phone_lock"`;}
-async function requireFieldEmployee(mutation=true){const user=await (mutation?requirePermissionForMutation("SALES_CHECK_INS"):requirePermission("SALES_CHECK_INS"));if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");const employee={...user,companyId:user.companyId};assertFieldWorker(employee);return employee;}
+async function requireFieldEmployee(mutation=true){const user=await (mutation?requirePermissionForMutation("SALES_CHECK_INS"):requirePermission("SALES_CHECK_INS"));if(!user.companyId)throw new VisitPolicyError("VISIT_NOT_FOUND");if(!user.salesRole)throw new VisitPolicyError("VISIT_NOT_FOUND");const employee={...user,salesRole:user.salesRole,companyId:user.companyId};assertFieldWorker(employee);return employee;}
 export function hasImmutableReference(value:{checkInReferenceLatitude:number|null;checkInReferenceLongitude:number|null;checkInReferenceSetAt:Date|null}){return value.checkInReferenceLatitude!==null&&value.checkInReferenceLongitude!==null&&value.checkInReferenceSetAt!==null;}
 export function hasReferenceVisitProvenance(value:{checkInReferenceVisitId:string|null}){return value.checkInReferenceVisitId!==null;}
 export function assertWithinImmutableReference(reference:{latitude:number;longitude:number}|null,actual:{latitude:number;longitude:number}){if(!reference)return;const distance=haversineDistanceMeters(reference,actual);if(distance>RADIUS_METERS)throw new VisitPolicyError("REPEAT_VISIT_OUTSIDE_RADIUS",distance);}

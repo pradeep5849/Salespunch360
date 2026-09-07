@@ -1,5 +1,5 @@
 import {createLeadFromVisitForActor,getLeadForActor,listLeadsForActor,transitionLeadForActor} from '@/lib/leads/service';import type {MobilePrincipal} from './auth';import{createFollowUpTaskForActor}from'@/lib/follow-up-tasks/service';
-const actor=(u:MobilePrincipal)=>({...u,companyId:u.companyId});
+const actor=(u:MobilePrincipal)=>({...u,salesRole:u.role==="COMPANY_ADMIN"?"PRIMARY_ADMIN" as const:u.role,companyId:u.companyId});
 export async function mobileLeads(u:MobilePrincipal,raw:unknown){return listLeadsForActor(actor(u),raw)}
 export async function mobileLead(u:MobilePrincipal,id:string){const lead=await getLeadForActor(actor(u),id);if(!lead)throw new Error('NOT_FOUND');return lead}
 export async function mobileLeadFromVisit(u:MobilePrincipal,raw:unknown){if(u.role==='COMPANY_ADMIN'||(u.role==='MANAGER'&&u.managerType==='MANAGER_ONLY'))throw new Error('NOT_FOUND');if(!raw||typeof raw!=='object')throw new Error('INVALID_INPUT');const input={...(raw as Record<string,unknown>),assignedUserId:u.id};return createLeadFromVisitForActor(actor(u),input)}

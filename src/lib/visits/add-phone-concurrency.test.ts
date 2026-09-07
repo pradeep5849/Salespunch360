@@ -8,7 +8,7 @@ vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:vi.fn()}));
 vi.mock("@/lib/storage",()=>({privateStorage:vi.fn(),visitPhotoKeys:vi.fn()}));
 import {addPhoneToVisitForUser} from "./service";
 
-const user={id:"11111111-1111-4111-8111-111111111111",companyId:"22222222-2222-4222-8222-222222222222",role:"SALES" as const};
+const user={id:"11111111-1111-4111-8111-111111111111",companyId:"22222222-2222-4222-8222-222222222222",salesRole:"SALES" as const};
 const visitId="33333333-3333-4333-8333-333333333333";
 let linkedLeadId:string|null;
 

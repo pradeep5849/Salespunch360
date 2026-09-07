@@ -78,4 +78,18 @@ describe("static module permission matrix", () => {
     expect(can({ ...dualAdmin, salesAccessActive: false, accountAccessActive: false }, "BRANCH_ASSIGN")).toBe(false);
     expect(can({ ...dualAdmin, salesAccessActive: false }, "BRANCH_ASSIGN", "SALESPUNCH360")).toBe(false);
   });
+  describe.each(["SALES_ATTENDANCE", "SALES_CHECK_INS", "SALES_CUSTOMERS", "SALES_LEADS", "SALES_FOLLOW_UPS"] as const)("migrated %s boundary", permission => {
+    it("requires an active Sales workspace identity and ignores legacy authority", () => {
+      expect(can(sales("SALES"), permission, "SALESPUNCH360")).toBe(true);
+      expect(can(sales("SALES", { salesAccessActive: false }), permission)).toBe(false);
+      expect(can(sales("SALES", { isActive: false }), permission)).toBe(false);
+      expect(can(sales("SALES"), permission, "SALESPUNCH360_ACCOUNT")).toBe(false);
+      expect(can(user({ role: "SALES", salesAccessActive: true }), permission)).toBe(false);
+      expect(can(user({ role: "FIELD_ADMIN", salesAccessActive: true }), permission)).toBe(false);
+      expect(can(user({ role: "ACCOUNT_USER", accountRole: "ACCOUNT_ADMIN", accountAccessActive: true }), permission)).toBe(false);
+      expect(can(user({ role: "SUPER_ADMIN", companyId: null, salesRole: "PRIMARY_ADMIN", salesAccessActive: true }), permission)).toBe(false);
+      expect(can(sales("ADMIN", { role: "FIELD_ADMIN" }), permission)).toBe(true);
+    });
+  });
+
 });
