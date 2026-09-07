@@ -20,6 +20,7 @@ const base = {
 function transactionHarness() {
   const tx = {
     company: { create: vi.fn(async ({ data }) => ({ id: "company-id", ...data })),update:vi.fn() },
+    branch: { create: vi.fn() },
     user: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(async () => ({ id: "admin-id", role: "COMPANY_ADMIN", companyId: "company-id" })),
@@ -47,6 +48,7 @@ describe("registration trial setup", () => {
     expect(company.contactEmail).toBe(base.adminEmail);
     expect(tx.company.create).toHaveBeenCalledTimes(1);
     expect(tx.user.create).toHaveBeenCalledTimes(1);
+    expect(tx.branch.create).toHaveBeenCalledWith({ data: { name: "Head Office", code: "HO", isPrimary: true, isActive: true, companyId: "company-id" } });
     expect(user.role).toBe("COMPANY_ADMIN");
     expect(tx.companySubscription.create).not.toHaveBeenCalled();
 

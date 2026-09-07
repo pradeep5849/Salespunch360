@@ -36,6 +36,9 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         contactEmail: data.adminEmail,
       },
     });
+    await tx.branch.create({
+      data: { name: "Head Office", code: "HO", isPrimary: true, isActive: true, companyId: company.id },
+    });
     const user = await tx.user.create({
       data: {
         name: data.adminName,

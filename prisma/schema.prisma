@@ -20,6 +20,17 @@ enum ManagerType {
   MANAGER_ONLY
 }
 
+enum ProductEdition {
+  SALESPUNCH360
+  SALESPUNCH360_ACCOUNT
+  SALESPUNCH360_PLUS
+}
+
+enum BranchAccessScope {
+  ALL_BRANCHES
+  SELECTED_BRANCHES
+}
+
 enum PushPlatform {
   ANDROID
 }
@@ -163,6 +174,7 @@ model Company {
   name                                String
   slug                                String                   @unique
   teamStructure                       TeamStructure            @default(MANAGERS_AND_SALES)
+  productEdition                      ProductEdition           @default(SALESPUNCH360)
   trialStartedAt                      DateTime?
   trialEndsAt                         DateTime?
   subscriptionStatus                  SubscriptionStatus       @default(SUSPENDED)
@@ -196,6 +208,7 @@ model Company {
   description                         String?
   logoObjectKey                       String?                  @db.VarChar(512)
   users                               User[]
+  branches                            Branch[]
   attendances                         Attendance[]
   locationPoints                      LocationPoint[]
   customers                           Customer[]
@@ -229,6 +242,7 @@ model User {
   sessionVersion          Int                      @default(0)
   role                    Role
   managerType             ManagerType?
+  branchAccessScope       BranchAccessScope       @default(ALL_BRANCHES)
   phone                   String?
   employeeCode            String?
   travelAllowanceEnabled  Boolean                  @default(false)
@@ -238,6 +252,7 @@ model User {
   manager                 User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   reports                 User[]                   @relation("ManagerReports")
   sessions                Session[]
+  branchAccesses          UserBranchAccess[]
   mobileSessions          MobileSession[]
   pushDevices             PushDevice[]
   attendances             Attendance[]
@@ -271,6 +286,45 @@ model User {
   @@index([companyId, isActive, role])
   @@index([managerId])
   @@map("users")
+}
+
+model Branch {
+  id           String             @id @default(uuid()) @db.Uuid
+  companyId    String             @db.Uuid
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name         String
+  code         String
+  isPrimary    Boolean            @default(false)
+  isActive     Boolean            @default(true)
+  addressLine1 String?
+  addressLine2 String?
+  locality     String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?
+  phone        String?
+  email        String?
+  gstin        String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  userAccesses UserBranchAccess[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive])
+  @@map("branches")
+}
+
+model UserBranchAccess {
+  userId    String   @db.Uuid
+  branchId  String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  createdAt DateTime @default(now())
+
+  @@id([userId, branchId])
+  @@index([branchId])
+  @@map("user_branch_accesses")
 }
 
 model EmailVerificationToken {
