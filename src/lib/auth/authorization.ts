@@ -2,7 +2,7 @@ import type { Prisma, Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser, type AuthenticatedUser } from "./session";
 import { db } from "@/lib/db";
-import { canAccessSalesWorkspace } from "./workspace-policy";
+import { canAccessAccountWorkspace, canAccessSalesWorkspace } from "./workspace-policy";
 
 export class AuthorizationError extends Error {
   constructor() { super("Not authorized"); this.name = "AuthorizationError"; }
@@ -68,5 +68,23 @@ export async function requireSalesWorkspaceForMutation() {
   if (!user.companyId) throw new AuthorizationError();
   const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
   if (!company || !canAccessSalesWorkspace(user, company.productEdition)) throw new AuthorizationError();
+  return { ...user, companyId: user.companyId };
+}
+
+/** Account-only authorization boundary. Tenant membership by itself never grants Account access. */
+export async function requireAccountWorkspace() {
+  const user = await requireUser();
+  if (!user.companyId) throw new AuthorizationError();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
+  if (!company || !canAccessAccountWorkspace(user, company.productEdition)) throw new AuthorizationError();
+  return { ...user, companyId: user.companyId };
+}
+
+/** Mutation counterpart of requireAccountWorkspace; never redirects. */
+export async function requireAccountWorkspaceForMutation() {
+  const user = await requireUserForMutation();
+  if (!user.companyId) throw new AuthorizationError();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
+  if (!company || !canAccessAccountWorkspace(user, company.productEdition)) throw new AuthorizationError();
   return { ...user, companyId: user.companyId };
 }

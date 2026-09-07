@@ -15,9 +15,12 @@ export type AuthenticatedUser = {
   name: string;
   email: string;
   role: Role;
+  isActive: boolean;
   managerType: ManagerType | null;
-  salesRole?: SalesRole | null;
-  accountRole?: AccountRole | null;
+  salesRole: SalesRole | null;
+  accountRole: AccountRole | null;
+  salesAccessActive: boolean;
+  accountAccessActive: boolean;
   companyId: string | null;
 };
 
@@ -48,7 +51,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    select: { expiresAt: true, sessionVersion: true, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, companyId: true, isActive: true, sessionVersion: true } } },
+    select: { expiresAt: true, sessionVersion: true, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, isActive: true, sessionVersion: true } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user) || session.sessionVersion !== session.user.sessionVersion) return null;
   return {
@@ -56,9 +59,12 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     name: session.user.name,
     email: session.user.email,
     role: session.user.role,
+    isActive: session.user.isActive,
     managerType: session.user.managerType,
     salesRole: session.user.salesRole,
     accountRole: session.user.accountRole,
+    salesAccessActive: session.user.salesAccessActive,
+    accountAccessActive: session.user.accountAccessActive,
     companyId: session.user.companyId,
   };
 });

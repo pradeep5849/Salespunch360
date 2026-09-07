@@ -60,7 +60,7 @@ import { createSession, getAuthenticatedUser } from "./session";
 import { replacePasswordAndRevoke } from "./session-generation";
 import { authenticateMobileToken, createMobileSession } from "@/lib/mobile/auth";
 
-const user = (id: string, email = `${id}@example.com`) => ({ id, name: id, email, passwordHash: "hash-password", role: "SALES", managerType: null, companyId: "company", isActive: true, sessionVersion: 0 });
+const user = (id: string, email = `${id}@example.com`) => ({ id, name: id, email, passwordHash: "hash-password", role: "SALES", managerType: null, salesRole: "SALES", accountRole: null, salesAccessActive: true, accountAccessActive: false, companyId: "company", isActive: true, sessionVersion: 0 });
 
 beforeEach(() => {
   vi.clearAllMocks(); state.cookie = ""; state.tokenNumber = 0; state.users = new Map([["a", user("a")], ["b", user("b")]]); state.web = []; state.mobile = []; state.push = []; state.lockTail = Promise.resolve();
@@ -85,11 +85,19 @@ describe("single active login rotation", () => {
     const current = user("a") as Record<string, unknown>; current.sessionVersion = 4;
     db.session.findUnique.mockResolvedValue({ expiresAt: new Date(Date.now() + 60_000), sessionVersion: 3, user: current }); state.cookie = "x";
     expect(await getAuthenticatedUser()).toBeNull();
-    db.session.findUnique.mockResolvedValue({ expiresAt: new Date(Date.now() + 60_000), sessionVersion: 4, user: current }); expect(await getAuthenticatedUser()).toMatchObject({ id: "a" });
+    db.session.findUnique.mockResolvedValue({ expiresAt: new Date(Date.now() + 60_000), sessionVersion: 4, user: current }); expect(await getAuthenticatedUser()).toMatchObject({ id: "a", isActive: true, salesRole: "SALES", accountRole: null, salesAccessActive: true, accountAccessActive: false });
     db.mobileSession.findUnique.mockResolvedValue({ id: "m", expiresAt: new Date(Date.now() + 60_000), revokedAt: null, lastUsedAt: new Date(), sessionVersion: 3, user: current });
     await expect(authenticateMobileToken(`Bearer ${"z".repeat(40)}`)).rejects.toThrow("MOBILE_UNAUTHORIZED");
     db.mobileSession.findUnique.mockResolvedValue({ id: "m", expiresAt: new Date(Date.now() + 60_000), revokedAt: null, lastUsedAt: new Date(), sessionVersion: 4, user: current });
     await expect(authenticateMobileToken(`Bearer ${"z".repeat(40)}`)).resolves.toMatchObject({ id: "a" });
+  });
+
+  it("rejects expired and globally inactive web sessions", async () => {
+    state.cookie = "x";
+    db.session.findUnique.mockResolvedValue({ expiresAt: new Date(Date.now() - 1), sessionVersion: 0, user: user("a") });
+    expect(await getAuthenticatedUser()).toBeNull();
+    db.session.findUnique.mockResolvedValue({ expiresAt: new Date(Date.now() + 60_000), sessionVersion: 0, user: { ...user("a"), isActive: false } });
+    expect(await getAuthenticatedUser()).toBeNull();
   });
 
   it("allows the same active web cookie in multiple tabs", async () => {

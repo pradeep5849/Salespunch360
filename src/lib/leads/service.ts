@@ -2,11 +2,13 @@ import { Prisma, type LeadStage } from "@prisma/client";
 import { db } from "@/lib/db";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import { requireRole } from "@/lib/auth/authorization";
+import type { AuthenticatedUser } from "@/lib/auth/session";
 import { canAssign, LeadError, pendingVisitWhere, transitionKind, visibilityWhere } from "./policy";
 import { syncLeadFollowUpAt } from "@/lib/follow-up-tasks/service";
 import { indiaDateText, parseIndiaBusinessDate } from "@/lib/follow-up-tasks/date";
 import { createLeadFromVisitSchema, createLeadSchema, editLeadSchema, leadFilterSchema, transitionLeadSchema, type CreateLeadInput, type EditLeadInput, type TransitionLeadInput } from "./validation";
-export async function leadActor(){const u=await requireRole("COMPANY_ADMIN","MANAGER","SALES");if(!u.companyId)throw new LeadError("NOT_FOUND");return {...u,companyId:u.companyId};}
+type SalesActor = Pick<AuthenticatedUser, "id" | "name" | "email" | "role" | "managerType"> & { companyId: string };
+export async function leadActor(): Promise<SalesActor>{const u=await requireRole("COMPANY_ADMIN","MANAGER","SALES");if(!u.companyId)throw new LeadError("NOT_FOUND");return {...u,companyId:u.companyId};}
 async function assignee(tx:Prisma.TransactionClient,a:Awaited<ReturnType<typeof leadActor>>,id:string){const v=await tx.user.findFirst({where:{id,companyId:a.companyId},select:{id:true,role:true,managerType:true,isActive:true,managerId:true}});if(!v||!canAssign(a,v))throw new LeadError("INVALID_ASSIGNMENT");return v;}
 const value=(v:string|undefined)=>v===undefined?null:new Prisma.Decimal(v);
 export async function createLead(raw:CreateLeadInput){return createLeadForActor(await leadActor(),raw);}
