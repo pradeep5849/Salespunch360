@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth/authorization";
+import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { haversineDistanceMeters } from "@/lib/location/geo";
 import { calculateTravelDistanceMeters } from "@/lib/location/travel-route";
 import {
@@ -17,14 +17,14 @@ import { evaluateGeofence } from "@/lib/geofence/policy";
 import { deliverFieldEvent } from "@/lib/push/service";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 
-async function requireEmployee() {
-  const user = await requireRole("MANAGER", "SALES");
-  if (!user.companyId || (user.role === "MANAGER" && user.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
+async function requireEmployee(mutation = true) {
+  const user = await (mutation ? requirePermissionForMutation("SALES_ATTENDANCE") : requirePermission("SALES_ATTENDANCE"));
+  if (!user.companyId || (user.salesRole !== "SALES" && !(user.salesRole === "MANAGER" && user.managerType !== "MANAGER_ONLY"))) throw new AttendancePolicyError("DISABLED");
   return { ...user, companyId: user.companyId };
 }
 
 export async function getCurrentAttendance() {
-  const user = await requireEmployee();
+  const user = await requireEmployee(false);
   const [attendance, company] = await Promise.all([
     db.attendance.findFirst({
       where: { companyId: user.companyId, userId: user.id, endedAt: null },
@@ -54,12 +54,13 @@ export async function startAttendance(raw: unknown) {
       where: {
         id: user.id,
         companyId: user.companyId,
-        role: { in: ["MANAGER", "SALES"] },
         isActive: true,
+        salesAccessActive: true,
+        salesRole: { in: ["MANAGER", "SALES"] },
       },
-      select: { id: true, managerType: true },
+      select: { id: true, salesRole: true, managerType: true },
     });
-    if (!employee || (user.role === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
+    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
     await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR SHARE`;
     const company = await tx.company.findFirst({
       where: { id: user.companyId },
@@ -150,6 +151,8 @@ export async function endAttendance(raw: unknown) {
   const { location } = attendanceMeasurementSchema.parse(raw);
   const attendance = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
+    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true } });
+    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
     const company = await tx.company.findFirst({
       where: { id: user.companyId },
       select: { gpsTrackingEnabled: true },
@@ -185,6 +188,9 @@ export async function uploadLocationPoint(raw: unknown) {
   const receivedAt = new Date();
   assertCaptureTime(point.capturedAt, receivedAt);
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
+    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true } });
+    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
     const company = await tx.company.findFirst({
       where: { id: user.companyId },
       select: { gpsTrackingEnabled: true },
@@ -227,14 +233,15 @@ export async function uploadLocationPoint(raw: unknown) {
 }
 
 export async function getAttendanceOverview() {
-  const viewer = await requireRole("COMPANY_ADMIN", "MANAGER");
+  const viewer = await requirePermission("SALES_ATTENDANCE");
   if (!viewer.companyId) throw new AttendancePolicyError("DISABLED");
+  if (viewer.salesRole === "SALES") throw new AttendancePolicyError("DISABLED");
   return db.user.findMany({
     where: {
       companyId: viewer.companyId,
-      ...(viewer.role === "MANAGER"
-        ? { role: "SALES" as const, managerId: viewer.id }
-        : { role: { in: ["MANAGER", "SALES"] as ("MANAGER" | "SALES")[] } }),
+      ...(viewer.salesRole === "MANAGER"
+        ? { salesRole: "SALES" as const, managerId: viewer.id, salesAccessActive: true, isActive: true }
+        : { salesRole: { in: ["MANAGER", "SALES"] as const }, salesAccessActive: true, isActive: true }),
     },
     select: {
       id: true,
@@ -256,10 +263,11 @@ export async function getAttendanceOverview() {
 }
 
 export async function getAttendanceRouteDistance(attendanceId: string) {
-  const viewer = await requireRole("COMPANY_ADMIN", "MANAGER");
+  const viewer = await requirePermission("SALES_ATTENDANCE");
   if (!viewer.companyId) throw new AttendancePolicyError("DISABLED");
+  if (viewer.salesRole === "SALES") throw new AttendancePolicyError("DISABLED");
   const attendance = await db.attendance.findFirst({
-    where: { id: attendanceId, companyId: viewer.companyId },
+    where: { id: attendanceId, companyId: viewer.companyId, ...(viewer.salesRole === "MANAGER" ? { user: { salesRole: "SALES", managerId: viewer.id } } : {}) },
     select: {
       locationPoints: {
         orderBy: { sequenceNumber: "asc" },
@@ -279,14 +287,14 @@ export async function getAttendanceRouteDistance(attendanceId: string) {
 }
 
 export async function updateCompanyOperations(raw: unknown) {
-  const admin = await requireRole("COMPANY_ADMIN");
+  const admin = await requirePermissionForMutation("SALES_SETTINGS");
   if (!admin.companyId) throw new AttendancePolicyError("DISABLED");
   const data = companyOperationsSchema.parse(raw);
   return db.company.updateMany({ where: { id: admin.companyId }, data });
 }
 
 export async function getCompanyOperations() {
-  const admin = await requireRole("COMPANY_ADMIN");
+  const admin = await requirePermission("SALES_SETTINGS");
   if (!admin.companyId) throw new AttendancePolicyError("DISABLED");
   return db.company.findFirst({
     where: { id: admin.companyId },

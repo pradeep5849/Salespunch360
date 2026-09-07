@@ -8,14 +8,14 @@ const mocks=vi.hoisted(()=>{
  };
  return{role:vi.fn(),tx,transaction:vi.fn(async(cb:(client:typeof tx)=>unknown)=>cb(tx))};
 });
-vi.mock("@/lib/auth/authorization",()=>({requireRole:mocks.role}));
+vi.mock("@/lib/auth/authorization",()=>({requirePermissionForMutation:mocks.role,requirePermission:mocks.role}));
 vi.mock("@/lib/db",()=>({db:{$transaction:mocks.transaction}}));
 import{createCustomer}from"./service";
 
 describe("Customer creation boundary",()=>{
  beforeEach(()=>{
   vi.clearAllMocks();
-  mocks.role.mockResolvedValue({id:"admin",role:"COMPANY_ADMIN",companyId:"company"});
+  mocks.role.mockResolvedValue({id:"admin",role:"COMPANY_ADMIN",salesRole:"PRIMARY_ADMIN",companyId:"company"});
   mocks.tx.customer.create.mockResolvedValue({id:"customer",name:"Acme",phone:"+12025550110"});
   mocks.tx.lead.findFirst.mockResolvedValue(null);
   mocks.tx.lead.create.mockResolvedValue({id:"lead"});
@@ -30,7 +30,7 @@ describe("Customer creation boundary",()=>{
  it("creates a Lead immediately when the Admin assigns the new Customer",async()=>{
   mocks.tx.user.findFirst.mockResolvedValue({id:"sales"});
   await createCustomer({name:"Acme",phone:"+12025550110",assignedUserId:"11111111-1111-4111-8111-111111111111"});
-  expect(mocks.tx.user.findFirst).toHaveBeenCalledWith({where:{id:"11111111-1111-4111-8111-111111111111",companyId:"company",isActive:true,OR:[{role:"SALES"},{role:"MANAGER",managerType:"FIELD_MANAGER"}]},select:{id:true}});
+  expect(mocks.tx.user.findFirst).toHaveBeenCalledWith({where:{id:"11111111-1111-4111-8111-111111111111",companyId:"company",isActive:true,salesAccessActive:true,OR:[{salesRole:"SALES"},{salesRole:"MANAGER",managerType:"FIELD_MANAGER"}]},select:{id:true}});
   expect(mocks.tx.customer.create).toHaveBeenCalledWith({data:{name:"Acme",phone:"+12025550110",companyId:"company",assignedUserId:"sales"}});
   expect(mocks.tx.lead.create).toHaveBeenCalledWith({data:{companyId:"company",customerId:"customer",assignedUserId:"sales",createdByUserId:"admin",title:"Acme",contactName:"Acme",phone:"+12025550110",source:"MANUAL",stage:"NEW"}});
   expect(mocks.tx.leadActivity.create).toHaveBeenCalled();
