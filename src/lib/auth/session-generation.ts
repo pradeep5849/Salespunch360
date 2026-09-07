@@ -14,14 +14,20 @@ export async function clearUserAuthentication(tx: Prisma.TransactionClient, user
   await tx.mobileSession.deleteMany({ where: { userId } });
 }
 
+/**
+ * Rotate the identity's session generation and remove every authentication
+ * credential. The caller MUST already hold the user row lock via `lockUser`.
+ */
+export async function revokeUserAuthenticationWithLock(tx: Prisma.TransactionClient, userId: string) {
+  await tx.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
+  await clearUserAuthentication(tx, userId);
+}
+
 export async function replacePasswordAndRevoke(userId: string, passwordHash: string, expectedPasswordHash?: string) {
   await db.$transaction(async (tx) => {
     const user = await lockUser(tx, userId);
     if (!user || (expectedPasswordHash && user.passwordHash !== expectedPasswordHash)) throw new Error("STALE_CREDENTIALS");
-    await tx.user.update({
-      where: { id: userId },
-      data: { passwordHash, sessionVersion: { increment: 1 } },
-    });
-    await clearUserAuthentication(tx, userId);
+    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    await revokeUserAuthenticationWithLock(tx, userId);
   });
 }

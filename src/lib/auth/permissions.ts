@@ -1,0 +1,48 @@
+import type { AccountRole, ProductEdition, SalesRole } from "@prisma/client";
+import { canAccessAccountWorkspace, canAccessSalesWorkspace, isPlatformSuperAdmin, type WorkspacePrincipal } from "./workspace-policy";
+
+export const PERMISSIONS = [
+  "PROFILE_SELF", "COMPANY_VIEW", "USER_DIRECTORY_VIEW", "BRANCH_VIEW", "BRANCH_ASSIGN", "SECURITY_RESET_PASSWORD",
+  "SALES_DASHBOARD", "SALES_ATTENDANCE", "SALES_CUSTOMERS", "SALES_CHECK_INS", "SALES_LEADS", "SALES_FOLLOW_UPS",
+  "SALES_TARGETS", "SALES_REPORTS", "SALES_TRAVEL", "SALES_USER_ADMIN", "SALES_SETTINGS", "SALES_BILLING",
+  "ACCOUNT_DASHBOARD", "ACCOUNT_PROJECTS", "ACCOUNT_ACCOUNTS", "ACCOUNT_STOCK", "ACCOUNT_REPORTS", "ACCOUNT_USER_ADMIN", "ACCOUNT_SETTINGS",
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+export type PermissionCategory = "SHARED" | "SALES" | "ACCOUNT";
+
+export const PERMISSION_CATEGORY: Record<Permission, PermissionCategory> = Object.fromEntries(PERMISSIONS.map((permission) => [
+  permission,
+  permission.startsWith("SALES_") ? "SALES" : permission.startsWith("ACCOUNT_") ? "ACCOUNT" : "SHARED",
+])) as Record<Permission, PermissionCategory>;
+
+const FIELD_SALES: Permission[] = ["SALES_DASHBOARD", "SALES_ATTENDANCE", "SALES_CUSTOMERS", "SALES_CHECK_INS", "SALES_LEADS", "SALES_FOLLOW_UPS", "SALES_TARGETS", "SALES_REPORTS", "SALES_TRAVEL"];
+export const SALES_ROLE_PERMISSIONS: Record<SalesRole, readonly Permission[]> = {
+  PRIMARY_ADMIN: [...FIELD_SALES, "SALES_USER_ADMIN", "SALES_SETTINGS", "SALES_BILLING"],
+  ADMIN: [...FIELD_SALES, "SALES_USER_ADMIN"],
+  MANAGER: FIELD_SALES,
+  SALES: FIELD_SALES,
+};
+export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, readonly Permission[]> = {
+  ACCOUNT_ADMIN: ["ACCOUNT_DASHBOARD", "ACCOUNT_PROJECTS", "ACCOUNT_ACCOUNTS", "ACCOUNT_STOCK", "ACCOUNT_REPORTS", "ACCOUNT_USER_ADMIN", "ACCOUNT_SETTINGS"],
+  ACCOUNTANT: ["ACCOUNT_DASHBOARD", "ACCOUNT_ACCOUNTS", "ACCOUNT_REPORTS"],
+  PROJECT_MANAGER: ["ACCOUNT_DASHBOARD", "ACCOUNT_PROJECTS", "ACCOUNT_REPORTS"],
+  DATA_ENTRY: ["ACCOUNT_DASHBOARD", "ACCOUNT_ACCOUNTS", "ACCOUNT_STOCK"],
+};
+
+const ACTIVE_TENANT_SHARED: Permission[] = ["COMPANY_VIEW", "USER_DIRECTORY_VIEW", "BRANCH_VIEW"];
+const ADMIN_SHARED: Permission[] = ["BRANCH_ASSIGN", "SECURITY_RESET_PASSWORD"];
+
+/** Pure module-level policy. Record/target scope remains a service-policy concern. */
+export function canUsePermission(user: WorkspacePrincipal, edition: ProductEdition, permission: Permission): boolean {
+  if (!user.isActive || isPlatformSuperAdmin(user)) return false;
+  const salesActive = canAccessSalesWorkspace(user, edition);
+  const accountActive = canAccessAccountWorkspace(user, edition);
+  const category = PERMISSION_CATEGORY[permission];
+  if (category === "SALES") return salesActive && !!user.salesRole && SALES_ROLE_PERMISSIONS[user.salesRole].includes(permission);
+  if (category === "ACCOUNT") return accountActive && !!user.accountRole && ACCOUNT_ROLE_PERMISSIONS[user.accountRole].includes(permission);
+  if (permission === "PROFILE_SELF") return true;
+  if (ACTIVE_TENANT_SHARED.includes(permission)) return salesActive || accountActive;
+  if (ADMIN_SHARED.includes(permission))
+    return (salesActive && (user.salesRole === "PRIMARY_ADMIN" || user.salesRole === "ADMIN")) || (accountActive && user.accountRole === "ACCOUNT_ADMIN");
+  return false;
+}

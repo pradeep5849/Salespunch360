@@ -8,6 +8,8 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 import {
   requireAccountWorkspace,
   requireAccountWorkspaceForMutation,
+  requirePermission,
+  requirePermissionForMutation,
   requireSalesWorkspace,
   requireSalesWorkspaceForMutation,
   requireTenantUser,
@@ -26,6 +28,27 @@ const principal = (overrides = {}) => ({
   accountAccessActive: true,
   companyId: "company",
   ...overrides,
+});
+
+describe("module permission server guards", () => {
+  it("uses the authoritative Company edition", async () => {
+    mocks.company.mockResolvedValue({ productEdition: "SALESPUNCH360" });
+    await expect(requirePermission("SALES_REPORTS")).resolves.toMatchObject({ companyId: "company" });
+    expect(mocks.company).toHaveBeenCalledWith({ where: { id: "company" }, select: { productEdition: true } });
+  });
+  it("rejects lifecycle inactivity, edition mismatch, and membership without a role", async () => {
+    mocks.user.mockResolvedValueOnce(principal({ salesAccessActive: false }));
+    await expect(requirePermission("SALES_REPORTS")).rejects.toMatchObject({ name: "AuthorizationError" });
+    mocks.user.mockResolvedValueOnce(principal()); mocks.company.mockResolvedValueOnce({ productEdition: "SALESPUNCH360_ACCOUNT" });
+    await expect(requirePermission("SALES_REPORTS")).rejects.toMatchObject({ name: "AuthorizationError" });
+    mocks.user.mockResolvedValueOnce(principal({ salesRole: null }));
+    await expect(requirePermission("SALES_REPORTS")).rejects.toMatchObject({ name: "AuthorizationError" });
+  });
+  it("mutation denial throws AuthorizationError without redirecting", async () => {
+    mocks.user.mockResolvedValue(principal({ salesAccessActive: false }));
+    await expect(requirePermissionForMutation("SALES_REPORTS")).rejects.toMatchObject({ name: "AuthorizationError" });
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
 });
 
 beforeEach(() => {

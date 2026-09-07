@@ -2,7 +2,8 @@ import type { Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/authorization";
 import { hashPassword } from "@/lib/auth/crypto";
-import { lockUser } from "@/lib/auth/session-generation";
+import { clearUserAuthentication, lockUser } from "@/lib/auth/session-generation";
+import { deactivateIdentityWithLock } from "@/lib/auth/lifecycle";
 import { getTrialStatus } from "@/lib/trial/status";
 import { profileComplete } from "@/lib/company/profile";
 import { hasSalesWorkspace } from "@/lib/product/edition";
@@ -169,12 +170,10 @@ export async function deactivateEmployeeForCompany(companyId:string,raw:unknown,
 }
 
 export async function deactivateEmployeeInTransaction(tx: Prisma.TransactionClient, companyId: string, employeeId: string) {
+    await lockUser(tx, employeeId);
     const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, select: { id: true, companyId: true, role: true, isActive: true } });
     assertManagedEmployee(companyId, employee);
-    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, role: { in: employeeRoles } }, data: { isActive: false, salesAccessActive: false, accountAccessActive: false } });
-    if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
-    await tx.session.deleteMany({ where: { userId: employeeId } });
-    await tx.mobileSession.deleteMany({ where: { userId: employeeId } });
+    await deactivateIdentityWithLock(tx, employeeId);
 }
 
 export async function reactivateEmployee(raw: unknown) {
@@ -210,7 +209,5 @@ export async function resetEmployeePasswordInTransaction(tx: Prisma.TransactionC
     assertManagedEmployee(companyId, employee);
     const updated = await tx.user.updateMany({ where: { id: employee.id, companyId, role: { in: employeeRoles } }, data: { passwordHash, sessionVersion: { increment: 1 } } });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
-    await tx.pushDevice.deleteMany({ where: { userId: employee.id } });
-    await tx.session.deleteMany({ where: { userId: employee.id } });
-    await tx.mobileSession.deleteMany({ where: { userId: employee.id } });
+    await clearUserAuthentication(tx, employee.id);
 }

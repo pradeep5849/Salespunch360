@@ -32,11 +32,17 @@ Account workspace access requires all of:
 
 Authentication session validity is not workspace authorization. Likewise, tenant membership is not product workspace authorization, and a role assignment is not an active workspace entitlement. Lifecycle flags independently suspend each workspace without removing its role, but even a stale `true` lifecycle flag cannot override `ProductEdition`.
 
+## Lifecycle security mutations
+
+Every identity/workspace lifecycle mutation locks the user row to serialize with login rotation, increments `sessionVersion`, and removes all `PushDevice`, web `Session`, and `MobileSession` rows. Global deactivation atomically clears `isActive`, `salesAccessActive`, and `accountAccessActive`; workspace suspension or activation changes only its corresponding lifecycle flag. Stable `role`, `salesRole`, and `accountRole` assignments are retained.
+
+Workspace activation additionally requires an active identity, company membership, the corresponding role, and a compatible authoritative Company edition. The low-level activation primitive is not commercial authorization: callers must enforce package, billing, and seat entitlement first.
+
 ## Scope boundaries
 
 - Branch access remains shared across Sales and Account.
 - Account UI and Account billing are not implemented in F3B.
 - Current registration remains SalesPunch360-only until F4.
 - When Account or Plus registration is introduced, F4 must make initial lifecycle activation edition-aware.
-- Module permission enforcement remains deferred to F3E.
+- Static module permission policy is defined by F3E; migration of existing services remains deferred to F3F.
 - Migration of downstream legacy Sales services to canonical guards remains deferred to F3F.

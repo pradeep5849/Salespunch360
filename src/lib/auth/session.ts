@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { createSessionToken, hashSessionToken } from "./crypto";
 import { canAuthenticate } from "./eligibility";
-import { clearUserAuthentication, lockUser } from "./session-generation";
+import { clearUserAuthentication, lockUser, revokeUserAuthenticationWithLock } from "./session-generation";
 
 const COOKIE_NAME = "sp360_session";
 const SESSION_DAYS = 30;
@@ -80,7 +80,6 @@ export async function revokeAllUserSessions(userId: string) {
   await db.$transaction(async (tx) => {
     const user = await lockUser(tx, userId);
     if (!user) return;
-    await tx.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
-    await clearUserAuthentication(tx, userId);
+    await revokeUserAuthenticationWithLock(tx, userId);
   });
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser, type AuthenticatedUser } from "./session";
 import { db } from "@/lib/db";
 import { canAccessAccountWorkspace, canAccessSalesWorkspace } from "./workspace-policy";
+import { canUsePermission, type Permission } from "./permissions";
 
 export class AuthorizationError extends Error {
   constructor() { super("Not authorized"); this.name = "AuthorizationError"; }
@@ -87,4 +88,21 @@ export async function requireAccountWorkspaceForMutation() {
   const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
   if (!company || !canAccessAccountWorkspace(user, company.productEdition)) throw new AuthorizationError();
   return { ...user, companyId: user.companyId };
+}
+
+async function authorizePermission(user: AuthenticatedUser, permission: Permission) {
+  if (!user.companyId) throw new AuthorizationError();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
+  if (!company || !canUsePermission(user, company.productEdition, permission)) throw new AuthorizationError();
+  return { ...user, companyId: user.companyId };
+}
+
+/** Uses only the authenticated identity and the Company's authoritative edition. */
+export async function requirePermission(permission: Permission) {
+  return authorizePermission(await requireUser(), permission);
+}
+
+/** Server Action counterpart; authentication and authorization failures never redirect. */
+export async function requirePermissionForMutation(permission: Permission) {
+  return authorizePermission(await requireUserForMutation(), permission);
 }

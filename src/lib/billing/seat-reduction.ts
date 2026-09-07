@@ -1,4 +1,5 @@
 import {db} from "@/lib/db";
+import {deactivateIdentityInTransaction} from "@/lib/auth/lifecycle";
 
 export async function applyDueSeatReductions(companyId:string,now=new Date()){
  const sub=await db.companySubscription.findFirst({
@@ -29,11 +30,9 @@ export async function applyDueSeatReductions(companyId:string,now=new Date()){
    for(const u of sales)if(!allowed.has(u.id))deactivateIds.push(u.id);
   }
 
-  if(deactivateIds.length){
-   await tx.user.updateMany({where:{companyId,id:{in:deactivateIds},role:{in:["MANAGER","SALES"]}},data:{isActive:false,salesAccessActive:false,accountAccessActive:false}});
-   await tx.session.deleteMany({where:{userId:{in:deactivateIds}}});
-   await tx.mobileSession.deleteMany({where:{userId:{in:deactivateIds}}});
-  }
+  // A stable order prevents two concurrent multi-user security operations from
+  // acquiring user locks in opposite orders.
+  for(const userId of deactivateIds.sort())await deactivateIdentityInTransaction(tx,userId);
   await tx.billingOrder.update({where:{id:order.id},data:{seatReductionAppliedAt:now}});
   await tx.billingAuditEvent.create({data:{companyId,type:"SEATS_CHANGED",entityId:sub.id,metadata:{managerSeats:fresh.managerSeats,salesSeats:fresh.salesSeats,deactivatedUserIds:deactivateIds}}});
  });
