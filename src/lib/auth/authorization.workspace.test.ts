@@ -31,6 +31,22 @@ const principal = (overrides = {}) => ({
 });
 
 describe("module permission server guards", () => {
+  it("allows active SUPER_ADMIN identity self-access without loading a Company", async () => {
+    mocks.user.mockResolvedValue(principal({ role: "SUPER_ADMIN", companyId: null, salesRole: null, accountRole: null, salesAccessActive: false, accountAccessActive: false }));
+    await expect(requirePermission("PROFILE_SELF")).resolves.toMatchObject({ role: "SUPER_ADMIN", companyId: null });
+    expect(mocks.company).not.toHaveBeenCalled();
+  });
+  it("allows mutation identity self-access without redirecting or loading a Company", async () => {
+    mocks.user.mockResolvedValue(principal({ role: "SUPER_ADMIN", companyId: null, salesRole: null, accountRole: null, salesAccessActive: false, accountAccessActive: false }));
+    await expect(requirePermissionForMutation("PROFILE_SELF")).resolves.toMatchObject({ role: "SUPER_ADMIN", companyId: null });
+    expect(mocks.company).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+  it("still rejects a missing company for every tenant permission", async () => {
+    mocks.user.mockResolvedValue(principal({ companyId: null }));
+    await expect(requirePermission("COMPANY_VIEW")).rejects.toMatchObject({ name: "AuthorizationError" });
+    expect(mocks.company).not.toHaveBeenCalled();
+  });
   it("uses the authoritative Company edition", async () => {
     mocks.company.mockResolvedValue({ productEdition: "SALESPUNCH360" });
     await expect(requirePermission("SALES_REPORTS")).resolves.toMatchObject({ companyId: "company" });

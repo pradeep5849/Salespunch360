@@ -41,8 +41,41 @@ describe("static module permission matrix", () => {
     for (const permission of PERMISSIONS) expect(can({ ...dual, isActive: false }, permission)).toBe(false);
   });
   it("never infers workspace authority from legacy Role", () => {
-    for (const permission of PERMISSIONS) expect(can(user({ role: "SUPER_ADMIN", salesRole: "PRIMARY_ADMIN", accountRole: "ACCOUNT_ADMIN", salesAccessActive: true, accountAccessActive: true }), permission)).toBe(false);
+    const malformedSuperAdmin = user({ role: "SUPER_ADMIN", companyId: null, salesRole: "PRIMARY_ADMIN", accountRole: "ACCOUNT_ADMIN", salesAccessActive: true, accountAccessActive: true });
+    expect(can(malformedSuperAdmin, "PROFILE_SELF")).toBe(true);
+    for (const permission of PERMISSIONS.filter(permission => permission !== "PROFILE_SELF")) expect(can(malformedSuperAdmin, permission)).toBe(false);
     expect(can(user({ role: "FIELD_ADMIN", salesAccessActive: true }), "SALES_USER_ADMIN")).toBe(false);
     expect(can(user({ role: "ACCOUNT_USER", accountAccessActive: true }), "ACCOUNT_DASHBOARD")).toBe(false);
+  });
+
+  it("grants PROFILE_SELF only from globally active identity state", () => {
+    expect(can(sales("SALES"), "PROFILE_SELF")).toBe(true);
+    expect(can(user({ accountRole: "ACCOUNTANT", accountAccessActive: true }), "PROFILE_SELF")).toBe(true);
+    expect(can(user({ role: "SUPER_ADMIN", companyId: null }), "PROFILE_SELF")).toBe(true);
+    expect(can(user({ role: "SUPER_ADMIN", companyId: null, isActive: false }), "PROFILE_SELF")).toBe(false);
+  });
+
+  it.each(["COMPANY_VIEW", "USER_DIRECTORY_VIEW", "BRANCH_VIEW"] as const)("requires an effective workspace for %s", permission => {
+    expect(can(sales("SALES"), permission)).toBe(true);
+    expect(can(user({ accountRole: "ACCOUNTANT", accountAccessActive: true }), permission)).toBe(true);
+    expect(can(user(), permission)).toBe(false);
+    expect(can(sales("SALES"), permission, "SALESPUNCH360_ACCOUNT")).toBe(false);
+  });
+
+  it.each(["BRANCH_ASSIGN", "SECURITY_RESET_PASSWORD"] as const)("restricts %s to an active workspace administrator", permission => {
+    expect(can(sales("PRIMARY_ADMIN"), permission)).toBe(true);
+    expect(can(sales("ADMIN"), permission)).toBe(true);
+    expect(can(user({ accountRole: "ACCOUNT_ADMIN", accountAccessActive: true }), permission)).toBe(true);
+    expect(can(sales("MANAGER"), permission)).toBe(false);
+    expect(can(sales("SALES"), permission)).toBe(false);
+    expect(can(user({ accountRole: "ACCOUNTANT", accountAccessActive: true }), permission)).toBe(false);
+  });
+
+  it("derives shared admin authority independently from active workspaces", () => {
+    const dualAdmin = user({ role: "FIELD_ADMIN", salesRole: "ADMIN", accountRole: "ACCOUNT_ADMIN", salesAccessActive: true, accountAccessActive: true });
+    expect(can({ ...dualAdmin, salesAccessActive: false }, "BRANCH_ASSIGN")).toBe(true);
+    expect(can({ ...dualAdmin, accountAccessActive: false }, "BRANCH_ASSIGN")).toBe(true);
+    expect(can({ ...dualAdmin, salesAccessActive: false, accountAccessActive: false }, "BRANCH_ASSIGN")).toBe(false);
+    expect(can({ ...dualAdmin, salesAccessActive: false }, "BRANCH_ASSIGN", "SALESPUNCH360")).toBe(false);
   });
 });

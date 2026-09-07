@@ -91,6 +91,10 @@ export async function requireAccountWorkspaceForMutation() {
 }
 
 async function authorizePermission(user: AuthenticatedUser, permission: Permission) {
+  if (permission === "PROFILE_SELF") {
+    if (!canUsePermission(user, null, permission)) throw new AuthorizationError();
+    return user;
+  }
   if (!user.companyId) throw new AuthorizationError();
   const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
   if (!company || !canUsePermission(user, company.productEdition, permission)) throw new AuthorizationError();

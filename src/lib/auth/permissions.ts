@@ -33,14 +33,15 @@ const ACTIVE_TENANT_SHARED: Permission[] = ["COMPANY_VIEW", "USER_DIRECTORY_VIEW
 const ADMIN_SHARED: Permission[] = ["BRANCH_ASSIGN", "SECURITY_RESET_PASSWORD"];
 
 /** Pure module-level policy. Record/target scope remains a service-policy concern. */
-export function canUsePermission(user: WorkspacePrincipal, edition: ProductEdition, permission: Permission): boolean {
-  if (!user.isActive || isPlatformSuperAdmin(user)) return false;
+export function canUsePermission(user: WorkspacePrincipal, edition: ProductEdition | null, permission: Permission): boolean {
+  if (user.isActive !== true) return false;
+  if (permission === "PROFILE_SELF") return true;
+  if (isPlatformSuperAdmin(user) || edition === null) return false;
   const salesActive = canAccessSalesWorkspace(user, edition);
   const accountActive = canAccessAccountWorkspace(user, edition);
   const category = PERMISSION_CATEGORY[permission];
   if (category === "SALES") return salesActive && !!user.salesRole && SALES_ROLE_PERMISSIONS[user.salesRole].includes(permission);
   if (category === "ACCOUNT") return accountActive && !!user.accountRole && ACCOUNT_ROLE_PERMISSIONS[user.accountRole].includes(permission);
-  if (permission === "PROFILE_SELF") return true;
   if (ACTIVE_TENANT_SHARED.includes(permission)) return salesActive || accountActive;
   if (ADMIN_SHARED.includes(permission))
     return (salesActive && (user.salesRole === "PRIMARY_ADMIN" || user.salesRole === "ADMIN")) || (accountActive && user.accountRole === "ACCOUNT_ADMIN");
