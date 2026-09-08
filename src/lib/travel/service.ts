@@ -1,18 +1,18 @@
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
-import {requireRole} from "@/lib/auth/authorization";
+import {AuthorizationError,requirePermission,requirePermissionForMutation} from "@/lib/auth/authorization";
 import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
 
 const businessDate=(text:string)=>new Date(`${text}T00:00:00.000Z`);
 
 export async function companyTravelSettings(){
- const admin=await requireRole("COMPANY_ADMIN");
+ const admin=await requirePermission("SALES_SETTINGS");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  return db.company.findUnique({where:{id:admin.companyId},select:{travelRatePerKm:true}});
 }
 
 export async function updateCompanyTravelRate(raw:unknown){
- const admin=await requireRole("COMPANY_ADMIN");
+ const admin=await requirePermissionForMutation("SALES_SETTINGS");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  const n=Number(raw);
  if(!Number.isFinite(n)||n<0||n>100000)throw new Error("INVALID_RATE");
@@ -20,8 +20,9 @@ export async function updateCompanyTravelRate(raw:unknown){
 }
 
 export async function updateEmployeeTravelSettings(employeeId:string,enabled:boolean,customRate:string|null){
- const admin=await requireRole("COMPANY_ADMIN");
+ const admin=await requirePermissionForMutation("SALES_TRAVEL");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
+ if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
  const companyId=admin.companyId;
  let rate:Prisma.Decimal|null=null;
  if(customRate&&customRate.trim()!==""){
@@ -29,7 +30,7 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
   if(!Number.isFinite(n)||n<0||n>100000)throw new Error("INVALID_RATE");
   rate=new Prisma.Decimal(n.toFixed(2));
  }
- const changed=await db.user.updateMany({where:{id:employeeId,companyId,role:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate}});
+ const changed=await db.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate}});
  if(changed.count!==1)throw new Error("NOT_FOUND");
 }
 
@@ -44,12 +45,13 @@ async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string
 }
 
 export async function reviewDailyTravel(employeeId:string,date:string,status:"APPROVED"|"REJECTED"){
- const admin=await requireRole("COMPANY_ADMIN");
+ const admin=await requirePermissionForMutation("SALES_TRAVEL");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
+ if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
  const companyId=admin.companyId;
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error("INVALID_DATE");
  return db.$transaction(async tx=>{
-  const employee=await tx.user.findFirst({where:{id:employeeId,companyId,role:{in:["MANAGER","SALES"]},travelAllowanceEnabled:true},select:{id:true,travelRatePerKm:true}});
+  const employee=await tx.user.findFirst({where:{id:employeeId,companyId,salesRole:{in:["MANAGER","SALES"]},travelAllowanceEnabled:true},select:{id:true,travelRatePerKm:true}});
   if(!employee)throw new Error("NOT_FOUND");
   const company=await tx.company.findUnique({where:{id:companyId},select:{travelRatePerKm:true}});
   const rate=employee.travelRatePerKm??company?.travelRatePerKm;
