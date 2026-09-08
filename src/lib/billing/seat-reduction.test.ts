@@ -1,54 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({
-  subscription: vi.fn(),
-  transaction: vi.fn(),
-  lock: vi.fn(),
-  order: vi.fn(),
-  users: vi.fn(),
-  updateUsers: vi.fn(),
-  findUser: vi.fn(),
-  updateUser: vi.fn(),
-  deletePush: vi.fn(),
-  deleteWeb: vi.fn(),
-  deleteMobile: vi.fn(),
-  updateOrder: vi.fn(),
-  audit: vi.fn(),
-}));
-
-vi.mock("@/lib/db", () => ({ db: { companySubscription: { findFirst: mocks.subscription }, $transaction: mocks.transaction } }));
-import { applyDueSeatReductions } from "./seat-reduction";
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  mocks.subscription.mockResolvedValue({ id: "subscription", sourceOrder: { id: "order", managerSeats: 0, salesSeats: 0, retainManagerUserIds: [], retainSalesUserIds: [], seatReductionAppliedAt: null } });
-  mocks.order.mockResolvedValue({ managerSeats: 0, salesSeats: 0, retainManagerUserIds: [], retainSalesUserIds: [], seatReductionAppliedAt: null });
-  mocks.users.mockResolvedValue([{ id: "manager", salesRole: "MANAGER" }, { id: "sales", salesRole: "SALES" }]);
-  mocks.updateUsers.mockResolvedValue({ count: 2 });
-  mocks.findUser.mockImplementation(({where})=>Promise.resolve({id:where.id}));
-  mocks.transaction.mockImplementation(async (work) => work({
-    $queryRawUnsafe: mocks.lock, $queryRaw: mocks.lock,
-    billingOrder: { findUnique: mocks.order, update: mocks.updateOrder },
-    user: { findMany: mocks.users, findUnique: mocks.findUser, update: mocks.updateUser, updateMany: mocks.updateUsers },
-    pushDevice: { deleteMany: mocks.deletePush },
-    session: { deleteMany: mocks.deleteWeb },
-    mobileSession: { deleteMany: mocks.deleteMobile },
-    billingAuditEvent: { create: mocks.audit },
-  }));
-});
-
-describe("billing seat reduction lifecycle writes", () => {
-  it("suspends removed Sales seats without globally deactivating identities", async () => {
-    await applyDueSeatReductions("company");
-    const write = mocks.updateUser.mock.calls[0][0];
-    expect(write.data).toEqual({ salesAccessActive: false });
-    expect(write.data).not.toHaveProperty("salesRole");
-    expect(write.data).not.toHaveProperty("accountRole");
-    expect(write.data).not.toHaveProperty("isActive");
-    expect(write.data).not.toHaveProperty("accountAccessActive");
-    expect(mocks.deleteWeb).toHaveBeenCalled();
-    expect(mocks.deleteMobile).toHaveBeenCalled();
-    expect(mocks.deletePush).toHaveBeenCalled();
-    expect(mocks.updateUser).toHaveBeenCalledWith(expect.objectContaining({data:{sessionVersion:{increment:1}}}));
-  });
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+const events:string[]=[];
+const mocks=vi.hoisted(()=>({transaction:vi.fn(),raw:vi.fn(),company:vi.fn(),subscription:vi.fn(),order:vi.fn(),users:vi.fn(),suspend:vi.fn(),updateOrder:vi.fn(),audit:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:mocks.transaction}}));
+vi.mock('@/lib/auth/lifecycle',()=>({suspendSalesAccessInTransaction:mocks.suspend}));
+import {applyDueSeatReductions} from './seat-reduction';
+beforeEach(()=>{vi.clearAllMocks();events.length=0;mocks.raw.mockImplementation((strings:TemplateStringsArray)=>{events.push(strings.join(' ').includes('companies')?'company-lock':'order-lock');return []});mocks.company.mockImplementation(()=>{events.push('company-read');return {id:'company'}});mocks.subscription.mockImplementation(()=>{events.push('subscription-read');return {id:'subscription',sourceOrderId:'order'}});mocks.order.mockImplementation(()=>{events.push('order-read');return {adminSeats:0,managerSeats:1,salesSeats:1,retainAdminUserIds:[],retainManagerUserIds:['manager'],retainSalesUserIds:['sales'],seatReductionAppliedAt:null}});mocks.users.mockImplementation(()=>{events.push('users-read');return [{id:'primary',salesRole:'PRIMARY_ADMIN'},{id:'admin',salesRole:'ADMIN'},{id:'manager',salesRole:'MANAGER'},{id:'sales',salesRole:'SALES'}]});mocks.suspend.mockImplementation((_tx,id)=>{events.push(`user:${id}`)});mocks.transaction.mockImplementation(work=>work({$queryRaw:mocks.raw,company:{findUnique:mocks.company},companySubscription:{findFirst:mocks.subscription},billingOrder:{findFirst:mocks.order,update:mocks.updateOrder},user:{findMany:mocks.users},billingAuditEvent:{create:mocks.audit}}))});
+describe('canonical three-role seat reduction',()=>{
+ it('locks company, then order, then users and reduces canonical ADMIN explicitly',async()=>{await applyDueSeatReductions('company');expect(events).toEqual(['company-lock','company-read','subscription-read','order-lock','order-read','users-read','user:admin']);expect(mocks.suspend).toHaveBeenCalledWith(expect.anything(),'admin');expect(mocks.suspend).not.toHaveBeenCalledWith(expect.anything(),'primary')});
+ it('preserves identity and Account fields by using Sales-only lifecycle suspension',async()=>{await applyDueSeatReductions('company');expect(mocks.suspend).toHaveBeenCalled();expect(mocks.updateOrder).toHaveBeenCalledWith({where:{id:'order'},data:{seatReductionAppliedAt:expect.any(Date)}});expect(mocks.audit).toHaveBeenCalledWith({data:expect.objectContaining({metadata:expect.objectContaining({adminSeats:0,suspendedSalesUserIds:['admin']})})})});
+ it('authoritatively reads effective subscription only after company locking',async()=>{await applyDueSeatReductions('company');expect(events.indexOf('company-lock')).toBeLessThan(events.indexOf('subscription-read'))});
 });

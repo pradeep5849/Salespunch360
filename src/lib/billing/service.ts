@@ -7,6 +7,7 @@ import type {VerifiedPayment} from "./provider";
 import {effectiveEntitlement} from "./entitlement";
 import {assertManagerSeatsAllowed} from "./policy";
 import {applyDueSeatReductions} from "./seat-reduction";
+import {lockBillingCompany} from "./company-lock";
 
 const billingUser=async(mutation=false)=>{const u=mutation?await requirePermissionForMutation("SALES_BILLING"):await requirePermission("SALES_BILLING");if(!u.companyId)throw new Error("NOT_AUTHORIZED");return{...u,companyId:u.companyId}};
 
@@ -62,8 +63,14 @@ export async function activateVerifiedPayment(v:VerifiedPayment){
  const result=await db.$transaction(async tx=>{
   const prior=await tx.paymentTransaction.findUnique({where:{providerPaymentId:v.providerPaymentId}});
   if(prior)return{payment:prior,companyId:prior.companyId};
+  // This first read resolves only the tenant lock key. Nothing mutable is trusted from it.
+  const orderTenant=await tx.billingOrder.findUnique({where:{id:v.orderId},select:{companyId:true}});
+  if(!orderTenant)throw new Error("PAYMENT_MISMATCH");
+  await lockBillingCompany(tx,orderTenant.companyId);
+  await tx.$queryRaw`SELECT 1::int AS "locked" FROM "billing_orders" WHERE "id"=${v.orderId}::uuid AND "companyId"=${orderTenant.companyId}::uuid FOR UPDATE`;
+  // Authoritative read occurs after the company and order locks and rechecks every payment invariant.
   const order=await tx.billingOrder.findUnique({where:{id:v.orderId}});
-  if(!order||order.status!=="PENDING"||order.totalAmount.toFixed(2)!==new Prisma.Decimal(v.amount).toFixed(2)||order.currency!==v.currency)throw new Error("PAYMENT_MISMATCH");
+  if(!order||order.companyId!==orderTenant.companyId||order.status!=="PENDING"||order.totalAmount.toFixed(2)!==new Prisma.Decimal(v.amount).toFixed(2)||order.currency!==v.currency)throw new Error("PAYMENT_MISMATCH");
   const current=await tx.companySubscription.findFirst({where:{companyId:order.companyId,status:"ACTIVE",startsAt:{lte:v.capturedAt},endsAt:{gt:v.capturedAt}},orderBy:{endsAt:"desc"}});
   const start=renewalWindow(v.capturedAt,current?.endsAt??null),end=addBillingPeriod(start,order.billingPeriod);
   const payment=await tx.paymentTransaction.create({data:{companyId:order.companyId,orderId:order.id,provider:v.provider,providerPaymentId:v.providerPaymentId,amount:order.totalAmount,currency:order.currency,status:"CAPTURED",capturedAt:v.capturedAt}});
@@ -97,6 +104,7 @@ export async function platformBilling(){
 export async function manualOverride(raw:unknown){
  const u=await requireRole("SUPER_ADMIN"),d=overrideSchema.parse(raw),now=new Date(),end=new Date(d.endsAt);
  return db.$transaction(async tx=>{
+  await lockBillingCompany(tx,d.companyId);
   const usage=await tx.user.groupBy({by:["salesRole"],where:{companyId:d.companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},_count:true});
   const a=usage.find(x=>x.salesRole==="ADMIN")?._count??0,m=usage.find(x=>x.salesRole==="MANAGER")?._count??0,s=usage.find(x=>x.salesRole==="SALES")?._count??0;
   if(d.adminSeats<a||d.managerSeats<m||d.salesSeats<s)throw new Error("SEATS_BELOW_USAGE");

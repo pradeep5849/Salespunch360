@@ -33,7 +33,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const visible = employees.filter((employee) => {
     if (filter === "MANAGERS") return isManagerEmployee(employee);
     if (filter === "SALES") return isSalesEmployee(employee);
-    if (filter === "ACTIVE") return employee.isActive;
+    if (filter === "ACTIVE") return employee.isActive && employee.salesAccessActive;
     if (filter === "INACTIVE") return !employee.isActive;
     return true;
   });

@@ -80,7 +80,7 @@ export async function listEmployees(filter: "ALL" | "MANAGERS" | "SALES" | "ACTI
   const where: Prisma.UserWhereInput = { companyId, salesRole: { in: employeeSalesRoles } };
   if (filter === "MANAGERS") where.salesRole = "MANAGER";
   if (filter === "SALES") where.salesRole = "SALES";
-  if (filter === "ACTIVE") where.isActive = true;
+  if (filter === "ACTIVE") { where.isActive = true; where.salesAccessActive = true; }
   if (filter === "INACTIVE") where.isActive = false;
   return db.user.findMany({ where, select: employeeSelect, orderBy: [{ isActive: "desc" }, { name: "asc" }] });
 }
