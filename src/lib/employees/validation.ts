@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { strongPasswordSchema } from "@/lib/auth/validation";
+import { managerTypeSchema } from "@/lib/users/validation";
 
 const normalizeOptional = (value: unknown) => typeof value === "string" && value.trim() === "" ? undefined : value;
 
@@ -33,7 +34,7 @@ const confirmPasswords = <T extends { password: string; confirmPassword: string 
   }
 };
 
-export const createManagerSchema = z.object({ ...profileFields, ...passwordFields, managerType: z.enum(["FIELD_MANAGER","MANAGER_ONLY"]).default("FIELD_MANAGER") }).strict().superRefine(confirmPasswords);
+export const createManagerSchema = z.object({ ...profileFields, ...passwordFields, managerType: managerTypeSchema.default("FIELD_MANAGER") }).strict().superRefine(confirmPasswords);
 
 export const createSalesSchema = z.object({
   ...profileFields,
@@ -45,7 +46,7 @@ export const editEmployeeSchema = z.object({
   employeeId: z.string().uuid(),
   ...profileFields,
   managerId: z.preprocess(normalizeOptional, z.string().uuid().nullable().optional()),
-  managerType: z.preprocess(normalizeOptional, z.enum(["FIELD_MANAGER","MANAGER_ONLY"]).optional()),
+  managerType: z.preprocess(normalizeOptional, managerTypeSchema.optional()),
 }).strict();
 
 export const employeeIdSchema = z.object({ employeeId: z.string().uuid() }).strict();

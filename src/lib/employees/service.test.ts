@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import { deactivateEmployeeInTransaction, resetEmployeePasswordInTransaction } from "./service";
 
-function transaction(employee: { id: string; companyId: string; role: "MANAGER" | "SALES"; isActive: boolean }) {
+function transaction(employee: { id: string; companyId: string; role: "MANAGER" | "SALES"; salesRole: "MANAGER" | "SALES" | null; salesAccessActive: boolean; isActive: boolean }) {
   return {
     user: { findUnique: vi.fn().mockResolvedValue(employee), findFirst: vi.fn().mockResolvedValue(employee), update: vi.fn().mockResolvedValue(employee), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     $queryRaw: vi.fn().mockResolvedValue([{ id: employee.id }]),
@@ -14,7 +14,7 @@ function transaction(employee: { id: string; companyId: string; role: "MANAGER" 
 
 describe("employee security mutations", () => {
   it("deactivation soft-disables the employee and revokes every session", async () => {
-    const mock = transaction({ id: "employee", companyId: "company-a", role: "SALES", isActive: true });
+    const mock = transaction({ id: "employee", companyId: "company-a", role: "SALES", salesRole: "SALES", salesAccessActive: true, isActive: true });
     await deactivateEmployeeInTransaction(mock as unknown as Prisma.TransactionClient, "company-a", "employee");
     expect(mock.user.update).toHaveBeenCalledWith(expect.objectContaining({ data: { isActive: false, salesAccessActive: false, accountAccessActive: false } }));
     expect(mock.user.update.mock.calls[0][0].data).not.toHaveProperty("salesRole");
@@ -26,7 +26,7 @@ describe("employee security mutations", () => {
   });
 
   it("rejects a cross-company password reset before mutation", async () => {
-    const mock = transaction({ id: "employee", companyId: "company-b", role: "SALES", isActive: true });
+    const mock = transaction({ id: "employee", companyId: "company-b", role: "SALES", salesRole: "SALES", salesAccessActive: true, isActive: true });
     await expect(resetEmployeePasswordInTransaction(mock as unknown as Prisma.TransactionClient, "company-a", "employee", "hash")).rejects.toThrow("NOT_FOUND");
     expect(mock.user.updateMany).not.toHaveBeenCalled();
     expect(mock.session.deleteMany).not.toHaveBeenCalled();
@@ -34,7 +34,7 @@ describe("employee security mutations", () => {
   });
 
   it("password reset updates the hash and revokes employee sessions", async () => {
-    const mock = transaction({ id: "employee", companyId: "company-a", role: "MANAGER", isActive: true });
+    const mock = transaction({ id: "employee", companyId: "company-a", role: "MANAGER", salesRole: "MANAGER", salesAccessActive: true, isActive: true });
     await resetEmployeePasswordInTransaction(mock as unknown as Prisma.TransactionClient, "company-a", "employee", "new-hash");
     expect(mock.user.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { passwordHash: "new-hash", sessionVersion: { increment: 1 } } }));
     expect(mock.pushDevice.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });

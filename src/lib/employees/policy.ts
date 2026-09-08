@@ -1,4 +1,4 @@
-import type { Role, SubscriptionStatus } from "@prisma/client";
+import type { SalesRole, SubscriptionStatus } from "@prisma/client";
 import { DEFAULT_TRIAL_ENTITLEMENTS } from "@/lib/trial/config";
 
 export class EmployeePolicyError extends Error {
@@ -7,16 +7,17 @@ export class EmployeePolicyError extends Error {
   }
 }
 
-type ManagedUser = { companyId: string | null; role: Role; id: string; isActive: boolean };
+type ManagedUser = { companyId: string | null; salesRole: SalesRole | null; id: string; isActive: boolean; salesAccessActive: boolean; managerType?: string | null };
+type ManagedEmployee = ManagedUser & { salesRole: "MANAGER" | "SALES" };
 
-export function assertManagedEmployee(companyId: string, employee: ManagedUser | null): asserts employee is ManagedUser {
-  if (!employee || employee.companyId !== companyId || !["MANAGER", "SALES"].includes(employee.role)) {
+export function assertManagedEmployee(companyId: string, employee: ManagedUser | null): asserts employee is ManagedEmployee {
+  if (!employee || employee.companyId !== companyId || (employee.salesRole !== "MANAGER" && employee.salesRole !== "SALES")) {
     throw new EmployeePolicyError("NOT_FOUND");
   }
 }
 
 export function assertAssignableManager(companyId: string, manager: ManagedUser | null): asserts manager is ManagedUser {
-  if (!manager || manager.companyId !== companyId || manager.role !== "MANAGER" || !manager.isActive) {
+  if (!manager || manager.companyId !== companyId || manager.salesRole !== "MANAGER" || !manager.isActive || !manager.salesAccessActive) {
     throw new EmployeePolicyError("INVALID_MANAGER");
   }
 }
