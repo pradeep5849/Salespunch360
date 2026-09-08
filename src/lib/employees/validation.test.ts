@@ -12,6 +12,12 @@ describe("employee validation", () => {
     expect(result.managerType).toBe("FIELD_MANAGER");
   });
 
+  it("accepts and normalizes minimal profile fields on existing create flows", () => {
+    const result = createManagerSchema.parse({ ...base, designation: " Area Manager ", dateOfJoining: "2026-09-08" });
+    expect(result.designation).toBe("Area Manager");
+    expect(result.dateOfJoining?.toISOString()).toBe("2026-09-08T00:00:00.000Z");
+  });
+
   it("accepts an explicit Manager Only type", () => {
     expect(createManagerSchema.parse({ ...base, managerType: "MANAGER_ONLY" }).managerType).toBe("MANAGER_ONLY");
   });

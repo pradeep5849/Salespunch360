@@ -1,27 +1,15 @@
 import { z } from "zod";
 import { strongPasswordSchema } from "@/lib/auth/validation";
 import { managerTypeSchema } from "@/lib/users/validation";
+import {
+  employeeCodeSchema,
+  employeeProfileFields,
+  phoneSchema,
+} from "@/lib/users/employee-profile-validation";
 
 const normalizeOptional = (value: unknown) => typeof value === "string" && value.trim() === "" ? undefined : value;
 
-export const employeeCodeSchema = z.preprocess(
-  normalizeOptional,
-  z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9-]{0,31}$/, "Use letters, numbers, and hyphens only").optional(),
-);
-
-export const phoneSchema = z.preprocess(
-  normalizeOptional,
-  z.string().transform((value) => value.replace(/[\s().-]/g, "")).pipe(
-    z.string().regex(/^\+?[1-9]\d{6,14}$/, "Enter a valid phone number"),
-  ).optional(),
-);
-
-const profileFields = {
-  name: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().transform((value) => value.toLowerCase()),
-  phone: phoneSchema,
-  employeeCode: employeeCodeSchema,
-};
+export { employeeCodeSchema, phoneSchema };
 
 const passwordFields = {
   password: strongPasswordSchema,
@@ -34,17 +22,17 @@ const confirmPasswords = <T extends { password: string; confirmPassword: string 
   }
 };
 
-export const createManagerSchema = z.object({ ...profileFields, ...passwordFields, managerType: managerTypeSchema.default("FIELD_MANAGER") }).strict().superRefine(confirmPasswords);
+export const createManagerSchema = z.object({ ...employeeProfileFields, ...passwordFields, managerType: managerTypeSchema.default("FIELD_MANAGER") }).strict().superRefine(confirmPasswords);
 
 export const createSalesSchema = z.object({
-  ...profileFields,
+  ...employeeProfileFields,
   ...passwordFields,
   managerId: z.preprocess(normalizeOptional, z.string().uuid().optional()),
 }).strict().superRefine(confirmPasswords);
 
 export const editEmployeeSchema = z.object({
   employeeId: z.string().uuid(),
-  ...profileFields,
+  ...employeeProfileFields,
   managerId: z.preprocess(normalizeOptional, z.string().uuid().nullable().optional()),
   managerType: z.preprocess(normalizeOptional, managerTypeSchema.optional()),
 }).strict();

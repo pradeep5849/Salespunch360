@@ -8,6 +8,7 @@ import { getTrialStatus } from "@/lib/trial/status";
 import { profileComplete } from "@/lib/company/profile";
 import { hasSalesWorkspace } from "@/lib/product/edition";
 import { projectLegacyRole } from "@/lib/users/role-projection";
+import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
 import {
   createManagerSchema,
@@ -98,13 +99,6 @@ export async function getEmployeeManagementContextForCompany(companyId: string) 
   return { employees, trial: getTrialStatus(company), teamStructure: company.teamStructure };
 }
 
-const normalizePhone=(phone:string|null|undefined)=>{if(!phone)return "";let d=phone.replace(/\D/g,"");if(d.length===12&&d.startsWith("91"))d=d.slice(2);return d;};
-async function assertCompanyPhoneUnique(tx:Prisma.TransactionClient,companyId:string,phone:string|null|undefined,excludeUserId?:string){
- const normalized=normalizePhone(phone);if(!normalized)return;
- const users=await tx.user.findMany({where:{companyId,salesRole:{in:employeeSalesRoles},phone:{not:null},...(excludeUserId?{id:{not:excludeUserId}}:{})},select:{phone:true}});
- if(users.some(u=>normalizePhone(u.phone)===normalized))throw new EmployeePolicyError("PHONE_IN_USE");
-}
-
 async function createEmployeeForCompany(companyId: string, salesRole: "MANAGER" | "SALES", raw: unknown, adminId:string) {
   const data = salesRole === "MANAGER" ? createManagerSchema.parse(raw) : createSalesSchema.parse(raw);
   const passwordHash = await hashPassword(data.password);
@@ -113,12 +107,12 @@ async function createEmployeeForCompany(companyId: string, salesRole: "MANAGER" 
     const company = await lockAndLoadCompany(tx, companyId);
     if (company.teamStructure === "SALES_ONLY" && salesRole === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
     await enforceAvailableSeat(tx, companyId, salesRole);
-    await assertCompanyPhoneUnique(tx,companyId,data.phone);
+    await assertSalesEmployeePhoneUnique(tx,companyId,data.phone);
     const requestedManagerId = "managerId" in data && typeof data.managerId === "string" ? data.managerId : undefined;
     if (company.teamStructure === "SALES_ONLY" && requestedManagerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     const managerId = salesRole === "SALES" ? await loadAssignableManager(tx, companyId, requestedManagerId) : null;
     return tx.user.create({
-      data: { companyId, ...employeeRoleDimensions(salesRole), isActive: true, salesAccessActive: hasSalesWorkspace(company.productEdition), name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, passwordHash, managerId, managerType: salesRole === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
+      data: { companyId, ...employeeRoleDimensions(salesRole), isActive: true, salesAccessActive: hasSalesWorkspace(company.productEdition), name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, designation: data.designation, dateOfJoining: data.dateOfJoining, passwordHash, managerId, managerType: salesRole === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
       select: employeeSelect,
     });
   });
@@ -137,7 +131,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
     const employee = await tx.user.findFirst({ where: { id: data.employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, salesAccessActive: true, isActive: true, managerId: true, managerType: true } });
     assertManagedEmployee(companyId, employee);
     if (company.teamStructure === "SALES_ONLY" && data.managerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
-    await assertCompanyPhoneUnique(tx,companyId,data.phone,employee.id);
+    await assertSalesEmployeePhoneUnique(tx,companyId,data.phone,employee.id);
     if (employee.salesRole === "MANAGER" && data.managerId) throw new EmployeePolicyError("INVALID_MANAGER");
     if (employee.salesRole === "MANAGER" && data.managerType && data.managerType !== employee.managerType && data.managerType === "MANAGER_ONLY") {
       const [openAttendance, openVisit, activeLead, pendingTask, assignedCustomer, activeTarget] = await Promise.all([
@@ -157,7 +151,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
       : employee.managerId;
     const updated = await tx.user.updateMany({
       where: { id: employee.id, companyId, salesRole: employee.salesRole },
-      data: { name: data.name, email: data.email, phone: data.phone ?? null, employeeCode: data.employeeCode ?? null, managerId, managerType: employee.salesRole === "MANAGER" ? (data.managerType ?? employee.managerType ?? "FIELD_MANAGER") : null },
+      data: { name: data.name, email: data.email, phone: data.phone ?? null, employeeCode: data.employeeCode ?? null, designation: data.designation ?? null, dateOfJoining: data.dateOfJoining ?? null, managerId, managerType: employee.salesRole === "MANAGER" ? (data.managerType ?? employee.managerType ?? "FIELD_MANAGER") : null },
     });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
   });

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -265,11 +265,13 @@ model User {
   salesAccessActive       Boolean                  @default(false)
   accountAccessActive     Boolean                  @default(false)
   managerType             ManagerType?
-  branchAccessScope       BranchAccessScope       @default(ALL_BRANCHES)
+  branchAccessScope       BranchAccessScope        @default(ALL_BRANCHES)
   phone                   String?
   employeeCode            String?
+  designation             String?                  @db.VarChar(120)
+  dateOfJoining           DateTime?                @db.Date
   travelAllowanceEnabled  Boolean                  @default(false)
-  travelRatePerKm          Decimal?                 @db.Decimal(10, 2)
+  travelRatePerKm         Decimal?                 @db.Decimal(10, 2)
   isActive                Boolean                  @default(true)
   managerId               String?                  @db.Uuid
   manager                 User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
@@ -630,13 +632,13 @@ model LocationPoint {
 }
 
 model Session {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  tokenHash String   @unique
-  sessionVersion Int @default(0)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash      String   @unique
+  sessionVersion Int      @default(0)
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
 
   @@index([userId])
   @@index([expiresAt])
@@ -644,16 +646,16 @@ model Session {
 }
 
 model MobileSession {
-  id          String       @id @default(uuid()) @db.Uuid
-  userId      String       @db.Uuid
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  tokenHash   String       @unique @db.Char(64)
-  sessionVersion Int       @default(0)
-  expiresAt   DateTime
-  lastUsedAt  DateTime
-  revokedAt   DateTime?
-  createdAt   DateTime     @default(now())
-  pushDevices PushDevice[]
+  id             String       @id @default(uuid()) @db.Uuid
+  userId         String       @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash      String       @unique @db.Char(64)
+  sessionVersion Int          @default(0)
+  expiresAt      DateTime
+  lastUsedAt     DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  pushDevices    PushDevice[]
 
   @@index([userId, revokedAt])
   @@index([expiresAt])
@@ -734,21 +736,21 @@ model SalesTarget {
 }
 
 model DailyTravelApproval {
-  id                String               @id @default(uuid()) @db.Uuid
-  companyId         String               @db.Uuid
-  company           Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  employeeId        String               @db.Uuid
-  employee          User                 @relation("TravelApprovalEmployee", fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  businessDate      DateTime             @db.Date
-  distanceMeters    Int
-  ratePerKm         Decimal              @db.Decimal(10, 2)
-  amount            Decimal              @db.Decimal(18, 2)
-  status            TravelApprovalStatus @default(PENDING)
-  reviewedByUserId  String?              @db.Uuid
-  reviewedBy        User?                @relation("TravelApprovalReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  reviewedAt        DateTime?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  id               String               @id @default(uuid()) @db.Uuid
+  companyId        String               @db.Uuid
+  company          Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employeeId       String               @db.Uuid
+  employee         User                 @relation("TravelApprovalEmployee", fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  businessDate     DateTime             @db.Date
+  distanceMeters   Int
+  ratePerKm        Decimal              @db.Decimal(10, 2)
+  amount           Decimal              @db.Decimal(18, 2)
+  status           TravelApprovalStatus @default(PENDING)
+  reviewedByUserId String?              @db.Uuid
+  reviewedBy       User?                @relation("TravelApprovalReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reviewedAt       DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   @@unique([companyId, employeeId, businessDate])
   @@index([companyId, businessDate, status])
@@ -792,33 +794,33 @@ model CompanySubscription {
 }
 
 model BillingOrder {
-  id               String               @id @default(uuid()) @db.Uuid
-  companyId        String               @db.Uuid
-  company          Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  createdByUserId  String               @db.Uuid
-  createdByUser    User                 @relation("OrderCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  billingPeriod    BillingPeriod
-  managerSeats     Int
-  salesSeats       Int
-  managerUnitPrice Decimal              @db.Decimal(18, 2)
-  salesUnitPrice   Decimal              @db.Decimal(18, 2)
-  currency         String               @db.Char(3)
-  subtotal         Decimal              @db.Decimal(18, 2)
-  taxAmount        Decimal              @default(0) @db.Decimal(18, 2)
-  totalAmount      Decimal              @db.Decimal(18, 2)
-  status           BillingOrderStatus   @default(PENDING)
-  provider         String               @default("UNCONFIGURED") @db.VarChar(40)
-  providerOrderId  String?              @unique @db.VarChar(200)
-  idempotencyKey   String               @unique @db.VarChar(100)
-  retainManagerUserIds String[]          @default([]) @db.Uuid
-  retainSalesUserIds   String[]          @default([]) @db.Uuid
+  id                     String               @id @default(uuid()) @db.Uuid
+  companyId              String               @db.Uuid
+  company                Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdByUserId        String               @db.Uuid
+  createdByUser          User                 @relation("OrderCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  billingPeriod          BillingPeriod
+  managerSeats           Int
+  salesSeats             Int
+  managerUnitPrice       Decimal              @db.Decimal(18, 2)
+  salesUnitPrice         Decimal              @db.Decimal(18, 2)
+  currency               String               @db.Char(3)
+  subtotal               Decimal              @db.Decimal(18, 2)
+  taxAmount              Decimal              @default(0) @db.Decimal(18, 2)
+  totalAmount            Decimal              @db.Decimal(18, 2)
+  status                 BillingOrderStatus   @default(PENDING)
+  provider               String               @default("UNCONFIGURED") @db.VarChar(40)
+  providerOrderId        String?              @unique @db.VarChar(200)
+  idempotencyKey         String               @unique @db.VarChar(100)
+  retainManagerUserIds   String[]             @default([]) @db.Uuid
+  retainSalesUserIds     String[]             @default([]) @db.Uuid
   seatReductionAppliedAt DateTime?
-  paidAt           DateTime?
-  expiresAt        DateTime?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  payments         PaymentTransaction[]
-  subscription     CompanySubscription?
+  paidAt                 DateTime?
+  expiresAt              DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  payments               PaymentTransaction[]
+  subscription           CompanySubscription?
 
   @@index([companyId, createdAt])
   @@map("billing_orders")
