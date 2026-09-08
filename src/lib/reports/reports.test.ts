@@ -6,7 +6,7 @@ import type { ReportActor } from "./scope";
 import { visibleUserWhere } from "./policy";
 import { indiaDateBoundary,parseReportFilters,ReportValidationError } from "./validation";
 
-const actor=(role:ReportActor['role'],managerType:ReportActor['managerType']=role==='MANAGER'?'FIELD_MANAGER':null):ReportActor=>({id:'self',name:'User',companyId:'tenant-a',role,managerType});
+const actor=(salesRole:ReportActor['salesRole'],managerType:ReportActor['managerType']=salesRole==='MANAGER'?'FIELD_MANAGER':null):ReportActor=>({id:'self',name:'User',companyId:'tenant-a',salesRole,managerType});
 describe('report filter safety',()=>{
  it('centralizes India timezone',()=>expect(REPORT_TIME_ZONE).toBe('Asia/Kolkata'));
  it('maps India midnight to prior UTC evening',()=>expect(indiaDateBoundary('2026-08-28').toISOString()).toBe('2026-08-27T18:30:00.000Z'));
@@ -24,10 +24,10 @@ describe('report filter safety',()=>{
  it('ignores unknown companyId',()=>expect(parseReportFilters({start:'2026-08-01',end:'2026-08-02',companyId:'tenant-b'} as never)).not.toHaveProperty('companyId'));
 });
 describe('current hierarchy report scope',()=>{
- it('company admin stays in tenant and sees report roles',()=>expect(visibleUserWhere(actor('COMPANY_ADMIN'))).toEqual({companyId:'tenant-a',role:{in:['MANAGER','SALES']}}));
- it('field manager sees self and direct Sales',()=>expect(visibleUserWhere(actor('MANAGER','FIELD_MANAGER'))).toEqual({companyId:'tenant-a',OR:[{id:'self',role:'MANAGER'},{role:'SALES',managerId:'self'}]}));
- it('manager only sees direct Sales',()=>expect(visibleUserWhere(actor('MANAGER','MANAGER_ONLY'))).toEqual({companyId:'tenant-a',role:'SALES',managerId:'self'}));
- it('sales is fixed to self',()=>expect(visibleUserWhere(actor('SALES'))).toEqual({companyId:'tenant-a',id:'self'}));
+ it('company admin stays in tenant and sees report roles',()=>expect(visibleUserWhere(actor('PRIMARY_ADMIN'))).toEqual({companyId:'tenant-a',salesRole:{in:['MANAGER','SALES']}}));
+ it('field manager sees self and direct Sales',()=>expect(visibleUserWhere(actor('MANAGER','FIELD_MANAGER'))).toEqual({companyId:'tenant-a',OR:[{id:'self',salesRole:'MANAGER'},{salesRole:'SALES',managerId:'self'}]}));
+ it('manager only sees direct Sales',()=>expect(visibleUserWhere(actor('MANAGER','MANAGER_ONLY'))).toEqual({companyId:'tenant-a',salesRole:'SALES',managerId:'self'}));
+ it('sales is fixed to self',()=>expect(visibleUserWhere(actor('SALES'))).toEqual({companyId:'tenant-a',id:'self',salesRole:'SALES'}));
 });
 describe('derived report metrics',()=>{
  const at=new Date('2026-01-01T00:00:00Z');

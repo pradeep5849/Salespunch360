@@ -11,7 +11,7 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
   const [total,completed,pending,leadAgg,visits,employees,customers]=await Promise.all([
     db.customerVisit.count({where}), db.customerVisit.count({where:{...where,checkedOutAt:{not:null}}}), db.customerVisit.count({where:{...where,checkedOutAt:null}}),
     db.lead.count({where:{companyId:actor.companyId,sourceVisit:{is:where}}}),
-    db.customerVisit.findMany({where,include:{user:{select:{name:true,role:true}},customer:{select:{name:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true}},_count:{select:{sourceLeads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
+    db.customerVisit.findMany({where,include:{user:{select:{name:true,salesRole:true}},customer:{select:{name:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true}},_count:{select:{sourceLeads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
     reportEmployeeOptions(actor), db.customer.findMany({where:{companyId:actor.companyId},select:{id:true,name:true},orderBy:{name:"asc"}})
   ]);
   const rows=await Promise.all(visits.map(async v=>{

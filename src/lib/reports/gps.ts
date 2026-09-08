@@ -8,10 +8,10 @@ import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor}
 const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v;
 export type GpsTimelineEvent={id:string;type:"ATTENDANCE_STARTED"|"GPS_STARTED"|"CHECK_IN"|"CHECK_OUT"|"GPS_ENDED"|"ATTENDANCE_ENDED";at:Date;customer?:string;latitude?:number;longitude?:number;detail?:string;sessionId:string};
 export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
- const actor=providedActor??await reportActor(),employees=await reportEmployeeOptions(actor),date=one(raw.date),requested=one(raw.employeeId),employeeId=actor.role==="SALES"?actor.id:requested;
+ const actor=providedActor??await reportActor(),employees=await reportEmployeeOptions(actor),date=one(raw.date),requested=one(raw.employeeId),employeeId=actor.salesRole==="SALES"?actor.id:requested;
  if(!date||!employeeId)return{actor,employees,date,employeeId,sessions:[],segments:[],points:[],markers:[],events:[],routeDistanceMeters:0,employee:null};
  const ids=await resolveEmployeeScope(actor,employeeId);if(ids.length!==1)throw new AuthorizationError();const start=indiaDateBoundary(date),end=indiaDateBoundary(date,true);
- const employee=await db.user.findFirst({where:{id:employeeId,companyId:actor.companyId},select:{id:true,name:true,role:true}});if(!employee)throw new AuthorizationError();
+ const employee=await db.user.findFirst({where:{id:employeeId,companyId:actor.companyId},select:{id:true,name:true,salesRole:true}});if(!employee)throw new AuthorizationError();
  const sessions=await db.attendance.findMany({where:{companyId:actor.companyId,userId:employeeId,startedAt:{lt:end},OR:[{endedAt:null},{endedAt:{gte:start}}]},include:{locationPoints:{where:{companyId:actor.companyId,userId:employeeId,capturedAt:{gte:start,lt:end}},orderBy:[{sequenceNumber:"asc"},{capturedAt:"asc"},{id:"asc"}]},customerVisits:{where:{companyId:actor.companyId,userId:employeeId,OR:[{checkedInAt:{gte:start,lt:end}},{checkedOutAt:{gte:start,lt:end}}]},include:{customer:{select:{name:true}}},orderBy:{checkedInAt:"asc"}}},orderBy:[{startedAt:"asc"},{id:"asc"}]});
  const segments=sessions.map(s=>orderedRoute(s.locationPoints));const points=segments.flat();let routeDistanceMeters=0;for(const segment of segments)routeDistanceMeters+=calculateTravelDistanceMeters(segment);
  const events:GpsTimelineEvent[]=[];const markers:Array<{latitude:number;longitude:number;label:string}>=[];

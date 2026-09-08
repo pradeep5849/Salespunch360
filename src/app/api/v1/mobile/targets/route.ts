@@ -4,7 +4,8 @@ import { mobileJson } from "@/lib/mobile/http";
 
 const actor = async (request: Request) => {
   const p = await authenticateMobileToken(request.headers.get("authorization"));
-  return { id: p.id, name: p.name, role: p.role, managerType: p.managerType, companyId: p.companyId };
+  if (!p.salesRole) throw new Error("MOBILE_UNAUTHORIZED");
+  return { id: p.id, name: p.name, salesRole: p.salesRole!, managerType: p.managerType, companyId: p.companyId };
 };
 function failure(error: unknown) {
   const code = error instanceof Error ? error.message : "INVALID_INPUT";
