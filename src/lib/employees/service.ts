@@ -128,7 +128,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
   const data = editEmployeeSchema.parse(raw);
   return db.$transaction(async (tx) => {
     const company = await lockAndLoadCompany(tx, companyId);
-    const employee = await tx.user.findFirst({ where: { id: data.employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, salesAccessActive: true, isActive: true, managerId: true, managerType: true } });
+    const employee = await tx.user.findFirst({ where: { id: data.employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, salesAccessActive: true, isActive: true, managerId: true, managerType: true, designation: true, dateOfJoining: true } });
     assertManagedEmployee(companyId, employee);
     if (company.teamStructure === "SALES_ONLY" && data.managerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     await assertSalesEmployeePhoneUnique(tx,companyId,data.phone,employee.id);
@@ -151,7 +151,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
       : employee.managerId;
     const updated = await tx.user.updateMany({
       where: { id: employee.id, companyId, salesRole: employee.salesRole },
-      data: { name: data.name, email: data.email, phone: data.phone ?? null, employeeCode: data.employeeCode ?? null, designation: data.designation ?? null, dateOfJoining: data.dateOfJoining ?? null, managerId, managerType: employee.salesRole === "MANAGER" ? (data.managerType ?? employee.managerType ?? "FIELD_MANAGER") : null },
+      data: { name: data.name, email: data.email, phone: data.phone ?? null, employeeCode: data.employeeCode ?? null, designation: data.designation === undefined ? employee.designation : data.designation, dateOfJoining: data.dateOfJoining === undefined ? employee.dateOfJoining : data.dateOfJoining, managerId, managerType: employee.salesRole === "MANAGER" ? (data.managerType ?? employee.managerType ?? "FIELD_MANAGER") : null },
     });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
   });
