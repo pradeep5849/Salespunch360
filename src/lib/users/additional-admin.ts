@@ -5,7 +5,7 @@ import {requirePermission,requirePermissionForMutation} from '@/lib/auth/authori
 import {hashPassword} from '@/lib/auth/password';
 import {strongPasswordSchema} from '@/lib/auth/validation';
 import {projectLegacyRole} from './role-projection';
-import {clearUserAuthentication,lockUser} from '@/lib/auth/session-generation';
+import {clearUserAuthentication} from '@/lib/auth/session-generation';
 import {activateSalesAccessInTransaction,deactivateIdentityWithLock,suspendSalesAccessInTransaction} from '@/lib/auth/lifecycle';
 import {hasSalesWorkspace} from '@/lib/product/edition';
 
@@ -17,9 +17,13 @@ export const resetAdditionalAdminPasswordSchema=z.object({userId:z.string().uuid
 
 async function primary(mutation:boolean){const actor=mutation?await requirePermissionForMutation('SALES_USER_ADMIN'):await requirePermission('SALES_USER_ADMIN');if(!actor.companyId||actor.salesRole!=='PRIMARY_ADMIN')throw new Error('NOT_AUTHORIZED');return{...actor,companyId:actor.companyId}}
 async function lockCompany(tx:Prisma.TransactionClient,id:string){await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${id}::uuid FOR UPDATE`;const c=await tx.company.findUnique({where:{id},select:{productEdition:true,subscriptionStatus:true,trialStartedAt:true,trialEndsAt:true}});if(!c)throw new Error('NOT_FOUND');return c}
-async function target(tx:Prisma.TransactionClient,companyId:string,userId:string){await lockUser(tx,userId);const u=await tx.user.findFirst({where:{id:userId,companyId,salesRole:'ADMIN'},select:{id:true,isActive:true,salesAccessActive:true}});if(!u)throw new Error('NOT_FOUND');return u}
+async function target(tx:Prisma.TransactionClient,companyId:string,userId:string){
+ await tx.$queryRaw`SELECT 1 FROM "users" WHERE "id"=${userId}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
+ const u=await tx.user.findFirst({where:{id:userId,companyId,salesRole:'ADMIN',role:{not:'SUPER_ADMIN'}},select:{id:true,isActive:true,salesAccessActive:true,role:true}});
+ if(!u||u.role==='SUPER_ADMIN')throw new Error('NOT_FOUND');return u
+}
 async function ensureSeat(tx:Prisma.TransactionClient,companyId:string){const now=new Date();const [used,sub]=await Promise.all([tx.user.count({where:{companyId,isActive:true,salesAccessActive:true,salesRole:'ADMIN'}}),tx.companySubscription.findFirst({where:{companyId,status:'ACTIVE',startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:'desc'}})]);if(used>=(sub?.adminSeats??0))throw new Error('SEAT_LIMIT')}
-export async function listAdditionalAdmins(){const a=await primary(false);return db.user.findMany({where:{companyId:a.companyId,salesRole:'ADMIN'},select:{id:true,name:true,email:true,phone:true,isActive:true,salesAccessActive:true},orderBy:{name:'asc'}})}
+export async function listAdditionalAdmins(){const a=await primary(false);return db.user.findMany({where:{companyId:a.companyId,salesRole:'ADMIN',role:{not:'SUPER_ADMIN'}},select:{id:true,name:true,email:true,phone:true,isActive:true,salesAccessActive:true},orderBy:{name:'asc'}})}
 export async function createAdditionalAdmin(raw:unknown){const a=await primary(true),d=createAdditionalAdminSchema.parse(raw),passwordHash=await hashPassword(d.password);return db.$transaction(async tx=>{const company=await lockCompany(tx,a.companyId);await ensureSeat(tx,a.companyId);return tx.user.create({data:{companyId:a.companyId,name:d.name,email:d.email,phone:d.phone,passwordHash,salesRole:'ADMIN',role:projectLegacyRole({salesRole:'ADMIN',accountRole:null}),isActive:true,salesAccessActive:hasSalesWorkspace(company.productEdition),accountRole:null,accountAccessActive:false,branchAccessScope:'ALL_BRANCHES',managerId:null,managerType:null}})},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
 export async function editAdditionalAdmin(raw:unknown){const a=await primary(true),d=editAdditionalAdminSchema.parse(raw);return db.$transaction(async tx=>{await target(tx,a.companyId,d.userId);const r=await tx.user.updateMany({where:{id:d.userId,companyId:a.companyId,salesRole:'ADMIN'},data:{name:d.name,email:d.email,phone:d.phone}});if(r.count!==1)throw new Error('NOT_FOUND')})}
 export async function setAdditionalAdminActive(raw:unknown,active:boolean){const a=await primary(true),d=additionalAdminIdSchema.parse(raw);return db.$transaction(async tx=>{await lockCompany(tx,a.companyId);const u=await target(tx,a.companyId,d.userId);if(active){if(!u.isActive){await ensureSeat(tx,a.companyId);await tx.user.update({where:{id:u.id},data:{isActive:true}})}if(!u.salesAccessActive){await ensureSeat(tx,a.companyId);await activateSalesAccessInTransaction(tx,u.id)}}else if(u.isActive)await deactivateIdentityWithLock(tx,u.id)},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}

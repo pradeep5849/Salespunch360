@@ -18,7 +18,7 @@ ALTER TABLE "billing_orders" ADD CONSTRAINT "order_seats_check" CHECK (
 );
 -- Zero is permitted only as the safe snapshot for orders created before Admin billing.
 ALTER TABLE "billing_orders" ADD CONSTRAINT "order_money_check" CHECK (
-  "adminUnitPrice" >= 0 AND "managerUnitPrice" > 0 AND "salesUnitPrice" > 0 AND
+  "adminUnitPrice" >= 0 AND ("adminSeats" = 0 OR "adminUnitPrice" > 0) AND "managerUnitPrice" > 0 AND "salesUnitPrice" > 0 AND
   "subtotal" = "adminUnitPrice" * "adminSeats" + "managerUnitPrice" * "managerSeats" + "salesUnitPrice" * "salesSeats" AND
   "taxAmount" >= 0 AND "totalAmount" = "subtotal" + "taxAmount" AND "currency" ~ '^[A-Z]{3}$'
 );
@@ -33,25 +33,33 @@ BEGIN
  RETURN NEW;
 END$$;
 
--- Close only current prices which differ, then insert the locked current snapshots.
-WITH desired(role,period,amount) AS (VALUES
- ('ADMIN'::"BillingRole",'MONTHLY'::"BillingPeriod",250::numeric),
- ('ADMIN','SIX_MONTH',1400),('ADMIN','YEARLY',2800),
- ('MANAGER','MONTHLY',200),('MANAGER','SIX_MONTH',1100),('MANAGER','YEARLY',2100),
- ('SALES','MONTHLY',150),('SALES','SIX_MONTH',800),('SALES','YEARLY',1500)
-), cutoff AS (SELECT TIMESTAMP '2026-09-08 00:00:00' AS at)
-UPDATE "billing_prices" p SET "effectiveUntil"=cutoff.at
-FROM desired d, cutoff
-WHERE p.role=d.role AND p.period=d.period AND p.currency='INR' AND p."effectiveUntil" IS NULL AND p.amount<>d.amount;
-
-WITH desired(role,period,amount) AS (VALUES
- ('ADMIN'::"BillingRole",'MONTHLY'::"BillingPeriod",250::numeric),
- ('ADMIN','SIX_MONTH',1400),('ADMIN','YEARLY',2800),
- ('MANAGER','MONTHLY',200),('MANAGER','SIX_MONTH',1100),('MANAGER','YEARLY',2100),
- ('SALES','MONTHLY',150),('SALES','SIX_MONTH',800),('SALES','YEARLY',1500)
-)
-INSERT INTO "billing_prices"("role","period","amount","currency","effectiveFrom","createdAt")
-SELECT d.role,d.period,d.amount,'INR',TIMESTAMP '2026-09-08 00:00:00',TIMESTAMP '2026-09-08 00:00:00'
-FROM desired d WHERE NOT EXISTS (
- SELECT 1 FROM "billing_prices" p WHERE p.role=d.role AND p.period=d.period AND p.currency='INR' AND p."effectiveUntil" IS NULL AND p.amount=d.amount
-);
+-- Version each current price at migration execution time. GREATEST also safely
+-- handles a current row whose effectiveFrom was scheduled in the future.
+DO $$
+DECLARE
+  desired RECORD;
+  current_price RECORD;
+  cutoff TIMESTAMP(3);
+BEGIN
+  FOR desired IN SELECT * FROM (VALUES
+    ('ADMIN'::"BillingRole",'MONTHLY'::"BillingPeriod",250::numeric),
+    ('ADMIN','SIX_MONTH',1400),('ADMIN','YEARLY',2800),
+    ('MANAGER','MONTHLY',200),('MANAGER','SIX_MONTH',1100),('MANAGER','YEARLY',2100),
+    ('SALES','MONTHLY',150),('SALES','SIX_MONTH',800),('SALES','YEARLY',1500)
+  ) AS prices(role,period,amount)
+  LOOP
+    SELECT * INTO current_price FROM "billing_prices"
+      WHERE role=desired.role AND period=desired.period AND currency='INR' AND "effectiveUntil" IS NULL
+      FOR UPDATE;
+    IF current_price.id IS NULL THEN
+      INSERT INTO "billing_prices"("role","period","amount","currency","effectiveFrom","createdAt")
+      VALUES(desired.role,desired.period,desired.amount,'INR',statement_timestamp(),statement_timestamp());
+    ELSIF current_price.amount <> desired.amount THEN
+      cutoff := GREATEST(statement_timestamp()::timestamp, current_price."effectiveFrom" + INTERVAL '1 millisecond');
+      UPDATE "billing_prices" SET "effectiveUntil"=cutoff WHERE id=current_price.id;
+      INSERT INTO "billing_prices"("role","period","amount","currency","effectiveFrom","createdAt")
+      VALUES(desired.role,desired.period,desired.amount,'INR',cutoff,statement_timestamp());
+    END IF;
+    current_price := NULL;
+  END LOOP;
+END $$;
