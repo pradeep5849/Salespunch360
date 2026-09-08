@@ -24,7 +24,8 @@ describe('report filter safety',()=>{
  it('ignores unknown companyId',()=>expect(parseReportFilters({start:'2026-08-01',end:'2026-08-02',companyId:'tenant-b'} as never)).not.toHaveProperty('companyId'));
 });
 describe('current hierarchy report scope',()=>{
- it('company admin stays in tenant and sees report roles',()=>expect(visibleUserWhere(actor('PRIMARY_ADMIN'))).toEqual({companyId:'tenant-a',salesRole:{in:['MANAGER','SALES']}}));
+ it('primary admin stays in tenant and sees report roles',()=>expect(visibleUserWhere(actor('PRIMARY_ADMIN'))).toEqual({companyId:'tenant-a',salesRole:{in:['MANAGER','SALES']}}));
+ it('additional admin receives the same company report scope from explicit SalesRole',()=>expect(visibleUserWhere(actor('ADMIN'))).toEqual({companyId:'tenant-a',salesRole:{in:['MANAGER','SALES']}}));
  it('field manager sees self and direct Sales',()=>expect(visibleUserWhere(actor('MANAGER','FIELD_MANAGER'))).toEqual({companyId:'tenant-a',OR:[{id:'self',salesRole:'MANAGER'},{salesRole:'SALES',managerId:'self'}]}));
  it('manager only sees direct Sales',()=>expect(visibleUserWhere(actor('MANAGER','MANAGER_ONLY'))).toEqual({companyId:'tenant-a',salesRole:'SALES',managerId:'self'}));
  it('sales is fixed to self',()=>expect(visibleUserWhere(actor('SALES'))).toEqual({companyId:'tenant-a',id:'self',salesRole:'SALES'}));

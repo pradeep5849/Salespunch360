@@ -1,12 +1,9 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
-import { createTarget, editTarget, listTargets } from "@/lib/targets/service";
+import { mobileReportActor } from "@/lib/mobile/report-actor";
+import { createTargetForActor, editTargetForActor, listTargetsForActor } from "@/lib/targets/service";
 import { mobileJson } from "@/lib/mobile/http";
 
-const actor = async (request: Request) => {
-  const p = await authenticateMobileToken(request.headers.get("authorization"));
-  if (!p.salesRole) throw new Error("MOBILE_UNAUTHORIZED");
-  return { id: p.id, name: p.name, salesRole: p.salesRole!, managerType: p.managerType, companyId: p.companyId };
-};
+const actor = async (request: Request) => mobileReportActor(await authenticateMobileToken(request.headers.get("authorization")));
 function failure(error: unknown) {
   const code = error instanceof Error ? error.message : "INVALID_INPUT";
   if (code === "MOBILE_UNAUTHORIZED") return mobileJson({ error: "UNAUTHORIZED" }, 401);
@@ -15,14 +12,14 @@ function failure(error: unknown) {
   return mobileJson({ error: code || "INVALID_INPUT" }, 400);
 }
 export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    return mobileJson(await listTargets(Object.fromEntries(url.searchParams), await actor(request)));
-  } catch (error) { return failure(error); }
+  try { const url = new URL(request.url); return mobileJson(await listTargetsForActor(await actor(request),Object.fromEntries(url.searchParams))); }
+  catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {
-  try { const a = await actor(request); await createTarget(await request.json(), a); return mobileJson(await listTargets({}, a), 201); } catch (error) { return failure(error); }
+  try { const a=await actor(request); await createTargetForActor(a,await request.json()); return mobileJson(await listTargetsForActor(a),201); }
+  catch (error) { return failure(error); }
 }
 export async function PATCH(request: Request) {
-  try { const a = await actor(request); await editTarget(await request.json(), a); return mobileJson(await listTargets({}, a)); } catch (error) { return failure(error); }
+  try { const a=await actor(request); await editTargetForActor(a,await request.json()); return mobileJson(await listTargetsForActor(a)); }
+  catch (error) { return failure(error); }
 }

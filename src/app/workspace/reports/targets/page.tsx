@@ -1,10 +1,10 @@
 import {reportActor} from "@/lib/reports/scope";
-import {monthlyTargetRows} from "@/lib/targets/service";
+import {monthlyTargetRowsForActor} from "@/lib/targets/service";
 import type {SearchParams} from "@/lib/reports/validation";
 import {ReportHeader,Summary} from "../report-ui";
 
 export default async function Page({searchParams}:{searchParams:Promise<SearchParams>}){
- const p=await searchParams,r=await monthlyTargetRows(await reportActor()),selected=typeof p.employeeId==="string"?p.employeeId:"";
+ const p=await searchParams,r=await monthlyTargetRowsForActor(await reportActor()),selected=typeof p.employeeId==="string"?p.employeeId:"";
  const rows=selected?r.rows.filter(x=>x.id===selected):r.rows;
  const leadsTarget=rows.reduce((s,x)=>s+x.leadTarget,0),created=rows.reduce((s,x)=>s+x.created,0),wonTarget=rows.reduce((s,x)=>s+x.wonTarget,0),won=rows.reduce((s,x)=>s+x.won,0);
  return <main className="reports-content">

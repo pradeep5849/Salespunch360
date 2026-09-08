@@ -11,10 +11,10 @@ export async function reportActor(): Promise<ReportActor> {
 }
 export async function resolveEmployeeScope(actor:ReportActor, requested?:string) {
   if (actor.salesRole === "SALES") return [actor.id];
-  const users = await db.user.findMany({ where:{ ...visibleUserWhere(actor), ...(requested ? { id:requested } : {}) }, select:{id:true} });
+  const users = await db.user.findMany({ where:{ ...visibleUserWhere(actor), ...(requested ? { id:requested,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]} } : {}) }, select:{id:true} });
   if (requested && users.length !== 1) throw new AuthorizationError();
   return users.map(u=>u.id);
 }
 export async function reportEmployeeOptions(actor:ReportActor) {
-  return db.user.findMany({ where:visibleUserWhere(actor), select:{id:true,name:true,salesRole:true,isActive:true}, orderBy:[{name:"asc"},{id:"asc"}] });
+  return db.user.findMany({ where:{...visibleUserWhere(actor),isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}}, select:{id:true,name:true,salesRole:true,isActive:true}, orderBy:[{name:"asc"},{id:"asc"}] });
 }

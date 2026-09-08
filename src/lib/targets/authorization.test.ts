@@ -1,0 +1,19 @@
+import{beforeEach,describe,expect,it,vi}from"vitest";
+const m=vi.hoisted(()=>({read:vi.fn(),mutation:vi.fn(),assignee:vi.fn(),targets:vi.fn(),create:vi.fn(),current:vi.fn(),update:vi.fn(),users:vi.fn(),leadFind:vi.fn(),leadCount:vi.fn(),aggregate:vi.fn(),transaction:vi.fn()}));
+vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class AuthorizationError extends Error{constructor(){super("Not authorized");this.name="AuthorizationError"}},requirePermission:m.read,requirePermissionForMutation:m.mutation}));
+vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:vi.fn()}));
+vi.mock("@/lib/db",()=>({db:{user:{findFirst:m.assignee,findMany:m.users},salesTarget:{findMany:m.targets,count:vi.fn(),create:m.create,findFirst:m.current,updateMany:m.update,upsert:vi.fn()},lead:{findMany:m.leadFind,count:m.leadCount,aggregate:m.aggregate},$transaction:m.transaction}}));
+import{createTarget,createTargetForActor,editTarget,listTargets,listTargetsForActor,saveMonthlyTargets}from"./service";
+const companyId="cccccccc-cccc-4ccc-8ccc-cccccccccccc",assignedUserId="11111111-1111-4111-8111-111111111111",targetId="22222222-2222-4222-8222-222222222222";
+const actor=(salesRole:"PRIMARY_ADMIN"|"ADMIN"|"MANAGER"|"SALES")=>({id:"actor",name:"Actor",companyId,salesRole,managerType:salesRole==="MANAGER"?"FIELD_MANAGER" as const:null});
+const input={assignedUserId,metric:"WON_LEADS_COUNT",periodType:"MONTHLY",startDate:"2026-09-01",endDate:"2026-09-30",targetValue:"5",currencyCode:"INR"};
+describe("Target authorization boundaries",()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.read.mockResolvedValue(actor("ADMIN"));m.mutation.mockResolvedValue(actor("ADMIN"));m.assignee.mockResolvedValue({id:assignedUserId});m.targets.mockResolvedValue([]);m.users.mockResolvedValue([]);m.leadFind.mockResolvedValue([]);m.leadCount.mockResolvedValue(0);m.aggregate.mockResolvedValue({_sum:{estimatedValue:null}});m.create.mockResolvedValue({id:"target"});m.current.mockResolvedValue({id:targetId,version:1});m.update.mockResolvedValue({count:1})});
+ it("public reads always establish SALES_TARGETS",async()=>{await listTargets();expect(m.read).toHaveBeenCalledWith("SALES_TARGETS")});
+ it("public mutations always establish the non-redirecting SALES_TARGETS boundary",async()=>{await createTarget(input);expect(m.mutation).toHaveBeenCalledWith("SALES_TARGETS");expect(m.read).not.toHaveBeenCalled()});
+ it("Sales cannot create, edit, or set monthly targets",async()=>{m.mutation.mockResolvedValue(actor("SALES"));await expect(createTarget(input)).rejects.toThrow("Not authorized");await expect(editTarget({...input,targetId,version:1})).rejects.toThrow("Not authorized");await expect(saveMonthlyTargets({assignedUserId,leadTarget:1,wonTarget:1})).rejects.toThrow("Not authorized")});
+ it("Additional Admin can perform permitted target administration",async()=>{await expect(createTarget(input)).resolves.toEqual({id:"target"});expect(m.mutation).toHaveBeenCalledWith("SALES_TARGETS");expect(m.create).toHaveBeenCalled()});
+ it("rejects suspended, Manager Only, and cross-company assignees",async()=>{for(let attempt=0;attempt<3;attempt++){m.assignee.mockResolvedValueOnce(null);await expect(createTargetForActor(actor("ADMIN"),{...input,assignedUserId})).rejects.toThrow("Not authorized");}expect(m.assignee).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({isActive:true,salesAccessActive:true,companyId,NOT:{salesRole:"MANAGER",managerType:"MANAGER_ONLY"}})}))});
+ it("cannot pass an actor to a public boundary to bypass authorization",async()=>{m.read.mockRejectedValue(new Error("DENIED"));await expect(listTargets(actor("PRIMARY_ADMIN") as never)).rejects.toThrow("DENIED");expect(m.read).toHaveBeenCalledWith("SALES_TARGETS")});
+ it("keeps explicitly named actor helpers available for already-authorized report/mobile boundaries",async()=>{await listTargetsForActor(actor("PRIMARY_ADMIN"));expect(m.read).not.toHaveBeenCalled()});
+});

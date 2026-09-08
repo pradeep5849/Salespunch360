@@ -1,4 +1,4 @@
-import type { ManagerType, Role, SalesRole } from "@prisma/client";
+import type { ManagerType, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   createSessionToken,
@@ -17,8 +17,6 @@ export type MobilePrincipal = {
   email: string;
   role: "COMPANY_ADMIN" | "MANAGER" | "SALES";
   managerType: ManagerType | null;
-  salesRole?: SalesRole | null;
-  salesAccessActive?: boolean;
   companyId: string;
   mobileSessionId?: string;
 };
@@ -36,8 +34,6 @@ export async function createMobileSession(
       email: true,
       passwordHash: true,
       role: true,
-      salesRole: true,
-      salesAccessActive: true,
       managerType: true,
       companyId: true,
       isActive: true,
@@ -45,8 +41,6 @@ export async function createMobileSession(
   });
   const valid = Boolean(
     user?.isActive &&
-    user.salesAccessActive &&
-    user.salesRole &&
     user.companyId &&
     isMobileRole(user.role) &&
     (await verifyPassword(user.passwordHash, password)),
@@ -57,7 +51,7 @@ export async function createMobileSession(
     expiresAt = new Date(now.getTime() + SESSION_DAYS * 86_400_000);
   const lockedUser = await db.$transaction(async (tx) => {
     const current = await lockUser(tx, user.id);
-    const stillValid = Boolean(current?.isActive && current.salesAccessActive && current.salesRole && current.companyId && isMobileRole(current.role) && await verifyPassword(current.passwordHash, password));
+    const stillValid = Boolean(current?.isActive && current.companyId && isMobileRole(current.role) && await verifyPassword(current.passwordHash, password));
     if (!stillValid || !current?.companyId || current.role === "SUPER_ADMIN") throw new Error("INVALID_MOBILE_CREDENTIALS");
     const rotated = await tx.user.update({ where: { id: current.id }, data: { sessionVersion: { increment: 1 } }, select: { sessionVersion: true } });
     await clearUserAuthentication(tx, current.id);
@@ -72,8 +66,6 @@ export async function createMobileSession(
       name: lockedUser.name,
       email: lockedUser.email,
       role: lockedUser.role as MobilePrincipal["role"],
-      salesRole: lockedUser.salesRole,
-      salesAccessActive: lockedUser.salesAccessActive,
       managerType: lockedUser.managerType,
       companyId: lockedUser.companyId!,
     },
@@ -100,8 +92,6 @@ export async function authenticateMobileToken(
           name: true,
           email: true,
           role: true,
-          salesRole: true,
-          salesAccessActive: true,
           managerType: true,
           companyId: true,
           isActive: true,
@@ -115,8 +105,6 @@ export async function authenticateMobileToken(
     session.revokedAt ||
     session.expiresAt <= now ||
     !session.user.isActive ||
-    !session.user.salesAccessActive ||
-    !session.user.salesRole ||
     !session.user.companyId ||
     !MOBILE_ROLES.includes(session.user.role)
     || session.sessionVersion !== session.user.sessionVersion
