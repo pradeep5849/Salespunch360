@@ -16,12 +16,27 @@ export async function currentPrices(){
 }
 
 export async function changePrice(raw:unknown){
- const u=await requireRole("SUPER_ADMIN"),d=priceChangeSchema.parse(raw),now=new Date();
+ const u=await requireRole("SUPER_ADMIN"),d=priceChangeSchema.parse(raw);
  return db.$transaction(async tx=>{
-  await tx.billingPrice.updateMany({where:{role:d.role,period:d.period,currency:d.currency,effectiveUntil:null},data:{effectiveUntil:now}});
-  const p=await tx.billingPrice.create({data:{...d,amount:new Prisma.Decimal(d.amount),effectiveFrom:now,createdByUserId:u.id}});
-  await tx.billingAuditEvent.create({data:{actorUserId:u.id,type:"PRICING_CHANGED",entityId:p.id,metadata:{role:d.role,period:d.period,currency:d.currency}}});
-  return p;
+  const priceKey=`${d.role}:${d.period}:${d.currency}`;
+  // The advisory lock also serializes the no-current-row case; the row lock protects an existing snapshot.
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${priceKey},0))`;
+  const current=await tx.$queryRaw<{id:string;effectiveFrom:Date;cutoff:Date}[]>`
+   SELECT "id","effectiveFrom",GREATEST(statement_timestamp()::timestamp,"effectiveFrom" + INTERVAL '1 millisecond') AS cutoff
+   FROM "billing_prices" WHERE "role"=${d.role}::"BillingRole" AND "period"=${d.period}::"BillingPeriod"
+     AND "currency"=${d.currency} AND "effectiveUntil" IS NULL FOR UPDATE`;
+  let cutoff:Date;
+  if(current[0]){
+   cutoff=current[0].cutoff;
+   await tx.billingPrice.update({where:{id:current[0].id},data:{effectiveUntil:cutoff}});
+  }else{
+   const databaseTime=await tx.$queryRaw<{cutoff:Date}[]>`SELECT statement_timestamp()::timestamp AS cutoff`;
+   if(!databaseTime[0])throw new Error("PRICING_UNAVAILABLE");
+   cutoff=databaseTime[0].cutoff;
+  }
+  const price=await tx.billingPrice.create({data:{...d,amount:new Prisma.Decimal(d.amount),effectiveFrom:cutoff,createdByUserId:u.id}});
+  await tx.billingAuditEvent.create({data:{actorUserId:u.id,type:"PRICING_CHANGED",entityId:price.id,metadata:{role:d.role,period:d.period,currency:d.currency}}});
+  return price;
  });
 }
 
@@ -104,7 +119,8 @@ export async function platformBilling(){
 export async function manualOverride(raw:unknown){
  const u=await requireRole("SUPER_ADMIN"),d=overrideSchema.parse(raw),now=new Date(),end=new Date(d.endsAt);
  return db.$transaction(async tx=>{
-  await lockBillingCompany(tx,d.companyId);
+  const company=await lockBillingCompany(tx,d.companyId);
+  assertManagerSeatsAllowed(company.teamStructure,d.managerSeats);
   const usage=await tx.user.groupBy({by:["salesRole"],where:{companyId:d.companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},_count:true});
   const a=usage.find(x=>x.salesRole==="ADMIN")?._count??0,m=usage.find(x=>x.salesRole==="MANAGER")?._count??0,s=usage.find(x=>x.salesRole==="SALES")?._count??0;
   if(d.adminSeats<a||d.managerSeats<m||d.salesSeats<s)throw new Error("SEATS_BELOW_USAGE");

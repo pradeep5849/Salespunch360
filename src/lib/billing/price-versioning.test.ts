@@ -1,0 +1,13 @@
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({role:vi.fn(),transaction:vi.fn(),raw:vi.fn(),update:vi.fn(),create:vi.fn(),audit:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({requireRole:mocks.role,requirePermission:vi.fn(),requirePermissionForMutation:vi.fn()}));vi.mock('@/lib/db',()=>({db:{$transaction:mocks.transaction}}));
+import {changePrice} from './service';
+const oldStart=new Date('2027-01-01T00:00:00Z'),cutoff=new Date('2027-01-01T00:00:00.001Z');
+function tx(){return {$queryRaw:mocks.raw,billingPrice:{update:mocks.update,create:mocks.create},billingAuditEvent:{create:mocks.audit}}}
+beforeEach(()=>{vi.clearAllMocks();mocks.role.mockResolvedValue({id:'super'});mocks.raw.mockImplementation((strings:TemplateStringsArray)=>strings.join(' ').includes('FROM "billing_prices"')?[{id:'old-price',effectiveFrom:oldStart,cutoff}]:[]);mocks.create.mockImplementation(({data})=>({id:'new-price',...data}));mocks.transaction.mockImplementation(work=>work(tx()))});
+describe('safe runtime price versioning',()=>{
+ it('requires Super Admin',async()=>{mocks.role.mockRejectedValue(new Error('Not authorized'));await expect(changePrice({role:'ADMIN',period:'MONTHLY',amount:'275',currency:'INR'})).rejects.toThrow('Not authorized');expect(mocks.transaction).not.toHaveBeenCalled()});
+ it.each(['ADMIN','MANAGER','SALES'] as const)('versions %s using a locked database-time cutoff',async role=>{await changePrice({role,period:'MONTHLY',amount:'275',currency:'INR'});const sql=mocks.raw.mock.calls.map(c=>c[0].join(' ')).join('\n');expect(sql).toContain('pg_advisory_xact_lock');expect(sql).toContain('FOR UPDATE');expect(sql).toContain('statement_timestamp()');expect(sql).toContain('GREATEST');expect(mocks.update).toHaveBeenCalledWith({where:{id:'old-price'},data:{effectiveUntil:cutoff}});expect(mocks.create).toHaveBeenCalledWith({data:expect.objectContaining({role,effectiveFrom:cutoff,createdByUserId:'super'})});expect(mocks.audit).toHaveBeenCalledWith({data:expect.objectContaining({type:'PRICING_CHANGED',entityId:'new-price'})})});
+ it('closes a future-effective row strictly after its start and reuses that cutoff',async()=>{await changePrice({role:'ADMIN',period:'YEARLY',amount:'3000',currency:'INR'});expect(cutoff.getTime()).toBeGreaterThan(oldStart.getTime());expect(mocks.update.mock.calls[0][0].data.effectiveUntil).toBe(mocks.create.mock.calls[0][0].data.effectiveFrom)});
+ it('preserves history and never touches paid BillingOrder snapshots',async()=>{await changePrice({role:'SALES',period:'MONTHLY',amount:'175',currency:'INR'});expect(mocks.update).toHaveBeenCalledWith({where:{id:'old-price'},data:{effectiveUntil:cutoff}});expect(tx()).not.toHaveProperty('billingOrder')});
+});
