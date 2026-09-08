@@ -1,0 +1,1 @@
+'use server';import {revalidatePath} from 'next/cache';import {transferPrimaryAdmin} from '@/lib/users/primary-admin';export async function transferPrimaryAdminAction(form:FormData){await transferPrimaryAdmin({targetUserId:form.get('targetUserId')});revalidatePath('/workspace/employees')}
