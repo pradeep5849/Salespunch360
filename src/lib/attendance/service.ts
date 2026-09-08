@@ -246,7 +246,7 @@ export async function getAttendanceOverview() {
     select: {
       id: true,
       name: true,
-      role: true,
+      salesRole: true,
       isActive: true,
       attendances: {
         where: { endedAt: null },
