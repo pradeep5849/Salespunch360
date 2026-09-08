@@ -23,7 +23,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.subscription.mockResolvedValue({ id: "subscription", sourceOrder: { id: "order", managerSeats: 0, salesSeats: 0, retainManagerUserIds: [], retainSalesUserIds: [], seatReductionAppliedAt: null } });
   mocks.order.mockResolvedValue({ managerSeats: 0, salesSeats: 0, retainManagerUserIds: [], retainSalesUserIds: [], seatReductionAppliedAt: null });
-  mocks.users.mockResolvedValue([{ id: "manager", role: "MANAGER" }, { id: "sales", role: "SALES" }]);
+  mocks.users.mockResolvedValue([{ id: "manager", salesRole: "MANAGER" }, { id: "sales", salesRole: "SALES" }]);
   mocks.updateUsers.mockResolvedValue({ count: 2 });
   mocks.findUser.mockImplementation(({where})=>Promise.resolve({id:where.id}));
   mocks.transaction.mockImplementation(async (work) => work({
@@ -38,12 +38,14 @@ beforeEach(() => {
 });
 
 describe("billing seat reduction lifecycle writes", () => {
-  it("globally deactivates removed Sales seats without removing workspace roles", async () => {
+  it("suspends removed Sales seats without globally deactivating identities", async () => {
     await applyDueSeatReductions("company");
     const write = mocks.updateUser.mock.calls[0][0];
-    expect(write.data).toEqual({ isActive: false, salesAccessActive: false, accountAccessActive: false });
+    expect(write.data).toEqual({ salesAccessActive: false });
     expect(write.data).not.toHaveProperty("salesRole");
     expect(write.data).not.toHaveProperty("accountRole");
+    expect(write.data).not.toHaveProperty("isActive");
+    expect(write.data).not.toHaveProperty("accountAccessActive");
     expect(mocks.deleteWeb).toHaveBeenCalled();
     expect(mocks.deleteMobile).toHaveBeenCalled();
     expect(mocks.deletePush).toHaveBeenCalled();

@@ -28,7 +28,7 @@ export const employeeRoleDimensions = (salesRole: "MANAGER" | "SALES") => ({
   role: projectLegacyRole({ salesRole, accountRole: null }),
 });
 const employeeSelect = {
-  id: true, name: true, email: true, phone: true, employeeCode: true,
+  id: true, name: true, email: true, phone: true, employeeCode: true, designation:true,dateOfJoining:true,branchAccessScope:true,branchAccesses:{select:{branch:{select:{id:true,name:true,code:true,isActive:true}}}},
   // Compatibility/display only; authorization and employee identity use salesRole.
   role: true, salesRole: true, salesAccessActive: true,
   isActive: true, managerId: true, managerType: true, companyId: true, travelAllowanceEnabled:true, travelRatePerKm:true,
@@ -62,7 +62,7 @@ async function enforceAdminReadiness(tx:Prisma.TransactionClient,companyId:strin
 
 async function enforceAvailableSeat(tx: Prisma.TransactionClient, companyId: string, salesRole: "MANAGER" | "SALES") {
   const company = await lockAndLoadCompany(tx, companyId);
-  const activeCount = await tx.user.count({ where: { companyId, salesRole, isActive: true } });
+  const activeCount = await tx.user.count({ where: { companyId, salesRole, isActive: true, salesAccessActive:true } });
   const now=new Date(),paid=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"}});
   if(paid){const limit=salesRole==="MANAGER"?paid.managerSeats:paid.salesSeats;if(activeCount>=limit)throw new EmployeePolicyError("SEAT_LIMIT");return;}
   assertCanActivate(getTrialStatus(company).effectiveStatus, salesRole, activeCount);
@@ -190,10 +190,10 @@ export async function reactivateEmployeeForCompany(companyId:string,raw:unknown,
     const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, salesAccessActive: true, isActive: true } });
     assertManagedEmployee(companyId, employee);
     if (company.teamStructure === "SALES_ONLY" && employee.salesRole === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
-    if (employee.isActive) return;
+    if (employee.isActive && employee.salesAccessActive) return;
     await enforceAvailableSeat(tx, companyId, employee.salesRole);
     const salesAccessActive = Boolean(employee.salesRole) && hasSalesWorkspace(company.productEdition);
-    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, salesRole: employee.salesRole, isActive: false }, data: { isActive: true, salesAccessActive } });
+    const updated = await tx.user.updateMany({ where: { id: employeeId, companyId, salesRole: employee.salesRole }, data: { isActive: true, salesAccessActive } });
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
   });
 }

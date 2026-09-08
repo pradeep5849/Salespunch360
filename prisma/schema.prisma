@@ -780,6 +780,7 @@ model CompanySubscription {
   company       Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
   status        PaidSubscriptionStatus
   billingPeriod BillingPeriod
+  adminSeats    Int                    @default(0)
   managerSeats  Int
   salesSeats    Int
   startsAt      DateTime
@@ -800,8 +801,10 @@ model BillingOrder {
   createdByUserId        String               @db.Uuid
   createdByUser          User                 @relation("OrderCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   billingPeriod          BillingPeriod
+  adminSeats             Int                  @default(0)
   managerSeats           Int
   salesSeats             Int
+  adminUnitPrice         Decimal              @default(0) @db.Decimal(18, 2)
   managerUnitPrice       Decimal              @db.Decimal(18, 2)
   salesUnitPrice         Decimal              @db.Decimal(18, 2)
   currency               String               @db.Char(3)
@@ -812,6 +815,7 @@ model BillingOrder {
   provider               String               @default("UNCONFIGURED") @db.VarChar(40)
   providerOrderId        String?              @unique @db.VarChar(200)
   idempotencyKey         String               @unique @db.VarChar(100)
+  retainAdminUserIds     String[]             @default([]) @db.Uuid
   retainManagerUserIds   String[]             @default([]) @db.Uuid
   retainSalesUserIds     String[]             @default([]) @db.Uuid
   seatReductionAppliedAt DateTime?
