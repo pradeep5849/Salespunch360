@@ -32,7 +32,7 @@ const employeeSelect = {
   // Compatibility/display only; authorization and employee identity use salesRole.
   role: true, salesRole: true, salesAccessActive: true,
   isActive: true, managerId: true, managerType: true, companyId: true, travelAllowanceEnabled:true, travelRatePerKm:true,
-  manager: { select: { id: true, name: true, isActive: true } },
+  manager: { select: { id: true, name: true, isActive: true, salesAccessActive: true } },
 } satisfies Prisma.UserSelect;
 
 async function requireSalesUserAdmin(mutation: boolean) {

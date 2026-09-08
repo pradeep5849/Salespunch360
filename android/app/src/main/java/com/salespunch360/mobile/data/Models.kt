@@ -12,8 +12,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class Capabilities(val canManageEmployees:Boolean=false,val canManageSalesSettings:Boolean=false,val canAccessSalesBilling:Boolean=false,val canViewReports:Boolean=false)
 @Serializable data class Entitlement(val state:String,val operationalWritesAllowed:Boolean,val adminLimit:Int=0,val adminUsage:Int=0,val managerLimit:Int=0,val salesLimit:Int=0,val managerUsage:Int=0,val salesUsage:Int=0)
 @Serializable data class CompanySettings(val name:String,val teamStructure:TeamStructure,val subscriptionStatus:String,val trialStartedAt:String?=null,val trialEndsAt:String?=null,val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val checkoutRequiredBeforeNextCheckIn:Boolean,val attendanceGeofenceEnabled:Boolean,val attendanceReferenceLatitude:String?=null,val attendanceReferenceLongitude:String?=null,val attendanceGeofenceRadiusMeters:Int?=null,val customerCheckInGeofenceEnabled:Boolean,val customerCheckInGeofenceRadiusMeters:Int?=null)
-@Serializable data class ActiveSubscription(val billingPeriod:String,val managerSeats:Int,val salesSeats:Int,val startsAt:String,val endsAt:String,val status:String)
-@Serializable data class CompanyEntitlement(val trialActive:Boolean,val paidActive:Boolean,val state:String,val managerLimit:Int,val salesLimit:Int,val managerUsage:Int,val salesUsage:Int,val operationalWritesAllowed:Boolean,val subscription:ActiveSubscription?=null)
+@Serializable data class ActiveSubscription(val billingPeriod:String,val adminSeats:Int=0,val managerSeats:Int,val salesSeats:Int,val startsAt:String,val endsAt:String,val status:String)
+@Serializable data class CompanyEntitlement(val trialActive:Boolean,val paidActive:Boolean,val state:String,val adminLimit:Int=0,val adminUsage:Int=0,val managerLimit:Int,val salesLimit:Int,val managerUsage:Int,val salesUsage:Int,val operationalWritesAllowed:Boolean,val subscription:ActiveSubscription?=null)
 @Serializable data class BillingPrice(val id:String,val role:String,val period:String,val amount:String,val currency:String)
 @Serializable data class CompanyContext(val company:CompanySettings,val entitlement:CompanyEntitlement,val prices:List<BillingPrice>,val paymentProvider:String,val paymentMessage:String)
 @Serializable data class OperationsSettings(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val checkoutRequiredBeforeNextCheckIn:Boolean)
@@ -25,8 +25,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class TargetsContext(val targets:List<SalesTarget>,val options:List<TargetOption>)
 @Serializable data class TargetRequest(val assignedUserId:String,val metric:String,val periodType:String,val startDate:String,val endDate:String,val targetValue:String,val currencyCode:String="INR")
 @Serializable data class EditTargetRequest(val targetId:String,val version:Int,val assignedUserId:String,val metric:String,val periodType:String,val startDate:String,val endDate:String,val targetValue:String,val currencyCode:String="INR")
-@Serializable data class EmployeeManager(val id:String,val name:String,val isActive:Boolean)
-@Serializable data class Employee(val id:String,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val role:MobileRole,val isActive:Boolean,val managerId:String?=null,val manager:EmployeeManager?=null)
+@Serializable data class EmployeeManager(val id:String,val name:String,val isActive:Boolean,val salesAccessActive:Boolean)
+@Serializable data class Employee(val id:String,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val role:MobileRole,val isActive:Boolean,val salesAccessActive:Boolean,val managerId:String?=null,val manager:EmployeeManager?=null)
 @Serializable data class EmployeeEntitlement(val state:String,val operationalWritesAllowed:Boolean,val managerLimit:Int?=null,val salesLimit:Int?=null,val managerUsage:Int,val salesUsage:Int)
 @Serializable data class EmployeeContext(val employees:List<Employee>,val teamStructure:TeamStructure,val entitlement:EmployeeEntitlement)
 @Serializable data class CreateEmployeeRequest(val role:MobileRole,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String,val managerId:String?=null)
@@ -53,3 +53,11 @@ internal fun attendanceRequest(action:String,location:LocationPayload?):Attendan
  if(location!=null)java.time.Instant.parse(location.capturedAt)
  return AttendanceRequest(action,location)
 }
+
+internal fun employeeStatus(employee:Employee)=when{!employee.isActive->"Inactive identity";!employee.salesAccessActive->"Sales access suspended";else->"Active"}
+internal fun employeeAction(employee:Employee)=when{!employee.isActive->"Reactivate identity";!employee.salesAccessActive->"Restore Sales access";else->"Deactivate employee"}
+internal fun isActiveEmployee(employee:Employee)=employee.isActive&&employee.salesAccessActive
+internal fun selectableManagers(employees:List<Employee>)=employees.filter{it.role==MobileRole.MANAGER&&isActiveEmployee(it)}
+internal fun seatSummaryLines(entitlement:Entitlement,structure:TeamStructure)=buildList{add("Primary Admin — Included / Free");add("Additional Admin — ${entitlement.adminUsage} / ${entitlement.adminLimit}");if(structure==TeamStructure.MANAGERS_AND_SALES)add("Manager — ${entitlement.managerUsage} / ${entitlement.managerLimit}");add("Sales — ${entitlement.salesUsage} / ${entitlement.salesLimit}")}
+internal fun subscriptionSeatLines(entitlement:CompanyEntitlement,structure:TeamStructure)=buildList{add("Primary Admin — Included / Free");add("Additional Admin — ${entitlement.adminUsage} / ${entitlement.adminLimit}");if(structure==TeamStructure.MANAGERS_AND_SALES)add("Manager — ${entitlement.managerUsage} / ${entitlement.managerLimit}");add("Sales — ${entitlement.salesUsage} / ${entitlement.salesLimit}")}
+internal fun visiblePricingRoles(structure:TeamStructure)=if(structure==TeamStructure.MANAGERS_AND_SALES)setOf("ADMIN","MANAGER","SALES")else setOf("ADMIN","SALES")
