@@ -3,7 +3,7 @@ const mocks=vi.hoisted(()=>({company:vi.fn(),findAttendance:vi.fn(),createAttend
 vi.mock("@/lib/db",()=>({db:{$transaction:vi.fn(async(fn)=>fn({$queryRaw:mocks.query,company:{findUnique:mocks.company},attendance:{findFirst:mocks.findAttendance,create:mocks.createAttendance}}))}}));
 vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:mocks.entitlement}));
 import{mobileAttendanceAction}from"./attendance";import{mobileAttendanceSchema}from"./validation";import type{MobilePrincipal}from"./auth";
-const user:MobilePrincipal={id:"sales",name:"Sales",email:"s@example.com",role:"SALES",managerType:null,companyId:"company"};
+const user:MobilePrincipal={id:"sales",name:"Sales",email:"s@example.com",salesRole:"SALES",managerType:null,companyId:"company"};
 const fresh=()=>({latitude:0,longitude:0,accuracyMeters:5,capturedAt:new Date()});
 beforeEach(()=>{vi.clearAllMocks();mocks.findAttendance.mockResolvedValue(null);mocks.createAttendance.mockResolvedValue({id:"attendance",startedAt:new Date(),endedAt:null});mocks.company.mockResolvedValue({attendanceEnabled:true,gpsTrackingEnabled:true,attendanceGeofenceEnabled:false,attendanceReferenceLatitude:null,attendanceReferenceLongitude:null,attendanceGeofenceRadiusMeters:null})});
 describe("mobile attendance start policy",()=>{

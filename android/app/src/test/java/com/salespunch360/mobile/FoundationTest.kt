@@ -7,7 +7,9 @@ import org.junit.Assert.*
 import org.junit.Test
 class FoundationTest{
  @Test fun `super admin has no mobile role`(){assertFalse(MobileRole.entries.any{it.name=="SUPER_ADMIN"})}
- @Test fun `company admin primary navigation is exact`(){assertEquals(listOf("Home","Employees","Reports","More"),RoleNavigation.destinations(MobileRole.COMPANY_ADMIN).map{it.label})}
+ @Test fun `company admin primary navigation is exact`(){assertEquals(listOf("Home","Employees","Reports","More"),RoleNavigation.destinations(MobileRole.PRIMARY_ADMIN).map{it.label})}
+ @Test fun `additional admin uses admin family navigation`(){assertEquals(RoleNavigation.destinations(MobileRole.PRIMARY_ADMIN).map{it.label},RoleNavigation.destinations(MobileRole.ADMIN).map{it.label})}
+ @Test fun `canonical mobile roles decode without company admin`(){assertEquals(listOf("PRIMARY_ADMIN","ADMIN","MANAGER","SALES"),MobileRole.entries.map{it.name})}
  @Test fun `manager primary navigation is exact`(){assertEquals(listOf("Home","Team","Reports","More"),RoleNavigation.destinations(MobileRole.MANAGER).map{it.label})}
  @Test fun `sales primary navigation is exact`(){assertEquals(listOf("Home","Customers","Leads","More"),RoleNavigation.destinations(MobileRole.SALES).map{it.label})}
  @Test fun `older bootstrap compatibility defaults team structure`(){assertEquals(TeamStructure.MANAGERS_AND_SALES,TeamStructure.valueOf("MANAGERS_AND_SALES"))}

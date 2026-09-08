@@ -23,6 +23,7 @@ const tx = {
       return "select" in data ? user : { sessionVersion: user.sessionVersion };
     }),
   },
+  company: { findUnique: vi.fn().mockResolvedValue({ productEdition: "SALESPUNCH360" }) },
   pushDevice: { deleteMany: vi.fn(({ where }: { where: { userId: string } }) => { state.push = state.push.filter((row) => row.userId !== where.userId); }) },
   session: {
     deleteMany: vi.fn(({ where }: { where: { userId: string } }) => { state.web = state.web.filter((row) => row.userId !== where.userId); }),
@@ -60,7 +61,7 @@ import { createSession, getAuthenticatedUser } from "./session";
 import { replacePasswordAndRevoke } from "./session-generation";
 import { authenticateMobileToken, createMobileSession } from "@/lib/mobile/auth";
 
-const user = (id: string, email = `${id}@example.com`) => ({ id, name: id, email, passwordHash: "hash-password", role: "SALES", managerType: null, salesRole: "SALES", accountRole: null, salesAccessActive: true, accountAccessActive: false, companyId: "company", isActive: true, sessionVersion: 0 });
+const user = (id: string, email = `${id}@example.com`) => ({ id, name: id, email, passwordHash: "hash-password", role: "SALES", managerType: null, salesRole: "SALES", accountRole: null, salesAccessActive: true, accountAccessActive: false, companyId: "company", isActive: true, sessionVersion: 0, company: { productEdition: "SALESPUNCH360" } });
 
 beforeEach(() => {
   vi.clearAllMocks(); state.cookie = ""; state.tokenNumber = 0; state.users = new Map([["a", user("a")], ["b", user("b")]]); state.web = []; state.mobile = []; state.push = []; state.lockTail = Promise.resolve();
@@ -68,7 +69,7 @@ beforeEach(() => {
 
 describe("single active login rotation", () => {
   it("web login replaces web and mobile sessions and removes only that user's push devices", async () => {
-    state.web.push({ userId: "a", sessionVersion: 0 }, { userId: "b", sessionVersion: 0 });
+    state.web.push({ userId: "a", sessionVersion: 0 }, { userId: "b", sessionVersion: 0, company: { productEdition: "SALESPUNCH360" } });
     state.mobile.push({ userId: "a" }, { userId: "b" }); state.push.push({ userId: "a", mobileSessionId: "old" }, { userId: "b", mobileSessionId: "other" });
     await createSession("a", true, "hash-password");
     expect(state.web.filter((row) => row.userId === "a")).toHaveLength(1); expect(state.web.find((row) => row.userId === "a")?.sessionVersion).toBe(1);

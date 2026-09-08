@@ -2,14 +2,15 @@ package com.salespunch360.mobile.data
 import kotlinx.serialization.Serializable
 @Serializable data class LoginRequest(val identifier:String,val password:String)
 @Serializable data class LoginResponse(val accessToken:String,val expiresAt:String,val bootstrap:Bootstrap)
-@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val entitlement:Entitlement,val attendance:Attendance?)
-@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val role:MobileRole)
-@Serializable enum class MobileRole{COMPANY_ADMIN,MANAGER,SALES}
+@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val capabilities:Capabilities=Capabilities(),val entitlement:Entitlement,val attendance:Attendance?)
+@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole)
+@Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)
-@Serializable data class Features(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean)
-@Serializable data class Entitlement(val state:String,val operationalWritesAllowed:Boolean,val managerLimit:Int=0,val salesLimit:Int=0,val managerUsage:Int=0,val salesUsage:Int=0)
+@Serializable data class Features(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val fieldWorkEnabled:Boolean=false)
+@Serializable data class Capabilities(val canManageEmployees:Boolean=false,val canManageSalesSettings:Boolean=false,val canAccessSalesBilling:Boolean=false,val canViewReports:Boolean=false)
+@Serializable data class Entitlement(val state:String,val operationalWritesAllowed:Boolean,val adminLimit:Int=0,val adminUsage:Int=0,val managerLimit:Int=0,val salesLimit:Int=0,val managerUsage:Int=0,val salesUsage:Int=0)
 @Serializable data class CompanySettings(val name:String,val teamStructure:TeamStructure,val subscriptionStatus:String,val trialStartedAt:String?=null,val trialEndsAt:String?=null,val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val checkoutRequiredBeforeNextCheckIn:Boolean,val attendanceGeofenceEnabled:Boolean,val attendanceReferenceLatitude:String?=null,val attendanceReferenceLongitude:String?=null,val attendanceGeofenceRadiusMeters:Int?=null,val customerCheckInGeofenceEnabled:Boolean,val customerCheckInGeofenceRadiusMeters:Int?=null)
 @Serializable data class ActiveSubscription(val billingPeriod:String,val managerSeats:Int,val salesSeats:Int,val startsAt:String,val endsAt:String,val status:String)
 @Serializable data class CompanyEntitlement(val trialActive:Boolean,val paidActive:Boolean,val state:String,val managerLimit:Int,val salesLimit:Int,val managerUsage:Int,val salesUsage:Int,val operationalWritesAllowed:Boolean,val subscription:ActiveSubscription?=null)

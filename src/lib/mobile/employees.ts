@@ -1,9 +1,9 @@
 import {effectiveEntitlement} from '@/lib/billing/entitlement';
 import {createManagerForCompany,createSalesEmployeeForCompany,deactivateEmployeeForCompany,getEmployeeManagementContextForCompany,reactivateEmployeeForCompany} from '@/lib/employees/service';
-import type {MobilePrincipal} from './auth';
+import {mobileCan,type MobilePrincipal} from './auth';
 
 export class MobileEmployeeError extends Error{constructor(public code:string,public status=400){super(code)}}
-function admin(principal:MobilePrincipal){if(principal.role!=='COMPANY_ADMIN')throw new MobileEmployeeError('FORBIDDEN',403);return principal.companyId}
+function admin(principal:MobilePrincipal){if(!mobileCan(principal,'SALES_USER_ADMIN'))throw new MobileEmployeeError('FORBIDDEN',403);return principal.companyId}
 export async function mobileEmployeeContext(principal:MobilePrincipal){const companyId=admin(principal);const [context,entitlement]=await Promise.all([getEmployeeManagementContextForCompany(companyId),effectiveEntitlement(companyId)]);return{employees:context.employees,teamStructure:context.teamStructure,entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage}}}
 export async function mobileCreateEmployee(principal:MobilePrincipal,raw:unknown){const companyId=admin(principal);if(!raw||typeof raw!=='object')throw new MobileEmployeeError('INVALID_INPUT');const {role,...input}=raw as Record<string,unknown>;if(role==='MANAGER')return createManagerForCompany(companyId,input,principal.id);if(role==='SALES')return createSalesEmployeeForCompany(companyId,input,principal.id);throw new MobileEmployeeError('INVALID_ROLE')}
 export async function mobileSetEmployeeActive(principal:MobilePrincipal,raw:unknown){const companyId=admin(principal);if(!raw||typeof raw!=='object')throw new MobileEmployeeError('INVALID_INPUT');const {employeeId,isActive}=raw as Record<string,unknown>;if(typeof isActive!=='boolean')throw new MobileEmployeeError('INVALID_INPUT');const input={employeeId};if(isActive)await reactivateEmployeeForCompany(companyId,input,principal.id);else await deactivateEmployeeForCompany(companyId,input,principal.id);return{ok:true}}

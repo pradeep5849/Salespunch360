@@ -4,14 +4,14 @@ import { geofenceSettingsSchema } from "@/lib/geofence/validation";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { currentPrices } from "@/lib/billing/service";
 import { PAYMENT_PROVIDER_STATUS } from "@/lib/billing/provider";
-import type { MobilePrincipal } from "./auth";
+import { mobileCan, type MobilePrincipal } from "./auth";
 
 export class MobileCompanyError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }
 
 function admin(principal: MobilePrincipal) {
-  if (principal.role !== "COMPANY_ADMIN") throw new MobileCompanyError("FORBIDDEN", 403);
+  if (!mobileCan(principal, "SALES_SETTINGS")) throw new MobileCompanyError("FORBIDDEN", 403);
   return principal.companyId;
 }
 
