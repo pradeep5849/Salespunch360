@@ -7,6 +7,7 @@ const employeeService = readFileSync("src/lib/employees/service.ts", "utf8");
 describe("F3J boundaries and lifecycle preservation", () => {
   it("serializes on the user row and wraps every public mutation in one serializable transaction", () => {
     expect(assignment).toMatch(/FROM "users"[\s\S]*FOR UPDATE/);
+    expect(assignment).toMatch(/WHERE "id" = \$\{assignment\.employeeId\}::uuid\s+AND "companyId" = \$\{companyId\}::uuid\s+FOR UPDATE/);
     expect(assignment.indexOf("FOR UPDATE")).toBeLessThan(assignment.indexOf("tx.user.findFirst"));
     expect(assignment).toContain("TransactionIsolationLevel.Serializable");
   });

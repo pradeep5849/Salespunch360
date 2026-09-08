@@ -28,7 +28,7 @@ const branchTwo = "33333333-3333-4333-8333-333333333333";
 const actor = { id: "admin", companyId, role: "COMPANY_ADMIN", salesRole: "ADMIN" };
 
 function transactionTarget(overrides: Record<string, unknown> = {}) {
-  const target = { id: employeeId, companyId, salesRole: "SALES", ...overrides };
+  const target = { id: employeeId, companyId, salesRole: "SALES", role: "SALES", ...overrides };
   return {
     $queryRaw: vi.fn().mockResolvedValue([{ locked: 1 }]),
     user: {
@@ -65,7 +65,7 @@ describe("public branch assignment authorization and reads", () => {
 
   it("reads canonical employee assignments without lifecycle filtering and retains inactive branches", async () => {
     mocks.userFindFirst.mockResolvedValue({
-      id: employeeId, companyId, salesRole: "MANAGER", branchAccessScope: "SELECTED_BRANCHES",
+      id: employeeId, companyId, salesRole: "MANAGER", role: "MANAGER", branchAccessScope: "SELECTED_BRANCHES",
       branchAccesses: [{ branch: { id: branchOne, name: "Old", code: "OLD", isPrimary: false, isActive: false } }],
     });
     await expect(getEmployeeBranchAssignment(employeeId)).resolves.toEqual({
@@ -80,7 +80,7 @@ describe("public branch assignment authorization and reads", () => {
   });
 
   it("rejects noncanonical and cross-company targets without disclosing them", async () => {
-    for (const target of [null, { id: employeeId, companyId: "other", salesRole: "SALES", branchAccesses: [] }, { id: employeeId, companyId, salesRole: null, branchAccesses: [] }, { id: employeeId, companyId, salesRole: "ADMIN", branchAccesses: [] }]) {
+    for (const target of [null, { id: employeeId, companyId: "other", salesRole: "SALES", role: "SALES", branchAccesses: [] }, { id: employeeId, companyId, salesRole: null, role: "MANAGER", branchAccesses: [] }, { id: employeeId, companyId, salesRole: "ADMIN", role: "COMPANY_ADMIN", branchAccesses: [] }]) {
       mocks.userFindFirst.mockResolvedValueOnce(target);
       await expect(getEmployeeBranchAssignment(employeeId)).rejects.toThrow("NOT_FOUND");
     }
@@ -99,6 +99,9 @@ describe("atomic replacement", () => {
     const tx = transactionTarget({ isActive: false, salesAccessActive: false });
     await replaceBranchAssignment(tx as unknown as Prisma.TransactionClient, companyId, { employeeId, branchAccessScope: "SELECTED_BRANCHES", branchIds: [branchOne, branchTwo] });
     expect(tx.$queryRaw).toHaveBeenCalledBefore(tx.user.findFirst);
+    const [sql, lockedEmployeeId, lockedCompanyId] = tx.$queryRaw.mock.calls[0];
+    expect(Array.from(sql).join("?")).toMatch(/WHERE "id" = \?::uuid\s+AND "companyId" = \?::uuid\s+FOR UPDATE/);
+    expect([lockedEmployeeId, lockedCompanyId]).toEqual([employeeId, companyId]);
     expect(tx.branch.findMany).toHaveBeenCalledWith({ where: { id: { in: [branchOne, branchTwo] }, companyId, isActive: true }, select: { id: true } });
     expect(tx.userBranchAccess.deleteMany).toHaveBeenCalledBefore(tx.userBranchAccess.createMany);
     expect(tx.userBranchAccess.createMany).toHaveBeenCalledWith({ data: [{ userId: employeeId, branchId: branchOne }, { userId: employeeId, branchId: branchTwo }] });
@@ -130,10 +133,28 @@ describe("atomic replacement", () => {
     await expect(replaceBranchAssignment(tx as unknown as Prisma.TransactionClient, companyId, { employeeId, branchAccessScope: "SELECTED_BRANCHES", branchIds: [branchOne, branchTwo] })).rejects.toThrow("INVARIANT_VIOLATION");
   });
 
-  it.each(["MANAGER", "SALES"] as const)("allows canonical %s targets independent of legacy role", async (salesRole) => {
-    const tx = transactionTarget({ salesRole, role: "SUPER_ADMIN" });
+  it.each([["MANAGER", "MANAGER"], ["SALES", "SALES"]] as const)("allows canonical %s targets with an ordinary compatible legacy role", async (salesRole, role) => {
+    const tx = transactionTarget({ salesRole, role });
     await expect(replaceBranchAssignment(tx as unknown as Prisma.TransactionClient, companyId, { employeeId, branchAccessScope: "SELECTED_BRANCHES", branchIds: [branchOne, branchTwo] })).resolves.toMatchObject({ userId: employeeId });
     expect(tx.user.update.mock.calls[0][0].data).toEqual({ branchAccessScope: "SELECTED_BRANCHES" });
+  });
+
+  it.each(["MANAGER", "SALES"] as const)("rejects canonical %s when legacy role is SUPER_ADMIN before replacement writes", async (salesRole) => {
+    const tx = transactionTarget({ salesRole, role: "SUPER_ADMIN" });
+    await expect(replaceBranchAssignment(tx as unknown as Prisma.TransactionClient, companyId, { employeeId, branchAccessScope: "ALL_BRANCHES" })).rejects.toThrow("NOT_FOUND");
+    expect(tx.userBranchAccess.deleteMany).not.toHaveBeenCalled();
+    expect(tx.user.update).not.toHaveBeenCalled();
+  });
+
+  it.each([[null, "MANAGER"], [null, "SALES"]] as const)("rejects salesRole %s even when legacy role is %s", async (salesRole, role) => {
+    const tx = transactionTarget({ salesRole, role });
+    await expect(replaceBranchAssignment(tx as unknown as Prisma.TransactionClient, companyId, { employeeId, branchAccessScope: "ALL_BRANCHES" })).rejects.toThrow("NOT_FOUND");
+    expect(tx.userBranchAccess.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it.each(["MANAGER", "SALES"] as const)("rejects canonical %s with legacy SUPER_ADMIN on the read path", async (salesRole) => {
+    mocks.userFindFirst.mockResolvedValue({ id: employeeId, companyId, salesRole, role: "SUPER_ADMIN", branchAccessScope: "ALL_BRANCHES", branchAccesses: [] });
+    await expect(getEmployeeBranchAssignment(employeeId)).rejects.toThrow("NOT_FOUND");
   });
 
   it.each([null, "PRIMARY_ADMIN", "ADMIN"])("rejects canonical target role %s", async (salesRole) => {

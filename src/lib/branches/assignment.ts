@@ -37,6 +37,7 @@ export async function getEmployeeBranchAssignment(employeeId: string) {
       id: true,
       companyId: true,
       salesRole: true,
+      role: true,
       branchAccessScope: true,
       branchAccesses: { select: { branch: { select: currentBranchSelect } }, orderBy: { branchId: "asc" } },
     },
@@ -64,11 +65,12 @@ export async function replaceBranchAssignment(tx: Prisma.TransactionClient, comp
   await tx.$queryRaw<{ locked: number }[]>`
     SELECT 1::int AS "locked" FROM "users"
     WHERE "id" = ${assignment.employeeId}::uuid
+      AND "companyId" = ${companyId}::uuid
     FOR UPDATE
   `;
   const target = await tx.user.findFirst({
     where: { id: assignment.employeeId, companyId, salesRole: { in: [...eligibleSalesRoles] } },
-    select: { id: true, companyId: true, salesRole: true },
+    select: { id: true, companyId: true, salesRole: true, role: true },
   });
   assertBranchAssignmentTarget(companyId, target);
 
