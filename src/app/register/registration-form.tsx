@@ -24,20 +24,36 @@ export function RegistrationForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [logoPreview,setLogoPreview]=useState<string>();
+  const [productEdition, setProductEdition] = useState("");
+  const [productChosen, setProductChosen] = useState(false);
   useEffect(()=>()=>{if(logoPreview)URL.revokeObjectURL(logoPreview)},[logoPreview]);
   const confirmationEntered = confirmation.length > 0;
   const passwordsMatch = confirmationEntered && password === confirmation;
   return (
     <form action={formAction} className="registration-form">
       <div className="form-section">
-        <div className="section-heading"><span>1</span><div><h2>Company information</h2><p>Identify your team workspace.</p></div></div>
+        <div className="section-heading"><span>1</span><div><h2>Choose product</h2><p>Select the workspace your company needs.</p></div></div>
+        <input type="hidden" name="productEdition" value={productEdition} />
+        <div className="product-grid" role="radiogroup" aria-label="Product edition">
+          {[
+            ["SALESPUNCH360", "SalesPunch360", "Field Sales & CRM"],
+            ["SALESPUNCH360_ACCOUNT", "SalesPunch360 Account", "Accounts & Business Management"],
+            ["SALESPUNCH360_PLUS", "SalesPunch360 Plus", "Sales + Accounts"],
+          ].map(([value, title, description]) => <button key={value} className={`product-card ${productEdition === value ? "selected" : ""}`} type="button" role="radio" aria-checked={productEdition === value} onClick={() => setProductEdition(value)}><strong>{title}</strong><span>{description}</span><small>15-day free trial</small></button>)}
+        </div>
+        <FieldError errors={state.fieldErrors?.productEdition} />
+        {!productChosen && <button className="register-button" type="button" disabled={!productEdition} onClick={() => setProductChosen(true)}>Continue</button>}
+      </div>
+      {productChosen && <>
+      <div className="form-section">
+        <div className="section-heading"><span>2</span><div><h2>Company information</h2><p>Identify your team workspace.</p></div></div>
         <div className="field-grid">
           <div className="field full"><label htmlFor="companyName">Company name</label><input id="companyName" name="companyName" required maxLength={120} autoComplete="organization" placeholder="Acme Sales" /><FieldError errors={state.fieldErrors?.companyName} /></div>
 
         </div>
       </div>
       <div className="form-section">
-        <div className="section-heading"><span>2</span><div><h2>Administrator information</h2><p>This account will manage your company. Team structure is selected after email verification.</p></div></div>
+        <div className="section-heading"><span>3</span><div><h2>Administrator information</h2><p>This account will manage your company. Team structure is selected after email verification.</p></div></div>
         <div className="field-grid">
           <div className="field full"><label htmlFor="companyLogo">Company Logo (optional)</label><input id="companyLogo" name="companyLogo" type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{const file=event.target.files?.[0];setLogoPreview(file?URL.createObjectURL(file):undefined)}}/><small>JPEG, PNG, or WebP. Maximum 5 MB.</small>{logoPreview&&<img className="company-logo-preview" src={logoPreview} alt="Company logo preview"/>}</div><div className="field full"><label htmlFor="adminName">Full name</label><input id="adminName" name="adminName" required maxLength={120} autoComplete="name" placeholder="Alex Morgan" /><FieldError errors={state.fieldErrors?.adminName} /></div>
           <div className="field full"><label htmlFor="adminEmail">Email address</label><input id="adminEmail" name="adminEmail" type="email" required autoComplete="email" placeholder="alex@company.com" /><FieldError errors={state.fieldErrors?.adminEmail} /></div>
@@ -49,6 +65,7 @@ export function RegistrationForm() {
       {state.error && <p className="form-error" role="alert">{state.error}</p>}
       <button className="register-button" type="submit" disabled={pending}>{pending ? "Creating workspace…" : "Start my free trial"}</button>
       <p className="terms">By continuing, you agree to use SalesPunch360 responsibly.</p>
+      </>}
     </form>
   );
 }

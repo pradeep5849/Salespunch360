@@ -3,6 +3,7 @@ import { loginSchema, registrationSchema } from "./validation";
 
 describe("authentication validation", () => {
   const validRegistration = {
+    productEdition: "SALESPUNCH360",
     companyName: "Acme",
     adminName: "Ada Admin",
     adminEmail: "ada@acme.com",
@@ -17,6 +18,8 @@ describe("authentication validation", () => {
     const result = registrationSchema.parse({ ...validRegistration, adminEmail: "ADA@ACME.COM" });
     expect(result.adminEmail).toBe("ada@acme.com");
   });
+  it.each(["SALESPUNCH360", "SALESPUNCH360_ACCOUNT", "SALESPUNCH360_PLUS"])("accepts product %s", productEdition => expect(registrationSchema.safeParse({ ...validRegistration, productEdition }).success).toBe(true));
+  it("rejects an invalid product", () => expect(registrationSchema.safeParse({ ...validRegistration, productEdition: "FORGED" }).success).toBe(false));
   it("rejects browser-supplied role and company fields when strict", () => {
     expect(registrationSchema.safeParse({ ...validRegistration, role: "SUPER_ADMIN", companyId: "other" }).success).toBe(false);
   });

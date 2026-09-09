@@ -194,6 +194,8 @@ model Company {
   slug                                String                   @unique
   teamStructure                       TeamStructure            @default(MANAGERS_AND_SALES)
   productEdition                      ProductEdition           @default(SALESPUNCH360)
+  /// Number of indivisible four-role Account packages. Trial Account/Plus companies start with one.
+  accountPackageQuantity              Int                      @default(0)
   trialStartedAt                      DateTime?
   trialEndsAt                         DateTime?
   subscriptionStatus                  SubscriptionStatus       @default(SUSPENDED)
