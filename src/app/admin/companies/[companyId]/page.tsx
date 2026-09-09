@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { permanentlyDeleteCompanyAction } from "@/app/actions/permanent-company-delete";
-import { previewPermanentCompanyDelete, STORAGE_OWNERSHIP_BLOCKED } from "@/lib/admin/permanent-company-delete";
-import { requireRole } from "@/lib/auth/authorization";
+import { previewPermanentCompanyDelete, requireGlobalSuperAdmin, showsActiveTrialWarning, STORAGE_OWNERSHIP_BLOCKED } from "@/lib/admin/permanent-company-delete";
 export default async function CompanyDangerPage({ params, searchParams }: { params: Promise<{ companyId: string }>; searchParams: Promise<{ prepare?: string; error?: string }> }) {
-  await requireRole("SUPER_ADMIN"); const { companyId } = await params; const query = await searchParams; let preview = null; let blocked = false;
+  await requireGlobalSuperAdmin(); const { companyId } = await params; const query = await searchParams; let preview = null; let blocked = false;
   if (query.prepare === "1") { try { preview = await previewPermanentCompanyDelete(companyId); } catch (error) { if (error instanceof Error && error.message === STORAGE_OWNERSHIP_BLOCKED) blocked = true; else if (error instanceof Error && error.message.includes("TENANT_NOT_FOUND")) notFound(); else throw error; } }
-  const active = preview && (preview.company.subscriptionStatus === "ACTIVE" || Boolean(preview.company.trialEndsAt && preview.company.trialEndsAt > new Date()));
+  const active = preview && showsActiveTrialWarning(preview.company);
   return <main className="billing-content company-danger-page"><Link href="/admin/billing" className="ghost-button admin-action">← Company list</Link><p className="eyebrow">Platform administration · Company</p><h1>{preview?.company.name ?? "Company management"}</h1>
     <section className="danger-zone"><h2>Danger Zone</h2><h3>Permanently Delete Company</h3><p>This action is permanent and irreversible. All Company users, operational data, tenant billing/history, and Company photos, logo, and storage will be deleted. This cannot be undone.</p>
       {!preview && !blocked && <Link className="danger-button admin-action" href={`/admin/companies/${companyId}?prepare=1`}>Prepare permanent deletion</Link>}{blocked && <p className="danger-alert" role="alert">{STORAGE_OWNERSHIP_BLOCKED}</p>}

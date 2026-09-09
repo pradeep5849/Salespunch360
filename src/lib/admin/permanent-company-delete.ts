@@ -1,4 +1,4 @@
-import { requireRole, requireRoleForMutation } from "@/lib/auth/authorization";
+import { AuthorizationError, requireUser, requireUserForMutation } from "@/lib/auth/authorization";
 import { privateStorage } from "@/lib/storage";
 import { tenantCleanupDatabase } from "@/lib/tenant-cleanup-database";
 import { purgeTenant, validateStorageOwnership, type CleanupDatabase, type CleanupStorage, type Inventory } from "@/lib/tenant-cleanup";
@@ -8,8 +8,24 @@ export const STORAGE_OWNERSHIP_BLOCKED = "Deletion blocked because tenant storag
 export type PermanentDeletePreview = { company: Inventory["company"]; counts: Inventory["counts"]; totalRows: number; totalStorageObjects: number };
 function validId(companyId: string) { if (!UUID.test(companyId)) throw new Error("INVALID_COMPANY_ID"); }
 
+export async function requireGlobalSuperAdmin() {
+  const user = await requireUser();
+  if (user.role !== "SUPER_ADMIN" || user.companyId !== null) throw new AuthorizationError();
+  return user;
+}
+
+export async function requireGlobalSuperAdminForMutation() {
+  const user = await requireUserForMutation();
+  if (user.role !== "SUPER_ADMIN" || user.companyId !== null) throw new AuthorizationError();
+  return user;
+}
+
+export function showsActiveTrialWarning(company: Pick<Inventory["company"], "subscriptionStatus" | "trialEndsAt">, now = new Date()) {
+  return company.subscriptionStatus === "ACTIVE" || company.subscriptionStatus === "TRIAL" || Boolean(company.trialEndsAt && company.trialEndsAt > now);
+}
+
 export async function previewPermanentCompanyDelete(companyId: string, database: CleanupDatabase = tenantCleanupDatabase): Promise<PermanentDeletePreview> {
-  await requireRole("SUPER_ADMIN");
+  await requireGlobalSuperAdmin();
   validId(companyId);
   const inventory = await database.inventory(companyId);
   if (!inventory) throw new Error("TENANT_NOT_FOUND_OR_ALREADY_CLEANED");
@@ -19,7 +35,7 @@ export async function previewPermanentCompanyDelete(companyId: string, database:
 }
 
 export async function permanentlyDeleteCompany(companyId: string, typedConfirmation: string, database: CleanupDatabase = tenantCleanupDatabase, storage: CleanupStorage = { delete: key => privateStorage().delete(key) }) {
-  await requireRoleForMutation("SUPER_ADMIN");
+  await requireGlobalSuperAdminForMutation();
   validId(companyId);
   return purgeTenant(database, storage, companyId, inventory => {
     if (typedConfirmation !== `DELETE ${inventory.company.slug}`) throw new Error("PERMANENT_DELETE_CONFIRMATION_INCORRECT");
