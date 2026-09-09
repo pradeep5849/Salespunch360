@@ -24,20 +24,24 @@ export async function resolvePushDevices(
     where: {
       id: actorUserId,
       isActive: true,
-      role: { in: ["MANAGER", "SALES"] },
+      salesAccessActive: true,
+      salesRole: { in: ["MANAGER", "SALES"] },
+      role: { not: "SUPER_ADMIN" },
       companyId: { not: null },
     },
-    select: { id: true, companyId: true, role: true, managerId: true },
+    select: { id: true, companyId: true, salesRole: true, managerId: true },
   });
   if (!actor?.companyId) return [];
   const recipients = await db.user.findMany({
     where: {
       companyId: actor.companyId,
       isActive: true,
+      salesAccessActive: true,
+      role: { not: "SUPER_ADMIN" },
       OR: [
-        { role: "COMPANY_ADMIN" },
-        ...(actor.role === "SALES" && actor.managerId
-          ? [{ id: actor.managerId, role: "MANAGER" as const }]
+        { salesRole: { in: ["PRIMARY_ADMIN", "ADMIN"] } },
+        ...(actor.salesRole === "SALES" && actor.managerId
+          ? [{ id: actor.managerId, salesRole: "MANAGER" as const }]
           : []),
       ],
     },
@@ -51,7 +55,7 @@ export async function resolvePushDevices(
       mobileSession: {
         revokedAt: null,
         expiresAt: { gt: now },
-        user: { isActive: true, companyId: actor.companyId },
+        user: { isActive: true, salesAccessActive: true, role: { not: "SUPER_ADMIN" }, companyId: actor.companyId },
       },
     },
     select: { id: true, fcmToken: true, userId: true },

@@ -22,6 +22,6 @@ export function repeatVisitSummary(previousVisitCount: number) {
   return { previousVisitCount, isFirstVisit: previousVisitCount === 0, isRepeatVisit: previousVisitCount > 0 };
 }
 
-export function canManagerViewVisit(managerId: string, visitUser: { id: string; role: string; managerId: string | null }) {
-  return visitUser.id === managerId || (visitUser.role === "SALES" && visitUser.managerId === managerId);
+export function canManagerViewVisit(managerId: string, visitUser: { id: string; salesRole: string | null; managerId: string | null }) {
+  return visitUser.id === managerId || (visitUser.salesRole === "SALES" && visitUser.managerId === managerId);
 }

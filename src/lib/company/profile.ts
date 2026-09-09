@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth/authorization";
+import { requirePermission } from "@/lib/auth/authorization";
 
 const optional = (max: number) => z.string().trim().max(max).transform(v => v || null);
 export const companyProfileSchema = z.object({
@@ -12,5 +12,5 @@ export const companyProfileSchema = z.object({
 }).strict();
 
 export const profileComplete = (company: Record<string, unknown>) => ["name","addressLine1","city","state","postalCode","country","primaryContactName","primaryPhone","contactEmail"].every(key => typeof company[key] === "string" && Boolean((company[key] as string).trim())) && (company.teamStructure === "MANAGERS_AND_SALES" || company.teamStructure === "SALES_ONLY");
-export async function getCompanyProfile() { const actor=await requireRole("COMPANY_ADMIN","MANAGER","SALES"); if(!actor.companyId) throw new Error("NOT_FOUND"); const company=await db.company.findUniqueOrThrow({where:{id:actor.companyId}}); return {profile:{...company,primaryContactName:company.primaryContactName||actor.name,contactEmail:company.contactEmail||actor.email},editable:actor.role==="COMPANY_ADMIN"}; }
-export async function updateCompanyProfile(raw: unknown) { const actor=await requireRole("COMPANY_ADMIN"); if(!actor.companyId) throw new Error("NOT_FOUND"); const data=companyProfileSchema.parse(raw); return db.company.update({where:{id:actor.companyId},data}); }
+export async function getCompanyProfile() { const actor=await requirePermission("COMPANY_VIEW"); if(!actor.companyId) throw new Error("NOT_FOUND"); const company=await db.company.findUniqueOrThrow({where:{id:actor.companyId}}); return {profile:{...company,primaryContactName:company.primaryContactName||actor.name,contactEmail:company.contactEmail||actor.email},editable:actor.salesRole==="PRIMARY_ADMIN"}; }
+export async function updateCompanyProfile(raw: unknown) { const actor=await requirePermission("SALES_SETTINGS"); if(!actor.companyId) throw new Error("NOT_FOUND"); const data=companyProfileSchema.parse(raw); return db.company.update({where:{id:actor.companyId},data}); }

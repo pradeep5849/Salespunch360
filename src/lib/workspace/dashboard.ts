@@ -8,9 +8,9 @@ const isAdmin=(actor:DashboardActor)=>actor.salesRole==="PRIMARY_ADMIN"||actor.s
 const isManager=(actor:DashboardActor)=>actor.salesRole==="MANAGER";
 const isSales=(actor:DashboardActor)=>actor.salesRole==="SALES";
 export function dashboardEmployeeWhere(actor:DashboardActor){
- if(isAdmin(actor))return{companyId:actor.companyId,role:{in:["MANAGER","SALES"] as ("MANAGER"|"SALES")[]},isActive:true};
- if(isManager(actor))return{companyId:actor.companyId,role:"SALES" as const,managerId:actor.id,isActive:true};
- return{companyId:actor.companyId,id:actor.id,role:"SALES" as const,isActive:true};
+ if(isAdmin(actor))return{companyId:actor.companyId,salesRole:{in:["MANAGER","SALES"] as ("MANAGER"|"SALES")[]},salesAccessActive:true,isActive:true};
+ if(isManager(actor))return{companyId:actor.companyId,salesRole:"SALES" as const,salesAccessActive:true,managerId:actor.id,isActive:true};
+ return{companyId:actor.companyId,id:actor.id,salesRole:"SALES" as const,salesAccessActive:true,isActive:true};
 }
 export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:string}){
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};
