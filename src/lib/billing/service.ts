@@ -21,7 +21,7 @@ export async function changePrice(raw:unknown){
  return db.$transaction(async tx=>{
   const priceKey=`${d.role}:${d.period}:${d.currency}`;
   // The advisory lock also serializes the no-current-row case; the row lock protects an existing snapshot.
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${priceKey},0))`;
+  await tx.$queryRaw<{locked:number}[]>`WITH "price_lock" AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtextextended(${priceKey},0))) SELECT 1::int AS "locked" FROM "price_lock"`;
   const current=await tx.$queryRaw<{id:string;effectiveFrom:Date;cutoff:Date}[]>`
    SELECT "id","effectiveFrom",GREATEST(statement_timestamp()::timestamp,"effectiveFrom" + INTERVAL '1 millisecond') AS cutoff
    FROM "billing_prices" WHERE "role"=${d.role}::"BillingRole" AND "period"=${d.period}::"BillingPeriod"
