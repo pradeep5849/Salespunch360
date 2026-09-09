@@ -31,6 +31,7 @@ New, unshipped closure migrations execute afterward:
 
 1. `20260909010000_f4_registration_company_setup`: additive `CompanyModule` and safe current-Sales defaults.
 2. `20260909020000_f0_f6_final_closure`: additive operational `branchId` columns, deterministic same-Company Primary-Branch backfill, null validation, composite Company/Branch foreign keys and indexes, one-primary-Branch constraint, and additive employee financial-foundation tables.
+3. `20260909030000_f0_f6_tenant_invariant_hardening`: additive composite tenant keys and foreign keys for compensation, advances, reimbursements, reviewer linkage, and salary-history/profile linkage, plus positive-money and valid-date-range checks. Existing single-column employee/profile foreign keys are replaced without deleting application data.
 
 No closure migration drops a table/column, replaces an enum, deletes records, recreates Companies, resets users, or rewrites billing/subscription history.
 
