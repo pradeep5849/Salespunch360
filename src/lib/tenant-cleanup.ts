@@ -34,6 +34,7 @@ export type Inventory = {
 export interface LockedCleanupDatabase {
   inventory(companyId: string): Promise<Inventory | null>;
   hasSuperAdmin(companyId: string): Promise<boolean>;
+  assertTransactionAlive(): Promise<void>;
   deleteTenant(companyId: string): Promise<void>;
   verifyTenantAbsent(companyId: string): Promise<boolean>;
 }
@@ -108,11 +109,15 @@ export async function cleanupTenants(db: CleanupDatabase, storage: CleanupStorag
     if (!inventory) throw new Error(`TENANT_NOT_FOUND_OR_ALREADY_CLEANED:${companyId}`);
     validateStorageOwnership(inventory);
     const storageResults: Array<{ companyId: string; key: string; status: "DELETED_OR_MISSING" }> = [];
+    await locked.assertTransactionAlive();
     for (const { key } of inventory.storage) {
+      await locked.assertTransactionAlive();
       try { await storage.delete(key); }
       catch { throw new Error(`STORAGE_DELETE_FAILED:${key}`); }
+      await locked.assertTransactionAlive();
       storageResults.push({ companyId, key, status: "DELETED_OR_MISSING" });
     }
+    await locked.assertTransactionAlive();
     await locked.deleteTenant(companyId);
     if (!(await locked.verifyTenantAbsent(companyId))) throw new Error(`RESIDUE_DETECTED:${companyId}`);
     return { mode: "EXECUTE" as const, inventories: [inventory], storageResults };

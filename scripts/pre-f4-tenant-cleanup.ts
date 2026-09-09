@@ -46,6 +46,7 @@ function lockedAdapter(tx: Prisma.TransactionClient): LockedCleanupDatabase {
   return {
     inventory: companyId => inventory(tx, companyId),
     hasSuperAdmin: companyId => hasSuperAdmin(tx, companyId),
+    assertTransactionAlive: async () => { await tx.$queryRaw`SELECT 1`; },
     async deleteTenant(companyId) {
       selectedUserIds = (await tx.user.findMany({ where: { companyId }, select: { id: true } })).map(user => user.id);
       const id = Prisma.sql`${companyId}::uuid`;
@@ -89,7 +90,7 @@ const adapter: CleanupDatabase = {
     if (!company.length) throw new Error(`TENANT_NOT_FOUND_OR_ALREADY_CLEANED:${companyId}`);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${companyId}, 0))`;
     return work(lockedAdapter(tx));
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
+  }, { maxWait: 15_000, timeout: 300_000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
 };
 
 async function main() {
