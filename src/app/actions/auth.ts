@@ -22,8 +22,11 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
   if (!canAuthenticate(user) || !user || !(await verifyPassword(user.passwordHash, parsed.data.password))) {
     return { error: "Invalid email or password." };
   }
+  if (user.role === "SUPER_ADMIN" && user.companyId !== null) {
+    return { error: "Invalid email or password." };
+  }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
-  redirect("/workspace");
+  redirect(user.role === "SUPER_ADMIN" ? "/admin" : "/workspace");
 }
 
 export async function signOut() {

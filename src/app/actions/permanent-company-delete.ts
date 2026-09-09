@@ -11,5 +11,5 @@ export async function permanentlyDeleteCompanyAction(formData: FormData) {
     const code = error instanceof Error && error.message === "PERMANENT_DELETE_CONFIRMATION_INCORRECT" ? "confirmation" : "blocked";
     redirect(`/admin/companies/${encodeURIComponent(companyId)}?prepare=1&error=${code}`);
   }
-  redirect("/admin/billing?deleted=1");
+  redirect("/admin/companies?deleted=1");
 }

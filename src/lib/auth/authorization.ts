@@ -38,6 +38,20 @@ export async function requireRole(...roles: Role[]) {
   return user;
 }
 
+/** Authorize only the platform identity, never a tenant-attached role value. */
+export async function requireGlobalSuperAdmin() {
+  const user = await requireUser();
+  if (user.role !== "SUPER_ADMIN" || user.companyId !== null) throw new AuthorizationError();
+  return user;
+}
+
+/** Non-redirecting Server Action counterpart for platform administration. */
+export async function requireGlobalSuperAdminForMutation() {
+  const user = await requireUserForMutation();
+  if (user.role !== "SUPER_ADMIN" || user.companyId !== null) throw new AuthorizationError();
+  return user;
+}
+
 export async function requireTenantUser() {
   const user = await requireUser();
   if (user.role === "SUPER_ADMIN" || !user.companyId) throw new AuthorizationError();

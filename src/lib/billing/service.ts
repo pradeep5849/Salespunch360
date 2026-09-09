@@ -1,6 +1,6 @@
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
-import {requirePermission,requirePermissionForMutation,requireRole} from "@/lib/auth/authorization";
+import {requireGlobalSuperAdmin,requireGlobalSuperAdminForMutation,requirePermission,requirePermissionForMutation} from "@/lib/auth/authorization";
 import {calculateOrder,addBillingPeriod,renewalWindow} from "./math";
 import {orderRequestSchema,priceChangeSchema,overrideSchema} from "./validation";
 import type {VerifiedPayment} from "./provider";
@@ -17,7 +17,7 @@ export async function currentPrices(){
 }
 
 export async function changePrice(raw:unknown){
- const u=await requireRole("SUPER_ADMIN"),d=priceChangeSchema.parse(raw);
+ const u=await requireGlobalSuperAdminForMutation(),d=priceChangeSchema.parse(raw);
  return db.$transaction(async tx=>{
   const priceKey=`${d.role}:${d.period}:${d.currency}`;
   // The advisory lock also serializes the no-current-row case; the row lock protects an existing snapshot.
@@ -99,12 +99,12 @@ export async function billingDashboard(){
 }
 
 export async function platformBilling(){
- await requireRole("SUPER_ADMIN");
+ await requireGlobalSuperAdmin();
  return{prices:await currentPrices(),companies:await db.company.findMany({select:{id:true,name:true,subscriptionStatus:true,trialStartedAt:true,trialEndsAt:true,subscriptions:{orderBy:{endsAt:"desc"},take:1},_count:{select:{users:true,billingOrders:true,payments:true}}},orderBy:{name:"asc"},take:500})};
 }
 
 export async function manualOverride(raw:unknown){
- const u=await requireRole("SUPER_ADMIN"),d=overrideSchema.parse(raw),now=new Date(),end=new Date(d.endsAt);
+ const u=await requireGlobalSuperAdminForMutation(),d=overrideSchema.parse(raw),now=new Date(),end=new Date(d.endsAt);
  return db.$transaction(async tx=>{
   const company=await lockBillingCompany(tx,d.companyId);
   assertManagerSeatsAllowed(company.teamStructure,d.managerSeats);

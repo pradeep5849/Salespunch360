@@ -1,6 +1,6 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 const mocks=vi.hoisted(()=>({role:vi.fn(),transaction:vi.fn(),raw:vi.fn(),update:vi.fn(),create:vi.fn(),audit:vi.fn()}));
-vi.mock('@/lib/auth/authorization',()=>({requireRole:mocks.role,requirePermission:vi.fn(),requirePermissionForMutation:vi.fn()}));vi.mock('@/lib/db',()=>({db:{$transaction:mocks.transaction}}));
+vi.mock('@/lib/auth/authorization',()=>({requireGlobalSuperAdmin:mocks.role,requireGlobalSuperAdminForMutation:mocks.role,requirePermission:vi.fn(),requirePermissionForMutation:vi.fn()}));vi.mock('@/lib/db',()=>({db:{$transaction:mocks.transaction}}));
 import {changePrice} from './service';
 const oldStart=new Date('2027-01-01T00:00:00Z'),cutoff=new Date('2027-01-01T00:00:00.001Z');
 function tx(){return {$queryRaw:mocks.raw,billingPrice:{update:mocks.update,create:mocks.create},billingAuditEvent:{create:mocks.audit}}}

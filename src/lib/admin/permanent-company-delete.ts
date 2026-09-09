@@ -1,4 +1,4 @@
-import { AuthorizationError, requireUser, requireUserForMutation } from "@/lib/auth/authorization";
+import { requireGlobalSuperAdmin, requireGlobalSuperAdminForMutation } from "@/lib/auth/authorization";
 import { privateStorage } from "@/lib/storage";
 import { tenantCleanupDatabase } from "@/lib/tenant-cleanup-database";
 import { purgeTenant, validateStorageOwnership, type CleanupDatabase, type CleanupStorage, type Inventory } from "@/lib/tenant-cleanup";
@@ -7,18 +7,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 export const STORAGE_OWNERSHIP_BLOCKED = "Deletion blocked because tenant storage ownership could not be verified.";
 export type PermanentDeletePreview = { company: Inventory["company"]; counts: Inventory["counts"]; totalRows: number; totalStorageObjects: number };
 function validId(companyId: string) { if (!UUID.test(companyId)) throw new Error("INVALID_COMPANY_ID"); }
-
-export async function requireGlobalSuperAdmin() {
-  const user = await requireUser();
-  if (user.role !== "SUPER_ADMIN" || user.companyId !== null) throw new AuthorizationError();
-  return user;
-}
-
-export async function requireGlobalSuperAdminForMutation() {
-  const user = await requireUserForMutation();
-  if (user.role !== "SUPER_ADMIN" || user.companyId !== null) throw new AuthorizationError();
-  return user;
-}
 
 export function showsActiveTrialWarning(company: Pick<Inventory["company"], "subscriptionStatus" | "trialEndsAt">, now = new Date()) {
   return company.subscriptionStatus === "ACTIVE" || company.subscriptionStatus === "TRIAL" || Boolean(company.trialEndsAt && company.trialEndsAt > now);
