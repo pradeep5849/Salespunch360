@@ -129,7 +129,17 @@ function lockedAdapter(tx: Prisma.TransactionClient): LockedCleanupDatabase {
       selectedUserIds = (await tx.user.findMany({ where: { companyId }, select: { id: true } })).map(user => user.id);
       const id = Prisma.sql`${companyId}::uuid`;
       await runCleanupDatabaseStage("DETACH_BILLING_PRICE_CREATOR", () => tx.$executeRaw`UPDATE "billing_prices" SET "createdByUserId" = NULL WHERE "createdByUserId" IN (SELECT "id" FROM "users" WHERE "companyId" = ${id})`);
-      await runCleanupDatabaseStage("CLEAR_LEAD_VISIT_REFERENCES", () => tx.$executeRaw`UPDATE "leads" SET "sourceVisitId"=NULL, "checkInReferenceVisitId"=NULL WHERE "companyId"=${id}`);
+      await runCleanupDatabaseStage("CLEAR_LEAD_VISIT_REFERENCES", () => tx.$executeRaw(Prisma.sql`
+        UPDATE "leads"
+        SET
+          "source" = CASE
+            WHEN "source" = 'CUSTOMER_VISIT'::"LeadSource" THEN 'OTHER'::"LeadSource"
+            ELSE "source"
+          END,
+          "sourceVisitId" = NULL,
+          "checkInReferenceVisitId" = NULL
+        WHERE "companyId" = ${id}
+      `));
       await runCleanupDatabaseStage("CLEAR_CUSTOMER_VISIT_REFERENCE", () => tx.$executeRaw`UPDATE "customers" SET "checkInReferenceVisitId"=NULL WHERE "companyId"=${id}`);
       const ordered = ["push_devices","sessions","mobile_sessions","email_verification_tokens","user_branch_accesses","follow_up_tasks","lead_activities","lead_deletion_audits","geofence_events","sales_targets","daily_travel_approvals","visit_photos","location_points","payment_transactions","company_subscriptions","billing_audit_events","customer_visits","leads","customers","attendances","billing_orders","pending_storage_deletions","branches"];
       for (const table of ordered) {
