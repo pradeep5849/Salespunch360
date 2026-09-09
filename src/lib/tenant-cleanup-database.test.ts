@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 const database = vi.hoisted(() => ({ transaction: vi.fn() }));
@@ -14,7 +15,10 @@ function sqlText(query: unknown): string {
 function cleanupTransaction(failAfterLeadUpdate = false) {
   const statements: unknown[] = [];
   const tx = {
-    $queryRaw: vi.fn(async () => [{ id: "11111111-1111-4111-8111-111111111111" }]),
+    $queryRaw: vi.fn(async (query: unknown) => {
+      statements.push(query);
+      return [{ id: "11111111-1111-4111-8111-111111111111" }];
+    }),
     $executeRaw: vi.fn(async (query: unknown) => {
       statements.push(query);
       if (failAfterLeadUpdate && sqlText(query).includes('UPDATE "customers"')) throw new Error("later cleanup failure");
@@ -102,5 +106,65 @@ describe("lead visit reference cleanup", () => {
       stage: "CLEAR_LEAD_VISIT_REFERENCES",
       details: { prismaCode: "P2010", databaseCode: "23514", constraint: "leads_source_visit_check" },
     });
+  });
+});
+
+describe("append-only lead activity tenant purge", () => {
+  const lockedCompanyId = "11111111-1111-4111-8111-111111111111";
+  const otherCompanyId = "22222222-2222-4222-8222-222222222222";
+  const migration = readFileSync("prisma/migrations/20260909000000_scope_append_only_tenant_purge/migration.sql", "utf8");
+
+  it("keeps ordinary DELETE and every UPDATE blocked", () => {
+    expect(migration).toContain("IF TG_OP = 'DELETE'");
+    expect(migration).not.toMatch(/TG_OP\s*=\s*'UPDATE'[\s\S]+RETURN OLD/);
+    expect(migration).toContain("RAISE EXCEPTION 'lead activity is append-only'");
+  });
+
+  it("permits DELETE only when the local marker exactly matches the row company", () => {
+    expect(migration).toContain("current_setting('app.tenant_cleanup_company_id', true) = OLD.\"companyId\"::text");
+    expect(migration).toMatch(/IF TG_OP = 'DELETE'[\s\S]+OLD\."companyId"::text[\s\S]+RETURN OLD;/);
+    expect(migration).toContain("SET search_path = pg_catalog, public");
+  });
+
+  it("applies the same narrow purge gate to the other guaranteed append-only purge targets", () => {
+    for (const functionName of ["prevent_geofence_event_mutation", "prevent_billing_audit_mutation"]) {
+      const start = migration.indexOf(`FUNCTION public.${functionName}()`);
+      expect(start).toBeGreaterThan(-1);
+      const implementation = migration.slice(start, migration.indexOf("$$;", start));
+      expect(implementation).toContain("IF TG_OP = 'DELETE'");
+      expect(implementation).toContain("current_setting('app.tenant_cleanup_company_id', true) = OLD.\"companyId\"::text");
+      expect(implementation).toContain("SET search_path = pg_catalog, public");
+    }
+  });
+
+  it("uses the locked Company id for a parameterized transaction-local marker and tenant DELETE", async () => {
+    const harness = cleanupTransaction();
+    await tenantCleanupDatabase.withLockedTenant(otherCompanyId, locked => locked.deleteTenant(otherCompanyId));
+    const statements = harness.statements.map(sqlText).map(sql => sql.replace(/\s+/g, " ").trim());
+    const enable = statements.find(sql => sql.includes("set_config('app.tenant_cleanup_company_id'") && sql.includes(", true)"));
+    expect(enable).toContain(lockedCompanyId);
+    expect(enable).not.toContain(otherCompanyId);
+    expect(statements.find(sql => sql.includes('DELETE FROM "lead_activities"'))).toContain(`"companyId"=${lockedCompanyId}::uuid`);
+    expect(statements.some(sql => sql.includes("set_config('app.tenant_cleanup_company_id', '', true)"))).toBe(true);
+  });
+
+  it("does not reach marker clearing when lead activity deletion fails, leaving rollback to discard the local marker", async () => {
+    const harness = cleanupTransaction();
+    database.transaction.mockReset();
+    const tx = {
+      $queryRaw: vi.fn(async (query: unknown) => { harness.statements.push(query); return [{ id: lockedCompanyId }]; }),
+      $executeRaw: vi.fn(async (query: unknown) => {
+        harness.statements.push(query);
+        if (sqlText(query).includes('DELETE FROM "lead_activities"')) throw new Error("append-only failure");
+        return 1;
+      }),
+      user: { findMany: vi.fn(async () => []) },
+    };
+    database.transaction.mockImplementationOnce(async (work: (client: typeof tx) => Promise<unknown>) => work(tx));
+    await expect(tenantCleanupDatabase.withLockedTenant(lockedCompanyId, locked => locked.deleteTenant(lockedCompanyId)))
+      .rejects.toMatchObject({ stage: "DELETE_LEAD_ACTIVITIES" });
+    const statements = harness.statements.map(sqlText);
+    expect(statements.some(sql => sql.includes("set_config('app.tenant_cleanup_company_id'") && sql.includes(", true)"))).toBe(true);
+    expect(statements.some(sql => sql.includes("set_config('app.tenant_cleanup_company_id', '', true)"))).toBe(false);
   });
 });

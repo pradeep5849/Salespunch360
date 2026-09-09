@@ -17,16 +17,22 @@ export const CLEANUP_DATABASE_STAGES = [
   "DELETE_EMAIL_VERIFICATION_TOKENS",
   "DELETE_USER_BRANCH_ACCESSES",
   "DELETE_FOLLOW_UP_TASKS",
+  "ENABLE_LEAD_ACTIVITY_PURGE_SCOPE",
   "DELETE_LEAD_ACTIVITIES",
+  "CLEAR_LEAD_ACTIVITY_PURGE_SCOPE",
   "DELETE_LEAD_DELETION_AUDITS",
+  "ENABLE_GEOFENCE_EVENT_PURGE_SCOPE",
   "DELETE_GEOFENCE_EVENTS",
+  "CLEAR_GEOFENCE_EVENT_PURGE_SCOPE",
   "DELETE_SALES_TARGETS",
   "DELETE_DAILY_TRAVEL_APPROVALS",
   "DELETE_VISIT_PHOTOS",
   "DELETE_LOCATION_POINTS",
   "DELETE_PAYMENT_TRANSACTIONS",
   "DELETE_COMPANY_SUBSCRIPTIONS",
+  "ENABLE_BILLING_AUDIT_PURGE_SCOPE",
   "DELETE_BILLING_AUDIT_EVENTS",
+  "CLEAR_BILLING_AUDIT_PURGE_SCOPE",
   "DELETE_CUSTOMER_VISITS",
   "DELETE_LEADS",
   "DELETE_CUSTOMERS",
@@ -119,13 +125,14 @@ export async function tenantInventory(client: QueryClient, companyId: string): P
 
 const hasSuperAdmin = (client: QueryClient, companyId: string) => client.user.count({ where: { companyId, role: "SUPER_ADMIN" } }).then(Boolean);
 
-function lockedAdapter(tx: Prisma.TransactionClient): LockedCleanupDatabase {
+function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): LockedCleanupDatabase {
   let selectedUserIds: string[] = [];
   return {
     inventory: companyId => tenantInventory(tx, companyId),
     hasSuperAdmin: companyId => hasSuperAdmin(tx, companyId),
     assertTransactionAlive: async () => { await runCleanupDatabaseStage("ASSERT_TRANSACTION_ALIVE", () => tx.$queryRaw`SELECT 1`); },
-    async deleteTenant(companyId) {
+    async deleteTenant(_companyId) {
+      const companyId = lockedCompanyId;
       selectedUserIds = (await tx.user.findMany({ where: { companyId }, select: { id: true } })).map(user => user.id);
       const id = Prisma.sql`${companyId}::uuid`;
       await runCleanupDatabaseStage("DETACH_BILLING_PRICE_CREATOR", () => tx.$executeRaw`UPDATE "billing_prices" SET "createdByUserId" = NULL WHERE "createdByUserId" IN (SELECT "id" FROM "users" WHERE "companyId" = ${id})`);
@@ -144,7 +151,24 @@ function lockedAdapter(tx: Prisma.TransactionClient): LockedCleanupDatabase {
       const ordered = ["push_devices","sessions","mobile_sessions","email_verification_tokens","user_branch_accesses","follow_up_tasks","lead_activities","lead_deletion_audits","geofence_events","sales_targets","daily_travel_approvals","visit_photos","location_points","payment_transactions","company_subscriptions","billing_audit_events","customer_visits","leads","customers","attendances","billing_orders","pending_storage_deletions","branches"];
       for (const table of ordered) {
         const predicate = userOwned.has(table) ? Prisma.sql`"userId" IN (SELECT "id" FROM "users" WHERE "companyId"=${id})` : Prisma.sql`"companyId"=${id}`;
+        const purgeScopeStages = table === "lead_activities"
+          ? ["ENABLE_LEAD_ACTIVITY_PURGE_SCOPE", "CLEAR_LEAD_ACTIVITY_PURGE_SCOPE"] as const
+          : table === "geofence_events"
+            ? ["ENABLE_GEOFENCE_EVENT_PURGE_SCOPE", "CLEAR_GEOFENCE_EVENT_PURGE_SCOPE"] as const
+            : table === "billing_audit_events"
+              ? ["ENABLE_BILLING_AUDIT_PURGE_SCOPE", "CLEAR_BILLING_AUDIT_PURGE_SCOPE"] as const
+              : undefined;
+        if (purgeScopeStages) {
+          await runCleanupDatabaseStage(purgeScopeStages[0], () => tx.$queryRaw(Prisma.sql`
+            SELECT set_config('app.tenant_cleanup_company_id', ${companyId}, true)
+          `));
+        }
         await runCleanupDatabaseStage(deleteStages[table], () => tx.$executeRaw(Prisma.sql`DELETE FROM ${Prisma.raw(`"${table}"`)} WHERE ${predicate}`));
+        if (purgeScopeStages) {
+          await runCleanupDatabaseStage(purgeScopeStages[1], () => tx.$queryRaw(Prisma.sql`
+            SELECT set_config('app.tenant_cleanup_company_id', '', true)
+          `));
+        }
       }
       await runCleanupDatabaseStage("DELETE_USERS", () => tx.$executeRaw`DELETE FROM "users" WHERE "companyId"=${id} AND "role" <> 'SUPER_ADMIN'`);
       await runCleanupDatabaseStage("DELETE_COMPANY", () => tx.$executeRaw`DELETE FROM "companies" WHERE "id"=${id}`);
@@ -177,6 +201,6 @@ export const tenantCleanupDatabase: CleanupDatabase = {
     const company = await runCleanupDatabaseStage("LOCK_COMPANY", () => tx.$queryRaw<Array<{ id: string }>>`SELECT "id" FROM "companies" WHERE "id"=${companyId}::uuid FOR UPDATE`);
     if (!company.length) throw new Error(`TENANT_NOT_FOUND_OR_ALREADY_CLEANED:${companyId}`);
     await runCleanupDatabaseStage("ADVISORY_LOCK", () => tx.$queryRaw<Array<{ locked: number }>>`WITH "company_lock" AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtextextended(${companyId}, 0))) SELECT 1::int AS "locked" FROM "company_lock"`);
-    return work(lockedAdapter(tx));
+    return work(lockedAdapter(tx, company[0].id));
   }, { maxWait: 15_000, timeout: 300_000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
 };
