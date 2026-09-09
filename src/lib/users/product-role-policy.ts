@@ -1,5 +1,6 @@
 import type { AccountRole, ManagerType, ProductEdition, SalesRole } from "@prisma/client";
 import { editionAllowsAccount, editionAllowsSales } from "@/lib/product/entitlements";
+import type { TeamStructure } from "@prisma/client";
 
 export type UserRoleAssignment = {
   salesRole: Exclude<SalesRole, "PRIMARY_ADMIN"> | null;
@@ -14,6 +15,23 @@ export function validateUserRoleAssignment(edition: ProductEdition, input: UserR
   if (input.salesRole !== "MANAGER" && input.managerType) throw new Error("MANAGER_TYPE_NOT_ALLOWED");
   if (input.salesRole === "MANAGER" && !input.managerType) throw new Error("MANAGER_TYPE_REQUIRED");
   return input;
+}
+
+/** Sales roles are fixed identities here. ADMIN is exclusively owned by the
+ * Primary-Admin-only additional-admin service. */
+export function assertProductSalesAssignment(teamStructure: TeamStructure, salesRole: UserRoleAssignment["salesRole"], managerId: string | null) {
+  if (salesRole === "ADMIN") throw new Error("ADDITIONAL_ADMIN_DEDICATED_FLOW");
+  if (teamStructure === "SALES_ONLY" && (salesRole === "MANAGER" || managerId)) throw new Error("MANAGERS_DISABLED");
+}
+
+export function assertFixedSalesRole(current: SalesRole | null, requested: UserRoleAssignment["salesRole"]) {
+  if (current === "PRIMARY_ADMIN") throw new Error("PRIMARY_PROTECTED");
+  if (current === "ADMIN") throw new Error("ADDITIONAL_ADMIN_DEDICATED_FLOW");
+  if (current !== requested) throw new Error("SALES_ROLE_CHANGE_NOT_ALLOWED");
+}
+
+export function assertSalesAdminBranchScope(salesRole: SalesRole | null, scope: string) {
+  if ((salesRole === "PRIMARY_ADMIN" || salesRole === "ADMIN") && scope !== "ALL_BRANCHES") throw new Error("SALES_ADMIN_ALL_BRANCHES_REQUIRED");
 }
 
 export function assertEditableProductUser<T extends {companyId:string|null;salesRole:SalesRole|null}|null>(companyId:string,target:T): asserts target is Exclude<T,null>{

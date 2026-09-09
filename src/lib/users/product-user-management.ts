@@ -7,9 +7,11 @@ import { hashPassword } from "@/lib/auth/password";
 import { strongPasswordSchema } from "@/lib/auth/validation";
 import { revokeUserAuthenticationWithLock } from "@/lib/auth/session-generation";
 import { projectLegacyRole } from "./role-projection";
-import { assertEditableProductUser, roleChangeRequiresAuthenticationRevocation, validateUserRoleAssignment } from "./product-role-policy";
+import { assertEditableProductUser, assertFixedSalesRole, assertProductSalesAssignment, assertSalesAdminBranchScope, roleChangeRequiresAuthenticationRevocation, validateUserRoleAssignment } from "./product-role-policy";
 import { getTrialStatus } from "@/lib/trial/status";
 import { assertCanActivate } from "@/lib/employees/policy";
+import { profileComplete } from "@/lib/company/profile";
+import { assertManagerOnlyTransitionSafe } from "@/lib/employees/manager-type-transition";
 
 const optional = <T extends z.ZodTypeAny>(schema: T) => z.preprocess((value) => value === "" || value === undefined ? null : value, schema.nullable());
 const salesRole = optional(z.enum(["ADMIN", "MANAGER", "SALES"]));
@@ -48,9 +50,15 @@ export type ProductUserMutation = z.infer<typeof editProductUserSchema>;
 async function administrationActor(mutation: boolean) {
   const actor = mutation ? await requireUserForMutation() : await requireUser();
   if (!actor.companyId || actor.role === "SUPER_ADMIN") throw new AuthorizationError();
-  const company = await db.company.findUnique({ where: { id: actor.companyId }, select: { id: true, productEdition: true, teamStructure: true, subscriptionStatus: true, trialStartedAt:true,trialEndsAt:true } });
+  const company = await db.company.findUnique({ where: { id: actor.companyId }, select: { id: true, productEdition: true, teamStructure: true, subscriptionStatus: true, trialStartedAt:true,trialEndsAt:true,name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true } });
   if (!company || (!canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN") && !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN"))) throw new AuthorizationError();
   return { actor: { ...actor, companyId: actor.companyId }, company };
+}
+
+async function enforceCreationReadiness(tx: Prisma.TransactionClient, company: Awaited<ReturnType<typeof administrationActor>>["company"], actorId: string) {
+  const actor = await tx.user.findFirst({ where: { id: actorId, companyId: company.id, isActive: true }, select: { emailVerifiedAt: true } });
+  if (!actor?.emailVerifiedAt) throw new Error("EMAIL_VERIFICATION_REQUIRED");
+  if (!profileComplete(company)) throw new Error("COMPANY_PROFILE_REQUIRED");
 }
 
 function assertAssignment(edition: ProductEdition, input: { salesRole: SalesRole | null; accountRole: AccountRole | null; managerType: ManagerType | null; salesAccessActive?: boolean; accountAccessActive?: boolean }) {
@@ -60,6 +68,7 @@ function assertAssignment(edition: ProductEdition, input: { salesRole: SalesRole
 }
 
 async function validateRelations(tx: Prisma.TransactionClient, companyId: string, input: { salesRole: SalesRole | null; managerId: string | null; branchAccessScope: BranchAccessScope; branchIds: string[] }) {
+  assertSalesAdminBranchScope(input.salesRole, input.branchAccessScope);
   if (input.salesRole === "SALES" && input.managerId) {
     const manager = await tx.user.findFirst({ where: { id: input.managerId, companyId, isActive: true, salesAccessActive: true, salesRole: "MANAGER" }, select: { id: true } });
     if (!manager) throw new Error("INVALID_MANAGER");
@@ -102,12 +111,14 @@ export async function createProductUser(raw: unknown) {
   const { actor, company } = await administrationActor(true);
   const input = createProductUserSchema.parse(raw);
   assertAssignment(company.productEdition, { ...input, salesAccessActive: !!input.salesRole, accountAccessActive: !!input.accountRole });
+  assertProductSalesAssignment(company.teamStructure, input.salesRole, input.managerId);
   if (input.salesRole && !canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN")) throw new AuthorizationError();
   if (input.accountRole && !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN")) throw new AuthorizationError();
   if (company.subscriptionStatus === "SUSPENDED" || company.subscriptionStatus === "EXPIRED") throw new Error("WORKSPACE_SUSPENDED");
   const passwordHash = await hashPassword(input.password);
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${company.id}::uuid FOR UPDATE`;
+    await enforceCreationReadiness(tx, company, actor.id);
     if(input.salesRole)await enforceSalesSeat(tx,company,input.salesRole);
     const branchIds = await validateRelations(tx, company.id, input);
     const user = await tx.user.create({ data: {
@@ -133,9 +144,12 @@ export async function editProductUser(raw: unknown) {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
     const target = await tx.user.findFirst({ where: { id: input.userId, companyId: company.id, role: { not: "SUPER_ADMIN" } }, select: { id:true,companyId:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}} } });
     assertEditableProductUser(company.id,target);
+    assertFixedSalesRole(target.salesRole, input.salesRole);
+    assertProductSalesAssignment(company.teamStructure, input.salesRole, input.managerId);
     if (target.salesRole && !canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN")) throw new AuthorizationError();
     if (target.accountRole && !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN")) throw new AuthorizationError();
     const branchIds = await validateRelations(tx, company.id, input);
+    if (target.managerType === "FIELD_MANAGER" && input.managerType === "MANAGER_ONLY") await assertManagerOnlyTransitionSafe(tx, company.id, target.id);
     if(input.salesRole&&input.salesAccessActive&&(!target.salesAccessActive||target.salesRole!==input.salesRole))await enforceSalesSeat(tx,company,input.salesRole,target.id);
     const securityChanged = roleChangeRequiresAuthenticationRevocation({...target,salesRole:target.salesRole as Exclude<SalesRole,"PRIMARY_ADMIN">|null,branchIds:target.branchAccesses.map(({branchId})=>branchId)},{...input,branchIds});
     await tx.user.update({ where: { id: target.id }, data: {

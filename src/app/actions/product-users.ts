@@ -23,6 +23,9 @@ export async function manageProductUser(_: ProductUserState, form: FormData): Pr
       BRANCH_REQUIRED: "Select at least one Branch.", INVALID_MANAGER: "Select an active Manager from this Company.",
       SALES_ROLE_NOT_ENTITLED: "This product does not include Sales roles.", ACCOUNT_ROLE_NOT_ENTITLED: "This product does not include Account roles.",
       MANAGER_TYPE_REQUIRED: "Choose Field Manager or Manager Only.", MANAGER_TYPE_NOT_ALLOWED: "Manager type is only valid for a Manager.", ROLE_REQUIRED: "Choose at least one role.",
+      ADDITIONAL_ADMIN_DEDICATED_FLOW: "Additional Sales Admins can only be managed by the Primary Admin in the dedicated Administrators section.",
+      SALES_ROLE_CHANGE_NOT_ALLOWED: "Sales roles cannot be converted in the generic user editor.", SALES_ADMIN_ALL_BRANCHES_REQUIRED: "Sales Administrators must have access to all Branches.",
+      MANAGERS_DISABLED: "Managers and Manager assignments are disabled by this Company's team structure.", EMAIL_VERIFICATION_REQUIRED: "Verify your email before creating users.", COMPANY_PROFILE_REQUIRED: "Complete the Company profile before creating users.", MANAGER_TYPE_CONFLICT: "Resolve this Field Manager's open field work and assignments before changing to Manager Only.",
     };
     return { error: messages[code] ?? "Unable to save this user. Review the role, manager, and Branch selections." };
   }

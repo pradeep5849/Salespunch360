@@ -5,7 +5,8 @@ import { manageProductUser, type ProductUserState } from "@/app/actions/product-
 
 type User = { id:string;name:string;email:string;isActive:boolean;salesRole:SalesRole|null;accountRole:AccountRole|null;managerType:ManagerType|null;managerId:string|null;salesAccessActive:boolean;accountAccessActive:boolean;branchAccessScope:"ALL_BRANCHES"|"SELECTED_BRANCHES";branchAccesses:{branchId:string}[] };
 type Branch = { id:string;name:string;code:string;isPrimary:boolean };
-const salesEditRoles = [["", "No Sales role"], ["ADMIN", "Additional Sales Admin"], ["MANAGER", "Manager"], ["SALES", "Sales"]] as const;
+// Additional Sales Admin has one stronger Primary-Admin-only management path.
+const salesEditRoles = [["", "No Sales role"], ["MANAGER", "Manager"], ["SALES", "Sales"]] as const;
 const accountRoles = [["", "No Account role"], ["ACCOUNT_ADMIN", "Account Admin"], ["ACCOUNTANT", "Accountant"], ["PROJECT_MANAGER", "Project Manager"], ["DATA_ENTRY", "Data Entry"]] as const;
 
 function RoleFields({ edition, managers, user }: { edition:ProductEdition;managers:User[];user?:User }) {

@@ -10,6 +10,7 @@ import { hasSalesWorkspace } from "@/lib/product/edition";
 import { projectLegacyRole } from "@/lib/users/role-projection";
 import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
+import { assertManagerOnlyTransitionSafe } from "./manager-type-transition";
 import {
   createManagerSchema,
   createSalesSchema,
@@ -134,15 +135,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
     await assertSalesEmployeePhoneUnique(tx,companyId,data.phone,employee.id);
     if (employee.salesRole === "MANAGER" && data.managerId) throw new EmployeePolicyError("INVALID_MANAGER");
     if (employee.salesRole === "MANAGER" && data.managerType && data.managerType !== employee.managerType && data.managerType === "MANAGER_ONLY") {
-      const [openAttendance, openVisit, activeLead, pendingTask, assignedCustomer, activeTarget] = await Promise.all([
-        tx.attendance.findFirst({where:{companyId,userId:employee.id,endedAt:null},select:{id:true}}),
-        tx.customerVisit.findFirst({where:{companyId,userId:employee.id,checkedOutAt:null},select:{id:true}}),
-        tx.lead.findFirst({where:{companyId,assignedUserId:employee.id,stage:{in:["NEW","QUALIFIED","PROPOSAL","NEGOTIATION"]}},select:{id:true}}),
-        tx.followUpTask.findFirst({where:{companyId,assignedUserId:employee.id,status:"PENDING"},select:{id:true}}),
-        tx.customer.findFirst({where:{companyId,assignedUserId:employee.id},select:{id:true}}),
-        tx.salesTarget.findFirst({where:{companyId,assignedUserId:employee.id,endDate:{gte:new Date()}},select:{id:true}}),
-      ]);
-      if (openAttendance || openVisit || activeLead || pendingTask || assignedCustomer || activeTarget) throw new EmployeePolicyError("MANAGER_TYPE_CONFLICT");
+      await assertManagerOnlyTransitionSafe(tx, companyId, employee.id);
     }
     const managerId = employee.salesRole === "SALES" && data.managerId !== undefined
       ? data.managerId === employee.managerId
