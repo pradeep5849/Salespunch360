@@ -1,6 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requirePermission } from "@/lib/auth/authorization";
+import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import { lockBillingCompany } from "@/lib/billing/company-lock";
 
 const optional = (max: number) => z.string().trim().max(max).transform(v => v || null);
 export const companyProfileSchema = z.object({
@@ -12,5 +14,37 @@ export const companyProfileSchema = z.object({
 }).strict();
 
 export const profileComplete = (company: Record<string, unknown>) => ["name","addressLine1","city","state","postalCode","country","primaryContactName","primaryPhone","contactEmail"].every(key => typeof company[key] === "string" && Boolean((company[key] as string).trim())) && (company.teamStructure === "MANAGERS_AND_SALES" || company.teamStructure === "SALES_ONLY");
-export async function getCompanyProfile() { const actor=await requirePermission("COMPANY_VIEW"); if(!actor.companyId) throw new Error("NOT_FOUND"); const company=await db.company.findUniqueOrThrow({where:{id:actor.companyId}}); return {profile:{...company,primaryContactName:company.primaryContactName||actor.name,contactEmail:company.contactEmail||actor.email},editable:actor.salesRole==="PRIMARY_ADMIN"}; }
-export async function updateCompanyProfile(raw: unknown) { const actor=await requirePermission("SALES_SETTINGS"); if(!actor.companyId) throw new Error("NOT_FOUND"); const data=companyProfileSchema.parse(raw); return db.company.update({where:{id:actor.companyId},data}); }
+export const companyProfileSelect = {
+  name:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,alternatePhone:true,website:true,gstin:true,pan:true,registrationNumber:true,description:true,teamStructure:true,logoObjectKey:true,updatedAt:true,
+} satisfies Prisma.CompanySelect;
+
+export type CompanyProfileDto = {
+  name:string;addressLine1:string|null;addressLine2:string|null;locality:string|null;city:string|null;state:string|null;postalCode:string|null;country:string|null;primaryContactName:string|null;primaryPhone:string|null;contactEmail:string|null;alternatePhone:string|null;website:string|null;gstin:string|null;pan:string|null;registrationNumber:string|null;description:string|null;teamStructure:"MANAGERS_AND_SALES"|"SALES_ONLY";hasLogo:boolean;logoVersion:string;
+};
+
+export async function getCompanyProfile() {
+  const actor=await requirePermission("COMPANY_VIEW");
+  if(!actor.companyId)throw new Error("NOT_FOUND");
+  const company=await db.company.findUniqueOrThrow({where:{id:actor.companyId},select:companyProfileSelect});
+  const profile:CompanyProfileDto={
+    name:company.name,addressLine1:company.addressLine1,addressLine2:company.addressLine2,locality:company.locality,city:company.city,state:company.state,postalCode:company.postalCode,country:company.country,
+    primaryContactName:company.primaryContactName||actor.name,primaryPhone:company.primaryPhone,contactEmail:company.contactEmail||actor.email,alternatePhone:company.alternatePhone,website:company.website,gstin:company.gstin,pan:company.pan,registrationNumber:company.registrationNumber,description:company.description,teamStructure:company.teamStructure,
+    hasLogo:Boolean(company.logoObjectKey),logoVersion:company.updatedAt.toISOString(),
+  };
+  return{profile,editable:actor.salesRole==="PRIMARY_ADMIN"};
+}
+
+export async function updateCompanyProfile(raw: unknown) {
+  const actor=await requirePermissionForMutation("SALES_SETTINGS");
+  if(!actor.companyId)throw new Error("NOT_FOUND");
+  const companyId=actor.companyId;
+  const data=companyProfileSchema.parse(raw);
+  return db.$transaction(async tx=>{
+    const company=await lockBillingCompany(tx,companyId);
+    if(company.teamStructure==="MANAGERS_AND_SALES"&&data.teamStructure==="SALES_ONLY"){
+      const activeManagers=await tx.user.count({where:{companyId,salesRole:"MANAGER",isActive:true,salesAccessActive:true}});
+      if(activeManagers>0)throw new Error("TEAM_STRUCTURE_CONFLICT");
+    }
+    return tx.company.update({where:{id:companyId},data});
+  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+}

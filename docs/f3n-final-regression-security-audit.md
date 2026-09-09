@@ -15,8 +15,11 @@ No production database, Supabase project, deployment hook, or Hostinger service 
 2. Dashboard employee selectors used legacy `role` and omitted `salesAccessActive`. They now use canonical `salesRole`, require active Sales access, and retain existing tenant/manager/self scopes.
 3. Manager visit visibility classified an assigned user by legacy `role`. It now classifies by canonical `salesRole`; a legacy-only Sales value grants no visibility.
 4. Field-event push fan-out used legacy actor/recipient roles and did not reject Sales-suspended identities. Actor, recipient, and session-backed device checks now require canonical Sales access and veto `SUPER_ADMIN`; admin recipients are canonical Primary/Admin and a Sales actor's supervisor must be a canonical Manager.
+5. The company profile mutation could transition to `SALES_ONLY` while canonical Managers consumed Sales access and did not share the durable company-row lock used by lifecycle/billing. It now locks and rereads the company, rejects active canonical Managers with `TEAM_STRUCTURE_CONFLICT`, and updates in one serializable transaction.
+6. The Company Details read selected and spread the complete Company row into a Client Component. It now uses an explicit select and explicit safe DTO; the storage key and tenant, subscription, edition, trial, geofence, travel-rate, and unrelated internal columns are not returned to `ProfileForm`. Logo state is represented only by `hasLogo` and `logoVersion`.
+7. Profile, logo, and verification mutations used read-oriented canonical permission guards. They now use `requirePermissionForMutation`, while the profile read continues to use `requirePermission`.
 
-Regression coverage was updated for canonical dashboard scopes, corrupted legacy combinations, canonical visit scope, canonical settings authority, self-verification authorization, and suspended/corrupted push eligibility.
+Regression coverage was updated for canonical dashboard scopes, corrupted legacy combinations, canonical visit scope, canonical settings authority, self-verification authorization, suspended/corrupted push eligibility, safe profile result shape, and company-lock/Manager-conflict ordering.
 
 ## Canonical access and permission conclusions
 
@@ -38,7 +41,7 @@ Billable usage is active + Sales-active canonical `ADMIN`, `MANAGER`, or `SALES`
 
 Branch assignments accept canonical Manager/Sales only, veto `SUPER_ADMIN`, validate tenant before mutation, serialize on the company, represent ALL_BRANCHES with zero rows and SELECTED_BRANCHES with the exact active set, and retain inactive history for display without read-side repair. Primary/Admin cannot be restricted.
 
-F3 migrations are additive and deployed history was not edited. Current schema and contract tests cover lifecycle consistency, canonical role compatibility, one Primary, branch tenant keys, billing snapshots/versioning/current-price uniqueness, and supporting indexes. Web/mobile share the same canonical policy and authoritative employee/report/field services; intentional UI differences do not change server authority.
+F3 migrations are additive and deployed history was not edited. Current schema and contract tests cover lifecycle consistency, canonical role compatibility, one Primary, branch tenant keys, billing snapshots/versioning/current-price uniqueness, and supporting indexes. Web/mobile share the same canonical policy and authoritative employee/report/field services; intentional UI differences do not change server authority. The corrected profile transition participates in the same company-row lock as Manager lifecycle and billing operations, preventing a concurrent create/reactivate from leaving an active Manager in `SALES_ONLY`.
 
 ## Legacy authority classification
 
