@@ -57,9 +57,6 @@ export async function createBillingOrder(raw:unknown){
  const u=await billingUser(true),d=orderRequestSchema.parse(raw);
  const existing=await db.billingOrder.findUnique({where:{idempotencyKey:d.idempotencyKey}});
  if(existing){if(existing.companyId!==u.companyId)throw new Error("NOT_FOUND");return existing}
- const company=await db.company.findUnique({where:{id:u.companyId},select:{teamStructure:true}});
- if(!company)throw new Error("NOT_FOUND");
- assertManagerSeatsAllowed(company.teamStructure,d.managerSeats);
  const e=await effectiveEntitlement(u.companyId);
  const retainAdminUserIds=await validatedRetainedUsers(u.companyId,"ADMIN",d.adminSeats,e.adminUsage,d.retainAdminUserIds,e.paidActive);
  const retainManagerUserIds=await validatedRetainedUsers(u.companyId,"MANAGER",d.managerSeats,e.managerUsage,d.retainManagerUserIds,e.paidActive);
@@ -68,6 +65,8 @@ export async function createBillingOrder(raw:unknown){
  if(!ap||!mp||!sp||ap.currency!==mp.currency||mp.currency!==sp.currency)throw new Error("PRICING_UNAVAILABLE");
  const money=calculateOrder(d.adminSeats,d.managerSeats,d.salesSeats,ap.amount,mp.amount,sp.amount);
  return db.$transaction(async tx=>{
+  const company=await lockBillingCompany(tx,u.companyId);
+  assertManagerSeatsAllowed(company.teamStructure,d.managerSeats);
   const o=await tx.billingOrder.create({data:{companyId:u.companyId,createdByUserId:u.id,billingPeriod:d.billingPeriod,adminSeats:d.adminSeats,managerSeats:d.managerSeats,salesSeats:d.salesSeats,retainAdminUserIds,retainManagerUserIds,retainSalesUserIds,adminUnitPrice:ap.amount,managerUnitPrice:mp.amount,salesUnitPrice:sp.amount,currency:"INR",...money,provider:"UNCONFIGURED",idempotencyKey:d.idempotencyKey,expiresAt:new Date(Date.now()+86400000)}});
   await tx.billingAuditEvent.create({data:{companyId:u.companyId,actorUserId:u.id,type:"ORDER_CREATED",entityId:o.id,metadata:{period:d.billingPeriod,adminSeats:d.adminSeats,managerSeats:d.managerSeats,salesSeats:d.salesSeats,retainAdminUserIds,retainManagerUserIds,retainSalesUserIds}}});
   return o;
@@ -81,11 +80,12 @@ export async function activateVerifiedPayment(v:VerifiedPayment){
   // This first read resolves only the tenant lock key. Nothing mutable is trusted from it.
   const orderTenant=await tx.billingOrder.findUnique({where:{id:v.orderId},select:{companyId:true}});
   if(!orderTenant)throw new Error("PAYMENT_MISMATCH");
-  await lockBillingCompany(tx,orderTenant.companyId);
+  const lockedCompany=await lockBillingCompany(tx,orderTenant.companyId);
   await tx.$queryRaw`SELECT 1::int AS "locked" FROM "billing_orders" WHERE "id"=${v.orderId}::uuid AND "companyId"=${orderTenant.companyId}::uuid FOR UPDATE`;
   // Authoritative read occurs after the company and order locks and rechecks every payment invariant.
   const order=await tx.billingOrder.findUnique({where:{id:v.orderId}});
   if(!order||order.companyId!==orderTenant.companyId||order.status!=="PENDING"||order.totalAmount.toFixed(2)!==new Prisma.Decimal(v.amount).toFixed(2)||order.currency!==v.currency)throw new Error("PAYMENT_MISMATCH");
+  assertManagerSeatsAllowed(lockedCompany.teamStructure,order.managerSeats);
   const current=await tx.companySubscription.findFirst({where:{companyId:order.companyId,status:"ACTIVE",startsAt:{lte:v.capturedAt},endsAt:{gt:v.capturedAt}},orderBy:{endsAt:"desc"}});
   const start=renewalWindow(v.capturedAt,current?.endsAt??null),end=addBillingPeriod(start,order.billingPeriod);
   const payment=await tx.paymentTransaction.create({data:{companyId:order.companyId,orderId:order.id,provider:v.provider,providerPaymentId:v.providerPaymentId,amount:order.totalAmount,currency:order.currency,status:"CAPTURED",capturedAt:v.capturedAt}});

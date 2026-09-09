@@ -42,8 +42,13 @@ export async function updateCompanyProfile(raw: unknown) {
   return db.$transaction(async tx=>{
     const company=await lockBillingCompany(tx,companyId);
     if(company.teamStructure==="MANAGERS_AND_SALES"&&data.teamStructure==="SALES_ONLY"){
+      const now=new Date();
       const activeManagers=await tx.user.count({where:{companyId,salesRole:"MANAGER",isActive:true,salesAccessActive:true}});
       if(activeManagers>0)throw new Error("TEAM_STRUCTURE_CONFLICT");
+      const pendingManagerOrder=await tx.billingOrder.findFirst({where:{companyId,status:"PENDING",managerSeats:{gt:0},OR:[{expiresAt:null},{expiresAt:{gt:now}}]},select:{id:true}});
+      if(pendingManagerOrder)throw new Error("TEAM_STRUCTURE_CONFLICT");
+      const activeManagerSubscription=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",managerSeats:{gt:0},endsAt:{gt:now}},select:{id:true}});
+      if(activeManagerSubscription)throw new Error("TEAM_STRUCTURE_CONFLICT");
     }
     return tx.company.update({where:{id:companyId},data});
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
