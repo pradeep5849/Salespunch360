@@ -56,6 +56,10 @@ export type ProductUserMutation = z.infer<typeof editProductUserSchema>;
 export function accountDomainUpdate(target: { salesRole: SalesRole|null }, accountRole: AccountRole|null, accountAccessActive: boolean) {
   return { accountRole, accountAccessActive: accountAccessActive && !!accountRole, role: projectLegacyRole({ salesRole: target.salesRole, accountRole }) };
 }
+export function assertAccountEditTarget<T extends {companyId:string|null;salesRole:SalesRole|null;isActive:boolean}|null>(companyId:string,target:T,activate:boolean):asserts target is Exclude<T,null>{
+  assertEditableProductUser(companyId,target);
+  if(!target.isActive&&activate)throw new Error("IDENTITY_INACTIVE");
+}
 
 async function administrationActor(mutation: boolean) {
   const actor = mutation ? await requireUserForMutation() : await requireUser();
@@ -133,8 +137,8 @@ export async function editAccountUser(raw: unknown) {
   if (input.accountRole && company.productEdition === "SALESPUNCH360") throw new Error("ACCOUNT_ROLE_NOT_ENTITLED");
   return db.$transaction(async tx => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
-    const target = await tx.user.findFirst({ where: { id: input.userId, companyId: company.id, role: { not: "SUPER_ADMIN" } }, select: { id:true,companyId:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}} } });
-    if (!target) throw new Error("NOT_FOUND");
+    const target = await tx.user.findFirst({ where: { id: input.userId, companyId: company.id, role: { not: "SUPER_ADMIN" } }, select: { id:true,companyId:true,isActive:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}} } });
+    assertAccountEditTarget(company.id, target, input.accountAccessActive);
     if (!input.accountRole && !target.salesRole) throw new Error("ROLE_REQUIRED");
     const accountAccessActive = input.accountAccessActive && !!input.accountRole;
     const securityChanged = target.accountRole !== input.accountRole || target.accountAccessActive !== accountAccessActive;

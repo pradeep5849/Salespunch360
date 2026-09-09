@@ -39,5 +39,5 @@ export async function manageAccountUser(_: ProductUserState, form: FormData): Pr
     else return { error: "Invalid Account user operation." };
     revalidatePath("/workspace/employees");
     return { success: operation === "create-account" ? "Account user created." : "Account role updated; stale sessions were revoked." };
-  } catch (error) { const code=error instanceof Error?error.message:""; return {error:code==="ROLE_REQUIRED"?"A user must retain at least one workspace role.":"Unable to update Account access."}; }
+  } catch (error) { const code=error instanceof Error?error.message:""; const messages:Record<string,string>={ROLE_REQUIRED:"A user must retain at least one workspace role.",PRIMARY_PROTECTED:"The Primary Admin can only be changed through the dedicated ownership transfer flow.",IDENTITY_INACTIVE:"Account access cannot be activated while the identity is inactive."};return {error:messages[code]??"Unable to update Account access."}; }
 }

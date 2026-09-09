@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {accountDomainUpdate,createAccountUserSchema,createProductUserSchema,editProductUserSchema} from "./product-user-management";
+import {accountDomainUpdate,assertAccountEditTarget,createAccountUserSchema,createProductUserSchema,editProductUserSchema} from "./product-user-management";
 import {assertEditableProductUser,assertFixedSalesRole,assertProductSalesAssignment,assertSalesAdminBranchScope,roleChangeRequiresAuthenticationRevocation,validateUserRoleAssignment} from "./product-role-policy";
 const id="11111111-1111-4111-8111-111111111111";
 const base={salesRole:null,accountRole:null,managerType:null};
@@ -15,4 +15,7 @@ describe("product-aware Company users",()=>{
  it("requires company-wide branch scope for Sales administrators",()=>{expect(()=>assertSalesAdminBranchScope("ADMIN","SELECTED_BRANCHES")).toThrow("SALES_ADMIN_ALL_BRANCHES_REQUIRED");expect(()=>assertSalesAdminBranchScope("PRIMARY_ADMIN","SELECTED_BRANCHES")).toThrow("SALES_ADMIN_ALL_BRANCHES_REQUIRED");expect(()=>assertSalesAdminBranchScope("ADMIN","ALL_BRANCHES")).not.toThrow();expect(()=>assertSalesAdminBranchScope("MANAGER","SELECTED_BRANCHES")).not.toThrow()});
  it.each(["ACCOUNTANT","PROJECT_MANAGER"] as const)("accepts Account-only %s creation",accountRole=>{expect(createAccountUserSchema.safeParse({name:"Account User",email:"account@example.com",password:"Password1234",confirmPassword:"Password1234",accountRole}).success).toBe(true)});
  it("builds an Account-only update without any Sales, Manager, lifecycle, or Branch write",()=>{const update=accountDomainUpdate({salesRole:"MANAGER"},"PROJECT_MANAGER",true);expect(update).toEqual({accountRole:"PROJECT_MANAGER",accountAccessActive:true,role:"MANAGER"});for(const protectedField of ["salesRole","managerType","managerId","salesAccessActive","branchAccessScope","branchIds"])expect(update).not.toHaveProperty(protectedField)});
+ it.each(["SALESPUNCH360_ACCOUNT","SALESPUNCH360_PLUS"] as const)("protects the initial PRIMARY_ADMIN in %s",edition=>{expect(edition).toBeTruthy();expect(()=>assertEditableProductUser("company",{companyId:"company",salesRole:"PRIMARY_ADMIN"})).toThrow("PRIMARY_PROTECTED")});
+ it("rejects both Account-role replacement and suspension for PRIMARY_ADMIN",()=>{for(const activate of [true,false])expect(()=>assertAccountEditTarget("company",{companyId:"company",salesRole:"PRIMARY_ADMIN",isActive:true},activate)).toThrow("PRIMARY_PROTECTED")});
+ it("does not activate Account access on a globally inactive identity",()=>{expect(()=>assertAccountEditTarget("company",{companyId:"company",salesRole:"SALES",isActive:false},true)).toThrow("IDENTITY_INACTIVE");expect(()=>assertAccountEditTarget("company",{companyId:"company",salesRole:"SALES",isActive:true},true)).not.toThrow()});
 });

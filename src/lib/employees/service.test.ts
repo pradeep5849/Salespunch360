@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import { deactivateEmployeeInTransaction, resetEmployeePasswordInTransaction } from "./service";
 
-function transaction(employee: { id: string; companyId: string; role: "MANAGER" | "SALES"; salesRole: "MANAGER" | "SALES" | null; salesAccessActive: boolean; isActive: boolean }) {
+function transaction(employee: { id: string; companyId: string; role: "MANAGER" | "SALES"; salesRole: "MANAGER" | "SALES" | null; salesAccessActive: boolean; isActive: boolean; accountRole?:"ACCOUNTANT"|null;accountAccessActive?:boolean }) {
   return {
     user: { findUnique: vi.fn().mockResolvedValue(employee), findFirst: vi.fn().mockResolvedValue(employee), update: vi.fn().mockResolvedValue(employee), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     $queryRaw: vi.fn().mockResolvedValue([{ id: employee.id }]),
@@ -23,6 +23,16 @@ describe("employee security mutations", () => {
     expect(mock.pushDevice.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
     expect(mock.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
     expect(mock.mobileSession.deleteMany).toHaveBeenCalledWith({ where: { userId: "employee" } });
+  });
+
+  it.each([true,false])("suspends only Sales for a dual-role identity when Account access is %s",async accountAccessActive=>{
+    const employee={id:"employee",companyId:"company-a",role:"MANAGER" as const,salesRole:"MANAGER" as const,salesAccessActive:true,isActive:true,accountRole:"ACCOUNTANT" as const,accountAccessActive};
+    const mock=transaction(employee);
+    await deactivateEmployeeInTransaction(mock as unknown as Prisma.TransactionClient,"company-a","employee");
+    expect(mock.user.update).toHaveBeenCalledWith(expect.objectContaining({data:{salesAccessActive:false}}));
+    expect(mock.user.update).toHaveBeenCalledWith(expect.objectContaining({data:{sessionVersion:{increment:1}}}));
+    const lifecycleUpdate=mock.user.update.mock.calls.find(([call])=>call.data.salesAccessActive===false)?.[0].data;
+    expect(lifecycleUpdate).not.toHaveProperty("isActive");expect(lifecycleUpdate).not.toHaveProperty("accountRole");expect(lifecycleUpdate).not.toHaveProperty("accountAccessActive");
   });
 
   it("rejects a cross-company password reset before mutation", async () => {

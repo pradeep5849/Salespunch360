@@ -168,7 +168,7 @@ export async function deactivateEmployeeInTransaction(tx: Prisma.TransactionClie
     await lockUser(tx, employeeId);
     const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, accountRole:true,accountAccessActive:true,isActive: true, salesAccessActive: true } });
     assertManagedEmployee(companyId, employee);
-    if (employee.accountRole && employee.accountAccessActive) await suspendSalesAccessInTransaction(tx, employeeId);
+    if (employee.accountRole) await suspendSalesAccessInTransaction(tx, employeeId);
     else await deactivateIdentityWithLock(tx, employeeId);
 }
 
