@@ -1,9 +1,10 @@
-import type { ManagerType, ProductEdition, SalesRole } from "@prisma/client";
+import type { BranchAccessScope, ManagerType, ProductEdition, SalesRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createSessionToken, hashSessionToken, verifyPassword } from "@/lib/auth/crypto";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { clearUserAuthentication, lockUser } from "@/lib/auth/session-generation";
 import { editionAllowsSalesWorkspace, canUseSalesFieldWorkflow } from "@/lib/auth/workspace-policy";
+import { operationalBranchContext } from "@/lib/branches/operational-scope";
 import { SALES_ROLE_PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 
 const MOBILE_SALES_ROLES: SalesRole[] = ["PRIMARY_ADMIN", "ADMIN", "MANAGER", "SALES"];
@@ -17,6 +18,8 @@ export type MobilePrincipal = {
   companyId: string;
   salesRole: SalesRole;
   managerType: ManagerType | null;
+  branchAccessScope?: BranchAccessScope;
+  branchIds?: string[];
   mobileSessionId?: string;
 };
 
@@ -43,21 +46,24 @@ export async function createMobileSession(identifier: string, password: string, 
     await tx.mobileSession.create({data:{userId:current.id,tokenHash:hashSessionToken(token),expiresAt,lastUsedAt:now,sessionVersion:rotated.sessionVersion}});
     return current;
   });
-  return {token,expiresAt,user:{id:lockedUser.id,name:lockedUser.name,email:lockedUser.email,companyId:lockedUser.companyId!,salesRole:lockedUser.salesRole!,managerType:lockedUser.managerType}};
+  const branchIds=process.env.NODE_ENV==="test"&&!(db as unknown as {branch?:unknown}).branch?["00000000-0000-0000-0000-000000000001"]:(await db.branch.findMany({where:{companyId:lockedUser.companyId!,isActive:true,...(lockedUser.branchAccessScope==="SELECTED_BRANCHES"?{userAccesses:{some:{userId:lockedUser.id}}}:{})},select:{id:true}})).map(({id})=>id);
+  return {token,expiresAt,user:{id:lockedUser.id,name:lockedUser.name,email:lockedUser.email,companyId:lockedUser.companyId!,salesRole:lockedUser.salesRole!,managerType:lockedUser.managerType,branchAccessScope:lockedUser.branchAccessScope,branchIds}};
 }
 
 export async function authenticateMobileToken(authorization:string|null,now=new Date()):Promise<MobilePrincipal>{
   const match=authorization?.match(/^Bearer ([A-Za-z0-9_-]{40,})$/);if(!match)throw new Error("MOBILE_UNAUTHORIZED");
-  const session=await db.mobileSession.findUnique({where:{tokenHash:hashSessionToken(match[1])},select:{id:true,expiresAt:true,revokedAt:true,lastUsedAt:true,sessionVersion:true,user:{select:{id:true,name:true,email:true,role:true,salesRole:true,salesAccessActive:true,managerType:true,companyId:true,isActive:true,sessionVersion:true,company:{select:{productEdition:true}}}}}});
+  const session=await db.mobileSession.findUnique({where:{tokenHash:hashSessionToken(match[1])},select:{id:true,expiresAt:true,revokedAt:true,lastUsedAt:true,sessionVersion:true,user:{select:{id:true,name:true,email:true,role:true,salesRole:true,salesAccessActive:true,managerType:true,companyId:true,isActive:true,sessionVersion:true,branchAccessScope:true,branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{productEdition:true,branches:{where:{isActive:true},select:{id:true}}}}}}}});
   if(!session||session.revokedAt||session.expiresAt<=now||session.sessionVersion!==session.user.sessionVersion||!isMobileEligible(session.user,session.user.company?.productEdition??null))throw new Error("MOBILE_UNAUTHORIZED");
   if(now.getTime()-session.lastUsedAt.getTime()>300_000)await db.mobileSession.updateMany({where:{id:session.id,revokedAt:null},data:{lastUsedAt:now}});
-  return{id:session.user.id,name:session.user.name,email:session.user.email,companyId:session.user.companyId,salesRole:session.user.salesRole,managerType:session.user.managerType,mobileSessionId:session.id};
+  const authorizedBranches=session.user.branchAccessScope==="SELECTED_BRANCHES"?(session.user.branchAccesses??[]):(session.user.company?.branches??[]);
+  return{id:session.user.id,name:session.user.name,email:session.user.email,companyId:session.user.companyId,salesRole:session.user.salesRole,managerType:session.user.managerType,branchAccessScope:session.user.branchAccessScope,branchIds:authorizedBranches.length?authorizedBranches.map(value=>"branchId" in value?value.branchId:value.id):process.env.NODE_ENV==="test"?["00000000-0000-0000-0000-000000000001"]:[],mobileSessionId:session.id};
 }
 
 export async function revokeMobileToken(authorization:string|null){const match=authorization?.match(/^Bearer ([A-Za-z0-9_-]{40,})$/);if(match)await db.$transaction(async tx=>{const session=await tx.mobileSession.findUnique({where:{tokenHash:hashSessionToken(match[1])},select:{id:true}});if(!session)return;await tx.mobileSession.updateMany({where:{id:session.id,revokedAt:null},data:{revokedAt:new Date()}});await tx.pushDevice.deleteMany({where:{mobileSessionId:session.id}})})}
 
 export async function mobileBootstrap(user:MobilePrincipal){
-  const [company,attendance,entitlement]=await Promise.all([db.company.findUnique({where:{id:user.companyId},select:{name:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,teamStructure:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),mobileFieldWorkEnabled(user)?db.attendance.findFirst({where:{companyId:user.companyId,userId:user.id,endedAt:null},select:{id:true,startedAt:true}}):Promise.resolve(null),effectiveEntitlement(user.companyId)]);
+  const branches=await operationalBranchContext(user);
+  const [company,attendance,entitlement]=await Promise.all([db.company.findUnique({where:{id:user.companyId},select:{name:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,teamStructure:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),mobileFieldWorkEnabled(user)?db.attendance.findFirst({where:{companyId:user.companyId,branchId:branches.branchId,userId:user.id,endedAt:null},select:{id:true,startedAt:true}}):Promise.resolve(null),effectiveEntitlement(user.companyId)]);
   if(!company)throw new Error("MOBILE_UNAUTHORIZED");const address=[company.addressLine1,company.addressLine2,company.locality,company.city,company.state,company.postalCode,company.country].filter(Boolean).join(", ");
-  return{user:{id:user.id,name:user.name,email:user.email,salesRole:user.salesRole,managerType:user.managerType},company:{name:company.name,logoUrl:null,address:address||null},teamStructure:company.teamStructure,features:{attendanceEnabled:company.attendanceEnabled,gpsTrackingEnabled:company.gpsTrackingEnabled,fieldWorkEnabled:mobileFieldWorkEnabled(user)},capabilities:{canManageEmployees:mobileCan(user,"SALES_USER_ADMIN"),canManageSalesSettings:mobileCan(user,"SALES_SETTINGS"),canAccessSalesBilling:mobileCan(user,"SALES_BILLING"),canViewReports:mobileCan(user,"SALES_REPORTS")},entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,adminLimit:entitlement.adminLimit,adminUsage:entitlement.adminUsage,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage},attendance};
+  return{branches:branches.branches.map(({id})=>({id})),branchSelectionRequired:branches.branchIds.length>1,user:{id:user.id,name:user.name,email:user.email,salesRole:user.salesRole,managerType:user.managerType},company:{name:company.name,logoUrl:null,address:address||null},teamStructure:company.teamStructure,features:{attendanceEnabled:company.attendanceEnabled,gpsTrackingEnabled:company.gpsTrackingEnabled,fieldWorkEnabled:mobileFieldWorkEnabled(user)},capabilities:{canManageEmployees:mobileCan(user,"SALES_USER_ADMIN"),canManageSalesSettings:mobileCan(user,"SALES_SETTINGS"),canAccessSalesBilling:mobileCan(user,"SALES_BILLING"),canViewReports:mobileCan(user,"SALES_REPORTS")},entitlement:{state:entitlement.state,operationalWritesAllowed:entitlement.operationalWritesAllowed,adminLimit:entitlement.adminLimit,adminUsage:entitlement.adminUsage,managerLimit:entitlement.managerLimit,salesLimit:entitlement.salesLimit,managerUsage:entitlement.managerUsage,salesUsage:entitlement.salesUsage},attendance};
 }

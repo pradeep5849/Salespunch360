@@ -9,6 +9,8 @@ vi.mock("@/lib/users/primary-admin",()=>({listPrimaryAdminTransferCandidates:vi.
 vi.mock("@/lib/db", () => ({ db: { company: { findUnique: mocks.company } } }));
 vi.mock("@/components/workspace/workspace-page-header", () => ({ WorkspacePageHeader: () => null }));
 vi.mock("./employee-manager", () => ({ EmployeeManager: () => null }));
+vi.mock("./product-user-manager",()=>({ProductUserManager:()=>null}));
+vi.mock("@/lib/users/product-user-management",()=>({getProductUserManagementContext:vi.fn().mockResolvedValue({edition:"SALESPUNCH360",users:[],branches:[]})}));
 
 import EmployeesPage from "./page";
 

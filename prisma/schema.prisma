@@ -402,7 +402,7 @@ model EmailVerificationToken {
 
 model Attendance {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId           String          @db.Uuid
   company             Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId              String          @db.Uuid
@@ -429,7 +429,7 @@ model Attendance {
 
 model Customer {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId                 String          @db.Uuid
   company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   assignedUserId            String?         @db.Uuid
@@ -460,7 +460,7 @@ model Customer {
 
 model CustomerVisit {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId              String             @db.Uuid
   company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId                 String             @db.Uuid
@@ -503,7 +503,7 @@ model CustomerVisit {
 
 model Lead {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId                 String          @db.Uuid
   company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   customerId                String?         @db.Uuid
@@ -551,7 +551,7 @@ model Lead {
 
 model FollowUpTask {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId        String             @db.Uuid
   company          Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   leadId           String             @db.Uuid
@@ -650,7 +650,7 @@ model LeadActivity {
 
 model LocationPoint {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId      String     @db.Uuid
   company        Company    @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId         String     @db.Uuid
@@ -726,7 +726,7 @@ model PushDevice {
 
 model GeofenceEvent {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId           String            @db.Uuid
   company             Company           @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   employeeId          String            @db.Uuid
@@ -756,7 +756,7 @@ model GeofenceEvent {
 
 model SalesTarget {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId       String           @db.Uuid
   company         Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   assignedUserId  String           @db.Uuid
@@ -783,7 +783,7 @@ model SalesTarget {
 
 model DailyTravelApproval {
   id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String?         @db.Uuid
+  branchId            String          @db.Uuid
   companyId        String               @db.Uuid
   company          Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   employeeId       String               @db.Uuid
@@ -799,7 +799,7 @@ model DailyTravelApproval {
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 
-  @@unique([companyId, employeeId, businessDate])
+  @@unique([companyId, branchId, employeeId, businessDate])
   @@index([companyId, businessDate, status])
   @@index([employeeId, businessDate])
   @@index([companyId, branchId])

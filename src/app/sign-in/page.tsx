@@ -4,11 +4,12 @@ import Link from "next/link";
 import { getAuthenticatedUser } from "@/lib/auth/session";
 import { SignInForm } from "./sign-in-form";
 import { BrandLogo } from "@/components/brand-logo";
+import { authenticatedHome } from "@/lib/auth/routing";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function SignInPage() {
-  if (await getAuthenticatedUser()) redirect("/workspace");
+  const user=await getAuthenticatedUser();if(user) redirect(authenticatedHome(user));
   return (
     <main className="login-page">
       <section className="login-card">

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { assertBranchAssignmentTarget, BranchAssignmentError } from "./policy";
 import { branchAssignmentSchema, type BranchAssignmentInput, type ValidBranchAssignment } from "./validation";
+import { revokeUserAuthenticationWithLock } from "@/lib/auth/session-generation";
 
 const optionSelect = { id: true, name: true, code: true, isPrimary: true } satisfies Prisma.BranchSelect;
 const currentBranchSelect = { id: true, name: true, code: true, isPrimary: true, isActive: true } satisfies Prisma.BranchSelect;
@@ -87,6 +88,7 @@ export async function replaceBranchAssignment(tx: Prisma.TransactionClient, comp
     await tx.userBranchAccess.createMany({ data: assignment.branchIds.map((branchId) => ({ userId: target.id, branchId })) });
   }
   await tx.user.update({ where: { id: target.id }, data: { branchAccessScope: assignment.branchAccessScope } });
+  await revokeUserAuthenticationWithLock(tx,target.id);
 
   const [storedUser, storedAssignments] = await Promise.all([
     tx.user.findUnique({ where: { id: target.id }, select: { branchAccessScope: true } }),

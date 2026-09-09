@@ -11,7 +11,7 @@ export const attendanceLocationSchema = coordinateSchema.extend({
   capturedAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)),
 }).strict();
 
-export const attendanceMeasurementSchema = z.object({ location: attendanceLocationSchema.optional() }).strict();
+export const attendanceMeasurementSchema = z.object({ location: attendanceLocationSchema.optional(), branchId: z.string().uuid().optional() }).strict();
 
 export const locationPointSchema = coordinateSchema.extend({
   capturedAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)),

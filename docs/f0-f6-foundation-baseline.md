@@ -23,6 +23,10 @@ Static server policy categorizes shared, Sales, and Account module permissions. 
 
 Authorization composes: authenticated session → active identity/workspace lifecycle → Company edition → role and permission → tenant predicate → Branch predicate → existing manager/team/self record policy. Branch access never grants Sales permission to Account-only users or operational tenant access to Super Admin.
 
+The existing `/workspace/employees` administration surface is product-aware: Sales editions expose Additional Sales Admin, Manager (Field Manager/Manager Only), and Sales identities; Account exposes Account Admin, Accountant, Project Manager, and Data Entry; Plus exposes both independent dimensions. Generic editing cannot target the Primary Admin. Role, workspace-access, Manager, or Branch changes rotate the session generation and remove web/mobile sessions and push devices while preserving an unchanged second workspace.
+
+Operational Branch policy is called by Attendance/GPS, Customers, Visits/check-ins, Leads, Follow-up Tasks, Targets, travel/expense, dashboard/Live Tracking, every Sales report, shared Excel report services, and Android Sales boundaries. Authenticated web and mobile principals carry a server-loaded active Branch snapshot. A single Branch resolves automatically; multiple Branch writes require an explicit permitted Branch. Location points inherit their open Attendance Branch, Visits prefer Attendance/customer/Lead ownership, generated Leads/tasks inherit their source Branch, and forged report/export filters cannot expand the snapshot.
+
 ## Migration execution map
 
 All existing migrations are immutable deployed/history candidates and execute lexically from `20260828000000_stage_1_foundation` through `20260909000000_scope_append_only_tenant_purge`. Important milestones are: stage foundations (Company/users, trials, employees, attendance/GPS, customers/visits, leads, geofence/targets, billing); Android sessions; check-in and retention hardening; follow-ups; private logo/address/push; manager types; travel; single-active-login; ProductEdition/Branch F1; role permissions F2; lifecycle/profile/billing F3; append-only tenant purge.
@@ -30,7 +34,7 @@ All existing migrations are immutable deployed/history candidates and execute le
 New, unshipped closure migrations execute afterward:
 
 1. `20260909010000_f4_registration_company_setup`: additive `CompanyModule` and safe current-Sales defaults.
-2. `20260909020000_f0_f6_final_closure`: additive operational `branchId` columns, deterministic same-Company Primary-Branch backfill, null validation, composite Company/Branch foreign keys and indexes, one-primary-Branch constraint, and additive employee financial-foundation tables.
+2. `20260909020000_f0_f6_final_closure`: additive required operational `branchId` columns, a fail-closed empty-table assertion for this fresh rollout, composite Company/Branch foreign keys and indexes, one-primary-Branch constraint, and additive employee financial-foundation tables. **Historical operational Branch backfill: not required because there are no real tenant operational records before F5.** Unexpected rows abort migration instead of being guessed into Head Office.
 3. `20260909030000_f0_f6_tenant_invariant_hardening`: additive composite tenant keys and foreign keys for compensation, advances, reimbursements, reviewer linkage, and salary-history/profile linkage, plus positive-money and valid-date-range checks. Existing single-column employee/profile foreign keys are replaced without deleting application data.
 
 No closure migration drops a table/column, replaces an enum, deletes records, recreates Companies, resets users, or rewrites billing/subscription history.
