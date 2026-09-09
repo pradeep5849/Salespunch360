@@ -8,6 +8,7 @@ import {effectiveEntitlement} from "./entitlement";
 import {assertManagerSeatsAllowed} from "./policy";
 import {applyDueSeatReductions} from "./seat-reduction";
 import {lockBillingCompany} from "./company-lock";
+import {hasEffectivePaidSubscription,validateAuthoritativeRetention} from "./retention";
 
 const billingUser=async(mutation=false)=>{const u=mutation?await requirePermissionForMutation("SALES_BILLING"):await requirePermission("SALES_BILLING");if(!u.companyId)throw new Error("NOT_AUTHORIZED");return{...u,companyId:u.companyId}};
 
@@ -40,35 +41,20 @@ export async function changePrice(raw:unknown){
  });
 }
 
-async function validatedRetainedUsers(companyId:string,role:"ADMIN"|"MANAGER"|"SALES",newSeats:number,currentUsage:number,ids:string[],isRenewal:boolean){
- if(newSeats>=currentUsage){
-  if(ids.length)throw new Error("INVALID_SEAT_SELECTION");
-  return [] as string[];
- }
- if(!isRenewal)throw new Error("SEATS_BELOW_USAGE");
- if(ids.length!==newSeats||new Set(ids).size!==ids.length)throw new Error("SEAT_SELECTION_REQUIRED");
- if(!ids.length)return [];
- const count=await db.user.count({where:{companyId,salesRole:role,isActive:true,salesAccessActive:true,id:{in:ids}}});
- if(count!==ids.length)throw new Error("INVALID_SEAT_SELECTION");
- return ids;
-}
-
 export async function createBillingOrder(raw:unknown){
  const u=await billingUser(true),d=orderRequestSchema.parse(raw);
  const existing=await db.billingOrder.findUnique({where:{idempotencyKey:d.idempotencyKey}});
  if(existing){if(existing.companyId!==u.companyId)throw new Error("NOT_FOUND");return existing}
- const e=await effectiveEntitlement(u.companyId);
- const retainAdminUserIds=await validatedRetainedUsers(u.companyId,"ADMIN",d.adminSeats,e.adminUsage,d.retainAdminUserIds,e.paidActive);
- const retainManagerUserIds=await validatedRetainedUsers(u.companyId,"MANAGER",d.managerSeats,e.managerUsage,d.retainManagerUserIds,e.paidActive);
- const retainSalesUserIds=await validatedRetainedUsers(u.companyId,"SALES",d.salesSeats,e.salesUsage,d.retainSalesUserIds,e.paidActive);
  const prices=await currentPrices(),ap=prices.find(p=>p.role==="ADMIN"&&p.period===d.billingPeriod),mp=prices.find(p=>p.role==="MANAGER"&&p.period===d.billingPeriod),sp=prices.find(p=>p.role==="SALES"&&p.period===d.billingPeriod);
  if(!ap||!mp||!sp||ap.currency!==mp.currency||mp.currency!==sp.currency)throw new Error("PRICING_UNAVAILABLE");
  const money=calculateOrder(d.adminSeats,d.managerSeats,d.salesSeats,ap.amount,mp.amount,sp.amount);
  return db.$transaction(async tx=>{
   const company=await lockBillingCompany(tx,u.companyId);
   assertManagerSeatsAllowed(company.teamStructure,d.managerSeats);
-  const o=await tx.billingOrder.create({data:{companyId:u.companyId,createdByUserId:u.id,billingPeriod:d.billingPeriod,adminSeats:d.adminSeats,managerSeats:d.managerSeats,salesSeats:d.salesSeats,retainAdminUserIds,retainManagerUserIds,retainSalesUserIds,adminUnitPrice:ap.amount,managerUnitPrice:mp.amount,salesUnitPrice:sp.amount,currency:"INR",...money,provider:"UNCONFIGURED",idempotencyKey:d.idempotencyKey,expiresAt:new Date(Date.now()+86400000)}});
-  await tx.billingAuditEvent.create({data:{companyId:u.companyId,actorUserId:u.id,type:"ORDER_CREATED",entityId:o.id,metadata:{period:d.billingPeriod,adminSeats:d.adminSeats,managerSeats:d.managerSeats,salesSeats:d.salesSeats,retainAdminUserIds,retainManagerUserIds,retainSalesUserIds}}});
+  const paidRenewal=await hasEffectivePaidSubscription(tx,u.companyId,new Date());
+  await validateAuthoritativeRetention(tx,u.companyId,d,{paidRenewal});
+  const o=await tx.billingOrder.create({data:{companyId:u.companyId,createdByUserId:u.id,billingPeriod:d.billingPeriod,adminSeats:d.adminSeats,managerSeats:d.managerSeats,salesSeats:d.salesSeats,retainAdminUserIds:d.retainAdminUserIds,retainManagerUserIds:d.retainManagerUserIds,retainSalesUserIds:d.retainSalesUserIds,adminUnitPrice:ap.amount,managerUnitPrice:mp.amount,salesUnitPrice:sp.amount,currency:"INR",...money,provider:"UNCONFIGURED",idempotencyKey:d.idempotencyKey,expiresAt:new Date(Date.now()+86400000)}});
+  await tx.billingAuditEvent.create({data:{companyId:u.companyId,actorUserId:u.id,type:"ORDER_CREATED",entityId:o.id,metadata:{period:d.billingPeriod,adminSeats:d.adminSeats,managerSeats:d.managerSeats,salesSeats:d.salesSeats,retainAdminUserIds:d.retainAdminUserIds,retainManagerUserIds:d.retainManagerUserIds,retainSalesUserIds:d.retainSalesUserIds}}});
   return o;
  });
 }
@@ -86,6 +72,7 @@ export async function activateVerifiedPayment(v:VerifiedPayment){
   const order=await tx.billingOrder.findUnique({where:{id:v.orderId}});
   if(!order||order.companyId!==orderTenant.companyId||order.status!=="PENDING"||order.totalAmount.toFixed(2)!==new Prisma.Decimal(v.amount).toFixed(2)||order.currency!==v.currency)throw new Error("PAYMENT_MISMATCH");
   assertManagerSeatsAllowed(lockedCompany.teamStructure,order.managerSeats);
+  await validateAuthoritativeRetention(tx,order.companyId,order,{activation:true});
   const current=await tx.companySubscription.findFirst({where:{companyId:order.companyId,status:"ACTIVE",startsAt:{lte:v.capturedAt},endsAt:{gt:v.capturedAt}},orderBy:{endsAt:"desc"}});
   const start=renewalWindow(v.capturedAt,current?.endsAt??null),end=addBillingPeriod(start,order.billingPeriod);
   const payment=await tx.paymentTransaction.create({data:{companyId:order.companyId,orderId:order.id,provider:v.provider,providerPaymentId:v.providerPaymentId,amount:order.totalAmount,currency:order.currency,status:"CAPTURED",capturedAt:v.capturedAt}});
