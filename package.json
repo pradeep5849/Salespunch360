@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "provision:initial-super-admin": "tsx scripts/provision-initial-super-admin.ts",
     "cleanup:checkins": "tsx scripts/cleanup-checkins.ts",
+    "cleanup:tenant": "tsx scripts/pre-f4-tenant-cleanup.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prebuild": "prisma generate && (prisma migrate deploy || (echo \"Migration connection failed; retrying in 8s...\" && sleep 8 && prisma migrate deploy) || (echo \"Retry 2 failed; retrying in 8s...\" && sleep 8 && prisma migrate deploy) || (echo \"Retry 3 failed; retrying in 8s...\" && sleep 8 && prisma migrate deploy))"
