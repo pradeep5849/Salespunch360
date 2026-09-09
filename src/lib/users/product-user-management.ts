@@ -45,7 +45,17 @@ export const editProductUserSchema = z.object({
   ...branchFields,
 }).strict();
 
+export const createAccountUserSchema = z.object({
+  name: z.string().trim().min(1).max(120), email: z.string().trim().toLowerCase().email().max(320),
+  password: strongPasswordSchema, confirmPassword: z.string(), accountRole: z.enum(["ACCOUNT_ADMIN", "ACCOUNTANT", "PROJECT_MANAGER", "DATA_ENTRY"]),
+}).strict().refine(value => value.password === value.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
+export const editAccountUserSchema = z.object({ userId: z.string().uuid(), accountRole, accountAccessActive: z.boolean() }).strict();
+
 export type ProductUserMutation = z.infer<typeof editProductUserSchema>;
+
+export function accountDomainUpdate(target: { salesRole: SalesRole|null }, accountRole: AccountRole|null, accountAccessActive: boolean) {
+  return { accountRole, accountAccessActive: accountAccessActive && !!accountRole, role: projectLegacyRole({ salesRole: target.salesRole, accountRole }) };
+}
 
 async function administrationActor(mutation: boolean) {
   const actor = mutation ? await requireUserForMutation() : await requireUser();
@@ -96,6 +106,8 @@ async function enforceSalesSeat(tx:Prisma.TransactionClient,company:Awaited<Retu
 
 export async function getProductUserManagementContext() {
   const { actor, company } = await administrationActor(false);
+  const canManageSalesUsers = canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN");
+  const canManageAccountUsers = canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN");
   const [users, branches] = await Promise.all([
     db.user.findMany({
       where: { companyId: company.id, role: { not: "SUPER_ADMIN" }, OR: [{ salesRole: { not: "PRIMARY_ADMIN" } }, { salesRole: null }] },
@@ -104,7 +116,31 @@ export async function getProductUserManagementContext() {
     }),
     db.branch.findMany({ where: { companyId: company.id, isActive: true }, select: { id:true,name:true,code:true,isPrimary:true }, orderBy: [{ isPrimary: "desc" }, { name: "asc" }] }),
   ]);
-  return { actor, edition: company.productEdition, teamStructure: company.teamStructure, users, branches };
+  return { actor, edition: company.productEdition, teamStructure: company.teamStructure, users, branches, canManageSalesUsers, canManageAccountUsers };
+}
+
+export async function createAccountUser(raw: unknown) {
+  const input = createAccountUserSchema.parse(raw);
+  return createProductUser({ ...input, salesRole: null, managerType: null, managerId: null, branchAccessScope: "ALL_BRANCHES", branchIds: [] });
+}
+
+/** Account-domain mutation: every Sales and Branch field is loaded from the DB
+ * and omitted from the update, so an Account Admin cannot mass-assign Sales state. */
+export async function editAccountUser(raw: unknown) {
+  const { actor, company } = await administrationActor(true);
+  if (!canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN")) throw new AuthorizationError();
+  const input = editAccountUserSchema.parse(raw);
+  if (input.accountRole && company.productEdition === "SALESPUNCH360") throw new Error("ACCOUNT_ROLE_NOT_ENTITLED");
+  return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
+    const target = await tx.user.findFirst({ where: { id: input.userId, companyId: company.id, role: { not: "SUPER_ADMIN" } }, select: { id:true,companyId:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}} } });
+    if (!target) throw new Error("NOT_FOUND");
+    if (!input.accountRole && !target.salesRole) throw new Error("ROLE_REQUIRED");
+    const accountAccessActive = input.accountAccessActive && !!input.accountRole;
+    const securityChanged = target.accountRole !== input.accountRole || target.accountAccessActive !== accountAccessActive;
+    await tx.user.update({ where: { id: target.id }, data: accountDomainUpdate(target, input.accountRole, input.accountAccessActive) });
+    if (securityChanged) await revokeUserAuthenticationWithLock(tx, target.id);
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function createProductUser(raw: unknown) {

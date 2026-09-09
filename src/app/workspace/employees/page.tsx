@@ -22,8 +22,8 @@ const filters = ["ALL", "MANAGERS", "SALES", "ACTIVE", "INACTIVE"] as const;
 
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const productContext = await getProductUserManagementContext();
-  const hasSales = productContext.edition !== "SALESPUNCH360_ACCOUNT";
-  if (!hasSales) return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Users" backHref="/workspace"/><ProductUserManager edition={productContext.edition} users={productContext.users} branches={productContext.branches}/></section></main>;
+  const { canManageSalesUsers, canManageAccountUsers } = productContext;
+  if (!canManageSalesUsers) return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Company Users" backHref="/workspace"/>{canManageAccountUsers&&<ProductUserManager edition={productContext.edition} users={productContext.users} branches={productContext.branches}/>}</section></main>;
   const { employees, trial, teamStructure } = await getEmployeeManagementContext();
   const actor=await requirePermission("SALES_USER_ADMIN");
   const readiness=actor.companyId?await db.company.findUnique({where:{id:actor.companyId},select:{name:true,teamStructure:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:actor.id},select:{emailVerifiedAt:true},take:1}}}):null;
@@ -51,7 +51,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     <main className="employees-shell">
       <section className="employees-content">
         <WorkspacePageHeader title="Employees" backHref="/workspace"/>
-        <ProductUserManager edition={productContext.edition} users={productContext.users} branches={productContext.branches}/>
+        {canManageAccountUsers&&<ProductUserManager edition={productContext.edition} users={productContext.users} branches={productContext.branches}/>}
         <div className="employees-title"><div><p className="muted">{managersEnabled ? "Manage your Managers and Sales team." : "Manage Sales employees who report directly to the Company Admin."}</p></div></div>
         <div className="employee-stats">
           {managersEnabled && <div><strong>{activeManagers.length}{trial.isInTrial ? ` / ${trial.managerAllowance}` : ""}</strong><span>Active Managers</span></div>}

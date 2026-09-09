@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {createProductUserSchema,editProductUserSchema} from "./product-user-management";
+import {accountDomainUpdate,createAccountUserSchema,createProductUserSchema,editProductUserSchema} from "./product-user-management";
 import {assertEditableProductUser,assertFixedSalesRole,assertProductSalesAssignment,assertSalesAdminBranchScope,roleChangeRequiresAuthenticationRevocation,validateUserRoleAssignment} from "./product-role-policy";
 const id="11111111-1111-4111-8111-111111111111";
 const base={salesRole:null,accountRole:null,managerType:null};
@@ -13,4 +13,6 @@ describe("product-aware Company users",()=>{
  it("preserves fixed Manager and Sales role semantics",()=>{expect(()=>assertFixedSalesRole("MANAGER","SALES")).toThrow("SALES_ROLE_CHANGE_NOT_ALLOWED");expect(()=>assertFixedSalesRole("SALES","MANAGER")).toThrow("SALES_ROLE_CHANGE_NOT_ALLOWED");expect(()=>assertFixedSalesRole("PRIMARY_ADMIN",null)).toThrow("PRIMARY_PROTECTED");expect(()=>assertFixedSalesRole("MANAGER","MANAGER")).not.toThrow()});
  it("enforces team structure without restricting independent Account roles",()=>{expect(()=>assertProductSalesAssignment("SALES_ONLY","MANAGER",null)).toThrow("MANAGERS_DISABLED");expect(()=>assertProductSalesAssignment("SALES_ONLY","SALES",id)).toThrow("MANAGERS_DISABLED");expect(()=>assertProductSalesAssignment("MANAGERS_AND_SALES","MANAGER",null)).not.toThrow();expect(validateUserRoleAssignment("SALESPUNCH360_PLUS",{salesRole:null,accountRole:"ACCOUNTANT",managerType:null})).toBeTruthy()});
  it("requires company-wide branch scope for Sales administrators",()=>{expect(()=>assertSalesAdminBranchScope("ADMIN","SELECTED_BRANCHES")).toThrow("SALES_ADMIN_ALL_BRANCHES_REQUIRED");expect(()=>assertSalesAdminBranchScope("PRIMARY_ADMIN","SELECTED_BRANCHES")).toThrow("SALES_ADMIN_ALL_BRANCHES_REQUIRED");expect(()=>assertSalesAdminBranchScope("ADMIN","ALL_BRANCHES")).not.toThrow();expect(()=>assertSalesAdminBranchScope("MANAGER","SELECTED_BRANCHES")).not.toThrow()});
+ it.each(["ACCOUNTANT","PROJECT_MANAGER"] as const)("accepts Account-only %s creation",accountRole=>{expect(createAccountUserSchema.safeParse({name:"Account User",email:"account@example.com",password:"Password1234",confirmPassword:"Password1234",accountRole}).success).toBe(true)});
+ it("builds an Account-only update without any Sales, Manager, lifecycle, or Branch write",()=>{const update=accountDomainUpdate({salesRole:"MANAGER"},"PROJECT_MANAGER",true);expect(update).toEqual({accountRole:"PROJECT_MANAGER",accountAccessActive:true,role:"MANAGER"});for(const protectedField of ["salesRole","managerType","managerId","salesAccessActive","branchAccessScope","branchIds"])expect(update).not.toHaveProperty(protectedField)});
 });

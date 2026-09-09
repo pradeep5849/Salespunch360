@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createProductUser, editProductUser } from "@/lib/users/product-user-management";
+import { createAccountUser, createProductUser, editAccountUser, editProductUser } from "@/lib/users/product-user-management";
 
 export type ProductUserState = { error?: string; success?: string };
 const values = (form: FormData) => ({
@@ -29,4 +29,15 @@ export async function manageProductUser(_: ProductUserState, form: FormData): Pr
     };
     return { error: messages[code] ?? "Unable to save this user. Review the role, manager, and Branch selections." };
   }
+}
+
+export async function manageAccountUser(_: ProductUserState, form: FormData): Promise<ProductUserState> {
+  try {
+    const operation = String(form.get("operation"));
+    if (operation === "create-account") await createAccountUser({ name:form.get("name"),email:form.get("email"),password:form.get("password"),confirmPassword:form.get("confirmPassword"),accountRole:form.get("accountRole") });
+    else if (operation === "edit-account") await editAccountUser({ userId:form.get("userId"),accountRole:form.get("accountRole"),accountAccessActive:form.get("accountAccessActive")==="on" });
+    else return { error: "Invalid Account user operation." };
+    revalidatePath("/workspace/employees");
+    return { success: operation === "create-account" ? "Account user created." : "Account role updated; stale sessions were revoked." };
+  } catch (error) { const code=error instanceof Error?error.message:""; return {error:code==="ROLE_REQUIRED"?"A user must retain at least one workspace role.":"Unable to update Account access."}; }
 }
