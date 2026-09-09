@@ -10,6 +10,7 @@ vi.mock("@/lib/storage",()=>({privateStorage:()=>({put:mocks.put,delete:mocks.de
 import { registerCompany } from "./registration";
 
 const base = {
+  productEdition: "SALESPUNCH360",
   companyName: "Acme Sales",
   adminName: "Ada Admin",
   adminEmail: "ada@example.com",
@@ -38,6 +39,11 @@ beforeEach(() => {
 });
 
 describe("registration trial setup", () => {
+  it.each([["SALESPUNCH360", true, false, 0], ["SALESPUNCH360_ACCOUNT", false, true, 1], ["SALESPUNCH360_PLUS", true, true, 1]] as const)("persists and provisions %s server-side", async (productEdition, salesAccessActive, accountAccessActive, accountPackageQuantity) => {
+    const tx = transactionHarness(); await registerCompany({ ...base, productEdition });
+    expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ productEdition, accountPackageQuantity }) }));
+    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ salesAccessActive, accountAccessActive }) }));
+  });
   it("creates one 15-day trial without accepting a registration team structure", async () => {
     const tx = transactionHarness();
     const { company, user } = await registerCompany(base);
