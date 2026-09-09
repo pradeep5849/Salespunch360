@@ -18,7 +18,7 @@ export default async function RegisterPage() {
       <section className="register-intro">
         <p className="eyebrow">15-day free trial</p>
         <h1>Create your company workspace</h1>
-        <p className="muted">Set up your SalesPunch360 field-sales workspace. No card required.</p>
+        <p className="muted">Choose Sales, Accounts, or both in one Company. No card required.</p>
       </section>
       <RegistrationForm />
     </main>

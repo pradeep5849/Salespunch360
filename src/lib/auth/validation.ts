@@ -13,7 +13,7 @@ export const strongPasswordSchema = z.string().min(12).max(200)
   .regex(/[0-9]/, "Password must contain a number");
 
 export const productEditionSchema = z.enum(["SALESPUNCH360", "SALESPUNCH360_ACCOUNT", "SALESPUNCH360_PLUS"]);
-export const publicProductEditionSchema = z.literal("SALESPUNCH360");
+export const publicProductEditionSchema = productEditionSchema;
 
 export const registrationSchema = z.object({
   productEdition: publicProductEditionSchema,

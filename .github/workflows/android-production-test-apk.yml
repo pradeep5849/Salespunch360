@@ -29,6 +29,20 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Inject Firebase configuration
+        shell: bash
+        env:
+          FIREBASE_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "Required FIREBASE_GOOGLE_SERVICES_JSON_BASE64 repository secret is unavailable." >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          test -s android/app/google-services.json
+
       - name: Run Android unit tests and lint
         working-directory: android
         run: ./gradlew --no-daemon testReleaseUnitTest lintRelease
@@ -104,3 +118,7 @@ jobs:
           path: SalesPunch360-production-test.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Remove Firebase configuration
+        if: always()
+        run: rm -f android/app/google-services.json

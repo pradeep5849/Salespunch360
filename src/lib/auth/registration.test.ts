@@ -40,7 +40,8 @@ beforeEach(() => {
 
 describe("registration trial setup", () => {
   it("persists the production Sales edition", async () => { const tx=transactionHarness(); await registerCompany(base); expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({productEdition:"SALESPUNCH360"})})); });
-  it.each(["SALESPUNCH360_ACCOUNT", "SALESPUNCH360_PLUS", "FORGED"])("rejects unavailable public product %s before database access", async productEdition => { transactionHarness(); await expect(registerCompany({...base,productEdition} as typeof base)).rejects.toThrow(); expect(mocks.transaction).not.toHaveBeenCalled(); });
+  it.each([["SALESPUNCH360",true,false,null],["SALESPUNCH360_ACCOUNT",false,true,"ACCOUNT_ADMIN"],["SALESPUNCH360_PLUS",true,true,"ACCOUNT_ADMIN"]] as const)("persists and provisions %s without another tenant",async(productEdition,salesAccessActive,accountAccessActive,accountRole)=>{const tx=transactionHarness();await registerCompany({...base,productEdition});expect(tx.company.create).toHaveBeenCalledTimes(1);expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({productEdition})}));expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({salesAccessActive,accountAccessActive,accountRole})}))});
+  it("rejects an unknown edition before database access",async()=>{transactionHarness();await expect(registerCompany({...base,productEdition:"FORGED"} as unknown as typeof base)).rejects.toThrow();expect(mocks.transaction).not.toHaveBeenCalled()});
   it("creates one 15-day trial without accepting a registration team structure", async () => {
     const tx = transactionHarness();
     const { company, user } = await registerCompany(base);
