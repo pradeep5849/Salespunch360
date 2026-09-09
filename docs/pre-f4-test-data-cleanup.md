@@ -18,7 +18,9 @@ Tenant-owned models discovered in `prisma/schema.prisma` are: Company, Branch, U
 * Visit thumbnail: `companies/<company UUID>/employees/<user UUID>/check-ins/<visit UUID>/thumb.webp`
 * Company logo: `Logo/<company UUID>.webp`
 
-Inventory uses stored `VisitPhoto.objectKey`, `VisitPhoto.thumbnailObjectKey`, `Company.logoObjectKey`, and `PendingStorageDeletion.objectKey`; it does not reconstruct or prefix-scan keys. `PendingStorageDeletion` is the retry queue used after metadata retention/deletion flows. Hostinger deletion uses force semantics, so an already-missing object is an idempotent `DELETED_OR_MISSING` result.
+Inventory reads stored `VisitPhoto.objectKey`, `VisitPhoto.thumbnailObjectKey`, `Company.logoObjectKey`, and `PendingStorageDeletion.objectKey`, but no stored key is trusted. Both dry-run and execute fail with `UNSAFE_STORAGE_KEY` unless the logo is exactly `Logo/<company UUID>.webp` and each live VisitPhoto main/thumbnail is exactly derivable from that row's `companyId`, `uploadedByUserId`, and `visitId` using the formats above. Equality is exact; different identifiers, prefixes, suffixes, traversal, and encoded traversal are rejected.
+
+The only current `PendingStorageDeletion` producers are visit-retention and permanent-lead-deletion flows, which copy live VisitPhoto main/thumbnail keys into the queue. Consequently cleanup permits queued keys only below the strict path-component namespace `companies/<selected company UUID>/...`; it does not permit logo or unknown namespaces. Empty components, `.`, `..`, `%` encoding, backslashes, absolute paths, and another company namespace fail closed. Hostinger deletion uses force semantics, so an already-missing validated object remains an idempotent `DELETED_OR_MISSING` result.
 
 ## Commands and guard
 
@@ -31,10 +33,10 @@ npm run cleanup:tenant -- --company-id 11111111-1111-4111-8111-111111111111
 Future execution **format only; do not run without separate production approval**:
 
 ```sh
-npm run cleanup:tenant -- --company-id 11111111-1111-4111-8111-111111111111 --execute --confirmation 'DELETE_TEST_TENANTS_11111111-1111-4111-8111-111111111111'
+npm run cleanup:tenant -- --company-id 11111111-1111-4111-8111-111111111111 --execute --confirmation 'DELETE_TEST_TENANT_11111111-1111-4111-8111-111111111111'
 ```
 
-For multiple IDs, repeat `--company-id`; the confirmation contains the lexically sorted UUIDs joined by `_`. Before any storage or DB mutation, every company must exist and every selected tenant is checked for `role = SUPER_ADMIN`. Any such corrupt association stops the entire request for manual review.
+Dry-run may repeat `--company-id`. Execute accepts exactly one Company UUID and otherwise fails with `EXECUTE_ONE_TENANT_ONLY`; there is no multi-tenant execute or execute-all mode. Before any mutation, preflight checks every selected dry-run tenant for `role = SUPER_ADMIN`. Execute repeats that check authoritatively after locking the selected Company row. Any such corrupt association stops the request for manual review.
 
 ## Inventory and dependency order
 
@@ -50,13 +52,13 @@ After nulling selected users from the preserved BillingPrice creator field and b
 6. BillingOrder; PendingStorageDeletion; Branch
 7. User (with an additional `role <> SUPER_ADMIN` predicate); Company
 
-This order follows the actual Restrict/Cascade foreign keys, rather than assuming Company cascade. The DB phase uses a serializable transaction and a tenant advisory transaction lock.
+This order follows the actual Restrict/Cascade foreign keys, rather than assuming Company cascade. Execute begins a serializable transaction and acquires the selected Company row with `SELECT ... FOR UPDATE` before authoritative inventory. While holding that row lock, it rechecks SUPER_ADMIN, rereads all counts and current storage keys using the same transaction client, validates ownership, deletes storage, performs DB cleanup, and verifies residue. The advisory transaction lock remains defense in depth for competing cleanup invocations; it is not claimed to isolate ordinary application writes. The Company row lock is the application-visible foreign-key serialization boundary.
 
 ## Storage sequencing, verification, and rollback limits
 
-Execution first saves the complete inventory, then deletes only its exact stored object keys. A missing file is reported as `DELETED_OR_MISSING`; any other storage failure stops that tenant before its DB transaction. Only after all its objects succeed does the explicit DB transaction run and remove the pending queue rows. This retains identifiers until storage work is complete. Storage and PostgreSQL are not atomically transactional: if storage succeeds but the DB transaction fails, restore files from the pre-approved backup using the emitted inventory, then retry/review. Never claim DB rollback restores objects.
+Execution deletes only keys from the locked, authoritative, ownership-validated inventory while the serializable PostgreSQL transaction remains open. A missing file is reported as `DELETED_OR_MISSING`. Any other storage failure identifies the failed validated key, throws out of the transaction, and prevents DB cleanup from committing. Storage and PostgreSQL are not atomically transactional: earlier object deletions cannot be rolled back if a later object or DB operation fails. The storage driver's missing-object behavior makes a reviewed retry idempotent, but the operator must use the emitted inventory and pre-approved backup/restore plan when investigating partial storage progress. Never claim DB rollback restores objects.
 
-Post-cleanup verification counts the Company and every table with a direct `companyId` and requires all to be zero. User-only Session, MobileSession, EmailVerificationToken, and UserBranchAccess rows are explicitly deleted and also protected from orphaning by their user foreign keys. The operator must additionally verify the inventoried keys are absent and capture pre/post counts proving SUPER_ADMIN and BillingPrice remain; `_prisma_migrations` is never queried for mutation. Re-running an absent UUID reports `TENANT_NOT_FOUND_OR_ALREADY_CLEANED`.
+Post-cleanup verification, using the same transaction client, counts the Company and every table with a direct `companyId`/`id` and requires all to be zero. It retains the locked snapshot of selected User IDs and explicitly verifies those Users plus Session, MobileSession, EmailVerificationToken, and UserBranchAccess rows are zero. The operator must additionally verify the inventoried keys are absent and capture pre/post counts proving SUPER_ADMIN and BillingPrice remain; `_prisma_migrations` is never queried for mutation. Re-running an absent UUID reports `TENANT_NOT_FOUND_OR_ALREADY_CLEANED`.
 
 Example dry-run shape (illustrative counts only):
 
