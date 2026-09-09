@@ -77,7 +77,7 @@ describe("controlled execution", () => {
 });
 
 describe("database safety contracts", () => {
-  const source = readFileSync("scripts/pre-f4-tenant-cleanup.ts", "utf8");
+  const source = readFileSync("src/lib/tenant-cleanup-database.ts", "utf8");
   it("starts a Serializable transaction and uses Company FOR UPDATE", () => { expect(source).toContain("Prisma.TransactionIsolationLevel.Serializable"); expect(source).toMatch(/SELECT \"id\" FROM \"companies\"[^`]+FOR UPDATE/); });
   it("sets cleanup-only interactive transaction lifetime limits", () => { expect(source).toContain("maxWait: 15_000"); expect(source).toContain("timeout: 300_000"); });
   it("implements liveness with SELECT 1 on the locked transaction client", () => { expect(source).toContain('assertTransactionAlive: async () => { await tx.$queryRaw`SELECT 1`; }'); expect(source).not.toContain('db.$queryRaw`SELECT 1`'); });

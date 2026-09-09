@@ -1,0 +1,18 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { permanentlyDeleteCompanyAction } from "@/app/actions/permanent-company-delete";
+import { previewPermanentCompanyDelete, STORAGE_OWNERSHIP_BLOCKED } from "@/lib/admin/permanent-company-delete";
+import { requireRole } from "@/lib/auth/authorization";
+export default async function CompanyDangerPage({ params, searchParams }: { params: Promise<{ companyId: string }>; searchParams: Promise<{ prepare?: string; error?: string }> }) {
+  await requireRole("SUPER_ADMIN"); const { companyId } = await params; const query = await searchParams; let preview = null; let blocked = false;
+  if (query.prepare === "1") { try { preview = await previewPermanentCompanyDelete(companyId); } catch (error) { if (error instanceof Error && error.message === STORAGE_OWNERSHIP_BLOCKED) blocked = true; else if (error instanceof Error && error.message.includes("TENANT_NOT_FOUND")) notFound(); else throw error; } }
+  const active = preview && (preview.company.subscriptionStatus === "ACTIVE" || Boolean(preview.company.trialEndsAt && preview.company.trialEndsAt > new Date()));
+  return <main className="billing-content company-danger-page"><Link href="/admin/billing" className="ghost-button admin-action">← Company list</Link><p className="eyebrow">Platform administration · Company</p><h1>{preview?.company.name ?? "Company management"}</h1>
+    <section className="danger-zone"><h2>Danger Zone</h2><h3>Permanently Delete Company</h3><p>This action is permanent and irreversible. All Company users, operational data, tenant billing/history, and Company photos, logo, and storage will be deleted. This cannot be undone.</p>
+      {!preview && !blocked && <Link className="danger-button admin-action" href={`/admin/companies/${companyId}?prepare=1`}>Prepare permanent deletion</Link>}{blocked && <p className="danger-alert" role="alert">{STORAGE_OWNERSHIP_BLOCKED}</p>}
+      {query.error === "confirmation" && <p className="danger-alert" role="alert">The confirmation was incorrect. No data was deleted.</p>}{query.error === "blocked" && <p className="danger-alert" role="alert">Company deletion was blocked. No database deletion was committed.</p>}
+      {preview && <div className="deletion-preview"><dl><div><dt>Company name</dt><dd>{preview.company.name}</dd></div><div><dt>Company UUID</dt><dd>{preview.company.id}</dd></div><div><dt>Slug</dt><dd>{preview.company.slug}</dd></div><div><dt>Created</dt><dd>{preview.company.createdAt?.toLocaleString() ?? "—"}</dd></div><div><dt>Product edition</dt><dd>{preview.company.productEdition ?? "—"}</dd></div><div><dt>Subscription / trial status</dt><dd>{preview.company.subscriptionStatus ?? "—"}{preview.company.trialEndsAt ? ` · trial ends ${preview.company.trialEndsAt.toLocaleDateString()}` : ""}</dd></div></dl>
+        {active && <p className="danger-alert"><strong>This Company is currently active/trial.</strong> Permanent deletion will immediately remove all access and data.</p>}<h3>Authoritative deletion inventory</h3><ul className="count-grid">{Object.entries(preview.counts).map(([model, count]) => <li key={model}><span>{model}</span><strong>{count}</strong></li>)}</ul><p><strong>Total rows to delete:</strong> {preview.totalRows}</p><p><strong>Total storage objects to delete:</strong> {preview.totalStorageObjects}</p>
+        <form action={permanentlyDeleteCompanyAction} className="delete-confirmation"><input type="hidden" name="companyId" value={companyId}/><label>Type <strong>DELETE {preview.company.slug}</strong> exactly<input name="confirmation" autoComplete="off" required/></label><button className="danger-button admin-action">Permanently Delete Company</button></form></div>}
+    </section></main>;
+}

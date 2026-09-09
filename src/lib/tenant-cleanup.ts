@@ -26,7 +26,7 @@ export type StorageObject =
   | { key: string; source: "PendingStorageDeletion.objectKey" }
   | { key: string; source: "VisitPhoto.objectKey" | "VisitPhoto.thumbnailObjectKey"; visitId: string; uploadedByUserId: string };
 export type Inventory = {
-  company: { id: string; name: string; slug: string; primaryAdmin?: { name: string; email: string } };
+  company: { id: string; name: string; slug: string; createdAt?: Date; productEdition?: string; subscriptionStatus?: string; trialEndsAt?: Date | null; primaryAdmin?: { name: string; email: string } };
   counts: Record<TenantCount, number>;
   storage: StorageObject[];
 };
@@ -44,6 +44,7 @@ export interface CleanupDatabase {
   withLockedTenant<T>(companyId: string, work: (locked: LockedCleanupDatabase) => Promise<T>): Promise<T>;
 }
 export interface CleanupStorage { delete(key: string): Promise<void> }
+export type LockedInventoryGuard = (inventory: Inventory) => void | Promise<void>;
 
 export type CleanupOptions = { companyIds: string[]; execute: boolean; confirmation?: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -101,12 +102,17 @@ export async function cleanupTenants(db: CleanupDatabase, storage: CleanupStorag
   }
   if (!options.execute) return { mode: "DRY_RUN" as const, inventories, storageResults: [] };
 
-  const companyId = options.companyIds[0];
+  return purgeTenant(db, storage, options.companyIds[0]);
+}
+
+/** The single destructive tenant-purge engine used by both the CLI and platform UI. */
+export async function purgeTenant(db: CleanupDatabase, storage: CleanupStorage, companyId: string, guard?: LockedInventoryGuard) {
   return db.withLockedTenant(companyId, async locked => {
     // withLockedTenant has already acquired Company FOR UPDATE in its Serializable transaction.
     if (await locked.hasSuperAdmin(companyId)) throw new Error(`SUPER_ADMIN_TENANT_CORRUPTION:${companyId}`);
     const inventory = await locked.inventory(companyId);
     if (!inventory) throw new Error(`TENANT_NOT_FOUND_OR_ALREADY_CLEANED:${companyId}`);
+    await guard?.(inventory);
     validateStorageOwnership(inventory);
     const storageResults: Array<{ companyId: string; key: string; status: "DELETED_OR_MISSING" }> = [];
     await locked.assertTransactionAlive();
