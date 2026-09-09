@@ -10,7 +10,6 @@ import {
   isPlatformSuperAdmin,
   isSalesPrimaryAdmin,
   type WorkspacePrincipal,
-  availableWorkspaces,
 } from "./workspace-policy";
 
 const user = (overrides: Partial<WorkspacePrincipal> = {}): WorkspacePrincipal => ({
@@ -90,16 +89,6 @@ describe("canonical workspace effective-access policy", () => {
     const principal = dualUser({ isActive: false });
     expect(canAccessSalesWorkspace(principal, "SALESPUNCH360_PLUS")).toBe(false);
     expect(canAccessAccountWorkspace(principal, "SALESPUNCH360_PLUS")).toBe(false);
-  });
-  it("exposes only server-authorized Plus workspaces", () => {
-    expect(availableWorkspaces(salesUser(), "SALESPUNCH360_PLUS")).toEqual(["SALES"]);
-    expect(availableWorkspaces(accountUser(), "SALESPUNCH360_PLUS")).toEqual(["ACCOUNTS"]);
-    expect(availableWorkspaces(dualUser(), "SALESPUNCH360_PLUS")).toEqual(["SALES", "ACCOUNTS"]);
-  });
-  it("gives the Primary Company Admin administrative Account access only when entitled and active", () => {
-    const primary = user({ role: "COMPANY_ADMIN", salesRole: "PRIMARY_ADMIN", accountAccessActive: true });
-    expect(canAccessAccountWorkspace(primary, "SALESPUNCH360_ACCOUNT")).toBe(true);
-    expect(canAccessAccountWorkspace(primary, "SALESPUNCH360")).toBe(false);
   });
 
   it("fails closed for a malformed SUPER_ADMIN with tenant, roles, and active lifecycle flags", () => {

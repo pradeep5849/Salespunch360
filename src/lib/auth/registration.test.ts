@@ -39,11 +39,8 @@ beforeEach(() => {
 });
 
 describe("registration trial setup", () => {
-  it.each([["SALESPUNCH360", true, false, 0], ["SALESPUNCH360_ACCOUNT", false, true, 1], ["SALESPUNCH360_PLUS", true, true, 1]] as const)("persists and provisions %s server-side", async (productEdition, salesAccessActive, accountAccessActive, accountPackageQuantity) => {
-    const tx = transactionHarness(); await registerCompany({ ...base, productEdition });
-    expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ productEdition, accountPackageQuantity }) }));
-    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ salesAccessActive, accountAccessActive }) }));
-  });
+  it("persists the production Sales edition", async () => { const tx=transactionHarness(); await registerCompany(base); expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({productEdition:"SALESPUNCH360"})})); });
+  it.each(["SALESPUNCH360_ACCOUNT", "SALESPUNCH360_PLUS", "FORGED"])("rejects unavailable public product %s before database access", async productEdition => { transactionHarness(); await expect(registerCompany({...base,productEdition} as typeof base)).rejects.toThrow(); expect(mocks.transaction).not.toHaveBeenCalled(); });
   it("creates one 15-day trial without accepting a registration team structure", async () => {
     const tx = transactionHarness();
     const { company, user } = await registerCompany(base);
@@ -66,4 +63,5 @@ describe("registration trial setup", () => {
   });
   it("stores a supplied logo at the exact key",async()=>{const tx=transactionHarness();await registerCompany(base,Buffer.from("webp"));expect(mocks.put).toHaveBeenCalledWith("Logo/company-id.webp",Buffer.from("webp"));expect(tx.company.update).toHaveBeenCalledWith({where:{id:"company-id"},data:{logoObjectKey:"Logo/company-id.webp"}})});
   it("removes a written logo when registration fails",async()=>{const tx=transactionHarness();tx.company.update.mockRejectedValue(new Error("DB_FAILURE"));await expect(registerCompany(base,Buffer.from("webp"))).rejects.toThrow("DB_FAILURE");expect(mocks.delete).toHaveBeenCalledWith("Logo/company-id.webp")});
+  it("cannot create the admin after required primary branch creation fails",async()=>{const tx=transactionHarness();tx.branch.create.mockRejectedValue(new Error("BRANCH_FAILURE"));await expect(registerCompany(base)).rejects.toThrow("BRANCH_FAILURE");expect(tx.company.create).toHaveBeenCalledTimes(1);expect(tx.branch.create).toHaveBeenCalledTimes(1);expect(tx.user.create).not.toHaveBeenCalled();expect(mocks.transaction).toHaveBeenCalledTimes(1)});
 });

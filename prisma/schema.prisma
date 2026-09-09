@@ -44,6 +44,20 @@ enum ProductEdition {
   SALESPUNCH360_PLUS
 }
 
+/// Company-selected product capabilities. Account/Plus modules remain reserved
+/// until their roadmap gates are released.
+enum CompanyModule {
+  SALES_CRM
+  ATTENDANCE
+  GPS_TRACKING
+  FOLLOW_UP_TASKS
+  TARGETS
+  REPORTS
+  INVENTORY
+  ACCOUNTING
+  PROJECTS
+}
+
 enum BranchAccessScope {
   ALL_BRANCHES
   SELECTED_BRANCHES
@@ -194,8 +208,7 @@ model Company {
   slug                                String                   @unique
   teamStructure                       TeamStructure            @default(MANAGERS_AND_SALES)
   productEdition                      ProductEdition           @default(SALESPUNCH360)
-  /// Number of indivisible four-role Account packages. Trial Account/Plus companies start with one.
-  accountPackageQuantity              Int                      @default(0)
+  enabledModules                      CompanyModule[]          @default([SALES_CRM, ATTENDANCE, GPS_TRACKING, FOLLOW_UP_TASKS, TARGETS, REPORTS])
   trialStartedAt                      DateTime?
   trialEndsAt                         DateTime?
   subscriptionStatus                  SubscriptionStatus       @default(SUSPENDED)
