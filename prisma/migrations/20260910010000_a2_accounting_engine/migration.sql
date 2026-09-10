@@ -267,14 +267,28 @@ CREATE TRIGGER journal_entry_lifecycle BEFORE UPDATE ON "journal_entries" FOR EA
 CREATE FUNCTION protect_posted_journal_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF; IF OLD."status" <> 'DRAFT' THEN RAISE EXCEPTION 'non-draft journal cannot be deleted'; END IF; RETURN OLD; END $$;
 CREATE TRIGGER journal_entry_no_delete BEFORE DELETE ON "journal_entries" FOR EACH ROW EXECUTE FUNCTION protect_posted_journal_delete();
 CREATE FUNCTION protect_journal_lines() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE target_company uuid; target_journal uuid; journal_status "JournalStatus";
+DECLARE old_status "JournalStatus"; new_status "JournalStatus"; old_parent_company uuid; new_parent_company uuid; marker text;
 BEGIN
- target_company := CASE WHEN TG_OP='DELETE' THEN OLD."companyId" ELSE NEW."companyId" END;
- target_journal := CASE WHEN TG_OP='DELETE' THEN OLD."journalEntryId" ELSE NEW."journalEntryId" END;
- IF current_setting('app.account_cleanup_company_id', true) = target_company::text THEN IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF; END IF;
- SELECT "status" INTO journal_status FROM "journal_entries" WHERE id=target_journal AND "companyId"=target_company;
- IF journal_status IS DISTINCT FROM 'DRAFT' THEN RAISE EXCEPTION 'journal lines are mutable only while draft'; END IF;
- IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+ marker := current_setting('app.account_cleanup_company_id', true);
+ IF TG_OP = 'INSERT' THEN
+   IF marker = NEW."companyId"::text THEN RETURN NEW; END IF;
+   SELECT "status", "companyId" INTO new_status, new_parent_company FROM "journal_entries" WHERE id=NEW."journalEntryId";
+   IF new_status IS DISTINCT FROM 'DRAFT' OR new_parent_company IS DISTINCT FROM NEW."companyId" THEN RAISE EXCEPTION 'journal lines may be inserted only into a same-company draft'; END IF;
+   RETURN NEW;
+ ELSIF TG_OP = 'DELETE' THEN
+   IF marker = OLD."companyId"::text THEN RETURN OLD; END IF;
+   SELECT "status", "companyId" INTO old_status, old_parent_company FROM "journal_entries" WHERE id=OLD."journalEntryId";
+   IF old_status IS DISTINCT FROM 'DRAFT' OR old_parent_company IS DISTINCT FROM OLD."companyId" THEN RAISE EXCEPTION 'only draft journal lines may be deleted'; END IF;
+   RETURN OLD;
+ ELSE
+   IF marker = OLD."companyId"::text AND NEW."companyId" = OLD."companyId" THEN RETURN NEW; END IF;
+   SELECT "status", "companyId" INTO old_status, old_parent_company FROM "journal_entries" WHERE id=OLD."journalEntryId";
+   SELECT "status", "companyId" INTO new_status, new_parent_company FROM "journal_entries" WHERE id=NEW."journalEntryId";
+   IF old_status IS DISTINCT FROM 'DRAFT' THEN RAISE EXCEPTION 'posted or reversed journal lines are immutable'; END IF;
+   IF new_status IS DISTINCT FROM 'DRAFT' THEN RAISE EXCEPTION 'draft lines may move only to another draft'; END IF;
+   IF NEW."companyId" IS DISTINCT FROM OLD."companyId" OR old_parent_company IS DISTINCT FROM OLD."companyId" OR new_parent_company IS DISTINCT FROM OLD."companyId" THEN RAISE EXCEPTION 'journal line company cannot change'; END IF;
+   RETURN NEW;
+ END IF;
 END $$;
 CREATE TRIGGER journal_line_draft_only BEFORE INSERT OR UPDATE OR DELETE ON "journal_lines" FOR EACH ROW EXECUTE FUNCTION protect_journal_lines();
 CREATE FUNCTION protect_accounting_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF; RAISE EXCEPTION 'accounting audit is append-only'; END $$;
