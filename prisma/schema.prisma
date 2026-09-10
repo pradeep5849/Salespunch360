@@ -117,6 +117,61 @@ enum SettlementType {
   VENDOR_ADVANCE
 }
 
+enum CommercialLineType {
+  PRODUCT
+  SERVICE
+  WORK_PACKAGE
+  CUSTOM
+  MATERIAL
+  SUBCONTRACT
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum PurchasePurpose {
+  OFFICE
+  PROJECT
+}
+
+enum PurchaseClassification {
+  PURCHASE_COST
+  GENERAL_EXPENSES
+}
+
+enum PaymentMode {
+  CASH
+  BANK
+}
+
+enum SettlementStatus {
+  POSTED
+}
+
+enum PaymentReminderStatus {
+  PENDING
+  SENT
+  DISMISSED
+}
+
+enum CommercialAuditEventType {
+  DOCUMENT_CREATED
+  INVOICE_POSTED
+  CREDIT_NOTE_POSTED
+  PURCHASE_BILL_POSTED
+  DEBIT_NOTE_POSTED
+  CUSTOMER_RECEIPT_POSTED
+  CUSTOMER_ADVANCE_POSTED
+  CUSTOMER_ADVANCE_APPLIED
+  VENDOR_PAYMENT_POSTED
+  VENDOR_ADVANCE_POSTED
+  VENDOR_ADVANCE_APPLIED
+  REMINDER_CREATED
+  REMINDER_STATUS_CHANGED
+}
+
 enum BranchAccessScope {
   ALL_BRANCHES
   SELECTED_BRANCHES
@@ -464,6 +519,9 @@ model Company {
   commercialDocuments                 CommercialDocument[]
   settlements                         AccountSettlement[]
   paymentReminders                    PaymentReminder[]
+  commercialAudits CommercialAuditEvent[]
+  settlementAllocations SettlementAllocation[]
+  advanceApplications AdvanceApplication[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -532,6 +590,9 @@ model User {
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
   commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
   settlements                AccountSettlement[]      @relation("SettlementCreator")
+  commercialAudits CommercialAuditEvent[] @relation("CommercialAuditActor")
+  paymentReminders PaymentReminder[] @relation("PaymentReminderActor")
+  advanceApplications AdvanceApplication[] @relation("AdvanceApplicationActor")
 
   @@unique([companyId, id])
   @@unique([companyId, employeeCode])
@@ -669,6 +730,7 @@ model Customer {
   @@index([companyId, assignedUserId])
   @@index([companyId, branchId])
   @@map("customers")
+  commercialDocuments CommercialDocument[] @relation("CommercialCustomer")
 }
 
 model CustomerVisit {
@@ -1281,7 +1343,9 @@ model Vendor {
   updatedAt     DateTime @updatedAt
 
   @@index([companyId, name])
+  @@unique([companyId, id])
   @@map("vendors")
+  commercialDocuments CommercialDocument[] @relation("CommercialVendor")
 }
 
 model AccountUnit {
@@ -1343,6 +1407,7 @@ model AccountProduct {
   updatedAt   DateTime         @updatedAt
 
   quotationLines QuotationLine[]
+  commercialLines CommercialDocumentLine[]
 
   @@unique([companyId, id])
   @@unique([companyId, code])
@@ -1369,6 +1434,7 @@ model AccountService {
   updatedAt     DateTime         @updatedAt
 
   quotationLines QuotationLine[]
+  commercialLines CommercialDocumentLine[]
 
   @@unique([companyId, id])
   @@unique([companyId, code])
@@ -1410,6 +1476,7 @@ model WorkPackage {
   updatedAt      DateTime     @updatedAt
 
   quotationLines QuotationLine[]
+  commercialLines CommercialDocumentLine[]
 
   @@unique([companyId, id])
   @@unique([companyId, code])
@@ -1520,6 +1587,9 @@ model JournalEntry {
   @@index([companyId, entryDate, status])
   @@index([companyId, branchId, entryDate])
   @@map("journal_entries")
+  commercialDocuments CommercialDocument[] @relation("CommercialJournal")
+  settlements AccountSettlement[] @relation("SettlementJournal")
+  advanceApplications AdvanceApplication[] @relation("AdvanceApplicationJournal")
 }
 
 model JournalLine {
@@ -1765,86 +1835,174 @@ model QuotationAuditEvent {
 }
 
 model CommercialDocument {
-  id             String                   @id @default(uuid()) @db.Uuid
-  companyId      String                   @db.Uuid
-  branchId       String                   @db.Uuid
-  type           CommercialDocumentType
-  status         CommercialDocumentStatus @default(DRAFT)
-  documentNumber String
-  partyId        String                   @db.Uuid
-  partyName      String
-  issueDate      DateTime                 @db.Date
-  dueDate        DateTime?                @db.Date
-  subtotal       Decimal                  @db.Decimal(18, 2)
-  taxTotal       Decimal                  @db.Decimal(18, 2)
-  grandTotal     Decimal                  @db.Decimal(18, 2)
-  balanceDue     Decimal                  @db.Decimal(18, 2)
-  notes          String?
-  journalEntryId String?                  @db.Uuid
-  createdById    String                   @db.Uuid
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-  company        Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  branch         Branch                   @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  createdBy      User                     @relation("CommercialDocumentCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  lines          CommercialDocumentLine[]
-  reminders      PaymentReminder[]
-
-  @@unique([companyId, id])
-  @@unique([companyId, branchId, type, documentNumber])
-  @@index([companyId, type, issueDate])
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  type CommercialDocumentType
+  status CommercialDocumentStatus @default(DRAFT)
+  documentNumber String @db.VarChar(100)
+  customerId String? @db.Uuid
+  vendorId String? @db.Uuid
+  partyId String @db.Uuid
+  partyName String @db.VarChar(240)
+  sourceDocumentId String? @db.Uuid
+  purchasePurpose PurchasePurpose?
+  purchaseClassification PurchaseClassification?
+  projectReference String? @db.VarChar(240)
+  issueDate DateTime @db.Date
+  dueDate DateTime? @db.Date
+  subtotal Decimal @db.Decimal(18,2)
+  discountTotal Decimal @default(0) @db.Decimal(18,2)
+  taxableTotal Decimal @db.Decimal(18,2)
+  taxTotal Decimal @db.Decimal(18,2)
+  grandTotal Decimal @db.Decimal(18,2)
+  balanceDue Decimal @db.Decimal(18,2)
+  notes String?
+  journalEntryId String? @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  customer Customer? @relation("CommercialCustomer",fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  vendor Vendor? @relation("CommercialVendor",fields:[companyId,vendorId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  journalEntry JournalEntry? @relation("CommercialJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdBy User @relation("CommercialDocumentCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  sourceDocument CommercialDocument? @relation("CommercialSource",fields:[companyId,sourceDocumentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  adjustments CommercialDocument[] @relation("CommercialSource")
+  lines CommercialDocumentLine[]
+  reminders PaymentReminder[]
+  allocations SettlementAllocation[]
+  advanceApplications AdvanceApplication[]
+  @@unique([companyId,id])
+  @@unique([companyId,branchId,type,documentNumber])
+  @@index([companyId,type,issueDate])
+  @@index([companyId,customerId])
+  @@index([companyId,vendorId])
   @@map("commercial_documents")
 }
-
 model CommercialDocumentLine {
-  id          String             @id @default(uuid()) @db.Uuid
-  companyId   String             @db.Uuid
-  documentId  String             @db.Uuid
-  position    Int
-  description String
-  quantity    Decimal            @db.Decimal(18, 4)
-  rate        Decimal            @db.Decimal(18, 2)
-  taxRate     Decimal            @default(0) @db.Decimal(7, 4)
-  taxable     Decimal            @db.Decimal(18, 2)
-  taxAmount   Decimal            @db.Decimal(18, 2)
-  total       Decimal            @db.Decimal(18, 2)
-  document    CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-
-  @@unique([companyId, documentId, position])
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  documentId String @db.Uuid
+  position Int
+  lineType CommercialLineType
+  productId String? @db.Uuid
+  serviceId String? @db.Uuid
+  workPackageId String? @db.Uuid
+  itemName String @db.VarChar(240)
+  itemCode String? @db.VarChar(80)
+  description String?
+  specification String?
+  unitName String? @db.VarChar(80)
+  unitSymbol String? @db.VarChar(20)
+  quantity Decimal @db.Decimal(18,4)
+  rate Decimal @db.Decimal(18,2)
+  discountType DiscountType?
+  discountValue Decimal? @db.Decimal(18,4)
+  baseAmount Decimal @db.Decimal(18,2)
+  discountAmount Decimal @db.Decimal(18,2)
+  taxableAmount Decimal @db.Decimal(18,2)
+  taxRate Decimal @default(0) @db.Decimal(7,4)
+  taxAmount Decimal @db.Decimal(18,2)
+  lineTotal Decimal @db.Decimal(18,2)
+  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  product AccountProduct? @relation(fields:[companyId,productId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  service AccountService? @relation(fields:[companyId,serviceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  workPackage WorkPackage? @relation(fields:[companyId,workPackageId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([companyId,id])
+  @@unique([companyId,documentId,position])
   @@map("commercial_document_lines")
 }
-
 model AccountSettlement {
-  id              String         @id @default(uuid()) @db.Uuid
-  companyId       String         @db.Uuid
-  branchId        String         @db.Uuid
-  type            SettlementType
-  partyId         String         @db.Uuid
-  amount          Decimal        @db.Decimal(18, 2)
-  transactionDate DateTime       @db.Date
-  reference       String?
-  journalEntryId  String?        @db.Uuid
-  createdById     String         @db.Uuid
-  createdAt       DateTime       @default(now())
-  company         Company        @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  branch          Branch         @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  createdBy       User           @relation("SettlementCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-
-  @@index([companyId, partyId, transactionDate])
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  type SettlementType
+  status SettlementStatus @default(POSTED)
+  settlementNumber String @db.VarChar(100)
+  partyId String @db.Uuid
+  paymentMode PaymentMode
+  amount Decimal @db.Decimal(18,2)
+  remainingAmount Decimal @default(0) @db.Decimal(18,2)
+  transactionDate DateTime @db.Date
+  reference String? @db.VarChar(160)
+  notes String?
+  journalEntryId String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  journalEntry JournalEntry @relation("SettlementJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdBy User @relation("SettlementCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  allocations SettlementAllocation[]
+  applications AdvanceApplication[]
+  @@unique([companyId,id])
+  @@unique([companyId,branchId,type,settlementNumber])
+  @@index([companyId,partyId,transactionDate])
   @@map("account_settlements")
 }
-
+model SettlementAllocation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  settlementId String @db.Uuid
+  documentId String @db.Uuid
+  amount Decimal @db.Decimal(18,2)
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  settlement AccountSettlement @relation(fields:[companyId,settlementId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([companyId,settlementId,documentId])
+  @@map("settlement_allocations")
+}
+model AdvanceApplication {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  advanceId String @db.Uuid
+  documentId String @db.Uuid
+  amount Decimal @db.Decimal(18,2)
+  idempotencyKey String @db.VarChar(120)
+  journalEntryId String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  advance AccountSettlement @relation(fields:[companyId,advanceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  journalEntry JournalEntry @relation("AdvanceApplicationJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdBy User @relation("AdvanceApplicationActor",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([companyId,idempotencyKey])
+  @@unique([companyId,advanceId,documentId,idempotencyKey])
+  @@map("advance_applications")
+}
 model PaymentReminder {
-  id         String             @id @default(uuid()) @db.Uuid
-  companyId  String             @db.Uuid
-  documentId String             @db.Uuid
-  remindAt   DateTime
-  message    String             @db.VarChar(1000)
-  sentAt     DateTime?
-  createdAt  DateTime           @default(now())
-  company    Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  document   CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-
-  @@index([companyId, remindAt])
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  documentId String @db.Uuid
+  customerId String @db.Uuid
+  remindAt DateTime
+  message String @db.VarChar(1000)
+  status PaymentReminderStatus @default(PENDING)
+  sentAt DateTime?
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdBy User @relation("PaymentReminderActor",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([companyId,remindAt,status])
   @@map("payment_reminders")
+}
+model CommercialAuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  eventType CommercialAuditEventType
+  entityType String @db.VarChar(60)
+  entityId String @db.Uuid
+  actorId String? @db.Uuid
+  metadata Json?
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  actor User? @relation("CommercialAuditActor",fields:[companyId,actorId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([companyId,entityType,entityId,createdAt])
+  @@map("commercial_audit_events")
 }
