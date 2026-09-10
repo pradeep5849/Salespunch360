@@ -731,6 +731,8 @@ model Customer {
   @@index([companyId, branchId])
   @@map("customers")
   commercialDocuments CommercialDocument[] @relation("CommercialCustomer")
+  settlements AccountSettlement[] @relation("SettlementCustomer")
+  paymentReminders PaymentReminder[] @relation("PaymentReminderCustomer")
 }
 
 model CustomerVisit {
@@ -1346,6 +1348,7 @@ model Vendor {
   @@unique([companyId, id])
   @@map("vendors")
   commercialDocuments CommercialDocument[] @relation("CommercialVendor")
+  settlements AccountSettlement[] @relation("SettlementVendor")
 }
 
 model AccountUnit {
@@ -1922,6 +1925,9 @@ model AccountSettlement {
   status SettlementStatus @default(POSTED)
   settlementNumber String @db.VarChar(100)
   partyId String @db.Uuid
+  customerId String? @db.Uuid
+  vendorId String? @db.Uuid
+  idempotencyKey String @db.VarChar(120)
   paymentMode PaymentMode
   amount Decimal @db.Decimal(18,2)
   remainingAmount Decimal @default(0) @db.Decimal(18,2)
@@ -1935,10 +1941,13 @@ model AccountSettlement {
   branch Branch @relation(fields:[companyId,branchId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
   journalEntry JournalEntry @relation("SettlementJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
   createdBy User @relation("SettlementCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  customer Customer? @relation("SettlementCustomer",fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  vendor Vendor? @relation("SettlementVendor",fields:[companyId,vendorId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
   allocations SettlementAllocation[]
   applications AdvanceApplication[]
   @@unique([companyId,id])
   @@unique([companyId,branchId,type,settlementNumber])
+  @@unique([companyId,idempotencyKey])
   @@index([companyId,partyId,transactionDate])
   @@map("account_settlements")
 }
@@ -1961,6 +1970,7 @@ model AdvanceApplication {
   advanceId String @db.Uuid
   documentId String @db.Uuid
   amount Decimal @db.Decimal(18,2)
+  applicationDate DateTime @db.Date
   idempotencyKey String @db.VarChar(120)
   journalEntryId String @db.Uuid
   createdById String @db.Uuid
@@ -1989,6 +1999,7 @@ model PaymentReminder {
   company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
   createdBy User @relation("PaymentReminderActor",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  customer Customer @relation("PaymentReminderCustomer",fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
   @@index([companyId,remindAt,status])
   @@map("payment_reminders")
 }
