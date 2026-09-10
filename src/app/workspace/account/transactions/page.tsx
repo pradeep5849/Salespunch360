@@ -1,0 +1,2 @@
+import Link from "next/link";import {listCommercialDocuments} from "@/lib/account/commercial";
+export default async function Page(){const rows=await listCommercialDocuments();return <main><h1>Sales & Purchases</h1><Link href="/workspace/account/transactions/new">New transaction</Link>{rows.map(x=><p key={x.id}><Link href={`/workspace/account/transactions/${x.id}`}>{x.type} {x.documentNumber} — {x.partyName} — {x.grandTotal.toString()}</Link></p>)}</main>}

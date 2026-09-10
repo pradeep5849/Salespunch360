@@ -58,6 +58,65 @@ enum CompanyModule {
   PROJECTS
 }
 
+enum BusinessType {
+  INTERIOR_CONSTRUCTION
+  RETAIL_TRADING
+  SERVICE_BUSINESS
+  MANUFACTURING
+  OTHER_MIXED
+}
+
+enum AccountModule {
+  QUOTATIONS_BOQ
+  SALES
+  SALES_ORDER
+  PROFORMA_INVOICE
+  DELIVERY_CHALLAN
+  CREDIT_NOTE
+  CUSTOMER_RECEIPTS
+  CUSTOMER_ADVANCES
+  PAYMENT_REMINDERS
+  PURCHASES
+  PURCHASE_ORDER
+  PURCHASE_BILLS
+  DEBIT_NOTE
+  VENDOR_PAYMENTS
+  VENDOR_ADVANCES
+  SUBCONTRACTORS
+  PROJECTS
+  PROJECT_COSTING
+  INVENTORY
+  BARCODE
+  EXPENSES
+  ASSETS
+  GST_ADVANCED
+}
+
+enum CommercialDocumentType {
+  SALES_ORDER
+  PROFORMA_INVOICE
+  SALES_INVOICE
+  DELIVERY_CHALLAN
+  CREDIT_NOTE
+  PURCHASE_ORDER
+  PURCHASE_BILL
+  DEBIT_NOTE
+  SUBCONTRACT_PURCHASE
+}
+
+enum CommercialDocumentStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum SettlementType {
+  CUSTOMER_RECEIPT
+  CUSTOMER_ADVANCE
+  VENDOR_PAYMENT
+  VENDOR_ADVANCE
+}
+
 enum BranchAccessScope {
   ALL_BRANCHES
   SELECTED_BRANCHES
@@ -402,6 +461,9 @@ model Company {
   quotationPaymentSchedules           QuotationPaymentSchedule[]
   quotationShares                     QuotationShare[]
   quotationAuditEvents                QuotationAuditEvent[]
+  commercialDocuments                 CommercialDocument[]
+  settlements                         AccountSettlement[]
+  paymentReminders                    PaymentReminder[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -468,6 +530,8 @@ model User {
   createdQuotationDocuments  QuotationDocument[]      @relation("QuotationCreator")
   acceptedQuotationDocuments QuotationDocument[]      @relation("QuotationAcceptor")
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
+  commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
+  settlements                AccountSettlement[]      @relation("SettlementCreator")
 
   @@unique([companyId, id])
   @@unique([companyId, employeeCode])
@@ -482,29 +546,31 @@ model User {
 }
 
 model Branch {
-  id                 String              @id @default(uuid()) @db.Uuid
-  companyId          String              @db.Uuid
-  company            Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name               String
-  code               String
-  isPrimary          Boolean             @default(false)
-  isActive           Boolean             @default(true)
-  addressLine1       String?
-  addressLine2       String?
-  locality           String?
-  city               String?
-  state              String?
-  postalCode         String?
-  country            String?
-  phone              String?
-  email              String?
-  gstin              String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  userAccesses       UserBranchAccess[]
-  numberingSeries    NumberingSeries[]
-  journalEntries     JournalEntry[]
-  quotationDocuments QuotationDocument[]
+  id                  String               @id @default(uuid()) @db.Uuid
+  companyId           String               @db.Uuid
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                String
+  code                String
+  isPrimary           Boolean              @default(false)
+  isActive            Boolean              @default(true)
+  addressLine1        String?
+  addressLine2        String?
+  locality            String?
+  city                String?
+  state               String?
+  postalCode          String?
+  country             String?
+  phone               String?
+  email               String?
+  gstin               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  userAccesses        UserBranchAccess[]
+  numberingSeries     NumberingSeries[]
+  journalEntries      JournalEntry[]
+  quotationDocuments  QuotationDocument[]
+  commercialDocuments CommercialDocument[]
+  settlements         AccountSettlement[]
 
   @@unique([companyId, code])
   @@unique([companyId, id])
@@ -1147,11 +1213,13 @@ model RateLimitBucket {
 }
 
 model AccountSettings {
-  companyId    String   @id @db.Uuid
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  baseCurrency String   @default("INR") @db.Char(3)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  companyId      String          @id @db.Uuid
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  baseCurrency   String          @default("INR") @db.Char(3)
+  businessType   BusinessType    @default(OTHER_MIXED)
+  enabledModules AccountModule[] @default([])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@map("account_settings")
 }
@@ -1694,4 +1762,89 @@ model QuotationAuditEvent {
 
   @@index([companyId, documentId, createdAt])
   @@map("quotation_audit_events")
+}
+
+model CommercialDocument {
+  id             String                   @id @default(uuid()) @db.Uuid
+  companyId      String                   @db.Uuid
+  branchId       String                   @db.Uuid
+  type           CommercialDocumentType
+  status         CommercialDocumentStatus @default(DRAFT)
+  documentNumber String
+  partyId        String                   @db.Uuid
+  partyName      String
+  issueDate      DateTime                 @db.Date
+  dueDate        DateTime?                @db.Date
+  subtotal       Decimal                  @db.Decimal(18, 2)
+  taxTotal       Decimal                  @db.Decimal(18, 2)
+  grandTotal     Decimal                  @db.Decimal(18, 2)
+  balanceDue     Decimal                  @db.Decimal(18, 2)
+  notes          String?
+  journalEntryId String?                  @db.Uuid
+  createdById    String                   @db.Uuid
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  company        Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch         Branch                   @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy      User                     @relation("CommercialDocumentCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  lines          CommercialDocumentLine[]
+  reminders      PaymentReminder[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, branchId, type, documentNumber])
+  @@index([companyId, type, issueDate])
+  @@map("commercial_documents")
+}
+
+model CommercialDocumentLine {
+  id          String             @id @default(uuid()) @db.Uuid
+  companyId   String             @db.Uuid
+  documentId  String             @db.Uuid
+  position    Int
+  description String
+  quantity    Decimal            @db.Decimal(18, 4)
+  rate        Decimal            @db.Decimal(18, 2)
+  taxRate     Decimal            @default(0) @db.Decimal(7, 4)
+  taxable     Decimal            @db.Decimal(18, 2)
+  taxAmount   Decimal            @db.Decimal(18, 2)
+  total       Decimal            @db.Decimal(18, 2)
+  document    CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, documentId, position])
+  @@map("commercial_document_lines")
+}
+
+model AccountSettlement {
+  id              String         @id @default(uuid()) @db.Uuid
+  companyId       String         @db.Uuid
+  branchId        String         @db.Uuid
+  type            SettlementType
+  partyId         String         @db.Uuid
+  amount          Decimal        @db.Decimal(18, 2)
+  transactionDate DateTime       @db.Date
+  reference       String?
+  journalEntryId  String?        @db.Uuid
+  createdById     String         @db.Uuid
+  createdAt       DateTime       @default(now())
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch          Branch         @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy       User           @relation("SettlementCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, partyId, transactionDate])
+  @@map("account_settlements")
+}
+
+model PaymentReminder {
+  id         String             @id @default(uuid()) @db.Uuid
+  companyId  String             @db.Uuid
+  documentId String             @db.Uuid
+  remindAt   DateTime
+  message    String             @db.VarChar(1000)
+  sentAt     DateTime?
+  createdAt  DateTime           @default(now())
+  company    Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document   CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, remindAt])
+  @@map("payment_reminders")
 }

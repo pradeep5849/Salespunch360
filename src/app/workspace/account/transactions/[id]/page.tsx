@@ -1,0 +1,2 @@
+import {getCommercialDocument} from "@/lib/account/commercial";
+export default async function Page({params}:{params:Promise<{id:string}>}){const {id}=await params,x=await getCommercialDocument(id);return <main><h1>{x.type} {x.documentNumber}</h1><p>{x.partyName} · {x.status} · Balance {x.balanceDue.toString()}</p>{x.lines.map(line=><p key={line.id}>{line.description} — {line.quantity.toString()} × {line.rate.toString()} = {line.total.toString()}</p>)}</main>}

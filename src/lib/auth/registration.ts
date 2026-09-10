@@ -5,6 +5,8 @@ import { calculateTrialEndsAt } from "@/lib/trial/status";
 import { randomUUID } from "node:crypto";
 import { companyLogoKey } from "@/lib/company/logo";
 import { privateStorage } from "@/lib/storage";
+import { BusinessType } from "@prisma/client";
+import { recommendedModulesForBusinessType } from "@/lib/account/modules";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 
 export function generateCompanySlug(companyName: string) {
@@ -37,7 +39,7 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         trialEndsAt,
         primaryContactName: data.adminName,
         contactEmail: data.adminEmail,
-        accountSettings: data.productEdition === "SALESPUNCH360" ? undefined : { create: { baseCurrency: "INR" } },
+        accountSettings: data.productEdition === "SALESPUNCH360" ? undefined : { create: { baseCurrency: "INR", businessType: BusinessType.OTHER_MIXED, enabledModules: recommendedModulesForBusinessType(BusinessType.OTHER_MIXED) } },
         ledgerAccounts: data.productEdition === "SALESPUNCH360" ? undefined : { create: DEFAULT_LEDGER_ACCOUNTS },
       },
     });
