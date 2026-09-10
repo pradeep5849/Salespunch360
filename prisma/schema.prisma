@@ -406,8 +406,10 @@ model User {
   reviewedTravelApprovals DailyTravelApproval[]    @relation("TravelApprovalReviewer")
   createdJournalEntries   JournalEntry[]           @relation("JournalCreator")
   postedJournalEntries    JournalEntry[]           @relation("JournalPoster")
-  accountingAuditEvents   AccountingAuditEvent[]
+  accountingAuditEvents   AccountingAuditEvent[]   @relation("AccountingAuditActor")
+  updatedAccountingLocks  AccountingPeriodLock[]   @relation("AccountingLockUpdater")
 
+  @@unique([companyId, id])
   @@unique([companyId, employeeCode])
   @@index([companyId, role])
   @@index([companyId, salesRole])
@@ -1357,18 +1359,19 @@ model JournalEntry {
   reversedBy      JournalEntry? @relation("JournalReversal")
   reversalReason  String?
   createdById     String        @db.Uuid
-  createdBy       User          @relation("JournalCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy       User          @relation("JournalCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   postedById      String?       @db.Uuid
-  postedBy        User?         @relation("JournalPoster", fields: [postedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  postedBy        User?         @relation("JournalPoster", fields: [companyId, postedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   postedAt        DateTime?
   lines           JournalLine[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@unique([companyId, id])
-  @@unique([companyId, journalNumber])
+  @@unique([companyId, branchId, journalNumber])
   @@unique([companyId, sourceType, sourceId, postingPurpose])
   @@unique([companyId, reversalOfId])
+  @@index([companyId, journalNumber])
   @@index([companyId, entryDate, status])
   @@index([companyId, branchId, entryDate])
   @@map("journal_entries")
@@ -1404,6 +1407,7 @@ model AccountingPeriodLock {
   financialYear   FinancialYear @relation(fields: [companyId, financialYearId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   lockedThrough   DateTime?     @db.Date
   updatedById     String        @db.Uuid
+  updatedBy       User          @relation("AccountingLockUpdater", fields: [companyId, updatedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   updatedAt       DateTime      @updatedAt
   createdAt       DateTime      @default(now())
 
@@ -1418,7 +1422,7 @@ model AccountingAuditEvent {
   companyId   String                   @db.Uuid
   company     Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   actorUserId String                   @db.Uuid
-  actor       User                     @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor       User                     @relation("AccountingAuditActor", fields: [companyId, actorUserId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   eventType   AccountingAuditEventType
   entityType  String                   @db.VarChar(60)
   entityId    String                   @db.VarChar(100)

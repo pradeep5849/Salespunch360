@@ -147,7 +147,9 @@ CREATE INDEX "journal_entries_companyId_branchId_entryDate_idx" ON "journal_entr
 CREATE UNIQUE INDEX "journal_entries_companyId_id_key" ON "journal_entries"("companyId", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "journal_entries_companyId_journalNumber_key" ON "journal_entries"("companyId", "journalNumber");
+CREATE UNIQUE INDEX "users_companyId_id_accounting_key" ON "users"("companyId", "id");
+CREATE UNIQUE INDEX "journal_entries_companyId_branchId_journalNumber_key" ON "journal_entries"("companyId", "branchId", "journalNumber");
+CREATE INDEX "journal_entries_companyId_journalNumber_idx" ON "journal_entries"("companyId", "journalNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "journal_entries_companyId_sourceType_sourceId_postingPurpos_key" ON "journal_entries"("companyId", "sourceType", "sourceId", "postingPurpose");
@@ -204,10 +206,10 @@ ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_companyId_branchId
 ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_companyId_reversalOfId_fkey" FOREIGN KEY ("companyId", "reversalOfId") REFERENCES "journal_entries"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_companyId_createdById_fkey" FOREIGN KEY ("companyId", "createdById") REFERENCES "users"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_postedById_fkey" FOREIGN KEY ("postedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_companyId_postedById_fkey" FOREIGN KEY ("companyId", "postedById") REFERENCES "users"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -227,28 +229,54 @@ ALTER TABLE "accounting_period_locks" ADD CONSTRAINT "accounting_period_locks_co
 -- AddForeignKey
 ALTER TABLE "accounting_period_locks" ADD CONSTRAINT "accounting_period_locks_companyId_financialYearId_fkey" FOREIGN KEY ("companyId", "financialYearId") REFERENCES "financial_years"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
+ALTER TABLE "accounting_period_locks" ADD CONSTRAINT "accounting_period_locks_companyId_updatedById_fkey" FOREIGN KEY ("companyId", "updatedById") REFERENCES "users"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
 -- AddForeignKey
 ALTER TABLE "accounting_audit_events" ADD CONSTRAINT "accounting_audit_events_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "accounting_audit_events" ADD CONSTRAINT "accounting_audit_events_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "accounting_audit_events" ADD CONSTRAINT "accounting_audit_events_companyId_actorUserId_fkey" FOREIGN KEY ("companyId", "actorUserId") REFERENCES "users"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_line_one_side_positive" CHECK ("debit" >= 0 AND "credit" >= 0 AND (("debit" > 0 AND "credit" = 0) OR ("credit" > 0 AND "debit" = 0)));
-ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_posting_fields" CHECK (("status" = 'DRAFT') OR ("postedAt" IS NOT NULL AND "postedById" IS NOT NULL));
+ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_posting_fields" CHECK (("status" IN ('DRAFT','CANCELLED')) OR ("postedAt" IS NOT NULL AND "postedById" IS NOT NULL));
 INSERT INTO "ledger_accounts" ("id","companyId","code","name","accountClass","normalBalance","systemKey","isSystem","isActive","allowPosting","createdAt","updatedAt")
 SELECT gen_random_uuid(), c.id, v.code, v.name, v.class::"LedgerAccountClass", v.normal::"NormalBalanceSide", v.key, true, true, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "companies" c CROSS JOIN (VALUES
 ('1000','Cash','ASSET','DEBIT','CASH'),('1100','Bank','ASSET','DEBIT','BANK'),('1200','Accounts Receivable','ASSET','DEBIT','ACCOUNTS_RECEIVABLE'),('1300','Inventory','ASSET','DEBIT','INVENTORY'),('1400','Advances','ASSET','DEBIT','ADVANCES'),('1500','Fixed Assets','ASSET','DEBIT','FIXED_ASSETS'),('2000','Accounts Payable','LIABILITY','CREDIT','ACCOUNTS_PAYABLE'),('2100','Taxes Payable','LIABILITY','CREDIT','TAXES_PAYABLE'),('2200','Loans','LIABILITY','CREDIT','LOANS'),('3000','Owner Capital','EQUITY','CREDIT','OWNER_CAPITAL'),('3100','Drawings','EQUITY','DEBIT','DRAWINGS'),('3200','Retained Earnings','EQUITY','CREDIT','RETAINED_EARNINGS'),('3300','Opening Balance Equity','EQUITY','CREDIT','OPENING_BALANCE_EQUITY'),('4000','Sales / Service Income','INCOME','CREDIT','SALES_INCOME'),('4100','Other Income','INCOME','CREDIT','OTHER_INCOME'),('5000','Purchase / Cost','EXPENSE','DEBIT','PURCHASE_COST'),('5100','General Expenses','EXPENSE','DEBIT','GENERAL_EXPENSES')) v(code,name,class,normal,key)
 WHERE c."productEdition" IN ('SALESPUNCH360_ACCOUNT','SALESPUNCH360_PLUS') ON CONFLICT ("companyId","systemKey") DO NOTHING;
 
-CREATE FUNCTION protect_posted_journal() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+CREATE FUNCTION protect_journal_lifecycle() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE line_count integer; debit_total numeric(18,2); credit_total numeric(18,2);
+BEGIN
  IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN NEW; END IF;
- IF OLD."status" IN ('POSTED','REVERSED') AND NOT (OLD."status"='POSTED' AND NEW."status"='REVERSED' AND NEW."reversalOfId" IS NOT DISTINCT FROM OLD."reversalOfId") THEN RAISE EXCEPTION 'posted journal is immutable'; END IF; RETURN NEW; END $$;
-CREATE TRIGGER journal_entry_immutable BEFORE UPDATE ON "journal_entries" FOR EACH ROW EXECUTE FUNCTION protect_posted_journal();
-CREATE FUNCTION protect_posted_journal_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF; IF OLD."status" IN ('POSTED','REVERSED') THEN RAISE EXCEPTION 'posted journal cannot be deleted'; END IF; RETURN OLD; END $$;
+ IF OLD."status" = 'DRAFT' AND NEW."status" = 'DRAFT' THEN RETURN NEW; END IF;
+ IF OLD."status" = 'DRAFT' AND NEW."status" = 'CANCELLED' THEN RETURN NEW; END IF;
+ IF OLD."status" = 'DRAFT' AND NEW."status" = 'POSTED' THEN
+   IF ROW(OLD."companyId",OLD."financialYearId",OLD."branchId",OLD."journalNumber",OLD."entryDate",OLD."reference",OLD."narration",OLD."sourceType",OLD."sourceId",OLD."postingPurpose",OLD."reversalOfId",OLD."reversalReason",OLD."createdById",OLD."createdAt") IS DISTINCT FROM ROW(NEW."companyId",NEW."financialYearId",NEW."branchId",NEW."journalNumber",NEW."entryDate",NEW."reference",NEW."narration",NEW."sourceType",NEW."sourceId",NEW."postingPurpose",NEW."reversalOfId",NEW."reversalReason",NEW."createdById",NEW."createdAt") THEN RAISE EXCEPTION 'posting transition cannot mutate journal identity'; END IF;
+   SELECT COUNT(*),COALESCE(SUM("debit"),0),COALESCE(SUM("credit"),0) INTO line_count,debit_total,credit_total FROM "journal_lines" WHERE "journalEntryId"=OLD.id;
+   IF NEW."postedAt" IS NULL OR NEW."postedById" IS NULL OR line_count < 2 OR debit_total <= 0 OR debit_total <> credit_total THEN RAISE EXCEPTION 'journal is not balanced for posting'; END IF;
+   RETURN NEW;
+ END IF;
+ IF OLD."status" = 'POSTED' AND NEW."status" = 'REVERSED' THEN
+   IF ROW(OLD."companyId",OLD."financialYearId",OLD."branchId",OLD."journalNumber",OLD."entryDate",OLD."reference",OLD."narration",OLD."sourceType",OLD."sourceId",OLD."postingPurpose",OLD."reversalOfId",OLD."reversalReason",OLD."createdById",OLD."postedById",OLD."postedAt",OLD."createdAt") IS DISTINCT FROM ROW(NEW."companyId",NEW."financialYearId",NEW."branchId",NEW."journalNumber",NEW."entryDate",NEW."reference",NEW."narration",NEW."sourceType",NEW."sourceId",NEW."postingPurpose",NEW."reversalOfId",NEW."reversalReason",NEW."createdById",NEW."postedById",NEW."postedAt",NEW."createdAt") THEN RAISE EXCEPTION 'reversal transition cannot mutate posted journal'; END IF;
+   RETURN NEW;
+ END IF;
+ RAISE EXCEPTION 'invalid journal lifecycle transition';
+END $$;
+CREATE TRIGGER journal_entry_lifecycle BEFORE UPDATE ON "journal_entries" FOR EACH ROW EXECUTE FUNCTION protect_journal_lifecycle();
+CREATE FUNCTION protect_posted_journal_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF; IF OLD."status" <> 'DRAFT' THEN RAISE EXCEPTION 'non-draft journal cannot be deleted'; END IF; RETURN OLD; END $$;
 CREATE TRIGGER journal_entry_no_delete BEFORE DELETE ON "journal_entries" FOR EACH ROW EXECUTE FUNCTION protect_posted_journal_delete();
-CREATE FUNCTION protect_posted_lines() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF; IF EXISTS (SELECT 1 FROM "journal_entries" j WHERE j.id=OLD."journalEntryId" AND j."status" IN ('POSTED','REVERSED')) THEN RAISE EXCEPTION 'posted journal lines are immutable'; END IF; RETURN OLD; END $$;
-CREATE TRIGGER journal_line_no_update BEFORE UPDATE OR DELETE ON "journal_lines" FOR EACH ROW EXECUTE FUNCTION protect_posted_lines();
+CREATE FUNCTION protect_journal_lines() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE target_company uuid; target_journal uuid; journal_status "JournalStatus";
+BEGIN
+ target_company := CASE WHEN TG_OP='DELETE' THEN OLD."companyId" ELSE NEW."companyId" END;
+ target_journal := CASE WHEN TG_OP='DELETE' THEN OLD."journalEntryId" ELSE NEW."journalEntryId" END;
+ IF current_setting('app.account_cleanup_company_id', true) = target_company::text THEN IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF; END IF;
+ SELECT "status" INTO journal_status FROM "journal_entries" WHERE id=target_journal AND "companyId"=target_company;
+ IF journal_status IS DISTINCT FROM 'DRAFT' THEN RAISE EXCEPTION 'journal lines are mutable only while draft'; END IF;
+ IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+END $$;
+CREATE TRIGGER journal_line_draft_only BEFORE INSERT OR UPDATE OR DELETE ON "journal_lines" FOR EACH ROW EXECUTE FUNCTION protect_journal_lines();
 CREATE FUNCTION protect_accounting_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF; RAISE EXCEPTION 'accounting audit is append-only'; END $$;
 CREATE TRIGGER accounting_audit_append_only BEFORE UPDATE OR DELETE ON "accounting_audit_events" FOR EACH ROW EXECUTE FUNCTION protect_accounting_audit();
 COMMIT;

@@ -88,6 +88,12 @@ const tables: Record<TenantCount, string> = {
   GeofenceEvent: "geofence_events", DailyTravelApproval: "daily_travel_approvals", CompanySubscription: "company_subscriptions",
   BillingOrder: "billing_orders", PaymentTransaction: "payment_transactions", BillingAuditEvent: "billing_audit_events",
   PendingStorageDeletion: "pending_storage_deletions",
+  AccountSettings: "account_settings", FinancialYear: "financial_years", NumberingSeries: "numbering_series",
+  Vendor: "vendors", AccountUnit: "account_units", AccountCategory: "account_categories",
+  AccountProduct: "account_products", AccountService: "account_services", WorkCategory: "work_categories",
+  WorkPackage: "work_packages", CustomFieldDefinition: "custom_field_definitions", LedgerAccount: "ledger_accounts",
+  CostCentre: "cost_centres", JournalEntry: "journal_entries", JournalLine: "journal_lines",
+  AccountingPeriodLock: "accounting_period_locks", AccountingAuditEvent: "accounting_audit_events",
 };
 const userOwned = new Set(["user_branch_accesses", "email_verification_tokens", "sessions", "mobile_sessions"]);
 const deleteStages: Record<string, CleanupDatabaseStage> = {

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { categorySchema, currencySchema, customFieldSchema, financialYearSchema, itemSchema, numberingSeriesSchema, partySchema, unitSchema, workCategorySchema, workPackageSchema } from "./validation";
+import { allocateDocumentNumberInTx } from "./numbering";
 
 const readActor=()=>requirePermission("ACCOUNT_DASHBOARD");
 const writeActor=()=>requirePermissionForMutation("ACCOUNT_ACCOUNTS");
@@ -21,4 +22,4 @@ export async function createWorkPackage(raw:unknown){const a=await writeActor(),
 export async function createCustomField(raw:unknown){const a=await settingsActor(),d=customFieldSchema.parse(raw);return db.customFieldDefinition.create({data:{companyId:a.companyId!,...d,options:d.options??Prisma.JsonNull}});}
 export async function createNumberingSeries(raw:unknown){const a=await settingsActor(),d=numberingSeriesSchema.parse(raw);if(d.branchId&&a.branchAccessScope==="SELECTED_BRANCHES"&&!(a.branchIds??[]).includes(d.branchId))throw new Error("INVALID_BRANCH");if(d.branchId&&!await db.branch.findFirst({where:{id:d.branchId,companyId:a.companyId!,isActive:true}}))throw new Error("INVALID_BRANCH");return db.numberingSeries.create({data:{companyId:a.companyId!,...d}});}
 /** Atomically reserves one number. Tenant and branch scope always come from the session. */
-export async function allocateDocumentNumber(seriesId:string,branchId?:string){const a=await writeActor();if(branchId&&a.branchAccessScope==="SELECTED_BRANCHES"&&!(a.branchIds??[]).includes(branchId))throw new Error("INVALID_BRANCH");return db.$transaction(async tx=>{const rows=await tx.$queryRaw<Array<{prefix:string;suffix:string;padding:number;allocated:bigint}>>(Prisma.sql`UPDATE numbering_series SET "nextSequence"="nextSequence"+1, "updatedAt"=NOW() WHERE id=${seriesId}::uuid AND "companyId"=${a.companyId!}::uuid AND "isActive"=TRUE AND "branchId" IS NOT DISTINCT FROM ${branchId??null}::uuid RETURNING prefix,suffix,padding,"nextSequence"-1 AS allocated`);if(rows.length!==1)throw new Error("NUMBERING_SERIES_NOT_FOUND");const r=rows[0];return `${r.prefix}${r.allocated.toString().padStart(r.padding,"0")}${r.suffix}`;},{isolationLevel:Prisma.TransactionIsolationLevel.ReadCommitted});}
+export async function allocateDocumentNumber(seriesId:string,branchId?:string){const a=await writeActor();if(branchId&&a.branchAccessScope==="SELECTED_BRANCHES"&&!(a.branchIds??[]).includes(branchId))throw new Error("INVALID_BRANCH");return db.$transaction(tx=>allocateDocumentNumberInTx(tx,{companyId:a.companyId!,branchId,seriesId}),{isolationLevel:Prisma.TransactionIsolationLevel.ReadCommitted});}
