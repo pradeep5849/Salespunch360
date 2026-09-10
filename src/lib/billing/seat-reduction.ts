@@ -1,11 +1,13 @@
 import {db} from "@/lib/db";
 import {suspendSalesAccessInTransaction} from "@/lib/auth/lifecycle";
 import {lockBillingCompany} from "./company-lock";
+import {ACCOUNT_PACKAGE_ORDER_PROVIDER} from "./account-package";
 
 export async function applyDueSeatReductions(companyId:string,now=new Date()){
  await db.$transaction(async tx=>{
   await lockBillingCompany(tx,companyId);
-  const sub=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrderId:{not:null}},orderBy:{endsAt:"desc"},select:{id:true,sourceOrderId:true}});
+  const candidates=await tx.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrderId:{not:null}},orderBy:{endsAt:"desc"},select:{id:true,sourceOrderId:true,sourceOrder:{select:{provider:true}}}});
+  const sub=candidates.find(item=>item.sourceOrder?.provider!==ACCOUNT_PACKAGE_ORDER_PROVIDER);
   if(!sub?.sourceOrderId)return;
   await tx.$queryRaw`SELECT 1::int AS "locked" FROM "billing_orders" WHERE "id"=${sub.sourceOrderId}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
   const order=await tx.billingOrder.findFirst({where:{id:sub.sourceOrderId,companyId},select:{seatReductionAppliedAt:true,retainAdminUserIds:true,retainManagerUserIds:true,retainSalesUserIds:true,adminSeats:true,managerSeats:true,salesSeats:true}});
