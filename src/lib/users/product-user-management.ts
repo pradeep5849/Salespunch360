@@ -7,11 +7,10 @@ import { hashPassword } from "@/lib/auth/password";
 import { strongPasswordSchema } from "@/lib/auth/validation";
 import { revokeUserAuthenticationWithLock } from "@/lib/auth/session-generation";
 import { projectLegacyRole } from "./role-projection";
-import { assertEditableProductUser, assertFixedSalesRole, assertProductSalesAssignment, assertSalesAdminBranchScope, roleChangeRequiresAuthenticationRevocation, validateUserRoleAssignment } from "./product-role-policy";
+import { assertEditableProductUser, assertProductSalesAssignment, assertSalesAdminBranchScope, validateUserRoleAssignment } from "./product-role-policy";
 import { getTrialStatus } from "@/lib/trial/status";
 import { assertCanActivate } from "@/lib/employees/policy";
 import { profileComplete } from "@/lib/company/profile";
-import { assertManagerOnlyTransitionSafe } from "@/lib/employees/manager-type-transition";
 
 const optional = <T extends z.ZodTypeAny>(schema: T) => z.preprocess((value) => value === "" || value === undefined ? null : value, schema.nullable());
 const salesRole = optional(z.enum(["ADMIN", "MANAGER", "SALES"]));
@@ -47,9 +46,9 @@ export const editProductUserSchema = z.object({
 
 export const createAccountUserSchema = z.object({
   name: z.string().trim().min(1).max(120), email: z.string().trim().toLowerCase().email().max(320),
-  password: strongPasswordSchema, confirmPassword: z.string(), accountRole: z.enum(["ACCOUNT_ADMIN", "ACCOUNTANT", "PROJECT_MANAGER", "DATA_ENTRY"]),
+  password: strongPasswordSchema, confirmPassword: z.string(), accountRole: z.enum(["ACCOUNT_ADMIN", "ACCOUNTANT", "PROJECT_MANAGER", "DATA_ENTRY"]), ...branchFields,
 }).strict().refine(value => value.password === value.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
-export const editAccountUserSchema = z.object({ userId: z.string().uuid(), accountRole, accountAccessActive: z.boolean() }).strict();
+export const editAccountUserSchema = z.object({ userId: z.string().uuid(), accountRole, accountAccessActive: z.boolean(), ...branchFields }).strict();
 
 export type ProductUserMutation = z.infer<typeof editProductUserSchema>;
 
@@ -125,7 +124,7 @@ export async function getProductUserManagementContext() {
 
 export async function createAccountUser(raw: unknown) {
   const input = createAccountUserSchema.parse(raw);
-  return createProductUser({ ...input, salesRole: null, managerType: null, managerId: null, branchAccessScope: "ALL_BRANCHES", branchIds: [] });
+  return createProductUser({ ...input, salesRole: null, managerType: null, managerId: null });
 }
 
 /** Account-domain mutation: every Sales and Branch field is loaded from the DB
@@ -139,15 +138,19 @@ export async function editAccountUser(raw: unknown) {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
     const target = await tx.user.findFirst({ where: { id: input.userId, companyId: company.id, role: { not: "SUPER_ADMIN" } }, select: { id:true,companyId:true,isActive:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}} } });
     assertAccountEditTarget(company.id, target, input.accountAccessActive);
+    const currentBranches=target.branchAccesses.map(x=>x.branchId).sort();
+    if(target.salesRole&&(input.branchAccessScope!==target.branchAccessScope||input.branchIds.slice().sort().join(",")!==currentBranches.join(",")))throw new Error("SALES_BRANCH_AUTHORITY_REQUIRED");
+    const branchIds=target.salesRole?currentBranches:await validateRelations(tx,company.id,{salesRole:null,managerId:null,branchAccessScope:input.branchAccessScope,branchIds:input.branchIds});
     if (!input.accountRole && !target.salesRole) throw new Error("ROLE_REQUIRED");
     const accountAccessActive = input.accountAccessActive && !!input.accountRole;
-    const securityChanged = target.accountRole !== input.accountRole || target.accountAccessActive !== accountAccessActive;
-    await tx.user.update({ where: { id: target.id }, data: accountDomainUpdate(target, input.accountRole, input.accountAccessActive) });
+    const securityChanged = target.accountRole !== input.accountRole || target.accountAccessActive !== accountAccessActive || (!target.salesRole && (input.branchAccessScope !== target.branchAccessScope || input.branchIds.slice().sort().join(",") !== currentBranches.join(",")));
+    await tx.user.update({ where: { id: target.id }, data: { ...accountDomainUpdate(target, input.accountRole, input.accountAccessActive), ...(!target.salesRole ? { branchAccessScope: input.branchAccessScope } : {}) } });
+    if(!target.salesRole)await replaceBranches(tx,target.id,input.branchAccessScope,branchIds);
     if (securityChanged) await revokeUserAuthenticationWithLock(tx, target.id);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
-export async function createProductUser(raw: unknown) {
+async function createProductUser(raw: unknown) {
   const { actor, company } = await administrationActor(true);
   const input = createProductUserSchema.parse(raw);
   assertAssignment(company.productEdition, { ...input, salesAccessActive: !!input.salesRole, accountAccessActive: !!input.accountRole });
@@ -171,34 +174,5 @@ export async function createProductUser(raw: unknown) {
     } });
     await replaceBranches(tx, user.id, input.branchAccessScope, branchIds);
     return user;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-}
-
-export async function editProductUser(raw: unknown) {
-  const { actor, company } = await administrationActor(true);
-  const input = editProductUserSchema.parse(raw);
-  assertAssignment(company.productEdition, input);
-  if (input.salesRole && !canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN")) throw new AuthorizationError();
-  if (input.accountRole && !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN")) throw new AuthorizationError();
-  return db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
-    const target = await tx.user.findFirst({ where: { id: input.userId, companyId: company.id, role: { not: "SUPER_ADMIN" } }, select: { id:true,companyId:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}} } });
-    assertEditableProductUser(company.id,target);
-    assertFixedSalesRole(target.salesRole, input.salesRole);
-    assertProductSalesAssignment(company.teamStructure, input.salesRole, input.managerId);
-    if (target.salesRole && !canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN")) throw new AuthorizationError();
-    if (target.accountRole && !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN")) throw new AuthorizationError();
-    const branchIds = await validateRelations(tx, company.id, input);
-    if (target.managerType === "FIELD_MANAGER" && input.managerType === "MANAGER_ONLY") await assertManagerOnlyTransitionSafe(tx, company.id, target.id);
-    if(input.salesRole&&input.salesAccessActive&&(!target.salesAccessActive||target.salesRole!==input.salesRole))await enforceSalesSeat(tx,company,input.salesRole,target.id);
-    const securityChanged = roleChangeRequiresAuthenticationRevocation({...target,salesRole:target.salesRole as Exclude<SalesRole,"PRIMARY_ADMIN">|null,branchIds:target.branchAccesses.map(({branchId})=>branchId)},{...input,branchIds});
-    await tx.user.update({ where: { id: target.id }, data: {
-      name: input.name, email: input.email, role: projectLegacyRole(input), salesRole: input.salesRole, accountRole: input.accountRole,
-      managerType: input.salesRole === "MANAGER" ? input.managerType : null, managerId: input.salesRole === "SALES" ? input.managerId : null,
-      salesAccessActive: input.salesAccessActive && !!input.salesRole, accountAccessActive: input.accountAccessActive && !!input.accountRole,
-      branchAccessScope: input.branchAccessScope,
-    } });
-    await replaceBranches(tx, target.id, input.branchAccessScope, branchIds);
-    if (securityChanged) await revokeUserAuthenticationWithLock(tx, target.id);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

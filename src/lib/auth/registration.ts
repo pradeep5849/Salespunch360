@@ -27,6 +27,7 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         name: data.companyName,
         slug: generateCompanySlug(data.companyName),
         productEdition: data.productEdition,
+        enabledModules: data.productEdition === "SALESPUNCH360_ACCOUNT" ? [] : undefined,
         // Team structure is deliberately chosen during verified company setup.
         // The schema default is safe because employee creation remains blocked
         // until all required company details (including that explicit choice) save.

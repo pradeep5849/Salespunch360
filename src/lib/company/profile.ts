@@ -1,9 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import { requirePermission } from "@/lib/auth/authorization";
 import { lockBillingCompany } from "@/lib/billing/company-lock";
 import { resolveEnabledModules, SELECTABLE_SALES_MODULES } from "@/lib/product/entitlements";
+import { requirePrimaryOwner } from "./owner-authorization";
 
 const optional = (max: number) => z.string().trim().max(max).transform(v => v || null);
 const optionalBusinessId = (pattern: RegExp, message: string) => z.string().trim().toUpperCase().refine(value => !value || pattern.test(value), message).transform(value => value || null);
@@ -18,7 +19,7 @@ export const companyProfileSchema = z.object({
 
 export const profileComplete = (company: Record<string, unknown>) => ["name","addressLine1","city","state","postalCode","country","primaryContactName","primaryPhone","contactEmail"].every(key => typeof company[key] === "string" && Boolean((company[key] as string).trim())) && (company.teamStructure === "MANAGERS_AND_SALES" || company.teamStructure === "SALES_ONLY");
 export const companyProfileSelect = {
-  name:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,alternatePhone:true,website:true,gstin:true,pan:true,registrationNumber:true,description:true,teamStructure:true,enabledModules:true,logoObjectKey:true,updatedAt:true,branches:{where:{isPrimary:true},select:{name:true,code:true},take:1},
+  name:true,productEdition:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,alternatePhone:true,website:true,gstin:true,pan:true,registrationNumber:true,description:true,teamStructure:true,enabledModules:true,logoObjectKey:true,updatedAt:true,branches:{where:{isPrimary:true},select:{name:true,code:true},take:1},
 } satisfies Prisma.CompanySelect;
 
 export type CompanyProfileDto = {
@@ -34,12 +35,11 @@ export async function getCompanyProfile() {
     primaryContactName:company.primaryContactName||actor.name,primaryPhone:company.primaryPhone,contactEmail:company.contactEmail||actor.email,alternatePhone:company.alternatePhone,website:company.website,gstin:company.gstin,pan:company.pan,registrationNumber:company.registrationNumber,description:company.description,teamStructure:company.teamStructure,enabledModules:company.enabledModules,primaryBranch:company.branches[0]??null,
     hasLogo:Boolean(company.logoObjectKey),logoVersion:company.updatedAt.toISOString(),
   };
-  return{profile,editable:actor.salesRole==="PRIMARY_ADMIN"};
+  return{profile,edition:company.productEdition,editable:actor.salesRole==="PRIMARY_ADMIN"};
 }
 
 export async function updateCompanyProfile(raw: unknown) {
-  const actor=await requirePermissionForMutation("SALES_SETTINGS");
-  if(!actor.companyId)throw new Error("NOT_FOUND");
+  const {actor}=await requirePrimaryOwner(true);
   const companyId=actor.companyId;
   const data=companyProfileSchema.parse(raw);
   return db.$transaction(async tx=>{
@@ -53,7 +53,7 @@ export async function updateCompanyProfile(raw: unknown) {
       const activeManagerSubscription=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",managerSeats:{gt:0},endsAt:{gt:now}},select:{id:true}});
       if(activeManagerSubscription)throw new Error("TEAM_STRUCTURE_CONFLICT");
     }
-    const enabledModules=resolveEnabledModules(data.enabledModules,"SALESPUNCH360");
-    return tx.company.update({where:{id:companyId},data:{...data,enabledModules}});
+    const enabledModules=resolveEnabledModules(data.enabledModules,company.productEdition);
+    return tx.company.update({where:{id:companyId},data:{...data,enabledModules,teamStructure:company.productEdition==="SALESPUNCH360_ACCOUNT"?company.teamStructure:data.teamStructure}});
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
 }
