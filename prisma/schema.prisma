@@ -1070,7 +1070,7 @@ model NumberingSeries {
   companyId    String   @db.Uuid
   branchId     String?  @db.Uuid
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch       Branch?  @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   seriesKey    String   @db.VarChar(60)
   prefix       String   @default("") @db.VarChar(30)
   nextSequence BigInt   @default(1)
@@ -1118,6 +1118,7 @@ model AccountUnit {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
+  @@unique([companyId, id])
   @@unique([companyId, name])
   @@unique([companyId, symbol])
   @@map("account_units")
@@ -1136,6 +1137,7 @@ model AccountCategory {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
+  @@unique([companyId, id])
   @@unique([companyId, name])
   @@index([companyId, scope, isActive])
   @@map("account_categories")
@@ -1146,9 +1148,9 @@ model AccountProduct {
   companyId   String           @db.Uuid
   company     Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   categoryId  String?          @db.Uuid
-  category    AccountCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  category    AccountCategory? @relation(fields: [companyId, categoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId      String?          @db.Uuid
-  unit        AccountUnit?     @relation(fields: [unitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unit        AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   name        String
   code        String?          @db.VarChar(60)
   description String?
@@ -1169,9 +1171,9 @@ model AccountService {
   companyId     String           @db.Uuid
   company       Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   categoryId    String?          @db.Uuid
-  category      AccountCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  category      AccountCategory? @relation(fields: [companyId, categoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId        String?          @db.Uuid
-  unit          AccountUnit?     @relation(fields: [unitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unit          AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   name          String
   code          String?          @db.VarChar(60)
   description   String?
@@ -1198,6 +1200,7 @@ model WorkCategory {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  @@unique([companyId, id])
   @@unique([companyId, name])
   @@map("work_categories")
 }
@@ -1207,9 +1210,9 @@ model WorkPackage {
   companyId      String       @db.Uuid
   company        Company      @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   workCategoryId String       @db.Uuid
-  workCategory   WorkCategory @relation(fields: [workCategoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  workCategory   WorkCategory @relation(fields: [companyId, workCategoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId         String?      @db.Uuid
-  unit           AccountUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unit           AccountUnit? @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   name           String
   code           String?      @db.VarChar(60)
   description    String?

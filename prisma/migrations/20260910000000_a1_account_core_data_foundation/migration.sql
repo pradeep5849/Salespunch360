@@ -1,3 +1,4 @@
+BEGIN;
 -- CreateEnum
 CREATE TYPE "AccountCategoryScope" AS ENUM ('PRODUCT', 'SERVICE', 'BOTH');
 
@@ -208,6 +209,9 @@ CREATE UNIQUE INDEX "numbering_series_companyId_branchId_seriesKey_key" ON "numb
 CREATE INDEX "vendors_companyId_name_idx" ON "vendors"("companyId", "name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "account_units_companyId_id_key" ON "account_units"("companyId", "id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "account_units_companyId_name_key" ON "account_units"("companyId", "name");
 
 -- CreateIndex
@@ -215,6 +219,9 @@ CREATE UNIQUE INDEX "account_units_companyId_symbol_key" ON "account_units"("com
 
 -- CreateIndex
 CREATE INDEX "account_categories_companyId_scope_isActive_idx" ON "account_categories"("companyId", "scope", "isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "account_categories_companyId_id_key" ON "account_categories"("companyId", "id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "account_categories_companyId_name_key" ON "account_categories"("companyId", "name");
@@ -230,6 +237,9 @@ CREATE INDEX "account_services_companyId_name_idx" ON "account_services"("compan
 
 -- CreateIndex
 CREATE UNIQUE INDEX "account_services_companyId_code_key" ON "account_services"("companyId", "code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "work_categories_companyId_id_key" ON "work_categories"("companyId", "id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "work_categories_companyId_name_key" ON "work_categories"("companyId", "name");
@@ -256,7 +266,7 @@ ALTER TABLE "financial_years" ADD CONSTRAINT "financial_years_companyId_fkey" FO
 ALTER TABLE "numbering_series" ADD CONSTRAINT "numbering_series_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "numbering_series" ADD CONSTRAINT "numbering_series_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "branches"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "numbering_series" ADD CONSTRAINT "numbering_series_companyId_branchId_fkey" FOREIGN KEY ("companyId", "branchId") REFERENCES "branches"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "vendors" ADD CONSTRAINT "vendors_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -271,19 +281,19 @@ ALTER TABLE "account_categories" ADD CONSTRAINT "account_categories_companyId_fk
 ALTER TABLE "account_products" ADD CONSTRAINT "account_products_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "account_products" ADD CONSTRAINT "account_products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "account_categories"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "account_products" ADD CONSTRAINT "account_products_companyId_categoryId_fkey" FOREIGN KEY ("companyId", "categoryId") REFERENCES "account_categories"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "account_products" ADD CONSTRAINT "account_products_unitId_fkey" FOREIGN KEY ("unitId") REFERENCES "account_units"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "account_products" ADD CONSTRAINT "account_products_companyId_unitId_fkey" FOREIGN KEY ("companyId", "unitId") REFERENCES "account_units"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "account_services" ADD CONSTRAINT "account_services_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "account_services" ADD CONSTRAINT "account_services_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "account_categories"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "account_services" ADD CONSTRAINT "account_services_companyId_categoryId_fkey" FOREIGN KEY ("companyId", "categoryId") REFERENCES "account_categories"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "account_services" ADD CONSTRAINT "account_services_unitId_fkey" FOREIGN KEY ("unitId") REFERENCES "account_units"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "account_services" ADD CONSTRAINT "account_services_companyId_unitId_fkey" FOREIGN KEY ("companyId", "unitId") REFERENCES "account_units"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "work_categories" ADD CONSTRAINT "work_categories_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -292,10 +302,10 @@ ALTER TABLE "work_categories" ADD CONSTRAINT "work_categories_companyId_fkey" FO
 ALTER TABLE "work_packages" ADD CONSTRAINT "work_packages_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "work_packages" ADD CONSTRAINT "work_packages_workCategoryId_fkey" FOREIGN KEY ("workCategoryId") REFERENCES "work_categories"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "work_packages" ADD CONSTRAINT "work_packages_companyId_workCategoryId_fkey" FOREIGN KEY ("companyId", "workCategoryId") REFERENCES "work_categories"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "work_packages" ADD CONSTRAINT "work_packages_unitId_fkey" FOREIGN KEY ("unitId") REFERENCES "account_units"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "work_packages" ADD CONSTRAINT "work_packages_companyId_unitId_fkey" FOREIGN KEY ("companyId", "unitId") REFERENCES "account_units"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "custom_field_definitions" ADD CONSTRAINT "custom_field_definitions_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -307,9 +317,5 @@ ALTER TABLE "numbering_series" ADD CONSTRAINT "numbering_series_values_valid" CH
 ALTER TABLE "account_products" ADD CONSTRAINT "account_products_rates_valid" CHECK (("salePrice" IS NULL OR "salePrice" >= 0) AND ("costPrice" IS NULL OR "costPrice" >= 0) AND ("taxRate" IS NULL OR "taxRate" BETWEEN 0 AND 100));
 ALTER TABLE "account_services" ADD CONSTRAINT "account_services_rates_valid" CHECK (("sellingRate" IS NULL OR "sellingRate" >= 0) AND ("estimatedCost" IS NULL OR "estimatedCost" >= 0) AND ("taxRate" IS NULL OR "taxRate" BETWEEN 0 AND 100));
 ALTER TABLE "work_packages" ADD CONSTRAINT "work_packages_rates_valid" CHECK (("sellingRate" IS NULL OR "sellingRate" >= 0) AND ("estimatedCost" IS NULL OR "estimatedCost" >= 0));
-
--- Establish an authoritative INR base currency for existing Account-capable tenants.
-INSERT INTO "account_settings" ("companyId", "baseCurrency", "createdAt", "updatedAt")
-SELECT id, 'INR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM "companies"
-WHERE "productEdition" IN ('SALESPUNCH360_ACCOUNT', 'SALESPUNCH360_PLUS')
-ON CONFLICT ("companyId") DO NOTHING;
+INSERT INTO "account_settings" ("companyId", "baseCurrency", "createdAt", "updatedAt") SELECT id, 'INR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM "companies" WHERE "productEdition" IN ('SALESPUNCH360_ACCOUNT', 'SALESPUNCH360_PLUS') ON CONFLICT ("companyId") DO NOTHING;
+COMMIT;

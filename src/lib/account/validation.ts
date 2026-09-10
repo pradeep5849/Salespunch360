@@ -8,7 +8,8 @@ export const financialYearSchema = z.object({name:z.string().trim().min(1).max(8
 export const currencySchema=z.object({baseCurrency:z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/)});
 export const unitSchema=z.object({name:z.string().trim().min(1).max(80),symbol:z.string().trim().min(1).max(20)});
 export const categorySchema=z.object({name:z.string().trim().min(1).max(100),description:optional(),scope:z.enum(["PRODUCT","SERVICE","BOTH"]).default("BOTH")});
-export const partySchema=z.object({name:z.string().trim().min(1).max(200),contactPerson:optional(160),phone:optional(30),email:optional(254).transform(v=>v?.toLowerCase()),address:optional(),shippingAddress:optional(),gstin:optional(15).transform(v=>v?.toUpperCase()),pan:optional(10).transform(v=>v?.toUpperCase()),notes:optional()});
+const optionalBusinessId=(pattern:RegExp,message:string)=>z.preprocess(v=>typeof v==="string"&&!v.trim()?undefined:v,z.string().trim().toUpperCase().regex(pattern,message).optional());
+export const partySchema=z.object({name:z.string().trim().min(1).max(200),contactPerson:optional(160),phone:optional(30),email:z.preprocess(v=>typeof v==="string"&&!v.trim()?undefined:v,z.string().trim().email().max(320).transform(v=>v.toLowerCase()).optional()),address:optional(),shippingAddress:optional(),gstin:optionalBusinessId(/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/,"Enter a valid GSTIN"),pan:optionalBusinessId(/^[A-Z]{5}\d{4}[A-Z]$/,"Enter a valid PAN"),notes:optional()});
 export const itemSchema=z.object({name:z.string().trim().min(1).max(200),code,categoryId:id.optional(),unitId:id.optional(),description:optional(),sellingRate:money,cost:money,taxRate:z.preprocess(v=>v===""||v==null?undefined:v,z.coerce.number().min(0).max(100).optional())});
 export const workCategorySchema=z.object({name:z.string().trim().min(1).max(100),description:optional()});
 export const workPackageSchema=itemSchema.extend({workCategoryId:id});

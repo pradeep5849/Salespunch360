@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canAccessAccountWorkspace } from "@/lib/auth/workspace-policy";
-import { categorySchema, currencySchema, financialYearSchema, itemSchema, numberingSeriesSchema, unitSchema } from "./validation";
+import { categorySchema, currencySchema, financialYearSchema, itemSchema, numberingSeriesSchema, partySchema, unitSchema } from "./validation";
 
 const actor=(overrides={})=>({companyId:"00000000-0000-4000-8000-000000000001",role:"ACCOUNT_USER" as const,isActive:true,salesRole:null,accountRole:"ACCOUNTANT" as const,salesAccessActive:false,accountAccessActive:true,managerType:null,...overrides});
 describe("A1 account foundation",()=>{
@@ -9,4 +9,5 @@ describe("A1 account foundation",()=>{
  it("validates financial-year ranges and flexible calendars",()=>{expect(financialYearSchema.safeParse({name:"FY",startDate:"2026-01-01",endDate:"2026-12-31"}).success).toBe(true);expect(financialYearSchema.safeParse({name:"bad",startDate:"2026-04-01",endDate:"2026-03-31"}).success).toBe(false);});
  it("normalizes currency and safely validates configurable masters",()=>{expect(currencySchema.parse({baseCurrency:"inr"}).baseCurrency).toBe("INR");expect(unitSchema.safeParse({name:"Sq.ft",symbol:"SFT"}).success).toBe(true);expect(categorySchema.safeParse({name:"Materials",scope:"PRODUCT"}).success).toBe(true);});
  it("rejects invalid references, rates, and numbering configurations",()=>{expect(itemSchema.safeParse({name:"Paint",unitId:"other-tenant",sellingRate:-1}).success).toBe(false);expect(numberingSeriesSchema.safeParse({seriesKey:"invoice",padding:0}).success).toBe(false);expect(numberingSeriesSchema.parse({seriesKey:"invoice",padding:6}).seriesKey).toBe("INVOICE");});
+ it("strictly validates and normalizes party identifiers",()=>{const valid=partySchema.parse({name:"Acme",email:"  HELLO@EXAMPLE.COM ",gstin:"27aapfu0939f1zv",pan:"aapfu0939f"});expect(valid).toMatchObject({email:"hello@example.com",gstin:"27AAPFU0939F1ZV",pan:"AAPFU0939F"});for(const value of [{email:"bad"},{gstin:"123"},{pan:"ABCDE123"}])expect(partySchema.safeParse({name:"Acme",...value}).success).toBe(false);});
 });

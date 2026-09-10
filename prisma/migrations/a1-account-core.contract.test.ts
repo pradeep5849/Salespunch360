@@ -6,4 +6,5 @@ describe("A1 migration contract",()=>{
  it("enforces current-year and nullable-branch uniqueness",()=>{expect(sql).toContain("financial_years_one_current");expect(sql).toContain("numbering_series_company_default_key");});
  it("retains and additively extends the Sales customer identity",()=>{expect(sql).toContain('ALTER TABLE "customers"');expect(sql).toContain('"isAccountCustomer" BOOLEAN NOT NULL DEFAULT false');expect(sql).not.toContain('DROP TABLE "customers"');});
  it("uses decimal money and tenant foreign keys",()=>{expect(sql).toContain("DECIMAL(18,2)");expect(sql.match(/FOREIGN KEY \("companyId"\)/g)?.length).toBeGreaterThanOrEqual(10);});
+ it("is atomic and enforces every same-company A1 reference",()=>{expect(sql.trimStart().startsWith("BEGIN;")).toBe(true);expect(sql.trimEnd().endsWith("COMMIT;")).toBe(true);for(const columns of ['"companyId", "branchId"','"companyId", "categoryId"','"companyId", "unitId"','"companyId", "workCategoryId"'])expect(sql).toContain(`FOREIGN KEY (${columns})`);expect(sql.match(/FOREIGN KEY \("companyId", "unitId"\)/g)?.length).toBe(3);});
 });
