@@ -8,7 +8,7 @@ export const TENANT_MODELS = [
   "AccountSettings", "FinancialYear", "NumberingSeries", "Vendor", "AccountUnit",
   "AccountCategory", "AccountProduct", "AccountService", "WorkCategory", "WorkPackage",
   "CustomFieldDefinition", "LedgerAccount", "CostCentre", "JournalEntry", "JournalLine",
-  "AccountingPeriodLock", "AccountingAuditEvent",
+  "AccountingPeriodLock", "AccountingAuditEvent", "QuotationDocument", "QuotationRevision", "QuotationLine", "QuotationAdjustment", "QuotationPaymentSchedule", "QuotationShare", "QuotationAuditEvent",
 ] as const;
 
 /** Child-first order derived from schema.prisma's Restrict foreign keys. */
@@ -18,7 +18,7 @@ export const DELETE_ORDER = [
   "GeofenceEvent", "SalesTarget", "DailyTravelApproval", "VisitPhoto",
   "LocationPoint", "PaymentTransaction", "CompanySubscription",
   "BillingAuditEvent", "CustomerVisit", "Lead", "Customer", "Attendance",
-  "AccountingAuditEvent", "JournalLine", "JournalEntry", "AccountingPeriodLock",
+  "QuotationAuditEvent", "QuotationShare", "QuotationPaymentSchedule", "QuotationAdjustment", "QuotationLine", "QuotationRevision", "QuotationDocument", "AccountingAuditEvent", "JournalLine", "JournalEntry", "AccountingPeriodLock",
   "CostCentre", "LedgerAccount", "CustomFieldDefinition", "WorkPackage", "WorkCategory",
   "AccountProduct", "AccountService", "AccountCategory", "AccountUnit", "Vendor",
   "FinancialYear", "NumberingSeries", "AccountSettings",

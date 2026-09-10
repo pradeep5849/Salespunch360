@@ -257,6 +257,56 @@ enum AccountingAuditEventType {
   PERIOD_UNLOCKED
 }
 
+enum QuotationDocumentType {
+  QUOTATION
+  ESTIMATE
+  BOQ
+}
+
+enum QuotationStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+enum QuotationLineType {
+  PRODUCT
+  SERVICE
+  WORK_PACKAGE
+  CUSTOM
+}
+
+enum QuotationAdjustmentType {
+  DISCOUNT
+  ADDITIONAL_CHARGE
+}
+
+enum QuotationValueType {
+  PERCENTAGE
+  FIXED
+}
+
+enum QuotationAuditEventType {
+  CREATED
+  REVISION_CREATED
+  SUBMITTED_FOR_APPROVAL
+  APPROVED
+  REJECTED
+  SHARED
+  SENT
+  SHARE_REVOKED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
 enum BillingAuditType {
   PRICING_CHANGED
   ORDER_CREATED
@@ -270,27 +320,27 @@ enum BillingAuditType {
 }
 
 model Company {
-  id                                  String                   @id @default(uuid()) @db.Uuid
+  id                                  String                     @id @default(uuid()) @db.Uuid
   name                                String
-  slug                                String                   @unique
-  teamStructure                       TeamStructure            @default(MANAGERS_AND_SALES)
-  productEdition                      ProductEdition           @default(SALESPUNCH360)
-  enabledModules                      CompanyModule[]          @default([SALES_CRM, ATTENDANCE, GPS_TRACKING, FOLLOW_UP_TASKS, TARGETS, REPORTS])
+  slug                                String                     @unique
+  teamStructure                       TeamStructure              @default(MANAGERS_AND_SALES)
+  productEdition                      ProductEdition             @default(SALESPUNCH360)
+  enabledModules                      CompanyModule[]            @default([SALES_CRM, ATTENDANCE, GPS_TRACKING, FOLLOW_UP_TASKS, TARGETS, REPORTS])
   trialStartedAt                      DateTime?
   trialEndsAt                         DateTime?
-  subscriptionStatus                  SubscriptionStatus       @default(SUSPENDED)
-  attendanceEnabled                   Boolean                  @default(true)
-  gpsTrackingEnabled                  Boolean                  @default(false)
-  checkoutRequiredBeforeNextCheckIn   Boolean                  @default(true)
-  attendanceGeofenceEnabled           Boolean                  @default(false)
+  subscriptionStatus                  SubscriptionStatus         @default(SUSPENDED)
+  attendanceEnabled                   Boolean                    @default(true)
+  gpsTrackingEnabled                  Boolean                    @default(false)
+  checkoutRequiredBeforeNextCheckIn   Boolean                    @default(true)
+  attendanceGeofenceEnabled           Boolean                    @default(false)
   attendanceReferenceLatitude         Float?
   attendanceReferenceLongitude        Float?
   attendanceGeofenceRadiusMeters      Int?
-  customerCheckInGeofenceEnabled      Boolean                  @default(false)
+  customerCheckInGeofenceEnabled      Boolean                    @default(false)
   customerCheckInGeofenceRadiusMeters Int?
-  travelRatePerKm                     Decimal?                 @db.Decimal(10, 2)
-  createdAt                           DateTime                 @default(now())
-  updatedAt                           DateTime                 @updatedAt
+  travelRatePerKm                     Decimal?                   @db.Decimal(10, 2)
+  createdAt                           DateTime                   @default(now())
+  updatedAt                           DateTime                   @updatedAt
   addressLine1                        String?
   addressLine2                        String?
   locality                            String?
@@ -307,7 +357,7 @@ model Company {
   pan                                 String?
   registrationNumber                  String?
   description                         String?
-  logoObjectKey                       String?                  @db.VarChar(512)
+  logoObjectKey                       String?                    @db.VarChar(512)
   accountSettings                     AccountSettings?
   financialYears                      FinancialYear[]
   numberingSeries                     NumberingSeries[]
@@ -345,69 +395,79 @@ model Company {
   followUpTasks                       FollowUpTask[]
   pushDevices                         PushDevice[]
   dailyTravelApprovals                DailyTravelApproval[]
+  quotationDocuments                  QuotationDocument[]
+  quotationRevisions                  QuotationRevision[]
+  quotationLines                      QuotationLine[]
+  quotationAdjustments                QuotationAdjustment[]
+  quotationPaymentSchedules           QuotationPaymentSchedule[]
+  quotationShares                     QuotationShare[]
+  quotationAuditEvents                QuotationAuditEvent[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
 }
 
 model User {
-  id                      String                   @id @default(uuid()) @db.Uuid
-  companyId               String?                  @db.Uuid
-  company                 Company?                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name                    String
-  email                   String                   @unique
-  passwordHash            String
-  sessionVersion          Int                      @default(0)
-  role                    Role
-  salesRole               SalesRole?
-  accountRole             AccountRole?
-  salesAccessActive       Boolean                  @default(false)
-  accountAccessActive     Boolean                  @default(false)
-  managerType             ManagerType?
-  branchAccessScope       BranchAccessScope        @default(ALL_BRANCHES)
-  phone                   String?
-  employeeCode            String?
-  designation             String?                  @db.VarChar(120)
-  dateOfJoining           DateTime?                @db.Date
-  travelAllowanceEnabled  Boolean                  @default(false)
-  travelRatePerKm         Decimal?                 @db.Decimal(10, 2)
-  isActive                Boolean                  @default(true)
-  managerId               String?                  @db.Uuid
-  manager                 User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  reports                 User[]                   @relation("ManagerReports")
-  sessions                Session[]
-  branchAccesses          UserBranchAccess[]
-  mobileSessions          MobileSession[]
-  pushDevices             PushDevice[]
-  attendances             Attendance[]
-  locationPoints          LocationPoint[]
-  customerVisits          CustomerVisit[]
-  assignedCustomers       Customer[]               @relation("CustomerAssignee")
-  uploadedVisitPhotos     VisitPhoto[]             @relation("VisitPhotoUploader")
-  leadDeletionAudits      LeadDeletionAudit[]      @relation("LeadDeletionActor")
-  assignedLeads           Lead[]                   @relation("LeadAssignee")
-  createdLeads            Lead[]                   @relation("LeadCreator")
-  leadActivities          LeadActivity[]           @relation("LeadActor")
-  previousLeadAssignments LeadActivity[]           @relation("PreviousLeadAssignee")
-  newLeadAssignments      LeadActivity[]           @relation("NewLeadAssignee")
-  geofenceEvents          GeofenceEvent[]          @relation("GeofenceEmployee")
-  assignedTargets         SalesTarget[]            @relation("TargetAssignee")
-  createdTargets          SalesTarget[]            @relation("TargetCreator")
-  createdPrices           BillingPrice[]           @relation("PriceCreator")
-  createdBillingOrders    BillingOrder[]           @relation("OrderCreator")
-  billingAuditEvents      BillingAuditEvent[]      @relation("BillingAuditActor")
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  emailVerifiedAt         DateTime?
-  emailVerificationTokens EmailVerificationToken[]
-  assignedFollowUpTasks   FollowUpTask[]           @relation("FollowUpTaskAssignee")
-  createdFollowUpTasks    FollowUpTask[]           @relation("FollowUpTaskCreator")
-  dailyTravelApprovals    DailyTravelApproval[]    @relation("TravelApprovalEmployee")
-  reviewedTravelApprovals DailyTravelApproval[]    @relation("TravelApprovalReviewer")
-  createdJournalEntries   JournalEntry[]           @relation("JournalCreator")
-  postedJournalEntries    JournalEntry[]           @relation("JournalPoster")
-  accountingAuditEvents   AccountingAuditEvent[]   @relation("AccountingAuditActor")
-  updatedAccountingLocks  AccountingPeriodLock[]   @relation("AccountingLockUpdater")
+  id                         String                   @id @default(uuid()) @db.Uuid
+  companyId                  String?                  @db.Uuid
+  company                    Company?                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                       String
+  email                      String                   @unique
+  passwordHash               String
+  sessionVersion             Int                      @default(0)
+  role                       Role
+  salesRole                  SalesRole?
+  accountRole                AccountRole?
+  salesAccessActive          Boolean                  @default(false)
+  accountAccessActive        Boolean                  @default(false)
+  managerType                ManagerType?
+  branchAccessScope          BranchAccessScope        @default(ALL_BRANCHES)
+  phone                      String?
+  employeeCode               String?
+  designation                String?                  @db.VarChar(120)
+  dateOfJoining              DateTime?                @db.Date
+  travelAllowanceEnabled     Boolean                  @default(false)
+  travelRatePerKm            Decimal?                 @db.Decimal(10, 2)
+  isActive                   Boolean                  @default(true)
+  managerId                  String?                  @db.Uuid
+  manager                    User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  reports                    User[]                   @relation("ManagerReports")
+  sessions                   Session[]
+  branchAccesses             UserBranchAccess[]
+  mobileSessions             MobileSession[]
+  pushDevices                PushDevice[]
+  attendances                Attendance[]
+  locationPoints             LocationPoint[]
+  customerVisits             CustomerVisit[]
+  assignedCustomers          Customer[]               @relation("CustomerAssignee")
+  uploadedVisitPhotos        VisitPhoto[]             @relation("VisitPhotoUploader")
+  leadDeletionAudits         LeadDeletionAudit[]      @relation("LeadDeletionActor")
+  assignedLeads              Lead[]                   @relation("LeadAssignee")
+  createdLeads               Lead[]                   @relation("LeadCreator")
+  leadActivities             LeadActivity[]           @relation("LeadActor")
+  previousLeadAssignments    LeadActivity[]           @relation("PreviousLeadAssignee")
+  newLeadAssignments         LeadActivity[]           @relation("NewLeadAssignee")
+  geofenceEvents             GeofenceEvent[]          @relation("GeofenceEmployee")
+  assignedTargets            SalesTarget[]            @relation("TargetAssignee")
+  createdTargets             SalesTarget[]            @relation("TargetCreator")
+  createdPrices              BillingPrice[]           @relation("PriceCreator")
+  createdBillingOrders       BillingOrder[]           @relation("OrderCreator")
+  billingAuditEvents         BillingAuditEvent[]      @relation("BillingAuditActor")
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+  emailVerifiedAt            DateTime?
+  emailVerificationTokens    EmailVerificationToken[]
+  assignedFollowUpTasks      FollowUpTask[]           @relation("FollowUpTaskAssignee")
+  createdFollowUpTasks       FollowUpTask[]           @relation("FollowUpTaskCreator")
+  dailyTravelApprovals       DailyTravelApproval[]    @relation("TravelApprovalEmployee")
+  reviewedTravelApprovals    DailyTravelApproval[]    @relation("TravelApprovalReviewer")
+  createdJournalEntries      JournalEntry[]           @relation("JournalCreator")
+  postedJournalEntries       JournalEntry[]           @relation("JournalPoster")
+  accountingAuditEvents      AccountingAuditEvent[]   @relation("AccountingAuditActor")
+  updatedAccountingLocks     AccountingPeriodLock[]   @relation("AccountingLockUpdater")
+  createdQuotationDocuments  QuotationDocument[]      @relation("QuotationCreator")
+  acceptedQuotationDocuments QuotationDocument[]      @relation("QuotationAcceptor")
+  quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
 
   @@unique([companyId, id])
   @@unique([companyId, employeeCode])
@@ -422,28 +482,29 @@ model User {
 }
 
 model Branch {
-  id              String             @id @default(uuid()) @db.Uuid
-  companyId       String             @db.Uuid
-  company         Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name            String
-  code            String
-  isPrimary       Boolean            @default(false)
-  isActive        Boolean            @default(true)
-  addressLine1    String?
-  addressLine2    String?
-  locality        String?
-  city            String?
-  state           String?
-  postalCode      String?
-  country         String?
-  phone           String?
-  email           String?
-  gstin           String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  userAccesses    UserBranchAccess[]
-  numberingSeries NumberingSeries[]
-  journalEntries  JournalEntry[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  companyId          String              @db.Uuid
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name               String
+  code               String
+  isPrimary          Boolean             @default(false)
+  isActive           Boolean             @default(true)
+  addressLine1       String?
+  addressLine2       String?
+  locality           String?
+  city               String?
+  state              String?
+  postalCode         String?
+  country            String?
+  phone              String?
+  email              String?
+  gstin              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  userAccesses       UserBranchAccess[]
+  numberingSeries    NumberingSeries[]
+  journalEntries     JournalEntry[]
+  quotationDocuments QuotationDocument[]
 
   @@unique([companyId, code])
   @@unique([companyId, id])
@@ -505,12 +566,12 @@ model Attendance {
 }
 
 model Customer {
-  id                        String          @id @default(uuid()) @db.Uuid
-  branchId                  String          @db.Uuid
-  companyId                 String          @db.Uuid
-  company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  assignedUserId            String?         @db.Uuid
-  assignedUser              User?           @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  id                        String              @id @default(uuid()) @db.Uuid
+  branchId                  String              @db.Uuid
+  companyId                 String              @db.Uuid
+  company                   Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId            String?             @db.Uuid
+  assignedUser              User?               @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   name                      String
   contactPerson             String?
   phone                     String?
@@ -520,21 +581,23 @@ model Customer {
   longitude                 Float?
   checkInReferenceLatitude  Float?
   checkInReferenceLongitude Float?
-  checkInReferenceVisitId   String?         @db.Uuid
+  checkInReferenceVisitId   String?             @db.Uuid
   checkInReferenceSetAt     DateTime?
   billingAddress            String?
   shippingAddress           String?
-  gstin                     String?         @db.VarChar(15)
-  pan                       String?         @db.VarChar(10)
+  gstin                     String?             @db.VarChar(15)
+  pan                       String?             @db.VarChar(10)
   notes                     String?
-  isActive                  Boolean         @default(true)
-  isAccountCustomer         Boolean         @default(false)
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @updatedAt
+  isActive                  Boolean             @default(true)
+  isAccountCustomer         Boolean             @default(false)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
   visits                    CustomerVisit[]
   leads                     Lead[]
   geofenceEvents            GeofenceEvent[]
+  quotationDocuments        QuotationDocument[]
 
+  @@unique([companyId, id])
   @@index([companyId, name])
   @@index([companyId, createdAt])
   @@index([companyId, assignedUserId])
@@ -623,6 +686,9 @@ model Lead {
   activities                LeadActivity[]
   followUpTasks             FollowUpTask[]
 
+  quotationDocuments QuotationDocument[]
+
+  @@unique([companyId, id])
   @@index([companyId, stage])
   @@index([companyId, assignedUserId])
   @@index([companyId, followUpAt])
@@ -1163,6 +1229,8 @@ model AccountUnit {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
+  quotationLines QuotationLine[]
+
   @@unique([companyId, id])
   @@unique([companyId, name])
   @@unique([companyId, symbol])
@@ -1206,6 +1274,9 @@ model AccountProduct {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  quotationLines QuotationLine[]
+
+  @@unique([companyId, id])
   @@unique([companyId, code])
   @@index([companyId, name])
   @@map("account_products")
@@ -1229,6 +1300,9 @@ model AccountService {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  quotationLines QuotationLine[]
+
+  @@unique([companyId, id])
   @@unique([companyId, code])
   @@index([companyId, name])
   @@map("account_services")
@@ -1267,6 +1341,9 @@ model WorkPackage {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  quotationLines QuotationLine[]
+
+  @@unique([companyId, id])
   @@unique([companyId, code])
   @@index([companyId, name])
   @@map("work_packages")
@@ -1433,4 +1510,188 @@ model AccountingAuditEvent {
   @@index([companyId, createdAt])
   @@index([companyId, entityType, entityId])
   @@map("accounting_audit_events")
+}
+
+model QuotationDocument {
+  id                    String                @id @default(uuid()) @db.Uuid
+  companyId             String                @db.Uuid
+  branchId              String                @db.Uuid
+  documentType          QuotationDocumentType
+  documentNumber        String                @db.VarChar(80)
+  customerId            String?               @db.Uuid
+  sourceLeadId          String?               @db.Uuid
+  status                QuotationStatus       @default(DRAFT)
+  currentRevisionNumber Int                   @default(0)
+  createdById           String                @db.Uuid
+  acceptedById          String?               @db.Uuid
+  acceptedAt            DateTime?
+  acceptanceNote        String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  company               Company               @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch                Branch                @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  customer              Customer?             @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceLead            Lead?                 @relation(fields: [sourceLeadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy             User                  @relation("QuotationCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  acceptedBy            User?                 @relation("QuotationAcceptor", fields: [companyId, acceptedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  revisions             QuotationRevision[]
+  audits                QuotationAuditEvent[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, branchId, documentType, documentNumber])
+  @@index([companyId, branchId, status])
+  @@map("quotation_documents")
+}
+
+model QuotationRevision {
+  id                    String                     @id @default(uuid()) @db.Uuid
+  companyId             String                     @db.Uuid
+  documentId            String                     @db.Uuid
+  revisionNumber        Int
+  status                QuotationStatus            @default(DRAFT)
+  issueDate             DateTime                   @db.Date
+  validUntil            DateTime?                  @db.Date
+  customerName          String
+  contactPerson         String?
+  phone                 String?
+  email                 String?
+  billingAddress        String?
+  siteAddress           String?
+  gstin                 String?                    @db.VarChar(15)
+  pan                   String?                    @db.VarChar(10)
+  terms                 String?
+  inclusions            String?
+  exclusions            String?
+  notes                 String?
+  subtotal              Decimal                    @default(0) @db.Decimal(18, 2)
+  discountTotal         Decimal                    @default(0) @db.Decimal(18, 2)
+  additionalChargeTotal Decimal                    @default(0) @db.Decimal(18, 2)
+  taxableTotal          Decimal                    @default(0) @db.Decimal(18, 2)
+  taxTotal              Decimal                    @default(0) @db.Decimal(18, 2)
+  grandTotal            Decimal                    @default(0) @db.Decimal(18, 2)
+  internalCostTotal     Decimal                    @default(0) @db.Decimal(18, 2)
+  expectedProfit        Decimal                    @default(0) @db.Decimal(18, 2)
+  expectedMarginPercent Decimal                    @default(0) @db.Decimal(9, 4)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  company               Company                    @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document              QuotationDocument          @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  lines                 QuotationLine[]
+  adjustments           QuotationAdjustment[]
+  paymentSchedule       QuotationPaymentSchedule[]
+  shares                QuotationShare[]
+
+  @@unique([companyId, id])
+  @@unique([documentId, revisionNumber])
+  @@index([companyId, documentId])
+  @@map("quotation_revisions")
+}
+
+model QuotationLine {
+  id                String              @id @default(uuid()) @db.Uuid
+  companyId         String              @db.Uuid
+  revisionId        String              @db.Uuid
+  position          Int
+  lineType          QuotationLineType
+  productId         String?             @db.Uuid
+  serviceId         String?             @db.Uuid
+  workPackageId     String?             @db.Uuid
+  unitId            String?             @db.Uuid
+  itemName          String
+  itemCode          String?
+  description       String?
+  specification     String?
+  unitName          String?
+  unitSymbol        String?
+  quantity          Decimal             @db.Decimal(18, 4)
+  rate              Decimal             @db.Decimal(18, 2)
+  discountType      QuotationValueType?
+  discountValue     Decimal?            @db.Decimal(18, 4)
+  baseAmount        Decimal             @db.Decimal(18, 2)
+  discountAmount    Decimal             @db.Decimal(18, 2)
+  taxableAmount     Decimal             @db.Decimal(18, 2)
+  taxRate           Decimal             @db.Decimal(5, 2)
+  taxAmount         Decimal             @db.Decimal(18, 2)
+  lineTotal         Decimal             @db.Decimal(18, 2)
+  internalUnitCost  Decimal             @db.Decimal(18, 2)
+  internalCostTotal Decimal             @db.Decimal(18, 2)
+  company           Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision          QuotationRevision   @relation(fields: [companyId, revisionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  product           AccountProduct?     @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  service           AccountService?     @relation(fields: [companyId, serviceId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  workPackage       WorkPackage?        @relation(fields: [companyId, workPackageId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  unit              AccountUnit?        @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([revisionId, position])
+  @@map("quotation_lines")
+}
+
+model QuotationAdjustment {
+  id         String                  @id @default(uuid()) @db.Uuid
+  companyId  String                  @db.Uuid
+  revisionId String                  @db.Uuid
+  position   Int
+  type       QuotationAdjustmentType
+  label      String
+  valueType  QuotationValueType
+  value      Decimal                 @db.Decimal(18, 4)
+  amount     Decimal                 @db.Decimal(18, 2)
+  taxable    Boolean                 @default(false)
+  taxRate    Decimal                 @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal                 @default(0) @db.Decimal(18, 2)
+  company    Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision   QuotationRevision       @relation(fields: [companyId, revisionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([revisionId, position])
+  @@map("quotation_adjustments")
+}
+
+model QuotationPaymentSchedule {
+  id             String             @id @default(uuid()) @db.Uuid
+  companyId      String             @db.Uuid
+  revisionId     String             @db.Uuid
+  position       Int
+  label          String
+  valueType      QuotationValueType
+  value          Decimal            @db.Decimal(18, 4)
+  amount         Decimal            @db.Decimal(18, 2)
+  dueDescription String?
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision       QuotationRevision  @relation(fields: [companyId, revisionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([revisionId, position])
+  @@map("quotation_payment_schedules")
+}
+
+model QuotationShare {
+  id         String            @id @default(uuid()) @db.Uuid
+  companyId  String            @db.Uuid
+  revisionId String            @db.Uuid
+  tokenHash  String            @unique @db.Char(64)
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime          @default(now())
+  company    Company           @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision   QuotationRevision @relation(fields: [companyId, revisionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, revisionId])
+  @@map("quotation_shares")
+}
+
+model QuotationAuditEvent {
+  id             String                  @id @default(uuid()) @db.Uuid
+  companyId      String                  @db.Uuid
+  documentId     String                  @db.Uuid
+  actorId        String?                 @db.Uuid
+  eventType      QuotationAuditEventType
+  revisionNumber Int?
+  note           String?
+  createdAt      DateTime                @default(now())
+  company        Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document       QuotationDocument       @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  actor          User?                   @relation("QuotationAuditActor", fields: [companyId, actorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, documentId, createdAt])
+  @@map("quotation_audit_events")
 }

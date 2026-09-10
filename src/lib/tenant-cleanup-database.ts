@@ -94,6 +94,7 @@ const tables: Record<TenantCount, string> = {
   WorkPackage: "work_packages", CustomFieldDefinition: "custom_field_definitions", LedgerAccount: "ledger_accounts",
   CostCentre: "cost_centres", JournalEntry: "journal_entries", JournalLine: "journal_lines",
   AccountingPeriodLock: "accounting_period_locks", AccountingAuditEvent: "accounting_audit_events",
+  QuotationDocument: "quotation_documents", QuotationRevision: "quotation_revisions", QuotationLine: "quotation_lines", QuotationAdjustment: "quotation_adjustments", QuotationPaymentSchedule: "quotation_payment_schedules", QuotationShare: "quotation_shares", QuotationAuditEvent: "quotation_audit_events",
 };
 const userOwned = new Set(["user_branch_accesses", "email_verification_tokens", "sessions", "mobile_sessions"]);
 const deleteStages: Record<string, CleanupDatabaseStage> = {
@@ -157,7 +158,7 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
       await runCleanupDatabaseStage("CLEAR_CUSTOMER_VISIT_REFERENCE", () => tx.$executeRaw`UPDATE "customers" SET "checkInReferenceVisitId"=NULL WHERE "companyId"=${id}`);
       await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$queryRaw`SELECT set_config('app.account_cleanup_company_id', ${companyId}, true)`);
       await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$executeRaw`UPDATE "ledger_accounts" SET "parentId"=NULL WHERE "companyId"=${id}`);
-      for (const table of ["accounting_audit_events","journal_lines","journal_entries","accounting_period_locks","cost_centres","ledger_accounts","custom_field_definitions","work_packages","work_categories","account_products","account_services","account_categories","account_units","vendors","financial_years","numbering_series","account_settings"]) {
+      for (const table of ["quotation_audit_events","quotation_shares","quotation_payment_schedules","quotation_adjustments","quotation_lines","quotation_revisions","quotation_documents","accounting_audit_events","journal_lines","journal_entries","accounting_period_locks","cost_centres","ledger_accounts","custom_field_definitions","work_packages","work_categories","account_products","account_services","account_categories","account_units","vendors","financial_years","numbering_series","account_settings"]) {
         await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$executeRaw(Prisma.sql`DELETE FROM ${Prisma.raw(`"${table}"`)} WHERE "companyId"=${id}`));
       }
       await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$queryRaw`SELECT set_config('app.account_cleanup_company_id', '', true)`);

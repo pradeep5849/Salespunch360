@@ -1,0 +1,2 @@
+import Link from "next/link";import { listQuotations } from "@/lib/quotations/service";
+export default async function Page(){const docs=await listQuotations();return <main><h1>Quotations / Estimates / BOQs</h1><p><Link href="/workspace/account/quotations/new">Create document</Link></p><div className="stack">{docs.map(d=><Link key={d.id} href={`/workspace/account/quotations/${d.id}`}>{d.documentType} {d.documentNumber} — R{d.currentRevisionNumber} — {d.status}</Link>)}</div></main>}

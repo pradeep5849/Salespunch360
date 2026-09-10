@@ -1,0 +1,13 @@
+import { describe,expect,it } from "vitest";import { calculateQuotation,reconcilePaymentSchedule } from "./calculation";
+describe("A3 Decimal quotation calculation",()=>{
+ it("calculates quantity, line tax, cost and margin without JS floating point",()=>{const x=calculateQuotation([{quantity:"10.5000",rate:"100.10",internalUnitCost:"60",taxRate:"18"}]);expect(x.subtotal.toString()).toBe("1051.05");expect(x.taxTotal.toString()).toBe("189.19");expect(x.grandTotal.toString()).toBe("1240.24");expect(x.internalCostTotal.toString()).toBe("630");expect(x.expectedProfit.toString()).toBe("421.05");expect(x.expectedMarginPercent.toString()).toBe("40.0599")});
+ it("supports line percentage discounts",()=>expect(calculateQuotation([{quantity:1,rate:100,taxRate:10,discountType:"PERCENTAGE",discountValue:10}]).grandTotal.toString()).toBe("99"));
+ it("supports fixed document discounts",()=>expect(calculateQuotation([{quantity:1,rate:100}], [{type:"DISCOUNT",valueType:"FIXED",value:25}]).grandTotal.toString()).toBe("75"));
+ it("supports percentage charges and taxable charges",()=>{const x=calculateQuotation([{quantity:1,rate:100}],[{type:"ADDITIONAL_CHARGE",valueType:"PERCENTAGE",value:10,taxable:true,taxRate:18}]);expect(x.additionalChargeTotal.toString()).toBe("10");expect(x.taxTotal.toString()).toBe("1.8")});
+ it.each([-1,101])("rejects invalid percentage %s",v=>expect(()=>calculateQuotation([{quantity:1,rate:100,discountType:"PERCENTAGE",discountValue:v}])).toThrow());
+ it("rejects excessive fixed discounts",()=>expect(()=>calculateQuotation([{quantity:1,rate:100}], [{type:"DISCOUNT",valueType:"FIXED",value:101}])).toThrow("EXCESSIVE"));
+ it("excludes GST from expected profit",()=>expect(calculateQuotation([{quantity:1,rate:100,internalUnitCost:60,taxRate:18}]).expectedProfit.toString()).toBe("40"));
+ it("handles zero selling base",()=>expect(calculateQuotation([{quantity:1,rate:0}]).expectedMarginPercent.toString()).toBe("0"));
+ it("reconciles a complete percentage schedule",()=>expect(reconcilePaymentSchedule([{valueType:"PERCENTAGE",value:40},{valueType:"PERCENTAGE",value:60}],"118").map(String)).toEqual(["47.2","70.8"]));
+ it("rejects incomplete, negative, excessive and mixed schedules",()=>{expect(()=>reconcilePaymentSchedule([{valueType:"PERCENTAGE",value:90}],100)).toThrow();expect(()=>reconcilePaymentSchedule([{valueType:"FIXED",value:-1}],100)).toThrow();expect(()=>reconcilePaymentSchedule([{valueType:"PERCENTAGE",value:101}],100)).toThrow();expect(()=>reconcilePaymentSchedule([{valueType:"PERCENTAGE",value:50},{valueType:"FIXED",value:50}],100)).toThrow()});
+});
