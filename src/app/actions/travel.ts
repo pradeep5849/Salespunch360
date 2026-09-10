@@ -19,6 +19,6 @@ export async function reviewDailyTravelAction(formData:FormData){
  await mutationGuard("travel-approval",60);
  const status=String(formData.get("status"));
  if(status!=="APPROVED"&&status!=="REJECTED")throw new Error("INVALID_STATUS");
- await reviewDailyTravel(String(formData.get("employeeId")),String(formData.get("date")),status);
+ await reviewDailyTravel(String(formData.get("employeeId")),String(formData.get("date")),status,String(formData.get("branchId")));
  revalidatePath("/workspace/reports/expenses");
 }

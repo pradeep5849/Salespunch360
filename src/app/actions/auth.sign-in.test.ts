@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 import { signIn } from "./auth";
 
 function data() { const form = new FormData(); form.set("email", "admin@example.com"); form.set("password", "ValidPassword!1"); return form; }
-function user(role = "COMPANY_ADMIN", companyId: string | null = "company", isActive = true) { return { id: "user", role, companyId, isActive, passwordHash: "hash" }; }
+function user(role = "COMPANY_ADMIN", companyId: string | null = "company", isActive = true) { return { id: "user", role, companyId, isActive, passwordHash: "hash", salesRole: role==="SUPER_ADMIN"?null:"PRIMARY_ADMIN", salesAccessActive:role!=="SUPER_ADMIN", accountRole:null, accountAccessActive:false }; }
 beforeEach(() => { vi.clearAllMocks(); mocks.find.mockResolvedValue(user()); mocks.verify.mockResolvedValue(true); });
 describe("authoritative sign-in destination", () => {
   it("creates a global Super Admin session and redirects to /admin", async () => { mocks.find.mockResolvedValue(user("SUPER_ADMIN", null)); await signIn({}, data()); expect(mocks.session).toHaveBeenCalledWith("user", false, "hash"); expect(mocks.redirect).toHaveBeenCalledWith("/admin"); });

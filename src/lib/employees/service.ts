@@ -3,13 +3,14 @@ import { db } from "@/lib/db";
 import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { hashPassword } from "@/lib/auth/crypto";
 import { clearUserAuthentication, lockUser } from "@/lib/auth/session-generation";
-import { deactivateIdentityWithLock } from "@/lib/auth/lifecycle";
+import { deactivateIdentityWithLock, suspendSalesAccessInTransaction } from "@/lib/auth/lifecycle";
 import { getTrialStatus } from "@/lib/trial/status";
 import { profileComplete } from "@/lib/company/profile";
 import { hasSalesWorkspace } from "@/lib/product/edition";
 import { projectLegacyRole } from "@/lib/users/role-projection";
 import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
+import { assertManagerOnlyTransitionSafe } from "./manager-type-transition";
 import {
   createManagerSchema,
   createSalesSchema,
@@ -30,7 +31,7 @@ export const employeeRoleDimensions = (salesRole: "MANAGER" | "SALES") => ({
 const employeeSelect = {
   id: true, name: true, email: true, phone: true, employeeCode: true, designation:true,dateOfJoining:true,branchAccessScope:true,branchAccesses:{select:{branch:{select:{id:true,name:true,code:true,isActive:true}}}},
   // Compatibility/display only; authorization and employee identity use salesRole.
-  role: true, salesRole: true, salesAccessActive: true,
+  role: true, salesRole: true, salesAccessActive: true, accountRole:true, accountAccessActive:true,
   isActive: true, managerId: true, managerType: true, companyId: true, travelAllowanceEnabled:true, travelRatePerKm:true,
   manager: { select: { id: true, name: true, isActive: true, salesAccessActive: true } },
 } satisfies Prisma.UserSelect;
@@ -134,15 +135,7 @@ export async function editEmployee(raw: EditEmployeeInput) {
     await assertSalesEmployeePhoneUnique(tx,companyId,data.phone,employee.id);
     if (employee.salesRole === "MANAGER" && data.managerId) throw new EmployeePolicyError("INVALID_MANAGER");
     if (employee.salesRole === "MANAGER" && data.managerType && data.managerType !== employee.managerType && data.managerType === "MANAGER_ONLY") {
-      const [openAttendance, openVisit, activeLead, pendingTask, assignedCustomer, activeTarget] = await Promise.all([
-        tx.attendance.findFirst({where:{companyId,userId:employee.id,endedAt:null},select:{id:true}}),
-        tx.customerVisit.findFirst({where:{companyId,userId:employee.id,checkedOutAt:null},select:{id:true}}),
-        tx.lead.findFirst({where:{companyId,assignedUserId:employee.id,stage:{in:["NEW","QUALIFIED","PROPOSAL","NEGOTIATION"]}},select:{id:true}}),
-        tx.followUpTask.findFirst({where:{companyId,assignedUserId:employee.id,status:"PENDING"},select:{id:true}}),
-        tx.customer.findFirst({where:{companyId,assignedUserId:employee.id},select:{id:true}}),
-        tx.salesTarget.findFirst({where:{companyId,assignedUserId:employee.id,endDate:{gte:new Date()}},select:{id:true}}),
-      ]);
-      if (openAttendance || openVisit || activeLead || pendingTask || assignedCustomer || activeTarget) throw new EmployeePolicyError("MANAGER_TYPE_CONFLICT");
+      await assertManagerOnlyTransitionSafe(tx, companyId, employee.id);
     }
     const managerId = employee.salesRole === "SALES" && data.managerId !== undefined
       ? data.managerId === employee.managerId
@@ -173,9 +166,10 @@ export async function deactivateEmployeeForCompany(companyId:string,raw:unknown,
 
 export async function deactivateEmployeeInTransaction(tx: Prisma.TransactionClient, companyId: string, employeeId: string) {
     await lockUser(tx, employeeId);
-    const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, isActive: true, salesAccessActive: true } });
+    const employee = await tx.user.findFirst({ where: { id: employeeId, companyId, salesRole: { in: employeeSalesRoles } }, select: { id: true, companyId: true, salesRole: true, accountRole:true,accountAccessActive:true,isActive: true, salesAccessActive: true } });
     assertManagedEmployee(companyId, employee);
-    await deactivateIdentityWithLock(tx, employeeId);
+    if (employee.accountRole) await suspendSalesAccessInTransaction(tx, employeeId);
+    else await deactivateIdentityWithLock(tx, employeeId);
 }
 
 export async function reactivateEmployee(raw: unknown) {

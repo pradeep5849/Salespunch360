@@ -22,7 +22,7 @@ describe("Customer creation boundary",()=>{
  });
  it("creates an unassigned Customer without creating a Lead",async()=>{
   await createCustomer({name:"Acme",phone:"+12025550110"});
-  expect(mocks.tx.customer.create).toHaveBeenCalledWith({data:{name:"Acme",phone:"+12025550110",companyId:"company",assignedUserId:undefined}});
+  expect(mocks.tx.customer.create).toHaveBeenCalledWith({data:{name:"Acme",phone:"+12025550110",companyId:"company",branchId:"00000000-0000-0000-0000-000000000001",assignedUserId:undefined}});
   expect(mocks.tx.user.findFirst).not.toHaveBeenCalled();
   expect(mocks.tx.lead.create).not.toHaveBeenCalled();
   expect(mocks.tx.leadActivity.create).not.toHaveBeenCalled();
@@ -31,8 +31,8 @@ describe("Customer creation boundary",()=>{
   mocks.tx.user.findFirst.mockResolvedValue({id:"sales"});
   await createCustomer({name:"Acme",phone:"+12025550110",assignedUserId:"11111111-1111-4111-8111-111111111111"});
   expect(mocks.tx.user.findFirst).toHaveBeenCalledWith({where:{id:"11111111-1111-4111-8111-111111111111",companyId:"company",isActive:true,salesAccessActive:true,OR:[{salesRole:"SALES"},{salesRole:"MANAGER",managerType:"FIELD_MANAGER"}]},select:{id:true}});
-  expect(mocks.tx.customer.create).toHaveBeenCalledWith({data:{name:"Acme",phone:"+12025550110",companyId:"company",assignedUserId:"sales"}});
-  expect(mocks.tx.lead.create).toHaveBeenCalledWith({data:{companyId:"company",customerId:"customer",assignedUserId:"sales",createdByUserId:"admin",title:"Acme",contactName:"Acme",phone:"+12025550110",source:"MANUAL",stage:"NEW"}});
+  expect(mocks.tx.customer.create).toHaveBeenCalledWith({data:{name:"Acme",phone:"+12025550110",companyId:"company",branchId:"00000000-0000-0000-0000-000000000001",assignedUserId:"sales"}});
+  expect(mocks.tx.lead.create).toHaveBeenCalledWith({data:{companyId:"company",branchId:"00000000-0000-0000-0000-000000000001",customerId:"customer",assignedUserId:"sales",createdByUserId:"admin",title:"Acme",contactName:"Acme",phone:"+12025550110",source:"MANUAL",stage:"NEW"}});
   expect(mocks.tx.leadActivity.create).toHaveBeenCalled();
  });
  it.each(["MANAGER","SALES"])("rejects %s Customer creation",async role=>{

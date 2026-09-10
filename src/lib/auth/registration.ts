@@ -26,6 +26,8 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
       data: {
         name: data.companyName,
         slug: generateCompanySlug(data.companyName),
+        productEdition: data.productEdition,
+        enabledModules: data.productEdition === "SALESPUNCH360_ACCOUNT" ? [] : undefined,
         // Team structure is deliberately chosen during verified company setup.
         // The schema default is safe because employee creation remains blocked
         // until all required company details (including that explicit choice) save.
@@ -46,8 +48,9 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         passwordHash,
         role: "COMPANY_ADMIN",
         salesRole: "PRIMARY_ADMIN",
-        salesAccessActive: true,
-        accountAccessActive: false,
+        accountRole: data.productEdition === "SALESPUNCH360" ? null : "ACCOUNT_ADMIN",
+        salesAccessActive: data.productEdition !== "SALESPUNCH360_ACCOUNT",
+        accountAccessActive: data.productEdition !== "SALESPUNCH360",
         companyId: company.id,
       },
       select: { id: true, name: true, email: true, role: true, companyId: true },

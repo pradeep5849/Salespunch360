@@ -9,6 +9,7 @@ import { loginSchema, strongPasswordSchema } from "@/lib/auth/validation";
 import { requireUser } from "@/lib/auth/authorization";
 import { canAuthenticate } from "@/lib/auth/eligibility";
 import {assertTrustedOrigin,consumeRateLimit,requestFingerprint} from "@/lib/security/request";
+import {authenticatedHome} from "@/lib/auth/routing";
 
 export type SignInState = { error?: string };
 
@@ -26,7 +27,7 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
     return { error: "Invalid email or password." };
   }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
-  redirect(user.role === "SUPER_ADMIN" ? "/admin" : "/workspace");
+  redirect(authenticatedHome(user));
 }
 
 export async function signOut() {

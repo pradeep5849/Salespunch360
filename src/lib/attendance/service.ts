@@ -16,6 +16,7 @@ import {
 import { evaluateGeofence } from "@/lib/geofence/policy";
 import { deliverFieldEvent } from "@/lib/push/service";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
+import { operationalBranchContext, resolveWriteBranch } from "@/lib/branches/operational-scope";
 
 async function requireEmployee(mutation = true) {
   const user = await (mutation ? requirePermissionForMutation("SALES_ATTENDANCE") : requirePermission("SALES_ATTENDANCE"));
@@ -25,9 +26,10 @@ async function requireEmployee(mutation = true) {
 
 export async function getCurrentAttendance() {
   const user = await requireEmployee(false);
+  const branches = await operationalBranchContext(user);
   const [attendance, company] = await Promise.all([
     db.attendance.findFirst({
-      where: { companyId: user.companyId, userId: user.id, endedAt: null },
+      where: { companyId: user.companyId, branchId: branches.branchId, userId: user.id, endedAt: null },
       include: { _count: { select: { locationPoints: true } } },
     }),
     db.company.findFirst({
@@ -46,7 +48,8 @@ export async function getCurrentAttendance() {
 export async function startAttendance(raw: unknown) {
   const user = await requireEmployee();
   await assertOperationalWrite(user.companyId);
-  const { location } = attendanceMeasurementSchema.parse(raw);
+  const { location, branchId: requestedBranchId } = attendanceMeasurementSchema.parse(raw);
+  const branchContext=await operationalBranchContext(user,requestedBranchId),branchId=resolveWriteBranch(branchContext.branches,requestedBranchId);
   if (location) assertAttendanceStartFresh(location.capturedAt);
   const result = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
@@ -78,7 +81,7 @@ export async function startAttendance(raw: unknown) {
     if (company.gpsTrackingEnabled && !location)
       throw new AttendancePolicyError("GPS_REQUIRED");
     const open = await tx.attendance.findFirst({
-      where: { companyId: user.companyId, userId: user.id, endedAt: null },
+      where: { companyId: user.companyId, branchId: branchContext.branchId, userId: user.id, endedAt: null },
       select: { id: true },
     });
     if (open) throw new AttendancePolicyError("ALREADY_OPEN");
@@ -102,6 +105,7 @@ export async function startAttendance(raw: unknown) {
         return {
           blocked: {
             companyId: user.companyId,
+            branchId,
             employeeId: user.id,
             type: verdict.type,
             action: "ATTENDANCE_START" as const,
@@ -123,6 +127,7 @@ export async function startAttendance(raw: unknown) {
       attendance: await tx.attendance.create({
         data: {
           companyId: user.companyId,
+          branchId,
           userId: user.id,
           startedAt: new Date(),
           startLatitude: acceptedLocation?.latitude,
@@ -148,7 +153,8 @@ export async function startAttendance(raw: unknown) {
 
 export async function endAttendance(raw: unknown) {
   const user = await requireEmployee();
-  const { location } = attendanceMeasurementSchema.parse(raw);
+  const { location, branchId: requestedBranchId } = attendanceMeasurementSchema.parse(raw);
+  const branches = await operationalBranchContext(user, requestedBranchId);
   const attendance = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
     const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true } });
@@ -158,8 +164,8 @@ export async function endAttendance(raw: unknown) {
       select: { gpsTrackingEnabled: true },
     });
     const open = await tx.attendance.findFirst({
-      where: { companyId: user.companyId, userId: user.id, endedAt: null },
-      select: { id: true },
+      where: { companyId: user.companyId, branchId: branches.branchId, userId: user.id, endedAt: null },
+      select: { id: true, branchId: true },
     });
     if (!open) throw new AttendancePolicyError("NO_OPEN_ATTENDANCE");
     const acceptedLocation = company?.gpsTrackingEnabled ? location : undefined;
@@ -199,7 +205,7 @@ export async function uploadLocationPoint(raw: unknown) {
       throw new AttendancePolicyError("GPS_DISABLED");
     const attendance = await tx.attendance.findFirst({
       where: { companyId: user.companyId, userId: user.id, endedAt: null },
-      select: { id: true },
+      select: { id: true, branchId: true },
     });
     if (!attendance) throw new AttendancePolicyError("NO_OPEN_ATTENDANCE");
     await tx.$queryRaw`SELECT "id" FROM "attendances" WHERE "id" = ${attendance.id}::uuid FOR UPDATE`;
@@ -218,7 +224,7 @@ export async function uploadLocationPoint(raw: unknown) {
       throw new AttendancePolicyError("THROTTLED");
     return tx.locationPoint.create({
       data: {
-        companyId: user.companyId,
+        companyId: user.companyId, branchId: attendance.branchId,
         userId: user.id,
         attendanceId: attendance.id,
         latitude: point.latitude,
@@ -236,6 +242,7 @@ export async function getAttendanceOverview() {
   const viewer = await requirePermission("SALES_ATTENDANCE");
   if (!viewer.companyId) throw new AttendancePolicyError("DISABLED");
   if (viewer.salesRole === "SALES") throw new AttendancePolicyError("DISABLED");
+  const branches = await operationalBranchContext({ id: viewer.id, companyId: viewer.companyId });
   return db.user.findMany({
     where: {
       companyId: viewer.companyId,
@@ -249,7 +256,7 @@ export async function getAttendanceOverview() {
       salesRole: true,
       isActive: true,
       attendances: {
-        where: { endedAt: null },
+        where: { branchId: branches.branchId, endedAt: null },
         take: 1,
         select: {
           id: true,
@@ -266,8 +273,9 @@ export async function getAttendanceRouteDistance(attendanceId: string) {
   const viewer = await requirePermission("SALES_ATTENDANCE");
   if (!viewer.companyId) throw new AttendancePolicyError("DISABLED");
   if (viewer.salesRole === "SALES") throw new AttendancePolicyError("DISABLED");
+  const branches = await operationalBranchContext({ id: viewer.id, companyId: viewer.companyId });
   const attendance = await db.attendance.findFirst({
-    where: { id: attendanceId, companyId: viewer.companyId, ...(viewer.salesRole === "MANAGER" ? { user: { salesRole: "SALES", managerId: viewer.id } } : {}) },
+    where: { id: attendanceId, companyId: viewer.companyId, branchId: branches.branchId, ...(viewer.salesRole === "MANAGER" ? { user: { salesRole: "SALES", managerId: viewer.id } } : {}) },
     select: {
       locationPoints: {
         orderBy: { sequenceNumber: "asc" },

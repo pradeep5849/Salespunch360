@@ -1,0 +1,2 @@
+import{describe,expect,it}from"vitest";import{branchDetails}from"./management";
+describe("F4 Branch setup validation",()=>{it("normalizes a valid Company Branch without accepting company ownership fields",()=>{expect(branchDetails.parse({name:" Pune ",code:" pn ",addressLine1:"",city:"Pune",state:"",postalCode:"",country:"",phone:"",email:""})).toMatchObject({name:"Pune",code:"PN"});expect(()=>branchDetails.parse({name:"Evil",code:"X",companyId:"other"})).toThrow()});it("requires Branch name and code",()=>{expect(()=>branchDetails.parse({name:"",code:""})).toThrow()})});

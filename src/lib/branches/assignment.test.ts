@@ -42,6 +42,9 @@ function transactionTarget(overrides: Record<string, unknown> = {}) {
       createMany: vi.fn().mockResolvedValue({ count: 2 }),
       findMany: vi.fn().mockResolvedValue([{ branchId: branchOne }, { branchId: branchTwo }]),
     },
+    pushDevice:{deleteMany:vi.fn().mockResolvedValue({count:0})},
+    session:{deleteMany:vi.fn().mockResolvedValue({count:0})},
+    mobileSession:{deleteMany:vi.fn().mockResolvedValue({count:0})},
   };
 }
 

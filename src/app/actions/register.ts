@@ -17,6 +17,7 @@ export async function register(_: RegistrationState, formData: FormData): Promis
   }
 
   const input = {
+    productEdition: formData.get("productEdition"),
     companyName: formData.get("companyName"),
     adminName: formData.get("adminName"),
     adminEmail: formData.get("adminEmail"),
@@ -37,5 +38,5 @@ export async function register(_: RegistrationState, formData: FormData): Promis
   } catch (error) {
     return { error: error instanceof Error&&error.message==="LOGO_INVALID" ? "Company logo must be a valid JPEG, PNG, or WebP image up to 5 MB." : "Unable to create your account. Check your details or try again later." };
   }
-  redirect("/workspace");
+  redirect(parsed.data.productEdition==="SALESPUNCH360_ACCOUNT"?"/workspace/account":"/workspace");
 }

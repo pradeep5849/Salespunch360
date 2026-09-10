@@ -44,6 +44,20 @@ enum ProductEdition {
   SALESPUNCH360_PLUS
 }
 
+/// Company-selected product capabilities. Account/Plus modules remain reserved
+/// until their roadmap gates are released.
+enum CompanyModule {
+  SALES_CRM
+  ATTENDANCE
+  GPS_TRACKING
+  FOLLOW_UP_TASKS
+  TARGETS
+  REPORTS
+  INVENTORY
+  ACCOUNTING
+  PROJECTS
+}
+
 enum BranchAccessScope {
   ALL_BRANCHES
   SELECTED_BRANCHES
@@ -176,6 +190,20 @@ enum TravelApprovalStatus {
   REJECTED
 }
 
+
+enum CompensationStatus {
+  ACTIVE
+  SUPERSEDED
+  CANCELLED
+}
+
+enum EmployeeFinancialRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum BillingAuditType {
   PRICING_CHANGED
   ORDER_CREATED
@@ -194,6 +222,7 @@ model Company {
   slug                                String                   @unique
   teamStructure                       TeamStructure            @default(MANAGERS_AND_SALES)
   productEdition                      ProductEdition           @default(SALESPUNCH360)
+  enabledModules                      CompanyModule[]          @default([SALES_CRM, ATTENDANCE, GPS_TRACKING, FOLLOW_UP_TASKS, TARGETS, REPORTS])
   trialStartedAt                      DateTime?
   trialEndsAt                         DateTime?
   subscriptionStatus                  SubscriptionStatus       @default(SUSPENDED)
@@ -340,6 +369,7 @@ model Branch {
   userAccesses UserBranchAccess[]
 
   @@unique([companyId, code])
+  @@unique([companyId, id])
   @@index([companyId, isActive])
   @@map("branches")
 }
@@ -372,6 +402,7 @@ model EmailVerificationToken {
 
 model Attendance {
   id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId           String          @db.Uuid
   company             Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId              String          @db.Uuid
@@ -392,11 +423,13 @@ model Attendance {
 
   @@index([companyId, startedAt])
   @@index([companyId, userId, startedAt])
+  @@index([companyId, branchId])
   @@map("attendances")
 }
 
 model Customer {
-  id                        String          @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId                 String          @db.Uuid
   company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   assignedUserId            String?         @db.Uuid
@@ -421,11 +454,13 @@ model Customer {
   @@index([companyId, name])
   @@index([companyId, createdAt])
   @@index([companyId, assignedUserId])
+  @@index([companyId, branchId])
   @@map("customers")
 }
 
 model CustomerVisit {
-  id                     String             @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId              String             @db.Uuid
   company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId                 String             @db.Uuid
@@ -462,11 +497,13 @@ model CustomerVisit {
   @@index([companyId, customerId, checkedInAt])
   @@index([companyId, leadId, checkedInAt])
   @@index([companyId, userId, checkedOutAt])
+  @@index([companyId, branchId])
   @@map("customer_visits")
 }
 
 model Lead {
-  id                        String          @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId                 String          @db.Uuid
   company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   customerId                String?         @db.Uuid
@@ -508,11 +545,13 @@ model Lead {
   @@index([companyId, createdAt])
   @@index([customerId])
   @@index([sourceVisitId])
+  @@index([companyId, branchId])
   @@map("leads")
 }
 
 model FollowUpTask {
-  id               String             @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId        String             @db.Uuid
   company          Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   leadId           String             @db.Uuid
@@ -533,6 +572,7 @@ model FollowUpTask {
   @@index([companyId, assignedUserId, status, dueDate])
   @@index([companyId, leadId, status, dueDate])
   @@index([companyId, status, dueDate])
+  @@index([companyId, branchId])
   @@map("follow_up_tasks")
 }
 
@@ -609,7 +649,8 @@ model LeadActivity {
 }
 
 model LocationPoint {
-  id             String     @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId      String     @db.Uuid
   company        Company    @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId         String     @db.Uuid
@@ -628,6 +669,7 @@ model LocationPoint {
   @@unique([companyId, userId, clientPointId])
   @@index([companyId, userId, capturedAt])
   @@index([attendanceId, capturedAt])
+  @@index([companyId, branchId])
   @@map("location_points")
 }
 
@@ -683,7 +725,8 @@ model PushDevice {
 }
 
 model GeofenceEvent {
-  id                  String            @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId           String            @db.Uuid
   company             Company           @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   employeeId          String            @db.Uuid
@@ -707,11 +750,13 @@ model GeofenceEvent {
   @@index([companyId, employeeId, occurredAt])
   @@index([companyId, action, occurredAt])
   @@index([customerId, occurredAt])
+  @@index([companyId, branchId])
   @@map("geofence_events")
 }
 
 model SalesTarget {
-  id              String           @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId       String           @db.Uuid
   company         Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   assignedUserId  String           @db.Uuid
@@ -732,11 +777,13 @@ model SalesTarget {
   @@index([companyId, assignedUserId])
   @@index([companyId, startDate, endDate])
   @@index([companyId, metric])
+  @@index([companyId, branchId])
   @@map("sales_targets")
 }
 
 model DailyTravelApproval {
-  id               String               @id @default(uuid()) @db.Uuid
+  id                  String          @id @default(uuid()) @db.Uuid
+  branchId            String          @db.Uuid
   companyId        String               @db.Uuid
   company          Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   employeeId       String               @db.Uuid
@@ -752,10 +799,76 @@ model DailyTravelApproval {
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 
-  @@unique([companyId, employeeId, businessDate])
+  @@unique([companyId, branchId, employeeId, businessDate])
   @@index([companyId, businessDate, status])
   @@index([employeeId, businessDate])
+  @@index([companyId, branchId])
   @@map("daily_travel_approvals")
+}
+
+model EmployeeCompensationProfile {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  employeeId String @db.Uuid
+  baseAmount Decimal @db.Decimal(18, 2)
+  currencyCode String @default("INR") @db.Char(3)
+  effectiveFrom DateTime @db.Date
+  effectiveUntil DateTime? @db.Date
+  status CompensationStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([employeeId, effectiveFrom])
+  @@index([companyId, employeeId, status])
+  @@map("employee_compensation_profiles")
+}
+
+model EmployeeAdvance {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  employeeId String @db.Uuid
+  amount Decimal @db.Decimal(18, 2)
+  currencyCode String @default("INR") @db.Char(3)
+  advanceDate DateTime @db.Date
+  note String? @db.VarChar(1000)
+  reference String? @db.VarChar(120)
+  status EmployeeFinancialRequestStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId, branchId, employeeId])
+  @@map("employee_advances")
+}
+
+model EmployeeReimbursement {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  employeeId String @db.Uuid
+  amount Decimal @db.Decimal(18, 2)
+  currencyCode String @default("INR") @db.Char(3)
+  requestedOn DateTime @db.Date
+  description String @db.VarChar(2000)
+  status EmployeeFinancialRequestStatus @default(PENDING)
+  reviewedByUserId String? @db.Uuid
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId, branchId, employeeId, status])
+  @@map("employee_reimbursements")
+}
+
+model SalaryHistoryLink {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  employeeId String @db.Uuid
+  compensationProfileId String @db.Uuid
+  payrollReference String? @db.VarChar(120)
+  periodStart DateTime @db.Date
+  periodEnd DateTime @db.Date
+  createdAt DateTime @default(now())
+  @@unique([companyId, employeeId, periodStart, periodEnd])
+  @@index([compensationProfileId])
+  @@map("salary_history_links")
 }
 
 model BillingPrice {
