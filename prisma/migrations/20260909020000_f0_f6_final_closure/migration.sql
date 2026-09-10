@@ -1,7 +1,36 @@
 -- F0-F6 additive closure. No operational row is deleted or recreated.
-CREATE TYPE "CompensationStatus" AS ENUM ('ACTIVE','SUPERSEDED','CANCELLED');
-CREATE TYPE "EmployeeFinancialRequestStatus" AS ENUM ('PENDING','APPROVED','REJECTED','CANCELLED');
-CREATE UNIQUE INDEX "branches_one_primary_per_company" ON "branches" ("companyId") WHERE "isPrimary" = true;
+-- PostgreSQL migrations are explicitly transactional here so a failed rollout
+-- cannot leave the F5 branch-scoping schema partially applied.
+BEGIN;
+
+-- Fresh operational Branch rollout. There are no legitimate pre-F5 tenant
+-- operational rows to infer. Check that assumption BEFORE any schema mutation
+-- and fail clearly instead of silently assigning historical data to Head Office.
+DO $$
+DECLARE table_name text; has_rows boolean;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY['attendances','location_points','customers','customer_visits','leads','follow_up_tasks','sales_targets','daily_travel_approvals','geofence_events'] LOOP
+    EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I)', table_name) INTO has_rows;
+    IF has_rows THEN
+      RAISE EXCEPTION 'F5 fresh rollout refused: unexpected operational rows exist in %', table_name;
+    END IF;
+  END LOOP;
+END $$;
+
+-- A previous failed production attempt may have created these enum types before
+-- stopping on the duplicate Branch index. Make only those already-executed
+-- statements safely retryable.
+DO $$ BEGIN
+  CREATE TYPE "CompensationStatus" AS ENUM ('ACTIVE','SUPERSEDED','CANCELLED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE TYPE "EmployeeFinancialRequestStatus" AS ENUM ('PENDING','APPROVED','REJECTED','CANCELLED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- branches_one_primary_per_company is already created and owned by the F1
+-- 20260906000000_product_edition_multi_branch_foundation migration.
 CREATE UNIQUE INDEX "branches_company_id_id_key" ON "branches" ("companyId", "id");
 
 ALTER TABLE "attendances" ADD COLUMN "branchId" UUID;
@@ -13,20 +42,6 @@ ALTER TABLE "follow_up_tasks" ADD COLUMN "branchId" UUID;
 ALTER TABLE "sales_targets" ADD COLUMN "branchId" UUID;
 ALTER TABLE "daily_travel_approvals" ADD COLUMN "branchId" UUID;
 ALTER TABLE "geofence_events" ADD COLUMN "branchId" UUID;
-
--- Fresh operational Branch rollout. There are no legitimate pre-F5 tenant
--- operational rows to infer. Fail clearly if that deployment assumption is
--- false instead of silently assigning historical data to Head Office.
-DO $$
-DECLARE table_name text; has_rows boolean;
-BEGIN
-  FOREACH table_name IN ARRAY ARRAY['attendances','location_points','customers','customer_visits','leads','follow_up_tasks','sales_targets','daily_travel_approvals','geofence_events'] LOOP
-    EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I)', table_name) INTO has_rows;
-    IF has_rows THEN
-      RAISE EXCEPTION 'F5 fresh rollout refused: unexpected operational rows exist in %', table_name;
-    END IF;
-  END LOOP;
-END $$;
 
 DO $$ BEGIN IF EXISTS (SELECT 1 FROM "attendances" WHERE "branchId" IS NULL) THEN RAISE EXCEPTION 'F5 backfill failed: attendances has records without a Primary Branch'; END IF; END $$;
 ALTER TABLE "attendances" ALTER COLUMN "branchId" SET NOT NULL;
@@ -86,3 +101,5 @@ CREATE TABLE "salary_history_links" ("id" UUID PRIMARY KEY, "companyId" UUID NOT
 CREATE UNIQUE INDEX "salary_history_links_companyId_employeeId_periodStart_periodEnd_key" ON "salary_history_links"("companyId","employeeId","periodStart","periodEnd");
 CREATE INDEX "salary_history_links_compensationProfileId_idx" ON "salary_history_links"("compensationProfileId");
 ALTER TABLE "salary_history_links" ADD CONSTRAINT "salary_history_compensation_fkey" FOREIGN KEY ("compensationProfileId") REFERENCES "employee_compensation_profiles"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+COMMIT;
