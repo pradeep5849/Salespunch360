@@ -2,6 +2,7 @@ import type { AccountRole } from "@prisma/client";
 
 /** A package is indivisible: no Account seat can be substituted for another role. */
 export const ACCOUNT_PACKAGE_YEARLY_PRICE_INR = 700;
+export const ACCOUNT_PACKAGE_ORDER_PROVIDER = "ACCOUNT_PACKAGE";
 export const ACCOUNT_PACKAGE_ROLES = Object.freeze(["ACCOUNT_ADMIN","ACCOUNTANT","PROJECT_MANAGER","DATA_ENTRY"] as const satisfies readonly AccountRole[]);
 export const ACCOUNT_PACKAGE_SEATS: Readonly<Record<AccountRole, 1>> = Object.freeze({
   ACCOUNT_ADMIN: 1,
