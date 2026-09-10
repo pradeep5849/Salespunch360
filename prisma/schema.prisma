@@ -190,7 +190,6 @@ enum TravelApprovalStatus {
   REJECTED
 }
 
-
 enum CompensationStatus {
   ACTIVE
   SUPERSEDED
@@ -202,6 +201,30 @@ enum EmployeeFinancialRequestStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum AccountCategoryScope {
+  PRODUCT
+  SERVICE
+  BOTH
+}
+
+enum CustomFieldEntity {
+  CUSTOMER
+  VENDOR
+  PRODUCT
+  SERVICE
+  WORK_PACKAGE
+}
+
+enum CustomFieldDataType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DECIMAL
+  DATE
+  BOOLEAN
+  SELECT
 }
 
 enum BillingAuditType {
@@ -255,6 +278,17 @@ model Company {
   registrationNumber                  String?
   description                         String?
   logoObjectKey                       String?                  @db.VarChar(512)
+  accountSettings                     AccountSettings?
+  financialYears                      FinancialYear[]
+  numberingSeries                     NumberingSeries[]
+  accountUnits                        AccountUnit[]
+  accountCategories                   AccountCategory[]
+  accountProducts                     AccountProduct[]
+  accountServices                     AccountService[]
+  vendors                             Vendor[]
+  workCategories                      WorkCategory[]
+  workPackages                        WorkPackage[]
+  customFieldDefinitions              CustomFieldDefinition[]
   users                               User[]
   branches                            Branch[]
   attendances                         Attendance[]
@@ -347,26 +381,27 @@ model User {
 }
 
 model Branch {
-  id           String             @id @default(uuid()) @db.Uuid
-  companyId    String             @db.Uuid
-  company      Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name         String
-  code         String
-  isPrimary    Boolean            @default(false)
-  isActive     Boolean            @default(true)
-  addressLine1 String?
-  addressLine2 String?
-  locality     String?
-  city         String?
-  state        String?
-  postalCode   String?
-  country      String?
-  phone        String?
-  email        String?
-  gstin        String?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  userAccesses UserBranchAccess[]
+  id              String             @id @default(uuid()) @db.Uuid
+  companyId       String             @db.Uuid
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name            String
+  code            String
+  isPrimary       Boolean            @default(false)
+  isActive        Boolean            @default(true)
+  addressLine1    String?
+  addressLine2    String?
+  locality        String?
+  city            String?
+  state           String?
+  postalCode      String?
+  country         String?
+  phone           String?
+  email           String?
+  gstin           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  userAccesses    UserBranchAccess[]
+  numberingSeries NumberingSeries[]
 
   @@unique([companyId, code])
   @@unique([companyId, id])
@@ -428,8 +463,8 @@ model Attendance {
 }
 
 model Customer {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id                        String          @id @default(uuid()) @db.Uuid
+  branchId                  String          @db.Uuid
   companyId                 String          @db.Uuid
   company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   assignedUserId            String?         @db.Uuid
@@ -445,6 +480,13 @@ model Customer {
   checkInReferenceLongitude Float?
   checkInReferenceVisitId   String?         @db.Uuid
   checkInReferenceSetAt     DateTime?
+  billingAddress            String?
+  shippingAddress           String?
+  gstin                     String?         @db.VarChar(15)
+  pan                       String?         @db.VarChar(10)
+  notes                     String?
+  isActive                  Boolean         @default(true)
+  isAccountCustomer         Boolean         @default(false)
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt
   visits                    CustomerVisit[]
@@ -459,8 +501,8 @@ model Customer {
 }
 
 model CustomerVisit {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id                     String             @id @default(uuid()) @db.Uuid
+  branchId               String             @db.Uuid
   companyId              String             @db.Uuid
   company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId                 String             @db.Uuid
@@ -502,8 +544,8 @@ model CustomerVisit {
 }
 
 model Lead {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id                        String          @id @default(uuid()) @db.Uuid
+  branchId                  String          @db.Uuid
   companyId                 String          @db.Uuid
   company                   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   customerId                String?         @db.Uuid
@@ -550,8 +592,8 @@ model Lead {
 }
 
 model FollowUpTask {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id               String             @id @default(uuid()) @db.Uuid
+  branchId         String             @db.Uuid
   companyId        String             @db.Uuid
   company          Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   leadId           String             @db.Uuid
@@ -649,8 +691,8 @@ model LeadActivity {
 }
 
 model LocationPoint {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id             String     @id @default(uuid()) @db.Uuid
+  branchId       String     @db.Uuid
   companyId      String     @db.Uuid
   company        Company    @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   userId         String     @db.Uuid
@@ -725,8 +767,8 @@ model PushDevice {
 }
 
 model GeofenceEvent {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id                  String            @id @default(uuid()) @db.Uuid
+  branchId            String            @db.Uuid
   companyId           String            @db.Uuid
   company             Company           @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   employeeId          String            @db.Uuid
@@ -755,8 +797,8 @@ model GeofenceEvent {
 }
 
 model SalesTarget {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id              String           @id @default(uuid()) @db.Uuid
+  branchId        String           @db.Uuid
   companyId       String           @db.Uuid
   company         Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   assignedUserId  String           @db.Uuid
@@ -782,8 +824,8 @@ model SalesTarget {
 }
 
 model DailyTravelApproval {
-  id                  String          @id @default(uuid()) @db.Uuid
-  branchId            String          @db.Uuid
+  id               String               @id @default(uuid()) @db.Uuid
+  branchId         String               @db.Uuid
   companyId        String               @db.Uuid
   company          Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   employeeId       String               @db.Uuid
@@ -807,65 +849,69 @@ model DailyTravelApproval {
 }
 
 model EmployeeCompensationProfile {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  employeeId String @db.Uuid
-  baseAmount Decimal @db.Decimal(18, 2)
-  currencyCode String @default("INR") @db.Char(3)
-  effectiveFrom DateTime @db.Date
-  effectiveUntil DateTime? @db.Date
-  status CompensationStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String             @id @default(uuid()) @db.Uuid
+  companyId      String             @db.Uuid
+  employeeId     String             @db.Uuid
+  baseAmount     Decimal            @db.Decimal(18, 2)
+  currencyCode   String             @default("INR") @db.Char(3)
+  effectiveFrom  DateTime           @db.Date
+  effectiveUntil DateTime?          @db.Date
+  status         CompensationStatus @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
   @@unique([employeeId, effectiveFrom])
   @@index([companyId, employeeId, status])
   @@map("employee_compensation_profiles")
 }
 
 model EmployeeAdvance {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  branchId String @db.Uuid
-  employeeId String @db.Uuid
-  amount Decimal @db.Decimal(18, 2)
-  currencyCode String @default("INR") @db.Char(3)
-  advanceDate DateTime @db.Date
-  note String? @db.VarChar(1000)
-  reference String? @db.VarChar(120)
-  status EmployeeFinancialRequestStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String                         @id @default(uuid()) @db.Uuid
+  companyId    String                         @db.Uuid
+  branchId     String                         @db.Uuid
+  employeeId   String                         @db.Uuid
+  amount       Decimal                        @db.Decimal(18, 2)
+  currencyCode String                         @default("INR") @db.Char(3)
+  advanceDate  DateTime                       @db.Date
+  note         String?                        @db.VarChar(1000)
+  reference    String?                        @db.VarChar(120)
+  status       EmployeeFinancialRequestStatus @default(PENDING)
+  createdAt    DateTime                       @default(now())
+  updatedAt    DateTime                       @updatedAt
+
   @@index([companyId, branchId, employeeId])
   @@map("employee_advances")
 }
 
 model EmployeeReimbursement {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  branchId String @db.Uuid
-  employeeId String @db.Uuid
-  amount Decimal @db.Decimal(18, 2)
-  currencyCode String @default("INR") @db.Char(3)
-  requestedOn DateTime @db.Date
-  description String @db.VarChar(2000)
-  status EmployeeFinancialRequestStatus @default(PENDING)
-  reviewedByUserId String? @db.Uuid
-  reviewedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String                         @id @default(uuid()) @db.Uuid
+  companyId        String                         @db.Uuid
+  branchId         String                         @db.Uuid
+  employeeId       String                         @db.Uuid
+  amount           Decimal                        @db.Decimal(18, 2)
+  currencyCode     String                         @default("INR") @db.Char(3)
+  requestedOn      DateTime                       @db.Date
+  description      String                         @db.VarChar(2000)
+  status           EmployeeFinancialRequestStatus @default(PENDING)
+  reviewedByUserId String?                        @db.Uuid
+  reviewedAt       DateTime?
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+
   @@index([companyId, branchId, employeeId, status])
   @@map("employee_reimbursements")
 }
 
 model SalaryHistoryLink {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  employeeId String @db.Uuid
-  compensationProfileId String @db.Uuid
-  payrollReference String? @db.VarChar(120)
-  periodStart DateTime @db.Date
-  periodEnd DateTime @db.Date
-  createdAt DateTime @default(now())
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyId             String   @db.Uuid
+  employeeId            String   @db.Uuid
+  compensationProfileId String   @db.Uuid
+  payrollReference      String?  @db.VarChar(120)
+  periodStart           DateTime @db.Date
+  periodEnd             DateTime @db.Date
+  createdAt             DateTime @default(now())
+
   @@unique([companyId, employeeId, periodStart, periodEnd])
   @@index([compensationProfileId])
   @@map("salary_history_links")
@@ -990,4 +1036,211 @@ model RateLimitBucket {
 
   @@index([resetsAt])
   @@map("rate_limit_buckets")
+}
+
+model AccountSettings {
+  companyId    String   @id @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  baseCurrency String   @default("INR") @db.Char(3)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("account_settings")
+}
+
+model FinancialYear {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name      String   @db.VarChar(80)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isCurrent Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId, startDate, endDate])
+  @@map("financial_years")
+}
+
+model NumberingSeries {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  branchId     String?  @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  seriesKey    String   @db.VarChar(60)
+  prefix       String   @default("") @db.VarChar(30)
+  nextSequence BigInt   @default(1)
+  padding      Int      @default(5)
+  suffix       String   @default("") @db.VarChar(30)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([companyId, branchId, seriesKey])
+  @@index([companyId, seriesKey])
+  @@map("numbering_series")
+}
+
+model Vendor {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @db.Uuid
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  gstin         String?  @db.VarChar(15)
+  pan           String?  @db.VarChar(10)
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId, name])
+  @@map("vendors")
+}
+
+model AccountUnit {
+  id           String           @id @default(uuid()) @db.Uuid
+  companyId    String           @db.Uuid
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name         String           @db.VarChar(80)
+  symbol       String           @db.VarChar(20)
+  isActive     Boolean          @default(true)
+  products     AccountProduct[]
+  services     AccountService[]
+  workPackages WorkPackage[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([companyId, name])
+  @@unique([companyId, symbol])
+  @@map("account_units")
+}
+
+model AccountCategory {
+  id          String               @id @default(uuid()) @db.Uuid
+  companyId   String               @db.Uuid
+  company     Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name        String               @db.VarChar(100)
+  description String?
+  scope       AccountCategoryScope @default(BOTH)
+  isActive    Boolean              @default(true)
+  products    AccountProduct[]
+  services    AccountService[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId, scope, isActive])
+  @@map("account_categories")
+}
+
+model AccountProduct {
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String           @db.Uuid
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  categoryId  String?          @db.Uuid
+  category    AccountCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unitId      String?          @db.Uuid
+  unit        AccountUnit?     @relation(fields: [unitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name        String
+  code        String?          @db.VarChar(60)
+  description String?
+  salePrice   Decimal?         @db.Decimal(18, 2)
+  costPrice   Decimal?         @db.Decimal(18, 2)
+  taxRate     Decimal?         @db.Decimal(5, 2)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId, name])
+  @@map("account_products")
+}
+
+model AccountService {
+  id            String           @id @default(uuid()) @db.Uuid
+  companyId     String           @db.Uuid
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  categoryId    String?          @db.Uuid
+  category      AccountCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unitId        String?          @db.Uuid
+  unit          AccountUnit?     @relation(fields: [unitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name          String
+  code          String?          @db.VarChar(60)
+  description   String?
+  sellingRate   Decimal?         @db.Decimal(18, 2)
+  estimatedCost Decimal?         @db.Decimal(18, 2)
+  taxRate       Decimal?         @db.Decimal(5, 2)
+  isActive      Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId, name])
+  @@map("account_services")
+}
+
+model WorkCategory {
+  id           String        @id @default(uuid()) @db.Uuid
+  companyId    String        @db.Uuid
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name         String        @db.VarChar(100)
+  description  String?
+  isActive     Boolean       @default(true)
+  workPackages WorkPackage[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([companyId, name])
+  @@map("work_categories")
+}
+
+model WorkPackage {
+  id             String       @id @default(uuid()) @db.Uuid
+  companyId      String       @db.Uuid
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  workCategoryId String       @db.Uuid
+  workCategory   WorkCategory @relation(fields: [workCategoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unitId         String?      @db.Uuid
+  unit           AccountUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name           String
+  code           String?      @db.VarChar(60)
+  description    String?
+  sellingRate    Decimal?     @db.Decimal(18, 2)
+  estimatedCost  Decimal?     @db.Decimal(18, 2)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId, name])
+  @@map("work_packages")
+}
+
+model CustomFieldDefinition {
+  id         String              @id @default(uuid()) @db.Uuid
+  companyId  String              @db.Uuid
+  company    Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  entityType CustomFieldEntity
+  fieldKey   String              @db.VarChar(60)
+  label      String              @db.VarChar(100)
+  dataType   CustomFieldDataType
+  isRequired Boolean             @default(false)
+  isActive   Boolean             @default(true)
+  position   Int                 @default(0)
+  options    Json?
+  validation Json?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([companyId, entityType, fieldKey])
+  @@index([companyId, entityType, isActive, position])
+  @@map("custom_field_definitions")
 }

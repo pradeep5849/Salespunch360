@@ -36,6 +36,7 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         trialEndsAt,
         primaryContactName: data.adminName,
         contactEmail: data.adminEmail,
+        accountSettings: data.productEdition === "SALESPUNCH360" ? undefined : { create: { baseCurrency: "INR" } },
       },
     });
     await tx.branch.create({
