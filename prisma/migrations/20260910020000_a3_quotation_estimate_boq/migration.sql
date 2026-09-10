@@ -228,10 +228,10 @@ ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_companyId_
 ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_companyId_branchId_fkey" FOREIGN KEY ("companyId", "branchId") REFERENCES "branches"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_companyId_customerId_fkey" FOREIGN KEY ("companyId", "customerId") REFERENCES "customers"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_sourceLeadId_fkey" FOREIGN KEY ("sourceLeadId") REFERENCES "leads"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_companyId_sourceLeadId_fkey" FOREIGN KEY ("companyId", "sourceLeadId") REFERENCES "leads"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_companyId_createdById_fkey" FOREIGN KEY ("companyId", "createdById") REFERENCES "users"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -291,35 +291,78 @@ ALTER TABLE "quotation_audit_events" ADD CONSTRAINT "quotation_audit_events_comp
 ALTER TABLE "quotation_audit_events" ADD CONSTRAINT "quotation_audit_events_companyId_actorId_fkey" FOREIGN KEY ("companyId", "actorId") REFERENCES "users"("companyId", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 
--- Issued commercial snapshots are immutable even if a future caller bypasses the service.
-CREATE FUNCTION prevent_issued_quotation_revision_mutation() RETURNS trigger AS $$
+ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_exactly_one_source_check"
+  CHECK (("customerId" IS NOT NULL)::int + ("sourceLeadId" IS NOT NULL)::int = 1);
+
+-- Drafts are mutable; pending/issued commercial snapshots are immutable. Cleanup bypass is tenant-exact.
+CREATE FUNCTION protect_quotation_revision() RETURNS trigger AS $$
+DECLARE cleanup_company text := current_setting('app.account_cleanup_company_id', true);
 BEGIN
-  IF TG_OP = 'DELETE' OR (OLD.status IN ('APPROVED','SENT','ACCEPTED','DECLINED','EXPIRED','CANCELLED') AND (to_jsonb(OLD) - 'status' - 'updatedAt') IS DISTINCT FROM (to_jsonb(NEW) - 'status' - 'updatedAt')) THEN
-    RAISE EXCEPTION 'ISSUED_QUOTATION_REVISION_IMMUTABLE';
+  IF TG_OP = 'DELETE' THEN
+    IF cleanup_company = OLD."companyId"::text OR OLD.status = 'DRAFT' THEN RETURN OLD; END IF;
+    RAISE EXCEPTION 'QUOTATION_REVISION_IMMUTABLE';
   END IF;
+  IF OLD."companyId" <> NEW."companyId" OR OLD."documentId" <> NEW."documentId" OR OLD."revisionNumber" <> NEW."revisionNumber" THEN
+    RAISE EXCEPTION 'QUOTATION_REVISION_IDENTITY_IMMUTABLE';
+  END IF;
+  IF OLD.status <> 'DRAFT' AND (to_jsonb(OLD) - 'status' - 'updatedAt') IS DISTINCT FROM (to_jsonb(NEW) - 'status' - 'updatedAt') THEN
+    RAISE EXCEPTION 'QUOTATION_REVISION_COMMERCIAL_IMMUTABLE';
+  END IF;
+  IF OLD.status <> NEW.status AND NOT (
+    (OLD.status='DRAFT' AND NEW.status IN ('PENDING_APPROVAL','CANCELLED')) OR
+    (OLD.status='PENDING_APPROVAL' AND NEW.status IN ('APPROVED','REJECTED','CANCELLED')) OR
+    (OLD.status='APPROVED' AND NEW.status IN ('SENT','ACCEPTED','DECLINED','CANCELLED')) OR
+    (OLD.status='SENT' AND NEW.status IN ('ACCEPTED','DECLINED','EXPIRED','CANCELLED'))
+  ) THEN RAISE EXCEPTION 'INVALID_QUOTATION_REVISION_TRANSITION'; END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER quotation_revision_immutable BEFORE UPDATE OR DELETE ON quotation_revisions FOR EACH ROW EXECUTE FUNCTION prevent_issued_quotation_revision_mutation();
+CREATE TRIGGER quotation_revision_immutable BEFORE UPDATE OR DELETE ON "quotation_revisions" FOR EACH ROW EXECUTE FUNCTION protect_quotation_revision();
 
-CREATE FUNCTION prevent_issued_quotation_child_mutation() RETURNS trigger AS $$
-DECLARE rid uuid; issued boolean;
+-- Check OLD and NEW parents independently so children cannot move across status or tenant boundaries.
+CREATE FUNCTION protect_quotation_child() RETURNS trigger AS $$
+DECLARE old_status "QuotationStatus"; new_status "QuotationStatus"; old_company uuid; new_company uuid;
+DECLARE cleanup_company text := current_setting('app.account_cleanup_company_id', true);
 BEGIN
-  rid := COALESCE(OLD."revisionId", NEW."revisionId");
-  SELECT status IN ('APPROVED','SENT','ACCEPTED','DECLINED','EXPIRED','CANCELLED') INTO issued FROM quotation_revisions WHERE id=rid;
-  IF issued THEN RAISE EXCEPTION 'ISSUED_QUOTATION_REVISION_IMMUTABLE'; END IF;
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP IN ('UPDATE','DELETE') THEN
+    SELECT status, "companyId" INTO old_status, old_company FROM "quotation_revisions" WHERE id=OLD."revisionId";
+    IF old_status IS NULL OR old_company <> OLD."companyId" THEN RAISE EXCEPTION 'INVALID_OLD_QUOTATION_PARENT'; END IF;
+    IF TG_OP='DELETE' AND cleanup_company = OLD."companyId"::text THEN RETURN OLD; END IF;
+    IF old_status <> 'DRAFT' THEN RAISE EXCEPTION 'ISSUED_QUOTATION_CHILD_IMMUTABLE'; END IF;
+    IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+  END IF;
+  SELECT status, "companyId" INTO new_status, new_company FROM "quotation_revisions" WHERE id=NEW."revisionId";
+  IF new_status IS NULL OR new_company <> NEW."companyId" OR (TG_OP='UPDATE' AND OLD."companyId" <> NEW."companyId") THEN
+    RAISE EXCEPTION 'INVALID_NEW_QUOTATION_PARENT';
+  END IF;
+  IF new_status <> 'DRAFT' THEN RAISE EXCEPTION 'ISSUED_QUOTATION_CHILD_IMMUTABLE'; END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER quotation_line_immutable BEFORE INSERT OR UPDATE OR DELETE ON quotation_lines FOR EACH ROW EXECUTE FUNCTION prevent_issued_quotation_child_mutation();
-CREATE TRIGGER quotation_adjustment_immutable BEFORE INSERT OR UPDATE OR DELETE ON quotation_adjustments FOR EACH ROW EXECUTE FUNCTION prevent_issued_quotation_child_mutation();
-CREATE TRIGGER quotation_schedule_immutable BEFORE INSERT OR UPDATE OR DELETE ON quotation_payment_schedules FOR EACH ROW EXECUTE FUNCTION prevent_issued_quotation_child_mutation();
+CREATE TRIGGER quotation_line_immutable BEFORE INSERT OR UPDATE OR DELETE ON "quotation_lines" FOR EACH ROW EXECUTE FUNCTION protect_quotation_child();
+CREATE TRIGGER quotation_adjustment_immutable BEFORE INSERT OR UPDATE OR DELETE ON "quotation_adjustments" FOR EACH ROW EXECUTE FUNCTION protect_quotation_child();
+CREATE TRIGGER quotation_schedule_immutable BEFORE INSERT OR UPDATE OR DELETE ON "quotation_payment_schedules" FOR EACH ROW EXECUTE FUNCTION protect_quotation_child();
+
+CREATE FUNCTION protect_quotation_document_lifecycle() RETURNS trigger AS $$
+BEGIN
+  IF OLD.status <> NEW.status AND NOT (
+    (OLD.status='DRAFT' AND NEW.status IN ('PENDING_APPROVAL','CANCELLED')) OR
+    (OLD.status='PENDING_APPROVAL' AND NEW.status IN ('APPROVED','REJECTED','CANCELLED')) OR
+    (OLD.status='APPROVED' AND NEW.status IN ('SENT','ACCEPTED','DECLINED','CANCELLED')) OR
+    (OLD.status='SENT' AND NEW.status IN ('ACCEPTED','DECLINED','EXPIRED','CANCELLED')) OR
+    (NEW.status='DRAFT' AND NEW."currentRevisionNumber"=OLD."currentRevisionNumber"+1 AND OLD.status IN ('APPROVED','REJECTED','SENT','DECLINED','EXPIRED'))
+  ) THEN RAISE EXCEPTION 'INVALID_QUOTATION_DOCUMENT_TRANSITION'; END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER quotation_document_lifecycle BEFORE UPDATE OF status ON "quotation_documents" FOR EACH ROW EXECUTE FUNCTION protect_quotation_document_lifecycle();
+
 CREATE FUNCTION prevent_quotation_audit_mutation() RETURNS trigger AS $$
 BEGIN
   IF current_setting('app.account_cleanup_company_id', true) = OLD."companyId"::text THEN RETURN OLD; END IF;
   RAISE EXCEPTION 'QUOTATION_AUDIT_APPEND_ONLY';
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER quotation_audit_append_only BEFORE UPDATE OR DELETE ON quotation_audit_events FOR EACH ROW EXECUTE FUNCTION prevent_quotation_audit_mutation();
+CREATE TRIGGER quotation_audit_append_only BEFORE UPDATE OR DELETE ON "quotation_audit_events" FOR EACH ROW EXECUTE FUNCTION prevent_quotation_audit_mutation();
 
 COMMIT;

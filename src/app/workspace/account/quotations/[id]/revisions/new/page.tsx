@@ -1,2 +1,2 @@
-import { saveRevision } from "@/app/actions/quotations";import { QuotationEditor } from "../../../quotation-editor";
-export default async function Page({params}:{params:Promise<{id:string}>}){const {id}=await params;return <main><h1>New revision</h1><QuotationEditor action={saveRevision.bind(null,id)}/></main>}
+import { saveRevision } from "@/app/actions/quotations";import { getQuotation,quotationEditorOptions } from "@/lib/quotations/service";import { quotationEditorInitial } from "@/lib/quotations/editor-data";import { QuotationEditor } from "../../../quotation-editor";
+export default async function Page({params}:{params:Promise<{id:string}>}){const {id}=await params,[document,options]=await Promise.all([getQuotation(id),quotationEditorOptions()]);return <main><h1>New revision from R{document.currentRevisionNumber}</h1><QuotationEditor action={saveRevision.bind(null,id)} options={options} initial={quotationEditorInitial(document as never)} lockIdentity/></main>}

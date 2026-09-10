@@ -1530,8 +1530,8 @@ model QuotationDocument {
   updatedAt             DateTime              @updatedAt
   company               Company               @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   branch                Branch                @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  customer              Customer?             @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  sourceLead            Lead?                 @relation(fields: [sourceLeadId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  customer              Customer?             @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  sourceLead            Lead?                 @relation(fields: [companyId, sourceLeadId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   createdBy             User                  @relation("QuotationCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   acceptedBy            User?                 @relation("QuotationAcceptor", fields: [companyId, acceptedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   revisions             QuotationRevision[]
