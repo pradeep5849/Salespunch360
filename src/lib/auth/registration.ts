@@ -5,6 +5,7 @@ import { calculateTrialEndsAt } from "@/lib/trial/status";
 import { randomUUID } from "node:crypto";
 import { companyLogoKey } from "@/lib/company/logo";
 import { privateStorage } from "@/lib/storage";
+import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 
 export function generateCompanySlug(companyName: string) {
   const base = companyName.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
@@ -37,6 +38,7 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         primaryContactName: data.adminName,
         contactEmail: data.adminEmail,
         accountSettings: data.productEdition === "SALESPUNCH360" ? undefined : { create: { baseCurrency: "INR" } },
+        ledgerAccounts: data.productEdition === "SALESPUNCH360" ? undefined : { create: DEFAULT_LEDGER_ACCOUNTS },
       },
     });
     await tx.branch.create({

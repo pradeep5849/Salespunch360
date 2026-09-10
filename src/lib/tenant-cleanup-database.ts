@@ -11,6 +11,7 @@ export const CLEANUP_DATABASE_STAGES = [
   "DETACH_BILLING_PRICE_CREATOR",
   "CLEAR_LEAD_VISIT_REFERENCES",
   "CLEAR_CUSTOMER_VISIT_REFERENCE",
+  "DELETE_ACCOUNT_DATA",
   "DELETE_PUSH_DEVICES",
   "DELETE_SESSIONS",
   "DELETE_MOBILE_SESSIONS",
@@ -131,7 +132,7 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
     inventory: companyId => tenantInventory(tx, companyId),
     hasSuperAdmin: companyId => hasSuperAdmin(tx, companyId),
     assertTransactionAlive: async () => { await runCleanupDatabaseStage("ASSERT_TRANSACTION_ALIVE", () => tx.$queryRaw`SELECT 1`); },
-    async deleteTenant(_companyId) {
+    async deleteTenant() {
       const companyId = lockedCompanyId;
       selectedUserIds = (await tx.user.findMany({ where: { companyId }, select: { id: true } })).map(user => user.id);
       const id = Prisma.sql`${companyId}::uuid`;
@@ -148,6 +149,12 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
         WHERE "companyId" = ${id}
       `));
       await runCleanupDatabaseStage("CLEAR_CUSTOMER_VISIT_REFERENCE", () => tx.$executeRaw`UPDATE "customers" SET "checkInReferenceVisitId"=NULL WHERE "companyId"=${id}`);
+      await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$queryRaw`SELECT set_config('app.account_cleanup_company_id', ${companyId}, true)`);
+      await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$executeRaw`UPDATE "ledger_accounts" SET "parentId"=NULL WHERE "companyId"=${id}`);
+      for (const table of ["accounting_audit_events","journal_lines","journal_entries","accounting_period_locks","cost_centres","ledger_accounts","custom_field_definitions","work_packages","work_categories","account_products","account_services","account_categories","account_units","vendors","financial_years","numbering_series","account_settings"]) {
+        await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$executeRaw(Prisma.sql`DELETE FROM ${Prisma.raw(`"${table}"`)} WHERE "companyId"=${id}`));
+      }
+      await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$queryRaw`SELECT set_config('app.account_cleanup_company_id', '', true)`);
       const ordered = ["push_devices","sessions","mobile_sessions","email_verification_tokens","user_branch_accesses","follow_up_tasks","lead_activities","lead_deletion_audits","geofence_events","sales_targets","daily_travel_approvals","visit_photos","location_points","payment_transactions","company_subscriptions","billing_audit_events","customer_visits","leads","customers","attendances","billing_orders","pending_storage_deletions","branches"];
       for (const table of ordered) {
         const predicate = userOwned.has(table) ? Prisma.sql`"userId" IN (SELECT "id" FROM "users" WHERE "companyId"=${id})` : Prisma.sql`"companyId"=${id}`;

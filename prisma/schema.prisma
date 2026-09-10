@@ -227,6 +227,36 @@ enum CustomFieldDataType {
   SELECT
 }
 
+enum LedgerAccountClass {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum NormalBalanceSide {
+  DEBIT
+  CREDIT
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  REVERSED
+  CANCELLED
+}
+
+enum AccountingAuditEventType {
+  SYSTEM_ACCOUNTS_INITIALIZED
+  JOURNAL_CREATED
+  JOURNAL_POSTED
+  JOURNAL_REVERSED
+  OPENING_BALANCE_POSTED
+  PERIOD_LOCKED
+  PERIOD_UNLOCKED
+}
+
 enum BillingAuditType {
   PRICING_CHANGED
   ORDER_CREATED
@@ -289,6 +319,12 @@ model Company {
   workCategories                      WorkCategory[]
   workPackages                        WorkPackage[]
   customFieldDefinitions              CustomFieldDefinition[]
+  ledgerAccounts                      LedgerAccount[]
+  journalEntries                      JournalEntry[]
+  journalLines                        JournalLine[]
+  costCentres                         CostCentre[]
+  accountingPeriodLocks               AccountingPeriodLock[]
+  accountingAuditEvents               AccountingAuditEvent[]
   users                               User[]
   branches                            Branch[]
   attendances                         Attendance[]
@@ -368,6 +404,9 @@ model User {
   createdFollowUpTasks    FollowUpTask[]           @relation("FollowUpTaskCreator")
   dailyTravelApprovals    DailyTravelApproval[]    @relation("TravelApprovalEmployee")
   reviewedTravelApprovals DailyTravelApproval[]    @relation("TravelApprovalReviewer")
+  createdJournalEntries   JournalEntry[]           @relation("JournalCreator")
+  postedJournalEntries    JournalEntry[]           @relation("JournalPoster")
+  accountingAuditEvents   AccountingAuditEvent[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId, role])
@@ -402,6 +441,7 @@ model Branch {
   updatedAt       DateTime           @updatedAt
   userAccesses    UserBranchAccess[]
   numberingSeries NumberingSeries[]
+  journalEntries  JournalEntry[]
 
   @@unique([companyId, code])
   @@unique([companyId, id])
@@ -1049,17 +1089,20 @@ model AccountSettings {
 }
 
 model FinancialYear {
-  id        String   @id @default(uuid()) @db.Uuid
-  companyId String   @db.Uuid
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name      String   @db.VarChar(80)
-  startDate DateTime @db.Date
-  endDate   DateTime @db.Date
-  isCurrent Boolean  @default(false)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String                @id @default(uuid()) @db.Uuid
+  companyId      String                @db.Uuid
+  company        Company               @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name           String                @db.VarChar(80)
+  startDate      DateTime              @db.Date
+  endDate        DateTime              @db.Date
+  isCurrent      Boolean               @default(false)
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  journalEntries JournalEntry[]
+  periodLock     AccountingPeriodLock?
 
+  @@unique([companyId, id])
   @@unique([companyId, name])
   @@index([companyId, startDate, endDate])
   @@map("financial_years")
@@ -1246,4 +1289,144 @@ model CustomFieldDefinition {
   @@unique([companyId, entityType, fieldKey])
   @@index([companyId, entityType, isActive, position])
   @@map("custom_field_definitions")
+}
+
+model LedgerAccount {
+  id            String             @id @default(uuid()) @db.Uuid
+  companyId     String             @db.Uuid
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  code          String             @db.VarChar(30)
+  name          String             @db.VarChar(160)
+  accountClass  LedgerAccountClass
+  normalBalance NormalBalanceSide
+  parentId      String?            @db.Uuid
+  parent        LedgerAccount?     @relation("LedgerTree", fields: [companyId, parentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  children      LedgerAccount[]    @relation("LedgerTree")
+  systemKey     String?            @db.VarChar(60)
+  isSystem      Boolean            @default(false)
+  isActive      Boolean            @default(true)
+  allowPosting  Boolean            @default(true)
+  journalLines  JournalLine[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, code])
+  @@unique([companyId, name])
+  @@unique([companyId, systemKey])
+  @@index([companyId, accountClass, isActive])
+  @@map("ledger_accounts")
+}
+
+model CostCentre {
+  id           String        @id @default(uuid()) @db.Uuid
+  companyId    String        @db.Uuid
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  code         String        @db.VarChar(30)
+  name         String        @db.VarChar(120)
+  description  String?
+  isActive     Boolean       @default(true)
+  journalLines JournalLine[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, code])
+  @@unique([companyId, name])
+  @@map("cost_centres")
+}
+
+model JournalEntry {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  financialYearId String        @db.Uuid
+  financialYear   FinancialYear @relation(fields: [companyId, financialYearId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  branchId        String        @db.Uuid
+  branch          Branch        @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalNumber   String        @db.VarChar(100)
+  entryDate       DateTime      @db.Date
+  status          JournalStatus @default(DRAFT)
+  reference       String?       @db.VarChar(160)
+  narration       String?
+  sourceType      String        @db.VarChar(60)
+  sourceId        String        @db.VarChar(100)
+  postingPurpose  String        @default("PRIMARY") @db.VarChar(60)
+  reversalOfId    String?       @db.Uuid
+  reversalOf      JournalEntry? @relation("JournalReversal", fields: [companyId, reversalOfId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  reversedBy      JournalEntry? @relation("JournalReversal")
+  reversalReason  String?
+  createdById     String        @db.Uuid
+  createdBy       User          @relation("JournalCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  postedById      String?       @db.Uuid
+  postedBy        User?         @relation("JournalPoster", fields: [postedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  postedAt        DateTime?
+  lines           JournalLine[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, journalNumber])
+  @@unique([companyId, sourceType, sourceId, postingPurpose])
+  @@unique([companyId, reversalOfId])
+  @@index([companyId, entryDate, status])
+  @@index([companyId, branchId, entryDate])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  journalEntryId  String        @db.Uuid
+  journalEntry    JournalEntry  @relation(fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  ledgerAccountId String        @db.Uuid
+  ledgerAccount   LedgerAccount @relation(fields: [companyId, ledgerAccountId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  costCentreId    String?       @db.Uuid
+  costCentre      CostCentre?   @relation(fields: [companyId, costCentreId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  lineNumber      Int
+  debit           Decimal       @default(0) @db.Decimal(18, 2)
+  credit          Decimal       @default(0) @db.Decimal(18, 2)
+  description     String?
+  createdAt       DateTime      @default(now())
+
+  @@unique([journalEntryId, lineNumber])
+  @@index([companyId, ledgerAccountId])
+  @@index([companyId, costCentreId])
+  @@map("journal_lines")
+}
+
+model AccountingPeriodLock {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  financialYearId String        @db.Uuid
+  financialYear   FinancialYear @relation(fields: [companyId, financialYearId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  lockedThrough   DateTime?     @db.Date
+  updatedById     String        @db.Uuid
+  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime      @default(now())
+
+  @@unique([companyId, id])
+  @@unique([companyId, financialYearId])
+  @@index([companyId, lockedThrough])
+  @@map("accounting_period_locks")
+}
+
+model AccountingAuditEvent {
+  id          String                   @id @default(uuid()) @db.Uuid
+  companyId   String                   @db.Uuid
+  company     Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actorUserId String                   @db.Uuid
+  actor       User                     @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  eventType   AccountingAuditEventType
+  entityType  String                   @db.VarChar(60)
+  entityId    String                   @db.VarChar(100)
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime                 @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([companyId, entityType, entityId])
+  @@map("accounting_audit_events")
 }
