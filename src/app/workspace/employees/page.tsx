@@ -23,7 +23,11 @@ const filters = ["ALL", "MANAGERS", "SALES", "ACTIVE", "INACTIVE"] as const;
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const productContext = await getProductUserManagementContext();
   const { canManageSalesUsers, canManageAccountUsers } = productContext;
-  if (!canManageSalesUsers) return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Company Users" backHref="/workspace"/>{canManageAccountUsers&&<ProductUserManager edition={productContext.edition} users={productContext.users} branches={productContext.branches}/>}</section></main>;
+  if (!canManageSalesUsers) {
+    const isAccountPrimary=productContext.actor.salesRole==="PRIMARY_ADMIN";
+    const transferCandidates=isAccountPrimary?await listPrimaryAdminTransferCandidates():[];
+    return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Company Users" backHref="/workspace/account"/>{canManageAccountUsers&&<ProductUserManager edition={productContext.edition} users={productContext.users} branches={productContext.branches}/>} {isAccountPrimary&&<section className="billing-card"><h2>Primary Owner</h2><p className="muted">Transfer Company ownership only to an eligible active Account Admin in this Company.</p>{transferCandidates.length>0?<form action={transferPrimaryAdminAction} className="employee-form"><h3>Transfer Primary Owner</h3><label>Eligible Account Admin<select name="targetUserId">{transferCandidates.map(candidate=><option value={candidate.id} key={candidate.id}>{candidate.name} · {candidate.email}</option>)}</select></label><button className="danger-button">Transfer authority</button></form>:<p className="muted">Add another active Account Admin before transferring ownership.</p>}</section>}</section></main>;
+  }
   const { employees, trial, teamStructure } = await getEmployeeManagementContext();
   const actor=await requirePermission("SALES_USER_ADMIN");
   const readiness=actor.companyId?await db.company.findUnique({where:{id:actor.companyId},select:{name:true,teamStructure:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:actor.id},select:{emailVerifiedAt:true},take:1}}}):null;
