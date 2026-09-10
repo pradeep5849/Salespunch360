@@ -14,4 +14,6 @@ describe("A3 migration hardening contract",()=>{
  it("protects essential document lifecycle transitions",()=>{expect(migration).toContain("protect_quotation_document_lifecycle");expect(migration).toContain("INVALID_QUOTATION_DOCUMENT_TRANSITION")});
  it("allows new revision document transition only with an increment",()=>expect(migration).toContain('NEW."currentRevisionNumber"=OLD."currentRevisionNumber"+1'));
  it("keeps audits append-only with tenant-exact cleanup",()=>{expect(migration).toContain("QUOTATION_AUDIT_APPEND_ONLY");expect(migration).toContain("app.account_cleanup_company_id")});
+ it("guards current revision number on every pointer or status update",()=>{expect(migration).toContain('BEFORE UPDATE OF status, "currentRevisionNumber"');expect(migration).toContain("QUOTATION_CURRENT_REVISION_CANNOT_DECREASE");expect(migration).toContain("INVALID_QUOTATION_CURRENT_REVISION_CHANGE");expect(migration).toContain("QUOTATION_CURRENT_REVISION_NOT_FOUND")});
+ it("enforces line source consistency",()=>{expect(migration).toContain("quotation_lines_source_consistency_check");for(const type of ["PRODUCT","SERVICE","WORK_PACKAGE","CUSTOM"])expect(migration).toContain(`"lineType"='${type}'`) });
 });

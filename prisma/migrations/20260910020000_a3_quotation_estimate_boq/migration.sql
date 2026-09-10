@@ -294,6 +294,13 @@ ALTER TABLE "quotation_audit_events" ADD CONSTRAINT "quotation_audit_events_comp
 ALTER TABLE "quotation_documents" ADD CONSTRAINT "quotation_documents_exactly_one_source_check"
   CHECK (("customerId" IS NOT NULL)::int + ("sourceLeadId" IS NOT NULL)::int = 1);
 
+ALTER TABLE "quotation_lines" ADD CONSTRAINT "quotation_lines_source_consistency_check" CHECK (
+  ("lineType"='PRODUCT' AND "productId" IS NOT NULL AND "serviceId" IS NULL AND "workPackageId" IS NULL) OR
+  ("lineType"='SERVICE' AND "productId" IS NULL AND "serviceId" IS NOT NULL AND "workPackageId" IS NULL) OR
+  ("lineType"='WORK_PACKAGE' AND "productId" IS NULL AND "serviceId" IS NULL AND "workPackageId" IS NOT NULL) OR
+  ("lineType"='CUSTOM' AND "productId" IS NULL AND "serviceId" IS NULL AND "workPackageId" IS NULL)
+);
+
 -- Drafts are mutable; pending/issued commercial snapshots are immutable. Cleanup bypass is tenant-exact.
 CREATE FUNCTION protect_quotation_revision() RETURNS trigger AS $$
 DECLARE cleanup_company text := current_setting('app.account_cleanup_company_id', true);
@@ -344,7 +351,16 @@ CREATE TRIGGER quotation_adjustment_immutable BEFORE INSERT OR UPDATE OR DELETE 
 CREATE TRIGGER quotation_schedule_immutable BEFORE INSERT OR UPDATE OR DELETE ON "quotation_payment_schedules" FOR EACH ROW EXECUTE FUNCTION protect_quotation_child();
 
 CREATE FUNCTION protect_quotation_document_lifecycle() RETURNS trigger AS $$
+DECLARE target_exists boolean;
 BEGIN
+  IF NEW."currentRevisionNumber" < OLD."currentRevisionNumber" THEN RAISE EXCEPTION 'QUOTATION_CURRENT_REVISION_CANNOT_DECREASE'; END IF;
+  IF NEW."currentRevisionNumber" <> OLD."currentRevisionNumber" THEN
+    IF NOT (NEW.status='DRAFT' AND OLD.status IN ('APPROVED','REJECTED','SENT','DECLINED','EXPIRED') AND NEW."currentRevisionNumber"=OLD."currentRevisionNumber"+1) THEN
+      RAISE EXCEPTION 'INVALID_QUOTATION_CURRENT_REVISION_CHANGE';
+    END IF;
+    SELECT EXISTS(SELECT 1 FROM "quotation_revisions" r WHERE r."companyId"=NEW."companyId" AND r."documentId"=NEW.id AND r."revisionNumber"=NEW."currentRevisionNumber") INTO target_exists;
+    IF NOT target_exists THEN RAISE EXCEPTION 'QUOTATION_CURRENT_REVISION_NOT_FOUND'; END IF;
+  END IF;
   IF OLD.status <> NEW.status AND NOT (
     (OLD.status='DRAFT' AND NEW.status IN ('PENDING_APPROVAL','CANCELLED')) OR
     (OLD.status='PENDING_APPROVAL' AND NEW.status IN ('APPROVED','REJECTED','CANCELLED')) OR
@@ -355,7 +371,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER quotation_document_lifecycle BEFORE UPDATE OF status ON "quotation_documents" FOR EACH ROW EXECUTE FUNCTION protect_quotation_document_lifecycle();
+CREATE TRIGGER quotation_document_lifecycle BEFORE UPDATE OF status, "currentRevisionNumber" ON "quotation_documents" FOR EACH ROW EXECUTE FUNCTION protect_quotation_document_lifecycle();
 
 CREATE FUNCTION prevent_quotation_audit_mutation() RETURNS trigger AS $$
 BEGIN
