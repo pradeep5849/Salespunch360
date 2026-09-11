@@ -92,6 +92,16 @@ enum AccountModule {
   GST_ADVANCED
 }
 
+enum InventoryTrackingMode { NONE BATCH SERIAL }
+enum StockMovementType { OPENING PURCHASE PURCHASE_RETURN SALE SALES_RETURN TRANSFER_IN TRANSFER_OUT ADJUSTMENT_IN ADJUSTMENT_OUT }
+enum InventoryPriceType { RETAIL WHOLESALE CUSTOMER }
+enum TaxMode { EXCLUSIVE INCLUSIVE }
+enum GstRegistrationType { UNREGISTERED REGULAR COMPOSITION SEZ }
+enum TaxCreditTreatment { ELIGIBLE INELIGIBLE BLOCKED }
+enum AssetType { VEHICLE EQUIPMENT FURNITURE COMPUTER TOOL OTHER }
+enum AssetStatus { ACTIVE ASSIGNED UNDER_MAINTENANCE RETIRED DISPOSED }
+enum DepreciationMethod { NONE STRAIGHT_LINE WRITTEN_DOWN_VALUE }
+
 enum CommercialDocumentType {
   SALES_ORDER
   PROFORMA_INVOICE
@@ -748,6 +758,8 @@ model Branch {
   phone               String?
   email               String?
   gstin               String?
+  gstStateCode        String?                @db.VarChar(2)
+  gstRegistrationType GstRegistrationType    @default(UNREGISTERED)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   userAccesses        UserBranchAccess[]
@@ -838,6 +850,8 @@ model Customer {
   billingAddress            String?
   shippingAddress           String?
   gstin                     String?              @db.VarChar(15)
+  stateCode                 String?              @db.VarChar(2)
+  gstRegistrationType       GstRegistrationType  @default(UNREGISTERED)
   pan                       String?              @db.VarChar(10)
   notes                     String?
   isActive                  Boolean              @default(true)
@@ -1410,6 +1424,11 @@ model AccountSettings {
   enabledModules           AccountModule[] @default([])
   expenseApprovalRequired  Boolean         @default(false)
   expenseApprovalThreshold Decimal         @default(0) @db.Decimal(18, 2)
+  negativeStockAllowed      Boolean         @default(false)
+  gstRegistrationType      GstRegistrationType @default(UNREGISTERED)
+  defaultStateCode          String?         @db.VarChar(2)
+  compositionEnabled        Boolean         @default(false)
+  defaultTaxMode            TaxMode         @default(EXCLUSIVE)
   createdAt                DateTime        @default(now())
   updatedAt                DateTime        @updatedAt
 
@@ -1466,6 +1485,8 @@ model Vendor {
   email               String?
   address             String?
   gstin               String?              @db.VarChar(15)
+  stateCode           String?              @db.VarChar(2)
+  gstRegistrationType GstRegistrationType  @default(UNREGISTERED)
   pan                 String?              @db.VarChar(10)
   notes               String?
   isActive            Boolean              @default(true)
@@ -1533,6 +1554,11 @@ model AccountProduct {
   salePrice   Decimal?         @db.Decimal(18, 2)
   costPrice   Decimal?         @db.Decimal(18, 2)
   taxRate     Decimal?         @db.Decimal(5, 2)
+  barcode     String?          @db.VarChar(120)
+  hsnCode     String?          @db.VarChar(12)
+  trackInventory Boolean      @default(false)
+  trackingMode InventoryTrackingMode @default(NONE)
+  lowStockThreshold Decimal   @default(0) @db.Decimal(18, 4)
   isActive    Boolean          @default(true)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -1542,6 +1568,7 @@ model AccountProduct {
 
   @@unique([companyId, id])
   @@unique([companyId, code])
+  @@unique([companyId, barcode])
   @@index([companyId, name])
   @@map("account_products")
 }
@@ -1560,6 +1587,7 @@ model AccountService {
   sellingRate   Decimal?         @db.Decimal(18, 2)
   estimatedCost Decimal?         @db.Decimal(18, 2)
   taxRate       Decimal?         @db.Decimal(5, 2)
+  sacCode       String?          @db.VarChar(12)
   isActive      Boolean          @default(true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -1991,6 +2019,18 @@ model CommercialDocument {
   discountTotal          Decimal                  @default(0) @db.Decimal(18, 2)
   taxableTotal           Decimal                  @db.Decimal(18, 2)
   taxTotal               Decimal                  @db.Decimal(18, 2)
+  sellerGstin            String?                  @db.VarChar(15)
+  partyGstin             String?                  @db.VarChar(15)
+  stateOfSupplyCode      String?                  @db.VarChar(2)
+  taxMode                TaxMode                  @default(EXCLUSIVE)
+  cgstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
+  sgstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
+  igstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
+  cessTotal              Decimal                  @default(0) @db.Decimal(18, 2)
+  reverseCharge          Boolean                  @default(false)
+  taxCreditTreatment     TaxCreditTreatment       @default(ELIGIBLE)
+  tdsAmount              Decimal                  @default(0) @db.Decimal(18, 2)
+  tcsAmount              Decimal                  @default(0) @db.Decimal(18, 2)
   grandTotal             Decimal                  @db.Decimal(18, 2)
   balanceDue             Decimal                  @db.Decimal(18, 2)
   notes                  String?
@@ -2048,6 +2088,11 @@ model CommercialDocumentLine {
   taxableAmount  Decimal            @db.Decimal(18, 2)
   taxRate        Decimal            @default(0) @db.Decimal(7, 4)
   taxAmount      Decimal            @db.Decimal(18, 2)
+  hsnSacCode     String?            @db.VarChar(12)
+  cgstAmount     Decimal            @default(0) @db.Decimal(18, 2)
+  sgstAmount     Decimal            @default(0) @db.Decimal(18, 2)
+  igstAmount     Decimal            @default(0) @db.Decimal(18, 2)
+  cessAmount     Decimal            @default(0) @db.Decimal(18, 2)
   lineTotal      Decimal            @db.Decimal(18, 2)
   document       CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   product        AccountProduct?    @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -2610,4 +2655,139 @@ model OwnerTransaction {
   @@unique([companyId, journalEntryId])
   @@index([companyId, transactionDate])
   @@map("owner_transactions")
+}
+
+model Warehouse {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+  branchId  String   @db.Uuid
+  name      String   @db.VarChar(160)
+  code      String   @db.VarChar(60)
+  address   String?
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([companyId, id])
+  @@unique([companyId, branchId, code])
+  @@index([companyId, branchId, isActive])
+  @@map("warehouses")
+}
+
+model InventoryBatch {
+  id               String    @id @default(uuid()) @db.Uuid
+  companyId        String    @db.Uuid
+  productId        String    @db.Uuid
+  batchNumber      String    @db.VarChar(100)
+  manufacturedDate DateTime? @db.Date
+  expiryDate       DateTime? @db.Date
+  createdAt        DateTime  @default(now())
+  @@unique([companyId, id])
+  @@unique([companyId, productId, batchNumber])
+  @@map("inventory_batches")
+}
+
+model InventorySerialNumber {
+  id           String    @id @default(uuid()) @db.Uuid
+  companyId    String    @db.Uuid
+  productId    String    @db.Uuid
+  serialNumber String    @db.VarChar(160)
+  expiryDate   DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+  @@unique([companyId, id])
+  @@unique([companyId, productId, serialNumber])
+  @@map("inventory_serial_numbers")
+}
+
+model StockMovement {
+  id             String            @id @default(uuid()) @db.Uuid
+  companyId      String            @db.Uuid
+  branchId       String            @db.Uuid
+  warehouseId    String            @db.Uuid
+  productId      String            @db.Uuid
+  movementType   StockMovementType
+  quantity       Decimal           @db.Decimal(18, 4)
+  unitCost       Decimal           @db.Decimal(18, 4)
+  totalCost      Decimal           @db.Decimal(18, 2)
+  sourceType     String            @db.VarChar(80)
+  sourceId       String            @db.VarChar(160)
+  sourceLineId   String?           @db.Uuid
+  batchId        String?           @db.Uuid
+  serialNumberId String?           @db.Uuid
+  reason         String?
+  movementDate   DateTime          @db.Date
+  createdById    String            @db.Uuid
+  createdAt      DateTime          @default(now())
+  @@unique([companyId, id])
+  @@unique([companyId, sourceType, sourceId, sourceLineId, movementType])
+  @@index([companyId, warehouseId, productId, movementDate])
+  @@map("stock_movements")
+}
+
+model ProductPrice {
+  id            String             @id @default(uuid()) @db.Uuid
+  companyId     String             @db.Uuid
+  productId     String             @db.Uuid
+  priceType     InventoryPriceType
+  customerId    String?            @db.Uuid
+  rate          Decimal            @db.Decimal(18, 2)
+  effectiveFrom DateTime?          @db.Date
+  effectiveTo   DateTime?          @db.Date
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  @@unique([companyId, id])
+  @@index([companyId, productId, priceType, customerId, isActive])
+  @@map("product_prices")
+}
+
+model Asset {
+  id                              String             @id @default(uuid()) @db.Uuid
+  companyId                       String             @db.Uuid
+  branchId                        String             @db.Uuid
+  assetNumber                     String             @db.VarChar(100)
+  name                            String             @db.VarChar(240)
+  assetType                       AssetType
+  category                        String?            @db.VarChar(120)
+  purchaseDate                    DateTime           @db.Date
+  purchaseValue                   Decimal            @db.Decimal(18, 2)
+  vendorId                        String?            @db.Uuid
+  purchaseDocumentId              String?            @db.Uuid
+  purchaseDocumentLineId          String?            @db.Uuid
+  description                     String?
+  serialNumber                    String?            @db.VarChar(160)
+  registrationNumber              String?            @db.VarChar(80)
+  makeModel                       String?            @db.VarChar(160)
+  manufactureYear                 Int?
+  status                          AssetStatus        @default(ACTIVE)
+  assignedUserId                  String?            @db.Uuid
+  location                        String?            @db.VarChar(240)
+  depreciationMethod              DepreciationMethod @default(NONE)
+  usefulLifeMonths                Int?
+  salvageValue                    Decimal            @default(0) @db.Decimal(18, 2)
+  depreciationStartDate           DateTime?           @db.Date
+  assetLedgerId                   String?             @db.Uuid
+  accumulatedDepreciationLedgerId String?             @db.Uuid
+  depreciationExpenseLedgerId     String?             @db.Uuid
+  createdById                     String              @db.Uuid
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime            @updatedAt
+  @@unique([companyId, id])
+  @@unique([companyId, assetNumber])
+  @@index([companyId, branchId, status])
+  @@map("assets")
+}
+
+model AssetAssignmentHistory {
+  id           String    @id @default(uuid()) @db.Uuid
+  companyId    String    @db.Uuid
+  assetId      String    @db.Uuid
+  assignedToId String    @db.Uuid
+  assignedAt   DateTime  @default(now())
+  returnedAt   DateTime?
+  assignedById String    @db.Uuid
+  notes        String?
+  @@unique([companyId, id])
+  @@index([companyId, assetId, assignedAt])
+  @@map("asset_assignment_history")
 }
