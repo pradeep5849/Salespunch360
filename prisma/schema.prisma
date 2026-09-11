@@ -196,6 +196,7 @@ enum PurchasePurpose {
 enum PurchaseClassification {
   PURCHASE_COST
   GENERAL_EXPENSES
+  FIXED_ASSET
 }
 
 enum PaymentMode {
@@ -2118,6 +2119,10 @@ model CommercialDocumentLine {
   position       Int
   lineType       CommercialLineType
   productId      String?            @db.Uuid
+  warehouseId    String?            @db.Uuid
+  batchId        String?            @db.Uuid
+  serialNumberId String?            @db.Uuid
+  stockReturnQuantity Decimal       @default(0) @db.Decimal(18, 4)
   serviceId      String?            @db.Uuid
   workPackageId  String?            @db.Uuid
   itemName       String             @db.VarChar(240)
@@ -2140,6 +2145,7 @@ model CommercialDocumentLine {
   sgstAmount     Decimal            @default(0) @db.Decimal(18, 2)
   igstAmount     Decimal            @default(0) @db.Decimal(18, 2)
   cessAmount     Decimal            @default(0) @db.Decimal(18, 2)
+  cessRate       Decimal            @default(0) @db.Decimal(7, 4)
   lineTotal      Decimal            @db.Decimal(18, 2)
   document       CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   product        AccountProduct?    @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
