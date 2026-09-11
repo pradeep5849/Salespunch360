@@ -1,35 +1,160 @@
-import {randomUUID} from "node:crypto";
-import {Prisma,ProjectAuditEventType,ProjectMilestoneStatus,ProjectTaskStatus} from "@prisma/client";
-import {z} from "zod";
-import {db} from "@/lib/db";
-import {AuthorizationError,requirePermission,requirePermissionForMutation} from "@/lib/auth/authorization";
-import {requireAccountModules} from "./modules";
-import {allocateDocumentNumberInTx} from "./numbering";
-import {privateStorage} from "@/lib/storage";
+import { randomUUID } from "node:crypto";
+import {
+  Prisma,
+  ProjectAuditEventType,
+  ProjectMilestoneStatus,
+  ProjectStatus,
+  ProjectTaskStatus,
+  type ProductEdition,
+} from "@prisma/client";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { AuthorizationError, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import { canUsePermission } from "@/lib/auth/permissions";
+import { enabledModulesForCompany, requireAccountModules } from "./modules";
+import { allocateDocumentNumberInTx } from "./numbering";
+import { privateStorage } from "@/lib/storage";
 
-const money=z.string().regex(/^\d{1,16}(\.\d{1,2})?$/);
-const optionalText=(n:number)=>z.string().trim().max(n).optional();
-export const projectInput=z.object({branchId:z.string().uuid(),name:z.string().trim().min(1).max(240),customerId:z.string().uuid(),siteName:optionalText(240),siteAddress:optionalText(4000),siteContactName:optionalText(160),siteContactPhone:optionalText(30),projectManagerId:z.string().uuid().optional(),startDate:z.coerce.date().optional(),targetEndDate:z.coerce.date().optional(),projectValue:money.default("0")}).strict();
-export const budgetInput=z.object({projectId:z.string().uuid(),lines:z.array(z.object({category:z.string().trim().min(1).max(120),title:z.string().trim().min(1).max(240),description:optionalText(2000),amount:money}).strict()).max(250)}).strict();
-export const milestoneInput=z.object({projectId:z.string().uuid(),title:z.string().trim().min(1).max(240),description:optionalText(2000),startDate:z.coerce.date().optional(),dueDate:z.coerce.date().optional(),status:z.nativeEnum(ProjectMilestoneStatus).default("PENDING")}).strict();
-export const taskInput=z.object({projectId:z.string().uuid(),milestoneId:z.string().uuid().optional(),title:z.string().trim().min(1).max(240),description:optionalText(2000),assigneeUserId:z.string().uuid().optional(),dueDate:z.coerce.date().optional(),priority:z.number().int().min(0).max(3).default(0),status:z.nativeEnum(ProjectTaskStatus).default("TODO")}).strict();
-type Actor=Awaited<ReturnType<typeof requirePermissionForMutation>>&{companyId:string};
-async function actor(mutation:boolean){const a=(mutation?await requirePermissionForMutation("ACCOUNT_PROJECTS"):await requirePermission("ACCOUNT_PROJECTS"));if(!a.companyId)throw new AuthorizationError();if(mutation)await requireAccountModules(a,"PROJECTS");return {...a,companyId:a.companyId} as Actor;}
-async function branchIds(a:Actor){if(a.branchAccessScope==="ALL_BRANCHES")return (await db.branch.findMany({where:{companyId:a.companyId,isActive:true},select:{id:true}})).map(x=>x.id);return (await db.userBranchAccess.findMany({where:{userId:a.id,branch:{companyId:a.companyId,isActive:true}},select:{branchId:true}})).map(x=>x.branchId)}
-function recordScope(a:Actor,ids:string[]):Prisma.ProjectWhereInput{return{companyId:a.companyId,branchId:{in:ids},...(a.accountRole==="PROJECT_MANAGER"?{OR:[{projectManagerId:a.id},{members:{some:{userId:a.id}}}]}:{})}}
-async function audit(tx:Prisma.TransactionClient,a:Actor,projectId:string,eventType:ProjectAuditEventType,metadata?:Prisma.InputJsonValue){await tx.projectAuditEvent.create({data:{companyId:a.companyId,projectId,actorUserId:a.id,eventType,metadata}})}
-async function mutable(tx:Prisma.TransactionClient,a:Actor,id:string,ids:string[]){await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;const p=await tx.project.findFirst({where:{id,...recordScope(a,ids)}});if(!p)throw new AuthorizationError();if(["CLOSED","CANCELLED"].includes(p.status))throw new Error("PROJECT_CLOSED");return p}
-async function validateManager(tx:Prisma.TransactionClient,a:Actor,userId:string|undefined,branchId:string){if(!userId)return;const u=await tx.user.findFirst({where:{id:userId,companyId:a.companyId,isActive:true,accountAccessActive:true,accountRole:{in:["ACCOUNT_ADMIN","PROJECT_MANAGER"]},OR:[{branchAccessScope:"ALL_BRANCHES"},{branchAccesses:{some:{branchId}}}]},select:{id:true}});if(!u)throw new Error("INVALID_PROJECT_MANAGER")}
-export async function createProject(raw:unknown){const d=projectInput.parse(raw),a=await actor(true),ids=await branchIds(a);if(!ids.includes(d.branchId))throw new AuthorizationError();return db.$transaction(async tx=>{const [branch,customer]=await Promise.all([tx.branch.findFirst({where:{id:d.branchId,companyId:a.companyId,isActive:true}}),tx.customer.findFirst({where:{id:d.customerId,companyId:a.companyId,isActive:true,isAccountCustomer:true}})]);if(!branch)throw new Error("INVALID_BRANCH");if(!customer)throw new Error("INVALID_CUSTOMER");await validateManager(tx,a,d.projectManagerId,d.branchId);const projectNumber=await allocateDocumentNumberInTx(tx,{companyId:a.companyId,branchId:d.branchId,seriesKey:"PROJECT",defaults:{prefix:"PRJ-",padding:6}});const p=await tx.project.create({data:{companyId:a.companyId,projectNumber,createdById:a.id,...d,projectValue:new Prisma.Decimal(d.projectValue),members:d.projectManagerId?{create:{userId:d.projectManagerId,role:"PROJECT_MANAGER"}}:undefined}});await audit(tx,a,p.id,"PROJECT_CREATED");return p},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-export async function listProjects(){const a=await actor(false),ids=await branchIds(a);return db.project.findMany({where:recordScope(a,ids),include:{customer:true,branch:true,projectManager:true},orderBy:{createdAt:"desc"}})}
-export async function getProject(id:string){const a=await actor(false),ids=await branchIds(a);const p=await db.project.findFirst({where:{id,...recordScope(a,ids)},include:{customer:true,branch:true,projectManager:true,members:{include:{user:true}},budgetLines:{orderBy:{position:"asc"}},milestones:{orderBy:{position:"asc"}},tasks:true,documents:true,quotationDocuments:{where:{documentType:"BOQ"}},commercialDocuments:{include:{allocations:true,advanceApplications:true},orderBy:{issueDate:"desc"}},audits:{orderBy:{createdAt:"desc"}}}});if(!p)throw new AuthorizationError();const budgetTotal=p.budgetLines.reduce((x,l)=>x.add(l.amount),new Prisma.Decimal(0)),customerPayments=p.commercialDocuments.filter(x=>["SALES_INVOICE","CREDIT_NOTE"].includes(x.type)).reduce((n,x)=>n.add(x.allocations.reduce((a,v)=>a.add(v.amount),new Prisma.Decimal(0))).add(x.advanceApplications.reduce((a,v)=>a.add(v.amount),new Prisma.Decimal(0))),new Prisma.Decimal(0)),vendorPayments=p.commercialDocuments.filter(x=>["PURCHASE_BILL","DEBIT_NOTE","SUBCONTRACT_PURCHASE"].includes(x.type)).reduce((n,x)=>n.add(x.allocations.reduce((a,v)=>a.add(v.amount),new Prisma.Decimal(0))).add(x.advanceApplications.reduce((a,v)=>a.add(v.amount),new Prisma.Decimal(0))),new Prisma.Decimal(0));return{...p,budgetTotal,customerPayments,vendorPayments}}
-export async function replaceBudget(raw:unknown){const d=budgetInput.parse(raw),a=await actor(true),ids=await branchIds(a);return db.$transaction(async tx=>{await mutable(tx,a,d.projectId,ids);await tx.projectBudgetLine.deleteMany({where:{companyId:a.companyId,projectId:d.projectId}});if(d.lines.length)await tx.projectBudgetLine.createMany({data:d.lines.map((l,position)=>({...l,amount:new Prisma.Decimal(l.amount),position,companyId:a.companyId,projectId:d.projectId}))});await audit(tx,a,d.projectId,"PROJECT_BUDGET_CHANGED",{total:d.lines.reduce((x,l)=>x.add(l.amount),new Prisma.Decimal(0)).toString()})},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-export async function addMilestone(raw:unknown){const d=milestoneInput.parse(raw),a=await actor(true),ids=await branchIds(a);return db.$transaction(async tx=>{await mutable(tx,a,d.projectId,ids);const position=await tx.projectMilestone.count({where:{companyId:a.companyId,projectId:d.projectId}});const m=await tx.projectMilestone.create({data:{...d,companyId:a.companyId,createdById:a.id,position,completedAt:d.status==="COMPLETED"?new Date():null}});await audit(tx,a,d.projectId,"MILESTONE_CHANGED");return m},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-export async function addTask(raw:unknown){const d=taskInput.parse(raw),a=await actor(true),ids=await branchIds(a);return db.$transaction(async tx=>{await mutable(tx,a,d.projectId,ids);if(d.milestoneId&&!await tx.projectMilestone.findFirst({where:{id:d.milestoneId,companyId:a.companyId,projectId:d.projectId}}))throw new Error("INVALID_MILESTONE");if(d.assigneeUserId&&!await tx.projectMember.findFirst({where:{companyId:a.companyId,projectId:d.projectId,userId:d.assigneeUserId,user:{isActive:true,accountAccessActive:true}}}))throw new Error("INVALID_TASK_ASSIGNEE");const t=await tx.projectTask.create({data:{...d,companyId:a.companyId,createdById:a.id,completedAt:d.status==="COMPLETED"?new Date():null}});await audit(tx,a,d.projectId,"TASK_CHANGED");return t},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-export async function addProjectMember(projectId:string,userId:string,role="MEMBER"){const a=await actor(true),ids=await branchIds(a);return db.$transaction(async tx=>{const p=await mutable(tx,a,projectId,ids);const user=await tx.user.findFirst({where:{id:userId,companyId:a.companyId,isActive:true,accountAccessActive:true,OR:[{branchAccessScope:"ALL_BRANCHES"},{branchAccesses:{some:{branchId:p.branchId}}}]}});if(!user)throw new Error("INVALID_PROJECT_MEMBER");await tx.projectMember.upsert({where:{projectId_userId:{projectId,userId}},create:{companyId:a.companyId,projectId,userId,role},update:{role}});await audit(tx,a,projectId,"PROJECT_TEAM_CHANGED")},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-export async function linkBoq(projectId:string,boqId:string){const a=await actor(true),ids=await branchIds(a);return db.$transaction(async tx=>{const p=await mutable(tx,a,projectId,ids);const q=await tx.quotationDocument.findFirst({where:{id:boqId,companyId:a.companyId,documentType:"BOQ",branchId:{in:ids}}});if(!q||q.customerId!==p.customerId||q.projectId&&q.projectId!==p.id)throw new Error("INVALID_BOQ");await tx.quotationDocument.updateMany({where:{id:q.id,companyId:a.companyId,projectId:null},data:{projectId:p.id}});await audit(tx,a,p.id,"BOQ_LINKED")})}
-export async function closeProject(projectId:string,raw:{handoverDate?:Date;handoverNote?:string;closureNote?:string}){const a=await actor(true),ids=await branchIds(a);return db.$transaction(async tx=>{const p=await mutable(tx,a,projectId,ids);const now=new Date();await tx.project.updateMany({where:{id:p.id,companyId:a.companyId,status:p.status},data:{status:"CLOSED",actualEndDate:now,handoverDate:raw.handoverDate,handoverNote:raw.handoverNote,closureNote:raw.closureNote,closedById:a.id,closedAt:now}});await audit(tx,a,p.id,"PROJECT_CLOSED")},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-export async function reopenProject(projectId:string){const a=await actor(true);if(a.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const ids=await branchIds(a);return db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id"=${projectId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;const p=await tx.project.findFirst({where:{id:projectId,status:"CLOSED",...recordScope(a,ids)}});if(!p)throw new AuthorizationError();await tx.project.update({where:{id:p.id},data:{status:"ACTIVE",closedById:null,closedAt:null}});await audit(tx,a,p.id,"PROJECT_REOPENED")},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-const allowedMime=new Set(["application/pdf","image/jpeg","image/png","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-export async function addProjectDocument(projectId:string,file:File,category="GENERAL",notes?:string){const a=await actor(true),ids=await branchIds(a);if(!file.size||file.size>10*1024*1024||!allowedMime.has(file.type))throw new Error("INVALID_PROJECT_DOCUMENT");const id=randomUUID(),key=`companies/${a.companyId}/projects/${projectId}/${id}`;await db.$transaction(tx=>mutable(tx,a,projectId,ids));await privateStorage().put(key,Buffer.from(await file.arrayBuffer()));try{return await db.$transaction(async tx=>{await mutable(tx,a,projectId,ids);const d=await tx.projectDocument.create({data:{id,companyId:a.companyId,projectId,uploadedById:a.id,category,displayName:file.name.slice(0,240),storageKey:key,mimeType:file.type,sizeBytes:file.size,notes}});await audit(tx,a,projectId,"DOCUMENT_ADDED");return d})}catch(e){await privateStorage().delete(key).catch(()=>undefined);throw e}}
-export async function downloadProjectDocument(id:string){const a=await actor(false),ids=await branchIds(a);await requireAccountModules(a,"PROJECTS");const d=await db.projectDocument.findFirst({where:{id,companyId:a.companyId,project:recordScope(a,ids)}});if(!d)throw new AuthorizationError();return{data:await privateStorage().get(d.storageKey),mimeType:d.mimeType,name:d.displayName}}
+const money = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/);
+const optionalText = (length: number) => z.string().trim().max(length).optional();
+const optionalUuid = z.string().uuid().optional();
+const operationalStatuses = ["PLANNING", "ACTIVE", "ON_HOLD", "COMPLETED"] as const;
+
+export const projectInput = z.object({
+  branchId: z.string().uuid(), name: z.string().trim().min(1).max(240), customerId: z.string().uuid(),
+  siteName: optionalText(240), siteAddress: optionalText(4000), siteContactName: optionalText(160), siteContactPhone: optionalText(30),
+  projectManagerId: optionalUuid, startDate: z.coerce.date().optional(), targetEndDate: z.coerce.date().optional(), projectValue: money.default("0"),
+}).strict();
+export const projectUpdateInput = projectInput.omit({ branchId: true, customerId: true }).extend({ projectId: z.string().uuid(), status: z.enum(operationalStatuses) }).strict();
+export const projectStatusInput = z.object({ projectId: z.string().uuid(), status: z.nativeEnum(ProjectStatus) }).strict();
+export const budgetInput = z.object({ projectId: z.string().uuid(), lines: z.array(z.object({ category: z.string().trim().min(1).max(120), title: z.string().trim().min(1).max(240), description: optionalText(2000), amount: money }).strict()).max(250) }).strict();
+const milestoneFields = z.object({ title: z.string().trim().min(1).max(240), description: optionalText(2000), startDate: z.coerce.date().optional(), dueDate: z.coerce.date().optional(), status: z.nativeEnum(ProjectMilestoneStatus).default("PENDING") }).strict();
+export const milestoneInput = milestoneFields.extend({ projectId: z.string().uuid() }).strict();
+export const milestoneUpdateInput = milestoneFields.extend({ projectId: z.string().uuid(), milestoneId: z.string().uuid() }).strict();
+const taskFields = z.object({ milestoneId: optionalUuid, title: z.string().trim().min(1).max(240), description: optionalText(2000), assigneeUserId: optionalUuid, dueDate: z.coerce.date().optional(), priority: z.coerce.number().int().min(0).max(3).default(0), status: z.nativeEnum(ProjectTaskStatus).default("TODO") }).strict();
+export const taskInput = taskFields.extend({ projectId: z.string().uuid() }).strict();
+export const taskUpdateInput = taskFields.extend({ projectId: z.string().uuid(), taskId: z.string().uuid() }).strict();
+
+export type ProjectActor = Awaited<ReturnType<typeof requirePermissionForMutation>> & { companyId: string };
+type ProjectAccessActor = Pick<ProjectActor, "id" | "companyId" | "accountRole" | "branchAccessScope" | "branchIds" | "isActive" | "role" | "salesRole" | "accountAccessActive" | "salesAccessActive" | "managerType">;
+
+async function projectActor(mutation: boolean) {
+  const value = mutation ? await requirePermissionForMutation("ACCOUNT_PROJECTS") : await requirePermission("ACCOUNT_PROJECTS");
+  if (!value.companyId) throw new AuthorizationError();
+  if (mutation) await requireAccountModules(value, "PROJECTS");
+  return { ...value, companyId: value.companyId } as ProjectActor;
+}
+
+export async function authorizedProjectBranchIds(actor: ProjectAccessActor) {
+  if (actor.branchAccessScope === "ALL_BRANCHES") return (await db.branch.findMany({ where: { companyId: actor.companyId, isActive: true }, select: { id: true } })).map(({ id }) => id);
+  return (await db.userBranchAccess.findMany({ where: { userId: actor.id, branch: { companyId: actor.companyId, isActive: true } }, select: { branchId: true } })).map(({ branchId }) => branchId);
+}
+export function projectRecordScope(actor: Pick<ProjectAccessActor, "id" | "companyId" | "accountRole">, branchIds: string[]): Prisma.ProjectWhereInput {
+  return { companyId: actor.companyId, branchId: { in: branchIds }, ...(actor.accountRole === "PROJECT_MANAGER" ? { OR: [{ projectManagerId: actor.id }, { members: { some: { userId: actor.id } } }] } : {}) };
+}
+async function assertProjectCapability(actor: ProjectAccessActor) {
+  const company = await db.company.findUnique({ where: { id: actor.companyId }, select: { productEdition: true } });
+  if (!company || !canUsePermission(actor, company.productEdition, "ACCOUNT_PROJECTS")) throw new AuthorizationError();
+  await requireAccountModules(actor, "PROJECTS");
+}
+export function nextCompletionAt(status:"COMPLETED"|string,current:Date|null,now=new Date()){return status==="COMPLETED"?current??now:null}
+export async function listOpenProjectOptionsForActor(actor: ProjectAccessActor, edition?: ProductEdition) {
+  const enabled = await enabledModulesForCompany(actor.companyId);
+  const productEdition = edition ?? (await db.company.findUnique({ where: { id: actor.companyId }, select: { productEdition: true } }))?.productEdition;
+  if (!enabled.includes("PROJECTS") || !productEdition || !canUsePermission(actor, productEdition, "ACCOUNT_PROJECTS")) return [];
+  const ids = await authorizedProjectBranchIds(actor);
+  return db.project.findMany({ where: { ...projectRecordScope(actor, ids), status: { notIn: ["CLOSED", "CANCELLED"] } }, select: { id: true, projectNumber: true, name: true, customerId: true, branchId: true, status: true }, orderBy: [{ projectNumber: "asc" }, { name: "asc" }] });
+}
+export async function authorizeProjectForCommercial(actor: ProjectAccessActor, projectId: string, branchId: string, customerId?: string, client: Prisma.TransactionClient | typeof db = db) {
+  await assertProjectCapability(actor);
+  const ids = await authorizedProjectBranchIds(actor);
+  if (!ids.includes(branchId)) throw new AuthorizationError();
+  if (client !== db) await client.$queryRaw`SELECT "id" FROM "projects" WHERE "id"=${projectId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  const project = await client.project.findFirst({ where: { id: projectId, branchId, ...projectRecordScope(actor, ids), status: { notIn: ["CLOSED", "CANCELLED"] }, ...(customerId ? { customerId } : {}) }, select: { id: true, projectNumber: true, name: true, customerId: true, branchId: true, status: true } });
+  if (!project) throw new AuthorizationError();
+  return project;
+}
+async function audit(tx: Prisma.TransactionClient, actor: ProjectActor, projectId: string, eventType: ProjectAuditEventType, metadata?: Prisma.InputJsonValue) {
+  await tx.projectAuditEvent.create({ data: { companyId: actor.companyId, projectId, actorUserId: actor.id, eventType, metadata } });
+}
+async function mutable(tx: Prisma.TransactionClient, actor: ProjectActor, id: string, branchIds: string[]) {
+  await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id"=${id}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  const project = await tx.project.findFirst({ where: { id, ...projectRecordScope(actor, branchIds) } });
+  if (!project) throw new AuthorizationError();
+  if (["CLOSED", "CANCELLED"].includes(project.status)) throw new Error("PROJECT_CLOSED");
+  return project;
+}
+async function validateManager(tx: Prisma.TransactionClient, actor: ProjectActor, userId: string | undefined, branchId: string) {
+  if (!userId) return;
+  const user = await tx.user.findFirst({ where: { id: userId, companyId: actor.companyId, isActive: true, accountAccessActive: true, accountRole: { in: ["ACCOUNT_ADMIN", "PROJECT_MANAGER"] }, OR: [{ branchAccessScope: "ALL_BRANCHES" }, { branchAccesses: { some: { branchId } } }] }, select: { id: true } });
+  if (!user) throw new Error("INVALID_PROJECT_MANAGER");
+}
+async function validateTaskRelations(tx: Prisma.TransactionClient, actor: ProjectActor, projectId: string, milestoneId?: string, assigneeUserId?: string) {
+  if (milestoneId && !await tx.projectMilestone.findFirst({ where: { id: milestoneId, companyId: actor.companyId, projectId } })) throw new Error("INVALID_MILESTONE");
+  if (assigneeUserId && !await tx.projectMember.findFirst({ where: { companyId: actor.companyId, projectId, userId: assigneeUserId, user: { isActive: true, accountAccessActive: true, accountRole: { in: ["ACCOUNT_ADMIN", "PROJECT_MANAGER"] } } } })) throw new Error("INVALID_TASK_ASSIGNEE");
+}
+
+export async function createProject(raw: unknown) {
+  const parsed = projectInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor);
+  if (!ids.includes(parsed.branchId)) throw new AuthorizationError();
+  const data = actor.accountRole === "PROJECT_MANAGER" ? { ...parsed, projectManagerId: actor.id } : parsed;
+  return db.$transaction(async tx => {
+    const [branch, customer] = await Promise.all([tx.branch.findFirst({ where: { id: data.branchId, companyId: actor.companyId, isActive: true } }), tx.customer.findFirst({ where: { id: data.customerId, companyId: actor.companyId, isActive: true, isAccountCustomer: true } })]);
+    if (!branch) throw new Error("INVALID_BRANCH"); if (!customer) throw new Error("INVALID_CUSTOMER");
+    await validateManager(tx, actor, data.projectManagerId, data.branchId);
+    const projectNumber = await allocateDocumentNumberInTx(tx, { companyId: actor.companyId, branchId: data.branchId, seriesKey: "PROJECT", defaults: { prefix: "PRJ-", padding: 6 } });
+    const project = await tx.project.create({ data: { companyId: actor.companyId, projectNumber, createdById: actor.id, ...data, projectValue: new Prisma.Decimal(data.projectValue), members: data.projectManagerId ? { create: { userId: data.projectManagerId, role: "PROJECT_MANAGER" } } : undefined } });
+    await audit(tx, actor, project.id, "PROJECT_CREATED"); return project;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+export async function updateProject(raw: unknown) {
+  const data = projectUpdateInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor);
+  return db.$transaction(async tx => {
+    const project = await mutable(tx, actor, data.projectId, ids);
+    if (actor.accountRole === "PROJECT_MANAGER" && data.projectManagerId !== actor.id) throw new AuthorizationError();
+    await validateManager(tx, actor, data.projectManagerId, project.branchId);
+    if (data.status !== project.status) assertNormalProjectTransition(project.status, data.status);
+    const value = new Prisma.Decimal(data.projectValue), managerChanged = (data.projectManagerId ?? null) !== project.projectManagerId;
+    await tx.project.update({ where: { id: project.id }, data: { name: data.name, siteName: data.siteName, siteAddress: data.siteAddress, siteContactName: data.siteContactName, siteContactPhone: data.siteContactPhone, startDate: data.startDate, targetEndDate: data.targetEndDate, projectValue: value, projectManagerId: data.projectManagerId ?? null, status: data.status } });
+    if (managerChanged && project.projectManagerId && project.projectManagerId !== data.projectManagerId) await tx.projectMember.updateMany({ where: { companyId: actor.companyId, projectId: project.id, userId: project.projectManagerId, role: "PROJECT_MANAGER" }, data: { role: "MEMBER" } });
+    if (data.projectManagerId) await tx.projectMember.upsert({ where: { projectId_userId: { projectId: project.id, userId: data.projectManagerId } }, create: { companyId: actor.companyId, projectId: project.id, userId: data.projectManagerId, role: "PROJECT_MANAGER" }, update: { role: "PROJECT_MANAGER" } });
+    await audit(tx, actor, project.id, "PROJECT_UPDATED", { projectValue: { from: project.projectValue.toString(), to: value.toString() } });
+    if (managerChanged) await audit(tx, actor, project.id, "PROJECT_MANAGER_CHANGED", { from: project.projectManagerId, to: data.projectManagerId ?? null });
+    if (data.status !== project.status) await audit(tx, actor, project.id, "PROJECT_STATUS_CHANGED", { from: project.status, to: data.status });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+export function assertNormalProjectTransition(from: ProjectStatus, to: ProjectStatus) {
+  const allowed: Record<ProjectStatus, ProjectStatus[]> = { PLANNING: ["ACTIVE", "CANCELLED"], ACTIVE: ["ON_HOLD", "COMPLETED", "CANCELLED"], ON_HOLD: ["ACTIVE", "CANCELLED"], COMPLETED: ["ACTIVE", "CANCELLED"], CLOSED: [], CANCELLED: [] };
+  if (!allowed[from].includes(to) || to === "CLOSED") throw new Error("INVALID_PROJECT_STATUS_TRANSITION");
+}
+export async function listProjects() { const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor); return db.project.findMany({ where: projectRecordScope(actor, ids), include: { customer: true, branch: true, projectManager: true }, orderBy: { createdAt: "desc" } }); }
+export function deriveProjectPaymentTotal(documents:Array<{type:string;allocations:Array<{amount:Prisma.Decimal}>;advanceApplications:Array<{amount:Prisma.Decimal}>}>,type:string){return documents.filter(document=>document.type===type).reduce((sum,document)=>sum.add(document.allocations.reduce((amount,row)=>amount.add(row.amount),new Prisma.Decimal(0))).add(document.advanceApplications.reduce((amount,row)=>amount.add(row.amount),new Prisma.Decimal(0))),new Prisma.Decimal(0))}
+export async function getProject(id: string) {
+  const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor);
+  const project = await db.project.findFirst({ where: { id, ...projectRecordScope(actor, ids) }, include: { customer: true, branch: true, projectManager: true, members: { include: { user: true } }, budgetLines: { orderBy: { position: "asc" } }, milestones: { orderBy: { position: "asc" } }, tasks: true, documents: true, quotationDocuments: { where: { documentType: "BOQ" } }, commercialDocuments: { include: { allocations: true, advanceApplications: true }, orderBy: { issueDate: "desc" } }, audits: { orderBy: { createdAt: "desc" } } } });
+  if (!project) throw new AuthorizationError();
+  const budgetTotal = project.budgetLines.reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0));
+  return { ...project, budgetTotal, customerPayments: deriveProjectPaymentTotal(project.commercialDocuments, "SALES_INVOICE"), vendorPayments: deriveProjectPaymentTotal(project.commercialDocuments, "PURCHASE_BILL") };
+}
+export async function getProjectFormOptions(projectId?: string) {
+  const actor = await projectActor(false); await requireAccountModules(actor, "PROJECTS"); const ids = await authorizedProjectBranchIds(actor);
+  const project = projectId ? await db.project.findFirst({ where: { id: projectId, ...projectRecordScope(actor, ids) }, select: { id: true, branchId: true, customerId: true } }) : null;
+  if (projectId && !project) throw new AuthorizationError();
+  const branches = await db.branch.findMany({ where: { companyId: actor.companyId, isActive: true, id: { in: ids } }, select: { id: true, name: true } });
+  const managers = await db.user.findMany({ where: { companyId: actor.companyId, isActive: true, accountAccessActive: true, accountRole: { in: ["ACCOUNT_ADMIN", "PROJECT_MANAGER"] }, ...(project ? { OR: [{ branchAccessScope: "ALL_BRANCHES" }, { branchAccesses: { some: { branchId: project.branchId } } }] } : {}) }, select: { id: true, name: true, accountRole: true, branchAccessScope: true, branchAccesses: { select: { branchId: true } } }, orderBy: { name: "asc" } });
+  const memberCandidates = project ? managers : [];
+  const boqCandidates = project ? await db.quotationDocument.findMany({ where: { companyId: actor.companyId, documentType: "BOQ", customerId: project.customerId, branchId: project.branchId, OR: [{ projectId: null }, { projectId: project.id }] }, select: { id: true, documentNumber: true, status: true }, orderBy: { documentNumber: "asc" } }) : [];
+  return { branches, managers, memberCandidates, boqCandidates };
+}
+export async function replaceBudget(raw: unknown) { const data = budgetInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { await mutable(tx, actor, data.projectId, ids); await tx.projectBudgetLine.deleteMany({ where: { companyId: actor.companyId, projectId: data.projectId } }); if (data.lines.length) await tx.projectBudgetLine.createMany({ data: data.lines.map((line, position) => ({ ...line, amount: new Prisma.Decimal(line.amount), position, companyId: actor.companyId, projectId: data.projectId })) }); await audit(tx, actor, data.projectId, "PROJECT_BUDGET_CHANGED", { total: data.lines.reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0)).toString() }); }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function addMilestone(raw: unknown) { const data = milestoneInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { await mutable(tx, actor, data.projectId, ids); const last = await tx.projectMilestone.findFirst({ where: { companyId: actor.companyId, projectId: data.projectId }, orderBy: { position: "desc" }, select: { position: true } }); const milestone = await tx.projectMilestone.create({ data: { ...data, companyId: actor.companyId, createdById: actor.id, position: (last?.position ?? -1) + 1, completedAt: nextCompletionAt(data.status, null) } }); await audit(tx, actor, data.projectId, "MILESTONE_CHANGED", { action: "CREATED", milestoneId: milestone.id }); return milestone; }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function updateMilestone(raw: unknown) { const data = milestoneUpdateInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { await mutable(tx, actor, data.projectId, ids); const current = await tx.projectMilestone.findFirst({ where: { id: data.milestoneId, companyId: actor.companyId, projectId: data.projectId } }); if (!current) throw new AuthorizationError(); await tx.projectMilestone.update({ where: { id: current.id }, data: { title: data.title, description: data.description, startDate: data.startDate, dueDate: data.dueDate, status: data.status, completedAt: nextCompletionAt(data.status, current.completedAt) } }); await audit(tx, actor, data.projectId, "MILESTONE_CHANGED", { action: "UPDATED", milestoneId: current.id, from: current.status, to: data.status }); }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function addTask(raw: unknown) { const data = taskInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { await mutable(tx, actor, data.projectId, ids); await validateTaskRelations(tx, actor, data.projectId, data.milestoneId, data.assigneeUserId); const task = await tx.projectTask.create({ data: { ...data, companyId: actor.companyId, createdById: actor.id, completedAt: nextCompletionAt(data.status, null) } }); await audit(tx, actor, data.projectId, "TASK_CHANGED", { action: "CREATED", taskId: task.id }); return task; }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function updateTask(raw: unknown) { const data = taskUpdateInput.parse(raw), actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { await mutable(tx, actor, data.projectId, ids); const current = await tx.projectTask.findFirst({ where: { id: data.taskId, companyId: actor.companyId, projectId: data.projectId } }); if (!current) throw new AuthorizationError(); await validateTaskRelations(tx, actor, data.projectId, data.milestoneId, data.assigneeUserId); await tx.projectTask.update({ where: { id: current.id }, data: { title: data.title, description: data.description, milestoneId: data.milestoneId ?? null, assigneeUserId: data.assigneeUserId ?? null, dueDate: data.dueDate, priority: data.priority, status: data.status, completedAt: nextCompletionAt(data.status, current.completedAt) } }); await audit(tx, actor, data.projectId, "TASK_CHANGED", { action: "UPDATED", taskId: current.id, from: current.status, to: data.status }); }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function addProjectMember(projectId: string, userId: string, role = "MEMBER") { const actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { const project = await mutable(tx, actor, projectId, ids); const user = await tx.user.findFirst({ where: { id: userId, companyId: actor.companyId, isActive: true, accountAccessActive: true, accountRole: { in: ["ACCOUNT_ADMIN", "PROJECT_MANAGER"] }, OR: [{ branchAccessScope: "ALL_BRANCHES" }, { branchAccesses: { some: { branchId: project.branchId } } }] } }); if (!user) throw new Error("INVALID_PROJECT_MEMBER"); await tx.projectMember.upsert({ where: { projectId_userId: { projectId, userId } }, create: { companyId: actor.companyId, projectId, userId, role }, update: { role } }); await audit(tx, actor, projectId, "PROJECT_TEAM_CHANGED"); }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function linkBoq(projectId: string, boqId: string) { const actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { const project = await mutable(tx, actor, projectId, ids); const boq = await tx.quotationDocument.findFirst({ where: { id: boqId, companyId: actor.companyId, documentType: "BOQ", customerId: project.customerId, branchId: project.branchId, OR: [{ projectId: null }, { projectId: project.id }] } }); if (!boq) throw new Error("INVALID_BOQ"); await tx.quotationDocument.updateMany({ where: { id: boq.id, companyId: actor.companyId, projectId: null }, data: { projectId: project.id } }); await audit(tx, actor, project.id, "BOQ_LINKED"); }); }
+export async function closeProject(projectId: string, raw: { handoverDate?: Date; handoverNote?: string; closureNote?: string }) { const actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { const project = await mutable(tx, actor, projectId, ids), now = new Date(); await tx.project.updateMany({ where: { id: project.id, companyId: actor.companyId, status: project.status }, data: { status: "CLOSED", actualEndDate: now, handoverDate: raw.handoverDate, handoverNote: raw.handoverNote, closureNote: raw.closureNote, closedById: actor.id, closedAt: now } }); await audit(tx, actor, project.id, "PROJECT_CLOSED"); }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+export async function reopenProject(projectId: string) { const actor = await projectActor(true); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); const ids = await authorizedProjectBranchIds(actor); return db.$transaction(async tx => { await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id"=${projectId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`; const project = await tx.project.findFirst({ where: { id: projectId, status: "CLOSED", ...projectRecordScope(actor, ids) } }); if (!project) throw new AuthorizationError(); await tx.project.update({ where: { id: project.id }, data: { status: "ACTIVE", closedById: null, closedAt: null } }); await audit(tx, actor, project.id, "PROJECT_REOPENED"); }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+const allowedMime = new Set(["application/pdf", "image/jpeg", "image/png", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
+export async function addProjectDocument(projectId: string, file: File, category = "GENERAL", notes?: string) { const actor = await projectActor(true), ids = await authorizedProjectBranchIds(actor); if (!file.size || file.size > 10 * 1024 * 1024 || !allowedMime.has(file.type)) throw new Error("INVALID_PROJECT_DOCUMENT"); const id = randomUUID(), key = `companies/${actor.companyId}/projects/${projectId}/${id}`; await db.$transaction(tx => mutable(tx, actor, projectId, ids)); await privateStorage().put(key, Buffer.from(await file.arrayBuffer())); try { return await db.$transaction(async tx => { await mutable(tx, actor, projectId, ids); const document = await tx.projectDocument.create({ data: { id, companyId: actor.companyId, projectId, uploadedById: actor.id, category, displayName: file.name.slice(0, 240), storageKey: key, mimeType: file.type, sizeBytes: file.size, notes } }); await audit(tx, actor, projectId, "DOCUMENT_ADDED"); return document; }); } catch (error) { await privateStorage().delete(key).catch(() => undefined); throw error; } }
+export async function downloadProjectDocument(id: string) { const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor); await requireAccountModules(actor, "PROJECTS"); const document = await db.projectDocument.findFirst({ where: { id, companyId: actor.companyId, project: projectRecordScope(actor, ids) } }); if (!document) throw new AuthorizationError(); return { data: await privateStorage().get(document.storageKey), mimeType: document.mimeType, name: document.displayName }; }
