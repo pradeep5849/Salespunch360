@@ -15,7 +15,7 @@
     "cleanup:tenant": "tsx scripts/pre-f4-tenant-cleanup.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "prebuild": "tsx scripts/migrate-deploy-safe.ts"
+    "prebuild": "prisma generate && tsx scripts/migrate-deploy-safe.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
