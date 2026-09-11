@@ -18,7 +18,7 @@ import { privateStorage } from "@/lib/storage";
 const money = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/);
 const optionalText = (length: number) => z.string().trim().max(length).optional();
 const optionalUuid = z.string().uuid().optional();
-const operationalStatuses = ["PLANNING", "ACTIVE", "ON_HOLD", "COMPLETED"] as const;
+const operationalStatuses = ["PLANNING", "ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"] as const;
 
 export const projectInput = z.object({
   branchId: z.string().uuid(), name: z.string().trim().min(1).max(240), customerId: z.string().uuid(),
