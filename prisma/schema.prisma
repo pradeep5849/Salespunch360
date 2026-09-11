@@ -2097,6 +2097,10 @@ model Project {
   targetEndDate DateTime? @db.Date
   actualEndDate DateTime? @db.Date
   projectValue Decimal @default(0) @db.Decimal(18,2)
+  sourceLeadId String? @db.Uuid
+  sourceQuotationId String? @db.Uuid
+  sourceSalesUserId String? @db.Uuid
+  sourceSalesManagerId String? @db.Uuid
   handoverDate DateTime? @db.Date
   handoverNote String?
   closureNote String?
@@ -2121,6 +2125,8 @@ model Project {
   audits ProjectAuditEvent[]
   @@unique([companyId,id])
   @@unique([companyId,branchId,projectNumber])
+  @@unique([companyId,sourceLeadId])
+  @@unique([companyId,sourceQuotationId])
   @@index([companyId,status])
   @@index([companyId,branchId,status])
   @@index([companyId,customerId])
