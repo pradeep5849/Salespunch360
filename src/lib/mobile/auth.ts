@@ -27,7 +27,8 @@ type Eligibility = { isActive: boolean; companyId: string | null; role: string; 
 export function isMobileEligible(user: Eligibility, edition: ProductEdition | null): user is Eligibility & { companyId: string; salesRole: SalesRole } {
   return user.isActive && user.companyId !== null && user.role !== "SUPER_ADMIN" && user.salesAccessActive && isMobileSalesRole(user.salesRole) && edition !== null && editionAllowsSalesWorkspace(edition);
 }
-export const mobileCan = (user: MobilePrincipal, permission: Permission) => SALES_ROLE_PERMISSIONS[user.salesRole].includes(permission);
+const MOBILE_PERSONAL_FIELD_PERMISSIONS:readonly Permission[]=["SALES_ATTENDANCE","SALES_CUSTOMERS","SALES_CHECK_INS","SALES_LEADS","SALES_FOLLOW_UPS","SALES_TARGETS","SALES_TRAVEL"];
+export const mobileCan = (user: MobilePrincipal, permission: Permission) => SALES_ROLE_PERMISSIONS[user.salesRole].includes(permission) && (!MOBILE_PERSONAL_FIELD_PERMISSIONS.includes(permission)||mobileFieldWorkEnabled(user));
 export const mobileFieldWorkEnabled = (user: MobilePrincipal) => canUseSalesFieldWorkflow(user);
 
 export async function createMobileSession(identifier: string, password: string, now = new Date()) {

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser, type AuthenticatedUser } from "./session";
 import { db } from "@/lib/db";
 import { canAccessAccountWorkspace, canAccessSalesWorkspace } from "./workspace-policy";
-import { canUsePermission, type Permission } from "./permissions";
+import { canUsePermission, canUsePermissionForMutation, type Permission } from "./permissions";
 
 export class AuthorizationError extends Error {
   constructor() { super("Not authorized"); this.name = "AuthorizationError"; }
@@ -104,14 +104,14 @@ export async function requireAccountWorkspaceForMutation() {
   return { ...user, companyId: user.companyId };
 }
 
-async function authorizePermission(user: AuthenticatedUser, permission: Permission) {
+async function authorizePermission(user: AuthenticatedUser, permission: Permission, mutation=false) {
   if (permission === "PROFILE_SELF") {
     if (!canUsePermission(user, null, permission)) throw new AuthorizationError();
     return user;
   }
   if (!user.companyId) throw new AuthorizationError();
   const company = await db.company.findUnique({ where: { id: user.companyId }, select: { productEdition: true } });
-  if (!company || !canUsePermission(user, company.productEdition, permission)) throw new AuthorizationError();
+  if (!company || !(mutation ? canUsePermissionForMutation(user, company.productEdition, permission) : canUsePermission(user, company.productEdition, permission))) throw new AuthorizationError();
   return { ...user, companyId: user.companyId };
 }
 
@@ -122,5 +122,5 @@ export async function requirePermission(permission: Permission) {
 
 /** Server Action counterpart; authentication and authorization failures never redirect. */
 export async function requirePermissionForMutation(permission: Permission) {
-  return authorizePermission(await requireUserForMutation(), permission);
+  return authorizePermission(await requireUserForMutation(), permission, true);
 }

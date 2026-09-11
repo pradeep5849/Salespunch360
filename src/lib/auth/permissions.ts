@@ -1,5 +1,5 @@
 import type { AccountRole, ProductEdition, SalesRole } from "@prisma/client";
-import { canAccessAccountWorkspace, canAccessSalesWorkspace, isPlatformSuperAdmin, type WorkspacePrincipal } from "./workspace-policy";
+import { canAccessAccountWorkspace, canAccessSalesWorkspace, canUseSalesFieldWorkflow, isPlatformSuperAdmin, type WorkspacePrincipal } from "./workspace-policy";
 
 export const PERMISSIONS = [
   "PROFILE_SELF", "COMPANY_VIEW", "USER_DIRECTORY_VIEW", "BRANCH_VIEW", "BRANCH_ASSIGN", "SECURITY_RESET_PASSWORD",
@@ -16,6 +16,7 @@ export const PERMISSION_CATEGORY: Record<Permission, PermissionCategory> = Objec
 ])) as Record<Permission, PermissionCategory>;
 
 const FIELD_SALES: Permission[] = ["SALES_DASHBOARD", "SALES_ATTENDANCE", "SALES_CUSTOMERS", "SALES_CHECK_INS", "SALES_LEADS", "SALES_FOLLOW_UPS", "SALES_TARGETS", "SALES_REPORTS", "SALES_TRAVEL"];
+export const PERSONAL_FIELD_PERMISSIONS: readonly Permission[] = ["SALES_ATTENDANCE", "SALES_CUSTOMERS", "SALES_CHECK_INS", "SALES_LEADS", "SALES_FOLLOW_UPS", "SALES_TARGETS", "SALES_TRAVEL"];
 export const SALES_ROLE_PERMISSIONS: Record<SalesRole, readonly Permission[]> = {
   PRIMARY_ADMIN: [...FIELD_SALES, "SALES_USER_ADMIN", "SALES_SETTINGS", "SALES_BILLING"],
   ADMIN: FIELD_SALES,
@@ -47,3 +48,6 @@ export function canUsePermission(user: WorkspacePrincipal, edition: ProductEditi
     return (salesActive && (user.salesRole === "PRIMARY_ADMIN" || user.salesRole === "ADMIN")) || (accountActive && user.accountRole === "ACCOUNT_ADMIN");
   return false;
 }
+
+/** Mutation policy closes personal field workflows while preserving scoped supervisor reads. */
+export function canUsePermissionForMutation(user:WorkspacePrincipal,edition:ProductEdition|null,permission:Permission){return canUsePermission(user,edition,permission)&&(!PERSONAL_FIELD_PERMISSIONS.includes(permission)||canUseSalesFieldWorkflow(user));}
