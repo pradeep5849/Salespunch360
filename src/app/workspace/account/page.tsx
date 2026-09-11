@@ -76,6 +76,21 @@ export default async function AccountFoundationPage() {
               Cash, Bank, Capital & Loans
             </Link>
           )}
+          {modules.includes("INVENTORY") &&
+            canUsePermission(actor, company.productEdition, "ACCOUNT_STOCK") && (
+              <Link href="/workspace/account/inventory">Inventory</Link>
+            )}
+          {modules.includes("ASSETS") &&
+            canUsePermission(actor, company.productEdition, "ACCOUNT_ACCOUNTS") && (
+              <Link href="/workspace/account/assets">Assets</Link>
+            )}
+          {modules.includes("GST_ADVANCED") &&
+            canUsePermission(actor, company.productEdition, "ACCOUNT_REPORTS") && (
+              <Link href="/workspace/account/tax">GST & Taxes</Link>
+            )}
+          {canUsePermission(actor, company.productEdition, "ACCOUNT_REPORTS") && (
+            <Link href="/workspace/account/reports">Financial Reports</Link>
+          )}
           {masters.map((x) => (
             <Link key={x} href={`/workspace/account/${x}`}>
               {x.replaceAll("-", " ")}
