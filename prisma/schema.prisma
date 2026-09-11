@@ -494,6 +494,27 @@ enum RecurringFrequency {
   YEARLY
 }
 
+enum MoneyAccountType {
+  BANK
+  CASH
+  PETTY_CASH
+}
+
+enum ChequeStatus {
+  ISSUED
+  RECEIVED
+  DEPOSITED
+  CLEARED
+  BOUNCED
+  CANCELLED
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID_OFF
+  CANCELLED
+}
+
 enum ProjectAuditEventType {
   PROJECT_CREATED
   PROJECT_UPDATED
@@ -2033,6 +2054,7 @@ model AccountSettlement {
   vendorId         String?                @db.Uuid
   idempotencyKey   String                 @db.VarChar(120)
   paymentMode      PaymentMode
+  moneyAccountId   String?                @db.Uuid
   amount           Decimal                @db.Decimal(18, 2)
   remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
   transactionDate  DateTime               @db.Date
@@ -2413,4 +2435,117 @@ model ExpenseAttachment {
   @@unique([companyId, storageKey])
   @@index([companyId, expenseId])
   @@map("expense_attachments")
+}
+
+model MoneyAccount {
+  id                  String           @id @default(uuid()) @db.Uuid
+  companyId           String           @db.Uuid
+  branchId            String?          @db.Uuid
+  type                MoneyAccountType
+  name                String           @db.VarChar(160)
+  ledgerAccountId     String           @db.Uuid
+  bankName            String?          @db.VarChar(160)
+  accountNumberMasked String?          @db.VarChar(40)
+  ifsc                String?          @db.VarChar(20)
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, ledgerAccountId])
+  @@index([companyId, type, isActive])
+  @@map("money_accounts")
+}
+
+model MoneyTransfer {
+  id                   String   @id @default(uuid()) @db.Uuid
+  companyId            String   @db.Uuid
+  branchId             String   @db.Uuid
+  sourceAccountId      String   @db.Uuid
+  destinationAccountId String   @db.Uuid
+  amount               Decimal  @db.Decimal(18, 2)
+  transferDate         DateTime @db.Date
+  idempotencyKey       String   @db.VarChar(160)
+  journalEntryId       String   @db.Uuid
+  createdById          String   @db.Uuid
+  createdAt            DateTime @default(now())
+
+  @@unique([companyId, id])
+  @@unique([companyId, idempotencyKey])
+  @@unique([companyId, journalEntryId])
+  @@map("money_transfers")
+}
+
+model Cheque {
+  id             String       @id @default(uuid()) @db.Uuid
+  companyId      String       @db.Uuid
+  branchId       String       @db.Uuid
+  moneyAccountId String       @db.Uuid
+  chequeNumber   String       @db.VarChar(80)
+  chequeDate     DateTime     @db.Date
+  partyName      String       @db.VarChar(240)
+  status         ChequeStatus
+  clearedDate    DateTime?    @db.Date
+  reference      String?      @db.VarChar(160)
+  journalEntryId String?      @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, moneyAccountId, chequeNumber])
+  @@map("cheques")
+}
+
+model OwnerFinancialAccount {
+  id               String @id @default(uuid()) @db.Uuid
+  companyId        String @db.Uuid
+  userId           String @db.Uuid
+  capitalLedgerId  String @db.Uuid
+  drawingsLedgerId String @db.Uuid
+  loanLedgerId     String @db.Uuid
+
+  @@unique([companyId, id])
+  @@unique([companyId, userId])
+  @@map("owner_financial_accounts")
+}
+
+model Loan {
+  id                String     @id @default(uuid()) @db.Uuid
+  companyId         String     @db.Uuid
+  branchId          String     @db.Uuid
+  lender            String     @db.VarChar(240)
+  loanType          String     @db.VarChar(80)
+  principal         Decimal    @db.Decimal(18, 2)
+  interestRate      Decimal?   @db.Decimal(7, 4)
+  startDate         DateTime   @db.Date
+  maturityDate      DateTime?  @db.Date
+  liabilityLedgerId String     @db.Uuid
+  moneyAccountId    String     @db.Uuid
+  status            LoanStatus @default(ACTIVE)
+  reference         String?    @db.VarChar(160)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([companyId, id])
+  @@index([companyId, status])
+  @@map("loans")
+}
+
+model LoanPayment {
+  id             String   @id @default(uuid()) @db.Uuid
+  companyId      String   @db.Uuid
+  loanId         String   @db.Uuid
+  moneyAccountId String   @db.Uuid
+  paymentDate    DateTime @db.Date
+  principal      Decimal  @db.Decimal(18, 2)
+  interest       Decimal  @db.Decimal(18, 2)
+  charges        Decimal  @default(0) @db.Decimal(18, 2)
+  idempotencyKey String   @db.VarChar(160)
+  journalEntryId String   @db.Uuid
+  createdAt      DateTime @default(now())
+
+  @@unique([companyId, id])
+  @@unique([companyId, idempotencyKey])
+  @@unique([companyId, journalEntryId])
+  @@map("loan_payments")
 }
