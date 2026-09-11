@@ -1,0 +1,7 @@
+CREATE TYPE "ProjectChangeOrderStatus" AS ENUM ('DRAFT','PENDING_APPROVAL','APPROVED','REJECTED','CANCELLED');
+CREATE TABLE "project_change_orders" ("id" UUID PRIMARY KEY,"companyId" UUID NOT NULL,"projectId" UUID NOT NULL,"changeOrderNumber" VARCHAR(100) NOT NULL,"title" VARCHAR(240) NOT NULL,"description" TEXT,"status" "ProjectChangeOrderStatus" NOT NULL DEFAULT 'DRAFT',"valueDelta" DECIMAL(18,2) NOT NULL,"estimatedCostDelta" DECIMAL(18,2) NOT NULL,"approvedAt" TIMESTAMP(3),"approvedById" UUID,"createdById" UUID NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL);
+CREATE UNIQUE INDEX "project_change_orders_company_project_number_key" ON "project_change_orders"("companyId","projectId","changeOrderNumber");
+CREATE INDEX "project_change_orders_company_project_status_idx" ON "project_change_orders"("companyId","projectId","status");
+ALTER TABLE "project_change_orders" ADD CONSTRAINT "project_change_orders_project_company_fkey" FOREIGN KEY ("companyId","projectId") REFERENCES "projects"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "project_change_orders" ADD CONSTRAINT "project_change_orders_creator_company_fkey" FOREIGN KEY ("companyId","createdById") REFERENCES "users"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "project_change_orders" ADD CONSTRAINT "project_change_orders_approver_company_fkey" FOREIGN KEY ("companyId","approvedById") REFERENCES "users"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;

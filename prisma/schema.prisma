@@ -456,6 +456,14 @@ enum ProjectTaskStatus {
   CANCELLED
 }
 
+enum ProjectChangeOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum ProjectAuditEventType {
   PROJECT_CREATED
   PROJECT_UPDATED
@@ -2252,4 +2260,25 @@ model ProjectAuditEvent {
   actor User @relation(fields:[companyId,actorUserId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
   @@index([companyId,projectId,createdAt])
   @@map("project_audit_events")
+}
+
+model ProjectChangeOrder {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  projectId String @db.Uuid
+  changeOrderNumber String @db.VarChar(100)
+  title String @db.VarChar(240)
+  description String?
+  status ProjectChangeOrderStatus @default(DRAFT)
+  valueDelta Decimal @db.Decimal(18,2)
+  estimatedCostDelta Decimal @db.Decimal(18,2)
+  approvedAt DateTime?
+  approvedById String? @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([companyId,id])
+  @@unique([companyId,projectId,changeOrderNumber])
+  @@index([companyId,projectId,status])
+  @@map("project_change_orders")
 }
