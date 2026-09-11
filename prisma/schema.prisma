@@ -509,6 +509,12 @@ enum ChequeStatus {
   CANCELLED
 }
 
+enum OwnerTransactionType {
+  INVESTMENT
+  WITHDRAWAL
+  OWNER_LOAN
+}
+
 enum LoanStatus {
   ACTIVE
   PAID_OFF
@@ -2482,6 +2488,7 @@ model MoneyTransfer {
   transferDate         DateTime @db.Date
   idempotencyKey       String   @db.VarChar(160)
   journalEntryId       String   @db.Uuid
+  reference            String?  @db.VarChar(160)
   createdById          String   @db.Uuid
   createdAt            DateTime @default(now())
 
@@ -2538,6 +2545,8 @@ model Loan {
   moneyAccountId    String     @db.Uuid
   status            LoanStatus @default(ACTIVE)
   reference         String?    @db.VarChar(160)
+  receivedJournalId String?    @db.Uuid
+  createdById       String?    @db.Uuid
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -2577,4 +2586,26 @@ model AccountOperationalAudit {
 
   @@index([companyId, entityType, entityId, createdAt])
   @@map("account_operational_audits")
+}
+
+model OwnerTransaction {
+  id                      String               @id @default(uuid()) @db.Uuid
+  companyId               String               @db.Uuid
+  branchId                String               @db.Uuid
+  ownerFinancialAccountId String               @db.Uuid
+  moneyAccountId          String               @db.Uuid
+  type                    OwnerTransactionType
+  amount                  Decimal              @db.Decimal(18, 2)
+  transactionDate         DateTime             @db.Date
+  reference               String?              @db.VarChar(160)
+  idempotencyKey          String               @db.VarChar(160)
+  journalEntryId          String               @db.Uuid
+  createdById             String               @db.Uuid
+  createdAt               DateTime             @default(now())
+
+  @@unique([companyId, id])
+  @@unique([companyId, idempotencyKey])
+  @@unique([companyId, journalEntryId])
+  @@index([companyId, transactionDate])
+  @@map("owner_transactions")
 }
