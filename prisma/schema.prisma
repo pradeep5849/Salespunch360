@@ -528,6 +528,11 @@ enum ProjectAuditEventType {
   DOCUMENT_ADDED
   PROJECT_CLOSED
   PROJECT_REOPENED
+  CHANGE_ORDER_CREATED
+  CHANGE_ORDER_SUBMITTED
+  CHANGE_ORDER_APPROVED
+  CHANGE_ORDER_REJECTED
+  CHANGE_ORDER_CANCELLED
 }
 
 model Company {
@@ -1967,6 +1972,7 @@ model CommercialDocument {
   partyId                String                   @db.Uuid
   partyName              String                   @db.VarChar(240)
   sourceDocumentId       String?                  @db.Uuid
+  sourcePurchaseOrderId  String?                  @db.Uuid
   purchasePurpose        PurchasePurpose?
   purchaseClassification PurchaseClassification?
   projectReference       String?                  @db.VarChar(240)
@@ -1993,6 +1999,8 @@ model CommercialDocument {
   createdBy              User                     @relation("CommercialDocumentCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   sourceDocument         CommercialDocument?      @relation("CommercialSource", fields: [companyId, sourceDocumentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   adjustments            CommercialDocument[]     @relation("CommercialSource")
+  sourcePurchaseOrder    CommercialDocument?      @relation("PurchaseOrderFulfillment", fields: [companyId, sourcePurchaseOrderId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  purchaseBills          CommercialDocument[]     @relation("PurchaseOrderFulfillment")
   lines                  CommercialDocumentLine[]
   reminders              PaymentReminder[]
   allocations            SettlementAllocation[]
@@ -2004,6 +2012,7 @@ model CommercialDocument {
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
   @@index([companyId, projectId])
+  @@index([companyId, sourcePurchaseOrderId, status])
   @@map("commercial_documents")
 }
 
