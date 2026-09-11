@@ -37,12 +37,10 @@ export function projectCosting(input: {
   closed?: boolean;
 }) {
   const changes = input.approvedChanges ?? [],
-    grossCurrentValue = input.originalValue.add(
-      sum(changes.map((x) => x.valueDelta)),
-    ),
+    approvedChangeOrders = sum(changes.map((x) => x.valueDelta)),
     contractRevenueBase = (
       input.contractRevenueBase ?? input.originalValue
-    ).add(sum(changes.map((x) => x.valueDelta))),
+    ).add(approvedChangeOrders),
     estimated = input.estimatedCost.add(
       sum(changes.map((x) => x.estimatedCostDelta)),
     ),
@@ -102,7 +100,7 @@ export function projectCosting(input: {
       base.isZero() ? Z : value.div(base).mul(100);
   return {
     originalValue: input.originalValue,
-    currentValue: grossCurrentValue,
+    approvedChangeOrders,
     contractRevenueBase,
     estimatedCost: estimated,
     actualCost,

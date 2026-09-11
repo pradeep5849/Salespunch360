@@ -87,6 +87,11 @@ function branchScope(a: Actor) {
     ? { branchId: { in: a.branchIds ?? [] } }
     : {};
 }
+export function manageableMoneyAccountScope(a: Actor) {
+  return a.branchAccessScope === "SELECTED_BRANCHES"
+    ? { OR: [{ branchId: null }, { branchId: { in: a.branchIds ?? [] } }] }
+    : {};
+}
 export function compatibleMoneyAccount(branchId: string) {
   return { OR: [{ branchId: null }, { branchId }] };
 }
@@ -197,7 +202,7 @@ export async function updateMoneyAccount(id: string, raw: unknown) {
   const a = await actor("ACCOUNT_MONEY_ENTRY", true),
     d = accountInput.partial().omit({ type: true, branchId: true }).parse(raw),
     changed = await db.moneyAccount.updateMany({
-      where: { id, companyId: a.companyId },
+      where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
       data: d,
     });
   if (changed.count !== 1) throw new AuthorizationError();
@@ -205,7 +210,7 @@ export async function updateMoneyAccount(id: string, raw: unknown) {
 export async function deactivateMoneyAccount(id: string) {
   const a = await actor("ACCOUNT_MONEY_ENTRY", true),
     changed = await db.moneyAccount.updateMany({
-      where: { id, companyId: a.companyId },
+      where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
       data: { isActive: false },
     });
   if (changed.count !== 1) throw new AuthorizationError();

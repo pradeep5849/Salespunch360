@@ -7,6 +7,16 @@ describe("A8-A10 correction contracts", () => {
     expect(source).toContain("taxableTotal");
     expect(source).toContain("taxableAmount");
     expect(source).not.toContain('SUBCONTRACT_PURCHASE"]).map');
+    expect(source).toContain("approvedChangeOrders");
+    expect(source).not.toContain("grossCurrentValue");
+  });
+  it("enforces current approval policy and scoped money account mutation", () => {
+    const expenses = read("src/lib/account/expenses.ts"),
+      money = read("src/lib/account/money.ts");
+    expect(expenses).toContain("approvalRequired(tx, a.companyId, row.totalAmount)");
+    expect(expenses).toContain('a.accountRole === "PROJECT_MANAGER" && !t.projectId');
+    expect(expenses).toContain("EXPENSE_CATEGORY_CLASS_MISMATCH");
+    expect(money.match(/manageableMoneyAccountScope\(a\)/g)).toHaveLength(2);
   });
   it("provides a non-financial PO finalizer and source selector", () => {
     expect(read("src/lib/account/commercial.ts")).toContain(

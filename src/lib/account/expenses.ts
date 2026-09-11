@@ -81,6 +81,18 @@ export const requiresExpenseApproval = (
   required: boolean,
   threshold: Prisma.Decimal,
 ) => required && total.gt(threshold);
+async function approvalRequired(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  total: Prisma.Decimal,
+) {
+  const settings = await tx.accountSettings.findUnique({ where: { companyId } });
+  return requiresExpenseApproval(
+    total,
+    settings?.expenseApprovalRequired ?? false,
+    settings?.expenseApprovalThreshold ?? Z,
+  );
+}
 export const recurringOccurrenceKey = (templateId: string, due: Date) =>
   `${templateId}:${due.toISOString().slice(0, 10)}`;
 type Actor = ProjectActor;
@@ -366,6 +378,11 @@ export async function transitionExpense(
         where: { id, companyId: a.companyId },
       });
       if (!row) throw new AuthorizationError();
+      if (
+        a.accountRole === "PROJECT_MANAGER" &&
+        ["APPROVED", "REJECTED"].includes(to)
+      )
+        throw new AuthorizationError();
       const allowed: Partial<
         Record<ExpenseTransactionStatus, ExpenseTransactionStatus[]>
       > = {
@@ -379,16 +396,24 @@ export async function transitionExpense(
         a.accountRole !== "ACCOUNT_ADMIN"
       )
         throw new AuthorizationError();
+      const effectiveTo =
+        row.status === "DRAFT" &&
+        to === "PENDING_APPROVAL" &&
+        !(await approvalRequired(tx, a.companyId, row.totalAmount))
+          ? "APPROVED"
+          : to;
       const updated = await tx.expenseTransaction.update({
         where: { id },
         data: {
-          status: to,
-          ...(to === "APPROVED"
+          status: effectiveTo,
+          ...(effectiveTo === "APPROVED" && to === "APPROVED"
             ? { approvedById: a.id, approvedAt: new Date() }
             : {}),
         },
       });
-      await audit(tx, a, `EXPENSE_${to}`, "EXPENSE", id);
+      await audit(tx, a, `EXPENSE_${effectiveTo}`, "EXPENSE", id, {
+        explicitApproval: to === "APPROVED",
+      });
       return updated;
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -575,12 +600,24 @@ export async function createRecurringTemplate(raw: unknown) {
     }))
   )
     throw new AuthorizationError();
-  if (
-    !(await db.expenseCategory.findFirst({
+  const category = await db.expenseCategory.findFirst({
       where: { id: d.categoryId, companyId: a.companyId, isActive: true },
-    }))
-  )
+    });
+  if (!category)
     throw new Error("INVALID_EXPENSE_CATEGORY");
+  const ledger = await db.ledgerAccount.findFirst({
+    where: {
+      id: category.defaultLedgerAccountId,
+      companyId: a.companyId,
+      isActive: true,
+      allowPosting: true,
+      accountClass: "EXPENSE",
+    },
+  });
+  if (!ledger || !["EXPENSE", "BOTH"].includes(category.scope))
+    throw new Error("EXPENSE_CATEGORY_CLASS_MISMATCH");
+  if (a.accountRole === "PROJECT_MANAGER" && !d.projectId)
+    throw new AuthorizationError();
   if (d.projectId) {
     const ids = await authorizedProjectBranchIds(a);
     if (
@@ -624,6 +661,13 @@ export async function generateRecurringExpense(
         where: { id: templateId, companyId: a.companyId, isActive: true },
       });
       if (!t || !branchOk(a, t.branchId)) throw new AuthorizationError();
+      if (
+        !(await tx.branch.findFirst({
+          where: { id: t.branchId, companyId: a.companyId, isActive: true },
+        })) ||
+        (a.accountRole === "PROJECT_MANAGER" && !t.projectId)
+      )
+        throw new AuthorizationError();
       if (t.projectId) {
         const ids = await authorizedProjectBranchIds(a);
         if (
@@ -638,12 +682,24 @@ export async function generateRecurringExpense(
         )
           throw new AuthorizationError();
       }
-      if (
-        !(await tx.expenseCategory.findFirst({
+      const category = await tx.expenseCategory.findFirst({
           where: { id: t.categoryId, companyId: a.companyId, isActive: true },
+        });
+      if (!category)
+        throw new Error("INVALID_EXPENSE_CATEGORY");
+      if (
+        !["EXPENSE", "BOTH"].includes(category.scope) ||
+        !(await tx.ledgerAccount.findFirst({
+          where: {
+            id: category.defaultLedgerAccountId,
+            companyId: a.companyId,
+            isActive: true,
+            allowPosting: true,
+            accountClass: "EXPENSE",
+          },
         }))
       )
-        throw new Error("INVALID_EXPENSE_CATEGORY");
+        throw new Error("EXPENSE_CATEGORY_CLASS_MISMATCH");
       const key = recurringOccurrenceKey(t.id, t.nextDueDate),
         existing = await tx.expenseTransaction.findFirst({
           where: { companyId: a.companyId, occurrenceKey: key },
@@ -664,6 +720,7 @@ export async function generateRecurringExpense(
           },
         });
       if (!money) throw new Error("INVALID_MONEY_ACCOUNT");
+      const needsApproval = await approvalRequired(tx, a.companyId, t.amount);
       const row = await tx.expenseTransaction.create({
         data: {
           companyId: a.companyId,
@@ -671,7 +728,7 @@ export async function generateRecurringExpense(
           projectId: t.projectId,
           categoryId: t.categoryId,
           type: t.projectId ? "PROJECT_EXPENSE" : "OFFICE_EXPENSE",
-          status: "DRAFT",
+          status: needsApproval ? "PENDING_APPROVAL" : "DRAFT",
           transactionNumber: number,
           transactionDate: t.nextDueDate,
           taxableAmount: t.amount,

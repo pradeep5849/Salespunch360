@@ -13,9 +13,8 @@ export default async function Page({
       await loadProjectCosting(id);
   const cards = [
     ["Project Value / Gross Value", metrics.originalValue],
-    ["Approved Change Orders", metrics.currentValue.sub(metrics.originalValue)],
-    ["Current Gross Contract Value", metrics.currentValue],
-    ["Tax-exclusive Contract Revenue", metrics.contractRevenueBase],
+    ["Approved Change Orders (tax-exclusive)", metrics.approvedChangeOrders],
+    ["Current Tax-exclusive Contract Revenue", metrics.contractRevenueBase],
     [`Estimated Cost (${estimateSource})`, metrics.estimatedCost],
     [
       "Budget",
