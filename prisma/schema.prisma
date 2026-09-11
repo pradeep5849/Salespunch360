@@ -1397,13 +1397,15 @@ model RateLimitBucket {
 }
 
 model AccountSettings {
-  companyId      String          @id @db.Uuid
-  company        Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  baseCurrency   String          @default("INR") @db.Char(3)
-  businessType   BusinessType    @default(OTHER_MIXED)
-  enabledModules AccountModule[] @default([])
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  companyId                String          @id @db.Uuid
+  company                  Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  baseCurrency             String          @default("INR") @db.Char(3)
+  businessType             BusinessType    @default(OTHER_MIXED)
+  enabledModules           AccountModule[] @default([])
+  expenseApprovalRequired  Boolean         @default(false)
+  expenseApprovalThreshold Decimal         @default(0) @db.Decimal(18, 2)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
 
   @@map("account_settings")
 }
@@ -2381,27 +2383,31 @@ model ExpenseCategory {
 }
 
 model ExpenseTransaction {
-  id                String                   @id @default(uuid()) @db.Uuid
-  companyId         String                   @db.Uuid
-  branchId          String                   @db.Uuid
-  projectId         String?                  @db.Uuid
-  categoryId        String                   @db.Uuid
-  type              ExpenseTransactionType
-  status            ExpenseTransactionStatus @default(DRAFT)
-  transactionNumber String                   @db.VarChar(100)
-  transactionDate   DateTime                 @db.Date
-  taxableAmount     Decimal                  @db.Decimal(18, 2)
-  taxRate           Decimal                  @default(0) @db.Decimal(7, 4)
-  taxAmount         Decimal                  @default(0) @db.Decimal(18, 2)
-  totalAmount       Decimal                  @db.Decimal(18, 2)
-  moneyAccountId    String?                  @db.Uuid
-  occurrenceKey     String?                  @db.VarChar(160)
-  journalEntryId    String?                  @db.Uuid
-  approvedById      String?                  @db.Uuid
-  approvedAt        DateTime?
-  createdById       String                   @db.Uuid
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
+  id                      String                   @id @default(uuid()) @db.Uuid
+  companyId               String                   @db.Uuid
+  branchId                String                   @db.Uuid
+  projectId               String?                  @db.Uuid
+  categoryId              String                   @db.Uuid
+  type                    ExpenseTransactionType
+  status                  ExpenseTransactionStatus @default(DRAFT)
+  transactionNumber       String                   @db.VarChar(100)
+  transactionDate         DateTime                 @db.Date
+  taxableAmount           Decimal                  @db.Decimal(18, 2)
+  taxRate                 Decimal                  @default(0) @db.Decimal(7, 4)
+  taxAmount               Decimal                  @default(0) @db.Decimal(18, 2)
+  totalAmount             Decimal                  @db.Decimal(18, 2)
+  moneyAccountId          String?                  @db.Uuid
+  occurrenceKey           String?                  @db.VarChar(160)
+  journalEntryId          String?                  @db.Uuid
+  reversalJournalId       String?                  @db.Uuid
+  employeeReimbursementId String?                  @db.Uuid
+  reference               String?                  @db.VarChar(160)
+  notes                   String?
+  approvedById            String?                  @db.Uuid
+  approvedAt              DateTime?
+  createdById             String                   @db.Uuid
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 
   @@unique([companyId, id])
   @@unique([companyId, occurrenceKey])
@@ -2557,4 +2563,18 @@ model LoanPayment {
   @@unique([companyId, idempotencyKey])
   @@unique([companyId, journalEntryId])
   @@map("loan_payments")
+}
+
+model AccountOperationalAudit {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @db.Uuid
+  actorUserId String   @db.Uuid
+  eventType   String   @db.VarChar(80)
+  entityType  String   @db.VarChar(80)
+  entityId    String   @db.Uuid
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, entityType, entityId, createdAt])
+  @@map("account_operational_audits")
 }
