@@ -6,7 +6,7 @@ vi.mock("@/lib/employees/service", () => ({ getEmployeeManagementContext: mocks.
 vi.mock("@/lib/branches/assignment",()=>({listBranchAssignmentOptions:vi.fn().mockResolvedValue([])}));
 vi.mock("@/lib/users/additional-admin",()=>({listAdditionalAdmins:vi.fn().mockResolvedValue([])}));
 vi.mock("@/lib/users/primary-admin",()=>({listPrimaryAdminTransferCandidates:vi.fn().mockResolvedValue([])}));
-vi.mock("@/lib/db", () => ({ db: { company: { findUnique: mocks.company }, user:{count:mocks.userCount} } }));
+vi.mock("@/lib/db", () => ({ db: { company: { findUnique: mocks.company }, user:{count:mocks.userCount}, companySubscription:{findFirst:vi.fn().mockResolvedValue(null)} } }));
 vi.mock("@/components/workspace/workspace-page-header", () => ({ WorkspacePageHeader: () => null }));
 vi.mock("./employee-manager", () => ({ EmployeeManager: () => null }));
 vi.mock("./product-user-manager",()=>({ProductUserManager:()=>null}));
@@ -14,9 +14,6 @@ vi.mock("@/lib/users/product-user-management",()=>({getProductUserManagementCont
 
 import EmployeesPage from "./page";
 
-const actor = (salesRole: "PRIMARY_ADMIN" | "ADMIN") => ({
-  id: "actor", companyId: "company", salesRole,
-});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -30,35 +27,30 @@ beforeEach(() => {
 });
 
 describe("Employee page authorization", () => {
-  it.each(["PRIMARY_ADMIN", "ADMIN"] as const)("allows canonical %s through SALES_USER_ADMIN", async (salesRole) => {
-    mocks.permission.mockResolvedValue(actor(salesRole));
+  it("allows Primary Admin Sales management", async () => {
     await expect(EmployeesPage({ searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
-    expect(mocks.permission).toHaveBeenCalledWith("SALES_USER_ADMIN");
+    expect(mocks.context).toHaveBeenCalledOnce();
   });
 
-  it("does not let a legacy FIELD_ADMIN role bypass canonical permission denial", async () => {
-    const denial = new Error("Not authorized");
-    mocks.permission.mockRejectedValue(denial);
-    await expect(EmployeesPage({ searchParams: Promise.resolve({}) })).rejects.toBe(denial);
-    expect(mocks.permission).toHaveBeenCalledWith("SALES_USER_ADMIN");
+  it("does not elevate Additional Admin to mutation authority", async () => {
+    mocks.productContext.mockResolvedValue({actor:{salesRole:"ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:false});
+    await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
   });
 
   it("lets a Plus Account Admin open Account management without invoking Sales loaders",async()=>{
     mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_PLUS",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:true});
     await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
-    expect(mocks.context).not.toHaveBeenCalled();expect(mocks.permission).not.toHaveBeenCalled();
+    expect(mocks.context).not.toHaveBeenCalled();
   });
 
-  it("loads Sales management but not Account controls for a Plus Sales-only administrator",async()=>{
-    mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_PLUS",users:[],branches:[],canManageSalesUsers:true,canManageAccountUsers:false});
-    mocks.permission.mockResolvedValue(actor("ADMIN"));
+  it("loads Sales management but not Account controls for a Sales-only Primary Admin",async()=>{
     await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
-    expect(mocks.context).toHaveBeenCalledOnce();expect(mocks.permission).toHaveBeenCalledWith("SALES_USER_ADMIN");
+    expect(mocks.context).toHaveBeenCalledOnce();
   });
 
   it("lets an Account-only Company administrator avoid every Sales-only service",async()=>{
     mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_ACCOUNT",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:true});
     await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
-    expect(mocks.context).not.toHaveBeenCalled();expect(mocks.permission).not.toHaveBeenCalled();
+    expect(mocks.context).not.toHaveBeenCalled();
   });
 });

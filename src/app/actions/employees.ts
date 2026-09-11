@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   createManager, createSalesEmployee, deactivateEmployee, editEmployee,
   reactivateEmployee, resetEmployeePassword,
@@ -55,5 +56,8 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     return safeError;
   }
   revalidatePath("/workspace/employees");
+  if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
   return { success: operation === "reset-password" ? "Password updated and sessions revoked." : "Employee updated successfully." };
 }
+
+export async function manageEmployeeForm(formData:FormData){return manageEmployee({},formData)}

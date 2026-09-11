@@ -10,7 +10,7 @@ describe("static module permission matrix", () => {
   it("maps Sales roles explicitly", () => {
     expect(can(sales("PRIMARY_ADMIN"), "SALES_BILLING")).toBe(true);
     expect(can(sales("ADMIN"), "SALES_BILLING")).toBe(false);
-    expect(can(sales("ADMIN"), "SALES_USER_ADMIN")).toBe(true);
+    expect(can(sales("ADMIN"), "SALES_USER_ADMIN")).toBe(false);
     expect(can(sales("MANAGER"), "SALES_USER_ADMIN")).toBe(false);
     expect(can(sales("SALES"), "SALES_USER_ADMIN")).toBe(false);
     for (const role of ["MANAGER", "SALES"] as const) for (const permission of SALES_ROLE_PERMISSIONS[role]) expect(can(sales(role), permission)).toBe(true);
