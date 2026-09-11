@@ -464,6 +464,36 @@ enum ProjectChangeOrderStatus {
   CANCELLED
 }
 
+enum ExpenseTransactionType {
+  PROJECT_EXPENSE
+  OFFICE_EXPENSE
+  OTHER_INCOME
+  REIMBURSEMENT
+}
+
+enum ExpenseTransactionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  POSTED
+  REJECTED
+  CANCELLED
+  REVERSED
+}
+
+enum ExpenseCategoryScope {
+  EXPENSE
+  INCOME
+  BOTH
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
 enum ProjectAuditEventType {
   PROJECT_CREATED
   PROJECT_UPDATED
@@ -565,16 +595,16 @@ model Company {
   commercialDocuments                 CommercialDocument[]
   settlements                         AccountSettlement[]
   paymentReminders                    PaymentReminder[]
-  commercialAudits CommercialAuditEvent[]
-  settlementAllocations SettlementAllocation[]
-  advanceApplications AdvanceApplication[]
-  projects Project[]
-  projectMembers ProjectMember[]
-  projectBudgetLines ProjectBudgetLine[]
-  projectMilestones ProjectMilestone[]
-  projectTasks ProjectTask[]
-  projectDocuments ProjectDocument[]
-  projectAuditEvents ProjectAuditEvent[]
+  commercialAudits                    CommercialAuditEvent[]
+  settlementAllocations               SettlementAllocation[]
+  advanceApplications                 AdvanceApplication[]
+  projects                            Project[]
+  projectMembers                      ProjectMember[]
+  projectBudgetLines                  ProjectBudgetLine[]
+  projectMilestones                   ProjectMilestone[]
+  projectTasks                        ProjectTask[]
+  projectDocuments                    ProjectDocument[]
+  projectAuditEvents                  ProjectAuditEvent[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
@@ -643,18 +673,18 @@ model User {
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
   commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
   settlements                AccountSettlement[]      @relation("SettlementCreator")
-  commercialAudits CommercialAuditEvent[] @relation("CommercialAuditActor")
-  paymentReminders PaymentReminder[] @relation("PaymentReminderActor")
-  advanceApplications AdvanceApplication[] @relation("AdvanceApplicationActor")
-  managedProjects Project[] @relation("ProjectManager")
-  createdProjects Project[] @relation("ProjectCreator")
-  closedProjects Project[] @relation("ProjectCloser")
-  projectMemberships ProjectMember[]
-  assignedProjectTasks ProjectTask[] @relation("ProjectTaskAssignee")
-  createdProjectTasks ProjectTask[] @relation("ProjectTaskCreator")
-  createdProjectMilestones ProjectMilestone[]
-  uploadedProjectDocuments ProjectDocument[]
-  projectAuditEvents ProjectAuditEvent[]
+  commercialAudits           CommercialAuditEvent[]   @relation("CommercialAuditActor")
+  paymentReminders           PaymentReminder[]        @relation("PaymentReminderActor")
+  advanceApplications        AdvanceApplication[]     @relation("AdvanceApplicationActor")
+  managedProjects            Project[]                @relation("ProjectManager")
+  createdProjects            Project[]                @relation("ProjectCreator")
+  closedProjects             Project[]                @relation("ProjectCloser")
+  projectMemberships         ProjectMember[]
+  assignedProjectTasks       ProjectTask[]            @relation("ProjectTaskAssignee")
+  createdProjectTasks        ProjectTask[]            @relation("ProjectTaskCreator")
+  createdProjectMilestones   ProjectMilestone[]
+  uploadedProjectDocuments   ProjectDocument[]
+  projectAuditEvents         ProjectAuditEvent[]
 
   @@unique([companyId, id])
   @@unique([companyId, employeeCode])
@@ -756,12 +786,12 @@ model Attendance {
 }
 
 model Customer {
-  id                        String              @id @default(uuid()) @db.Uuid
-  branchId                  String              @db.Uuid
-  companyId                 String              @db.Uuid
-  company                   Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  assignedUserId            String?             @db.Uuid
-  assignedUser              User?               @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  id                        String               @id @default(uuid()) @db.Uuid
+  branchId                  String               @db.Uuid
+  companyId                 String               @db.Uuid
+  company                   Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assignedUserId            String?              @db.Uuid
+  assignedUser              User?                @relation("CustomerAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   name                      String
   contactPerson             String?
   phone                     String?
@@ -771,22 +801,25 @@ model Customer {
   longitude                 Float?
   checkInReferenceLatitude  Float?
   checkInReferenceLongitude Float?
-  checkInReferenceVisitId   String?             @db.Uuid
+  checkInReferenceVisitId   String?              @db.Uuid
   checkInReferenceSetAt     DateTime?
   billingAddress            String?
   shippingAddress           String?
-  gstin                     String?             @db.VarChar(15)
-  pan                       String?             @db.VarChar(10)
+  gstin                     String?              @db.VarChar(15)
+  pan                       String?              @db.VarChar(10)
   notes                     String?
-  isActive                  Boolean             @default(true)
-  isAccountCustomer         Boolean             @default(false)
-  createdAt                 DateTime            @default(now())
-  updatedAt                 DateTime            @updatedAt
+  isActive                  Boolean              @default(true)
+  isAccountCustomer         Boolean              @default(false)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
   visits                    CustomerVisit[]
   leads                     Lead[]
   geofenceEvents            GeofenceEvent[]
   quotationDocuments        QuotationDocument[]
   projects                  Project[]
+  commercialDocuments       CommercialDocument[] @relation("CommercialCustomer")
+  settlements               AccountSettlement[]  @relation("SettlementCustomer")
+  paymentReminders          PaymentReminder[]    @relation("PaymentReminderCustomer")
 
   @@unique([companyId, id])
   @@index([companyId, name])
@@ -794,9 +827,6 @@ model Customer {
   @@index([companyId, assignedUserId])
   @@index([companyId, branchId])
   @@map("customers")
-  commercialDocuments CommercialDocument[] @relation("CommercialCustomer")
-  settlements AccountSettlement[] @relation("SettlementCustomer")
-  paymentReminders PaymentReminder[] @relation("PaymentReminderCustomer")
 }
 
 model CustomerVisit {
@@ -1393,26 +1423,26 @@ model NumberingSeries {
 }
 
 model Vendor {
-  id            String   @id @default(uuid()) @db.Uuid
-  companyId     String   @db.Uuid
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  name          String
-  contactPerson String?
-  phone         String?
-  email         String?
-  address       String?
-  gstin         String?  @db.VarChar(15)
-  pan           String?  @db.VarChar(10)
-  notes         String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([companyId, name])
-  @@unique([companyId, id])
-  @@map("vendors")
+  id                  String               @id @default(uuid()) @db.Uuid
+  companyId           String               @db.Uuid
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                String
+  contactPerson       String?
+  phone               String?
+  email               String?
+  address             String?
+  gstin               String?              @db.VarChar(15)
+  pan                 String?              @db.VarChar(10)
+  notes               String?
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   commercialDocuments CommercialDocument[] @relation("CommercialVendor")
-  settlements AccountSettlement[] @relation("SettlementVendor")
+  settlements         AccountSettlement[]  @relation("SettlementVendor")
+
+  @@unique([companyId, id])
+  @@index([companyId, name])
+  @@map("vendors")
 }
 
 model AccountUnit {
@@ -1473,7 +1503,7 @@ model AccountProduct {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  quotationLines QuotationLine[]
+  quotationLines  QuotationLine[]
   commercialLines CommercialDocumentLine[]
 
   @@unique([companyId, id])
@@ -1500,7 +1530,7 @@ model AccountService {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  quotationLines QuotationLine[]
+  quotationLines  QuotationLine[]
   commercialLines CommercialDocumentLine[]
 
   @@unique([companyId, id])
@@ -1542,7 +1572,7 @@ model WorkPackage {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  quotationLines QuotationLine[]
+  quotationLines  QuotationLine[]
   commercialLines CommercialDocumentLine[]
 
   @@unique([companyId, id])
@@ -1618,33 +1648,36 @@ model CostCentre {
 }
 
 model JournalEntry {
-  id              String        @id @default(uuid()) @db.Uuid
-  companyId       String        @db.Uuid
-  company         Company       @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  financialYearId String        @db.Uuid
-  financialYear   FinancialYear @relation(fields: [companyId, financialYearId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  branchId        String        @db.Uuid
-  branch          Branch        @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  journalNumber   String        @db.VarChar(100)
-  entryDate       DateTime      @db.Date
-  status          JournalStatus @default(DRAFT)
-  reference       String?       @db.VarChar(160)
-  narration       String?
-  sourceType      String        @db.VarChar(60)
-  sourceId        String        @db.VarChar(100)
-  postingPurpose  String        @default("PRIMARY") @db.VarChar(60)
-  reversalOfId    String?       @db.Uuid
-  reversalOf      JournalEntry? @relation("JournalReversal", fields: [companyId, reversalOfId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  reversedBy      JournalEntry? @relation("JournalReversal")
-  reversalReason  String?
-  createdById     String        @db.Uuid
-  createdBy       User          @relation("JournalCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  postedById      String?       @db.Uuid
-  postedBy        User?         @relation("JournalPoster", fields: [companyId, postedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  postedAt        DateTime?
-  lines           JournalLine[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                  String               @id @default(uuid()) @db.Uuid
+  companyId           String               @db.Uuid
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  financialYearId     String               @db.Uuid
+  financialYear       FinancialYear        @relation(fields: [companyId, financialYearId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  branchId            String               @db.Uuid
+  branch              Branch               @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalNumber       String               @db.VarChar(100)
+  entryDate           DateTime             @db.Date
+  status              JournalStatus        @default(DRAFT)
+  reference           String?              @db.VarChar(160)
+  narration           String?
+  sourceType          String               @db.VarChar(60)
+  sourceId            String               @db.VarChar(100)
+  postingPurpose      String               @default("PRIMARY") @db.VarChar(60)
+  reversalOfId        String?              @db.Uuid
+  reversalOf          JournalEntry?        @relation("JournalReversal", fields: [companyId, reversalOfId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  reversedBy          JournalEntry?        @relation("JournalReversal")
+  reversalReason      String?
+  createdById         String               @db.Uuid
+  createdBy           User                 @relation("JournalCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  postedById          String?              @db.Uuid
+  postedBy            User?                @relation("JournalPoster", fields: [companyId, postedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  postedAt            DateTime?
+  lines               JournalLine[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  commercialDocuments CommercialDocument[] @relation("CommercialJournal")
+  settlements         AccountSettlement[]  @relation("SettlementJournal")
+  advanceApplications AdvanceApplication[] @relation("AdvanceApplicationJournal")
 
   @@unique([companyId, id])
   @@unique([companyId, branchId, journalNumber])
@@ -1654,9 +1687,6 @@ model JournalEntry {
   @@index([companyId, entryDate, status])
   @@index([companyId, branchId, entryDate])
   @@map("journal_entries")
-  commercialDocuments CommercialDocument[] @relation("CommercialJournal")
-  settlements AccountSettlement[] @relation("SettlementJournal")
-  advanceApplications AdvanceApplication[] @relation("AdvanceApplicationJournal")
 }
 
 model JournalLine {
@@ -1905,380 +1935,482 @@ model QuotationAuditEvent {
 }
 
 model CommercialDocument {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  branchId String @db.Uuid
-  type CommercialDocumentType
-  status CommercialDocumentStatus @default(DRAFT)
-  documentNumber String @db.VarChar(100)
-  customerId String? @db.Uuid
-  vendorId String? @db.Uuid
-  partyId String @db.Uuid
-  partyName String @db.VarChar(240)
-  sourceDocumentId String? @db.Uuid
-  purchasePurpose PurchasePurpose?
+  id                     String                   @id @default(uuid()) @db.Uuid
+  companyId              String                   @db.Uuid
+  branchId               String                   @db.Uuid
+  type                   CommercialDocumentType
+  status                 CommercialDocumentStatus @default(DRAFT)
+  documentNumber         String                   @db.VarChar(100)
+  customerId             String?                  @db.Uuid
+  vendorId               String?                  @db.Uuid
+  partyId                String                   @db.Uuid
+  partyName              String                   @db.VarChar(240)
+  sourceDocumentId       String?                  @db.Uuid
+  purchasePurpose        PurchasePurpose?
   purchaseClassification PurchaseClassification?
-  projectReference String? @db.VarChar(240)
-  projectId String? @db.Uuid
-  issueDate DateTime @db.Date
-  dueDate DateTime? @db.Date
-  subtotal Decimal @db.Decimal(18,2)
-  discountTotal Decimal @default(0) @db.Decimal(18,2)
-  taxableTotal Decimal @db.Decimal(18,2)
-  taxTotal Decimal @db.Decimal(18,2)
-  grandTotal Decimal @db.Decimal(18,2)
-  balanceDue Decimal @db.Decimal(18,2)
-  notes String?
-  journalEntryId String? @db.Uuid
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  customer Customer? @relation("CommercialCustomer",fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  vendor Vendor? @relation("CommercialVendor",fields:[companyId,vendorId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  journalEntry JournalEntry? @relation("CommercialJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  project Project? @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation("CommercialDocumentCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  sourceDocument CommercialDocument? @relation("CommercialSource",fields:[companyId,sourceDocumentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  adjustments CommercialDocument[] @relation("CommercialSource")
-  lines CommercialDocumentLine[]
-  reminders PaymentReminder[]
-  allocations SettlementAllocation[]
-  advanceApplications AdvanceApplication[]
-  @@unique([companyId,id])
-  @@unique([companyId,branchId,type,documentNumber])
-  @@index([companyId,type,issueDate])
-  @@index([companyId,customerId])
-  @@index([companyId,vendorId])
-  @@index([companyId,projectId])
+  projectReference       String?                  @db.VarChar(240)
+  projectId              String?                  @db.Uuid
+  issueDate              DateTime                 @db.Date
+  dueDate                DateTime?                @db.Date
+  subtotal               Decimal                  @db.Decimal(18, 2)
+  discountTotal          Decimal                  @default(0) @db.Decimal(18, 2)
+  taxableTotal           Decimal                  @db.Decimal(18, 2)
+  taxTotal               Decimal                  @db.Decimal(18, 2)
+  grandTotal             Decimal                  @db.Decimal(18, 2)
+  balanceDue             Decimal                  @db.Decimal(18, 2)
+  notes                  String?
+  journalEntryId         String?                  @db.Uuid
+  createdById            String                   @db.Uuid
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  company                Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch                 Branch                   @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  customer               Customer?                @relation("CommercialCustomer", fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  vendor                 Vendor?                  @relation("CommercialVendor", fields: [companyId, vendorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalEntry           JournalEntry?            @relation("CommercialJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  project                Project?                 @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy              User                     @relation("CommercialDocumentCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  sourceDocument         CommercialDocument?      @relation("CommercialSource", fields: [companyId, sourceDocumentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  adjustments            CommercialDocument[]     @relation("CommercialSource")
+  lines                  CommercialDocumentLine[]
+  reminders              PaymentReminder[]
+  allocations            SettlementAllocation[]
+  advanceApplications    AdvanceApplication[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, branchId, type, documentNumber])
+  @@index([companyId, type, issueDate])
+  @@index([companyId, customerId])
+  @@index([companyId, vendorId])
+  @@index([companyId, projectId])
   @@map("commercial_documents")
 }
+
 model CommercialDocumentLine {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  documentId String @db.Uuid
-  position Int
-  lineType CommercialLineType
-  productId String? @db.Uuid
-  serviceId String? @db.Uuid
-  workPackageId String? @db.Uuid
-  itemName String @db.VarChar(240)
-  itemCode String? @db.VarChar(80)
-  description String?
-  specification String?
-  unitName String? @db.VarChar(80)
-  unitSymbol String? @db.VarChar(20)
-  quantity Decimal @db.Decimal(18,4)
-  rate Decimal @db.Decimal(18,2)
-  discountType DiscountType?
-  discountValue Decimal? @db.Decimal(18,4)
-  baseAmount Decimal @db.Decimal(18,2)
-  discountAmount Decimal @db.Decimal(18,2)
-  taxableAmount Decimal @db.Decimal(18,2)
-  taxRate Decimal @default(0) @db.Decimal(7,4)
-  taxAmount Decimal @db.Decimal(18,2)
-  lineTotal Decimal @db.Decimal(18,2)
-  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  product AccountProduct? @relation(fields:[companyId,productId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  service AccountService? @relation(fields:[companyId,serviceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  workPackage WorkPackage? @relation(fields:[companyId,workPackageId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([companyId,id])
-  @@unique([companyId,documentId,position])
+  id             String             @id @default(uuid()) @db.Uuid
+  companyId      String             @db.Uuid
+  documentId     String             @db.Uuid
+  position       Int
+  lineType       CommercialLineType
+  productId      String?            @db.Uuid
+  serviceId      String?            @db.Uuid
+  workPackageId  String?            @db.Uuid
+  itemName       String             @db.VarChar(240)
+  itemCode       String?            @db.VarChar(80)
+  description    String?
+  specification  String?
+  unitName       String?            @db.VarChar(80)
+  unitSymbol     String?            @db.VarChar(20)
+  quantity       Decimal            @db.Decimal(18, 4)
+  rate           Decimal            @db.Decimal(18, 2)
+  discountType   DiscountType?
+  discountValue  Decimal?           @db.Decimal(18, 4)
+  baseAmount     Decimal            @db.Decimal(18, 2)
+  discountAmount Decimal            @db.Decimal(18, 2)
+  taxableAmount  Decimal            @db.Decimal(18, 2)
+  taxRate        Decimal            @default(0) @db.Decimal(7, 4)
+  taxAmount      Decimal            @db.Decimal(18, 2)
+  lineTotal      Decimal            @db.Decimal(18, 2)
+  document       CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  product        AccountProduct?    @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  service        AccountService?    @relation(fields: [companyId, serviceId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  workPackage    WorkPackage?       @relation(fields: [companyId, workPackageId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([companyId, documentId, position])
   @@map("commercial_document_lines")
 }
+
 model AccountSettlement {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  branchId String @db.Uuid
-  type SettlementType
-  status SettlementStatus @default(POSTED)
-  settlementNumber String @db.VarChar(100)
-  partyId String @db.Uuid
-  customerId String? @db.Uuid
-  vendorId String? @db.Uuid
-  idempotencyKey String @db.VarChar(120)
-  paymentMode PaymentMode
-  amount Decimal @db.Decimal(18,2)
-  remainingAmount Decimal @default(0) @db.Decimal(18,2)
-  transactionDate DateTime @db.Date
-  reference String? @db.VarChar(160)
-  notes String?
-  journalEntryId String @db.Uuid
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  journalEntry JournalEntry @relation("SettlementJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation("SettlementCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  customer Customer? @relation("SettlementCustomer",fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  vendor Vendor? @relation("SettlementVendor",fields:[companyId,vendorId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  allocations SettlementAllocation[]
-  applications AdvanceApplication[]
-  @@unique([companyId,id])
-  @@unique([companyId,branchId,type,settlementNumber])
-  @@unique([companyId,idempotencyKey])
-  @@index([companyId,partyId,transactionDate])
+  id               String                 @id @default(uuid()) @db.Uuid
+  companyId        String                 @db.Uuid
+  branchId         String                 @db.Uuid
+  type             SettlementType
+  status           SettlementStatus       @default(POSTED)
+  settlementNumber String                 @db.VarChar(100)
+  partyId          String                 @db.Uuid
+  customerId       String?                @db.Uuid
+  vendorId         String?                @db.Uuid
+  idempotencyKey   String                 @db.VarChar(120)
+  paymentMode      PaymentMode
+  amount           Decimal                @db.Decimal(18, 2)
+  remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
+  transactionDate  DateTime               @db.Date
+  reference        String?                @db.VarChar(160)
+  notes            String?
+  journalEntryId   String                 @db.Uuid
+  createdById      String                 @db.Uuid
+  createdAt        DateTime               @default(now())
+  company          Company                @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch           Branch                 @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalEntry     JournalEntry           @relation("SettlementJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy        User                   @relation("SettlementCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  customer         Customer?              @relation("SettlementCustomer", fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  vendor           Vendor?                @relation("SettlementVendor", fields: [companyId, vendorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  allocations      SettlementAllocation[]
+  applications     AdvanceApplication[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, branchId, type, settlementNumber])
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, partyId, transactionDate])
   @@map("account_settlements")
 }
+
 model SettlementAllocation {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  settlementId String @db.Uuid
-  documentId String @db.Uuid
-  amount Decimal @db.Decimal(18,2)
-  createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  settlement AccountSettlement @relation(fields:[companyId,settlementId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([companyId,settlementId,documentId])
+  id           String             @id @default(uuid()) @db.Uuid
+  companyId    String             @db.Uuid
+  settlementId String             @db.Uuid
+  documentId   String             @db.Uuid
+  amount       Decimal            @db.Decimal(18, 2)
+  createdAt    DateTime           @default(now())
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  settlement   AccountSettlement  @relation(fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  document     CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, settlementId, documentId])
   @@map("settlement_allocations")
 }
+
 model AdvanceApplication {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  advanceId String @db.Uuid
-  documentId String @db.Uuid
-  amount Decimal @db.Decimal(18,2)
-  applicationDate DateTime @db.Date
-  idempotencyKey String @db.VarChar(120)
-  journalEntryId String @db.Uuid
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  advance AccountSettlement @relation(fields:[companyId,advanceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  journalEntry JournalEntry @relation("AdvanceApplicationJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation("AdvanceApplicationActor",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([companyId,idempotencyKey])
-  @@unique([companyId,advanceId,documentId,idempotencyKey])
+  id              String             @id @default(uuid()) @db.Uuid
+  companyId       String             @db.Uuid
+  advanceId       String             @db.Uuid
+  documentId      String             @db.Uuid
+  amount          Decimal            @db.Decimal(18, 2)
+  applicationDate DateTime           @db.Date
+  idempotencyKey  String             @db.VarChar(120)
+  journalEntryId  String             @db.Uuid
+  createdById     String             @db.Uuid
+  createdAt       DateTime           @default(now())
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  advance         AccountSettlement  @relation(fields: [companyId, advanceId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  document        CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalEntry    JournalEntry       @relation("AdvanceApplicationJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy       User               @relation("AdvanceApplicationActor", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, idempotencyKey])
+  @@unique([companyId, advanceId, documentId, idempotencyKey])
   @@map("advance_applications")
 }
+
 model PaymentReminder {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  documentId String @db.Uuid
-  customerId String @db.Uuid
-  remindAt DateTime
-  message String @db.VarChar(1000)
-  status PaymentReminderStatus @default(PENDING)
-  sentAt DateTime?
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  document CommercialDocument @relation(fields:[companyId,documentId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation("PaymentReminderActor",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  customer Customer @relation("PaymentReminderCustomer",fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@index([companyId,remindAt,status])
+  id          String                @id @default(uuid()) @db.Uuid
+  companyId   String                @db.Uuid
+  documentId  String                @db.Uuid
+  customerId  String                @db.Uuid
+  remindAt    DateTime
+  message     String                @db.VarChar(1000)
+  status      PaymentReminderStatus @default(PENDING)
+  sentAt      DateTime?
+  createdById String                @db.Uuid
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document    CommercialDocument    @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy   User                  @relation("PaymentReminderActor", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  customer    Customer              @relation("PaymentReminderCustomer", fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, remindAt, status])
   @@map("payment_reminders")
 }
+
 model CommercialAuditEvent {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  eventType CommercialAuditEventType
-  entityType String @db.VarChar(60)
-  entityId String @db.Uuid
-  actorId String? @db.Uuid
-  metadata Json?
-  createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  actor User? @relation("CommercialAuditActor",fields:[companyId,actorId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@index([companyId,entityType,entityId,createdAt])
+  id         String                   @id @default(uuid()) @db.Uuid
+  companyId  String                   @db.Uuid
+  eventType  CommercialAuditEventType
+  entityType String                   @db.VarChar(60)
+  entityId   String                   @db.Uuid
+  actorId    String?                  @db.Uuid
+  metadata   Json?
+  createdAt  DateTime                 @default(now())
+  company    Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor      User?                    @relation("CommercialAuditActor", fields: [companyId, actorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, entityType, entityId, createdAt])
   @@map("commercial_audit_events")
 }
 
 model Project {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  branchId String @db.Uuid
-  projectNumber String @db.VarChar(100)
-  name String @db.VarChar(240)
-  customerId String @db.Uuid
-  siteName String? @db.VarChar(240)
-  siteAddress String?
-  siteContactName String? @db.VarChar(160)
-  siteContactPhone String? @db.VarChar(30)
-  projectManagerId String? @db.Uuid
-  status ProjectStatus @default(PLANNING)
-  startDate DateTime? @db.Date
-  targetEndDate DateTime? @db.Date
-  actualEndDate DateTime? @db.Date
-  projectValue Decimal @default(0) @db.Decimal(18,2)
-  sourceLeadId String? @db.Uuid
-  sourceQuotationId String? @db.Uuid
-  sourceSalesUserId String? @db.Uuid
-  sourceSalesManagerId String? @db.Uuid
-  handoverDate DateTime? @db.Date
-  handoverNote String?
-  closureNote String?
-  closedById String? @db.Uuid
-  closedAt DateTime?
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  customer Customer @relation(fields:[companyId,customerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  projectManager User? @relation("ProjectManager",fields:[companyId,projectManagerId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation("ProjectCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  closedBy User? @relation("ProjectCloser",fields:[companyId,closedById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  members ProjectMember[]
-  budgetLines ProjectBudgetLine[]
-  milestones ProjectMilestone[]
-  tasks ProjectTask[]
-  documents ProjectDocument[]
-  quotationDocuments QuotationDocument[]
-  commercialDocuments CommercialDocument[]
-  audits ProjectAuditEvent[]
-  @@unique([companyId,id])
-  @@unique([companyId,branchId,projectNumber])
-  @@unique([companyId,sourceLeadId])
-  @@unique([companyId,sourceQuotationId])
-  @@index([companyId,status])
-  @@index([companyId,branchId,status])
-  @@index([companyId,customerId])
-  @@index([companyId,projectManagerId])
+  id                   String               @id @default(uuid()) @db.Uuid
+  companyId            String               @db.Uuid
+  branchId             String               @db.Uuid
+  projectNumber        String               @db.VarChar(100)
+  name                 String               @db.VarChar(240)
+  customerId           String               @db.Uuid
+  siteName             String?              @db.VarChar(240)
+  siteAddress          String?
+  siteContactName      String?              @db.VarChar(160)
+  siteContactPhone     String?              @db.VarChar(30)
+  projectManagerId     String?              @db.Uuid
+  status               ProjectStatus        @default(PLANNING)
+  startDate            DateTime?            @db.Date
+  targetEndDate        DateTime?            @db.Date
+  actualEndDate        DateTime?            @db.Date
+  projectValue         Decimal              @default(0) @db.Decimal(18, 2)
+  sourceLeadId         String?              @db.Uuid
+  sourceQuotationId    String?              @db.Uuid
+  sourceSalesUserId    String?              @db.Uuid
+  sourceSalesManagerId String?              @db.Uuid
+  handoverDate         DateTime?            @db.Date
+  handoverNote         String?
+  closureNote          String?
+  closedById           String?              @db.Uuid
+  closedAt             DateTime?
+  createdById          String               @db.Uuid
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  company              Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch               Branch               @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  customer             Customer             @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  projectManager       User?                @relation("ProjectManager", fields: [companyId, projectManagerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy            User                 @relation("ProjectCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  closedBy             User?                @relation("ProjectCloser", fields: [companyId, closedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  members              ProjectMember[]
+  budgetLines          ProjectBudgetLine[]
+  milestones           ProjectMilestone[]
+  tasks                ProjectTask[]
+  documents            ProjectDocument[]
+  quotationDocuments   QuotationDocument[]
+  commercialDocuments  CommercialDocument[]
+  audits               ProjectAuditEvent[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, branchId, projectNumber])
+  @@unique([companyId, sourceLeadId])
+  @@unique([companyId, sourceQuotationId])
+  @@index([companyId, status])
+  @@index([companyId, branchId, status])
+  @@index([companyId, customerId])
+  @@index([companyId, projectManagerId])
   @@map("projects")
 }
 
 model ProjectMember {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  userId String @db.Uuid
-  role String @default("MEMBER") @db.VarChar(80)
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+  projectId String   @db.Uuid
+  userId    String   @db.Uuid
+  role      String   @default("MEMBER") @db.VarChar(80)
   createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  project Project @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  user User @relation(fields:[companyId,userId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([companyId,id])
-  @@unique([projectId,userId])
-  @@index([companyId,userId])
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  project   Project  @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  user      User     @relation(fields: [companyId, userId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([projectId, userId])
+  @@index([companyId, userId])
   @@map("project_members")
 }
 
 model ProjectBudgetLine {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  position Int
-  category String @db.VarChar(120)
-  title String @db.VarChar(240)
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @db.Uuid
+  projectId   String   @db.Uuid
+  position    Int
+  category    String   @db.VarChar(120)
+  title       String   @db.VarChar(240)
   description String?
-  amount Decimal @db.Decimal(18,2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  project Project @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([projectId,position])
-  @@index([companyId,projectId])
+  amount      Decimal  @db.Decimal(18, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  project     Project  @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([projectId, position])
+  @@index([companyId, projectId])
   @@map("project_budget_lines")
 }
 
 model ProjectMilestone {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  title String @db.VarChar(240)
+  id          String                 @id @default(uuid()) @db.Uuid
+  companyId   String                 @db.Uuid
+  projectId   String                 @db.Uuid
+  title       String                 @db.VarChar(240)
   description String?
-  position Int
-  startDate DateTime? @db.Date
-  dueDate DateTime? @db.Date
-  status ProjectMilestoneStatus @default(PENDING)
+  position    Int
+  startDate   DateTime?              @db.Date
+  dueDate     DateTime?              @db.Date
+  status      ProjectMilestoneStatus @default(PENDING)
   completedAt DateTime?
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  project Project @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation(fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  tasks ProjectTask[]
-  @@unique([companyId,id])
-  @@unique([projectId,position])
-  @@index([companyId,projectId,status])
+  createdById String                 @db.Uuid
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  company     Company                @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  project     Project                @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy   User                   @relation(fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  tasks       ProjectTask[]
+
+  @@unique([companyId, id])
+  @@unique([projectId, position])
+  @@index([companyId, projectId, status])
   @@map("project_milestones")
 }
 
 model ProjectTask {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  milestoneId String? @db.Uuid
-  title String @db.VarChar(240)
-  description String?
-  assigneeUserId String? @db.Uuid
-  status ProjectTaskStatus @default(TODO)
-  priority Int @default(0)
-  dueDate DateTime? @db.Date
-  completedAt DateTime?
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  project Project @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  milestone ProjectMilestone? @relation(fields:[companyId,milestoneId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  assignee User? @relation("ProjectTaskAssignee",fields:[companyId,assigneeUserId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  createdBy User @relation("ProjectTaskCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([companyId,id])
-  @@index([companyId,projectId,status])
-  @@index([companyId,assigneeUserId])
+  id             String            @id @default(uuid()) @db.Uuid
+  companyId      String            @db.Uuid
+  projectId      String            @db.Uuid
+  milestoneId    String?           @db.Uuid
+  title          String            @db.VarChar(240)
+  description    String?
+  assigneeUserId String?           @db.Uuid
+  status         ProjectTaskStatus @default(TODO)
+  priority       Int               @default(0)
+  dueDate        DateTime?         @db.Date
+  completedAt    DateTime?
+  createdById    String            @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  project        Project           @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  milestone      ProjectMilestone? @relation(fields: [companyId, milestoneId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  assignee       User?             @relation("ProjectTaskAssignee", fields: [companyId, assigneeUserId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy      User              @relation("ProjectTaskCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@index([companyId, projectId, status])
+  @@index([companyId, assigneeUserId])
   @@map("project_tasks")
 }
 
 model ProjectDocument {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  uploadedById String @db.Uuid
-  category String @db.VarChar(80)
-  displayName String @db.VarChar(240)
-  storageKey String @db.VarChar(512)
-  mimeType String @db.VarChar(120)
-  sizeBytes Int
-  notes String?
-  createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  project Project @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  uploadedBy User @relation(fields:[companyId,uploadedById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@unique([companyId,id])
-  @@unique([companyId,storageKey])
-  @@index([companyId,projectId,createdAt])
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  projectId    String   @db.Uuid
+  uploadedById String   @db.Uuid
+  category     String   @db.VarChar(80)
+  displayName  String   @db.VarChar(240)
+  storageKey   String   @db.VarChar(512)
+  mimeType     String   @db.VarChar(120)
+  sizeBytes    Int
+  notes        String?
+  createdAt    DateTime @default(now())
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  project      Project  @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  uploadedBy   User     @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([companyId, storageKey])
+  @@index([companyId, projectId, createdAt])
   @@map("project_documents")
 }
 
 model ProjectAuditEvent {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  actorUserId String @db.Uuid
-  eventType ProjectAuditEventType
-  metadata Json?
-  createdAt DateTime @default(now())
-  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
-  project Project @relation(fields:[companyId,projectId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  actor User @relation(fields:[companyId,actorUserId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
-  @@index([companyId,projectId,createdAt])
+  id          String                @id @default(uuid()) @db.Uuid
+  companyId   String                @db.Uuid
+  projectId   String                @db.Uuid
+  actorUserId String                @db.Uuid
+  eventType   ProjectAuditEventType
+  metadata    Json?
+  createdAt   DateTime              @default(now())
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  project     Project               @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  actor       User                  @relation(fields: [companyId, actorUserId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([companyId, projectId, createdAt])
   @@map("project_audit_events")
 }
 
 model ProjectChangeOrder {
-  id String @id @default(uuid()) @db.Uuid
-  companyId String @db.Uuid
-  projectId String @db.Uuid
-  changeOrderNumber String @db.VarChar(100)
-  title String @db.VarChar(240)
-  description String?
-  status ProjectChangeOrderStatus @default(DRAFT)
-  valueDelta Decimal @db.Decimal(18,2)
-  estimatedCostDelta Decimal @db.Decimal(18,2)
-  approvedAt DateTime?
-  approvedById String? @db.Uuid
-  createdById String @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([companyId,id])
-  @@unique([companyId,projectId,changeOrderNumber])
-  @@index([companyId,projectId,status])
+  id                 String                   @id @default(uuid()) @db.Uuid
+  companyId          String                   @db.Uuid
+  projectId          String                   @db.Uuid
+  changeOrderNumber  String                   @db.VarChar(100)
+  title              String                   @db.VarChar(240)
+  description        String?
+  status             ProjectChangeOrderStatus @default(DRAFT)
+  valueDelta         Decimal                  @db.Decimal(18, 2)
+  estimatedCostDelta Decimal                  @db.Decimal(18, 2)
+  approvedAt         DateTime?
+  approvedById       String?                  @db.Uuid
+  createdById        String                   @db.Uuid
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, projectId, changeOrderNumber])
+  @@index([companyId, projectId, status])
   @@map("project_change_orders")
+}
+
+model ExpenseCategory {
+  id                     String               @id @default(uuid()) @db.Uuid
+  companyId              String               @db.Uuid
+  name                   String               @db.VarChar(160)
+  scope                  ExpenseCategoryScope
+  defaultLedgerAccountId String               @db.Uuid
+  isActive               Boolean              @default(true)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, name])
+  @@map("expense_categories")
+}
+
+model ExpenseTransaction {
+  id                String                   @id @default(uuid()) @db.Uuid
+  companyId         String                   @db.Uuid
+  branchId          String                   @db.Uuid
+  projectId         String?                  @db.Uuid
+  categoryId        String                   @db.Uuid
+  type              ExpenseTransactionType
+  status            ExpenseTransactionStatus @default(DRAFT)
+  transactionNumber String                   @db.VarChar(100)
+  transactionDate   DateTime                 @db.Date
+  taxableAmount     Decimal                  @db.Decimal(18, 2)
+  taxRate           Decimal                  @default(0) @db.Decimal(7, 4)
+  taxAmount         Decimal                  @default(0) @db.Decimal(18, 2)
+  totalAmount       Decimal                  @db.Decimal(18, 2)
+  moneyAccountId    String?                  @db.Uuid
+  occurrenceKey     String?                  @db.VarChar(160)
+  journalEntryId    String?                  @db.Uuid
+  approvedById      String?                  @db.Uuid
+  approvedAt        DateTime?
+  createdById       String                   @db.Uuid
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, occurrenceKey])
+  @@unique([companyId, journalEntryId])
+  @@index([companyId, projectId, status])
+  @@map("expense_transactions")
+}
+
+model RecurringExpenseTemplate {
+  id          String             @id @default(uuid()) @db.Uuid
+  companyId   String             @db.Uuid
+  branchId    String             @db.Uuid
+  projectId   String?            @db.Uuid
+  categoryId  String             @db.Uuid
+  frequency   RecurringFrequency
+  nextDueDate DateTime           @db.Date
+  amount      Decimal            @db.Decimal(18, 2)
+  isActive    Boolean            @default(true)
+  createdById String             @db.Uuid
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([companyId, id])
+  @@index([companyId, nextDueDate, isActive])
+  @@map("recurring_expense_templates")
+}
+
+model ExpenseAttachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  expenseId    String   @db.Uuid
+  storageKey   String   @db.VarChar(512)
+  displayName  String   @db.VarChar(240)
+  mimeType     String   @db.VarChar(120)
+  sizeBytes    Int
+  uploadedById String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  @@unique([companyId, id])
+  @@unique([companyId, storageKey])
+  @@index([companyId, expenseId])
+  @@map("expense_attachments")
 }
