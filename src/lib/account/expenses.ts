@@ -22,6 +22,7 @@ import {
 import { allocateDocumentNumberInTx } from "./numbering";
 import { postJournalInTx, reverseJournal } from "@/lib/accounting/service";
 import { privateStorage } from "@/lib/storage";
+import { calculateTax } from "./tax";
 const D = Prisma.Decimal,
   Z = new D(0),
   money = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/);
@@ -214,6 +215,10 @@ const expenseInput = z
     transactionDate: z.coerce.date(),
     taxableAmount: money,
     taxRate: money.default("0"),
+    cessRate: money.default("0"),
+    taxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
+    stateOfSupplyCode: z.string().regex(/^\d{2}$/).optional(),
+    taxCreditTreatment: z.enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"]).default("ELIGIBLE"),
     moneyAccountId: z.string().uuid().optional(),
     employeeReimbursementId: z.string().uuid().optional(),
     reference: z.string().max(160).optional(),
@@ -305,9 +310,11 @@ export async function createExpense(raw: unknown, occurrenceKey?: string) {
   const a = await actor("ACCOUNT_EXPENSE_ENTRY", true),
     d = expenseInput.parse(raw),
     category = await validateExpenseRelations(a, d),
-    taxable = new D(d.taxableAmount),
-    tax = taxable.mul(d.taxRate).div(100).toDecimalPlaces(2),
-    total = taxable.add(tax);
+    inputAmount = new D(d.taxableAmount),
+    context = await db.branch.findFirst({where:{id:d.branchId,companyId:a.companyId},select:{gstStateCode:true}}),
+    settings = await db.accountSettings.findUnique({where:{companyId:a.companyId!}}),
+    calculated = calculateTax({amount:inputAmount,taxRate:new D(d.taxRate),cessRate:new D(d.cessRate),taxMode:d.taxMode,sellerStateCode:context?.gstStateCode??settings?.defaultStateCode,stateOfSupplyCode:d.stateOfSupplyCode??context?.gstStateCode??settings?.defaultStateCode,itcEligible:d.taxCreditTreatment==="ELIGIBLE",composition:settings?.compositionEnabled}),
+    taxable = calculated.taxable, tax = calculated.totalTax, total = calculated.grandTotal;
   return db.$transaction(
     async (tx) => {
       const transactionNumber = await allocateDocumentNumberInTx(tx, {
@@ -327,6 +334,7 @@ export async function createExpense(raw: unknown, occurrenceKey?: string) {
             taxableAmount: taxable,
             taxRate: new D(d.taxRate),
             taxAmount: tax,
+            cgstAmount: calculated.cgst, sgstAmount: calculated.sgst, igstAmount: calculated.igst, cessAmount: calculated.cess,
             totalAmount: total,
             status: "DRAFT",
             approvedAt: null,
@@ -348,16 +356,23 @@ export async function updateExpense(id: string, raw: unknown) {
   await scopedExpense(a, id, "DRAFT");
   const d = expenseInput.parse(raw);
   await validateExpenseRelations(a, d);
-  const taxable = new D(d.taxableAmount),
-    tax = taxable.mul(d.taxRate).div(100).toDecimalPlaces(2),
+  const [branch, settings] = await Promise.all([
+      db.branch.findFirst({ where: { id: d.branchId, companyId: a.companyId } }),
+      db.accountSettings.findUnique({ where: { companyId: a.companyId! } }),
+    ]),
+    calculated = calculateTax({ amount: new D(d.taxableAmount), taxRate: new D(d.taxRate), cessRate: new D(d.cessRate), taxMode: d.taxMode, sellerStateCode: branch?.gstStateCode ?? settings?.defaultStateCode, stateOfSupplyCode: d.stateOfSupplyCode ?? branch?.gstStateCode ?? settings?.defaultStateCode, composition: settings?.compositionEnabled, itcEligible: d.taxCreditTreatment === "ELIGIBLE" }),
     changed = await db.expenseTransaction.updateMany({
       where: { id, companyId: a.companyId, status: "DRAFT", createdById: a.id },
       data: {
         ...d,
-        taxableAmount: taxable,
+        taxableAmount: calculated.taxable,
         taxRate: new D(d.taxRate),
-        taxAmount: tax,
-        totalAmount: taxable.add(tax),
+        taxAmount: calculated.totalTax,
+        cgstAmount: calculated.cgst,
+        sgstAmount: calculated.sgst,
+        igstAmount: calculated.igst,
+        cessAmount: calculated.cess,
+        totalAmount: calculated.grandTotal,
       },
     });
   if (changed.count !== 1) throw new Error("EXPENSE_NOT_EDITABLE");
@@ -460,7 +475,7 @@ export async function postExpense(id: string) {
         tx.ledgerAccount.findMany({
           where: {
             companyId: a.companyId,
-            systemKey: { in: ["INPUT_TAX_CREDIT", "ACCOUNTS_PAYABLE"] },
+            systemKey: { in: ["INPUT_TAX_CREDIT", "ACCOUNTS_PAYABLE", "CGST_ITC", "SGST_ITC", "IGST_ITC", "CESS_ITC"] },
             isActive: true,
             allowPosting: true,
           },
@@ -470,14 +485,15 @@ export async function postExpense(id: string) {
       const byKey = new Map(system.map((x) => [x.systemKey, x.id])),
         destination = money?.ledgerAccountId ?? byKey.get("ACCOUNTS_PAYABLE");
       if (!destination) throw new Error("EXPENSE_DESTINATION_MISSING");
-      const posting = expensePosting({
-          type: row.type,
-          taxable: row.taxableAmount,
-          taxRate: row.taxRate,
-          categoryLedgerId: category.defaultLedgerAccountId,
-          inputTaxLedgerId: byKey.get("INPUT_TAX_CREDIT") ?? "",
-          destinationLedgerId: destination,
-        }),
+      const eligible = row.taxCreditTreatment === "ELIGIBLE",
+        components = [["CGST_ITC", row.cgstAmount], ["SGST_ITC", row.sgstAmount], ["IGST_ITC", row.igstAmount], ["CESS_ITC", row.cessAmount]] as const,
+        postingLines = row.type === "OTHER_INCOME"
+          ? [{ ledgerAccountId: destination, debit: row.totalAmount, credit: Z }, { ledgerAccountId: category.defaultLedgerAccountId, debit: Z, credit: row.totalAmount }]
+          : [
+              { ledgerAccountId: category.defaultLedgerAccountId, debit: row.taxableAmount.add(eligible ? Z : row.taxAmount), credit: Z },
+              ...components.filter(([, amount]) => eligible && amount.gt(0)).map(([key, amount]) => ({ ledgerAccountId: byKey.get(key) ?? "", debit: amount, credit: Z })),
+              { ledgerAccountId: destination, debit: Z, credit: row.totalAmount },
+            ],
         journal = await postJournalInTx(tx, a, {
           financialYearId: fy.id,
           branchId: row.branchId,
@@ -487,7 +503,7 @@ export async function postExpense(id: string) {
           sourceType: row.type,
           sourceId: row.id,
           postingPurpose: "PRIMARY",
-          lines: posting.lines.map((l) => ({
+          lines: postingLines.map((l) => ({
             ledgerAccountId: l.ledgerAccountId,
             debit: l.debit.toFixed(2),
             credit: l.credit.toFixed(2),

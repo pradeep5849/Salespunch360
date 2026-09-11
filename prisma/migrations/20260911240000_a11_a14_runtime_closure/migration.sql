@@ -1,6 +1,7 @@
 -- Forward-only A11-A14 runtime closure. Nullable line references preserve posted history.
 ALTER TYPE "PurchaseClassification" ADD VALUE IF NOT EXISTS 'FIXED_ASSET';
 ALTER TABLE "commercial_document_lines" ADD COLUMN "warehouseId" UUID, ADD COLUMN "batchId" UUID, ADD COLUMN "serialNumberId" UUID, ADD COLUMN "stockReturnQuantity" DECIMAL(18,4) NOT NULL DEFAULT 0, ADD COLUMN "cessRate" DECIMAL(7,4) NOT NULL DEFAULT 0;
+ALTER TABLE "expense_transactions" ADD COLUMN "stateOfSupplyCode" VARCHAR(2), ADD COLUMN "taxMode" "TaxMode" NOT NULL DEFAULT 'EXCLUSIVE', ADD COLUMN "cessRate" DECIMAL(7,4) NOT NULL DEFAULT 0, ADD COLUMN "cgstAmount" DECIMAL(18,2) NOT NULL DEFAULT 0, ADD COLUMN "sgstAmount" DECIMAL(18,2) NOT NULL DEFAULT 0, ADD COLUMN "igstAmount" DECIMAL(18,2) NOT NULL DEFAULT 0, ADD COLUMN "cessAmount" DECIMAL(18,2) NOT NULL DEFAULT 0, ADD COLUMN "taxCreditTreatment" "TaxCreditTreatment" NOT NULL DEFAULT 'ELIGIBLE';
 ALTER TABLE "commercial_document_lines" ADD CONSTRAINT "commercial_line_stock_return_valid" CHECK ("stockReturnQuantity" >= 0 AND "stockReturnQuantity" <= "quantity");
 ALTER TABLE "commercial_document_lines" ADD CONSTRAINT "commercial_line_warehouse_company_fk" FOREIGN KEY ("companyId","warehouseId") REFERENCES "warehouses"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE "commercial_document_lines" ADD CONSTRAINT "commercial_line_batch_company_fk" FOREIGN KEY ("companyId","batchId") REFERENCES "inventory_batches"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
