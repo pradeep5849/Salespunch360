@@ -1,1 +1,74 @@
-import{loanAction,loanPaymentAction}from"@/app/actions/money";import{listMoneyData}from"@/lib/account/money";import{WorkspacePageHeader}from"@/components/workspace/workspace-page-header";export default async function Page(){const d=await listMoneyData();return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Loans & EMI" backHref="/workspace/account/money"/><form action={loanAction} className="stack"><select name="branchId">{d.branches.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select name="moneyAccountId">{d.dashboard.accounts.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="lender" placeholder="Lender" required/><input name="loanType" placeholder="Loan type" required/><input name="principal" required/><input name="interestRate"/><input type="date" name="startDate" required/><input type="date" name="maturityDate"/><input name="reference"/><button>Create and receive loan</button></form><h2>Payments</h2><form action={loanPaymentAction} className="stack"><select name="loanId">{d.loans.filter(x=>x.status==="ACTIVE").map(x=><option key={x.id} value={x.id}>{x.lender}</option>)}</select><select name="moneyAccountId">{d.dashboard.accounts.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input type="date" name="paymentDate" required/><input name="principal" placeholder="Principal" required/><input name="interest" placeholder="Interest" required/><input name="charges" defaultValue="0"/><input type="hidden" name="idempotencyKey" value={crypto.randomUUID()}/><button>Post EMI/payment</button></form></section></main>}
+import { loanAction, loanPaymentAction } from "@/app/actions/money";
+import { listMoneyData } from "@/lib/account/money";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
+export default async function Page() {
+  const d = await listMoneyData();
+  return (
+    <main className="employees-shell">
+      <section className="employees-content">
+        <WorkspacePageHeader
+          title="Loans & EMI"
+          backHref="/workspace/account/money"
+        />
+        <form action={loanAction} className="stack">
+          <select name="branchId">
+            {d.branches.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+          <select name="moneyAccountId">
+            {d.dashboard.accounts.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+          <input name="lender" placeholder="Lender" required />
+          <input name="loanType" placeholder="Loan type" required />
+          <input name="principal" required />
+          <input name="interestRate" />
+          <input type="date" name="startDate" required />
+          <input type="date" name="maturityDate" />
+          <input name="reference" />
+          <input
+            type="hidden"
+            name="idempotencyKey"
+            value={crypto.randomUUID()}
+          />
+          <button>Create and receive loan</button>
+        </form>
+        <h2>Payments</h2>
+        <form action={loanPaymentAction} className="stack">
+          <select name="loanId">
+            {d.loans
+              .filter((x) => x.status === "ACTIVE")
+              .map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.lender}
+                </option>
+              ))}
+          </select>
+          <select name="moneyAccountId">
+            {d.dashboard.accounts.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+          <input type="date" name="paymentDate" required />
+          <input name="principal" placeholder="Principal" required />
+          <input name="interest" placeholder="Interest" required />
+          <input name="charges" defaultValue="0" />
+          <input
+            type="hidden"
+            name="idempotencyKey"
+            value={crypto.randomUUID()}
+          />
+          <button>Post EMI/payment</button>
+        </form>
+      </section>
+    </main>
+  );
+}

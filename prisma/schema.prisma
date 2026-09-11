@@ -2545,12 +2545,14 @@ model Loan {
   moneyAccountId    String     @db.Uuid
   status            LoanStatus @default(ACTIVE)
   reference         String?    @db.VarChar(160)
+  idempotencyKey    String?    @db.VarChar(160)
   receivedJournalId String?    @db.Uuid
   createdById       String?    @db.Uuid
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, idempotencyKey])
   @@index([companyId, status])
   @@map("loans")
 }
