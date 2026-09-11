@@ -11,6 +11,7 @@ vi.mock("@/components/workspace/workspace-page-header", () => ({ WorkspacePageHe
 vi.mock("./employee-manager", () => ({ EmployeeManager: () => null }));
 vi.mock("./product-user-manager",()=>({ProductUserManager:()=>null}));
 vi.mock("@/lib/users/product-user-management",()=>({getProductUserManagementContext:mocks.productContext}));
+vi.mock("@/lib/billing/entitlement",()=>({effectiveEntitlement:vi.fn().mockResolvedValue({adminUsage:0,adminLimit:0,managerUsage:0,managerLimit:1,salesUsage:0,salesLimit:5})}));
 
 import EmployeesPage from "./page";
 

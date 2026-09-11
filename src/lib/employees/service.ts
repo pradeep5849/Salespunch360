@@ -1,4 +1,4 @@
-import type { Prisma, SalesRole } from "@prisma/client";
+import { Prisma, type SalesRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { hashPassword } from "@/lib/auth/crypto";
@@ -11,11 +11,13 @@ import { projectLegacyRole } from "@/lib/users/role-projection";
 import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
 import { assertManagerOnlyTransitionSafe } from "./manager-type-transition";
+import {salesRoleAssignment,salesRoleTransitionUpdate}from"./role-transition-policy";
 import {
   createManagerSchema,
   createSalesSchema,
   editEmployeeSchema,
   employeeIdSchema,
+  changeSalesRoleSchema,
   resetEmployeePasswordSchema,
   type CreateManagerInput,
   type CreateSalesInput,
@@ -64,7 +66,7 @@ async function enforceAdminReadiness(tx:Prisma.TransactionClient,companyId:strin
 async function enforceAvailableSeat(tx: Prisma.TransactionClient, companyId: string, salesRole: "MANAGER" | "SALES") {
   const company = await lockAndLoadCompany(tx, companyId);
   const activeCount = await tx.user.count({ where: { companyId, salesRole, isActive: true, salesAccessActive:true } });
-  const now=new Date(),paid=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"}});
+  const now=new Date(),paid=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrder:{is:{provider:{not:"ACCOUNT_PACKAGE"}}}},orderBy:{endsAt:"desc"}});
   if(paid){const limit=salesRole==="MANAGER"?paid.managerSeats:paid.salesSeats;if(activeCount>=limit)throw new EmployeePolicyError("SEAT_LIMIT");return;}
   assertCanActivate(getTrialStatus(company).effectiveStatus, salesRole, activeCount);
 }
@@ -75,6 +77,7 @@ async function loadAssignableManager(tx: Prisma.TransactionClient, companyId: st
   assertAssignableManager(companyId, manager);
   return manager.id;
 }
+async function validateBranches(tx:Prisma.TransactionClient,companyId:string,scope:"ALL_BRANCHES"|"SELECTED_BRANCHES",ids:string[]){const unique=[...new Set(ids)];if(scope==="SELECTED_BRANCHES"){if(!unique.length)throw new Error("BRANCH_REQUIRED");const count=await tx.branch.count({where:{companyId,id:{in:unique},isActive:true}});if(count!==unique.length)throw new Error("INVALID_BRANCH")}return scope==="SELECTED_BRANCHES"?unique:[]}
 
 export async function listEmployees(filter: "ALL" | "MANAGERS" | "SALES" | "ACTIVE" | "INACTIVE" = "ALL") {
   const { companyId } = await requireSalesUserAdmin(false);
@@ -112,8 +115,9 @@ async function createEmployeeForCompany(companyId: string, salesRole: "MANAGER" 
     const requestedManagerId = "managerId" in data && typeof data.managerId === "string" ? data.managerId : undefined;
     if (company.teamStructure === "SALES_ONLY" && requestedManagerId) throw new EmployeePolicyError("MANAGERS_DISABLED");
     const managerId = salesRole === "SALES" ? await loadAssignableManager(tx, companyId, requestedManagerId) : null;
+    const branchIds=await validateBranches(tx,companyId,data.branchAccessScope,data.branchIds);
     return tx.user.create({
-      data: { companyId, ...employeeRoleDimensions(salesRole), isActive: true, salesAccessActive: hasSalesWorkspace(company.productEdition), name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, designation: data.designation, dateOfJoining: data.dateOfJoining, passwordHash, managerId, managerType: salesRole === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null },
+      data: { companyId, ...employeeRoleDimensions(salesRole), isActive: true, salesAccessActive: hasSalesWorkspace(company.productEdition), name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, designation: data.designation, dateOfJoining: data.dateOfJoining, passwordHash, managerId, managerType: salesRole === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null,branchAccessScope:data.branchAccessScope,branchAccesses:branchIds.length?{create:branchIds.map(branchId=>({branchId}))}:undefined },
       select: employeeSelect,
     });
   });
@@ -149,6 +153,8 @@ export async function editEmployee(raw: EditEmployeeInput) {
     if (updated.count !== 1) throw new EmployeePolicyError("NOT_FOUND");
   });
 }
+
+export async function changeSalesRole(raw:unknown){const actor=await requireSalesUserAdmin(true);if(actor.salesRole!=="PRIMARY_ADMIN")throw new Error("NOT_AUTHORIZED");const data=changeSalesRoleSchema.parse(raw);return db.$transaction(async tx=>{const company=await lockAndLoadCompany(tx,actor.companyId);if(!hasSalesWorkspace(company.productEdition))throw new Error("SALES_NOT_ENTITLED");await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${data.employeeId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;const target=await tx.user.findFirst({where:{id:data.employeeId,companyId:actor.companyId,salesRole:{in:["ADMIN","MANAGER","SALES"]}},select:{id:true,salesRole:true,managerType:true,managerId:true,isActive:true,salesAccessActive:true,accountRole:true,accountAccessActive:true}});if(!target)throw new EmployeePolicyError("NOT_FOUND");const assignment=salesRoleAssignment(data.role,data.managerId),nextRole=assignment.salesRole,nextManagerType=assignment.managerType;if(company.teamStructure==="SALES_ONLY"&&nextRole==="MANAGER")throw new EmployeePolicyError("MANAGERS_DISABLED");if(target.salesRole==="MANAGER"&&(nextRole!=="MANAGER"||nextManagerType!==target.managerType))await assertManagerOnlyTransitionSafe(tx,actor.companyId,target.id);if(target.isActive&&target.salesAccessActive&&nextRole!==target.salesRole){if(nextRole==="ADMIN"){const now=new Date(),paid=await tx.companySubscription.findFirst({where:{companyId:actor.companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrder:{is:{provider:{not:"ACCOUNT_PACKAGE"}}}},orderBy:{endsAt:"desc"}}),used=await tx.user.count({where:{companyId:actor.companyId,salesRole:"ADMIN",isActive:true,salesAccessActive:true,id:{not:target.id}}});if(!paid||used>=paid.adminSeats)throw new EmployeePolicyError("SEAT_LIMIT")}else await enforceAvailableSeat(tx,actor.companyId,nextRole)}const managerId=nextRole==="SALES"?await loadAssignableManager(tx,actor.companyId,assignment.managerId):null;if(nextRole==="ADMIN")await tx.userBranchAccess.deleteMany({where:{userId:target.id}});await tx.user.update({where:{id:target.id},data:{...salesRoleTransitionUpdate(target,{...assignment,managerId}),branchAccessScope:nextRole==="ADMIN"?"ALL_BRANCHES":undefined,sessionVersion:{increment:1}}});return{...target,salesRole:nextRole,managerType:nextManagerType,managerId,accountRole:target.accountRole,accountAccessActive:target.accountAccessActive}},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
 
 export async function deactivateEmployee(raw: unknown) {
   const actor = await requireSalesUserAdmin(true);

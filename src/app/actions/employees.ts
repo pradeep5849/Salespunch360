@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createManager, createSalesEmployee, deactivateEmployee, editEmployee,
-  reactivateEmployee, resetEmployeePassword,
+  reactivateEmployee, resetEmployeePassword, changeSalesRole,
 } from "@/lib/employees/service";
 import {
   createManagerSchema, createSalesSchema, editEmployeeSchema,
@@ -23,6 +23,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
         name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"),
         employeeCode: formData.get("employeeCode"), designation:formData.get("designation"),dateOfJoining:formData.get("dateOfJoining"), password: formData.get("password"),
         confirmPassword: formData.get("confirmPassword"),
+        branchAccessScope: formData.get("branchAccessScope"), branchIds: formData.getAll("branchIds").map(String),
         ...(operation === "create-manager" ? { managerType: formData.get("managerType") } : { managerId: formData.get("managerId") }),
       };
       const schema = operation === "create-manager" ? createManagerSchema : createSalesSchema;
@@ -44,6 +45,8 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
       const parsed = resetEmployeePasswordSchema.safeParse({ employeeId: formData.get("employeeId"), password: formData.get("password"), confirmPassword: formData.get("confirmPassword") });
       if (!parsed.success) return { error: "Review the new password and confirmation.", fieldErrors: parsed.error.flatten().fieldErrors };
       await resetEmployeePassword(parsed.data);
+    } else if(operation==="change-role") {
+      await changeSalesRole({employeeId:formData.get("employeeId"),role:formData.get("role"),managerId:formData.get("managerId")});
     } else {
       return safeError;
     }

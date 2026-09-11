@@ -1,5 +1,6 @@
 "use server";
 import {revalidatePath} from "next/cache";
+import{redirect}from"next/navigation";
 import {reviewDailyTravel,updateCompanyTravelRate,updateEmployeeTravelSettings} from "@/lib/travel/service";
 import {mutationGuard} from "@/lib/security/request";
 
@@ -14,6 +15,7 @@ export async function updateEmployeeTravelSettingsAction(formData:FormData){
  await updateEmployeeTravelSettings(String(formData.get("employeeId")),formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null);
  revalidatePath("/workspace/employees");
  revalidatePath("/workspace/reports/expenses");
+ if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
 }
 export async function reviewDailyTravelAction(formData:FormData){
  await mutationGuard("travel-approval",60);

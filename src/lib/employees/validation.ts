@@ -15,6 +15,10 @@ const passwordFields = {
   password: strongPasswordSchema,
   confirmPassword: z.string().min(1).max(200),
 };
+const branchFields = {
+  branchAccessScope: z.enum(["ALL_BRANCHES", "SELECTED_BRANCHES"]).default("ALL_BRANCHES"),
+  branchIds: z.array(z.string().uuid()).default([]),
+};
 
 const confirmPasswords = <T extends { password: string; confirmPassword: string }>(data: T, context: z.RefinementCtx) => {
   if (data.password !== data.confirmPassword) {
@@ -22,11 +26,12 @@ const confirmPasswords = <T extends { password: string; confirmPassword: string 
   }
 };
 
-export const createManagerSchema = z.object({ ...employeeProfileFields, ...passwordFields, managerType: managerTypeSchema.default("FIELD_MANAGER") }).strict().superRefine(confirmPasswords);
+export const createManagerSchema = z.object({ ...employeeProfileFields, ...passwordFields, ...branchFields, managerType: managerTypeSchema.default("FIELD_MANAGER") }).strict().superRefine(confirmPasswords);
 
 export const createSalesSchema = z.object({
   ...employeeProfileFields,
   ...passwordFields,
+  ...branchFields,
   managerId: z.preprocess(normalizeOptional, z.string().uuid().optional()),
 }).strict().superRefine(confirmPasswords);
 
@@ -38,6 +43,7 @@ export const editEmployeeSchema = z.object({
 }).strict();
 
 export const employeeIdSchema = z.object({ employeeId: z.string().uuid() }).strict();
+export const changeSalesRoleSchema=z.object({employeeId:z.string().uuid(),role:z.enum(["ADDITIONAL_ADMIN","SALES_MANAGER","OFFICE_MANAGER","SALES_EMPLOYEE"]),managerId:z.preprocess(normalizeOptional,z.string().uuid().nullable().optional())}).strict();
 
 export const resetEmployeePasswordSchema = z.object({
   employeeId: z.string().uuid(),

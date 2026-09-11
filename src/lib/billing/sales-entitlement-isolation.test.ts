@@ -1,0 +1,3 @@
+import{describe,expect,it}from"vitest";import{selectSalesSubscription}from"./entitlement";
+const accountPackage={adminSeats:1,managerSeats:0,salesSeats:0,sourceOrder:{provider:"ACCOUNT_PACKAGE"}},sales={adminSeats:2,managerSeats:2,salesSeats:5,sourceOrder:{provider:"RAZORPAY"}};
+describe("Sales entitlement isolation",()=>{it("does not let an Account package replace a Sales subscription",()=>expect(selectSalesSubscription([accountPackage,sales])).toBe(sales));it("does not create Sales seats from an Account package",()=>expect(selectSalesSubscription([accountPackage])).toBeUndefined());it("preserves real Sales manager and employee limits",()=>expect(selectSalesSubscription([accountPackage,sales])).toMatchObject({managerSeats:2,salesSeats:5,adminSeats:2}))});

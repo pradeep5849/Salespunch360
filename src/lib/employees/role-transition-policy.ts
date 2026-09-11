@@ -1,0 +1,6 @@
+import type { ManagerType, SalesRole } from "@prisma/client";
+import{projectLegacyRole}from"@/lib/users/role-projection";
+export type SalesRoleChoice="ADDITIONAL_ADMIN"|"SALES_MANAGER"|"OFFICE_MANAGER"|"SALES_EMPLOYEE";
+export function salesRoleAssignment(choice:SalesRoleChoice,managerId?:string|null):{salesRole:Exclude<SalesRole,"PRIMARY_ADMIN">;managerType:ManagerType|null;managerId:string|null}{if(choice==="ADDITIONAL_ADMIN")return{salesRole:"ADMIN",managerType:null,managerId:null};if(choice==="SALES_MANAGER")return{salesRole:"MANAGER",managerType:"FIELD_MANAGER",managerId:null};if(choice==="OFFICE_MANAGER")return{salesRole:"MANAGER",managerType:"MANAGER_ONLY",managerId:null};return{salesRole:"SALES",managerType:null,managerId:managerId||null}}
+export function seatActionState(canManage:boolean,usage:number,limit:number){return{canManage,canAdd:canManage&&usage<limit,remaining:Math.max(0,limit-usage)}}
+export function salesRoleTransitionUpdate(target:{accountRole:"ACCOUNT_ADMIN"|"ACCOUNTANT"|"PROJECT_MANAGER"|"DATA_ENTRY"|null},assignment:ReturnType<typeof salesRoleAssignment>){return{salesRole:assignment.salesRole,role:projectLegacyRole({salesRole:assignment.salesRole,accountRole:target.accountRole}),managerType:assignment.managerType,managerId:assignment.managerId}}
