@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import {
   applyAdvanceAction,
@@ -94,7 +95,7 @@ export default async function Page({
             <button>Post / Issue</button>
           </form>
         )}
-      <h2>Adjustments and payments</h2>
+      <p><Link href={`/api/account/print/${x.type}/${x.id}`}>Print / Preview</Link> · <Link href={`/api/account/print/${x.type}/${x.id}?format=pdf`}>Download PDF</Link></p><h2>Adjustments and payments</h2>
       {x.adjustments.map((a) => (
         <p key={a.id}>
           {a.type} {a.documentNumber}: {a.grandTotal.toString()}
