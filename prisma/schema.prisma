@@ -387,6 +387,11 @@ enum CustomFieldEntity {
   PRODUCT
   SERVICE
   WORK_PACKAGE
+  PROJECT
+  ASSET
+  QUOTATION
+  SALES_INVOICE
+  PURCHASE_BILL
 }
 
 enum CustomFieldDataType {
@@ -419,6 +424,27 @@ enum JournalStatus {
   CANCELLED
 }
 
+enum FinancialYearStatus {
+  OPEN
+  CLOSED
+}
+
+enum AccountImportStatus {
+  UPLOADED
+  VALIDATED
+  READY
+  PROCESSING
+  COMPLETED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum PrintPaperSize {
+  A4
+  THERMAL_80MM
+}
+
 enum AccountingAuditEventType {
   SYSTEM_ACCOUNTS_INITIALIZED
   JOURNAL_CREATED
@@ -427,6 +453,13 @@ enum AccountingAuditEventType {
   OPENING_BALANCE_POSTED
   PERIOD_LOCKED
   PERIOD_UNLOCKED
+  IMPORT_VALIDATED
+  IMPORT_COMPLETED
+  RECORD_ARCHIVED
+  RECORD_RESTORED
+  FINANCIAL_YEAR_CLOSED
+  SETTINGS_CHANGED
+  BACKUP_GENERATED
 }
 
 enum QuotationDocumentType {
@@ -655,6 +688,12 @@ model Company {
   costCentres                         CostCentre[]
   accountingPeriodLocks               AccountingPeriodLock[]
   accountingAuditEvents               AccountingAuditEvent[]
+  accountImportJobs                    AccountImportJob[]
+  recycleBinRecords                    AccountRecycleRecord[]
+  customFieldValues                    CustomFieldValue[]
+  printTemplates                       PrintTemplate[]
+  termsTemplates                       AccountTermsTemplate[]
+  backupRecords                        AccountBackupRecord[]
   users                               User[]
   branches                            Branch[]
   attendances                         Attendance[]
@@ -1477,6 +1516,9 @@ model AccountSettings {
   defaultStateCode          String?         @db.VarChar(2)
   compositionEnabled        Boolean         @default(false)
   defaultTaxMode            TaxMode         @default(EXCLUSIVE)
+  transactionDefaults      Json?
+  projectDefaults          Json?
+  printProfile             Json?
   createdAt                DateTime        @default(now())
   updatedAt                DateTime        @updatedAt
 
@@ -1492,6 +1534,9 @@ model FinancialYear {
   endDate        DateTime              @db.Date
   isCurrent      Boolean               @default(false)
   isActive       Boolean               @default(true)
+  status         FinancialYearStatus   @default(OPEN)
+  closedAt       DateTime?
+  closedById     String?                @db.Uuid
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   journalEntries JournalEntry[]
@@ -1706,10 +1751,119 @@ model CustomFieldDefinition {
   validation Json?
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
+  values     CustomFieldValue[]
 
   @@unique([companyId, entityType, fieldKey])
   @@index([companyId, entityType, isActive, position])
   @@map("custom_field_definitions")
+}
+
+model CustomFieldValue {
+  id           String                @id @default(uuid()) @db.Uuid
+  companyId    String                @db.Uuid
+  company      Company               @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  definitionId String                @db.Uuid
+  definition   CustomFieldDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  entityType   CustomFieldEntity
+  entityId     String                @db.Uuid
+  value        Json
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([companyId, definitionId, entityId])
+  @@index([companyId, entityType, entityId])
+  @@map("custom_field_values")
+}
+
+model AccountImportJob {
+  id            String              @id @default(uuid()) @db.Uuid
+  companyId     String              @db.Uuid
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  importType    String              @db.VarChar(40)
+  fileName      String              @db.VarChar(255)
+  fileHash      String              @db.Char(64)
+  status        AccountImportStatus @default(UPLOADED)
+  rowCount      Int                 @default(0)
+  validCount    Int                 @default(0)
+  invalidCount  Int                 @default(0)
+  createdById   String              @db.Uuid
+  confirmedById String?             @db.Uuid
+  metadata      Json?
+  createdAt     DateTime            @default(now())
+  completedAt   DateTime?
+
+  @@unique([companyId, importType, fileHash])
+  @@index([companyId, createdAt])
+  @@map("account_import_jobs")
+}
+
+model AccountRecycleRecord {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  entityType   String   @db.VarChar(40)
+  entityId     String   @db.Uuid
+  displayName  String   @db.VarChar(240)
+  archivedById String   @db.Uuid
+  archivedAt   DateTime @default(now())
+  reason       String?
+  restoredById String?  @db.Uuid
+  restoredAt   DateTime?
+
+  @@unique([companyId, entityType, entityId])
+  @@index([companyId, archivedAt])
+  @@map("account_recycle_records")
+}
+
+model PrintTemplate {
+  id           String         @id @default(uuid()) @db.Uuid
+  companyId    String         @db.Uuid
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branchId     String?        @db.Uuid
+  documentType String         @db.VarChar(40)
+  name         String         @db.VarChar(120)
+  paperSize    PrintPaperSize @default(A4)
+  version      Int            @default(1)
+  isDefault    Boolean        @default(false)
+  isActive     Boolean        @default(true)
+  config       Json
+  createdById  String         @db.Uuid
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([companyId, branchId, documentType, name, version])
+  @@index([companyId, documentType, paperSize, isDefault, isActive])
+  @@map("print_templates")
+}
+
+model AccountTermsTemplate {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branchId     String?  @db.Uuid
+  documentType String   @db.VarChar(40)
+  name         String   @db.VarChar(120)
+  content      String
+  isDefault    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId, documentType, isDefault, isActive])
+  @@map("account_terms_templates")
+}
+
+model AccountBackupRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @db.Uuid
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  generatedById String   @db.Uuid
+  manifest      Json
+  checksum      String   @db.Char(64)
+  generatedAt   DateTime @default(now())
+
+  @@index([companyId, generatedAt])
+  @@map("account_backup_records")
 }
 
 model LedgerAccount {
