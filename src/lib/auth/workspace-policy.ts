@@ -38,3 +38,38 @@ export const canAccessAccountWorkspace = (user: WorkspacePrincipal, edition: Pro
   hasAccountRole(user) &&
   user.accountAccessActive === true &&
   editionAllowsAccountWorkspace(edition);
+
+export type WebWorkspace = "SALES" | "ACCOUNT";
+export type WorkspaceAccess = {
+  canAccessSales: boolean;
+  canAccessAccount: boolean;
+  canSwitchWorkspace: boolean;
+  defaultWorkspace: WebWorkspace | null;
+  effectiveWorkspace: WebWorkspace | null;
+};
+
+/** The single policy for web workspace choice. A preference is never an entitlement. */
+export function resolveWorkspaceAccess(
+  user: WorkspacePrincipal,
+  edition: ProductEdition,
+  preferred?: string | null,
+): WorkspaceAccess {
+  const canAccessSales = canAccessSalesWorkspace(user, edition);
+  const canAccessAccount = canAccessAccountWorkspace(user, edition);
+  const canSwitchWorkspace = edition === "SALESPUNCH360_PLUS" && canAccessSales && canAccessAccount;
+  const validPreference = canSwitchWorkspace && (preferred === "SALES" || preferred === "ACCOUNT")
+    ? preferred
+    : null;
+  const defaultWorkspace: WebWorkspace | null = canAccessSales
+    ? "SALES"
+    : canAccessAccount
+      ? "ACCOUNT"
+      : null;
+  return {
+    canAccessSales,
+    canAccessAccount,
+    canSwitchWorkspace,
+    defaultWorkspace,
+    effectiveWorkspace: validPreference ?? defaultWorkspace,
+  };
+}

@@ -12,6 +12,7 @@ import {dashboardPresentation, type DashboardPresentationActor} from "@/lib/work
 import {requireUser} from "@/lib/auth/authorization";
 import {authenticatedHome} from "@/lib/auth/routing";
 import {redirect} from "next/navigation";
+import {webWorkspaceContext} from "@/lib/auth/web-workspace";
 
 export const metadata:Metadata={title:"Company dashboard"};
 type Params={setup?:string;from?:string;checkInEmployee?:string;liveEmployee?:string};
@@ -24,7 +25,7 @@ const fmt=(d:Date|null)=>d?d.toLocaleString("en-IN",{dateStyle:"medium",timeStyl
 function ReportsMenu({items}:{items:readonly(readonly[string,string])[]}){return <details className="reports-menu"><summary><span>▥</span>Reports</summary>{items.map(([label,href])=><Link href={href} key={href}>{label}</Link>)}</details>}
 function Nav({actor}:{actor:DashboardPresentationActor}){const p=dashboardPresentation(actor);const reports=p.navigation==="ADMIN"?adminReports:p.navigation==="MANAGER"?managerReports:p.navigation==="SALES"?salesReports:null;const operationalLinks=p.isSales?baseLinks:p.navigationRoutes?baseLinks.filter(([, ,href])=>(p.navigationRoutes as readonly string[]).includes(href)):baseLinks.filter(([, ,href])=>href!=="/workspace/check-ins");const links=p.canAccessLegacyOwnerRoutes?[operationalLinks[0],adminLinks[0],...operationalLinks.slice(1),...adminLinks.slice(1)]:operationalLinks;return <>{links.map(([icon,label,href])=><Link className={href==="/workspace"?"active":""} href={href} key={href}><span>{icon}</span>{label}</Link>)}{reports&&<ReportsMenu items={reports}/>}</>}
 export default async function WorkspacePage({searchParams}:{searchParams:Promise<Params>}){
- const principal=await requireUser();const home=authenticatedHome(principal);if(home!=="/workspace")redirect(home);
+ const principal=await requireUser();const access=await webWorkspaceContext(principal);if(!access?.canAccessSales)redirect(access?.canAccessAccount?"/workspace/account":authenticatedHome(principal));
  const params=await searchParams,d=await dashboardData(params),presentation=dashboardPresentation(d.actor);
  if(presentation.canAccessLegacyOwnerRoutes&&params.setup==="1"){
   const setup=await db.company.findUniqueOrThrow({where:{id:d.actor.companyId},select:{name:true,teamStructure:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:d.actor.id},select:{emailVerifiedAt:true},take:1}}});const verified=Boolean(setup.users[0]?.emailVerifiedAt),complete=profileComplete(setup as unknown as Record<string,unknown>);

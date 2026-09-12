@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/authorization";
 import { canAuthenticate } from "@/lib/auth/eligibility";
 import {assertTrustedOrigin,consumeRateLimit,requestFingerprint} from "@/lib/security/request";
 import {authenticatedHome} from "@/lib/auth/routing";
+import { cookies } from "next/headers";
 
 export type SignInState = { error?: string };
 
@@ -27,7 +28,12 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
     return { error: "Invalid email or password." };
   }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
-  redirect(authenticatedHome(user));
+  if(user.role==="SUPER_ADMIN")return redirect("/admin");
+  // Older test/integration adapters may expose only the User delegate.
+  if(!user.companyId||!(db as {company?:unknown}).company)return redirect(authenticatedHome(user));
+  const company=user.companyId?await db.company.findUnique({where:{id:user.companyId},select:{productEdition:true}}):null;
+  const preferred=(await cookies()).get("sp360_web_workspace")?.value;
+  redirect(authenticatedHome(user,company?.productEdition,preferred));
 }
 
 export async function signOut() {
