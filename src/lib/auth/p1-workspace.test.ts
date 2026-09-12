@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { resolveWorkspaceAccess, type WorkspacePrincipal } from "./workspace-policy";
 
-const user=(overrides:Partial<WorkspacePrincipal>={}):WorkspacePrincipal=>({companyId:"company",role:"COMPANY_ADMIN",isActive:true,salesRole:"ADMIN",accountRole:"ACCOUNTANT",salesAccessActive:true,accountAccessActive:true,managerType:null,...overrides});
+const user=(overrides:Partial<WorkspacePrincipal>={}):WorkspacePrincipal=>({companyId:"company",role:"FIELD_ADMIN",isActive:true,salesRole:"ADMIN",accountRole:"ACCOUNTANT",salesAccessActive:true,accountAccessActive:true,managerType:null,...overrides});
 describe("P1 central web workspace policy",()=>{
+ it("uses the actual Additional Admin projection for dual PLUS access",()=>expect(resolveWorkspaceAccess(user({salesRole:"ADMIN",accountRole:"ACCOUNTANT"}),"SALESPUNCH360_PLUS")).toMatchObject({canAccessSales:true,canAccessAccount:true,canSwitchWorkspace:true}));
+ it("keeps an Additional Admin header-eligible without granting an Account switch",()=>expect(resolveWorkspaceAccess(user({accountRole:null,accountAccessActive:false}),"SALESPUNCH360_PLUS")).toMatchObject({canAccessSales:true,canAccessAccount:false,canSwitchWorkspace:false}));
  it("keeps single-product editions isolated even with stale roles",()=>{
   expect(resolveWorkspaceAccess(user(),"SALESPUNCH360","ACCOUNT")).toMatchObject({canAccessSales:true,canAccessAccount:false,canSwitchWorkspace:false,effectiveWorkspace:"SALES"});
   expect(resolveWorkspaceAccess(user(),"SALESPUNCH360_ACCOUNT","SALES")).toMatchObject({canAccessSales:false,canAccessAccount:true,canSwitchWorkspace:false,effectiveWorkspace:"ACCOUNT"});
