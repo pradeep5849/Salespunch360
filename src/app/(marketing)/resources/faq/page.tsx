@@ -1,2 +1,3 @@
+export const metadata={title:'Frequently Asked Questions',description:'Answers about SalesPunch360 products, trial, roles, branches and Android access.',alternates:{canonical:'/resources/faq'}};
 import Link from "next/link";import {CTA,PageHero} from "@/components/public/marketing-ui";import {faqs} from "@/lib/public-site/content";
 export default function Page(){return <><PageHero eyebrow="FAQs" title="Answers for your product decision." copy="Understand editions, workspaces, roles, branches, Android access and the free trial."><Link className="button" href="/register">Start Free Trial</Link></PageHero><section className="faq-list">{faqs.map(([q,a])=><details key={q}><summary>{q}</summary><p>{a}</p></details>)}</section><CTA/></>}

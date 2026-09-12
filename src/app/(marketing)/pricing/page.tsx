@@ -1,3 +1,4 @@
+export const metadata={title:'Pricing',description:'Current SalesPunch360 seat pricing, Account packages and Plus pricing explained.',alternates:{canonical:'/pricing'}};
 import Link from "next/link";import {CTA,PageHero} from "@/components/public/marketing-ui";import {getPublicPricing} from "@/lib/billing/public-pricing";
 export const dynamic="force-dynamic";
 const periods=[['MONTHLY','Monthly'],['SIX_MONTH','6 Months'],['YEARLY','Yearly']] as const;const roles=[['ADMIN','Additional Admin'],['MANAGER','Manager'],['SALES','Sales']] as const;const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);

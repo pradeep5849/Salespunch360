@@ -1,2 +1,2 @@
-import {commercialEditorOptions} from "@/lib/account/commercial";import {CommercialEditor} from "./commercial-editor";
-export default async function Page(){const raw=await commercialEditorOptions(),options=JSON.parse(JSON.stringify(raw));return <main><h1>New sales / purchase document</h1><CommercialEditor options={options}/></main>}
+import {commercialEditorOptions} from "@/lib/account/commercial";import {CommercialEditor} from "./commercial-editor";import {AccountPageHeader} from "@/components/account/account-shell";
+export default async function Page(){const raw=await commercialEditorOptions(),options=JSON.parse(JSON.stringify(raw));return <><AccountPageHeader title="New sales / purchase document" subtitle="Choose the document and party, add items, review tax, then confirm totals."/><div className="account-document-editor"><CommercialEditor options={options}/></div></>}

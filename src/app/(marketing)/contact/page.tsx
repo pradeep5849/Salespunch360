@@ -1,2 +1,3 @@
+export const metadata={title:'Contact',description:'Contact SalesPunch360 about products, pricing, roles, branches or getting started.',alternates:{canonical:'/contact'}};
 import {PageHero} from "@/components/public/marketing-ui";import {InquiryForm} from "@/components/public/inquiry-form";
 export default function Page(){return <><PageHero eyebrow="Contact" title="Tell us what your business needs." copy="Ask about products, roles, branches, pricing or getting started. Share enough context for a useful response."/><section className="form-card-public"><InquiryForm kind="contact"/></section></>}

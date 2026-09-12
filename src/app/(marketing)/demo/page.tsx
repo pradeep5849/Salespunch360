@@ -1,2 +1,3 @@
+export const metadata={title:'Book a Demo',description:'Book a focused SalesPunch360 product demonstration for your business.',alternates:{canonical:'/demo'}};
 import {PageHero} from "@/components/public/marketing-ui";import {InquiryForm} from "@/components/public/inquiry-form";
 export default function Page(){return <><PageHero eyebrow="Book a Demo" title="See your workflows in one connected platform." copy="Tell us how your field, accounts, project or branch teams work. We will use your request to focus the conversation on the right product."/><section className="form-card-public"><InquiryForm kind="demo"/></section></>}
