@@ -18,12 +18,23 @@ describe("D final UI contracts", () => {
   it("exposes only supported direct Sales and Purchase workflows through filtered navigation", () => {
     const navigation = read("src/lib/account/navigation.ts");
     for (const type of ["SALES_INVOICE", "CUSTOMER_RECEIPT", "CREDIT_NOTE", "PROFORMA_INVOICE", "SALES_ORDER", "DELIVERY_CHALLAN", "PURCHASE_BILL", "VENDOR_PAYMENT", "DEBIT_NOTE", "PURCHASE_ORDER"]) expect(navigation).toContain(type);
-    expect(navigation).toContain("canUsePermission"); expect(navigation).toContain("set.has(item.module)"); expect(navigation).not.toContain("Mobile POS");
+    expect(navigation).toContain("canUsePermission"); expect(navigation).toContain("item.requiredModules"); expect(navigation).not.toContain("Mobile POS");
   });
   it("keeps public authentication actions visible outside the collapsible navigation", () => {
     const header = read("src/components/public/public-header.tsx"), logo = read("src/components/brand-logo.tsx");
     expect(header.indexOf("mobile-auth-actions")).toBeLessThan(header.indexOf("<nav"));
     expect(header).toContain('href="/sign-in"'); expect(header).toContain('href="/register"');
     expect(logo).toContain("SalesPunch<span>360</span>"); expect(logo).not.toContain("salespunch360-logo.png");
+  });
+  it("uses one section slug helper in desktop Account navigation and Menu", () => {
+    expect(read("src/components/account/account-shell.tsx")).toContain("accountNavSectionId(group.label)");
+    expect(read("src/app/workspace/account/menu/page.tsx")).toContain("accountNavSectionId(group.label)");
+  });
+  it("keeps authorized Sales workspace switching available on desktop and mobile", () => {
+    const header = read("src/components/workspace/workspace-header.tsx"), css = read("src/app/globals.css");
+    expect(header).toContain('canSwitchWorkspace&&<details className="workspace-desktop-workspace-menu"');
+    expect(header).toContain('canSwitchWorkspace&&<form action={switchWorkspace} onSubmit={closeDrawer}');
+    expect((header.match(/Switch to Accounts/g) ?? [])).toHaveLength(2);
+    expect(css).toContain("@media(max-width:760px){.workspace-desktop-workspace-menu{display:none}}");
   });
 });
