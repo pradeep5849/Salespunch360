@@ -53,6 +53,8 @@ describe("S1 final workspace authorization matrix", () => {
     const managerOnly = principal({ salesRole: "MANAGER", managerType: "MANAGER_ONLY", salesAccessActive: true });
     expect(canUsePermission(managerOnly, "SALESPUNCH360", "SALES_ATTENDANCE")).toBe(true);
     expect(canUsePermissionForMutation(managerOnly, "SALESPUNCH360", "SALES_ATTENDANCE")).toBe(false);
+    const malformedManager = principal({ salesRole: "MANAGER", managerType: null, salesAccessActive: true });
+    expect(canUsePermissionForMutation(malformedManager, "SALESPUNCH360", "SALES_ATTENDANCE")).toBe(false);
     const roles: Array<[AccountRole, Parameters<typeof canUsePermission>[2]]> = [
       ["ACCOUNTANT", "ACCOUNT_USER_ADMIN"], ["PROJECT_MANAGER", "ACCOUNT_JOURNAL_POST"],
       ["DATA_ENTRY", "ACCOUNT_QUOTATION_APPROVE"],

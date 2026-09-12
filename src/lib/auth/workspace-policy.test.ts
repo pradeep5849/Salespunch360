@@ -43,6 +43,9 @@ describe("workspace assignment helpers", () => {
     expect(canAccessSalesWorkspace(suspendedAdmin, "SALESPUNCH360")).toBe(false);
     expect(isSalesPrimaryAdmin(suspendedAdmin)).toBe(false);
     expect(canUseSalesFieldWorkflow(user({ role: "MANAGER", salesRole: "MANAGER", managerType: "FIELD_MANAGER" }))).toBe(true);
+    expect(canUseSalesFieldWorkflow(user({ role: "MANAGER", salesRole: "MANAGER", managerType: "MANAGER_ONLY" }))).toBe(false);
+    expect(canUseSalesFieldWorkflow(user({ role: "MANAGER", salesRole: "MANAGER", managerType: null }))).toBe(false);
+    expect(canUseSalesFieldWorkflow(salesUser())).toBe(true);
   });
 });
 
