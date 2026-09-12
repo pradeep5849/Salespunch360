@@ -27,3 +27,5 @@ export async function sendVerificationEmail(to: string, token: string) {
     html: `<p>Verify your email to unlock employee creation.</p><p><a href="${url.toString()}">Verify email</a></p><p>This link expires in 24 hours.</p>`,
   });
 }
+
+export async function sendPublicInquiry(subject:string,text:string,replyTo:string){const smtp=config();await transport().sendMail({from:smtp.from,to:smtp.from,replyTo,subject,text});}

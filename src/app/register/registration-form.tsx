@@ -8,12 +8,12 @@ const initialState: RegistrationState = {};
 function FieldError({ errors }: { errors?: string[] }) { return errors?.length ? <span className="field-error">{errors[0]}</span> : null; }
 function PasswordIcon({ visible }: { visible: boolean }) { return visible ? <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.9 4.2A10.8 10.8 0 0112 4c5.5 0 9 5 9 5a16.8 16.8 0 01-2.1 2.5M6.2 6.2C4.2 7.5 3 9 3 9s3.5 5 9 5c1 0 2-.2 2.8-.5" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12s3.5-5 9-5 9 5 9 5-3.5 5-9 5-9-5-9-5z" /><circle cx="12" cy="12" r="2.5" /></svg>; }
 
-export function RegistrationForm() {
+export function RegistrationForm({initialProduct}:{initialProduct?:"SALESPUNCH360"|"SALESPUNCH360_ACCOUNT"|"SALESPUNCH360_PLUS"}) {
   const [state, formAction, pending] = useActionState(register, initialState);
   const [password, setPassword] = useState(""); const [confirmation, setConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false); const [showConfirmation, setShowConfirmation] = useState(false);
   const [logoPreview,setLogoPreview]=useState<string>(); useEffect(()=>()=>{if(logoPreview)URL.revokeObjectURL(logoPreview)},[logoPreview]);
-  const [productEdition,setProductEdition]=useState("");
+  const [productEdition,setProductEdition]=useState(initialProduct??"");
   const confirmationEntered = confirmation.length > 0; const passwordsMatch = confirmationEntered && password === confirmation;
   return <form action={formAction} className="registration-form">
     <input type="hidden" name="productEdition" value={productEdition} />
