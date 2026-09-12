@@ -2,6 +2,21 @@ import { PrismaClient } from "@prisma/client";
 import { spawnSync } from "node:child_process";
 
 const TARGET_MIGRATION = "20260911190000_a10_runtime_integrity";
+const ACCOUNT_RUNTIME_MIGRATION = "20260911240000_a11_a14_runtime_closure";
+const ACCOUNT_SYSTEM_LEDGERS = [
+  ["1460", "Inventory Asset", "ASSET", "DEBIT", "INVENTORY_ASSET"],
+  ["1470", "CGST ITC", "ASSET", "DEBIT", "CGST_ITC"],
+  ["1471", "SGST ITC", "ASSET", "DEBIT", "SGST_ITC"],
+  ["1472", "IGST ITC", "ASSET", "DEBIT", "IGST_ITC"],
+  ["1473", "CESS ITC", "ASSET", "DEBIT", "CESS_ITC"],
+  ["2110", "CGST Payable", "LIABILITY", "CREDIT", "CGST_PAYABLE"],
+  ["2111", "SGST Payable", "LIABILITY", "CREDIT", "SGST_PAYABLE"],
+  ["2112", "IGST Payable", "LIABILITY", "CREDIT", "IGST_PAYABLE"],
+  ["2113", "CESS Payable", "LIABILITY", "CREDIT", "CESS_PAYABLE"],
+  ["2120", "TDS Payable", "LIABILITY", "CREDIT", "TDS_PAYABLE"],
+  ["2130", "TCS Payable", "LIABILITY", "CREDIT", "TCS_PAYABLE"],
+  ["5200", "Cost of Goods Sold", "EXPENSE", "DEBIT", "COGS"],
+];
 const prisma = new PrismaClient();
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 
@@ -119,10 +134,60 @@ END $$;
   return true;
 }
 
+async function preseedAccountSystemLedgers() {
+  const tables = await prisma.$queryRawUnsafe(
+    `SELECT to_regclass('public.ledger_accounts') IS NOT NULL AS "ledgers",
+            to_regclass('public.companies') IS NOT NULL AS "companies",
+            to_regclass('public._prisma_migrations') IS NOT NULL AS "migrations"`,
+  );
+  if (!tables[0]?.ledgers || !tables[0]?.companies || !tables[0]?.migrations)
+    return;
+  const applied = await prisma.$queryRawUnsafe(
+    `SELECT 1 FROM "_prisma_migrations" WHERE "migration_name"=$1 AND "finished_at" IS NOT NULL LIMIT 1`,
+    ACCOUNT_RUNTIME_MIGRATION,
+  );
+  if (applied.length) return;
+  const companies = await prisma.$queryRawUnsafe(
+    `SELECT "id" FROM "companies" WHERE "productEdition" IN ('SALESPUNCH360_ACCOUNT','SALESPUNCH360_PLUS')`,
+  );
+  for (const company of companies) {
+    const existing = await prisma.$queryRawUnsafe(
+      `SELECT "code","name","systemKey" FROM "ledger_accounts" WHERE "companyId"=$1::uuid`,
+      company.id,
+    );
+    const codes = new Set(existing.map((row) => row.code));
+    const names = new Set(existing.map((row) => row.name));
+    const keys = new Set(existing.map((row) => row.systemKey).filter(Boolean));
+    for (const [preferredCode, preferredName, accountClass, normal, key] of
+      ACCOUNT_SYSTEM_LEDGERS) {
+      if (keys.has(key)) continue;
+      let code = preferredCode;
+      for (let suffix = 1; codes.has(code); suffix += 1)
+        code = `SYS${preferredCode}-${suffix}`;
+      let name = preferredName;
+      for (let suffix = 1; names.has(name); suffix += 1)
+        name = `${preferredName} (System${suffix === 1 ? "" : ` ${suffix}`})`;
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "ledger_accounts" ("id","companyId","code","name","accountClass","normalBalance","systemKey","isSystem","isActive","allowPosting","createdAt","updatedAt") VALUES (gen_random_uuid(),$1::uuid,$2,$3,$4::"LedgerAccountClass",$5::"NormalBalanceSide",$6,true,true,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT ("companyId","systemKey") DO NOTHING`,
+        company.id,
+        code,
+        name,
+        accountClass,
+        normal,
+        key,
+      );
+      codes.add(code);
+      names.add(name);
+      keys.add(key);
+    }
+  }
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
   for (let attempt = 1; attempt <= 4; attempt += 1) {
+    await preseedAccountSystemLedgers();
     if (runPrisma(["migrate", "deploy"])) {
       await prisma.$disconnect();
       return;

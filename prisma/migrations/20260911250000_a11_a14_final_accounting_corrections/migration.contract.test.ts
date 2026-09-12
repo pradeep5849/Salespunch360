@@ -1,0 +1,3 @@
+import{readFileSync}from"node:fs";import{describe,expect,it}from"vitest";
+const sql=readFileSync("prisma/migrations/20260911250000_a11_a14_final_accounting_corrections/migration.sql","utf8");
+describe("A11-A14 final correction migration",()=>{it("is additive and preserves adjustment history",()=>{expect(sql).toContain('ADD COLUMN "payableAmount"');expect(sql).toContain('ADD COLUMN "sourceCommercialLineId"');expect(sql).toContain("ON DELETE RESTRICT");expect(sql).toContain("commercial_documents_aging_idx")});it("avoids unsafe migration operations",()=>{expect(sql).not.toMatch(/session_replication_role|\bDROP\s+(TABLE|COLUMN)|\bDELETE\s+FROM|\bUPDATE\s+"/i)})});

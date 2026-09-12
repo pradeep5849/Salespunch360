@@ -2081,6 +2081,7 @@ model CommercialDocument {
   tcsAmount              Decimal                  @default(0) @db.Decimal(18, 2)
   grandTotal             Decimal                  @db.Decimal(18, 2)
   balanceDue             Decimal                  @db.Decimal(18, 2)
+  payableAmount          Decimal?                 @db.Decimal(18, 2)
   notes                  String?
   journalEntryId         String?                  @db.Uuid
   createdById            String                   @db.Uuid
@@ -2116,6 +2117,7 @@ model CommercialDocumentLine {
   id             String             @id @default(uuid()) @db.Uuid
   companyId      String             @db.Uuid
   documentId     String             @db.Uuid
+  sourceCommercialLineId String?    @db.Uuid
   position       Int
   lineType       CommercialLineType
   productId      String?            @db.Uuid
