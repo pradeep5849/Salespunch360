@@ -11,7 +11,13 @@ export type WorkspacePrincipal = {
   managerType: ManagerType | null;
 };
 
-export const isPlatformSuperAdmin = (user: Pick<WorkspacePrincipal, "role">) => user.role === "SUPER_ADMIN";
+/** A platform administrator is deliberately outside every tenant. */
+export const isPlatformSuperAdmin = (user: Pick<WorkspacePrincipal, "role" | "companyId">) =>
+  user.role === "SUPER_ADMIN" && user.companyId === null;
+
+/** A legacy SUPER_ADMIN value attached to a tenant is invalid, not a tenant entitlement. */
+export const hasMalformedPlatformIdentity = (user: Pick<WorkspacePrincipal, "role" | "companyId">) =>
+  user.role === "SUPER_ADMIN" && user.companyId !== null;
 export const hasSalesRole = (user: Pick<WorkspacePrincipal, "salesRole">) => user.salesRole != null;
 export const hasAccountRole = (user: Pick<WorkspacePrincipal, "accountRole">) => user.accountRole != null;
 export const isSalesPrimaryAdmin = (user: Pick<WorkspacePrincipal, "salesRole">) => user.salesRole === "PRIMARY_ADMIN";
@@ -26,7 +32,7 @@ export const editionAllowsAccountWorkspace = (edition: ProductEdition) => editio
 export const canAccessSalesWorkspace = (user: WorkspacePrincipal, edition: ProductEdition) =>
   user.isActive === true &&
   user.companyId !== null &&
-  !isPlatformSuperAdmin(user) &&
+  user.role !== "SUPER_ADMIN" &&
   hasSalesRole(user) &&
   user.salesAccessActive === true &&
   editionAllowsSalesWorkspace(edition);
@@ -34,7 +40,7 @@ export const canAccessSalesWorkspace = (user: WorkspacePrincipal, edition: Produ
 export const canAccessAccountWorkspace = (user: WorkspacePrincipal, edition: ProductEdition) =>
   user.isActive === true &&
   user.companyId !== null &&
-  !isPlatformSuperAdmin(user) &&
+  user.role !== "SUPER_ADMIN" &&
   hasAccountRole(user) &&
   user.accountAccessActive === true &&
   editionAllowsAccountWorkspace(edition);

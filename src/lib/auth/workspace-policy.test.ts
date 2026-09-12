@@ -7,6 +7,7 @@ import {
   canUseSalesFieldWorkflow,
   hasAccountRole,
   hasSalesRole,
+  hasMalformedPlatformIdentity,
   isPlatformSuperAdmin,
   isSalesPrimaryAdmin,
   type WorkspacePrincipal,
@@ -91,11 +92,13 @@ describe("canonical workspace effective-access policy", () => {
     expect(canAccessAccountWorkspace(principal, "SALESPUNCH360_PLUS")).toBe(false);
   });
 
-  it("fails closed for a malformed SUPER_ADMIN with tenant, roles, and active lifecycle flags", () => {
+  it("distinguishes the global administrator from a malformed tenant-attached legacy value and fails closed", () => {
     const principal = dualUser({ role: "SUPER_ADMIN" });
-    expect(isPlatformSuperAdmin(principal)).toBe(true);
+    expect(isPlatformSuperAdmin(principal)).toBe(false);
+    expect(hasMalformedPlatformIdentity(principal)).toBe(true);
     expect(canAccessSalesWorkspace(principal, "SALESPUNCH360_PLUS")).toBe(false);
     expect(canAccessAccountWorkspace(principal, "SALESPUNCH360_PLUS")).toBe(false);
+    expect(isPlatformSuperAdmin(user({ role: "SUPER_ADMIN", companyId: null }))).toBe(true);
   });
 
   it("does not infer workspace access from unsupported legacy roles", () => {
