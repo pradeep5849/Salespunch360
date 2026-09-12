@@ -11,7 +11,7 @@ export type AccountBranchActor = {
   branchAccessScope?: BranchAccessScope;
   branchIds?: readonly string[];
 };
-export type AuthorizedBranch = { id: string; name: string };
+export type AuthorizedBranch = { id: string; name: string; isPrimary: boolean };
 export type AccountBranchContext =
   | { mode: "COMPANY"; branchId: null; branchName: null }
   | { mode: "BRANCH"; branchId: string; branchName: string };
@@ -27,8 +27,8 @@ export async function authorizedAccountBranches(actor: AccountBranchActor): Prom
       isActive: true,
       ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { id: { in: [...(actor.branchIds ?? [])] } } : {}),
     },
-    select: { id: true, name: true },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, isPrimary: true },
+    orderBy: [{ isPrimary: "desc" }, { name: "asc" }, { id: "asc" }],
   });
 }
 
@@ -38,7 +38,7 @@ export async function resolveAccountBranchContext(
   requested?: { scope?: string | null; branchId?: string | null },
 ): Promise<{ context: AccountBranchContext; branches: AuthorizedBranch[]; canConsolidate: boolean }> {
   const branches = await authorizedAccountBranches(actor);
-  const canConsolidate = canUseCompanyConsolidation(actor);
+  const canConsolidate = branches.length > 1 && canUseCompanyConsolidation(actor);
   if (requested?.scope === "all") {
     if (!canConsolidate) throw new AuthorizationError();
     return { context: { mode: "COMPANY", branchId: null, branchName: null }, branches, canConsolidate };
@@ -54,9 +54,7 @@ export async function resolveAccountBranchContext(
   const savedBranch = branches.find(({ id }) => id === saved);
   if (savedBranch)
     return { context: { mode: "BRANCH", branchId: savedBranch.id, branchName: savedBranch.name }, branches, canConsolidate };
-  if (canConsolidate)
-    return { context: { mode: "COMPANY", branchId: null, branchName: null }, branches, canConsolidate };
-  const first = branches[0];
+  const first = branches.find(branch => branch.isPrimary) ?? branches[0];
   if (!first) throw new AuthorizationError();
   return { context: { mode: "BRANCH", branchId: first.id, branchName: first.name }, branches, canConsolidate };
 }
