@@ -1525,6 +1525,20 @@ model AccountSettings {
   @@map("account_settings")
 }
 
+model AuthorizedSignatureVersion {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @db.Uuid
+  objectKey   String    @db.VarChar(500)
+  uploadedById String   @db.Uuid
+  isCurrent   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  retiredAt   DateTime?
+
+  @@unique([companyId, objectKey])
+  @@index([companyId, isCurrent, createdAt])
+  @@map("authorized_signature_versions")
+}
+
 model FinancialYear {
   id             String                @id @default(uuid()) @db.Uuid
   companyId      String                @db.Uuid
@@ -2239,6 +2253,7 @@ model CommercialDocument {
   notes                  String?
   journalEntryId         String?                  @db.Uuid
   createdById            String                   @db.Uuid
+  signatureVersionId     String?                  @db.Uuid
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
   company                Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
