@@ -2365,6 +2365,39 @@ model SettlementAllocation {
   @@map("settlement_allocations")
 }
 
+/// Settlement target for a party amount already posted by an OPENING_BALANCE journal.
+/// Registration never posts another journal, preventing duplicate accounting balances.
+model PartyOpeningBalance {
+  id             String   @id @default(uuid()) @db.Uuid
+  companyId      String   @db.Uuid
+  branchId       String   @db.Uuid
+  partyType      String   @db.VarChar(16)
+  partyId        String   @db.Uuid
+  partyName      String   @db.VarChar(240)
+  effectiveDate  DateTime @db.Date
+  amount         Decimal  @db.Decimal(18, 2)
+  journalEntryId String   @db.Uuid
+  createdById    String   @db.Uuid
+  createdAt      DateTime @default(now())
+
+  @@unique([companyId, journalEntryId, partyType, partyId])
+  @@index([companyId, branchId, partyType, partyId, effectiveDate])
+  @@map("party_opening_balances")
+}
+
+model OpeningBalanceAllocation {
+  id               String   @id @default(uuid()) @db.Uuid
+  companyId        String   @db.Uuid
+  settlementId     String   @db.Uuid
+  openingBalanceId String   @db.Uuid
+  amount           Decimal  @db.Decimal(18, 2)
+  createdAt        DateTime @default(now())
+
+  @@unique([companyId, settlementId, openingBalanceId])
+  @@index([companyId, openingBalanceId])
+  @@map("opening_balance_allocations")
+}
+
 model AdvanceApplication {
   id              String             @id @default(uuid()) @db.Uuid
   companyId       String             @db.Uuid
