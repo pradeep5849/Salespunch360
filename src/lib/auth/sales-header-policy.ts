@@ -1,4 +1,6 @@
-import type { ManagerType, SalesRole } from "@prisma/client";
+import type { ManagerType, ProductEdition, SalesRole } from "@prisma/client";
+import { canUsePermission } from "./permissions";
+import type { WorkspacePrincipal } from "./workspace-policy";
 
 export type SalesHeaderKind = "ADMIN" | "MANAGER" | "SALES";
 
@@ -9,4 +11,13 @@ export function salesHeaderPresentation(salesRole: SalesRole | null, managerType
   if (salesRole === "MANAGER") return { kind: "MANAGER" as const, label: managerType === "MANAGER_ONLY" ? "Office Manager" : "Sales Manager" };
   if (salesRole === "SALES") return { kind: "SALES" as const, label: "Sales" };
   return null;
+}
+
+/** Navigation authorization delegates to the same permission policy used by server routes. */
+export function salesHeaderCapabilities(actor: WorkspacePrincipal, edition: ProductEdition) {
+  return {
+    canManageEmployees: canUsePermission(actor, edition, "SALES_USER_ADMIN"),
+    canManageBilling: canUsePermission(actor, edition, "SALES_BILLING"),
+    canManageSettings: canUsePermission(actor, edition, "SALES_SETTINGS"),
+  };
 }
