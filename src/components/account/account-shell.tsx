@@ -3,11 +3,12 @@ import { accountNavSectionId, type AccountNavGroup } from "@/lib/account/navigat
 import { AccountBottomNav, type AccountBottomItem } from "./account-bottom-nav";
 import { AccountIcon } from "./account-icons";
 import { AccountProfileMenu } from "./account-profile-menu";
+import {CompanyIdentity} from "@/components/workspace/company-identity";
 
-type ShellProps={children:React.ReactNode;companyName:string;userName:string;role:string;notifications:number;navigation:AccountNavGroup[];showItems:boolean;showProjects:boolean};
-export function AccountShell({children,companyName,userName,role,notifications,navigation,showItems,showProjects}:ShellProps){
+type ShellProps={children:React.ReactNode;companyName:string;companyAddress?:string;hasCompanyLogo?:boolean;companyLogoVersion?:number;userName:string;role:string;notifications:number;navigation:AccountNavGroup[];showItems:boolean;showProjects:boolean};
+export function AccountShell({children,companyName,companyAddress,hasCompanyLogo=false,companyLogoVersion,userName,role,notifications,navigation,showItems,showProjects}:ShellProps){
  const bottom:AccountBottomItem[]=[{label:"Home",href:"/workspace/account",icon:"home"},{label:"Dashboard",href:"/workspace/account/dashboard",icon:"dashboard"},...(showItems?[{label:"Items",href:"/workspace/account/inventory",icon:"items"} as const]:[]),...(showProjects?[{label:"Projects",href:"/workspace/account/projects",icon:"projects"} as const]:[]),{label:"Menu",href:"/workspace/account/menu",icon:"menu"}];
- return <div className="account-shell"><header className="account-topbar"><Link href="/workspace/account" className="account-identity"><strong>{companyName}</strong></Link><div className="account-top-actions">
+ return <div className="account-shell"><header className="account-topbar"><CompanyIdentity href="/workspace/account" name={companyName} address={companyAddress} hasLogo={hasCompanyLogo} version={companyLogoVersion} className="account-identity workspace-identity"/><div className="account-top-actions">
   <Link aria-label={`${notifications} account notifications`} className="account-icon-button" href="/workspace/account/notifications"><AccountIcon name="bell"/>{notifications>0&&<b>{notifications>99?"99+":notifications}</b>}</Link><AccountProfileMenu userName={userName} role={role}/></div></header>
   <div className="account-desktop-nav" aria-label="Account modules">{navigation.map(group=><Link key={group.label} href={`/workspace/account/menu#${accountNavSectionId(group.label)}`}>{group.label}</Link>)}</div><main className="account-main">{children}</main><AccountBottomNav items={bottom}/></div>;
 }
