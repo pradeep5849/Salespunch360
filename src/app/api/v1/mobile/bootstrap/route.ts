@@ -1,2 +1,2 @@
-import {authenticateMobileToken,mobileBootstrap} from '@/lib/mobile/auth';import {mobileError,mobileJson} from '@/lib/mobile/http';
-export async function GET(request:Request){try{return mobileJson(await mobileBootstrap(await authenticateMobileToken(request.headers.get('authorization'))))}catch{return mobileError()}}
+import {authenticateMobileToken,mobileBootstrap} from '@/lib/mobile/auth';import {mobileJson,mobileUnauthorized,mobileUnexpected} from '@/lib/mobile/http';
+export async function GET(request:Request){try{return mobileJson(await mobileBootstrap(await authenticateMobileToken(request.headers.get('authorization'))))}catch(error){return mobileUnauthorized(error)??mobileUnexpected('MOBILE_BOOTSTRAP',error)}}

@@ -28,8 +28,8 @@ describe("frozen mobile API v1 contract", () => {
       readOrUpdate: 200, create: 201, invalid: 400, unauthenticated: 401,
       forbidden: 403, absent: 404, conflict: 409, rateLimited: 429, unexpected: 500,
     });
-    expect(MOBILE_PUBLIC_ERROR_CODES).toContain("SERVER_ERROR");
-    expect(MOBILE_PUBLIC_ERROR_CODES).not.toContain("MOBILE_PUBLIC_ERROR_CODES");
+    expect(MOBILE_PUBLIC_ERROR_CODES).toEqual(expect.arrayContaining(["UNAUTHORIZED", "FORBIDDEN", "SERVER_ERROR"]));
+    expect(MOBILE_PUBLIC_ERROR_CODES).not.toEqual(expect.arrayContaining(["MOBILE_UNAUTHORIZED", "MOBILE_FORBIDDEN"]));
     for (const code of MOBILE_PUBLIC_ERROR_CODES) expect(code).toMatch(/^[A-Z][A-Z0-9_]*$/);
   });
 

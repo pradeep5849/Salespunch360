@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks=vi.hoisted(()=>({auth:vi.fn(),attendance:vi.fn(),upload:vi.fn(),report:vi.fn()}));
-vi.mock("@/lib/mobile/auth",()=>({authenticateMobileToken:mocks.auth,mobileBootstrap:vi.fn()}));
+vi.mock("@/lib/mobile/auth",()=>({authenticateMobileToken:mocks.auth,mobileBootstrap:vi.fn(),mobileFieldWorkEnabled:vi.fn()}));
 vi.mock("@/lib/mobile/attendance",()=>({mobileAttendanceAction:mocks.attendance,mobileUploadPoint:mocks.upload}));
 vi.mock("@/lib/mobile/reports",()=>({mobileReport:mocks.report}));
 
@@ -25,7 +25,7 @@ describe("authenticated mobile route status contract",()=>{
     ["locations",()=>locations(post({clientPointId:crypto.randomUUID(),latitude:1,longitude:2,capturedAt:new Date().toISOString()}))],
     ["reports",()=>reports(get())],["field",()=>field(get())],["employees",()=>employees(get())],
     ["company",()=>company(get())],["targets",()=>targets(get())],["push",()=>push(post({}))],["bootstrap",()=>bootstrap(get())],
-  ] as const)("returns 401 for %s when authentication fails",async(_name,call)=>expect((await call()).status).toBe(401));
-  it("preserves attendance, location, and report domain statuses",async()=>{mocks.auth.mockResolvedValue({});mocks.attendance.mockRejectedValue(new Error("GPS_REQUIRED"));expect((await attendance(post({action:"START",location:{latitude:1,longitude:2,capturedAt:new Date().toISOString()}}))).status).toBe(409);mocks.upload.mockRejectedValue(new Error("THROTTLED"));expect((await locations(post({clientPointId:crypto.randomUUID(),latitude:1,longitude:2,capturedAt:new Date().toISOString()}))).status).toBe(409);mocks.report.mockRejectedValue(new Error("INVALID_REPORT"));expect((await reports(get())).status).toBe(400)});
+  ] as const)("returns the public 401 body for %s when authentication fails",async(_name,call)=>{const response=await call(),body=await response.json();expect(response.status).toBe(401);expect(body).toEqual({error:"UNAUTHORIZED"});expect(JSON.stringify(body)).not.toContain("MOBILE_UNAUTHORIZED")});
+  it("preserves attendance, location, and report domain statuses and bodies",async()=>{mocks.auth.mockResolvedValue({});mocks.attendance.mockRejectedValue(new Error("GPS_REQUIRED"));const attendanceResponse=await attendance(post({action:"START",location:{latitude:1,longitude:2,capturedAt:new Date().toISOString()}}));expect(attendanceResponse.status).toBe(409);expect(await attendanceResponse.json()).toEqual({error:"GPS_REQUIRED"});mocks.upload.mockRejectedValue(new Error("THROTTLED"));const locationResponse=await locations(post({clientPointId:crypto.randomUUID(),latitude:1,longitude:2,capturedAt:new Date().toISOString()}));expect(locationResponse.status).toBe(409);expect(await locationResponse.json()).toEqual({error:"THROTTLED"});mocks.report.mockRejectedValue(new Error("INVALID_REPORT"));const reportResponse=await reports(get());expect(reportResponse.status).toBe(400);expect(await reportResponse.json()).toEqual({error:"INVALID_REPORT"})});
   it("fails closed for field-ineligible actors without leaking unexpected errors",async()=>{mocks.auth.mockResolvedValue({});mocks.attendance.mockRejectedValue(new Error("MOBILE_FORBIDDEN"));const forbidden=await attendance(post({action:"START"}));expect(forbidden.status).toBe(403);expect(await forbidden.json()).toEqual({error:"FORBIDDEN"});mocks.upload.mockRejectedValue(new Error("private database host"));const unexpected=await locations(post({clientPointId:crypto.randomUUID(),latitude:1,longitude:2,capturedAt:new Date().toISOString()}));expect(unexpected.status).toBe(500);expect(await unexpected.json()).toMatchObject({error:"SERVER_ERROR",referenceId:expect.any(String)})});
 });

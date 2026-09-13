@@ -2,7 +2,7 @@ import {authenticateMobileToken} from '@/lib/mobile/auth';
 import {mobilePasswordSchema} from '@/lib/mobile/validation';
 import {hashPassword,verifyPassword} from '@/lib/auth/crypto';
 import {db} from '@/lib/db';
-import {mobileError,mobileJson} from '@/lib/mobile/http';
+import {mobileJson,mobileUnauthorized,mobileUnexpected} from '@/lib/mobile/http';
 import {replacePasswordAndRevoke} from '@/lib/auth/session-generation';
 
 export async function POST(request:Request){
@@ -14,5 +14,5 @@ export async function POST(request:Request){
   const passwordHash=await hashPassword(parsed.data.newPassword);
   await replacePasswordAndRevoke(principal.id,passwordHash,user.passwordHash);
   return mobileJson({ok:true});
- }catch(error){return mobileError(error instanceof Error&&error.message==='MOBILE_UNAUTHORIZED'?401:400)}
+ }catch(error){const unauthorized=mobileUnauthorized(error);if(unauthorized)return unauthorized;if(error instanceof SyntaxError)return mobileJson({error:'INVALID_INPUT'},400);return mobileUnexpected('MOBILE_PASSWORD',error)}
 }
