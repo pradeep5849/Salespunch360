@@ -726,6 +726,9 @@ model Company {
   paymentReminders                    PaymentReminder[]
   commercialAudits                    CommercialAuditEvent[]
   settlementAllocations               SettlementAllocation[]
+  partyOpeningBalances                PartyOpeningBalance[]
+  openingBalanceAllocations            OpeningBalanceAllocation[]
+  authorizedSignatureVersions          AuthorizedSignatureVersion[]
   advanceApplications                 AdvanceApplication[]
   projects                            Project[]
   projectMembers                      ProjectMember[]
@@ -1533,7 +1536,10 @@ model AuthorizedSignatureVersion {
   isCurrent   Boolean   @default(true)
   createdAt   DateTime  @default(now())
   retiredAt   DateTime?
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  documents   CommercialDocument[]
 
+  @@unique([companyId, id])
   @@unique([companyId, objectKey])
   @@index([companyId, isCurrent, createdAt])
   @@map("authorized_signature_versions")
@@ -2263,6 +2269,7 @@ model CommercialDocument {
   journalEntry           JournalEntry?            @relation("CommercialJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   project                Project?                 @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   createdBy              User                     @relation("CommercialDocumentCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  signatureVersion       AuthorizedSignatureVersion? @relation(fields: [companyId, signatureVersionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   sourceDocument         CommercialDocument?      @relation("CommercialSource", fields: [companyId, sourceDocumentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   adjustments            CommercialDocument[]     @relation("CommercialSource")
   sourcePurchaseOrder    CommercialDocument?      @relation("PurchaseOrderFulfillment", fields: [companyId, sourcePurchaseOrderId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -2357,6 +2364,7 @@ model AccountSettlement {
   vendor           Vendor?                @relation("SettlementVendor", fields: [companyId, vendorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   allocations      SettlementAllocation[]
   applications     AdvanceApplication[]
+  openingAllocations OpeningBalanceAllocation[]
 
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, settlementNumber])
@@ -2394,7 +2402,11 @@ model PartyOpeningBalance {
   journalEntryId String   @db.Uuid
   createdById    String   @db.Uuid
   createdAt      DateTime @default(now())
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  allocations    OpeningBalanceAllocation[]
 
+  @@unique([companyId, id])
+  @@unique([companyId, journalEntryId, partyType])
   @@unique([companyId, journalEntryId, partyType, partyId])
   @@index([companyId, branchId, partyType, partyId, effectiveDate])
   @@map("party_opening_balances")
@@ -2407,6 +2419,9 @@ model OpeningBalanceAllocation {
   openingBalanceId String   @db.Uuid
   amount           Decimal  @db.Decimal(18, 2)
   createdAt        DateTime @default(now())
+  company           Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  settlement        AccountSettlement @relation(fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  openingBalance    PartyOpeningBalance @relation(fields: [companyId, openingBalanceId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([companyId, settlementId, openingBalanceId])
   @@index([companyId, openingBalanceId])

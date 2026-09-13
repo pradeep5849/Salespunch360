@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveInitialMoneyType } from "./money-form";
+import { allocationForTarget, resolveInitialMoneyType } from "./money-form";
 
 describe("money transaction query preselection", () => {
   it.each(["CUSTOMER_RECEIPT", "VENDOR_PAYMENT"])("preselects allowed %s", type => {
@@ -9,4 +9,5 @@ describe("money transaction query preselection", () => {
     expect(resolveInitialMoneyType(["CUSTOMER_RECEIPT"], "NOT_REAL")).toBe("CUSTOMER_RECEIPT");
     expect(resolveInitialMoneyType(["CUSTOMER_RECEIPT"], "VENDOR_PAYMENT")).toBe("CUSTOMER_RECEIPT");
   });
+  it("submits exactly the selected allocation identifier",()=>{expect(allocationForTarget("opening:opening-id","25")).toEqual({openingBalanceId:"opening-id",amount:"25"});expect(allocationForTarget("document:invoice-id","25")).toEqual({documentId:"invoice-id",amount:"25"})});
 });
