@@ -1,4 +1,4 @@
-import {readFileSync} from "node:fs";
+import {readFileSync,readdirSync} from "node:fs";
 import {describe,expect,it} from "vitest";
 import {PROJECT_MAX_PAGE_SIZE,PROJECT_PAGE_SIZE,projectPageInput} from "./projects";
 
@@ -33,9 +33,15 @@ describe("R2 query/index contracts",()=>{
   expect(source).not.toContain("Promise.all(visits.map(async");
  });
  it("adds only a forward migration with indexes matching bounded filters",()=>{
-  const migration=readFileSync("prisma/migrations/20260913090000_r2_performance_indexes/migration.sql","utf8");
+  const migration=readFileSync("prisma/migrations/20260913150000_r2_performance_indexes/migration.sql","utf8");
+  expect(migration).toContain('"attendances"("companyId", "branchId", "userId", "startedAt")');
+  expect(migration).toContain('"customer_visits"("companyId", "branchId", "userId", "checkedInAt")');
   expect(migration).toContain('"location_points"("companyId", "branchId", "userId", "capturedAt")');
   expect(migration).toContain('"commercial_documents"("companyId", "branchId", "status", "type", "issueDate")');
   expect(migration).toContain('"projects"("companyId", "branchId", "createdAt")');
+ });
+ it("sorts R2 after the latest historical Y invariant migration",()=>{
+  const migrations=readdirSync("prisma/migrations",{withFileTypes:true}).filter(entry=>entry.isDirectory()).map(entry=>entry.name).sort();
+  expect(migrations.slice(-2)).toEqual(["20260913100000_y02_y03_tenant_invariants","20260913150000_r2_performance_indexes"]);
  });
 });
