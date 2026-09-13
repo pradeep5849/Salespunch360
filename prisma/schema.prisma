@@ -917,6 +917,7 @@ model Attendance {
 
   @@index([companyId, startedAt])
   @@index([companyId, userId, startedAt])
+  @@index([companyId, branchId, userId, startedAt])
   @@index([companyId, branchId])
   @@map("attendances")
 }
@@ -1003,6 +1004,7 @@ model CustomerVisit {
 
   @@index([companyId, checkedInAt])
   @@index([companyId, userId, checkedInAt])
+  @@index([companyId, branchId, userId, checkedInAt])
   @@index([companyId, customerId, checkedInAt])
   @@index([companyId, leadId, checkedInAt])
   @@index([companyId, userId, checkedOutAt])
@@ -1180,6 +1182,7 @@ model LocationPoint {
   @@unique([attendanceId, sequenceNumber])
   @@unique([companyId, userId, clientPointId])
   @@index([companyId, userId, capturedAt])
+  @@index([companyId, branchId, userId, capturedAt])
   @@index([attendanceId, capturedAt])
   @@index([companyId, branchId])
   @@map("location_points")
@@ -2286,6 +2289,7 @@ model CommercialDocument {
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, documentNumber])
   @@index([companyId, type, issueDate])
+  @@index([companyId, branchId, status, type, issueDate])
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
   @@index([companyId, projectId])
@@ -2545,6 +2549,7 @@ model Project {
   @@index([companyId, branchId, status])
   @@index([companyId, customerId])
   @@index([companyId, projectManagerId])
+  @@index([companyId, branchId, createdAt])
   @@map("projects")
 }
 
