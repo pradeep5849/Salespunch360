@@ -127,11 +127,26 @@ export function assertNormalProjectTransition(from: ProjectStatus, to: ProjectSt
   const allowed: Record<ProjectStatus, ProjectStatus[]> = { PLANNING: ["ACTIVE", "CANCELLED"], ACTIVE: ["ON_HOLD", "COMPLETED", "CANCELLED"], ON_HOLD: ["ACTIVE", "CANCELLED"], COMPLETED: ["ACTIVE", "CANCELLED"], CLOSED: [], CANCELLED: [] };
   if (!allowed[from].includes(to) || to === "CLOSED") throw new Error("INVALID_PROJECT_STATUS_TRANSITION");
 }
-export async function listProjects() { const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor); return db.project.findMany({ where: projectRecordScope(actor, ids), include: { customer: true, branch: true, projectManager: true }, orderBy: { createdAt: "desc" } }); }
+export const PROJECT_PAGE_SIZE = 25;
+export const PROJECT_MAX_PAGE_SIZE = 50;
+export function projectPageInput(raw: { page?: string; pageSize?: string } = {}) {
+  const page = Math.max(1, Number.isSafeInteger(Number(raw.page)) ? Number(raw.page) : 1);
+  const requested = Number(raw.pageSize);
+  const pageSize = Math.min(PROJECT_MAX_PAGE_SIZE, Math.max(1, Number.isSafeInteger(requested) ? requested : PROJECT_PAGE_SIZE));
+  return { page, pageSize };
+}
+export async function listProjects(raw: { page?: string; pageSize?: string } = {}) {
+  const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor), paging = projectPageInput(raw), where = projectRecordScope(actor, ids);
+  const [rows, total] = await Promise.all([
+    db.project.findMany({ where, select: { id:true,projectNumber:true,name:true,status:true,projectValue:true,startDate:true,targetEndDate:true,customer:{select:{name:true}},branch:{select:{name:true}},projectManager:{select:{name:true}} }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (paging.page - 1) * paging.pageSize, take: paging.pageSize }),
+    db.project.count({ where }),
+  ]);
+  return { rows, ...paging, total, totalPages: Math.max(1, Math.ceil(total / paging.pageSize)) };
+}
 export function deriveProjectPaymentTotal(documents:Array<{type:string;allocations:Array<{amount:Prisma.Decimal}>;advanceApplications:Array<{amount:Prisma.Decimal}>}>,type:string){return documents.filter(document=>document.type===type).reduce((sum,document)=>sum.add(document.allocations.reduce((amount,row)=>amount.add(row.amount),new Prisma.Decimal(0))).add(document.advanceApplications.reduce((amount,row)=>amount.add(row.amount),new Prisma.Decimal(0))),new Prisma.Decimal(0))}
 export async function getProject(id: string) {
   const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor);
-  const project = await db.project.findFirst({ where: { id, ...projectRecordScope(actor, ids) }, include: { customer: true, branch: true, projectManager: true, members: { include: { user: true } }, budgetLines: { orderBy: { position: "asc" } }, milestones: { orderBy: { position: "asc" } }, tasks: true, documents: true, quotationDocuments: { where: { documentType: "BOQ" } }, commercialDocuments: { include: { allocations: true, advanceApplications: true }, orderBy: { issueDate: "desc" } }, audits: { orderBy: { createdAt: "desc" } } } });
+  const project = await db.project.findFirst({ where: { id, ...projectRecordScope(actor, ids) }, include: { customer: true, branch: true, projectManager: true, members: { include: { user: true } }, budgetLines: { orderBy: { position: "asc" } }, milestones: { orderBy: { position: "asc" } }, tasks: { orderBy:[{updatedAt:"desc"},{id:"desc"}],take:50 }, documents: { orderBy:[{createdAt:"desc"},{id:"desc"}],take:50 }, quotationDocuments: { where: { documentType: "BOQ" }, orderBy:[{createdAt:"desc"},{id:"desc"}], take:50 }, commercialDocuments: { include: { allocations: true, advanceApplications: true }, orderBy: [{ issueDate: "desc" },{id:"desc"}] }, audits: { orderBy: [{ createdAt: "desc" },{id:"desc"}], take:50 } } });
   if (!project) throw new AuthorizationError();
   const budgetTotal = project.budgetLines.reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0));
   return { ...project, budgetTotal, customerPayments: deriveProjectPaymentTotal(project.commercialDocuments, "SALES_INVOICE"), vendorPayments: deriveProjectPaymentTotal(project.commercialDocuments, "PURCHASE_BILL") };
