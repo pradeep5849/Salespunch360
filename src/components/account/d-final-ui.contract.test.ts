@@ -24,7 +24,7 @@ describe("D final UI contracts", () => {
     const header = read("src/components/public/public-header.tsx"), logo = read("src/components/brand-logo.tsx");
     expect(header.indexOf("mobile-auth-actions")).toBeLessThan(header.indexOf("<nav"));
     expect(header).toContain('href="/sign-in"'); expect(header).toContain('href="/register"');
-    expect(logo).toContain("SalesPunch<span>360</span>"); expect(logo).not.toContain("salespunch360-logo.png");
+    expect(logo).toContain("/salespunch360-wordmark.webp"); expect(logo).not.toContain("brand-mark");
   });
   it("uses one section slug helper in desktop Account navigation and Menu", () => {
     expect(read("src/components/account/account-shell.tsx")).toContain("accountNavSectionId(group.label)");
