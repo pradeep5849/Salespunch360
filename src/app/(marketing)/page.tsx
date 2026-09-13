@@ -19,8 +19,8 @@ const workflows=[
   {label:"Plus workflow",title:"One business journey across two workspaces",steps:["Field Lead","Quotation","Won","Project","Invoice and receipt","Cost and profitability"],href:"/products/plus"},
 ] as const;
 export default function Home(){return <>
-  <PageHero eyebrow="Field Sales · Business Accounts · Connected" title="One platform for the field, the business, or both together." copy="Run field execution and CRM with SalesPunch360, business accounting and projects with SalesPunch360 Account, or connect both workspaces with SalesPunch360 Plus.">
-    <Link className="button" href="/register">Start {TRIAL_DURATION_DAYS}-day Free Trial</Link><Link className="button secondary" href="/pricing">View Pricing</Link><Link href="/demo">Book a Demo →</Link>
+  <PageHero eyebrow="Field Sales · Business Accounts · Connected" title="Track. Punch. Perform." copy="Run field sales, business accounts, or both together—one secure platform built for teams that move.">
+    <Link className="button" href="/register">Start {TRIAL_DURATION_DAYS}-day Free Trial</Link><Link className="button secondary" href="/pricing">View Pricing</Link><Link href="/demo">Book a Demo →</Link><small className="trial-note">15-day trial · No credit card required</small>
   </PageHero>
   <section className="home-access-strip"><span>Already using SalesPunch360?</span><Link href="/sign-in">Login</Link><Link href="/android">Android / Google Play</Link><Link href="/apps">Explore Web + Android access</Link></section>
   <section className="full-bleed soft"><div className="inner"><div className="section-heading"><p className="eyebrow">Product family</p><h2>Choose the workspace that fits your team.</h2><p>Each edition has a clear purpose. Plus brings both experiences together without giving every user every permission.</p></div><div className="card-grid">{editions.map(e=><article className="card product-family-card" key={e.key}><p className="eyebrow">{e.tagline}</p><h2>{e.name}</h2><p>{e.summary}</p><Link className="learn" href={e.href}>Explore {e.name} →</Link></article>)}</div></div></section>
