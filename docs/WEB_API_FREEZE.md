@@ -1,0 +1,115 @@
+# SalesPunch360 Web/API Freeze
+
+## Freeze Version
+
+- **Freeze date:** 2026-09-13
+- **Main baseline:** `4b129da6bb6e8ca4f7d9cb493f48e217a992dfb8`
+- **API version:** `v1`
+- **Feature SHA:** recorded by the review commit; this document does not embed a self-referential SHA.
+
+This is the final Web/API compatibility baseline before mobile client work. It records implemented behavior, not a desired second API. The executable companion is `src/lib/mobile/contract.ts`.
+
+## Product Editions and Workspace Resolution
+
+| Edition | Sales workspace | Account workspace |
+|---|---|---|
+| `SALESPUNCH360` | Allowed only with an active Sales role/access flag | Denied |
+| `SALESPUNCH360_ACCOUNT` | Denied, including attendance, GPS and check-in | Allowed only with an active Account role/access flag |
+| `SALESPUNCH360_PLUS` | Allowed with active Sales authorization | Allowed with active Account authorization |
+
+A Plus user may switch only when independently authorized for both workspaces. Preference never grants authorization. Inactive users, tenant-attached `SUPER_ADMIN` actors, missing tenants, and missing/inactive workspace grants fail closed. A platform `SUPER_ADMIN` must have no company and routes to `/admin`.
+
+## Roles, Manager Types, and Account Roles
+
+- Sales roles are `PRIMARY_ADMIN`, `ADMIN`, `MANAGER`, and `SALES`. `PRIMARY_ADMIN` additionally owns Sales user administration, settings, and billing. Other Sales roles receive the field/report capabilities defined by `SALES_ROLE_PERMISSIONS`; record visibility remains service-scoped.
+- `FIELD_MANAGER` may perform personal field work and supervise its team. `MANAGER_ONLY`, and a Manager with a null type, may supervise but cannot start personal attendance, upload GPS, or check in.
+- Account permissions use `ACCOUNT_ROLE_PERMISSIONS`: `ACCOUNT_ADMIN` has all Account permissions; `ACCOUNTANT` has operational accounting, quotation, expense, money, stock and reports; `PROJECT_MANAGER` has quotation/project/cost, expense and report scope; `DATA_ENTRY` has dashboard, quotation edit, Sales/Purchase entry, ledger view, journal draft and accounts. Route hiding is not authorization; pages, actions, and service direct-ID lookups enforce these permissions.
+
+## Branch and Tenant Semantics
+
+Every tenant-owned lookup/mutation derives `companyId` from the authenticated principal. Client-supplied tenant identity is not authority. Selected-branch users are limited to assigned active branches; all-branches users may select any active branch in their company. A branch-scoped document must use parties, projects, warehouses, assignees and source documents from that same branch. Cross-tenant and unauthorized cross-branch IDs return a safe denial/absence and cannot be mutated.
+
+## Web Route Contract
+
+There are **112 page routes** and **26 route handlers** (138 application route entries at freeze). Parent layouts and server actions supply the effective authorization; the groups below are the authoritative pathname inventory. Dynamic segments are shown in brackets.
+
+| Category | Paths | Authentication / denial contract |
+|---|---|---|
+| PUBLIC | `/`, `/about`, `/android`, `/apps`, `/compare`, `/contact`, `/demo`, `/features`, `/features/[slug]`, `/pricing`, `/privacy`, `/products`, `/products/account`, `/products/plus`, `/products/salespunch360`, `/resources`, `/resources/faq`, `/security`, `/terms`, `/share/quotation/[token]`, `/share/quotation/[token]/pdf` | No session. Share routes require a valid opaque share token and reveal the approved representation only. |
+| AUTH | `/sign-in`, `/register`, `/verify-email` | Public authentication lifecycle. Authenticated workspace users are resolved to an authorized workspace. |
+| SUPER_ADMIN | `/admin`, `/admin/billing`, `/admin/companies`, `/admin/companies/[companyId]` | Platform `SUPER_ADMIN` only; tenant actors are denied. |
+| SALES_WORKSPACE | `/workspace`, `/workspace/attendance`, `/workspace/billing`, `/workspace/branches`, `/workspace/change-password`, `/workspace/check-ins`, `/workspace/company-profile`, `/workspace/customers`, `/workspace/customers/new`, `/workspace/employees`, `/workspace/employees/account/edit/[id]`, `/workspace/employees/account/new/[role]`, `/workspace/employees/sales/edit/[id]`, `/workspace/employees/sales/new/[kind]`, `/workspace/follow-up-tasks`, `/workspace/leads`, `/workspace/leads/[id]`, `/workspace/reports`, `/workspace/reports/attendance`, `/workspace/reports/check-ins`, `/workspace/reports/check-ins/advanced`, `/workspace/reports/expenses`, `/workspace/reports/geofence-breaches`, `/workspace/reports/gps`, `/workspace/reports/leads`, `/workspace/reports/targets`, `/workspace/settings`, `/workspace/targets` | Authenticated tenant. `/workspace` resolves edition/grants. Operational pages require their corresponding `SALES_*` permission. Billing/settings/user administration remain admin-only. Field mutations additionally require a field-capable Sales actor. Unauthorized workspace access redirects to the permitted workspace/sign-in or returns a server denial from actions. |
+| ACCOUNT_WORKSPACE | `/workspace/account`, `/workspace/account/dashboard`, `/workspace/account/[master]`, `/workspace/account/accounting/[section]`, `/workspace/account/assets`, `/workspace/account/assets/new`, `/workspace/account/assets/[id]`, `/workspace/account/assets/[id]/edit`, `/workspace/account/expenses`, `/workspace/account/expenses/new`, `/workspace/account/expenses/[id]`, `/workspace/account/expenses/categories`, `/workspace/account/expenses/recurring`, `/workspace/account/inventory`, `/workspace/account/inventory/[section]`, `/workspace/account/menu`, `/workspace/account/money`, `/workspace/account/money/accounts`, `/workspace/account/money/capital`, `/workspace/account/money/cheques`, `/workspace/account/money/loans`, `/workspace/account/money/transfers`, `/workspace/account/notifications`, `/workspace/account/projects`, `/workspace/account/projects/new`, `/workspace/account/projects/[id]`, `/workspace/account/projects/[id]/edit`, `/workspace/account/projects/[id]/costing`, `/workspace/account/quotations`, `/workspace/account/quotations/new`, `/workspace/account/quotations/[id]`, `/workspace/account/quotations/[id]/edit`, `/workspace/account/quotations/[id]/revisions/new`, `/workspace/account/reports`, `/workspace/account/reports/[report]`, `/workspace/account/settings`, `/workspace/account/settings/custom-fields`, `/workspace/account/settings/modules`, `/workspace/account/settings/print-templates`, `/workspace/account/tax`, `/workspace/account/tax/[section]`, `/workspace/account/transactions`, `/workspace/account/transactions/new`, `/workspace/account/transactions/[id]`, `/workspace/account/transactions/money`, `/workspace/account/utilities`, `/workspace/account/utilities/audit`, `/workspace/account/utilities/backup`, `/workspace/account/utilities/export`, `/workspace/account/utilities/financial-year`, `/workspace/account/utilities/import`, `/workspace/account/utilities/import/[id]`, `/workspace/account/utilities/period-locks`, `/workspace/account/utilities/recycle-bin`, `/workspace/account/utilities/verification` | Authenticated Account-authorized tenant and route-specific `ACCOUNT_*` permission. `PROJECT_MANAGER` is further record-scoped and cost data requires cost permission. Direct IDs are tenant/branch scoped. Denial redirects to an authorized workspace or produces a server action denial. |
+| PRIVATE_FILE | `GET /api/company-logo`, `GET /api/visit-photos/[visitId]`, `GET /api/visit-photos/[visitId]/thumbnail`, `GET /api/account/signature/[id]`, `GET /api/project-documents/[id]`, `GET /api/expense-attachments/[id]`, `GET /workspace/account/quotations/[id]/pdf`, `GET /api/account/print/[documentType]/[id]` | Authenticated same-tenant access, plus workspace/permission, record and branch scope where applicable. IDs are resolved to authorized records before storage keys are used. Correct stored MIME is returned; raw keys and public private-storage URLs are never accepted as authority. |
+| API | `GET /api/health`; `GET /api/reports/[report]/excel`; `GET /api/account/reports/[report]/[format]`; `GET /api/account/utilities/backup`; `GET /api/account/utilities/export/[type]`; `GET /api/account/utilities/templates/[type]` | Health is public and non-secret. Export/report/utility handlers require authenticated workspace permissions and enforce tenant/branch scope; Sales exports cap at 10,000 rows. |
+| MOBILE_API | `/api/v1/mobile/*` listed below | Bearer token except login. Mobile eligibility always requires an active Sales grant and a Sales-capable edition. |
+
+## Mobile API Contract
+
+All JSON replies set `Cache-Control: no-store`. Unless stated otherwise, the content type is JSON, authentication is `Authorization: Bearer <opaque-token>`, success is 200, and requests are same-tenant with authorized active-branch resolution. Unexpected errors on hardened route surfaces are `{ "error": "SERVER_ERROR", "referenceId": "<uuid>" }` with status 500. Login alone returns the intended access token; no response includes password hashes, token hashes, storage keys, or raw Prisma records.
+
+| Method/path | Request and authorization | Success response/status | Stable domain behavior | Bounds / retry |
+|---|---|---|---|---|
+| `POST /api/v1/mobile/auth/login` | No token. JSON `{identifier,password}`; identifier 3..254, password 8..128. | `{accessToken,expiresAt,bootstrap}` / 200 | Invalid JSON/schema/credentials/inactive/ineligible/account-only: 401 safe generic error. Rate limit: 429. Login increments `sessionVersion`, revokes old web/mobile authentication, and creates the latest session. | Not retry-idempotent; a second success rotates the first token. 10 attempts / 15 minutes per fingerprint. |
+| `POST /api/v1/mobile/auth/logout` | Token optional. No body. | `{ok:true}` / 200 | Unknown/already-revoked token remains successful. | Idempotent; revokes session and removes its push devices. |
+| `POST /api/v1/mobile/auth/password` | Token. JSON `{currentPassword,newPassword,confirmPassword}`; new password >=12 with lower/upper/digit. | `{ok:true}` / 200 | `UNAUTHORIZED` 401; `INVALID_INPUT` 400; `CURRENT_PASSWORD_INCORRECT` 403. Password replacement revokes sessions. | Do not blindly retry after success because the old current password is invalid. |
+| `GET /api/v1/mobile/bootstrap` | Token. | `{branches,branchSelectionRequired,user,company,teamStructure,features,capabilities,entitlement,attendance}` / 200 | Invalid/stale/disabled token: 401. Account-only actors are ineligible. Manager-only/null manager type gets `fieldWorkEnabled:false` and no attendance query/result. | Bounded configuration; no pagination. Safe to retry. |
+| `GET /api/v1/mobile/attendance` | Token; field-capable actor. | Current `{id,startedAt}` or null / 200 | Unauthorized 401. | Bounded current state; safe read. |
+| `POST /api/v1/mobile/attendance` | Token. JSON `{action:START|END,location?,branchId?}`; location has coordinates, optional accuracy and captured time per shared schema. | `{attendance}` / 200 | Invalid input 400. Field role, entitlement, attendance, branch, GPS/capture/geofence and open-state rules produce deterministic denial/conflict; duplicate START or END conflicts. | Transaction/user lock protects one open attendance. Not safe to assume duplicate success. |
+| `POST /api/v1/mobile/locations` | Token/field actor. JSON `{clientPointId,latitude,longitude,accuracyMeters?,capturedAt}`. | `{acknowledged:true,duplicate:boolean}` / 200 | Invalid input 400; unauthorized 401; GPS/attendance/staleness/throttle conflicts 409. Point is tied to the actor's open same-company attendance/branch. | `clientPointId` retry returns existing acknowledgement; sequence is server assigned under attendance lock. |
+| `GET /api/v1/mobile/field?q=` | Token/field actor. | `{branches,customers,visits}` / 200 | `UNAUTHORIZED` 401; `FORBIDDEN` 403; safe field codes; unexpected 500 + reference ID. | Service-bounded context; safe read. |
+| `POST /api/v1/mobile/field` | Token. JSON action `CHECK_IN` plus shared visit schema, or `CHECK_OUT` plus checkout schema. Multipart is check-in only with action, visit type, subject IDs/name/phone, branch, coordinates, notes and optional photo. | Check-in `{visitId,checkedInAt,leadId?}` / 201; checkout `{ok:true}` / 200 | 400 invalid/action; 401 unauthorized; 403 forbidden; workflow/photo/ownership conflicts 409. Public codes include attendance/checkout/photo/customer/phone/radius/ownership/visit errors. Unknown errors are safe 500. | One-open-visit/checkout transaction protection; duplicates conflict. Lead conversion uses existing concurrency protections. |
+| `GET /api/v1/mobile/leads` | Token. Query `id` for detail, otherwise `stage,assignedUserId,followUp,branchId,q`. | Lead or lead list / 200 | `UNAUTHORIZED` 401; `NOT_FOUND` 404; `STALE` 409; validated public codes 400; unexpected 500. Ownership/team and branch scope are server derived. | List max 200, `updatedAt desc`; no page metadata. Safe read. |
+| `POST /api/v1/mobile/leads` | Token. JSON action `FROM_VISIT`, `TRANSITION`, or `FOLLOW_UP`, with the corresponding existing lead/follow-up schema. | From-visit / 201; transition `{ok:true}` / 200; follow-up object / 200 | Invalid action/input/reference/transition and workflow restrictions are stable codes; stale version 409; unknown 500. | From-visit is concurrency protected; transitions use version conflict; follow-up creation is not safe to blindly retry. |
+| `GET /api/v1/mobile/targets` | Token with reports scope. Existing target filters. | `{targets,...}` / 200 | 401 unauthorized, 403 forbidden, 400 invalid target/input/assignee, 409 stale/subscription, unexpected safe 500. | Max 100, `startDate desc,id desc`; batched progress calculation. |
+| `POST /api/v1/mobile/targets` | Token with target mutation authority. Shared create-target schema. | Refreshed target list / 201 | Same target codes/statuses. | Creation not safe to blindly retry. Returned list remains bounded. |
+| `PATCH /api/v1/mobile/targets` | Token with target mutation authority. Shared edit-target schema including `targetId,version`. | Refreshed target list / 200 | Same target codes/statuses; stale version 409. | Optimistic version protected. |
+| `GET /api/v1/mobile/reports` | Token with report scope. `type` plus report filters including `start,end,page,pageSize,employeeId,branchId,q` and report-specific filters. | Existing report object with `rows`, `filters`, summary/options and `totalPages` / 200 | `UNAUTHORIZED` 401; invalid report/date/range 400; unexpected safe 500. Allowed types: attendance, check-ins, advanced-check-ins, leads, gps, geofence, targets. | Page default 25/max 100; date range max 366 days; rows order by event date desc then ID desc (targets: start date/ID). |
+| `POST /api/v1/mobile/push` | Token. JSON `{installationId,fcmToken}` with lengths 16..128 and 20..4096. | `{id,platform,lastSeenAt}` / 200 | Unauthorized 401; invalid input 400. Principal supplies company/user/session; client cannot reassign ownership. | Upsert by installation; token/installation collisions are removed transactionally. Safe to retry. Logout removes session devices. |
+| `GET /api/v1/mobile/company` | Token with `SALES_SETTINGS`. | `{company,entitlement,prices,paymentProvider,paymentMessage}` / 200 | 401 unauthorized; 403 forbidden; 404 company absence. Response uses an explicit company settings selection. | Bounded configuration; safe read. |
+| `PATCH /api/v1/mobile/company` | Token with `SALES_SETTINGS`. JSON `{section:operations|geofence,data}` using shared settings schemas. | Updated company context / 200 | 400 invalid input/section; 401; 403. | Absolute settings update; safe to retry with the same body. |
+| `GET /api/v1/mobile/employees` | Token with `SALES_USER_ADMIN`. | `{employees,teamStructure,entitlement}` / 200 | 401 unauthorized; 403 forbidden. | Bounded management context; safe read. |
+| `POST /api/v1/mobile/employees` | Token with `SALES_USER_ADMIN`. JSON `role:MANAGER|SALES` plus shared employee create fields. | Created employee / 201 | 400 invalid input/role; 401/403; seat/lifecycle/manager/profile conflicts 409. | Not safe to blindly retry. Tenant/branch and role authority are server-side. |
+| `PATCH /api/v1/mobile/employees` | Token with `SALES_USER_ADMIN`. JSON `{employeeId,isActive}`. | `{ok:true}` / 200 | 400 input, 401/403, lifecycle conflicts 409. Direct ID is tenant scoped. | Desired-state activation is retry-tolerant only where lifecycle permits. |
+
+## HTTP Status and Error Code Contract
+
+The executable status table is `MOBILE_HTTP_STATUS`: 200 read/update, 201 creation where listed, 400 malformed/invalid action, 401 missing/invalid auth, 403 authenticated forbidden, 404 safe absence, 409 business/version/concurrency conflict, 429 login rate limit, and 500 unexpected failure. Endpoint exceptions are explicit above. Legacy generic auth/input bodies from login and a few simple routes remain intentionally opaque; clients must use HTTP status there.
+
+`MOBILE_PUBLIC_ERROR_CODES` is the authoritative symbolic allow-list. Field-safe handling never returns arbitrary `Error.message`; unknown failures use `SERVER_ERROR` and a reference ID. Report date validation retains its existing bounded human error text as a documented v1 exception. Internal `MOBILE_UNAUTHORIZED`, `MOBILE_FORBIDDEN`, Prisma codes/messages, SQL, stack traces and filesystem paths are not public contract values.
+
+## Pagination Contract
+
+- Reports: 1-based `page`, default `pageSize=25`, maximum 100, `totalPages`, and deterministic date-desc/ID-desc ordering. Invalid oversized page size is 400, never an unbounded query. Date range is at most 366 days.
+- Leads: bounded list of 200 ordered `updatedAt desc`; no pagination metadata is currently implemented, so v1 does not invent it.
+- Targets: bounded list of 100 ordered `startDate desc,id desc`; no pagination metadata is currently implemented.
+- Bootstrap/configuration/context payloads are inherently bounded or service-capped and do not gain incompatible pagination in this freeze.
+- Web report exports load at most 10,000 rows and require narrower filters beyond the cap.
+
+## Retry / Idempotency Contract
+
+The machine-readable classifications are in `MOBILE_RETRY_CONTRACT`. Attendance and visits use row locks/uniqueness but return conflicts on duplicate state transitions. Location retry by `clientPointId` returns the existing acknowledgement. Push registration is an upsert. Lead/target transitions use optimistic versions. Creation of follow-ups, employees and targets is not safe to blindly retry. Commercial posting, document numbering, settlements, advances, note cumulative limits, opening-balance settlement, signature-current uniqueness, and inventory posting retain their existing database transaction/unique/idempotency protections; callers must use the operation's existing key/version and must not assume universal idempotency.
+
+## Private File and Print/PDF Contract
+
+Private objects are fetched only after authenticated tenant/record authorization; a caller-supplied storage key is never sufficient. Visit photos/thumbnails require authorized Sales record scope. Logos, signatures, project documents, expense attachments and financial documents require same tenant and applicable Account permission/branch scope. Responses preserve correct MIME. Print/PDF resolves logo and historical signature snapshots through authorized server paths.
+
+Payment-demand UPI/QR is emitted only for a **POSTED `SALES_INVOICE` with authoritative outstanding greater than zero**. Quotations, orders, proformas, delivery challans, credit/debit notes, purchases and settled invoices do not receive a payment-demand QR. Historical signature version, allocations, payment mode/reference, bank details and authoritative outstanding remain snapshot/print inputs as implemented.
+
+## Security Invariants
+
+- Passwords are Argon2id hashed. Web sessions are database-backed HTTP-only cookies; mobile sessions store token hashes, enforce expiry/revocation and `sessionVersion`, and latest-login-wins.
+- Disabled/stale/malformed principals fail closed. Logout revokes the presented mobile token and its push registrations.
+- Company, authorization role and branch scope come from the authenticated principal/database, never client claims.
+- Account-only actors never receive field attendance, check-in or GPS access. Manager-only/null-type managers cannot perform personal field workflows.
+- API responses use explicit selects/maps where private material exists. Password/session hashes, secrets, private storage keys and raw internal errors are forbidden.
+
+## Accounting Invariants
+
+Posted commercial and settlement documents require an open financial year/unlocked period, balanced journals, same-branch authoritative parties/sources, and duplicate-post protection. Credit/debit notes cannot cumulatively exceed their source limits. Outstanding is authoritative from postings/allocations, not client input. Advances cannot be over-allocated. Normalized `PartyOpeningBalance` registration does not create a second journal; the original `OPENING_BALANCE` journal remains GL authority. Journal and stock effects post atomically. R2 query batching, indexes and bounded histories must preserve Trial Balance, P&L, Balance Sheet, AR/AP, ageing, project totals, and stock values.
+
+## Compatibility Rules and Post-Freeze Change Policy
+
+Android and other future clients adapt to this v1 contract. They may not require ad-hoc route, request, response, status, error, permission, branch, tenant or retry redesign. Additive optional fields require review; removal, rename, type/status changes and semantic reinterpretation are breaking changes.
+
+After approval, a frozen contract may change only for a critical security defect, critical accounting defect, data-loss defect, or unavoidable production-breaking bug. Such a change must document **before**, **after**, **why**, and **client impact**, and include regression coverage. Ordinary client convenience is not sufficient.
