@@ -11,7 +11,7 @@ import {
   updateTaskAction,
 } from "@/app/actions/projects";
 import { BudgetEditor } from "./budget-editor";
-import { getProject, getProjectFormOptions } from "@/lib/account/projects";
+import { getProject, getProjectFormOptions, type ProjectHistoryParams } from "@/lib/account/projects";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { requireAccountWorkspace } from "@/lib/auth/authorization";
 import { canUsePermission } from "@/lib/auth/permissions";
@@ -20,13 +20,15 @@ import { db } from "@/lib/db";
 const date = (value: Date | null) => value?.toISOString().slice(0, 10) ?? "";
 export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<ProjectHistoryParams>;
 }) {
-  const { id } = await params,
+  const { id } = await params, query=await searchParams,
     actor = await requireAccountWorkspace(),
     [project, options, modules, company] = await Promise.all([
-      getProject(id),
+      getProject(id,query),
       getProjectFormOptions(id),
       enabledModulesForCompany(actor.companyId),
       db.company.findUniqueOrThrow({
@@ -94,11 +96,7 @@ export default async function Page({
           <article>
             <b>Open tasks</b>
             <p>
-              {
-                project.tasks.filter(
-                  (task) => !["COMPLETED", "CANCELLED"].includes(task.status),
-                ).length
-              }
+              {project.openTasks}
             </p>
           </article>
         </div>
@@ -134,7 +132,7 @@ export default async function Page({
             <button>Add team member</button>
           </form>
         )}
-        <h2>BOQ</h2>
+        <h2>BOQ history</h2>
         <ul>
           {project.quotationDocuments.map((boq) => (
             <li key={boq.id}>
@@ -142,6 +140,7 @@ export default async function Page({
             </li>
           ))}
         </ul>
+        <HistoryPages id={id} keyName="boqsPage" page={project.history.boqsPage} totalPages={project.history.pages.boqs}/>
         {mutable && (
           <form action={linkBoqAction}>
             <input type="hidden" name="projectId" value={id} />
@@ -221,7 +220,7 @@ export default async function Page({
             <button>Add milestone</button>
           </form>
         )}
-        <h2>Tasks</h2>
+        <h2>Task history</h2>
         {project.tasks.map((task) => (
           <form key={task.id} action={updateTaskAction} className="stack">
             <input type="hidden" name="projectId" value={id} />
@@ -285,6 +284,7 @@ export default async function Page({
             <button>Add task</button>
           </form>
         )}
+        <HistoryPages id={id} keyName="tasksPage" page={project.history.tasksPage} totalPages={project.history.pages.tasks}/>
         <h2>Documents</h2>
         <ul>
           {project.documents.map((document) => (
@@ -295,6 +295,7 @@ export default async function Page({
             </li>
           ))}
         </ul>
+        <HistoryPages id={id} keyName="documentsPage" page={project.history.documentsPage} totalPages={project.history.pages.documents}/>
         {mutable && (
           <form action={addProjectDocumentAction}>
             <input type="hidden" name="projectId" value={id} />
@@ -302,12 +303,13 @@ export default async function Page({
             <button>Upload private document</button>
           </form>
         )}
-        <h2>Project expenses</h2>
-        <p>{expenses.length} linked general-expense purchase bills.</p>
-        <h2>Purchases & vendor/subcontractor activity</h2>
+        <h2>Recent project expenses</h2>
+        <p>{expenses.length} linked general-expense purchase bills on this history page.</p>
+        <h2>Recent purchases & vendor/subcontractor activity</h2>
         <Documents rows={purchases} />
-        <h2>Invoices</h2>
+        <h2>Recent invoices</h2>
         <Documents rows={sales} />
+        <HistoryPages id={id} keyName="commercialPage" page={project.history.commercialPage} totalPages={project.history.pages.commercial}/>
         <h2>Payments</h2>
         <p>
           Customer payments: {project.customerPayments.toString()} · Vendor
@@ -343,10 +345,12 @@ export default async function Page({
             </li>
           ))}
         </ul>
+        <HistoryPages id={id} keyName="auditsPage" page={project.history.auditsPage} totalPages={project.history.pages.audits}/>
       </section>
     </main>
   );
 }
+function HistoryPages({id,keyName,page,totalPages}:{id:string;keyName:keyof ProjectHistoryParams;page:number;totalPages:number}){if(totalPages<=1)return null;return <nav aria-label={`${keyName} pagination`}><span>Page {page} of {totalPages}</span>{page>1&&<Link href={`/workspace/account/projects/${id}?${keyName}=${page-1}`}>Previous</Link>}{page<totalPages&&<Link href={`/workspace/account/projects/${id}?${keyName}=${page+1}`}>Next</Link>}</nav>}
 function Documents({
   rows,
 }: {

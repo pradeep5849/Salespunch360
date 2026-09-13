@@ -58,6 +58,7 @@ async function assertProjectCapability(actor: ProjectAccessActor) {
   await requireAccountModules(actor, "PROJECTS");
 }
 export function nextCompletionAt(status:"COMPLETED"|string,current:Date|null,now=new Date()){return status==="COMPLETED"?current??now:null}
+export function projectCustomerWhere(companyId:string,branchId:string,customerId:string):Prisma.CustomerWhereInput{return{id:customerId,companyId,branchId,isActive:true,isAccountCustomer:true}}
 export async function listOpenProjectOptionsForActor(actor: ProjectAccessActor, edition?: ProductEdition) {
   const enabled = await enabledModulesForCompany(actor.companyId);
   const productEdition = edition ?? (await db.company.findUnique({ where: { id: actor.companyId }, select: { productEdition: true } }))?.productEdition;
@@ -99,7 +100,7 @@ export async function createProject(raw: unknown) {
   if (!ids.includes(parsed.branchId)) throw new AuthorizationError();
   const data = actor.accountRole === "PROJECT_MANAGER" ? { ...parsed, projectManagerId: actor.id } : parsed;
   return db.$transaction(async tx => {
-    const [branch, customer] = await Promise.all([tx.branch.findFirst({ where: { id: data.branchId, companyId: actor.companyId, isActive: true } }), tx.customer.findFirst({ where: { id: data.customerId, companyId: actor.companyId, isActive: true, isAccountCustomer: true } })]);
+    const [branch, customer] = await Promise.all([tx.branch.findFirst({ where: { id: data.branchId, companyId: actor.companyId, isActive: true } }), tx.customer.findFirst({ where: projectCustomerWhere(actor.companyId,data.branchId,data.customerId) })]);
     if (!branch) throw new Error("INVALID_BRANCH"); if (!customer) throw new Error("INVALID_CUSTOMER");
     await validateManager(tx, actor, data.projectManagerId, data.branchId);
     const projectNumber = await allocateDocumentNumberInTx(tx, { companyId: actor.companyId, branchId: data.branchId, seriesKey: "PROJECT", defaults: { prefix: "PRJ-", padding: 6 } });
@@ -144,12 +145,16 @@ export async function listProjects(raw: { page?: string; pageSize?: string } = {
   return { rows, ...paging, total, totalPages: Math.max(1, Math.ceil(total / paging.pageSize)) };
 }
 export function deriveProjectPaymentTotal(documents:Array<{type:string;allocations:Array<{amount:Prisma.Decimal}>;advanceApplications:Array<{amount:Prisma.Decimal}>}>,type:string){return documents.filter(document=>document.type===type).reduce((sum,document)=>sum.add(document.allocations.reduce((amount,row)=>amount.add(row.amount),new Prisma.Decimal(0))).add(document.advanceApplications.reduce((amount,row)=>amount.add(row.amount),new Prisma.Decimal(0))),new Prisma.Decimal(0))}
-export async function getProject(id: string) {
+export type ProjectHistoryParams={tasksPage?:string;documentsPage?:string;boqsPage?:string;commercialPage?:string;auditsPage?:string;pageSize?:string};
+export function projectHistoryInput(raw:ProjectHistoryParams={}){const pageSize=projectPageInput({pageSize:raw.pageSize}).pageSize,page=(value?:string)=>projectPageInput({page:value,pageSize:String(pageSize)}).page;return{pageSize,tasksPage:page(raw.tasksPage),documentsPage:page(raw.documentsPage),boqsPage:page(raw.boqsPage),commercialPage:page(raw.commercialPage),auditsPage:page(raw.auditsPage)}}
+export async function getProject(id: string,raw:ProjectHistoryParams={}) {
   const actor = await projectActor(false), ids = await authorizedProjectBranchIds(actor);
-  const project = await db.project.findFirst({ where: { id, ...projectRecordScope(actor, ids) }, include: { customer: true, branch: true, projectManager: true, members: { include: { user: true } }, budgetLines: { orderBy: { position: "asc" } }, milestones: { orderBy: { position: "asc" } }, tasks: { orderBy:[{updatedAt:"desc"},{id:"desc"}],take:50 }, documents: { orderBy:[{createdAt:"desc"},{id:"desc"}],take:50 }, quotationDocuments: { where: { documentType: "BOQ" }, orderBy:[{createdAt:"desc"},{id:"desc"}], take:50 }, commercialDocuments: { include: { allocations: true, advanceApplications: true }, orderBy: [{ issueDate: "desc" },{id:"desc"}] }, audits: { orderBy: [{ createdAt: "desc" },{id:"desc"}], take:50 } } });
+  const paging=projectHistoryInput(raw),skip=(page:number)=>(page-1)*paging.pageSize;
+  const project = await db.project.findFirst({ where: { id, ...projectRecordScope(actor, ids) }, include: { customer: true, branch: true, projectManager: true, members: { include: { user: true } }, budgetLines: { orderBy: { position: "asc" } }, milestones: { orderBy: { position: "asc" } }, tasks: { orderBy:[{updatedAt:"desc"},{id:"desc"}],skip:skip(paging.tasksPage),take:paging.pageSize }, documents: { orderBy:[{createdAt:"desc"},{id:"desc"}],skip:skip(paging.documentsPage),take:paging.pageSize }, quotationDocuments: { where: { documentType: "BOQ" }, orderBy:[{createdAt:"desc"},{id:"desc"}],skip:skip(paging.boqsPage),take:paging.pageSize }, commercialDocuments: { orderBy: [{ issueDate: "desc" },{id:"desc"}],skip:skip(paging.commercialPage),take:paging.pageSize }, audits: { orderBy: [{ createdAt: "desc" },{id:"desc"}],skip:skip(paging.auditsPage),take:paging.pageSize },_count:{select:{tasks:true,documents:true,quotationDocuments:{where:{documentType:"BOQ"}},commercialDocuments:true,audits:true}} } });
   if (!project) throw new AuthorizationError();
-  const budgetTotal = project.budgetLines.reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0));
-  return { ...project, budgetTotal, customerPayments: deriveProjectPaymentTotal(project.commercialDocuments, "SALES_INVOICE"), vendorPayments: deriveProjectPaymentTotal(project.commercialDocuments, "PURCHASE_BILL") };
+  const paymentWhere=(type:"SALES_INVOICE"|"PURCHASE_BILL")=>({companyId:actor.companyId,document:{projectId:project.id,companyId:actor.companyId,branchId:project.branchId,type}}),[openTasks,customerAllocations,customerAdvances,vendorAllocations,vendorAdvances]=await Promise.all([db.projectTask.count({where:{companyId:actor.companyId,projectId:project.id,status:{notIn:["COMPLETED","CANCELLED"]}}}),db.settlementAllocation.aggregate({where:paymentWhere("SALES_INVOICE"),_sum:{amount:true}}),db.advanceApplication.aggregate({where:paymentWhere("SALES_INVOICE"),_sum:{amount:true}}),db.settlementAllocation.aggregate({where:paymentWhere("PURCHASE_BILL"),_sum:{amount:true}}),db.advanceApplication.aggregate({where:paymentWhere("PURCHASE_BILL"),_sum:{amount:true}})]);
+  const budgetTotal = project.budgetLines.reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0)),total=(a:{_sum:{amount:Prisma.Decimal|null}},b:{_sum:{amount:Prisma.Decimal|null}})=>new Prisma.Decimal(a._sum.amount??0).add(b._sum.amount??0),pages={tasks:Math.max(1,Math.ceil(project._count.tasks/paging.pageSize)),documents:Math.max(1,Math.ceil(project._count.documents/paging.pageSize)),boqs:Math.max(1,Math.ceil(project._count.quotationDocuments/paging.pageSize)),commercial:Math.max(1,Math.ceil(project._count.commercialDocuments/paging.pageSize)),audits:Math.max(1,Math.ceil(project._count.audits/paging.pageSize))};
+  return { ...project, budgetTotal,openTasks,customerPayments:total(customerAllocations,customerAdvances),vendorPayments:total(vendorAllocations,vendorAdvances),history:{...paging,pages} };
 }
 export async function getProjectFormOptions(projectId?: string) {
   const actor = await projectActor(false); await requireAccountModules(actor, "PROJECTS"); const ids = await authorizedProjectBranchIds(actor);
