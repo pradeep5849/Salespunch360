@@ -1,7 +1,7 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
 import { mobileReportActor } from "@/lib/mobile/report-actor";
 import { createTargetForActor, editTargetForActor, listTargetsForActor } from "@/lib/targets/service";
-import { mobileJson } from "@/lib/mobile/http";
+import { mobileJson, mobileUnexpected } from "@/lib/mobile/http";
 
 const actor = async (request: Request) => mobileReportActor(await authenticateMobileToken(request.headers.get("authorization")));
 function failure(error: unknown) {
@@ -9,7 +9,8 @@ function failure(error: unknown) {
   if (code === "MOBILE_UNAUTHORIZED") return mobileJson({ error: "UNAUTHORIZED" }, 401);
   if (code === "NOT_AUTHORIZED" || code === "Not authorized") return mobileJson({ error: "FORBIDDEN" }, 403);
   if (["STALE", "SUBSCRIPTION_REQUIRED"].includes(code)) return mobileJson({ error: code }, 409);
-  return mobileJson({ error: code || "INVALID_INPUT" }, 400);
+  if (["INVALID_INPUT", "INVALID_TARGET", "INVALID_ASSIGNEE"].includes(code)) return mobileJson({ error: code }, 400);
+  return mobileUnexpected("MOBILE_TARGETS", error);
 }
 export async function GET(request: Request) {
   try { const url = new URL(request.url); return mobileJson(await listTargetsForActor(await actor(request),Object.fromEntries(url.searchParams))); }
