@@ -2,15 +2,13 @@
 
 ## Status
 
-**Blocked before implementation.** The frozen mobile v1 contract cannot currently
-authorize an Account-only Android user, describe independently authorized
-workspaces, or exchange a mobile bearer session for the HTTP-only Web session
-required by the Account workspace. Implementing the requested client shell would
-therefore either be unusable or would require insecure client-side assumptions.
+**SERVER CONTRACT AMENDMENT IMPLEMENTED — ANDROID IMPLEMENTATION STILL PENDING REVIEW.**
+The approved narrow v1 amendment resolves the previously confirmed server blockers.
+No Android M1/M2 implementation starts until this bridge is reviewed and approved.
 
-No Android, Web, API, Prisma, migration, or production-script implementation was
-changed at this gate. This document records the required architecture, the audited
-baseline, and the exact contract decisions needed before M1/M2 can resume.
+Android sources and production scripts remain unchanged. This gate changes only the
+mobile authentication/workspace contract, linked session bridge, forward schema
+migration, tests, and freeze documentation.
 
 ## Required architecture
 
@@ -46,53 +44,43 @@ baseline, and the exact contract decisions needed before M1/M2 can resume.
   policy; release uses the canonical HTTPS API URL, R8, and optional signing values
   supplied only by environment variables. Services are not exported.
 
-## Blocking contract gaps
+## Resolved prerequisite contract gaps
 
 ### 1. Account-only users cannot establish a mobile session
 
-The current mobile login authority requires an active Sales grant, a Sales role,
-and an edition that allows Sales. Consequently `SALESPUNCH360_ACCOUNT` users and
-Plus users with Account-only authorization are rejected before Android can resolve
-their Account workspace. This directly prevents the M1 Account-only acceptance
-matrix and the M2 Plus/Account-only case.
+Mobile login now accepts active tenant identities with at least one workspace grant,
+using the shared server workspace policy. Account-only and Plus Account-only actors
+receive the same opaque login envelope as existing Sales actors.
 
 ### 2. Bootstrap cannot authorize workspace availability
 
-The frozen bootstrap response exposes a non-null Sales role and Sales-oriented
-features/capabilities, but not ProductEdition, Account role, Account access state,
-or a server-derived authorized-workspace list. Android therefore cannot distinguish
-Plus+Sales-only, Plus+Account-only, and Plus+both without treating local assumptions
-as authorization. Doing so would violate the required fail-closed model.
+Bootstrap now adds `productEdition`, `authorizedWorkspaces`, `canSwitchWorkspace`,
+and `user.accountRole`. Android must treat that fresh ordered workspace list as the
+only coarse workspace authority; local state remains preference only.
 
 ### 3. No approved mobile-to-Web session handoff exists
 
-The native app owns a mobile bearer token, while the Web Account application uses
-a separate HTTP-only `sp360_session` cookie backed by the Web session store. The
-repository has no one-time, short-lived, same-user exchange mechanism that can set
-that cookie. Loading the canonical Account URL in a WebView would show Web login;
-injecting the bearer token into a URL, JavaScript, or a bridge is expressly unsafe.
+Android will call authenticated `POST /api/v1/mobile/web-session` with an optional
+Account-relative `redirectPath`, retain the returned 90-second `handoffCode` only in
+memory, then use WebView `postUrl()` to form-post `code` to canonical
+`https://www.salespunch360.com/mobile/web-session`. The consumer atomically creates
+the linked HTTP-only Web cookie and redirects to the server-stored Account path.
 
-These gaps cannot be corrected solely in Android. Resolving them changes successful
-mobile authentication/bootstrap behavior and/or adds a session-exchange operation,
-which requires an explicit Web/API freeze decision. No endpoint was added and no
-existing shape was changed in this gate.
+The bearer token is never supplied to WebView, a URL, JavaScript, or a bridge. The
+handoff is hashed at rest, one-time, Account-authorized at issue and consumption,
+and bound to the mobile session, user, generation, expiry, and normalized redirect.
 
-## Minimum decisions required to unblock
+## Approved bridge contract
 
-The Web/API owners must explicitly approve and freeze a server-authoritative design
-covering both of the following before Android implementation resumes:
-
-1. Mobile authentication/bootstrap eligibility and data that support Account-only
-   identities and return the independently authorized `SALES`/`ACCOUNT` workspace
-   set after checking edition, active grant, role, identity, and session version.
-2. A one-time, short-lived, replay-resistant mobile-session-to-Web-session handoff
-   that derives identity and Account authorization server-side, permits only
-   same-origin Account redirect paths, sets the existing secure HTTP-only cookie,
-   and never exposes the mobile bearer token to Web content or URLs.
-
-The API owners must also decide whether these are a versioned v1 contract amendment
-or a later API version. Android must not guess a response extension or invent an
-Android-specific duplicate Account API.
+- API stays v1; operation inventory is 22 after adding only `POST /web-session`.
+- Existing login envelope remains `{accessToken, expiresAt, bootstrap}`.
+- Account-only actors receive false Sales feature/capability flags and cannot call
+  any native Sales operation; those operations return `FORBIDDEN` / 403.
+- Consumption accepts only form-encoded POST. It sets `sp360_session` with HttpOnly,
+  production Secure, SameSite=Lax and Path=/, expiring no later than mobile auth.
+- Native and linked Web logout invalidate the linked pair and its push registration.
+  Normal browser logout remains independent. A later normal login/password change
+  preserves latest-login-wins and invalidates the old pair.
 
 ## Planned client behavior after unblocking
 
@@ -116,10 +104,9 @@ Android-specific duplicate Account API.
 
 ## Known limitations
 
-M1/M2 is not runnable until the three blocking gaps above are resolved. Accordingly,
-there is no Account WebView, workspace switch UI, Account file flow, Account deep
-link routing, or Account notification routing in this change. Native Sales behavior
-and the frozen 21-operation mobile v1 contract remain unchanged.
+Android implementation intentionally remains pending actual review and approval of
+this server amendment. There is still no WebView, workspace switch UI, Account file
+flow, Account deep-link routing, or Account notification routing in this change.
 
 ## Validation commands
 

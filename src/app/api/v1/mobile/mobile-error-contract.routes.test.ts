@@ -10,7 +10,7 @@ const mocks=vi.hoisted(()=>({
 
 vi.mock("@/lib/logging",()=>({logEvent:mocks.log}));
 vi.mock("@/lib/mobile/auth",()=>({
-  authenticateMobileToken:mocks.auth,mobileBootstrap:mocks.bootstrap,mobileFieldWorkEnabled:mocks.fieldEnabled,
+  authenticateMobileSalesToken:mocks.auth,authenticateMobileToken:mocks.auth,mobileBootstrap:mocks.bootstrap,mobileFieldWorkEnabled:mocks.fieldEnabled,
   createMobileSession:mocks.createSession,revokeMobileToken:mocks.revoke,
 }));
 vi.mock("@/lib/mobile/attendance",()=>({mobileAttendanceAction:mocks.attendance,mobileUploadPoint:mocks.upload}));

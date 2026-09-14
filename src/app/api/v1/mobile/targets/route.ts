@@ -1,10 +1,10 @@
-import { authenticateMobileToken } from "@/lib/mobile/auth";
+import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileReportActor } from "@/lib/mobile/report-actor";
 import { createTargetForActor, editTargetForActor, listTargetsForActor } from "@/lib/targets/service";
 import { mobileAuthorizationFailure, mobileBranchFailure, mobileJson, mobileUnauthorized, mobileUnexpected } from "@/lib/mobile/http";
 import { ZodError } from "zod";
 
-const actor = async (request: Request) => mobileReportActor(await authenticateMobileToken(request.headers.get("authorization")));
+const actor = async (request: Request) => mobileReportActor(await authenticateMobileSalesToken(request.headers.get("authorization")));
 function failure(error: unknown) {
   const code = error instanceof Error ? error.message : "";
   const expected = mobileUnauthorized(error) ?? mobileAuthorizationFailure(error) ?? mobileBranchFailure(error);

@@ -1,6 +1,6 @@
 import{beforeEach,describe,expect,it,vi}from"vitest";
 const mocks=vi.hoisted(()=>({auth:vi.fn(),list:vi.fn(),get:vi.fn(),fromVisit:vi.fn(),transition:vi.fn(),followUp:vi.fn()}));
-vi.mock("@/lib/mobile/auth",async importOriginal=>({...await importOriginal<typeof import("@/lib/mobile/auth")>(),authenticateMobileToken:mocks.auth}));
+vi.mock("@/lib/mobile/auth",async importOriginal=>({...await importOriginal<typeof import("@/lib/mobile/auth")>(),authenticateMobileSalesToken:mocks.auth}));
 vi.mock("@/lib/leads/service",()=>({listLeadsForActor:mocks.list,getLeadForActor:mocks.get,createLeadFromVisitForActor:mocks.fromVisit,transitionLeadForActor:mocks.transition}));
 vi.mock("@/lib/follow-up-tasks/service",()=>({createFollowUpTaskForActor:mocks.followUp}));
 import{GET,POST}from"./leads/route";

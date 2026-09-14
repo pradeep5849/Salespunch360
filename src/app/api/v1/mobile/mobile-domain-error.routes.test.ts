@@ -1,7 +1,7 @@
 import{beforeEach,describe,expect,it,vi}from"vitest";import{z}from"zod";
 const mocks=vi.hoisted(()=>({auth:vi.fn(),leadList:vi.fn(),leadGet:vi.fn(),leadFromVisit:vi.fn(),leadTransition:vi.fn(),followUp:vi.fn(),report:vi.fn(),reportActor:vi.fn(),targetList:vi.fn(),targetCreate:vi.fn(),targetEdit:vi.fn(),log:vi.fn()}));
 vi.mock("@/lib/logging",()=>({logEvent:mocks.log}));
-vi.mock("@/lib/mobile/auth",()=>({authenticateMobileToken:mocks.auth}));
+vi.mock("@/lib/mobile/auth",()=>({authenticateMobileSalesToken:mocks.auth}));
 vi.mock("@/lib/mobile/leads",()=>({mobileLeads:mocks.leadList,mobileLead:mocks.leadGet,mobileLeadFromVisit:mocks.leadFromVisit,mobileTransitionLead:mocks.leadTransition,mobileFollowUp:mocks.followUp}));
 vi.mock("@/lib/mobile/reports",()=>({mobileReport:mocks.report}));
 vi.mock("@/lib/mobile/report-actor",()=>({mobileReportActor:mocks.reportActor}));

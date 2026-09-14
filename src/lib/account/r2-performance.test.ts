@@ -42,6 +42,6 @@ describe("R2 query/index contracts",()=>{
  });
  it("sorts R2 after the latest historical Y invariant migration",()=>{
   const migrations=readdirSync("prisma/migrations",{withFileTypes:true}).filter(entry=>entry.isDirectory()).map(entry=>entry.name).sort();
-  expect(migrations.slice(-2)).toEqual(["20260913100000_y02_y03_tenant_invariants","20260913150000_r2_performance_indexes"]);
+  expect(migrations.slice(-3)).toEqual(["20260913100000_y02_y03_tenant_invariants","20260913150000_r2_performance_indexes","20260914130000_m1_m2_mobile_web_session_bridge"]);
  });
 });

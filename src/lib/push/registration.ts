@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import type { MobilePrincipal } from "@/lib/mobile/auth";
 import { z } from "zod";
 const schema = z
   .object({
@@ -7,8 +6,8 @@ const schema = z
     fcmToken: z.string().trim().min(20).max(4096),
   })
   .strict();
-export async function registerPushDevice(
-  principal: MobilePrincipal,
+export async function registerPushDevice<P extends {id:string;companyId:string;mobileSessionId?:string}>(
+  principal: P,
   raw: unknown,
   now = new Date(),
 ) {

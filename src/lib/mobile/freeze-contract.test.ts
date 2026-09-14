@@ -16,8 +16,8 @@ describe("frozen mobile API v1 contract", () => {
   it("keeps the version, complete endpoint/method inventory, and route implementations", () => {
     expect(MOBILE_API_VERSION).toBe("v1");
     expect(MOBILE_API_PREFIX).toBe("/api/v1/mobile");
-    expect(MOBILE_ENDPOINTS).toHaveLength(21);
-    expect(new Set(MOBILE_ENDPOINTS.map(([method, path]) => `${method} ${path}`)).size).toBe(21);
+    expect(MOBILE_ENDPOINTS).toHaveLength(22);
+    expect(new Set(MOBILE_ENDPOINTS.map(([method, path]) => `${method} ${path}`)).size).toBe(22);
     for (const [, path] of MOBILE_ENDPOINTS) {
       expect(existsSync(join(process.cwd(), "src/app/api/v1/mobile", path, "route.ts"))).toBe(true);
     }

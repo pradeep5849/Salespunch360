@@ -1,9 +1,9 @@
-import { authenticateMobileToken } from "@/lib/mobile/auth";
+import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileCompanyContext, mobileUpdateCompany, MobileCompanyError } from "@/lib/mobile/company";
 import { mobileBranchFailure, mobileJson, mobileUnauthorized, mobileUnexpected } from "@/lib/mobile/http";
 import { ZodError } from "zod";
 
-const principal = (request: Request) => authenticateMobileToken(request.headers.get("authorization"));
+const principal = (request: Request) => authenticateMobileSalesToken(request.headers.get("authorization"));
 function failure(error: unknown) {
   if (error instanceof MobileCompanyError) return mobileJson({ error: error.code }, error.status);
   const expected = mobileUnauthorized(error) ?? mobileBranchFailure(error);

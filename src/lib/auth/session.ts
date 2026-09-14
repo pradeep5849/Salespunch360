@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { createSessionToken, hashSessionToken } from "./crypto";
 import { canAuthenticate } from "./eligibility";
+import { canAccessAccountWorkspace } from "./workspace-policy";
 import { clearUserAuthentication, lockUser, revokeUserAuthenticationWithLock } from "./session-generation";
 
 const COOKIE_NAME = "sp360_session";
@@ -53,9 +54,10 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    select: { expiresAt: true, sessionVersion: true, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, isActive: true, sessionVersion: true, branchAccessScope:true, branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{branches:{where:{isActive:true},select:{id:true}}}} } } },
+    select: { expiresAt: true, sessionVersion: true, mobileSession:{select:{id:true,expiresAt:true,revokedAt:true,sessionVersion:true}}, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, isActive: true, sessionVersion: true, branchAccessScope:true, branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{productEdition:true,branches:{where:{isActive:true},select:{id:true}}}} } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user) || session.sessionVersion !== session.user.sessionVersion) return null;
+  if(session.mobileSession&&(session.mobileSession.revokedAt!==null||session.mobileSession.expiresAt<=new Date()||session.mobileSession.sessionVersion!==session.user.sessionVersion||!session.user.company||!canAccessAccountWorkspace(session.user,session.user.company.productEdition)))return null;
   return {
     id: session.user.id,
     name: session.user.name,
@@ -76,7 +78,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
 export async function revokeCurrentSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (token) await db.session.deleteMany({ where: { tokenHash: hashSessionToken(token) } });
+  if (token) await db.$transaction(async tx=>{const session=await tx.session.findUnique({where:{tokenHash:hashSessionToken(token)},select:{id:true,mobileSessionId:true}});if(!session)return;if(session.mobileSessionId){await tx.pushDevice.deleteMany({where:{mobileSessionId:session.mobileSessionId}});await tx.mobileSession.updateMany({where:{id:session.mobileSessionId},data:{revokedAt:new Date(),webHandoffCodeHash:null,webHandoffExpiresAt:null,webHandoffRedirectPath:null}})}await tx.session.delete({where:{id:session.id}})});
   cookieStore.set(COOKIE_NAME, "", cookieOptions(new Date(0)));
 }
 

@@ -1196,6 +1196,8 @@ model Session {
   sessionVersion Int      @default(0)
   expiresAt      DateTime
   createdAt      DateTime @default(now())
+  mobileSessionId String? @unique @db.Uuid
+  mobileSession   MobileSession? @relation("MobileWebSession", fields: [mobileSessionId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([userId])
   @@index([expiresAt])
@@ -1213,6 +1215,10 @@ model MobileSession {
   revokedAt      DateTime?
   createdAt      DateTime     @default(now())
   pushDevices    PushDevice[]
+  webHandoffCodeHash String? @unique @db.Char(64)
+  webHandoffExpiresAt DateTime?
+  webHandoffRedirectPath String?
+  webSession Session? @relation("MobileWebSession")
 
   @@index([userId, revokedAt])
   @@index([expiresAt])

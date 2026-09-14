@@ -17,6 +17,7 @@ export const MOBILE_ENDPOINTS = [
   ["GET", "/field"], ["POST", "/field"],
   ["GET", "/leads"], ["POST", "/leads"],
   ["POST", "/locations"], ["POST", "/push"], ["GET", "/reports"],
+  ["POST", "/web-session"],
   ["GET", "/targets"], ["POST", "/targets"], ["PATCH", "/targets"],
 ] as const;
 
