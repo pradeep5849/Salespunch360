@@ -1,16 +1,17 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
 import { mobileReportActor } from "@/lib/mobile/report-actor";
 import { createTargetForActor, editTargetForActor, listTargetsForActor } from "@/lib/targets/service";
-import { mobileJson, mobileUnexpected } from "@/lib/mobile/http";
+import { mobileAuthorizationFailure, mobileBranchFailure, mobileJson, mobileUnauthorized, mobileUnexpected } from "@/lib/mobile/http";
 import { ZodError } from "zod";
 
 const actor = async (request: Request) => mobileReportActor(await authenticateMobileToken(request.headers.get("authorization")));
 function failure(error: unknown) {
   const code = error instanceof Error ? error.message : "";
-  if (code === "MOBILE_UNAUTHORIZED") return mobileJson({ error: "UNAUTHORIZED" }, 401);
-  if (code === "NOT_AUTHORIZED" || code === "Not authorized") return mobileJson({ error: "FORBIDDEN" }, 403);
+  const expected = mobileUnauthorized(error) ?? mobileAuthorizationFailure(error) ?? mobileBranchFailure(error);
+  if (expected) return expected;
   if (["STALE", "SUBSCRIPTION_REQUIRED"].includes(code)) return mobileJson({ error: code }, 409);
   if (["INVALID_INPUT", "INVALID_TARGET", "INVALID_ASSIGNEE"].includes(code)) return mobileJson({ error: code }, 400);
+  if (["INVALID_PERIOD", "NON_CANONICAL_PERIOD"].includes(code)) return mobileJson({ error: "INVALID_TARGET" }, 400);
   if (error instanceof SyntaxError || error instanceof ZodError) return mobileJson({ error: "INVALID_INPUT" }, 400);
   return mobileUnexpected("MOBILE_TARGETS", error);
 }

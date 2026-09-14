@@ -39,6 +39,8 @@ import {GET as employeesGet} from "./employees/route";
 import {POST as pushPost} from "./push/route";
 import {MobileCompanyError} from "@/lib/mobile/company";
 import {MobileEmployeeError} from "@/lib/mobile/employees";
+import {EmployeePolicyError} from "@/lib/employees/policy";
+import {OperationalBranchError} from "@/lib/branches/operational-scope";
 
 const secret="postgresql://user:password@private-db-host/database SQL failure /private/storage/key token=secret";
 const headers={authorization:`Bearer ${"a".repeat(40)}`,"content-type":"application/json"};
@@ -93,6 +95,15 @@ describe("final mobile route error contract",()=>{
     mocks.companyContext.mockRejectedValueOnce(new MobileCompanyError("FORBIDDEN",403));const company=await companyGet(get());expect(company.status).toBe(403);expect(await company.json()).toEqual({error:"FORBIDDEN"});
     mocks.employeeContext.mockRejectedValueOnce(new MobileEmployeeError("INVALID_ROLE",400));const employee=await employeesGet(get());expect(employee.status).toBe(400);expect(await employee.json()).toEqual({error:"INVALID_ROLE"});
     const validation=z.object({required:z.string()}).safeParse({});if(validation.success)throw new Error("expected invalid fixture");mocks.registerPush.mockRejectedValueOnce(validation.error);const push=await pushPost(post({}));expect(push.status).toBe(400);expect(await push.json()).toEqual({error:"INVALID_INPUT"});
+  });
+
+  it("normalizes every expected employee business and branch failure",async()=>{
+    const cases:[unknown,number,string][]= [
+      [new EmployeePolicyError("PHONE_IN_USE"),409,"PHONE_IN_USE"],[new EmployeePolicyError("NOT_FOUND"),404,"NOT_FOUND"],
+      [new Error("INVALID_BRANCH"),400,"INVALID_BRANCH"],[new Error("BRANCH_REQUIRED"),400,"BRANCH_REQUIRED"],
+      [new OperationalBranchError("BRANCH_FORBIDDEN"),403,"BRANCH_FORBIDDEN"],[new EmployeePolicyError("SEAT_LIMIT"),409,"SEAT_LIMIT"],
+    ];
+    for(const [error,status,code]of cases){mocks.employeeContext.mockRejectedValueOnce(error);const response=await employeesGet(get());expect(response.status).toBe(status);expect(await response.json()).toEqual({error:code})}
   });
 
   it("preserves password statuses and makes database failures safe",async()=>{
