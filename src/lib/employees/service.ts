@@ -78,6 +78,8 @@ async function loadAssignableManager(tx: Prisma.TransactionClient, companyId: st
   return manager.id;
 }
 async function validateBranches(tx:Prisma.TransactionClient,companyId:string,scope:"ALL_BRANCHES"|"SELECTED_BRANCHES",ids:string[]){const unique=[...new Set(ids)];if(scope==="SELECTED_BRANCHES"){if(!unique.length)throw new Error("BRANCH_REQUIRED");const count=await tx.branch.count({where:{companyId,id:{in:unique},isActive:true}});if(count!==unique.length)throw new Error("INVALID_BRANCH")}return scope==="SELECTED_BRANCHES"?unique:[]}
+export function isEmployeeEmailUniqueError(error:unknown){if(!(error instanceof Prisma.PrismaClientKnownRequestError)||error.code!=="P2002")return false;const target=error.meta?.target;return Array.isArray(target)?target.length===1&&target[0]==="email":typeof target==="string"&&target.split(/[^A-Za-z]+/).includes("email")}
+export function normalizeEmployeeCreateError(error:unknown):never{if(isEmployeeEmailUniqueError(error))throw new EmployeePolicyError("EMAIL_IN_USE");throw error}
 
 export async function listEmployees(filter: "ALL" | "MANAGERS" | "SALES" | "ACTIVE" | "INACTIVE" = "ALL") {
   const { companyId } = await requireSalesUserAdmin(false);
@@ -106,7 +108,7 @@ export async function getEmployeeManagementContextForCompany(companyId: string) 
 async function createEmployeeForCompany(companyId: string, salesRole: "MANAGER" | "SALES", raw: unknown, adminId:string) {
   const data = salesRole === "MANAGER" ? createManagerSchema.parse(raw) : createSalesSchema.parse(raw);
   const passwordHash = await hashPassword(data.password);
-  return db.$transaction(async (tx) => {
+  try{return await db.$transaction(async (tx) => {
     await enforceAdminReadiness(tx,companyId,adminId);
     const company = await lockAndLoadCompany(tx, companyId);
     if (company.teamStructure === "SALES_ONLY" && salesRole === "MANAGER") throw new EmployeePolicyError("MANAGERS_DISABLED");
@@ -120,7 +122,7 @@ async function createEmployeeForCompany(companyId: string, salesRole: "MANAGER" 
       data: { companyId, ...employeeRoleDimensions(salesRole), isActive: true, salesAccessActive: hasSalesWorkspace(company.productEdition), name: data.name, email: data.email, phone: data.phone, employeeCode: data.employeeCode, designation: data.designation, dateOfJoining: data.dateOfJoining, passwordHash, managerId, managerType: salesRole === "MANAGER" ? ("managerType" in data ? data.managerType : "FIELD_MANAGER") : null,branchAccessScope:data.branchAccessScope,branchAccesses:branchIds.length?{create:branchIds.map(branchId=>({branchId}))}:undefined },
       select: employeeSelect,
     });
-  });
+  });}catch(error){normalizeEmployeeCreateError(error)}
 }
 
 export async function createManager(input: CreateManagerInput) { const actor=await requireSalesUserAdmin(true); return createEmployeeForCompany(actor.companyId,"MANAGER",input,actor.id); }

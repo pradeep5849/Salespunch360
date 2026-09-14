@@ -35,12 +35,13 @@ import {POST as loginPost} from "./auth/login/route";
 import {POST as logoutPost} from "./auth/logout/route";
 import {POST as passwordPost} from "./auth/password/route";
 import {GET as companyGet} from "./company/route";
-import {GET as employeesGet} from "./employees/route";
+import {GET as employeesGet,POST as employeesPost} from "./employees/route";
 import {POST as pushPost} from "./push/route";
 import {MobileCompanyError} from "@/lib/mobile/company";
 import {MobileEmployeeError} from "@/lib/mobile/employees";
 import {EmployeePolicyError} from "@/lib/employees/policy";
 import {OperationalBranchError} from "@/lib/branches/operational-scope";
+import {Prisma} from "@prisma/client";
 
 const secret="postgresql://user:password@private-db-host/database SQL failure /private/storage/key token=secret";
 const headers={authorization:`Bearer ${"a".repeat(40)}`,"content-type":"application/json"};
@@ -105,6 +106,9 @@ describe("final mobile route error contract",()=>{
     ];
     for(const [error,status,code]of cases){mocks.employeeContext.mockRejectedValueOnce(error);const response=await employeesGet(get());expect(response.status).toBe(status);expect(await response.json()).toEqual({error:code})}
   });
+
+  it.each(["same-company","cross-company"])("returns a private EMAIL_IN_USE conflict for %s duplicates",async()=>{mocks.employeeCreate.mockRejectedValueOnce(new EmployeePolicyError("EMAIL_IN_USE"));const response=await employeesPost(post({role:"SALES"})),body=await response.json(),serialized=JSON.stringify(body);expect(response.status).toBe(409);expect(body).toEqual({error:"EMAIL_IN_USE"});for(const detail of ["company-a","company-b","user-id","Existing User","SALES","P2002"])expect(serialized).not.toContain(detail)});
+  it("keeps unrelated P2002 failures on the safe unexpected path",async()=>{mocks.employeeCreate.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("duplicate phone",{code:"P2002",clientVersion:"6.12.0",meta:{target:["phone"]}}));await expectSafe500(await employeesPost(post({role:"SALES"})))});
 
   it("preserves password statuses and makes database failures safe",async()=>{
     const body={currentPassword:"OldPassword1",newPassword:"NewPassword123",confirmPassword:"NewPassword123"};

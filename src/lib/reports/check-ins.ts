@@ -2,12 +2,12 @@ import { operationalBranchContext } from "@/lib/branches/operational-scope";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { durationMs, referenceDistance } from "./metrics";
-import { parseReportFilters, type SearchParams } from "./validation";
+import { parseReportFilters, reportUuid, type SearchParams } from "./validation";
 import { reportActor, reportEmployeeOptions, resolveEmployeeScope, type ReportActor } from "./scope";
 
 export async function checkInReport(raw:SearchParams, advanced=false,providedActor?:ReportActor,exportMode=false) {
-  const actor=providedActor??await reportActor(), filters=parseReportFilters(raw,undefined,exportMode?10000:undefined), userIds=await resolveEmployeeScope(actor,filters.employeeId), branches=await operationalBranchContext(actor,typeof raw.branchId==="string"?raw.branchId:undefined);
-  const status=raw.status === "COMPLETED" || raw.status === "ACTIVE" ? raw.status : "ALL",sentiment=raw.sentiment==="POSITIVE"||raw.sentiment==="NEUTRAL"||raw.sentiment==="NEGATIVE"?raw.sentiment:"ALL",customerId=typeof raw.customerId==="string"?raw.customerId:undefined;
+  const actor=providedActor??await reportActor(), filters=parseReportFilters(raw,undefined,exportMode?10000:undefined), userIds=await resolveEmployeeScope(actor,filters.employeeId), branches=await operationalBranchContext(actor,reportUuid(raw,"branchId"));
+  const status=raw.status === "COMPLETED" || raw.status === "ACTIVE" ? raw.status : "ALL",sentiment=raw.sentiment==="POSITIVE"||raw.sentiment==="NEUTRAL"||raw.sentiment==="NEGATIVE"?raw.sentiment:"ALL",customerId=reportUuid(raw,"customerId");
   const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,branchId:branches.branchId,userId:{in:userIds},checkedInAt:{gte:filters.start,lt:filters.endExclusive},...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="ACTIVE"?{checkedOutAt:null}:{}),...(sentiment!=="ALL"?{checkoutSentiment:sentiment}:{}),...(customerId?{customerId}:{}),...(advanced&&filters.q?{customer:{name:{contains:filters.q,mode:"insensitive"}}}:{})};
   const [total,completed,pending,leadAgg,visits,employees,customers]=await Promise.all([
     db.customerVisit.count({where}), db.customerVisit.count({where:{...where,checkedOutAt:{not:null}}}), db.customerVisit.count({where:{...where,checkedOutAt:null}}),

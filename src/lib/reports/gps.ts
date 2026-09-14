@@ -3,13 +3,13 @@ import {AuthorizationError} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
 import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
 import {orderedRoute} from "./metrics";
-import {indiaDateBoundary,type SearchParams} from "./validation";
+import {indiaDateBoundary,reportUuid,type SearchParams} from "./validation";
 import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor} from "./scope";
 
 const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v;
 export type GpsTimelineEvent={id:string;type:"ATTENDANCE_STARTED"|"GPS_STARTED"|"CHECK_IN"|"CHECK_OUT"|"GPS_ENDED"|"ATTENDANCE_ENDED";at:Date;customer?:string;latitude?:number;longitude?:number;detail?:string;sessionId:string};
 export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
- const actor=providedActor??await reportActor(),employees=await reportEmployeeOptions(actor),date=one(raw.date),requested=one(raw.employeeId),employeeId=actor.salesRole==="SALES"?actor.id:requested,branches=await operationalBranchContext(actor,typeof raw.branchId==="string"?raw.branchId:undefined);
+ const actor=providedActor??await reportActor(),employees=await reportEmployeeOptions(actor),date=one(raw.date),requested=reportUuid(raw,"employeeId"),employeeId=actor.salesRole==="SALES"?actor.id:requested,branches=await operationalBranchContext(actor,reportUuid(raw,"branchId"));
  if(!date||!employeeId)return{actor,employees,date,employeeId,sessions:[],segments:[],points:[],markers:[],events:[],routeDistanceMeters:0,employee:null};
  const ids=await resolveEmployeeScope(actor,employeeId);if(ids.length!==1)throw new AuthorizationError();const start=indiaDateBoundary(date),end=indiaDateBoundary(date,true);
  const employee=await db.user.findFirst({where:{id:employeeId,companyId:actor.companyId},select:{id:true,name:true,salesRole:true}});if(!employee)throw new AuthorizationError();

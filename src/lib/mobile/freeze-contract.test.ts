@@ -28,8 +28,8 @@ describe("frozen mobile API v1 contract", () => {
       readOrUpdate: 200, create: 201, invalid: 400, unauthenticated: 401,
       forbidden: 403, absent: 404, conflict: 409, rateLimited: 429, unexpected: 500,
     });
-    expect(MOBILE_PUBLIC_ERROR_CODES).toEqual(expect.arrayContaining(["UNAUTHORIZED", "FORBIDDEN", "SERVER_ERROR", "BRANCH_REQUIRED", "BRANCH_FORBIDDEN", "PHONE_IN_USE", "ROW_LIMIT", "REPORT_TOO_LARGE"]));
-    expect(MOBILE_PUBLIC_ERROR_CODES).not.toEqual(expect.arrayContaining(["MOBILE_UNAUTHORIZED", "MOBILE_FORBIDDEN", "TERMINAL", "NOT_AUTHORIZED"]));
+    expect(MOBILE_PUBLIC_ERROR_CODES).toEqual(expect.arrayContaining(["UNAUTHORIZED", "FORBIDDEN", "SERVER_ERROR", "BRANCH_REQUIRED", "BRANCH_FORBIDDEN", "PHONE_IN_USE", "EMAIL_IN_USE", "ROW_LIMIT", "REPORT_TOO_LARGE"]));
+    expect(MOBILE_PUBLIC_ERROR_CODES).not.toEqual(expect.arrayContaining(["MOBILE_UNAUTHORIZED", "MOBILE_FORBIDDEN", "TERMINAL", "NOT_AUTHORIZED", "P2002"]));
     for (const code of MOBILE_PUBLIC_ERROR_CODES) expect(code).toMatch(/^[A-Z][A-Z0-9_]*$/);
   });
 
