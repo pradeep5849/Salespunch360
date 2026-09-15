@@ -32,7 +32,7 @@ private val accountResourceExactPaths = setOf(
 )
 
 private fun parsed(raw: String): URI? {
-    if (raw.isBlank() || raw.contains('\') || raw.contains("%5c", ignoreCase = true)) return null
+    if (raw.isBlank() || raw.contains('\\') || raw.contains("%5c", ignoreCase = true)) return null
     return runCatching { URI(raw) }.getOrNull()
 }
 
@@ -94,7 +94,7 @@ fun isAllowedAccountDownloadUrl(raw: String): Boolean =
     }
 
 fun accountRelativePathOrNull(raw: String): String? {
-    if (raw.isBlank() || raw.contains('\') || raw.contains("%5c", ignoreCase = true)) return null
+    if (raw.isBlank() || raw.contains('\\') || raw.contains("%5c", ignoreCase = true)) return null
     val uri = runCatching {
         if (raw.startsWith("/")) URI("$ACCOUNT_ORIGIN$raw") else URI(raw)
     }.getOrNull() ?: return null
