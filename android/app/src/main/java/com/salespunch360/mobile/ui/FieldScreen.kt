@@ -2,6 +2,7 @@ package com.salespunch360.mobile.ui
 import android.Manifest
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import java.io.ByteArrayOutputStream
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,7 +26,7 @@ import com.salespunch360.mobile.location.currentDeviceLocation
 import com.salespunch360.mobile.location.locationFailureMessage
 import kotlinx.coroutines.launch
 
-private fun compressedBitmap(source:Bitmap):ByteArray{val scale=minOf(1f,720f/maxOf(source.width,source.height));val result=if(scale<1f)Bitmap.createScaledBitmap(source,(source.width*scale).toInt(),(source.height*scale).toInt(),true)else source;return ByteArrayOutputStream().use{result.compress(Bitmap.CompressFormat.WEBP_LOSSY,58,it);if(result!==source)result.recycle();source.recycle();it.toByteArray()}}
+private fun compressedBitmap(source:Bitmap):ByteArray{val scale=minOf(1f,720f/maxOf(source.width,source.height));val result=if(scale<1f)Bitmap.createScaledBitmap(source,(source.width*scale).toInt(),(source.height*scale).toInt(),true)else source;val format=if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.R)Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP;return ByteArrayOutputStream().use{result.compress(format,58,it);if(result!==source)result.recycle();source.recycle();it.toByteArray()}}
 private fun compressedPhoto(bytes:ByteArray):ByteArray?=BitmapFactory.decodeByteArray(bytes,0,bytes.size)?.let(::compressedBitmap)
 @Composable fun FieldScreen(vm:FieldViewModel=viewModel()){val state=vm.state.collectAsStateWithLifecycle().value;val context=state.context;var type by remember{mutableStateOf("NEW")};var subjectId by remember{mutableStateOf<String?>(null)};var subjectLabel by remember{mutableStateOf<String?>(null)};var firstCustomer by remember{mutableStateOf(false)};var showForm by remember{mutableStateOf(false)};var checkout by remember{mutableStateOf<FieldVisit?>(null)};var permissionAction by remember{mutableStateOf<(() -> Unit)?>(null)};val androidContext=LocalContext.current;val scope=rememberCoroutineScope();val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){if(it[Manifest.permission.ACCESS_FINE_LOCATION]==true)permissionAction?.invoke()else vm.locationError("Precise location is required.")}
  if(context==null&&state.loading){LoadingScreen("Loading check-ins…");return};if(context==null){RetryScreen(state.message?:"Check-ins couldn't be loaded.",vm::refresh);return};val open=context.visits.filter{it.checkedOutAt==null}
