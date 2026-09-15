@@ -37,13 +37,7 @@ import com.salespunch360.mobile.web.classifyAccountUrl
 import com.salespunch360.mobile.web.handoffFormBody
 import com.salespunch360.mobile.web.isAllowedAccountDownloadUrl
 
-private enum class AccountLoadState {
-    LOADING,
-    READY,
-    OFFLINE,
-    ERROR,
-    SESSION_RECOVERY,
-}
+private enum class AccountLoadState { LOADING, READY, OFFLINE, ERROR, SESSION_RECOVERY }
 
 private fun canGoBackSafely(view: WebView): Boolean {
     val history = view.copyBackForwardList()
@@ -74,75 +68,54 @@ fun AccountWorkspaceScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
 
-    val filePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val callback = fileCallback
         fileCallback = null
         val returned = result.data
         val uris = if (result.resultCode == Activity.RESULT_OK && returned != null) {
             when {
-                returned.clipData != null -> Array(returned.clipData!!.itemCount) { index ->
-                    returned.clipData!!.getItemAt(index).uri
-                }
+                returned.clipData != null -> Array(returned.clipData!!.itemCount) { index -> returned.clipData!!.getItemAt(index).uri }
                 returned.data != null -> arrayOf(returned.data!!)
                 else -> null
             }
-        } else {
-            null
-        }
+        } else null
         callback?.onReceiveValue(uris)
     }
 
     BackHandler(enabled = canGoBack || switchToSales != null) {
         val current = webView
-        if (current != null && canGoBackSafely(current)) {
-            current.goBack()
-        } else {
-            switchToSales?.invoke()
-        }
+        if (current != null && canGoBackSafely(current)) current.goBack() else switchToSales?.invoke()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Account")
-                        Text(data.company.name, style = MaterialTheme.typography.labelSmall)
-                    }
-                },
-                actions = {
-                    switchToSales?.let { action ->
-                        TextButton(onClick = action) { Text("Sales") }
-                    }
-                    TextButton(onClick = logout) { Text("Sign out") }
-                },
-            )
-        },
-    ) { padding ->
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Column { Text("Account"); Text(data.company.name, style = MaterialTheme.typography.labelSmall) } },
+            actions = {
+                switchToSales?.let { action -> TextButton(onClick = action) { Text("Sales") } }
+                TextButton(onClick = logout) { Text("Sign out") }
+            },
+        )
+    }) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             key(rendererEpoch) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
                         WebView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
+                            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                             WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
-
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
                             settings.allowFileAccess = false
                             settings.allowContentAccess = true
+                            @Suppress("DEPRECATION")
                             settings.allowFileAccessFromFileURLs = false
+                            @Suppress("DEPRECATION")
                             settings.allowUniversalAccessFromFileURLs = false
                             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                             settings.setSupportMultipleWindows(false)
 
-                            if (Build.VERSION.SDK_INT >= 26) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                                 WebView.startSafeBrowsing(ctx) { _ -> }
                             }
 
@@ -151,196 +124,71 @@ fun AccountWorkspaceScreen(
                             cookieManager.setAcceptThirdPartyCookies(this, false)
 
                             webChromeClient = object : WebChromeClient() {
-                                override fun onShowFileChooser(
-                                    view: WebView?,
-                                    callback: ValueCallback<Array<Uri>>?,
-                                    params: FileChooserParams?,
-                                ): Boolean {
-                                    if (
-                                        callback == null ||
-                                        params == null ||
-                                        classifyAccountUrl(view?.url.orEmpty()) != AccountNavigation.ACCOUNT
-                                    ) {
-                                        return false
-                                    }
-
+                                override fun onShowFileChooser(view: WebView?, callback: ValueCallback<Array<Uri>>?, params: FileChooserParams?): Boolean {
+                                    if (callback == null || params == null || classifyAccountUrl(view?.url.orEmpty()) != AccountNavigation.ACCOUNT) return false
                                     fileCallback?.onReceiveValue(null)
                                     fileCallback = callback
-
-                                    val types = params.acceptTypes
-                                        .mapNotNull { type ->
-                                            type.trim().takeIf {
-                                                it.contains("/") && it.length <= 120
-                                            }
-                                        }
-                                        .distinct()
-
+                                    val types = params.acceptTypes.mapNotNull { type -> type.trim().takeIf { it.contains("/") && it.length <= 120 } }.distinct()
                                     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                                         addCategory(Intent.CATEGORY_OPENABLE)
                                         type = if (types.size == 1) types.first() else "*/*"
-                                        if (types.size > 1) {
-                                            putExtra(Intent.EXTRA_MIME_TYPES, types.toTypedArray())
-                                        }
-                                        putExtra(
-                                            Intent.EXTRA_ALLOW_MULTIPLE,
-                                            params.mode == FileChooserParams.MODE_OPEN_MULTIPLE,
-                                        )
+                                        if (types.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, types.toTypedArray())
+                                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, params.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
                                     }
-
-                                    return runCatching {
-                                        filePicker.launch(intent)
-                                        true
-                                    }.getOrElse {
-                                        fileCallback?.onReceiveValue(null)
-                                        fileCallback = null
-                                        false
+                                    return runCatching { filePicker.launch(intent); true }.getOrElse {
+                                        fileCallback?.onReceiveValue(null); fileCallback = null; false
                                     }
                                 }
                             }
 
                             setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-                                if (url != null && isAllowedAccountDownloadUrl(url)) {
-                                    AccountDownloadManager.download(
-                                        context = context,
-                                        url = url,
-                                        userAgent = userAgent,
-                                        contentDisposition = contentDisposition,
-                                        mimeType = mimeType,
-                                    )
-                                }
+                                if (url != null && isAllowedAccountDownloadUrl(url)) AccountDownloadManager.download(context, url, userAgent, contentDisposition, mimeType)
                             }
 
                             webViewClient = object : WebViewClient() {
                                 private fun recoverOnce() {
-                                    if (recoveryAttempts >= 1) {
-                                        loadState = AccountLoadState.ERROR
-                                        message = "Account session could not be restored."
-                                        return
-                                    }
-                                    recoveryAttempts += 1
-                                    loadState = AccountLoadState.SESSION_RECOVERY
-                                    message = null
-                                    recoverSession()
+                                    if (recoveryAttempts >= 1) { loadState = AccountLoadState.ERROR; message = "Account session could not be restored."; return }
+                                    recoveryAttempts += 1; loadState = AccountLoadState.SESSION_RECOVERY; message = null; recoverSession()
                                 }
-
-                                private fun handle(raw: String): Boolean =
-                                    when (classifyAccountUrl(raw)) {
-                                        AccountNavigation.ACCOUNT,
-                                        AccountNavigation.ACCOUNT_RESOURCE -> false
-                                        AccountNavigation.SESSION_RECOVERY -> {
-                                            recoverOnce()
-                                            true
-                                        }
-                                        AccountNavigation.EXTERNAL_HTTPS -> {
-                                            runCatching {
-                                                context.startActivity(
-                                                    Intent(Intent.ACTION_VIEW, Uri.parse(raw)),
-                                                )
-                                            }
-                                            true
-                                        }
-                                        AccountNavigation.HANDOFF,
-                                        AccountNavigation.BLOCKED -> true
-                                    }
-
-                                override fun shouldOverrideUrlLoading(
-                                    view: WebView?,
-                                    request: WebResourceRequest?,
-                                ): Boolean = handle(request?.url?.toString().orEmpty())
-
+                                private fun handle(raw: String): Boolean = when (classifyAccountUrl(raw)) {
+                                    AccountNavigation.ACCOUNT, AccountNavigation.ACCOUNT_RESOURCE -> false
+                                    AccountNavigation.SESSION_RECOVERY -> { recoverOnce(); true }
+                                    AccountNavigation.EXTERNAL_HTTPS -> { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(raw))) }; true }
+                                    AccountNavigation.HANDOFF, AccountNavigation.BLOCKED -> true
+                                }
+                                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = handle(request?.url?.toString().orEmpty())
                                 @Suppress("DEPRECATION")
-                                override fun shouldOverrideUrlLoading(
-                                    view: WebView?,
-                                    url: String?,
-                                ): Boolean = handle(url.orEmpty())
-
-                                override fun onPageStarted(
-                                    view: WebView?,
-                                    url: String?,
-                                    favicon: android.graphics.Bitmap?,
-                                ) {
+                                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean = handle(url.orEmpty())
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                                     super.onPageStarted(view, url, favicon)
-                                    val classification = classifyAccountUrl(
-                                        url.orEmpty(),
-                                        allowHandoff = true,
-                                    )
-                                    when (classification) {
+                                    when (classifyAccountUrl(url.orEmpty(), allowHandoff = true)) {
                                         AccountNavigation.SESSION_RECOVERY -> recoverOnce()
-                                        AccountNavigation.ACCOUNT,
-                                        AccountNavigation.ACCOUNT_RESOURCE,
-                                        AccountNavigation.HANDOFF -> loadState = AccountLoadState.LOADING
+                                        AccountNavigation.ACCOUNT, AccountNavigation.ACCOUNT_RESOURCE, AccountNavigation.HANDOFF -> loadState = AccountLoadState.LOADING
                                         else -> Unit
                                     }
                                 }
-
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     super.onPageFinished(view, url)
-                                    if (
-                                        classifyAccountUrl(url.orEmpty()) in setOf(
-                                            AccountNavigation.ACCOUNT,
-                                            AccountNavigation.ACCOUNT_RESOURCE,
-                                        )
-                                    ) {
-                                        loadState = AccountLoadState.READY
-                                        message = null
-                                        recoveryAttempts = 0
-                                        canGoBack = view?.let(::canGoBackSafely) == true
+                                    if (classifyAccountUrl(url.orEmpty()) in setOf(AccountNavigation.ACCOUNT, AccountNavigation.ACCOUNT_RESOURCE)) {
+                                        loadState = AccountLoadState.READY; message = null; recoveryAttempts = 0; canGoBack = view?.let(::canGoBackSafely) == true
                                     }
                                 }
-
-                                override fun onReceivedError(
-                                    view: WebView?,
-                                    request: WebResourceRequest?,
-                                    error: WebResourceError?,
-                                ) {
+                                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                                     super.onReceivedError(view, request, error)
-                                    if (request?.isForMainFrame == true) {
-                                        loadState = AccountLoadState.OFFLINE
-                                        message =
-                                            "Unable to load Account. Check your connection and try again."
-                                    }
+                                    if (request?.isForMainFrame == true) { loadState = AccountLoadState.OFFLINE; message = "Unable to load Account. Check your connection and try again." }
                                 }
-
-                                override fun onReceivedHttpError(
-                                    view: WebView?,
-                                    request: WebResourceRequest?,
-                                    errorResponse: WebResourceResponse?,
-                                ) {
+                                override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
                                     super.onReceivedHttpError(view, request, errorResponse)
                                     if (request?.isForMainFrame != true) return
-                                    when (errorResponse?.statusCode) {
-                                        401 -> recoverOnce()
-                                        403 -> {
-                                            message = "Account access changed. Refreshing authorization…"
-                                            recoverOnce()
-                                        }
-                                    }
+                                    when (errorResponse?.statusCode) { 401 -> recoverOnce(); 403 -> { message = "Account access changed. Refreshing authorization…"; recoverOnce() } }
                                 }
-
-                                override fun onReceivedSslError(
-                                    view: WebView?,
-                                    handler: SslErrorHandler?,
-                                    error: SslError?,
-                                ) {
-                                    handler?.cancel()
-                                    loadState = AccountLoadState.ERROR
-                                    message = "Secure connection failed."
+                                override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                                    handler?.cancel(); loadState = AccountLoadState.ERROR; message = "Secure connection failed."
                                 }
-
-                                override fun onRenderProcessGone(
-                                    view: WebView?,
-                                    detail: RenderProcessGoneDetail?,
-                                ): Boolean {
-                                    view?.destroy()
-                                    canGoBack = false
-                                    webView = null
-                                    rendererEpoch += 1
-                                    loadState = AccountLoadState.ERROR
-                                    message = "Account view restarted. Tap Retry."
-                                    return true
+                                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                                    view?.destroy(); canGoBack = false; webView = null; rendererEpoch += 1; loadState = AccountLoadState.ERROR; message = "Account view restarted. Tap Retry."; return true
                                 }
                             }
-
                             webView = this
                         }
                     },
@@ -349,19 +197,11 @@ fun AccountWorkspaceScreen(
             }
 
             if (loadState != AccountLoadState.READY) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.surface,
-                ) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                     when (loadState) {
                         AccountLoadState.LOADING -> LoadingScreen("Loading Account…")
-                        AccountLoadState.SESSION_RECOVERY ->
-                            LoadingScreen("Restoring Account session…")
-                        AccountLoadState.OFFLINE,
-                        AccountLoadState.ERROR -> RetryScreen(
-                            message ?: "Unable to load Account",
-                            retry = { retryNonce += 1 },
-                        )
+                        AccountLoadState.SESSION_RECOVERY -> LoadingScreen("Restoring Account session…")
+                        AccountLoadState.OFFLINE, AccountLoadState.ERROR -> RetryScreen(message ?: "Unable to load Account", retry = { retryNonce += 1 })
                         AccountLoadState.READY -> Unit
                     }
                 }
@@ -369,48 +209,27 @@ fun AccountWorkspaceScreen(
         }
     }
 
-    LaunchedEffect(
-        redirectPath,
-        sessionEpoch,
-        retryNonce,
-        rendererEpoch,
-        webView,
-    ) {
+    LaunchedEffect(redirectPath, sessionEpoch, retryNonce, rendererEpoch, webView) {
         val target = webView ?: return@LaunchedEffect
-        loadState = AccountLoadState.LOADING
-        message = null
+        loadState = AccountLoadState.LOADING; message = null
         requestHandoff(redirectPath) { result ->
-            result.onSuccess { handoff ->
-                if (webView === target) {
-                    target.postUrl(HANDOFF_URL, handoffFormBody(handoff.handoffCode))
+            result.onSuccess { handoff -> if (webView === target) target.postUrl(HANDOFF_URL, handoffFormBody(handoff.handoffCode)) }
+                .onFailure { error ->
+                    if (webView !== target) return@onFailure
+                    loadState = if (error is java.io.IOException) AccountLoadState.OFFLINE else AccountLoadState.ERROR
+                    message = when {
+                        error is ApiException && error.status == 403 -> "Account access changed. Refreshing authorization…"
+                        error is ApiException && error.status == 401 -> "Your session expired."
+                        error is java.io.IOException -> "You're offline. Reconnect and try again."
+                        else -> "Unable to open Account. Tap Retry."
+                    }
                 }
-            }.onFailure { error ->
-                if (webView !== target) return@onFailure
-                loadState = if (error is java.io.IOException) {
-                    AccountLoadState.OFFLINE
-                } else {
-                    AccountLoadState.ERROR
-                }
-                message = when {
-                    error is ApiException && error.status == 403 ->
-                        "Account access changed. Refreshing authorization…"
-                    error is ApiException && error.status == 401 ->
-                        "Your session expired."
-                    error is java.io.IOException ->
-                        "You're offline. Reconnect and try again."
-                    else -> "Unable to open Account. Tap Retry."
-                }
-            }
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            fileCallback?.onReceiveValue(null)
-            fileCallback = null
-            webView?.stopLoading()
-            webView?.destroy()
-            webView = null
+            fileCallback?.onReceiveValue(null); fileCallback = null; webView?.stopLoading(); webView?.destroy(); webView = null
         }
     }
 }
