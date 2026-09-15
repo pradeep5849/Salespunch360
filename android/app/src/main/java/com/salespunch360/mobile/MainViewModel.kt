@@ -136,14 +136,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = current.copy(workspace = Workspace.ACCOUNT, accountPath = safe, message = null)
     }
 
-    fun switchToSales() = viewModelScope.launch {
-        try {
-            applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES)
-        } catch (error: Exception) {
-            if (error is ApiException && error.status == 401) {
-                secureSignOut("Your session expired. Please sign in again.")
-            } else {
-                _state.value = _state.value.copy(message = "Sales access could not be refreshed.")
+    fun switchToSales() {
+        viewModelScope.launch {
+            try {
+                applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES)
+            } catch (error: Exception) {
+                if (error is ApiException && error.status == 401) {
+                    secureSignOut("Your session expired. Please sign in again.")
+                } else {
+                    _state.value = _state.value.copy(message = "Sales access could not be refreshed.")
+                }
             }
         }
     }
