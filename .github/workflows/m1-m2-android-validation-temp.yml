@@ -1,0 +1,49 @@
+name: M1 M2 Android client validation
+
+on:
+  push:
+    branches:
+      - feature/m1-m2-android-client
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 35
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Android unit tests, lint and debug build
+        working-directory: android
+        run: ./gradlew --no-daemon test lint assembleDebug
+      - name: Android unsigned release build
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+  web-regression:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://x:x@localhost:5432/x
+      DIRECT_URL: postgresql://x:x@localhost:5432/x
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --include=dev --no-audit --no-fund
+      - run: npm run prisma:generate
+      - run: npm run prisma:validate
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Frozen mobile bridge regression
+        run: npx vitest run src/lib/mobile/freeze-contract.test.ts src/lib/mobile/web-session.test.ts src/app/api/v1/mobile/web-session/route.test.ts src/app/mobile/web-session/route.test.ts
+      - run: npm test
