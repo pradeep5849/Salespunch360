@@ -20,6 +20,7 @@ jobs:
     timeout-minutes: 20
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/salespunch360
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/salespunch360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
