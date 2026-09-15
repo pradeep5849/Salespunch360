@@ -8,44 +8,404 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.salespunch360.mobile.data.*
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.salespunch360.mobile.data.*
 import com.salespunch360.mobile.location.TrackingService
 import kotlinx.coroutines.launch
 
-data class PrimaryDestination(val label:String,val icon:ImageVector)
-object RoleNavigation{fun destinations(role:MobileRole)=when(role){MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->listOf(PrimaryDestination("Home",Icons.Default.Home),PrimaryDestination("Employees",Icons.Default.Groups),PrimaryDestination("Reports",Icons.Default.Assessment),PrimaryDestination("More",Icons.Default.MoreHoriz));MobileRole.MANAGER->listOf(PrimaryDestination("Home",Icons.Default.Home),PrimaryDestination("Team",Icons.Default.Groups),PrimaryDestination("Reports",Icons.Default.Assessment),PrimaryDestination("More",Icons.Default.MoreHoriz));MobileRole.SALES->listOf(PrimaryDestination("Home",Icons.Default.Home),PrimaryDestination("Customers",Icons.Default.People),PrimaryDestination("Leads",Icons.Default.FilterAlt),PrimaryDestination("More",Icons.Default.MoreHoriz))}}
+data class PrimaryDestination(val label: String, val icon: ImageVector)
 
-@OptIn(ExperimentalMaterial3Api::class) @Composable fun AuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit,attendance:(Boolean,LocationPayload,()->Unit)->Unit,logout:()->Unit){
- val destinations=RoleNavigation.destinations(data.user.salesRole);var selected by remember(data.user.salesRole){mutableIntStateOf(0)};BackHandler(selected!=0){selected=0}
- Scaffold(topBar={TopAppBar(title={CompanyIdentity(data.company.name,data.company.address)},actions={StatusChip(data.entitlement.state)})},bottomBar={NavigationBar{destinations.forEachIndexed{i,item->NavigationBarItem(selected=selected==i,onClick={selected=i},icon={Icon(item.icon,item.label)},label={Text(item.label)})}}}){padding->Column(Modifier.padding(padding).fillMaxSize()){message?.let{MessageBanner(it,dismiss)};when{selected==0->HomeScreen(data,attendance);selected==1&&data.capabilities.canManageEmployees->EmployeesScreen();selected==1&&data.user.salesRole==MobileRole.MANAGER->ReportsScreen();selected==1&&data.user.salesRole==MobileRole.SALES->FieldScreen();selected==2&&data.user.salesRole==MobileRole.SALES->LeadsScreen();selected==2&&data.user.salesRole!=MobileRole.SALES->ReportsScreen();selected==destinations.lastIndex->MoreScreen(data,logout){destination->when(destination){"Employees"->selected=1;"Reports"->selected=2}};else->FoundationScreen(destinations[selected].label)}}}
+object RoleNavigation {
+    fun destinations(role: MobileRole) = when (role) {
+        MobileRole.PRIMARY_ADMIN, MobileRole.ADMIN -> listOf(
+            PrimaryDestination("Home", Icons.Default.Home),
+            PrimaryDestination("Employees", Icons.Default.Groups),
+            PrimaryDestination("Reports", Icons.Default.Assessment),
+            PrimaryDestination("More", Icons.Default.MoreHoriz),
+        )
+        MobileRole.MANAGER -> listOf(
+            PrimaryDestination("Home", Icons.Default.Home),
+            PrimaryDestination("Team", Icons.Default.Groups),
+            PrimaryDestination("Reports", Icons.Default.Assessment),
+            PrimaryDestination("More", Icons.Default.MoreHoriz),
+        )
+        MobileRole.SALES -> listOf(
+            PrimaryDestination("Home", Icons.Default.Home),
+            PrimaryDestination("Customers", Icons.Default.People),
+            PrimaryDestination("Leads", Icons.Default.FilterAlt),
+            PrimaryDestination("More", Icons.Default.MoreHoriz),
+        )
+    }
 }
 
-@Composable private fun HomeScreen(data:Bootstrap,attendance:(Boolean,LocationPayload,()->Unit)->Unit){LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{CompanyIdentity(data.company.name,data.company.address);Spacer(Modifier.height(8.dp));Text("Good to see you, ${data.user.name.substringBefore(' ')}",style=MaterialTheme.typography.headlineSmall);Text(homeIntro(data.user.salesRole))};if(data.features.fieldWorkEnabled)item{AttendanceCard(data,attendance)};if(data.features.fieldWorkEnabled)item{SyncStatusCard(data.user.id)};if(data.capabilities.canManageEmployees)item{SeatCard(data)};if(data.user.salesRole!=MobileRole.SALES)item{ContentCard("Live Location",if(data.features.gpsTrackingEnabled)"View current field-team location from the live company map on Home." else "GPS tracking is disabled in company settings."){StatusChip(if(data.features.gpsTrackingEnabled)"Available on Home" else "Disabled")}};items(homeFoundations(data).size){ContentCard(homeFoundations(data)[it].first,homeFoundations(data)[it].second)}}}
-private fun homeIntro(role:MobileRole)=when(role){MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->"Your company overview";MobileRole.MANAGER->"Your assigned team overview";MobileRole.SALES->"Your day at a glance"}
-private fun homeFoundations(data:Bootstrap):List<Pair<String,String>> = when(data.user.salesRole){
- MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->listOf("Team status" to if(data.teamStructure==TeamStructure.SALES_ONLY)"Your direct Sales team will appear here." else "Manager and Sales team status will appear here.","Today's activity" to "Attendance, check-ins and leads will appear as activity is recorded.","Quick actions" to "Employee and reporting actions are available from the navigation below.")
- MobileRole.MANAGER->listOf("Assigned team" to "Team attendance and activity will appear here.","Check-ins & follow-ups" to "Customer visits, leads and follow-ups will appear when recorded.","Performance" to "Team performance information will appear when available.")
- MobileRole.SALES->listOf("Today's visits" to "Customer visits and check-ins will appear when recorded.","Leads & follow-ups" to "Your lead activity and upcoming follow-ups will appear here.","Daily progress" to "Your recorded activity will build today's progress.")}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AuthenticatedApp(
+    data: Bootstrap,
+    message: String?,
+    dismiss: () -> Unit,
+    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit,
+    logout: () -> Unit,
+    switchToAccount: (() -> Unit)? = null,
+) {
+    val role = data.user.salesRole ?: return RetryScreen("Sales access is not available.", {})
+    val destinations = RoleNavigation.destinations(role)
+    var selected by remember(role) { mutableIntStateOf(0) }
 
-@Composable private fun AttendanceCard(data:Bootstrap,attendance:(Boolean,LocationPayload,()->Unit)->Unit){
- val context=LocalContext.current;val scope=rememberCoroutineScope();var locating by remember{mutableStateOf(false)};var locationMessage by remember{mutableStateOf<String?>(null)}
- fun submit(start:Boolean){scope.launch{locating=true;locationMessage="Getting current location…";try{val point=com.salespunch360.mobile.location.currentDeviceLocation(context);locationMessage="Location ready";attendance(start,point){if(start&&data.features.gpsTrackingEnabled)TrackingService.start(context);if(!start)TrackingService.stop(context)}}catch(e:Exception){locationMessage=com.salespunch360.mobile.location.locationFailureMessage(e)}finally{locating=false}}}
- val launcher=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){grants->if(grants[Manifest.permission.ACCESS_FINE_LOCATION]==true)submit(data.attendance==null)else locationMessage="Precise location permission is required. You can enable it in Android Settings."}
- ContentCard("Attendance",when{!data.features.attendanceEnabled->"Attendance is disabled by your company.";data.attendance!=null->"Working since ${data.attendance.startedAt}";else->"Not currently working"}){locationMessage?.let{Text(it,style=MaterialTheme.typography.bodySmall)};if(locationMessage?.contains("Settings")==true)TextButton({context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:${context.packageName}")))}){Text("Open Settings")};if(data.attendance!=null&&data.features.gpsTrackingEnabled)StatusChip("Tracking active");Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button({launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))},enabled=!locating&&data.attendance==null&&data.features.attendanceEnabled&&data.entitlement.operationalWritesAllowed){Text(if(locating)"Locating…" else "Start attendance")};OutlinedButton({launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))},enabled=!locating&&data.attendance!=null){Text("End attendance")}}}
+    BackHandler(selected != 0) { selected = 0 }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { CompanyIdentity(data.company.name, data.company.address) },
+                actions = {
+                    StatusChip(data.entitlement.state)
+                    switchToAccount?.let { action ->
+                        TextButton(onClick = action) { Text("Account") }
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                destinations.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        selected = selected == index,
+                        onClick = { selected = index },
+                        icon = { Icon(item.icon, item.label) },
+                        label = { Text(item.label) },
+                    )
+                }
+            }
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            message?.let { MessageBanner(it, dismiss) }
+            when {
+                selected == 0 -> HomeScreen(data, role, attendance)
+                selected == 1 && data.capabilities.canManageEmployees -> EmployeesScreen()
+                selected == 1 && role == MobileRole.MANAGER -> ReportsScreen()
+                selected == 1 && role == MobileRole.SALES -> FieldScreen()
+                selected == 2 && role == MobileRole.SALES -> LeadsScreen()
+                selected == 2 && role != MobileRole.SALES -> ReportsScreen()
+                selected == destinations.lastIndex -> MoreScreen(data, role, logout) { destination ->
+                    when (destination) {
+                        "Employees" -> selected = 1
+                        "Reports" -> selected = 2
+                    }
+                }
+                else -> FoundationScreen(destinations[selected].label)
+            }
+        }
+    }
 }
-@Composable private fun SeatCard(data:Bootstrap){val e=data.entitlement;ContentCard("Team seats",seatSummaryLines(e,data.teamStructure).joinToString("\n")){StatusChip(if(e.operationalWritesAllowed)"Operational" else "Read only")}}
-@Composable private fun FoundationScreen(title:String){Box(Modifier.fillMaxSize().padding(16.dp)){ContentCard(title,"This workspace is ready. Information will appear here when available.")}}
-@Composable private fun MoreScreen(data:Bootstrap,logout:()->Unit,navigate:(String)->Unit){var page by remember{mutableStateOf<String?>(null)};if(page!=null){Column(Modifier.fillMaxSize()){TextButton({page=null},Modifier.padding(horizontal=8.dp)){Text("← More")};Box(Modifier.weight(1f)){when(page){"Geofence"->GeofenceScreen();"Targets"->TargetsScreen(data.user.salesRole);"Leads"->LeadsScreen();"Subscription"->SubscriptionScreen();"Settings"->SettingsScreen();"Change Password"->ChangePasswordScreen();else->AccountScreen(data,logout)}}};return};val items=when(data.user.salesRole){MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->buildList{if(data.capabilities.canManageSalesSettings)add("Company");if(data.capabilities.canManageEmployees)add("Employees");if(data.capabilities.canManageSalesSettings)add("Geofence");add("Targets");add("Leads");if(data.capabilities.canAccessSalesBilling)add("Subscription");if(data.capabilities.canManageSalesSettings)add("Settings");add("Profile");add("Change Password")};MobileRole.MANAGER->listOf("Targets","Leads","Reports","Profile","Change Password");MobileRole.SALES->listOf("My Targets","Profile","Change Password")};LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){item{Text(when(data.user.salesRole){MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->"Admin menu";MobileRole.MANAGER->"Manager menu";MobileRole.SALES->"Sales menu"},style=MaterialTheme.typography.headlineSmall);Text("${data.company.name} · ${data.user.name}")};items(items){item->OutlinedButton({when(item){"Employees","Reports"->navigate(item);"Targets","My Targets"->page="Targets";"Profile"->page="Profile";else->page=item}},Modifier.fillMaxWidth()){Text(item)}};item{OutlinedButton(logout,Modifier.fillMaxWidth()){Icon(Icons.AutoMirrored.Filled.Logout,null);Spacer(Modifier.width(8.dp));Text("Sign out")};Spacer(Modifier.height(20.dp));Text("Powered by SalesPunch360",style=MaterialTheme.typography.labelSmall)}}}
-@Composable private fun AccountScreen(data:Bootstrap,logout:()->Unit){Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){ContentCard(data.company.name,listOfNotNull(data.user.name,data.user.email,data.user.salesRole.name.replace('_',' ')).joinToString(" · "));OutlinedButton(logout,Modifier.fillMaxWidth()){Icon(Icons.AutoMirrored.Filled.Logout,null);Spacer(Modifier.width(8.dp));Text("Sign out")}}}
 
-@Composable private fun SyncStatusCard(ownerUserId:String){val app=LocalContext.current.applicationContext as com.salespunch360.mobile.SalesPunchApp;val pending=app.database.locations().count(ownerUserId).collectAsStateWithLifecycle(0).value;ContentCard("GPS sync",if(pending==0)"All queued location points are synced." else "$pending location point${if(pending==1)"" else "s"} waiting for a network upload."){if(pending>0)StatusChip("Pending $pending")}}
+@Composable
+private fun HomeScreen(
+    data: Bootstrap,
+    role: MobileRole,
+    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit,
+) {
+    val foundations = homeFoundations(data, role)
+    LazyColumn(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            CompanyIdentity(data.company.name, data.company.address)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Good to see you, ${data.user.name.substringBefore(' ')}",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(homeIntro(role))
+        }
+        if (data.features.fieldWorkEnabled) item { AttendanceCard(data, attendance) }
+        if (data.features.fieldWorkEnabled) item { SyncStatusCard(data.user.id) }
+        if (data.capabilities.canManageEmployees) item { SeatCard(data) }
+        if (role != MobileRole.SALES) {
+            item {
+                ContentCard(
+                    "Live Location",
+                    if (data.features.gpsTrackingEnabled) {
+                        "View current field-team location from the live company map on Home."
+                    } else {
+                        "GPS tracking is disabled in company settings."
+                    },
+                ) {
+                    StatusChip(if (data.features.gpsTrackingEnabled) "Available on Home" else "Disabled")
+                }
+            }
+        }
+        items(foundations.size) { index ->
+            ContentCard(foundations[index].first, foundations[index].second)
+        }
+    }
+}
+
+private fun homeIntro(role: MobileRole) = when (role) {
+    MobileRole.PRIMARY_ADMIN, MobileRole.ADMIN -> "Your company overview"
+    MobileRole.MANAGER -> "Your assigned team overview"
+    MobileRole.SALES -> "Your day at a glance"
+}
+
+private fun homeFoundations(data: Bootstrap, role: MobileRole): List<Pair<String, String>> = when (role) {
+    MobileRole.PRIMARY_ADMIN, MobileRole.ADMIN -> listOf(
+        "Team status" to if (data.teamStructure == TeamStructure.SALES_ONLY) {
+            "Your direct Sales team will appear here."
+        } else {
+            "Manager and Sales team status will appear here."
+        },
+        "Today's activity" to "Attendance, check-ins and leads will appear as activity is recorded.",
+        "Quick actions" to "Employee and reporting actions are available from the navigation below.",
+    )
+    MobileRole.MANAGER -> listOf(
+        "Assigned team" to "Team attendance and activity will appear here.",
+        "Check-ins & follow-ups" to "Customer visits, leads and follow-ups will appear when recorded.",
+        "Performance" to "Team performance information will appear when available.",
+    )
+    MobileRole.SALES -> listOf(
+        "Today's visits" to "Customer visits and check-ins will appear when recorded.",
+        "Leads & follow-ups" to "Your lead activity and upcoming follow-ups will appear here.",
+        "Daily progress" to "Your recorded activity will build today's progress.",
+    )
+}
+
+@Composable
+private fun AttendanceCard(
+    data: Bootstrap,
+    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var locating by remember { mutableStateOf(false) }
+    var locationMessage by remember { mutableStateOf<String?>(null) }
+
+    fun submit(start: Boolean) {
+        scope.launch {
+            locating = true
+            locationMessage = "Getting current location…"
+            try {
+                val point = com.salespunch360.mobile.location.currentDeviceLocation(context)
+                locationMessage = "Location ready"
+                attendance(start, point) {
+                    if (start && data.features.gpsTrackingEnabled) TrackingService.start(context)
+                    if (!start) TrackingService.stop(context)
+                }
+            } catch (error: Exception) {
+                locationMessage = com.salespunch360.mobile.location.locationFailureMessage(error)
+            } finally {
+                locating = false
+            }
+        }
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        if (grants[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            submit(data.attendance == null)
+        } else {
+            locationMessage =
+                "Precise location permission is required. You can enable it in Android Settings."
+        }
+    }
+
+    ContentCard(
+        "Attendance",
+        when {
+            !data.features.attendanceEnabled -> "Attendance is disabled by your company."
+            data.attendance != null -> "Working since ${data.attendance.startedAt}"
+            else -> "Not currently working"
+        },
+    ) {
+        locationMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        if (locationMessage?.contains("Settings") == true) {
+            TextButton(
+                onClick = {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                },
+            ) { Text("Open Settings") }
+        }
+        if (data.attendance != null && data.features.gpsTrackingEnabled) StatusChip("Tracking active")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    launcher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                },
+                enabled = !locating &&
+                    data.attendance == null &&
+                    data.features.attendanceEnabled &&
+                    data.entitlement.operationalWritesAllowed,
+            ) { Text(if (locating) "Locating…" else "Start attendance") }
+
+            OutlinedButton(
+                onClick = {
+                    launcher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                },
+                enabled = !locating && data.attendance != null,
+            ) { Text("End attendance") }
+        }
+    }
+}
+
+@Composable
+private fun SeatCard(data: Bootstrap) {
+    val entitlement = data.entitlement
+    ContentCard(
+        "Team seats",
+        seatSummaryLines(entitlement, data.teamStructure).joinToString("\\n"),
+    ) {
+        StatusChip(if (entitlement.operationalWritesAllowed) "Operational" else "Read only")
+    }
+}
+
+@Composable
+private fun FoundationScreen(title: String) {
+    Box(Modifier.fillMaxSize().padding(16.dp)) {
+        ContentCard(title, "This workspace is ready. Information will appear here when available.")
+    }
+}
+
+@Composable
+private fun MoreScreen(
+    data: Bootstrap,
+    role: MobileRole,
+    logout: () -> Unit,
+    navigate: (String) -> Unit,
+) {
+    var page by remember { mutableStateOf<String?>(null) }
+    if (page != null) {
+        Column(Modifier.fillMaxSize()) {
+            TextButton({ page = null }, Modifier.padding(horizontal = 8.dp)) { Text("← More") }
+            Box(Modifier.weight(1f)) {
+                when (page) {
+                    "Geofence" -> GeofenceScreen()
+                    "Targets" -> TargetsScreen(role)
+                    "Leads" -> LeadsScreen()
+                    "Subscription" -> SubscriptionScreen()
+                    "Settings" -> SettingsScreen()
+                    "Change Password" -> ChangePasswordScreen()
+                    else -> AccountScreen(data, role, logout)
+                }
+            }
+        }
+        return
+    }
+
+    val menuItems = when (role) {
+        MobileRole.PRIMARY_ADMIN, MobileRole.ADMIN -> buildList {
+            if (data.capabilities.canManageSalesSettings) add("Company")
+            if (data.capabilities.canManageEmployees) add("Employees")
+            if (data.capabilities.canManageSalesSettings) add("Geofence")
+            add("Targets")
+            add("Leads")
+            if (data.capabilities.canAccessSalesBilling) add("Subscription")
+            if (data.capabilities.canManageSalesSettings) add("Settings")
+            add("Profile")
+            add("Change Password")
+        }
+        MobileRole.MANAGER -> listOf("Targets", "Leads", "Reports", "Profile", "Change Password")
+        MobileRole.SALES -> listOf("My Targets", "Profile", "Change Password")
+    }
+
+    LazyColumn(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            Text(
+                when (role) {
+                    MobileRole.PRIMARY_ADMIN, MobileRole.ADMIN -> "Admin menu"
+                    MobileRole.MANAGER -> "Manager menu"
+                    MobileRole.SALES -> "Sales menu"
+                },
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text("${data.company.name} · ${data.user.name}")
+        }
+        items(menuItems) { item ->
+            OutlinedButton(
+                onClick = {
+                    when (item) {
+                        "Employees", "Reports" -> navigate(item)
+                        "Targets", "My Targets" -> page = "Targets"
+                        "Profile" -> page = "Profile"
+                        else -> page = item
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(item) }
+        }
+        item {
+            OutlinedButton(logout, Modifier.fillMaxWidth()) {
+                Icon(Icons.AutoMirrored.Filled.Logout, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Sign out")
+            }
+            Spacer(Modifier.height(20.dp))
+            Text("Powered by SalesPunch360", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun AccountScreen(data: Bootstrap, role: MobileRole, logout: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ContentCard(
+            data.company.name,
+            listOfNotNull(
+                data.user.name,
+                data.user.email,
+                role.name.replace('_', ' '),
+            ).joinToString(" · "),
+        )
+        OutlinedButton(logout, Modifier.fillMaxWidth()) {
+            Icon(Icons.AutoMirrored.Filled.Logout, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Sign out")
+        }
+    }
+}
+
+@Composable
+private fun SyncStatusCard(ownerUserId: String) {
+    val app = LocalContext.current.applicationContext as com.salespunch360.mobile.SalesPunchApp
+    val pending = app.database.locations().count(ownerUserId).collectAsStateWithLifecycle(0).value
+    ContentCard(
+        "GPS sync",
+        if (pending == 0) {
+            "All queued location points are synced."
+        } else {
+            "$pending location point${if (pending == 1) "" else "s"} waiting for a network upload."
+        },
+    ) {
+        if (pending > 0) StatusChip("Pending $pending")
+    }
+}

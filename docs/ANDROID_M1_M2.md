@@ -1,121 +1,235 @@
-# Android M1/M2 gate: hybrid Account workspace and Plus switching
+# Android M1/M2 — Account workspace and Plus switching
 
 ## Status
 
-**SERVER CONTRACT AMENDMENT IMPLEMENTED — ANDROID IMPLEMENTATION STILL PENDING REVIEW.**
-The approved narrow v1 amendment resolves the previously confirmed server blockers.
-No Android M1/M2 implementation starts until this bridge is reviewed and approved.
+**ANDROID CLIENT IMPLEMENTED — BUILD / DEVICE VALIDATION PENDING.**
 
-Android sources and production scripts remain unchanged. This gate changes only the
-mobile authentication/workspace contract, linked session bridge, forward schema
-migration, tests, and freeze documentation.
+The approved M1/M2 server bridge is already on `main` at
+`63af2529eb1c9c53bdfd0c454051f739a32ae20f`. The Android client implementation
+lives on `feature/m1-m2-android-client` and has not been merged or deployed.
 
-## Required architecture
+The implementation keeps Sales field work native and hosts the existing responsive
+Account workspace inside a hardened Android WebView. No Account business module is
+rebuilt natively.
 
-- Native Android remains the Sales/field-work client.
-- `https://www.salespunch360.com/workspace/account` remains the canonical Account
-  client and must be hosted in a hardened Android WebView rather than rebuilt.
-- Workspace availability must come from current server authorization. A Plus
-  edition is not itself a grant. A saved workspace is only a preference.
-- Account roles and branch permissions remain enforced by the Web application.
-- Opening Account must never initialize attendance, field permissions, check-ins,
-  or background location. Switching workspaces must not mutate attendance or an
-  open visit.
+## Baseline
 
-## Audited Android baseline
+- Project/module: `android` / `:app`
+- Application ID: `com.salespunch360.mobile`
+- Kotlin 2.1.0, Java 17
+- compile/target SDK 35; minimum SDK 26
+- Jetpack Compose + Material 3
+- OkHttp + kotlinx.serialization
+- AndroidX Security encrypted bearer storage
+- Room + WorkManager
+- Google Play Services Location with attendance-driven foreground
+  `TrackingService`
+- Firebase Messaging
+- Existing release transport remains HTTPS-only; the emulator HTTP host remains
+  debug-only.
+- No broad storage permission was added.
 
-- Project/module: `android` / `:app`, a single Gradle application module.
-- Package/application ID: `com.salespunch360.mobile`.
-- Toolchain: Kotlin 2.1.0, Java 17, compile/target SDK 35, minimum SDK 26.
-- UI/navigation: Jetpack Compose with a role-derived single-activity shell and
-  in-memory bottom-navigation selection; no Navigation component graph.
-- Networking/authentication: OkHttp and kotlinx.serialization; the mobile v1
-  bearer token is stored with AndroidX Security encrypted preferences.
-- Persistence/background work: Room, WorkManager, and an attendance-driven
-  foreground `TrackingService` using Google Play Services Location.
-- Native Sales features: login/bootstrap, attendance, location upload, customer
-  and follow-up check-ins, leads, targets, reports, employees/company management,
-  password change, push registration, and logout.
-- Push: Firebase Messaging through a non-exported messaging service.
-- Files/photos: native Sales multipart visit-photo handling; there is currently no
-  Account WebView file chooser or download layer.
-- Deep links: no application deep-link intent filter currently exists.
-- Variants/security: debug uses the emulator HTTP host with a debug-only network
-  policy; release uses the canonical HTTPS API URL, R8, and optional signing values
-  supplied only by environment variables. Services are not exported.
+## Workspace authority
 
-## Resolved prerequisite contract gaps
+Android models the two workspaces explicitly as `SALES` and `ACCOUNT`.
+Availability comes only from the current server `bootstrap.authorizedWorkspaces`
+response and is additionally failed closed if the corresponding server role is
+missing. `ProductEdition`, a saved preference, or an old local state never grants
+workspace access.
 
-### 1. Account-only users cannot establish a mobile session
+Resolution is:
 
-Mobile login now accepts active tenant identities with at least one workspace grant,
-using the shared server workspace policy. Account-only and Plus Account-only actors
-receive the same opaque login envelope as existing Sales actors.
+- Sales-only -> native Sales
+- Account-only -> Account WebView
+- Plus Sales-only -> native Sales
+- Plus Account-only -> Account WebView
+- Plus dual-authorized -> last still-authorized preference, otherwise Sales
+- no authorized workspace -> secure sign-out
 
-### 2. Bootstrap cannot authorize workspace availability
+Only the preferred workspace name is persisted. Fresh bootstrap authority is
+required after process restore and before Account-to-Sales switching.
 
-Bootstrap now adds `productEdition`, `authorizedWorkspaces`, `canSwitchWorkspace`,
-and `user.accountRole`. Android must treat that fresh ordered workspace list as the
-only coarse workspace authority; local state remains preference only.
+## M1 Account workspace
 
-### 3. No approved mobile-to-Web session handoff exists
+The Account workspace uses the canonical origin
+`https://www.salespunch360.com` and Account root
+`/workspace/account`.
 
-Android will call authenticated `POST /api/v1/mobile/web-session` with an optional
-Account-relative `redirectPath`, retain the returned 90-second `handoffCode` only in
-memory, then use WebView `postUrl()` to form-post `code` to canonical
-`https://www.salespunch360.com/mobile/web-session`. The consumer atomically creates
-the linked HTTP-only Web cookie and redirects to the server-stored Account path.
+Android requests the approved one-time handoff through
+`POST /api/v1/mobile/web-session` using the native bearer. The returned handoff
+code stays in memory and is form-encoded into `WebView.postUrl()` for
+`https://www.salespunch360.com/mobile/web-session`. The native bearer is never
+passed to WebView, a URL, JavaScript, a cookie, or an external Intent.
 
-The bearer token is never supplied to WebView, a URL, JavaScript, or a bridge. The
-handoff is hashed at rest, one-time, Account-authorized at issue and consumption,
-and bound to the mobile session, user, generation, expiry, and normalized redirect.
+The server-created `sp360_session` remains the Account Web authentication
+credential. Android accepts first-party cookies and disables third-party cookies.
+Full native logout clears the targeted Account cookie/storage in addition to
+calling the server logout endpoint.
 
-## Approved bridge contract
+## WebView hardening
 
-- API stays v1; operation inventory is 22 after adding only `POST /web-session`.
-- Existing login envelope remains `{accessToken, expiresAt, bootstrap}`.
-- Account-only actors receive false Sales feature/capability flags and cannot call
-  any native Sales operation; those operations return `FORBIDDEN` / 403.
-- Consumption accepts only form-encoded POST. It sets `sp360_session` with HttpOnly,
-  production Secure, SameSite=Lax and Path=/, expiring no later than mobile auth.
-- Native and linked Web logout invalidate the linked pair and its push registration.
-  Normal browser logout remains independent. A later normal login/password change
-  preserves latest-login-wins and invalidates the old pair.
+The Account container:
 
-## Planned client behavior after unblocking
+- enables JavaScript and DOM storage for the Next.js application
+- denies mixed content
+- disables file URL access and universal file URL access
+- uses content access only for Android picker-backed `content://` uploads
+- enables Safe Browsing on supported devices
+- enables WebView debugging only in debug builds
+- never installs `addJavascriptInterface`
+- never uses JavaScript for authentication
+- cancels SSL errors; it never bypasses certificate failures
+- keeps only exact canonical Account routes in the privileged application surface
+- treats `/sign-in` as session recovery, not a second password-login surface
+- opens safe non-SalesPunch360 HTTPS links externally
+- blocks unsafe schemes, lookalike hosts, user-info tricks, encoded path traversal,
+  and arbitrary same-origin API paths
 
-- Resolve `[SALES]`, `[ACCOUNT]`, or `[SALES, ACCOUNT]` only from fresh bootstrap
-  authority; ignore a saved workspace that is no longer present.
-- Start Sales initialization and location behavior only when server-authorized
-  Sales field conditions require it. Manager-only and null manager type remain
-  fail-closed for personal field work.
-- Use a minimal Compose workspace shell and a separately owned Account WebView
-  component with canonical-origin checks, HTTPS/mixed-content hardening, no JS
-  interface, release debugging disabled, renderer recovery, loading/offline/error
-  states, and meaningful WebView-first back navigation.
-- Keep same-origin Account routes in the WebView, open safe external HTTPS URLs via
-  system handling, and reject `javascript:`, `file:`, `content:`, `intent:`, HTTP,
-  lookalike hosts, and unauthorized Account deep links.
-- Use the Storage Access Framework/file picker for uploads and scoped Android
-  download handling for authenticated PDFs, spreadsheets, exports, and documents;
-  request no broad storage permission and share no bearer token externally.
-- Clear WebView session data with coherent native logout/session revocation and
-  re-resolve authorization after login, process restore, or Account-to-Sales switch.
+The controlled handoff route is accepted only during the app-initiated handoff
+load. Known frozen Account document/download endpoints are separately allowlisted;
+the mobile API itself is not a privileged WebView resource.
+
+## Session recovery
+
+When the linked Web session redirects to `/sign-in`, Android refreshes the native
+bootstrap and attempts at most one automatic Web-session recovery before showing a
+recoverable error. A 401 securely signs the app out. If Account authorization has
+been removed but Sales remains authorized, fresh bootstrap resolves back to Sales
+rather than treating the old Account preference as authority.
+
+Native logout stops field tracking, revokes the server mobile session, clears
+user-owned queued location state, clears the encrypted bearer, clears the workspace
+preference, and clears Account Web state.
+
+A logout performed inside the linked Account Web session revokes the linked mobile
+session server-side; the following native bootstrap/session request therefore
+fails closed and returns to native sign-in.
+
+## M2 Plus switching
+
+The workspace switch appears only when fresh bootstrap is dual-authorized.
+
+Sales -> Account:
+
+- stores Account as a preference only
+- does not end attendance
+- does not checkout an open visit
+- does not mutate leads/follow-ups/targets
+- does not start GPS because Account opened
+- requests a Web handoff when the Account container opens
+
+Account -> Sales:
+
+- refreshes bootstrap before exposing native Sales again
+- saves Sales only after it remains authorized
+- returns to the existing native Sales shell
+
+Switching away from an active native Sales session does not stop legitimate
+attendance tracking. If fresh authority later removes Sales, Android stops
+`TrackingService` and cancels Sales location sync. A location upload 403 also
+stops tracking and requests an authorization refresh without treating the 403 as
+total authentication loss.
+
+## GPS and field privacy
+
+Account-only bootstrap never reaches the native Sales shell. Account entry does not
+call `TrackingService.start()`, attendance controls are rendered only inside the
+Sales shell when `fieldWorkEnabled` is true, and location/camera permission
+requests remain action-driven by native Sales workflows.
+
+On process restore an Account-only bootstrap explicitly stops any stale field
+tracking and clears/cancels Sales location queue work for that identity.
+
+Manager field behavior remains server-driven; this implementation does not alter
+FIELD_MANAGER / MANAGER_ONLY policy.
+
+## Back behavior
+
+Inside Account, Android goes back only when the previous WebView history entry is a
+validated Account route. Otherwise a dual-authorized user returns to Sales through
+the workspace shell. Single-workspace Account users keep normal Android back
+behavior and are not trapped inside arbitrary Web history.
+
+Native Sales retains its existing tab/back behavior.
+
+## Files and downloads
+
+Web file inputs use `ACTION_OPEN_DOCUMENT` / Storage Access Framework and return
+`content://` URIs. Requested MIME types and multiple-selection mode are honored
+within Android picker boundaries. No raw filesystem path is exposed and no broad
+storage permission is requested.
+
+Authenticated Account downloads are restricted to the canonical HTTPS origin and
+the Account workspace / known frozen Account file endpoints. The Web cookie is
+read transiently only for that request and is never logged or persisted separately.
+Files stream to MediaStore Downloads on Android 10+ or app-scoped storage on older
+supported Android versions. App-scoped files are exposed to external viewers only
+through a non-exported FileProvider/content URI.
+
+This supports the existing Account PDF, report/export, project-document,
+attachment, print, backup/export, and template flows without adding a backend API.
+
+## Deep links
+
+The manifest accepts only HTTPS links for
+`www.salespunch360.com/workspace/account...`. The Kotlin URL policy performs the
+final exact host/path validation and bootstrap still has to prove Account access
+before the link is opened.
+
+`android:autoVerify` is intentionally not claimed because Digital Asset Links
+verification is not established by this implementation.
+
+## Tests added
+
+Android unit-test sources cover:
+
+- Sales-only / Account-only / Plus workspace resolution
+- valid and stale workspace preferences
+- nullable Sales role and fail-closed inconsistent authority
+- empty workspace fail-closed behavior
+- canonical Account URL rules
+- unsafe schemes, lookalikes, user-info and backslash tricks
+- encoded path traversal
+- controlled handoff route
+- sign-in session-recovery classification
+- Account deep-link normalization
+- handoff form encoding
+- Account file-resource allowlist
+- 401 invalidation remaining distinct from 403 authorization change
+
+The pre-existing Sales tests remain in place.
+
+## Validation status
+
+This chat environment can write/review the connected GitHub repository but does
+not provide an Android SDK/repository checkout, and outbound container Git access
+is unavailable. Therefore Gradle, lint, emulator/instrumentation, npm regression,
+and release assembly have **not** been claimed as executed here.
+
+The repository already contains the manual GitHub Actions workflow
+`.github/workflows/android-production-test-apk.yml`, which installs SDK 35 and
+runs release Android tests/lint and `assembleRelease`; this connector cannot
+dispatch `workflow_dispatch` runs.
+
+Before merge, run at minimum:
+
+```bash
+cd android
+./gradlew test lint assembleDebug
+./gradlew assembleRelease
+```
+
+and the frozen Web/API regression checks from the M1/M2 task plan. Device/emulator
+validation should additionally cover Account-only launch, Plus switching, file
+picker, authenticated PDF/downloads, external links, back navigation, process
+recreation, linked-Web logout, and active-attendance switching.
 
 ## Known limitations
 
-Android implementation intentionally remains pending actual review and approval of
-this server amendment. There is still no WebView, workspace switch UI, Account file
-flow, Account deep-link routing, or Account notification routing in this change.
-
-## Validation commands
-
-From the repository root:
-
-```bash
-npx vitest run src/lib/mobile/freeze-contract.test.ts
-cd android && ./gradlew test lint assembleDebug
-```
-
-The Android tasks validate the existing native baseline only; the blocked Account
-and Plus behaviors cannot truthfully be represented as passing acceptance tests.
+- No verified Android App Links / Digital Asset Links claim is made.
+- Account-specific push routing was not expanded; push contract remains the frozen
+  general mobile behavior.
+- Runtime WebView/file-picker/download behavior still requires device/emulator
+  validation.
+- Release signing / Play Store publication is outside M1/M2 and was not performed.
+- M3 PWA, R3, R4, R5, and H1 have not started.

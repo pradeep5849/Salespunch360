@@ -2,9 +2,25 @@ package com.salespunch360.mobile.data
 import kotlinx.serialization.Serializable
 @Serializable data class LoginRequest(val identifier:String,val password:String)
 @Serializable data class LoginResponse(val accessToken:String,val expiresAt:String,val bootstrap:Bootstrap)
-@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val capabilities:Capabilities=Capabilities(),val entitlement:Entitlement,val attendance:Attendance?)
-@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole)
+@Serializable data class Bootstrap(
+ val user:MobileUser,
+ val company:CompanyBrand,
+ val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,
+ val features:Features,
+ val capabilities:Capabilities=Capabilities(),
+ val entitlement:Entitlement,
+ val attendance:Attendance?,
+ val productEdition:ProductEdition,
+ val authorizedWorkspaces:List<Workspace>,
+ val canSwitchWorkspace:Boolean
+)
+@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
+@Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
+@Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
+@Serializable enum class Workspace{SALES,ACCOUNT}
+@Serializable data class WebSessionRequest(val redirectPath:String="/workspace/account")
+@Serializable data class WebSessionHandoff(val handoffCode:String,val expiresAt:String)
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)

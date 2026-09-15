@@ -1,28 +1,111 @@
 package com.salespunch360.mobile
 
-import android.os.Bundle
 import android.Manifest
+import android.content.Intent
 import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.Composable
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.salespunch360.mobile.ui.AppTheme
-import com.salespunch360.mobile.ui.AuthenticatedApp
-import com.salespunch360.mobile.ui.LoadingScreen
-import com.salespunch360.mobile.ui.LoginScreen
-import com.salespunch360.mobile.ui.RetryScreen
+import com.salespunch360.mobile.data.Workspace
+import com.salespunch360.mobile.data.validatedWorkspaces
+import com.salespunch360.mobile.ui.*
 
-class MainActivity:ComponentActivity(){private val notifications=registerForActivityResult(ActivityResultContracts.RequestPermission()){};override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);if(Build.VERSION.SDK_INT>=33)notifications.launch(Manifest.permission.POST_NOTIFICATIONS);setContent{AppTheme{SalesPunchAppRoot()}}}}
+class MainActivity : ComponentActivity() {
+    private val notifications =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
-@Composable fun SalesPunchAppRoot(vm:MainViewModel=viewModel()){
- val state=vm.state.collectAsStateWithLifecycle().value
- when(state.status){
-  AppStatus.STARTING->LoadingScreen("Securing your session…")
-  AppStatus.SIGNED_OUT->LoginScreen(state.message,state.submitting,vm::clearMessage,vm::login)
-  AppStatus.RECOVERABLE_ERROR->RetryScreen(state.message?:"Unable to connect",vm::validateSession,vm::logout)
-  AppStatus.AUTHENTICATED->state.bootstrap?.let{AuthenticatedApp(it,state.message,vm::clearMessage,{start,location,done->vm.attendance(start,location,done)},vm::logout)}?:LoadingScreen()
- }
+    private var deepLink by mutableStateOf<String?>(null)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        deepLink = intent?.dataString
+        if (Build.VERSION.SDK_INT >= 33) {
+            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        setContent {
+            AppTheme {
+                SalesPunchAppRoot(deepLink = deepLink)
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        deepLink = intent.dataString
+    }
+}
+
+@Composable
+fun SalesPunchAppRoot(
+    vm: MainViewModel = viewModel(),
+    deepLink: String? = null,
+) {
+    val state = vm.state.collectAsStateWithLifecycle().value
+
+    LaunchedEffect(deepLink) {
+        if (deepLink != null) vm.handleDeepLink(deepLink)
+    }
+
+    when (state.status) {
+        AppStatus.STARTING -> LoadingScreen("Securing your session…")
+        AppStatus.SIGNED_OUT -> LoginScreen(
+            state.message,
+            state.submitting,
+            vm::clearMessage,
+            vm::login,
+        )
+        AppStatus.RECOVERABLE_ERROR -> RetryScreen(
+            state.message ?: "Unable to connect",
+            vm::validateSession,
+            vm::logout,
+        )
+        AppStatus.AUTHENTICATED -> {
+            val data = state.bootstrap
+            val canSwitch = data?.let { it.canSwitchWorkspace && validatedWorkspaces(it).size == 2 } == true
+            if (data == null || state.workspace == null) {
+                LoadingScreen()
+            } else {
+                when (state.workspace) {
+                    Workspace.SALES -> {
+                        if (data.user.salesRole == null) {
+                            RetryScreen(
+                                "Sales access changed. Refresh your session.",
+                                vm::validateSession,
+                                vm::logout,
+                            )
+                        } else {
+                            AuthenticatedApp(
+                                data = data,
+                                message = state.message,
+                                dismiss = vm::clearMessage,
+                                attendance = { start, location, done ->
+                                    vm.attendance(start, location, done)
+                                },
+                                logout = vm::logout,
+                                switchToAccount = if (canSwitch) {
+                                    { vm.switchToAccount() }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
+                    Workspace.ACCOUNT -> AccountWorkspaceScreen(
+                        data = data,
+                        redirectPath = state.accountPath,
+                        sessionEpoch = state.accountSessionEpoch,
+                        requestHandoff = vm::requestAccountHandoff,
+                        recoverSession = vm::recoverAccountSession,
+                        switchToSales = if (canSwitch) vm::switchToSales else null,
+                        logout = vm::logout,
+                    )
+                }
+            }
+        }
+    }
 }
