@@ -10,6 +10,7 @@ import android.provider.MediaStore
 import android.webkit.CookieManager
 import android.webkit.URLUtil
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
@@ -53,7 +54,7 @@ object AccountDownloadManager {
                         ?: "application/octet-stream"
 
                     body.byteStream().use { input ->
-                        val uri = if (Build.VERSION.SDK_INT >= 29) {
+                        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             saveToMediaStore(app, fileName, type, input)
                         } else {
                             saveToAppStorage(app, fileName, input)
@@ -73,6 +74,7 @@ object AccountDownloadManager {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun saveToMediaStore(
         context: Context,
         fileName: String,
