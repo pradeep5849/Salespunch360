@@ -1,0 +1,43 @@
+name: M3 PWA validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/app/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/m3-pwa-validation-temp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/salespunch360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma validate
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --run src/lib/mobile/contract.test.ts
+      - name: Validate PWA assets
+        run: |
+          test -f public/sw.js
+          test -f src/app/manifest.ts
+          test -f src/app/pwa-register.tsx
+          grep -q 'display: "standalone"' src/app/manifest.ts
+          grep -q 'manifest: "/manifest.webmanifest"' src/app/layout.tsx
+          grep -q 'serviceWorker.register("/sw.js"' src/app/pwa-register.tsx
+      - run: npm run build
