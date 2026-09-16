@@ -55,4 +55,6 @@ jobs:
           grep -q 'display: "standalone"' src/app/manifest.ts
           grep -q 'manifest: "/manifest.webmanifest"' src/app/layout.tsx
           grep -q 'serviceWorker.register("/sw.js"' src/app/pwa-register.tsx
+      - name: Initialize temporary CI database
+        run: npx prisma migrate deploy
       - run: npm run build
