@@ -37,17 +37,16 @@ export function shouldRegisterPwaServiceWorker() {
 export function PwaInstall() {
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [showIosHelp, setShowIosHelp] = useState(false);
-  const [dismissed, setDismissed] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (isStandalone() || isNativeAndroidWebView()) return;
     const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
-    setDismissed(wasDismissed);
-    if (!wasDismissed && isIosSafari()) setShowIosHelp(true);
+    if (wasDismissed) return;
 
     const onPrompt = (event: Event) => {
       event.preventDefault();
-      if (!wasDismissed) setPromptEvent(event as InstallPromptEvent);
+      setPromptEvent(event as InstallPromptEvent);
     };
     const onInstalled = () => {
       setPromptEvent(null);
@@ -55,9 +54,16 @@ export function PwaInstall() {
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
+
+    let iosHelpTimer: ReturnType<typeof window.setTimeout> | undefined;
+    if (isIosSafari()) {
+      iosHelpTimer = window.setTimeout(() => setShowIosHelp(true), 0);
+    }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("appinstalled", onInstalled);
+      if (iosHelpTimer !== undefined) window.clearTimeout(iosHelpTimer);
     };
   }, []);
 
