@@ -35,6 +35,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/salespunch360
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/salespunch360
+      AUTH_SECRET: m3-ci-only-auth-secret-0123456789abcdef0123456789abcdef
+      APP_URL: https://www.salespunch360.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
