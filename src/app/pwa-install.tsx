@@ -55,7 +55,7 @@ export function PwaInstall() {
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
 
-    let iosHelpTimer: ReturnType<typeof window.setTimeout> | undefined;
+    let iosHelpTimer: number | undefined;
     if (isIosSafari()) {
       iosHelpTimer = window.setTimeout(() => setShowIosHelp(true), 0);
     }
