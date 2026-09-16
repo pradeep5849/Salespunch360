@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./functional-polish.css";
+import "./pwa.css";
 import { PwaRegister } from "./pwa-register";
 import { PwaInstall } from "./pwa-install";
 
@@ -10,15 +11,8 @@ export const metadata: Metadata = {
   description: "Run field sales, business accounts, projects, inventory and branches from one connected platform.",
   manifest: "/manifest.webmanifest",
   applicationName: "SalesPunch360",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "SalesPunch360",
-  },
-  icons: {
-    icon: "/salespunch360-logo.png",
-    apple: "/salespunch360-logo.png",
-  },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "SalesPunch360" },
+  icons: { icon: "/salespunch360-logo.png", apple: "/salespunch360-logo.png" },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -29,21 +23,8 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#0f172a",
-};
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0f172a" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="en">
-      <body>
-        {children}
-        <PwaInstall />
-        <PwaRegister />
-      </body>
-    </html>
-  );
+  return <html lang="en"><body>{children}<PwaInstall /><PwaRegister /></body></html>;
 }
