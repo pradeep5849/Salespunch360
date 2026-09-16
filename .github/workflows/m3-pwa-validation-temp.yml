@@ -37,6 +37,13 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/salespunch360
       AUTH_SECRET: m3-ci-only-auth-secret-0123456789abcdef0123456789abcdef
       APP_URL: https://www.salespunch360.com
+      HOSTINGER_STORAGE_PATH: /tmp/salespunch360-m3-ci-storage
+      SMTP_HOST: smtp.hostinger.com
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_USER: ci@example.com
+      SMTP_PASSWORD: ci-validation-password-0123456789
+      MAIL_FROM: ci@example.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
