@@ -32,7 +32,7 @@ jobs:
       - run: npx prisma validate
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test -- --run src/lib/mobile/contract.test.ts
+      - run: npm test -- src/lib/mobile/v1/contract.test.ts
       - name: Validate PWA assets
         run: |
           test -f public/sw.js
