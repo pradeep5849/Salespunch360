@@ -12,8 +12,11 @@ import kotlinx.serialization.Serializable
  val attendance:Attendance?,
  val productEdition:ProductEdition,
  val authorizedWorkspaces:List<Workspace>,
- val canSwitchWorkspace:Boolean
+ val canSwitchWorkspace:Boolean,
+ val salesDashboard:SalesDashboard?=null
 )
+@Serializable data class SalesDashboard(val todayVisitCount:Int=0,val todayLeadCount:Int=0,val monthVisitCount:Int=0,val monthLeadCount:Int=0,val pendingTodayTasks:Int=0,val overdueTasks:Int=0,val recentVisits:List<DashboardVisit> = emptyList())
+@Serializable data class DashboardVisit(val id:String,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null)
 @Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
@@ -64,12 +67,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class LocationPayload(val latitude:Double,val longitude:Double,val accuracyMeters:Double?=null,val clientPointId:String?=null,val capturedAt:String?=null)
 
-internal fun attendanceRequest(action:String,location:LocationPayload?):AttendanceRequest {
- if(location!=null&&location.capturedAt.isNullOrBlank())throw IllegalArgumentException("Attendance location measurement time is required")
- if(location!=null)java.time.Instant.parse(location.capturedAt)
- return AttendanceRequest(action,location)
-}
-
+internal fun attendanceRequest(action:String,location:LocationPayload?):AttendanceRequest { if(location!=null&&location.capturedAt.isNullOrBlank())throw IllegalArgumentException("Attendance location measurement time is required"); if(location!=null)java.time.Instant.parse(location.capturedAt); return AttendanceRequest(action,location) }
 internal fun employeeStatus(employee:Employee)=when{!employee.isActive->"Inactive identity";!employee.salesAccessActive->"Sales access suspended";else->"Active"}
 internal fun employeeAction(employee:Employee)=when{!employee.isActive->"Reactivate identity";!employee.salesAccessActive->"Restore Sales access";else->"Deactivate employee"}
 internal fun isActiveEmployee(employee:Employee)=employee.isActive&&employee.salesAccessActive
