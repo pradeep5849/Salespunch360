@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./functional-polish.css";
 import { PwaRegister } from "./pwa-register";
+import { PwaInstall } from "./pwa-install";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.salespunch360.com"),
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         {children}
+        <PwaInstall />
         <PwaRegister />
       </body>
     </html>
