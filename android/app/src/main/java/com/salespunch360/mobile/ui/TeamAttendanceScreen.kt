@@ -15,10 +15,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AttendanceOverviewViewModel
+import com.salespunch360.mobile.data.Bootstrap
+import com.salespunch360.mobile.data.LocationPayload
 import com.salespunch360.mobile.data.MobileRole
+
+@Composable fun FieldManagerAttendanceScreen(data:Bootstrap,attendance:(Boolean,LocationPayload,()->Unit)->Unit){
+ var tab by remember{mutableIntStateOf(0)}
+ Column(Modifier.fillMaxSize()){
+  TabRow(selectedTabIndex=tab){Tab(selected=tab==0,onClick={tab=0},text={Text("My Attendance")});Tab(selected=tab==1,onClick={tab=1},text={Text("Team Status")})}
+  if(tab==0)SalesDrawerAttendance(data,attendance) else TeamAttendanceScreen(MobileRole.MANAGER)
+ }
+}
 
 @Composable fun TeamAttendanceScreen(role:MobileRole,vm:AttendanceOverviewViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value
+ LaunchedEffect(Unit){vm.load()}
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=16.dp),contentPadding=PaddingValues(vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Attendance",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);HorizontalDivider(Modifier.padding(top=8.dp,bottom=10.dp),color=SalesLine);Text("Team attendance",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk);Text(if(role==MobileRole.MANAGER)"Current attendance status of your assigned sales team." else "Current attendance state for your company.",color=SalesMuted)}
   if(state.loading&&state.employees.isEmpty())item{LinearProgressIndicator(Modifier.fillMaxWidth())}
