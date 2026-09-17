@@ -21,12 +21,90 @@ import kotlinx.coroutines.launch
 private val PrimaryAdminItems = listOf("Dashboard","Employees","Attendance","Customers","Leads","Follow-ups","Targets","Billing & Subscription","Settings","Reports")
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun PrimaryAdminAuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit,logout:()->Unit,switchToAccount:(()->Unit)?=null){
- val drawer=rememberDrawerState(DrawerValue.Closed);val scope=rememberCoroutineScope();var route by rememberSaveable{mutableStateOf("Dashboard")};var profileMenu by remember{mutableStateOf(false)};var pendingLeadId by remember{mutableStateOf<String?>(null)};var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
- fun navigate(value:String){route=value;visitTask=null;scope.launch{drawer.close()}}
- ModalNavigationDrawer(drawerState=drawer,drawerContent={ModalDrawerSheet(Modifier.width(300.dp),drawerContainerColor=SalesNavy){Spacer(Modifier.height(22.dp));PrimaryAdminItems.forEach{item->NavigationDrawerItem(label={Text(item,fontWeight=FontWeight.SemiBold)},selected=route==item,onClick={navigate(item)},colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent,selectedContainerColor=Color.White.copy(alpha=.12f),unselectedTextColor=Color.White,selectedTextColor=Color.White),modifier=Modifier.padding(horizontal=12.dp,vertical=2.dp))};if(switchToAccount!=null){HorizontalDivider(Modifier.padding(16.dp),color=Color.White.copy(alpha=.18f));NavigationDrawerItem(label={Text("⇄  Switch to Accounts",color=Color.White)},selected=false,onClick={scope.launch{drawer.close()};switchToAccount()},colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent),modifier=Modifier.padding(horizontal=12.dp))}}}){
-  Scaffold(containerColor=SalesPale,topBar={TopAppBar(colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White),navigationIcon={IconButton({scope.launch{drawer.open()}}){Icon(Icons.Default.Menu,"Open menu")}},title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},actions={Box{IconButton({profileMenu=true}){Surface(shape=CircleShape,color=Color(0xFFEAF3FF)){Box(Modifier.size(42.dp),contentAlignment=Alignment.Center){Text(data.user.name.trim().firstOrNull()?.uppercase()?:"P",color=SalesBlue,fontWeight=FontWeight.Bold)}}};DropdownMenu(profileMenu,{profileMenu=false}){DropdownMenuItem({Text("Company Details")},{profileMenu=false;route="Company Details"});DropdownMenuItem({Text("Follow-up Tasks")},{profileMenu=false;route="Follow-ups"});DropdownMenuItem({Text("Change Password")},{profileMenu=false;route="Change Password"});HorizontalDivider();DropdownMenuItem({Text("Logout")},{profileMenu=false;logout()})}}}})}){padding->Column(Modifier.padding(padding).fillMaxSize()){message?.let{MessageBanner(it,dismiss)};when{visitTask!=null->PrimaryFollowUpVisit(visitTask!!){visitTask=null};route=="Dashboard"->PrimaryAdminDashboard(data);route=="Employees"->EmployeesScreen();route=="Customers"->CustomersScreen();route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null});route=="Follow-ups"->FollowUpsScreen(startCheckIn={},viewLead={pendingLeadId=it;route="Leads"},viewVisit={visitTask=it});route=="Targets"->TargetsScreen(MobileRole.PRIMARY_ADMIN);route=="Billing & Subscription"->SubscriptionScreen();route=="Settings"->SettingsScreen();route=="Reports"->ReportsScreen(role=MobileRole.PRIMARY_ADMIN);route=="Company Details"->PrimaryAdminCompanyDetails(data);route=="Change Password"->ChangePasswordScreen();route=="Attendance"->TeamAttendanceScreen(MobileRole.PRIMARY_ADMIN);else->PrimaryAdminDashboard(data)}}}
- }
+@Composable
+fun PrimaryAdminAuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit,logout:()->Unit,switchToAccount:(()->Unit)?=null){
+    val drawer=rememberDrawerState(DrawerValue.Closed)
+    val scope=rememberCoroutineScope()
+    var route by rememberSaveable{mutableStateOf("Dashboard")}
+    var profileMenu by remember{mutableStateOf(false)}
+    var pendingLeadId by remember{mutableStateOf<String?>(null)}
+    var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
+    fun navigate(value:String){route=value;visitTask=null;scope.launch{drawer.close()}}
+
+    ModalNavigationDrawer(
+        drawerState=drawer,
+        drawerContent={
+            ModalDrawerSheet(Modifier.width(300.dp),drawerContainerColor=SalesNavy){
+                Spacer(Modifier.height(22.dp))
+                PrimaryAdminItems.forEach{item->
+                    NavigationDrawerItem(
+                        label={Text(item,fontWeight=FontWeight.SemiBold)},
+                        selected=route==item,
+                        onClick={navigate(item)},
+                        colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent,selectedContainerColor=Color.White.copy(alpha=.12f),unselectedTextColor=Color.White,selectedTextColor=Color.White),
+                        modifier=Modifier.padding(horizontal=12.dp,vertical=2.dp)
+                    )
+                }
+                if(switchToAccount!=null){
+                    HorizontalDivider(Modifier.padding(16.dp),color=Color.White.copy(alpha=.18f))
+                    NavigationDrawerItem(
+                        label={Text("⇄  Switch to Accounts",color=Color.White)},
+                        selected=false,
+                        onClick={scope.launch{drawer.close()};switchToAccount()},
+                        colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent),
+                        modifier=Modifier.padding(horizontal=12.dp)
+                    )
+                }
+            }
+        }
+    ){
+        Scaffold(
+            containerColor=SalesPale,
+            topBar={
+                TopAppBar(
+                    colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White),
+                    navigationIcon={IconButton({scope.launch{drawer.open()}}){Icon(Icons.Default.Menu,"Open menu")}},
+                    title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},
+                    actions={
+                        Box{
+                            IconButton({profileMenu=true}){
+                                Surface(shape=CircleShape,color=Color(0xFFEAF3FF)){
+                                    Box(Modifier.size(42.dp),contentAlignment=Alignment.Center){Text(data.user.name.trim().firstOrNull()?.uppercase()?:"P",color=SalesBlue,fontWeight=FontWeight.Bold)}
+                                }
+                            }
+                            DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){
+                                DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;route="Company Details"})
+                                DropdownMenuItem(text={Text("Follow-up Tasks")},onClick={profileMenu=false;route="Follow-ups"})
+                                DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;route="Change Password"})
+                                HorizontalDivider()
+                                DropdownMenuItem(text={Text("Logout")},onClick={profileMenu=false;logout()})
+                            }
+                        }
+                    }
+                )
+            }
+        ){padding->
+            Column(Modifier.padding(padding).fillMaxSize()){
+                message?.let{MessageBanner(it,dismiss)}
+                when{
+                    visitTask!=null->PrimaryFollowUpVisit(visitTask!!){visitTask=null}
+                    route=="Dashboard"->PrimaryAdminDashboard(data)
+                    route=="Employees"->EmployeesScreen()
+                    route=="Customers"->CustomersScreen()
+                    route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null})
+                    route=="Follow-ups"->FollowUpsScreen(startCheckIn={},viewLead={pendingLeadId=it;route="Leads"},viewVisit={visitTask=it})
+                    route=="Targets"->TargetsScreen(MobileRole.PRIMARY_ADMIN)
+                    route=="Billing & Subscription"->SubscriptionScreen()
+                    route=="Settings"->SettingsScreen()
+                    route=="Reports"->ReportsScreen(role=MobileRole.PRIMARY_ADMIN)
+                    route=="Company Details"->PrimaryAdminCompanyDetails(data)
+                    route=="Change Password"->ChangePasswordScreen()
+                    route=="Attendance"->TeamAttendanceScreen(MobileRole.PRIMARY_ADMIN)
+                    else->PrimaryAdminDashboard(data)
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun PrimaryFollowUpVisit(task:FollowUpTask,back:()->Unit){LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Back")};Text("Visit Details",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)};item{OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(task.subjectName,fontWeight=FontWeight.Bold,color=SalesInk);Text("Sales: ${task.completedVisitUserName?:task.assignedUserName?:"—"}",color=SalesMuted);task.checkedInAt?.let{Text("Check-in: ${primaryAdminTime(it)}",color=SalesMuted)};task.checkedOutAt?.let{Text("Checkout: ${primaryAdminTime(it)}",color=SalesMuted)};StatusChip(if(task.checkedOutAt==null)"Checkout pending" else "Checkout completed")}}}}}
