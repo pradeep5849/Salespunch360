@@ -11,6 +11,7 @@ class FieldViewModel(app:Application):AndroidViewModel(app){private val session=
  fun refresh()=viewModelScope.launch{_state.value=_state.value.copy(loading=true);_state.value=try{FieldState(false,api.fieldContext(),api.leads().filter{it.assignedUserId==session.userId()})}catch(_:Exception){_state.value.copy(loading=false,message="Field information couldn't be loaded.")}}
  fun checkIn(type:String,subjectId:String?,name:String?,phone:String?,location:LocationPayload,notes:String?,photo:ByteArray?,followUpTaskId:String?=null){mutate("Checked in."){api.checkIn(type,subjectId,name,phone,location,notes,photo,followUpTaskId)}}
  fun checkout(visitId:String,location:LocationPayload,sentiment:VisitSentiment,remarks:String?){mutate("Checkout completed."){api.checkout(visitId,location,sentiment,remarks)}}
+ fun addPhone(visitId:String,phone:String){mutate("Phone added and Lead created."){api.addPendingPhone(visitId,phone)}}
  fun createLead(visitId:String,title:String){mutate("Lead created from visit."){api.leadFromVisit(visitId,title)}}
  fun locationError(message:String){_state.value=_state.value.copy(message=message)}
  fun clear(){_state.value=_state.value.copy(message=null)}
