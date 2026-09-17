@@ -21,11 +21,13 @@ export function EmployeeGroup({title,users,empty,addHref,addLabel,canManage,canA
 export default async function EmployeesPage({searchParams}:{searchParams:Promise<{domain?:string;filter?:string}>}) {
   const context=await getProductUserManagementContext(),params=await searchParams;
   const workspace=await webWorkspaceContext(context.actor);
-  const domain=workspace?.effectiveWorkspace==="ACCOUNT"||!context.canManageSalesUsers?"account":"sales";
+  const domain=workspace?.effectiveWorkspace==="ACCOUNT"?"account":"sales";
   if(domain==="account") {
+    if(!context.canManageAccountUsers) return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Account Employees" backHref="/workspace/account"/><p className="muted">You do not have permission to manage Account employees.</p></section></main>;
     const groups=accountGroups(context.users as DirectoryUser[]),filter=(params.filter??"all").toLowerCase();
     return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Account Employees" backHref="/workspace/account"/><nav className="employee-filters"><Link href="/workspace/employees">All</Link><Link href="/workspace/employees?filter=inactive">Inactive</Link></nav><div className="account-role-stats">{accountRoles.map(role=><div key={role}><strong>{context.accountUsage[role]} / {context.accountLimits[role]}</strong><span>{accountRoleLabel(role)} · {Math.max(0,context.accountLimits[role]-context.accountUsage[role])} available</span></div>)}</div>{filter==="inactive"?<EmployeeGroup title="Inactive Account Employees" users={groups.inactive} empty="No inactive users." canManage={context.canManageAccountUsers} canAdd={false} domain="account"/>:accountRoles.map(role=><EmployeeGroup key={role} title={`${accountRoleLabel(role)}s`} users={groups[role]} empty={`No ${accountRoleLabel(role)}s added.`} canManage={context.canManageAccountUsers} canAdd={context.canManageAccountUsers&&context.accountUsage[role]<context.accountLimits[role]} addHref={`/workspace/employees/account/new/${role.toLowerCase().replaceAll("_","-")}`} addLabel={`Add ${accountRoleLabel(role)}`} domain="account"/>)}</section></main>;
   }
+  if(!context.canManageSalesUsers) return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Sales Employees" backHref="/workspace"/><p className="muted">You do not have permission to manage Sales employees.</p></section></main>;
   const [employeeContext,admins,seats]=await Promise.all([getEmployeeManagementContext(),listAdditionalAdmins(),effectiveEntitlement(context.actor.companyId!)]);
   const all=[...admins.map(user=>({...user,salesRole:"ADMIN" as const,managerType:null})),...employeeContext.employees] as DirectoryUser[];
   const groups=salesGroups(all),filter=(params.filter??"all").toLowerCase(),canManage=context.actor.salesRole==="PRIMARY_ADMIN";
