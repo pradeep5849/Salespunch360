@@ -1,0 +1,93 @@
+name: R5 final validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web final regression
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: salespunch360_ci
+          POSTGRES_PASSWORD: salespunch360_ci
+          POSTGRES_DB: salespunch360_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U salespunch360_ci -d salespunch360_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
+      DIRECT_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma validate
+      - name: Exercise production-safe migration path on isolated database
+        run: |
+          set -euo pipefail
+          node scripts/migrate-deploy-safe.mjs || true
+          node scripts/repair-a11-a14-runtime.mjs
+          node scripts/migrate-deploy-safe.mjs
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: "1"
+          AUTH_SECRET: "r5-ci-only-auth-secret-not-used-outside-github-actions"
+          APP_URL: "https://www.salespunch360.com"
+          HOSTINGER_STORAGE_PATH: "/tmp/salespunch360-r5-storage"
+          SMTP_HOST: "smtp.hostinger.com"
+          SMTP_PORT: "465"
+          SMTP_SECURE: "true"
+          SMTP_USER: "r5-ci@salespunch360.com"
+          SMTP_PASSWORD: "r5-ci-only-password-not-used-outside-github-actions"
+          MAIL_FROM: "r5-ci@salespunch360.com"
+
+  android:
+    name: Android final regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools"
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Run Android release tests and lint
+        working-directory: android
+        run: ./gradlew --no-daemon testReleaseUnitTest lintRelease
+      - name: Assemble unsigned release
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Verify release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'https://www.salespunch360.com/' android/app/build.gradle.kts
+          if grep -R -n -E '10\.0\.2\.2|localhost' android/app/src/main android/app/src/release 2>/dev/null; then
+            echo "Release sources contain a forbidden development host." >&2
+            exit 1
+          fi
+          grep -Fq 'manifestPlaceholders["cleartextTraffic"]="false"' android/app/build.gradle.kts
