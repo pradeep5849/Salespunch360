@@ -54,6 +54,7 @@ class ApiClient(private val session:SecureSession){
  suspend fun updateOperations(data:OperationsSettings)=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company","PATCH",json.encodeToString(CompanyUpdateRequest("operations",data))))
  suspend fun updateGeofence(data:GeofenceSettings)=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company","PATCH",json.encodeToString(CompanyUpdateRequest("geofence",data))))
  suspend fun targets()=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets"))
+ suspend fun monthlyTargets()=json.decodeFromString<MonthlyTargetsContext>(call("api/v1/mobile/targets?view=monthly"))
  suspend fun createTarget(data:TargetRequest)=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets","POST",json.encodeToString(data)))
  suspend fun editTarget(data:EditTargetRequest)=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets","PATCH",json.encodeToString(data)))
 }
