@@ -7,6 +7,10 @@ import kotlinx.serialization.Serializable
 @Serializable data class AdminDashboard(val teamMemberCount:Int=0,val presentToday:Int=0,val todayVisitCount:Int=0,val todayLeadCount:Int=0,val recentVisits:List<AdminDashboardVisit> = emptyList())
 @Serializable data class AdminDashboardVisit(val id:String,val userName:String?=null,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null,val thumbnailUrl:String?=null)
 @Serializable data class DashboardVisit(val id:String,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null,val thumbnailUrl:String?=null)
+@Serializable data class DashboardEmployee(val id:String,val name:String,val salesRole:MobileRole,val managerType:String?=null)
+@Serializable data class LatestLocation(val latitude:Double,val longitude:Double,val capturedAt:String,val user:DashboardLocationUser)
+@Serializable data class DashboardLocationUser(val name:String)
+@Serializable data class MobileDashboardContext(val employees:List<DashboardEmployee> = emptyList(),val liveUserId:String?=null,val latestLocation:LatestLocation?=null)
 @Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null,val managerType:String?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
