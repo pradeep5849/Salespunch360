@@ -16,8 +16,8 @@ describe("frozen mobile API v1 contract", () => {
   it("keeps the version, complete endpoint/method inventory, and route implementations", () => {
     expect(MOBILE_API_VERSION).toBe("v1");
     expect(MOBILE_API_PREFIX).toBe("/api/v1/mobile");
-    expect(MOBILE_ENDPOINTS).toHaveLength(22);
-    expect(new Set(MOBILE_ENDPOINTS.map(([method, path]) => `${method} ${path}`)).size).toBe(22);
+    expect(MOBILE_ENDPOINTS).toHaveLength(23);
+    expect(new Set(MOBILE_ENDPOINTS.map(([method, path]) => `${method} ${path}`)).size).toBe(23);
     for (const [, path] of MOBILE_ENDPOINTS) {
       expect(existsSync(join(process.cwd(), "src/app/api/v1/mobile", path, "route.ts"))).toBe(true);
     }
@@ -37,6 +37,7 @@ describe("frozen mobile API v1 contract", () => {
     expect(MOBILE_PAGINATION.reports).toMatchObject({defaultPageSize: 25, maxPageSize: 100, maxDateRangeDays: 366, orderingTieBreaker: "id desc"});
     expect(MOBILE_PAGINATION.leads).toMatchObject({maxItems: 200, ordering: "updatedAt desc"});
     expect(MOBILE_PAGINATION.targets).toMatchObject({maxItems: 100, ordering: "startDate desc, id desc"});
+    expect(MOBILE_PAGINATION.followUps).toMatchObject({maxItems: 300, ordering: "dueDate asc, createdAt asc, id asc"});
     expect(MOBILE_REPORT_NAMES).toEqual(["attendance", "check-ins", "advanced-check-ins", "leads", "gps", "geofence", "targets"]);
   });
 
