@@ -12,8 +12,11 @@ import kotlinx.serialization.Serializable
  val attendance:Attendance?,
  val productEdition:ProductEdition,
  val authorizedWorkspaces:List<Workspace>,
- val canSwitchWorkspace:Boolean
+ val canSwitchWorkspace:Boolean,
+ val salesDashboard:SalesDashboard?=null
 )
+@Serializable data class SalesDashboard(val todayVisitCount:Int=0,val todayLeadCount:Int=0,val monthVisitCount:Int=0,val monthLeadCount:Int=0,val pendingTodayTasks:Int=0,val overdueTasks:Int=0,val recentVisits:List<DashboardVisit> = emptyList())
+@Serializable data class DashboardVisit(val id:String,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null)
 @Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
@@ -51,6 +54,8 @@ import kotlinx.serialization.Serializable
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
 @Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val leadCount:Int=0,val contactName:String?=null,val leadId:String?=null,val visitType:String="CUSTOMER",val customer:Customer?=null)
 @Serializable data class FieldContext(val customers:List<Customer>,val visits:List<FieldVisit>)
+@Serializable data class FollowUpsContext(val status:String,val tasks:List<FollowUpTask>)
+@Serializable data class FollowUpTask(val id:String,val status:String,val dueDate:String,val notes:String?=null,val leadId:String,val leadTitle:String,val subjectName:String,val completedVisitId:String?=null,val checkedInAt:String?=null,val checkedOutAt:String?=null,val canStartCheckIn:Boolean=false)
 @Serializable data class CheckInRequest(val action:String="CHECK_IN",val customerId:String,val location:LocationPayload,val visitNotes:String?=null)
 @Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
 @Serializable enum class LeadStage{NEW,QUALIFIED,PROPOSAL,NEGOTIATION,WON,LOST}
@@ -64,12 +69,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class LocationPayload(val latitude:Double,val longitude:Double,val accuracyMeters:Double?=null,val clientPointId:String?=null,val capturedAt:String?=null)
 
-internal fun attendanceRequest(action:String,location:LocationPayload?):AttendanceRequest {
- if(location!=null&&location.capturedAt.isNullOrBlank())throw IllegalArgumentException("Attendance location measurement time is required")
- if(location!=null)java.time.Instant.parse(location.capturedAt)
- return AttendanceRequest(action,location)
-}
-
+internal fun attendanceRequest(action:String,location:LocationPayload?):AttendanceRequest { if(location!=null&&location.capturedAt.isNullOrBlank())throw IllegalArgumentException("Attendance location measurement time is required"); if(location!=null)java.time.Instant.parse(location.capturedAt); return AttendanceRequest(action,location) }
 internal fun employeeStatus(employee:Employee)=when{!employee.isActive->"Inactive identity";!employee.salesAccessActive->"Sales access suspended";else->"Active"}
 internal fun employeeAction(employee:Employee)=when{!employee.isActive->"Reactivate identity";!employee.salesAccessActive->"Restore Sales access";else->"Deactivate employee"}
 internal fun isActiveEmployee(employee:Employee)=employee.isActive&&employee.salesAccessActive
