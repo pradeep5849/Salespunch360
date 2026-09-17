@@ -13,6 +13,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class MobileDashboardContext(val employees:List<DashboardEmployee> = emptyList(),val liveUserId:String?=null,val latestLocation:LatestLocation?=null)
 @Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null,val managerType:String?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
+@Serializable enum class ManagerType{FIELD_MANAGER,MANAGER_ONLY}
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
 @Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
 @Serializable enum class Workspace{SALES,ACCOUNT}
@@ -45,7 +46,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class Employee(val id:String,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val role:MobileRole,val isActive:Boolean,val salesAccessActive:Boolean,val managerId:String?=null,val manager:EmployeeManager?=null)
 @Serializable data class EmployeeEntitlement(val state:String,val operationalWritesAllowed:Boolean,val managerLimit:Int?=null,val salesLimit:Int?=null,val managerUsage:Int,val salesUsage:Int)
 @Serializable data class EmployeeContext(val employees:List<Employee>,val teamStructure:TeamStructure,val entitlement:EmployeeEntitlement)
-@Serializable data class CreateEmployeeRequest(val role:MobileRole,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String,val managerId:String?=null)
+@Serializable data class CreateEmployeeRequest(val role:MobileRole,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String,val managerId:String?=null,val managerType:ManagerType?=null)
 @Serializable data class EmployeeActiveRequest(val employeeId:String,val isActive:Boolean)
 @Serializable data class Customer(val id:String,val name:String,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val latitude:Double?=null,val longitude:Double?=null,val checkInReferenceSetAt:String?=null)
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
