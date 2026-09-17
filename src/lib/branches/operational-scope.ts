@@ -37,15 +37,15 @@ export async function operationalBranchContext(actor: OperationalActor, requeste
   if (actor.branchAccessScope && actor.branchIds) {
     const ids=[...actor.branchIds];
     if(!ids.length)throw new OperationalBranchError("BRANCH_FORBIDDEN");
-    if(requestedBranchId&&!ids.includes(requestedBranchId))throw new OperationalBranchError("BRANCH_FORBIDDEN");
-    const branchId=requestedBranchId??(ids.length===1?ids[0]:null);
-    return {branchId,branchIds:ids,branches:ids.map(id=>({id,companyId:actor.companyId,isActive:true})),branchAccessScope:actor.branchAccessScope};
+    const branchId=operationalBranchWhere({branchAccessScope:actor.branchAccessScope},ids,requestedBranchId);
+    const selectedBranchId=requestedBranchId??(ids.length===1?ids[0]:null);
+    return {branchId,selectedBranchId,branchIds:ids,branches:ids.map(id=>({id,companyId:actor.companyId,isActive:true})),branchAccessScope:actor.branchAccessScope};
   }
   // Older unit fixtures predate Branch context. Production principals always
   // include the server-loaded snapshot; focused integration tests exercise it.
   if (process.env.NODE_ENV === "test") {
     const id=requestedBranchId??"00000000-0000-0000-0000-000000000001";
-    return {branchId:id,branchIds:[id],branches:[{id,companyId:actor.companyId,isActive:true}],branchAccessScope:"ALL_BRANCHES" as const};
+    return {branchId:id,selectedBranchId:id,branchIds:[id],branches:[{id,companyId:actor.companyId,isActive:true}],branchAccessScope:"ALL_BRANCHES" as const};
   }
   const user = await client.user.findFirst({
     where: { id: actor.id, companyId: actor.companyId, isActive: true, salesAccessActive: true, salesRole: { not: null }, role: { not: "SUPER_ADMIN" } },
@@ -63,9 +63,9 @@ export async function operationalBranchContext(actor: OperationalActor, requeste
   });
   if(!branches.length)throw new OperationalBranchError("BRANCH_FORBIDDEN");
   const branchIds=branches.map(({id})=>id);
-  if(requestedBranchId&&!branchIds.includes(requestedBranchId))throw new OperationalBranchError("BRANCH_FORBIDDEN");
-  const branchId=requestedBranchId??(branchIds.length===1?branchIds[0]:null);
-  return { branchId, branchIds, branches, branchAccessScope: user.branchAccessScope };
+  const branchId=operationalBranchWhere(user,branchIds,requestedBranchId);
+  const selectedBranchId=requestedBranchId??(branchIds.length===1?branchIds[0]:null);
+  return { branchId, selectedBranchId, branchIds, branches, branchAccessScope: user.branchAccessScope };
 }
 
 export async function resolveOperationalWriteBranch(actor: OperationalActor, requestedBranchId?: string, client: DbClient = db) {
