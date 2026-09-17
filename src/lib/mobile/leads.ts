@@ -1,7 +1,8 @@
 import {createLeadFromVisitForActor,getLeadForActor,listLeadsForActor,transitionLeadForActor} from '@/lib/leads/service';import {mobileFieldWorkEnabled,type MobilePrincipal} from './auth';import{createFollowUpTaskForActor}from'@/lib/follow-up-tasks/service';import{createLeadFromVisitSchema,transitionLeadSchema}from'@/lib/leads/validation';import{z}from'zod';
 const actor=(u:MobilePrincipal)=>u;
-export async function mobileLeads(u:MobilePrincipal,raw:unknown){return listLeadsForActor(actor(u),raw)}
-export async function mobileLead(u:MobilePrincipal,id:string){const leadId=z.string().uuid().parse(id),lead=await getLeadForActor(actor(u),leadId);if(!lead)throw new Error('NOT_FOUND');return lead}
+const withVisitCount=<T extends {visits?:unknown[]}>(lead:T)=>({...lead,visitCount:lead.visits?.length??0});
+export async function mobileLeads(u:MobilePrincipal,raw:unknown){return (await listLeadsForActor(actor(u),raw)).map(withVisitCount)}
+export async function mobileLead(u:MobilePrincipal,id:string){const leadId=z.string().uuid().parse(id),lead=await getLeadForActor(actor(u),leadId);if(!lead)throw new Error('NOT_FOUND');return withVisitCount(lead)}
 export async function mobileLeadFromVisit(u:MobilePrincipal,raw:unknown){if(!mobileFieldWorkEnabled(u))throw new Error('NOT_FOUND');if(!raw||typeof raw!=='object')throw new Error('INVALID_INPUT');const input=createLeadFromVisitSchema.parse({...(raw as Record<string,unknown>),assignedUserId:u.id});return createLeadFromVisitForActor(actor(u),input)}
 export async function mobileTransitionLead(u:MobilePrincipal,raw:unknown){await transitionLeadForActor(actor(u),transitionLeadSchema.parse(raw));return{ok:true}}
 export async function mobileFollowUp(u:MobilePrincipal,raw:unknown){if(!raw||typeof raw!=='object')throw new Error('INVALID_INPUT');const requested=raw as Record<string,unknown>,leadId=z.string().uuid().parse(requested.leadId);return createFollowUpTaskForActor(actor(u),{leadId,dueDate:String(requested.followUpAt??'').slice(0,10),notes:requested.notes})}
