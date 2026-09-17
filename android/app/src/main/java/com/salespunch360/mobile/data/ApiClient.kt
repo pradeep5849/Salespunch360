@@ -40,6 +40,7 @@ class ApiClient(private val session:SecureSession){
  suspend fun leadFromVisit(visitId:String,title:String)=json.decodeFromString<LeadSummary>(call("api/v1/mobile/leads","POST",json.encodeToString(LeadFromVisitRequest(visitId=visitId,title=title))))
  suspend fun transitionLead(id:String,version:Int,stage:LeadStage,reason:String?)=call("api/v1/mobile/leads","POST",json.encodeToString(LeadTransitionRequest(leadId=id,version=version,toStage=stage,lostReason=reason)))
  suspend fun updateFollowUp(id:String,at:String?,notes:String?)=call("api/v1/mobile/leads","POST",json.encodeToString(LeadFollowUpRequest(leadId=id,followUpAt=at,notes=notes)))
+ suspend fun deleteLead(id:String)=call("api/v1/mobile/leads","POST","{\"action\":\"DELETE\",\"leadId\":\"$id\"}")
  suspend fun report(type:String)=json.parseToJsonElement(call("api/v1/mobile/reports?type=$type")).jsonObject
  suspend fun report(type:String,start:String?,end:String?,employeeId:String?):kotlinx.serialization.json.JsonObject {
   fun enc(value:String)=java.net.URLEncoder.encode(value,"UTF-8")
