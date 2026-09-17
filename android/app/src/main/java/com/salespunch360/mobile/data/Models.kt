@@ -56,7 +56,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
 @Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
 @Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)
-@Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null)
+@Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null,val gpsPointCount:Int=0)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class LocationPayload(val latitude:Double,val longitude:Double,val accuracyMeters:Double?=null,val clientPointId:String?=null,val capturedAt:String?=null)
 internal fun attendanceRequest(action:String,location:LocationPayload?):AttendanceRequest { if(location!=null&&location.capturedAt.isNullOrBlank())throw IllegalArgumentException("Attendance location measurement time is required"); if(location!=null)java.time.Instant.parse(location.capturedAt); return AttendanceRequest(action,location) }
