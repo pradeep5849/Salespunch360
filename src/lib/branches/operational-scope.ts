@@ -37,7 +37,8 @@ export async function operationalBranchContext(actor: OperationalActor, requeste
   if (actor.branchAccessScope && actor.branchIds) {
     const ids=[...actor.branchIds];
     if(!ids.length)throw new OperationalBranchError("BRANCH_FORBIDDEN");
-    const branchId=operationalBranchWhere({branchAccessScope:actor.branchAccessScope},ids,requestedBranchId);
+    if(requestedBranchId&&!ids.includes(requestedBranchId))throw new OperationalBranchError("BRANCH_FORBIDDEN");
+    const branchId=requestedBranchId??(ids.length===1?ids[0]:null);
     return {branchId,branchIds:ids,branches:ids.map(id=>({id,companyId:actor.companyId,isActive:true})),branchAccessScope:actor.branchAccessScope};
   }
   // Older unit fixtures predate Branch context. Production principals always
@@ -61,8 +62,10 @@ export async function operationalBranchContext(actor: OperationalActor, requeste
     orderBy: [{ isPrimary: "desc" }, { id: "asc" }],
   });
   if(!branches.length)throw new OperationalBranchError("BRANCH_FORBIDDEN");
-  const branchId = operationalBranchWhere(user, branches.map(({ id }) => id), requestedBranchId);
-  return { branchId, branchIds: branches.map(({ id }) => id), branches, branchAccessScope: user.branchAccessScope };
+  const branchIds=branches.map(({id})=>id);
+  if(requestedBranchId&&!branchIds.includes(requestedBranchId))throw new OperationalBranchError("BRANCH_FORBIDDEN");
+  const branchId=requestedBranchId??(branchIds.length===1?branchIds[0]:null);
+  return { branchId, branchIds, branches, branchAccessScope: user.branchAccessScope };
 }
 
 export async function resolveOperationalWriteBranch(actor: OperationalActor, requestedBranchId?: string, client: DbClient = db) {
