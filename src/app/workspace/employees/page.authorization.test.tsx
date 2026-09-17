@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ permission: vi.fn(), context: vi.fn(), company: vi.fn(), productContext:vi.fn(),userCount:vi.fn() }));
+const mocks = vi.hoisted(() => ({ permission: vi.fn(), context: vi.fn(), company: vi.fn(), productContext:vi.fn(),userCount:vi.fn(),workspace:vi.fn() }));
 vi.mock("@/lib/auth/authorization", () => ({ requirePermission: mocks.permission }));
+vi.mock("@/lib/auth/web-workspace",()=>({webWorkspaceContext:mocks.workspace}));
 vi.mock("@/lib/employees/service", () => ({ getEmployeeManagementContext: mocks.context }));
 vi.mock("@/lib/branches/assignment",()=>({listBranchAssignmentOptions:vi.fn().mockResolvedValue([])}));
 vi.mock("@/lib/users/additional-admin",()=>({listAdditionalAdmins:vi.fn().mockResolvedValue([])}));
@@ -15,7 +16,6 @@ vi.mock("@/lib/billing/entitlement",()=>({effectiveEntitlement:vi.fn().mockResol
 
 import EmployeesPage from "./page";
 
-
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.context.mockResolvedValue({
@@ -24,7 +24,8 @@ beforeEach(() => {
   });
   mocks.userCount.mockResolvedValue(1);
   mocks.company.mockResolvedValue({ users: [{ emailVerifiedAt: new Date() }] });
-  mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360",users:[],branches:[],canManageSalesUsers:true,canManageAccountUsers:false});
+  mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN",companyId:"company-1"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360",users:[],branches:[],canManageSalesUsers:true,canManageAccountUsers:false});
+  mocks.workspace.mockResolvedValue({effectiveWorkspace:"SALES"});
 });
 
 describe("Employee page authorization", () => {
@@ -34,12 +35,13 @@ describe("Employee page authorization", () => {
   });
 
   it("does not elevate Additional Admin to mutation authority", async () => {
-    mocks.productContext.mockResolvedValue({actor:{salesRole:"ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:false});
+    mocks.productContext.mockResolvedValue({actor:{salesRole:"ADMIN",companyId:"company-1"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:false});
     await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
   });
 
   it("lets a Plus Account Admin open Account management without invoking Sales loaders",async()=>{
-    mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_PLUS",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:true});
+    mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN",companyId:"company-1"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_PLUS",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:true});
+    mocks.workspace.mockResolvedValue({effectiveWorkspace:"ACCOUNT"});
     await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
     expect(mocks.context).not.toHaveBeenCalled();
   });
@@ -50,7 +52,8 @@ describe("Employee page authorization", () => {
   });
 
   it("lets an Account-only Company administrator avoid every Sales-only service",async()=>{
-    mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_ACCOUNT",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:true});
+    mocks.productContext.mockResolvedValue({actor:{salesRole:"PRIMARY_ADMIN",companyId:"company-1"},accountLimits:{},accountUsage:{},edition:"SALESPUNCH360_ACCOUNT",users:[],branches:[],canManageSalesUsers:false,canManageAccountUsers:true});
+    mocks.workspace.mockResolvedValue({effectiveWorkspace:"ACCOUNT"});
     await expect(EmployeesPage({searchParams:Promise.resolve({})})).resolves.toBeTruthy();
     expect(mocks.context).not.toHaveBeenCalled();
   });
