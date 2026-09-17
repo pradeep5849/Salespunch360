@@ -54,6 +54,8 @@ import kotlinx.serialization.Serializable
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
 @Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val leadCount:Int=0,val contactName:String?=null,val leadId:String?=null,val visitType:String="CUSTOMER",val customer:Customer?=null)
 @Serializable data class FieldContext(val customers:List<Customer>,val visits:List<FieldVisit>)
+@Serializable data class FollowUpsContext(val status:String,val tasks:List<FollowUpTask>)
+@Serializable data class FollowUpTask(val id:String,val status:String,val dueDate:String,val notes:String?=null,val leadId:String,val leadTitle:String,val subjectName:String,val completedVisitId:String?=null,val checkedInAt:String?=null,val checkedOutAt:String?=null,val canStartCheckIn:Boolean=false)
 @Serializable data class CheckInRequest(val action:String="CHECK_IN",val customerId:String,val location:LocationPayload,val visitNotes:String?=null)
 @Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
 @Serializable enum class LeadStage{NEW,QUALIFIED,PROPOSAL,NEGOTIATION,WON,LOST}
