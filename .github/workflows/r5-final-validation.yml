@@ -38,8 +38,8 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npx prisma validate
-      - name: Initialize isolated migration database
-        run: npx prisma migrate deploy
+      - name: Exercise production-safe migration path on isolated database
+        run: node scripts/migrate-deploy-safe.mjs
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
