@@ -15,6 +15,7 @@ export const MOBILE_ENDPOINTS = [
   ["GET", "/company"], ["PATCH", "/company"],
   ["GET", "/employees"], ["POST", "/employees"], ["PATCH", "/employees"],
   ["GET", "/field"], ["POST", "/field"],
+  ["GET", "/follow-ups"],
   ["GET", "/leads"], ["POST", "/leads"],
   ["POST", "/locations"], ["POST", "/push"], ["GET", "/reports"],
   ["POST", "/web-session"],
@@ -67,6 +68,11 @@ export const MOBILE_PAGINATION = {
     style: "bounded-list" as const,
     maxItems: 200,
     ordering: "updatedAt desc",
+  },
+  followUps: {
+    style: "bounded-list" as const,
+    maxItems: 300,
+    ordering: "dueDate asc, createdAt asc, id asc",
   },
   targets: {
     style: "bounded-list" as const,
