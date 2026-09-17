@@ -12,6 +12,9 @@ jobs:
   web:
     name: Web final regression
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
+      DIRECT_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
