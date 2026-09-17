@@ -1,5 +1,6 @@
 name: R4 validation
 
+# Validation workflow also serves as the isolated R4/R5 repair-branch gate.
 on:
   pull_request:
     branches: [main]

@@ -18,7 +18,6 @@ import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import coil3.request.httpHeaders
 import com.salespunch360.mobile.BuildConfig
 import com.salespunch360.mobile.data.SecureSession
 
