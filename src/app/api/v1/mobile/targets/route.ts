@@ -1,6 +1,6 @@
 import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileReportActor } from "@/lib/mobile/report-actor";
-import { createTargetForActor, editTargetForActor, listTargetsForActor } from "@/lib/targets/service";
+import { createTargetForActor, editTargetForActor, listTargetsForActor, monthlyTargetRowsForActor } from "@/lib/targets/service";
 import { mobileAuthorizationFailure, mobileBranchFailure, mobileJson, mobileUnauthorized, mobileUnexpected } from "@/lib/mobile/http";
 import { ZodError } from "zod";
 
@@ -16,7 +16,12 @@ function failure(error: unknown) {
   return mobileUnexpected("MOBILE_TARGETS", error);
 }
 export async function GET(request: Request) {
-  try { const url = new URL(request.url); return mobileJson(await listTargetsForActor(await actor(request),Object.fromEntries(url.searchParams))); }
+  try {
+    const url = new URL(request.url);
+    const a = await actor(request);
+    if (url.searchParams.get("view") === "monthly") return mobileJson(await monthlyTargetRowsForActor(a));
+    return mobileJson(await listTargetsForActor(a,Object.fromEntries(url.searchParams)));
+  }
   catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {

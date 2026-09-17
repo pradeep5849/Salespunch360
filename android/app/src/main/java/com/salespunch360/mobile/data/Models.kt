@@ -2,11 +2,18 @@ package com.salespunch360.mobile.data
 import kotlinx.serialization.Serializable
 @Serializable data class LoginRequest(val identifier:String,val password:String)
 @Serializable data class LoginResponse(val accessToken:String,val expiresAt:String,val bootstrap:Bootstrap)
-@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val capabilities:Capabilities=Capabilities(),val entitlement:Entitlement,val attendance:Attendance?,val productEdition:ProductEdition,val authorizedWorkspaces:List<Workspace>,val canSwitchWorkspace:Boolean,val salesDashboard:SalesDashboard?=null)
+@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val capabilities:Capabilities=Capabilities(),val entitlement:Entitlement,val attendance:Attendance?,val productEdition:ProductEdition,val authorizedWorkspaces:List<Workspace>,val canSwitchWorkspace:Boolean,val salesDashboard:SalesDashboard?=null,val adminDashboard:AdminDashboard?=null)
 @Serializable data class SalesDashboard(val todayVisitCount:Int=0,val todayLeadCount:Int=0,val monthVisitCount:Int=0,val monthLeadCount:Int=0,val pendingTodayTasks:Int=0,val overdueTasks:Int=0,val recentVisits:List<DashboardVisit> = emptyList())
+@Serializable data class AdminDashboard(val teamMemberCount:Int=0,val presentToday:Int=0,val todayVisitCount:Int=0,val todayLeadCount:Int=0,val recentVisits:List<AdminDashboardVisit> = emptyList())
+@Serializable data class AdminDashboardVisit(val id:String,val userName:String?=null,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null,val thumbnailUrl:String?=null)
 @Serializable data class DashboardVisit(val id:String,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null,val thumbnailUrl:String?=null)
-@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null)
+@Serializable data class DashboardEmployee(val id:String,val name:String,val salesRole:MobileRole,val managerType:String?=null)
+@Serializable data class LatestLocation(val latitude:Double,val longitude:Double,val capturedAt:String,val user:DashboardLocationUser)
+@Serializable data class DashboardLocationUser(val name:String)
+@Serializable data class MobileDashboardContext(val employees:List<DashboardEmployee> = emptyList(),val liveUserId:String?=null,val latestLocation:LatestLocation?=null,val checkUserId:String?=null,val recentVisits:List<AdminDashboardVisit> = emptyList())
+@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null,val managerType:String?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
+@Serializable enum class ManagerType{FIELD_MANAGER,MANAGER_ONLY}
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
 @Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
 @Serializable enum class Workspace{SALES,ACCOUNT}
@@ -30,31 +37,38 @@ import kotlinx.serialization.Serializable
 @Serializable data class SalesTarget(val id:String,val assignedUserId:String,val assignedUser:TargetPerson,val metric:String,val periodType:String,val startDate:String,val endDate:String,val targetValue:String,val currencyCode:String,val version:Int,val actual:String,val remaining:String,val percentage:Double,val status:String)
 @Serializable data class TargetOption(val id:String,val name:String,val role:String)
 @Serializable data class TargetsContext(val targets:List<SalesTarget>,val options:List<TargetOption>)
+@Serializable data class MonthlyTargetRow(val id:String,val name:String,val salesRole:MobileRole,val managerType:String?=null,val leadTarget:Int=0,val wonTarget:Int=0,val created:Int=0,val won:Int=0,val hasTarget:Boolean=false)
+@Serializable data class MonthlyTargetMonth(val startText:String,val endText:String)
+@Serializable data class MonthlyTargetsContext(val month:MonthlyTargetMonth,val rows:List<MonthlyTargetRow>)
 @Serializable data class TargetRequest(val assignedUserId:String,val metric:String,val periodType:String,val startDate:String,val endDate:String,val targetValue:String,val currencyCode:String="INR")
 @Serializable data class EditTargetRequest(val targetId:String,val version:Int,val assignedUserId:String,val metric:String,val periodType:String,val startDate:String,val endDate:String,val targetValue:String,val currencyCode:String="INR")
 @Serializable data class EmployeeManager(val id:String,val name:String,val isActive:Boolean,val salesAccessActive:Boolean)
 @Serializable data class Employee(val id:String,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val role:MobileRole,val isActive:Boolean,val salesAccessActive:Boolean,val managerId:String?=null,val manager:EmployeeManager?=null)
 @Serializable data class EmployeeEntitlement(val state:String,val operationalWritesAllowed:Boolean,val managerLimit:Int?=null,val salesLimit:Int?=null,val managerUsage:Int,val salesUsage:Int)
 @Serializable data class EmployeeContext(val employees:List<Employee>,val teamStructure:TeamStructure,val entitlement:EmployeeEntitlement)
-@Serializable data class CreateEmployeeRequest(val role:MobileRole,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String,val managerId:String?=null)
+@Serializable data class CreateEmployeeRequest(val role:MobileRole,val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String,val managerId:String?=null,val managerType:ManagerType?=null)
 @Serializable data class EmployeeActiveRequest(val employeeId:String,val isActive:Boolean)
 @Serializable data class Customer(val id:String,val name:String,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val latitude:Double?=null,val longitude:Double?=null,val checkInReferenceSetAt:String?=null)
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
 @Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val leadCount:Int=0,val contactName:String?=null,val leadId:String?=null,val visitType:String="CUSTOMER",val customer:Customer?=null)
 @Serializable data class FieldContext(val customers:List<Customer>,val visits:List<FieldVisit>)
 @Serializable data class FollowUpsContext(val status:String,val tasks:List<FollowUpTask>)
-@Serializable data class FollowUpTask(val id:String,val status:String,val dueDate:String,val notes:String?=null,val leadId:String,val leadTitle:String,val subjectName:String,val completedVisitId:String?=null,val checkedInAt:String?=null,val checkedOutAt:String?=null,val canStartCheckIn:Boolean=false)
+@Serializable data class FollowUpTask(val id:String,val status:String,val dueDate:String,val notes:String?=null,val leadId:String,val leadTitle:String,val subjectName:String,val assignedUserId:String?=null,val assignedUserName:String?=null,val createdByUserName:String?=null,val createdAt:String?=null,val completedAt:String?=null,val completedVisitId:String?=null,val checkedInAt:String?=null,val checkedOutAt:String?=null,val completedVisitUserName:String?=null,val lastAction:String="No action yet",val canStartCheckIn:Boolean=false,val canCancel:Boolean=false)
 @Serializable data class CheckInRequest(val action:String="CHECK_IN",val customerId:String,val location:LocationPayload,val visitNotes:String?=null)
 @Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
 @Serializable enum class LeadStage{NEW,QUALIFIED,PROPOSAL,NEGOTIATION,WON,LOST}
 @Serializable data class LeadPerson(val id:String?=null,val name:String)
 @Serializable data class LeadActivity(val id:String,val type:String,val fromStage:LeadStage?=null,val toStage:LeadStage?=null,val previousAssignedUserId:String?=null,val newAssignedUserId:String?=null,val createdAt:String,val actorUser:LeadPerson)
-@Serializable data class LeadSummary(val id:String,val title:String,val stage:LeadStage,val source:String,val version:Int,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val followUpAt:String?=null,val notes:String?=null,val lostReason:String?=null,val assignedUserId:String,val assignedUser:LeadPerson,val customer:LeadPerson?=null,val sourceVisitId:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val visitCount:Int=0,val activities:List<LeadActivity> = emptyList())
+@Serializable data class LeadSummary(val id:String,val title:String,val stage:LeadStage,val source:String,val version:Int,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val followUpAt:String?=null,val notes:String?=null,val lostReason:String?=null,val assignedUserId:String,val assignedUser:LeadPerson,val customer:LeadPerson?=null,val sourceVisitId:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val visitCount:Int=0,val updatedAt:String?=null,val canAddCheckIn:Boolean=false,val canDelete:Boolean=false,val activities:List<LeadActivity> = emptyList())
+@Serializable data class PendingLeadVisit(val id:String,val contactName:String?=null,val customerName:String?=null,val userId:String,val userName:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkInAddress:String?=null,val checkInLatitude:Double,val checkInLongitude:Double,val hasPhoto:Boolean=false,val photoUrl:String?=null,val canAddPhone:Boolean=false)
+@Serializable data class PendingLeadsContext(val count:Int=0,val visits:List<PendingLeadVisit> = emptyList())
 @Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
 @Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
 @Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)
-@Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null)
+@Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null,val gpsPointCount:Int=0)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
+@Serializable data class TeamAttendanceEmployee(val id:String,val name:String,val salesRole:MobileRole,val isActive:Boolean,val working:Boolean,val startedAt:String?=null,val gpsPointCount:Int=0)
+@Serializable data class TeamAttendanceContext(val employees:List<TeamAttendanceEmployee> = emptyList())
 @Serializable data class LocationPayload(val latitude:Double,val longitude:Double,val accuracyMeters:Double?=null,val clientPointId:String?=null,val capturedAt:String?=null)
 internal fun attendanceRequest(action:String,location:LocationPayload?):AttendanceRequest { if(location!=null&&location.capturedAt.isNullOrBlank())throw IllegalArgumentException("Attendance location measurement time is required"); if(location!=null)java.time.Instant.parse(location.capturedAt); return AttendanceRequest(action,location) }
 internal fun employeeStatus(employee:Employee)=when{!employee.isActive->"Inactive identity";!employee.salesAccessActive->"Sales access suspended";else->"Active"}

@@ -17,7 +17,8 @@ export function salesHeaderPresentation(salesRole: SalesRole | null, managerType
 export function salesHeaderCapabilities(actor: WorkspacePrincipal, edition: ProductEdition) {
   return {
     canManageEmployees: canUsePermission(actor, edition, "SALES_USER_ADMIN"),
-    canManageBilling: canUsePermission(actor, edition, "SALES_BILLING"),
+    // Additional Admin is an operational admin seat, not the subscription owner.
+    canManageBilling: actor.salesRole !== "ADMIN" && canUsePermission(actor, edition, "SALES_BILLING"),
     canManageSettings: canUsePermission(actor, edition, "SALES_SETTINGS"),
   };
 }
