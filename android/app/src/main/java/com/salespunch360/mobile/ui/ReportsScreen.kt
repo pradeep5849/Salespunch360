@@ -11,15 +11,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.ReportsViewModel
+import com.salespunch360.mobile.data.MobileRole
 import kotlinx.serialization.json.*
 
-private val salesReportTypes=listOf("check-ins" to "Check-in Report","attendance" to "My Attendance","gps" to "My Travel / Distance","targets" to "My Performance")
-@Composable fun ReportsScreen(initialType:String?=null,showMenu:Boolean=true,vm:ReportsViewModel=viewModel()){
- val state=vm.state.collectAsStateWithLifecycle().value;var expanded by remember{mutableStateOf(showMenu)}
+private fun reportTypes(role:MobileRole)=when(role){
+ MobileRole.SALES->listOf("check-ins" to "Check-in Report","attendance" to "My Attendance","gps" to "My Travel / Distance","targets" to "My Performance")
+ MobileRole.MANAGER->listOf("check-ins" to "Check-in Report","attendance" to "Attendance Report","gps" to "GPS Route Report","geofence" to "Geofence Report","targets" to "Target Analysis")
+ MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->listOf("check-ins" to "Check-in Report","attendance" to "Attendance Report","gps" to "GPS Route Report","geofence" to "Geofence Report","targets" to "Target Analysis","expenses" to "Expense Report")
+}
+@Composable fun ReportsScreen(initialType:String?=null,showMenu:Boolean=true,role:MobileRole=MobileRole.SALES,vm:ReportsViewModel=viewModel()){
+ val state=vm.state.collectAsStateWithLifecycle().value;val types=remember(role){reportTypes(role)};var expanded by remember{mutableStateOf(showMenu)}
  LaunchedEffect(initialType){if(initialType!=null&&initialType!=state.type)vm.load(initialType)}
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=16.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-  item{Text(if(showMenu)"Reports" else salesReportTypes.firstOrNull{it.first==(initialType?:state.type)}?.second?:"Report",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);HorizontalDivider(Modifier.padding(top=8.dp,bottom=if(showMenu)8.dp else 0.dp),color=SalesLine);if(showMenu){OutlinedButton({expanded=!expanded},Modifier.fillMaxWidth()){Text(if(expanded)"Reports ▲" else "Reports ▼")};if(expanded)Column(verticalArrangement=Arrangement.spacedBy(4.dp)){salesReportTypes.forEach{item->TextButton({vm.load(item.first)},Modifier.fillMaxWidth()){Text(item.second,Modifier.fillMaxWidth())}}}}}
-  if(showMenu)item{Text(salesReportTypes.firstOrNull{it.first==state.type}?.second?:"Report",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
+  item{Text(if(showMenu)"Reports" else types.firstOrNull{it.first==(initialType?:state.type)}?.second?:"Report",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);HorizontalDivider(Modifier.padding(top=8.dp,bottom=if(showMenu)8.dp else 0.dp),color=SalesLine);if(showMenu){OutlinedButton({expanded=!expanded},Modifier.fillMaxWidth()){Text(if(expanded)"Reports ▲" else "Reports ▼")};if(expanded)Column(verticalArrangement=Arrangement.spacedBy(4.dp)){types.forEach{item->TextButton({vm.load(item.first)},Modifier.fillMaxWidth()){Text(item.second,Modifier.fillMaxWidth())}}}}}
+  if(showMenu)item{Text(types.firstOrNull{it.first==state.type}?.second?:"Report",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
   item{ReportFilters(state,vm)};if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())};state.message?.let{item{ContentCard("Report unavailable",it)}}
   state.report?.let{report->item{Text("Asia/Kolkata reporting period",style=MaterialTheme.typography.labelMedium);SummaryCards(report["summary"]?.jsonObject)};val rows=report["rows"]?.jsonArray?:JsonArray(emptyList());if(rows.isEmpty())item{ContentCard("No report records","No records match the selected reporting period.")}else items(rows.size){index->ReportRow(rows[index].jsonObject)}}
  }
