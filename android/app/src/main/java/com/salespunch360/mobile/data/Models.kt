@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class DashboardEmployee(val id:String,val name:String,val salesRole:MobileRole,val managerType:String?=null)
 @Serializable data class LatestLocation(val latitude:Double,val longitude:Double,val capturedAt:String,val user:DashboardLocationUser)
 @Serializable data class DashboardLocationUser(val name:String)
-@Serializable data class MobileDashboardContext(val employees:List<DashboardEmployee> = emptyList(),val liveUserId:String?=null,val latestLocation:LatestLocation?=null)
+@Serializable data class MobileDashboardContext(val employees:List<DashboardEmployee> = emptyList(),val liveUserId:String?=null,val latestLocation:LatestLocation?=null,val checkUserId:String?=null,val recentVisits:List<AdminDashboardVisit> = emptyList())
 @Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null,val managerType:String?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
 @Serializable enum class ManagerType{FIELD_MANAGER,MANAGER_ONLY}
