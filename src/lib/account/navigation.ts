@@ -32,7 +32,7 @@ const groups: AccountNavGroup[] = [
   { label: "Reports", items: [{ label: "Reports hub", href: "/workspace/account/reports", permission: "ACCOUNT_REPORTS" }, { label: "Profit & Loss", href: "/workspace/account/reports/profit-loss", permission: "ACCOUNT_REPORTS" }, { label: "Balance Sheet", href: "/workspace/account/reports/balance-sheet", permission: "ACCOUNT_REPORTS" }, { label: "Trial Balance", href: "/workspace/account/reports/trial-balance", permission: "ACCOUNT_REPORTS" }] },
   { label: "Utilities", items: [{ label: "Import, export & backup", href: "/workspace/account/utilities", permission: "ACCOUNT_REPORTS" }] },
   { label: "Company / Branch", items: [{ label: "Company details", href: "/workspace/company-profile", permission: "COMPANY_VIEW" }] },
-  { label: "Users & Permissions", items: [{ label: "Users & permissions", href: "/workspace/employees", permission: "ACCOUNT_USER_ADMIN" }] },
+  { label: "Users & Permissions", items: [{ label: "Users & permissions", href: "/workspace/employees?domain=account", permission: "ACCOUNT_USER_ADMIN" }] },
   { label: "Settings", items: [{ label: "Settings", href: "/workspace/account/settings", permission: "ACCOUNT_SETTINGS" }] },
   { label: "Help / Support", items: [{ label: "Contact SalesPunch360", href: "/contact" }, { label: "Frequently asked questions", href: "/resources/faq" }] },
 ];
