@@ -1,4 +1,4 @@
-import type { AccountRole, BranchAccessScope, ManagerType, Prisma, ProductEdition, Role, SalesRole } from "@prisma/client";
+import type { AccountRole, BranchAccessScope, ManagerType, ProductEdition, Role, SalesRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createSessionToken, hashSessionToken, verifyPassword } from "@/lib/auth/crypto";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
@@ -42,7 +42,7 @@ export async function authenticateMobileToken(authorization:string|null,now=new 
 }
 export async function revokeMobileToken(authorization:string|null){const match=authorization?.match(/^Bearer ([A-Za-z0-9_-]{40,})$/);if(match)await db.$transaction(async tx=>{const session=await tx.mobileSession.findUnique({where:{tokenHash:hashSessionToken(match[1])},select:{id:true}});if(!session)return;await tx.session.deleteMany({where:{mobileSessionId:session.id}});await tx.mobileSession.updateMany({where:{id:session.id},data:{revokedAt:new Date(),webHandoffCodeHash:null,webHandoffExpiresAt:null,webHandoffRedirectPath:null}});await tx.pushDevice.deleteMany({where:{mobileSessionId:session.id}})})}
 
-async function mobileSalesDashboard(user:MobileAppPrincipal|MobilePrincipal,branchId:Prisma.StringFilter|string|null){
+async function mobileSalesDashboard(user:MobileAppPrincipal|MobilePrincipal,branchId:string|null){
  if(user.salesRole!=="SALES"||!branchId||!mobileFieldWorkEnabled(user))return null;
  const todayText=indiaDateText(),today=parseIndiaBusinessDate(todayText),tomorrow=new Date(today.getTime()+86400000);const [year,month]=todayText.split("-");const monthStart=parseIndiaBusinessDate(`${year}-${month}-01`);const scope={companyId:user.companyId,branchId};
  const [todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,pendingTodayTasks,overdueTasks,recentVisits]=await Promise.all([
