@@ -1,5 +1,8 @@
 package com.salespunch360.mobile.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,13 +22,22 @@ import com.salespunch360.mobile.AttendanceOverviewViewModel
 import com.salespunch360.mobile.data.Bootstrap
 import com.salespunch360.mobile.data.LocationPayload
 import com.salespunch360.mobile.data.MobileRole
+import com.salespunch360.mobile.location.TrackingService
+import kotlinx.coroutines.launch
 
 @Composable fun FieldManagerAttendanceScreen(data:Bootstrap,attendance:(Boolean,LocationPayload,()->Unit)->Unit){
  var tab by remember{mutableIntStateOf(0)}
  Column(Modifier.fillMaxSize()){
   TabRow(selectedTabIndex=tab){Tab(selected=tab==0,onClick={tab=0},text={Text("My Attendance")});Tab(selected=tab==1,onClick={tab=1},text={Text("Team Status")})}
-  if(tab==0)SalesDrawerAttendance(data,attendance) else TeamAttendanceScreen(MobileRole.MANAGER)
+  if(tab==0)FieldManagerSelfAttendance(data,attendance) else TeamAttendanceScreen(MobileRole.MANAGER)
  }
+}
+
+@Composable private fun FieldManagerSelfAttendance(data:Bootstrap,attendance:(Boolean,LocationPayload,()->Unit)->Unit){
+ val context=LocalContext.current;val scope=rememberCoroutineScope();var locating by remember{mutableStateOf(false)};var status by remember{mutableStateOf<String?>(null)}
+ fun submit(start:Boolean){scope.launch{locating=true;status="Getting current location…";try{val point=com.salespunch360.mobile.location.currentDeviceLocation(context);attendance(start,point){if(start&&data.features.gpsTrackingEnabled)TrackingService.start(context);if(!start)TrackingService.stop(context)};status="Location ready"}catch(e:Exception){status=com.salespunch360.mobile.location.locationFailureMessage(e)}finally{locating=false}}}
+ val launcher=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){if(it[Manifest.permission.ACCESS_FINE_LOCATION]==true)submit(data.attendance==null)else status="Precise location permission is required."}
+ LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Text("Attendance",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);Text("Your field attendance",color=SalesMuted);HorizontalDivider(Modifier.padding(top=8.dp))};item{val active=data.attendance;if(active!=null)Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFFFFF7F7)),border=BorderStroke(1.dp,Color(0xFFE25A5A))){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("ON ATTENDANCE",fontWeight=FontWeight.Bold,color=Color(0xFFC62828));Text("Started ${attendanceOverviewTime(active.startedAt)}",color=SalesInk);if(data.features.gpsTrackingEnabled)Text("GPS tracking active · ${active.gpsPointCount} ${if(active.gpsPointCount==1)"point" else "points"}",color=SalesMuted);status?.let{Text(it,color=SalesMuted)};Button({launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))},enabled=!locating,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFC62828))){Text(if(locating)"Locating…" else "End Attendance")}}}else OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("Not currently working",fontWeight=FontWeight.Bold,color=SalesInk);Text(if(data.features.attendanceEnabled)"Start attendance when you begin field work." else "Attendance is disabled by your company.",color=SalesMuted);status?.let{Text(it,color=SalesMuted)};Button({launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))},enabled=!locating&&data.features.attendanceEnabled&&data.entitlement.operationalWritesAllowed,modifier=Modifier.fillMaxWidth()){Text(if(locating)"Locating…" else "Start Attendance")}}}}}
 }
 
 @Composable fun TeamAttendanceScreen(role:MobileRole,vm:AttendanceOverviewViewModel=viewModel()){
