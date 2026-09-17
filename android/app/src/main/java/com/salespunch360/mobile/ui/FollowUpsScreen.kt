@@ -16,10 +16,10 @@ import com.salespunch360.mobile.data.FollowUpTask
 @Composable fun FollowUpsScreen(startCheckIn:(FollowUpTask)->Unit,viewLead:(String)->Unit,vm:FollowUpsViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=16.dp),contentPadding=PaddingValues(vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-  item{Text("My Follow-ups",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);Text("Your assigned follow-up tasks",color=SalesMuted);Spacer(Modifier.height(8.dp));LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(listOf("TODAY" to "Today","OVERDUE" to "Overdue","PENDING" to "Pending","COMPLETED" to "Completed","CANCELLED" to "Cancelled")){(value,label)->FilterChip(state.filter==value,{vm.select(value)},{Text(label)})}}}
+  item{Text("Follow-ups",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);Spacer(Modifier.height(8.dp));LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(listOf("TODAY" to "Due Today","OVERDUE" to "Overdue","PENDING" to "Pending","COMPLETED" to "Completed","CANCELLED" to "Cancelled")){(value,label)->FilterChip(state.filter==value,{vm.select(value)},{Text(label)})}}}
   state.message?.let{item{MessageBanner(it,vm::clear)}}
   if(state.loading&&state.tasks.isEmpty())item{LinearProgressIndicator(Modifier.fillMaxWidth())}
-  if(!state.loading&&state.tasks.isEmpty())item{ContentCard("No follow-ups","No tasks match this filter.")}
+  if(!state.loading&&state.tasks.isEmpty())item{OutlinedCard(Modifier.fillMaxWidth()){Box(Modifier.fillMaxWidth().padding(vertical=28.dp,horizontal=16.dp)){Text("No tasks in this view.",color=SalesMuted)}}}
   items(state.tasks,key={it.id}){task->FollowUpTaskCard(task,startCheckIn,viewLead)}
  }
 }
