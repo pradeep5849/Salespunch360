@@ -1,11 +1,11 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
-const mocks=vi.hoisted(()=>({company:vi.fn(),attendance:vi.fn(),entitlement:vi.fn()}));
-vi.mock('@/lib/db',()=>({db:{company:{findUnique:mocks.company},attendance:{findFirst:mocks.attendance}}}));
+const mocks=vi.hoisted(()=>({company:vi.fn(),attendance:vi.fn(),entitlement:vi.fn(),users:vi.fn(),userCount:vi.fn(),visits:vi.fn(),visitCount:vi.fn(),leadCount:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:mocks.company},attendance:{findFirst:mocks.attendance},user:{findMany:mocks.users,count:mocks.userCount},customerVisit:{findMany:mocks.visits,count:mocks.visitCount},lead:{count:mocks.leadCount}}}));
 vi.mock('@/lib/billing/entitlement',()=>({effectiveEntitlement:mocks.entitlement}));
 import {isMobileSalesRole,mobileBootstrap,type MobilePrincipal} from './auth';
 import {mobileLoginSchema,mobilePasswordSchema,mobilePointSchema} from './validation';
 const user:MobilePrincipal={id:'user-1',name:'Ada',email:'ada@example.com',salesRole:'PRIMARY_ADMIN',managerType:null,companyId:'company-1'};
-beforeEach(()=>{vi.clearAllMocks();mocks.company.mockResolvedValue({name:'Acme',teamStructure:'MANAGERS_AND_SALES',attendanceEnabled:true,gpsTrackingEnabled:true});mocks.entitlement.mockResolvedValue({state:'TRIAL',operationalWritesAllowed:true,adminLimit:1,adminUsage:0,managerLimit:1,salesLimit:5,managerUsage:1,salesUsage:3})});
+beforeEach(()=>{vi.clearAllMocks();mocks.company.mockResolvedValue({name:'Acme',teamStructure:'MANAGERS_AND_SALES',attendanceEnabled:true,gpsTrackingEnabled:true});mocks.entitlement.mockResolvedValue({state:'TRIAL',operationalWritesAllowed:true,adminLimit:1,adminUsage:0,managerLimit:1,salesLimit:5,managerUsage:1,salesUsage:3});mocks.users.mockResolvedValue([]);mocks.userCount.mockResolvedValue(0);mocks.visits.mockResolvedValue([]);mocks.visitCount.mockResolvedValue(0);mocks.leadCount.mockResolvedValue(0)});
 describe('mobile boundary',()=>{
  it('allows only tenant mobile roles',()=>{expect(isMobileSalesRole('PRIMARY_ADMIN')).toBe(true);expect(isMobileSalesRole('MANAGER')).toBe(true);expect(isMobileSalesRole('SALES')).toBe(true);expect(isMobileSalesRole('SUPER_ADMIN' as never)).toBe(false)});
  it('rejects role and tenant mass assignment',()=>expect(mobileLoginSchema.safeParse({identifier:'user@example.com',password:'long-enough',role:'PRIMARY_ADMIN',managerType:null,companyId:'x'}).success).toBe(false));
