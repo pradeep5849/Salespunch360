@@ -58,7 +58,7 @@ jobs:
           SMTP_SECURE: "true"
           SMTP_USER: "r5-ci@salespunch360.com"
           SMTP_PASSWORD: "r5-ci-only-password-not-used-outside-github-actions"
-          MAIL_FROM: "SalesPunch360 R5 CI <r5-ci@salespunch360.com>"
+          MAIL_FROM: "r5-ci@salespunch360.com"
 
   android:
     name: Android final regression
