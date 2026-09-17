@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,6 +35,7 @@ class ApiClient(private val session:SecureSession){
  suspend fun setEmployeeActive(employeeId:String,isActive:Boolean)=call("api/v1/mobile/employees","PATCH",json.encodeToString(EmployeeActiveRequest(employeeId,isActive)))
  suspend fun fieldContext()=json.decodeFromString<FieldContext>(call("api/v1/mobile/field"))
  suspend fun followUps(status:String)=json.decodeFromString<FollowUpsContext>(call("api/v1/mobile/follow-ups?status=${java.net.URLEncoder.encode(status,"UTF-8")}"))
+ suspend fun cancelFollowUp(taskId:String)=call("api/v1/mobile/follow-ups","POST",json.encodeToString(buildJsonObject{put("action","CANCEL");put("taskId",taskId)}))
  suspend fun checkIn(visitType:String,subjectId:String?,name:String?,phone:String?,location:LocationPayload,notes:String?,photo:ByteArray?,followUpTaskId:String?=null)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("action","CHECK_IN").addFormDataPart("visitType",visitType).addFormDataPart("latitude",location.latitude.toString()).addFormDataPart("longitude",location.longitude.toString()).addFormDataPart("accuracyMeters",(location.accuracyMeters?:0.0).toString()).apply{notes?.let{addFormDataPart("visitNotes",it)};name?.let{addFormDataPart("name",it)};phone?.let{addFormDataPart("phone",it)};subjectId?.let{addFormDataPart(if(visitType=="CUSTOMER")"customerId" else "leadId",it)};followUpTaskId?.let{addFormDataPart("followUpTaskId",it)};photo?.let{addFormDataPart("photo","photo.webp",it.toRequestBody("image/webp".toMediaType()))}}.build();val requestToken=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/field").header("Accept","application/json").apply{requestToken?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).execute().use{val raw=it.body?.string()?:"{}";if(!it.isSuccessful){if(it.code==401)session.invalidateIfCurrent(requestToken);val code=runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull();if(it.code==403&&code=="FORBIDDEN")session.authorizationChanged();val distance=runCatching{json.parseToJsonElement(raw).jsonObject["distanceMeters"]?.jsonPrimitive?.content?.toDouble()}.getOrNull();throw ApiException(it.code,code,distance)};raw}}
  suspend fun checkout(visitId:String,location:LocationPayload,sentiment:VisitSentiment,remarks:String?)=call("api/v1/mobile/field","POST",json.encodeToString(CheckoutRequest(visitId=visitId,location=location,sentiment=sentiment,remarks=remarks)))
  suspend fun leads()=json.decodeFromString<List<LeadSummary>>(call("api/v1/mobile/leads"))
