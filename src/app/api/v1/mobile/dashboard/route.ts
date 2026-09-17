@@ -16,7 +16,8 @@ export async function GET(request:Request){
   const requested=new URL(request.url).searchParams.get('liveEmployee');
   const allowed=new Set(employees.map(employee=>employee.id));
   const liveUserId=requested&&allowed.has(requested)?requested:null;
-  const latestLocation=liveUserId?await db.locationPoint.findFirst({where:{companyId:user.companyId,branchId:branches.branchId,userId:liveUserId},orderBy:[{capturedAt:'desc'},{sequenceNumber:'desc'}],select:{latitude:true,longitude:true,capturedAt:true,user:{select:{name:true}}}}):null;
+  const point=liveUserId?await db.locationPoint.findFirst({where:{companyId:user.companyId,branchId:branches.branchId,userId:liveUserId},orderBy:[{capturedAt:'desc'},{sequenceNumber:'desc'}],select:{latitude:true,longitude:true,capturedAt:true,user:{select:{name:true}}}}):null;
+  const latestLocation=point?{latitude:Number(point.latitude),longitude:Number(point.longitude),capturedAt:point.capturedAt,user:point.user}:null;
   return mobileJson({employees,liveUserId,latestLocation});
  }catch(error){const expected=mobileUnauthorized(error)??mobileBranchFailure(error);if(expected)return expected;return mobileUnexpected('MOBILE_DASHBOARD',error)}
 }
