@@ -14,7 +14,6 @@ import com.salespunch360.mobile.DashboardViewModel
 
 @Composable fun LiveTrackingCard(vm:DashboardViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value;var expanded by remember{mutableStateOf(false)}
- LaunchedEffect(Unit){vm.load()}
  Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=androidx.compose.ui.graphics.Color.White),border=BorderStroke(1.dp,SalesLine)){
   Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
    Text("Live Tracking",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
