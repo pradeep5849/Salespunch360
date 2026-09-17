@@ -53,7 +53,33 @@ fun AuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit,attendance:
     fun salesNavigate(destination:String){when(destination){"Customers"->{salesPage="Customers";selected=1};"Check-ins"->{salesPage="Check-ins";selected=1};"Leads"->{salesPage=null;selected=2};"Attendance","Follow-ups","Targets","Reports"->{salesPage=destination;selected=destinations.lastIndex};"More"->{salesPage=null;selected=destinations.lastIndex}}}
     Scaffold(
         containerColor=SalesPale,
-        topBar={TopAppBar(colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White),title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},actions={StatusChip(data.entitlement.state);switchToAccount?.let{a->TextButton(a){Text("Account",fontWeight=FontWeight.Bold)}};Box{IconButton({profileMenu=true}){Surface(shape=CircleShape,color=SalesNavy){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(data.user.name.trim().firstOrNull()?.uppercase()?:"U",fontWeight=FontWeight.ExtraBold,color=Color.White)}}};DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){DropdownMenuItem(text={Text("Company Details")},leadingIcon={Icon(Icons.Default.Business,null)},onClick={profileMenu=false;profilePage="Company Details"});DropdownMenuItem(text={Text("Change Password")},leadingIcon={Icon(Icons.Default.Lock,null)},onClick={profileMenu=false;profilePage="Change Password"});HorizontalDivider();DropdownMenuItem(text={Text("Logout")},leadingIcon={Icon(Icons.AutoMirrored.Filled.Logout,null)},onClick={profileMenu=false;logout()})}}}})},
+        topBar={
+            TopAppBar(
+                colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White),
+                title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},
+                actions={
+                    StatusChip(data.entitlement.state)
+                    switchToAccount?.let { action ->
+                        TextButton(onClick=action){Text("Account",fontWeight=FontWeight.Bold)}
+                    }
+                    Box {
+                        IconButton(onClick={profileMenu=true}) {
+                            Surface(shape=CircleShape,color=SalesNavy) {
+                                Box(Modifier.size(36.dp),contentAlignment=Alignment.Center) {
+                                    Text(data.user.name.trim().firstOrNull()?.uppercase()?:"U",fontWeight=FontWeight.ExtraBold,color=Color.White)
+                                }
+                            }
+                        }
+                        DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}) {
+                            DropdownMenuItem(text={Text("Company Details")},leadingIcon={Icon(Icons.Default.Business,null)},onClick={profileMenu=false;profilePage="Company Details"})
+                            DropdownMenuItem(text={Text("Change Password")},leadingIcon={Icon(Icons.Default.Lock,null)},onClick={profileMenu=false;profilePage="Change Password"})
+                            HorizontalDivider()
+                            DropdownMenuItem(text={Text("Logout")},leadingIcon={Icon(Icons.AutoMirrored.Filled.Logout,null)},onClick={profileMenu=false;logout()})
+                        }
+                    }
+                }
+            )
+        },
         bottomBar={if(profilePage==null){NavigationBar(containerColor=Color.White){destinations.forEachIndexed{i,item->NavigationBarItem(selected=selected==i&&(salesPage==null||(i==1&&salesPage=="Customers")),onClick={salesPage=if(role==MobileRole.SALES&&i==1)"Customers" else null;selected=i},icon={Icon(item.icon,item.label)},label={Text(item.label)})}}}}
     ){padding->
         Column(Modifier.padding(padding).fillMaxSize()){
