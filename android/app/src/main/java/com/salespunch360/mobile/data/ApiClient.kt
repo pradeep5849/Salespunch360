@@ -45,7 +45,7 @@ class ApiClient(private val session:SecureSession){
   fun enc(value:String)=java.net.URLEncoder.encode(value,"UTF-8")
   val parameters=mutableListOf("type=${enc(type)}")
   start?.let { parameters += "start=${enc(it)}" }
-  end?.let { parameters += "end=${enc(end)}" }
+  end?.let { parameters += "end=${enc(it)}" }
   employeeId?.let { parameters += "employeeId=${enc(it)}" }
   return json.parseToJsonElement(call("api/v1/mobile/reports?${parameters.joinToString("&")}")).jsonObject
  }
