@@ -2,10 +2,12 @@ package com.salespunch360.mobile.data
 import kotlinx.serialization.Serializable
 @Serializable data class LoginRequest(val identifier:String,val password:String)
 @Serializable data class LoginResponse(val accessToken:String,val expiresAt:String,val bootstrap:Bootstrap)
-@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val capabilities:Capabilities=Capabilities(),val entitlement:Entitlement,val attendance:Attendance?,val productEdition:ProductEdition,val authorizedWorkspaces:List<Workspace>,val canSwitchWorkspace:Boolean,val salesDashboard:SalesDashboard?=null)
+@Serializable data class Bootstrap(val user:MobileUser,val company:CompanyBrand,val teamStructure:TeamStructure=TeamStructure.MANAGERS_AND_SALES,val features:Features,val capabilities:Capabilities=Capabilities(),val entitlement:Entitlement,val attendance:Attendance?,val productEdition:ProductEdition,val authorizedWorkspaces:List<Workspace>,val canSwitchWorkspace:Boolean,val salesDashboard:SalesDashboard?=null,val adminDashboard:AdminDashboard?=null)
 @Serializable data class SalesDashboard(val todayVisitCount:Int=0,val todayLeadCount:Int=0,val monthVisitCount:Int=0,val monthLeadCount:Int=0,val pendingTodayTasks:Int=0,val overdueTasks:Int=0,val recentVisits:List<DashboardVisit> = emptyList())
+@Serializable data class AdminDashboard(val teamMemberCount:Int=0,val presentToday:Int=0,val todayVisitCount:Int=0,val todayLeadCount:Int=0,val recentVisits:List<AdminDashboardVisit> = emptyList())
+@Serializable data class AdminDashboardVisit(val id:String,val userName:String?=null,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null,val thumbnailUrl:String?=null)
 @Serializable data class DashboardVisit(val id:String,val contactName:String?=null,val checkedInAt:String,val checkedOutAt:String?=null,val checkInAddress:String?=null,val checkoutSentiment:String?=null,val customerName:String?=null,val thumbnailUrl:String?=null)
-@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null)
+@Serializable data class MobileUser(val id:String,val name:String,val email:String?=null,val salesRole:MobileRole?=null,val accountRole:AccountRole?=null,val managerType:String?=null)
 @Serializable enum class MobileRole{PRIMARY_ADMIN,ADMIN,MANAGER,SALES}
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
 @Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
