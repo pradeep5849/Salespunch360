@@ -50,6 +50,8 @@ jobs:
       - run: npm run build
         env:
           SKIP_ENV_VALIDATION: "1"
+          AUTH_SECRET: "r5-ci-only-auth-secret-not-used-outside-github-actions"
+          APP_URL: "https://www.salespunch360.com"
 
   android:
     name: Android final regression
