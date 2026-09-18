@@ -94,4 +94,7 @@
 /* Reference-lock step 11: visual audit corrections */
 @media(min-width:1001px){.reference-hero{max-width:1180px!important;grid-template-columns:.91fr 1.09fr!important;padding-top:56px!important;padding-bottom:58px!important}.reference-products{gap:22px!important}.reference-products .focus-card{min-height:482px!important}.reference-industries .industry-grid{max-width:1100px;margin-left:auto;margin-right:auto}.reference-why,.reference-testimonials{scroll-margin-top:90px}}
 /* Keep the reference composition while using only verified capability copy. */
-.reference-hero .hero-trust span{white-space:nowrap}.reference-testimonials .demo-stars{aria-hidden:true}
+.reference-hero .hero-trust span{white-space:nowrap}
+
+/* Footer live social + QR assets */
+.reference-footer .footer-socials a{width:27px;height:27px;display:grid;place-items:center;border:1px solid #ffffff1c;border-radius:6px;background:#102b41;color:#d8e6f1!important;font-size:10px!important;font-weight:800;text-decoration:none}.reference-footer .qr-preview img{width:48px;height:48px;display:block;border:3px solid #fff;border-radius:3px;background:#fff}.reference-footer .footer-base{justify-content:space-between}.reference-footer .footer-base span{margin-right:0}
