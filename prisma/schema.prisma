@@ -3100,6 +3100,7 @@ model PublicTestimonial {
   customerName String  @db.VarChar(160)
   customerRole String? @db.VarChar(200)
   companyName  String? @db.VarChar(200)
+  imagePath    String? @db.VarChar(500)
   quote         String
   rating        Int     @default(5)
   isPublished   Boolean @default(false)
