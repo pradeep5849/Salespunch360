@@ -105,3 +105,9 @@
 
 /* Reference icon palette */
 .reference-industries .industry-card>b,.reference-benefits article>i{display:grid;place-items:center;margin-inline:auto}.reference-industries .industry-1>b,.reference-benefits .benefit-1>i{color:#2f73ff}.reference-industries .industry-2>b,.reference-benefits .benefit-2>i{color:#00a8a8}.reference-industries .industry-3>b,.reference-benefits .benefit-3>i{color:#f14b62}.reference-industries .industry-4>b,.reference-benefits .benefit-4>i{color:#7856e8}.reference-industries .industry-5>b,.reference-benefits .benefit-5>i{color:#f0a020}.reference-industries .industry-6>b,.reference-benefits .benefit-6>i{color:#238ad7}.reference-industries .industry-7>b{color:#e88721}.reference-industries .industry-8>b{color:#d5a318}.reference-industries .industry-9>b{color:#7b8795}.reference-testimonials .demo-person img{border-radius:50%;object-fit:cover}.reference-testimonials .demo-stars{letter-spacing:2px;color:#f4b41a}
+
+/* Persistent public WhatsApp contact */
+.whatsapp-float{position:fixed;right:22px;bottom:22px;z-index:90;width:54px;height:54px;display:grid;place-items:center;border-radius:50%;background:#25d366;box-shadow:0 10px 28px rgba(7,26,43,.24);transition:transform .2s ease,box-shadow .2s ease}
+.whatsapp-float:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(7,26,43,.3)}
+.whatsapp-float svg{width:31px;height:31px;fill:#fff}
+@media(max-width:760px){.whatsapp-float{right:14px;bottom:14px;width:50px;height:50px}.whatsapp-float svg{width:28px;height:28px}}
