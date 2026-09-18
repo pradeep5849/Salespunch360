@@ -59,7 +59,40 @@ private fun SubscriptionContent(data:MobileBillingContext){
         items(data.orders.take(8)){o->Text("${o.billingPeriod.replace('_',' ')} · ₹${o.totalAmount} · ${o.status}",style=MaterialTheme.typography.bodySmall)}
     }
 }
-@Composable private fun SalesPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit){val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var period by remember{mutableStateOf("MONTHLY")};var admins by remember{mutableStateOf("1")};var managers by remember{mutableStateOf(if(data.teamStructure==TeamStructure.SALES_ONLY)"0" else "1")};var sales by remember{mutableStateOf("5")};ContentCard("Sales Subscription","Choose seats and review before payment."){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){listOf("MONTHLY","SIX_MONTH","YEARLY").forEach{p->FilterChip(selected=period==p,onClick={period=p},label={Text(p.replace('_',' '))})};OutlinedTextField(admins,{admins=it.filter(Char::isDigit)},label={Text("Additional Admin")},modifier=Modifier.fillMaxWidth());if(data.teamStructure!=TeamStructure.SALES_ONLY)OutlinedTextField(managers,{managers=it.filter(Char::isDigit)},label={Text("Manager")},modifier=Modifier.fillMaxWidth());OutlinedTextField(sales,{sales=it.filter(Char::isDigit)},label={Text("Sales")},modifier=Modifier.fillMaxWidth());Button(onClick={scope.launch{runCatching{api.billingQuote(BillingQuoteRequest(billingPeriod=period,adminSeats=admins.toIntOrNull()?:0,managerSeats=managers.toIntOrNull()?:0,salesSeats=sales.toIntOrNull()?:0))}.onSuccess(onQuote)}},modifier=Modifier.fillMaxWidth()){Text("Continue to Checkout")}}}}
+@Composable
+private fun SalesPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit){
+    val context=LocalContext.current
+    val api=remember{ApiClient(SecureSession(context))}
+    val scope=rememberCoroutineScope()
+    var period by remember{mutableStateOf("MONTHLY")}
+    var admins by remember{mutableStateOf("1")}
+    var managers by remember{mutableStateOf(if(data.teamStructure==TeamStructure.SALES_ONLY)"0" else "1")}
+    var sales by remember{mutableStateOf("5")}
+    ContentCard("Sales Subscription","Choose seats and review before payment."){
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+            listOf("MONTHLY","SIX_MONTH","YEARLY").forEach{p->
+                FilterChip(selected=period==p,onClick={period=p},label={Text(p.replace('_',' '))})
+            }
+            OutlinedTextField(value=admins,onValueChange={admins=it.filter(Char::isDigit)},label={Text("Additional Admin")},modifier=Modifier.fillMaxWidth())
+            if(data.teamStructure!=TeamStructure.SALES_ONLY){
+                OutlinedTextField(value=managers,onValueChange={managers=it.filter(Char::isDigit)},label={Text("Manager")},modifier=Modifier.fillMaxWidth())
+            }
+            OutlinedTextField(value=sales,onValueChange={sales=it.filter(Char::isDigit)},label={Text("Sales")},modifier=Modifier.fillMaxWidth())
+            Button(onClick={
+                scope.launch{
+                    runCatching{
+                        api.billingQuote(BillingQuoteRequest(
+                            billingPeriod=period,
+                            adminSeats=admins.toIntOrNull()?:0,
+                            managerSeats=managers.toIntOrNull()?:0,
+                            salesSeats=sales.toIntOrNull()?:0
+                        ))
+                    }.onSuccess(onQuote)
+                }
+            },modifier=Modifier.fillMaxWidth()){Text("Continue to Checkout")}
+        }
+    }
+}
 @Composable
 private fun AccountPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit){
     val context=LocalContext.current
