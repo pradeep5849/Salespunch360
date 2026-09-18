@@ -21,7 +21,7 @@ private fun reportTypes(role:MobileRole)=when(role){
 }
 @Composable fun ReportsScreen(initialType:String?=null,showMenu:Boolean=true,role:MobileRole=MobileRole.SALES,vm:ReportsViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value;val types=remember(role){reportTypes(role)};var expanded by remember{mutableStateOf(showMenu)}
- LaunchedEffect(initialType){if(initialType!=null&&initialType!=state.type)vm.load(initialType)}
+ LaunchedEffect(initialType){vm.load(initialType?:state.type)}
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=16.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text(if(showMenu)"Reports" else types.firstOrNull{it.first==(initialType?:state.type)}?.second?:"Report",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);HorizontalDivider(Modifier.padding(top=8.dp,bottom=if(showMenu)8.dp else 0.dp),color=SalesLine);if(showMenu){OutlinedButton({expanded=!expanded},Modifier.fillMaxWidth()){Text(if(expanded)"Reports ▲" else "Reports ▼")};if(expanded)Column(verticalArrangement=Arrangement.spacedBy(4.dp)){types.forEach{item->TextButton({vm.load(item.first)},Modifier.fillMaxWidth()){Text(item.second,Modifier.fillMaxWidth())}}}}}
   if(showMenu)item{Text(types.firstOrNull{it.first==state.type}?.second?:"Report",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
