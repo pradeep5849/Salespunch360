@@ -16,7 +16,7 @@ const roleLabels: Record<string, string> = {
   SALES: "Sales",
 };
 
-export function AccountProfileMenu({ userName, role }: { userName: string; role: string }) {
+export function AccountProfileMenu({ userName, role, isPlusPrimaryAdmin=false }: { userName: string; role: string; isPlusPrimaryAdmin?: boolean }) {
   const [openPath, setOpenPath] = useState<string | null>(null);
   const pathname = usePathname();
   const open = openPath === pathname;
@@ -40,6 +40,6 @@ export function AccountProfileMenu({ userName, role }: { userName: string; role:
 
   return <div className="account-profile" ref={root}>
     <button ref={trigger} type="button" aria-label="Open profile menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpenPath(value => value === pathname ? null : pathname)}><span>{userName.charAt(0).toUpperCase()}</span></button>
-    {open && <div role="menu" aria-label="Profile menu"><strong>{userName}</strong><small>{roleLabels[role] ?? role.replaceAll("_", " ").toLowerCase()}</small>{role==="ACCOUNT_ADMIN"&&<Link role="menuitem" href="/workspace/billing" onClick={() => close()}>Subscription &amp; Billing</Link>}<Link role="menuitem" href="/workspace/change-password" onClick={() => close()}>Profile &amp; password</Link><form action={signOut} onSubmit={() => close()}><button role="menuitem">Sign out</button></form></div>}
+    {open && <div role="menu" aria-label="Profile menu"><strong>{userName}</strong><small>{roleLabels[role] ?? role.replaceAll("_", " ").toLowerCase()}</small>{(role==="ACCOUNT_ADMIN"||isPlusPrimaryAdmin)&&<Link role="menuitem" href="/workspace/billing" onClick={() => close()}>{isPlusPrimaryAdmin?"Plus Subscription & Billing":"Account Subscription & Billing"}</Link>}<Link role="menuitem" href="/workspace/change-password" onClick={() => close()}>Profile &amp; password</Link><form action={signOut} onSubmit={() => close()}><button role="menuitem">Sign out</button></form></div>}
   </div>;
 }
