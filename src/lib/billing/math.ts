@@ -4,3 +4,9 @@ export function calculateOrder(adminSeats:number,managerSeats:number,salesSeats:
 export function calculateOrder(a:number,b:number,c:number|Prisma.Decimal,d:Prisma.Decimal,e?:Prisma.Decimal,f?:Prisma.Decimal){const legacy=e===undefined||f===undefined,subtotal=legacy?(c as Prisma.Decimal).mul(a).plus(d.mul(b)):d.mul(a).plus(e.mul(b)).plus(f.mul(c as number)),taxAmount=new Prisma.Decimal(0);return{subtotal,taxAmount,totalAmount:subtotal.plus(taxAmount)}}
 export function addBillingPeriod(start:Date,period:BillingPeriod){const months=period==='MONTHLY'?1:period==='SIX_MONTH'?6:12,y=start.getUTCFullYear(),m=start.getUTCMonth(),d=start.getUTCDate(),h=start.getUTCHours(),min=start.getUTCMinutes(),targetMonth=m+months,last=new Date(Date.UTC(y,targetMonth+1,0)).getUTCDate();return new Date(Date.UTC(y,targetMonth,Math.min(d,last),h,min,start.getUTCSeconds(),start.getUTCMilliseconds()))}
 export function renewalWindow(now:Date,currentEnd:Date|null){return currentEnd&&currentEnd>now?currentEnd:now}
+/** Deterministic co-term proration. Money is rounded to paise; expiry never moves. */
+export function prorateToExpiry(fullTermAmount:Prisma.Decimal,now:Date,currentStart:Date,currentEnd:Date){
+ if(now>=currentEnd)return fullTermAmount;
+ const whole=Math.max(1,currentEnd.getTime()-currentStart.getTime()),remaining=Math.max(0,currentEnd.getTime()-now.getTime());
+ return fullTermAmount.mul(remaining).div(whole).toDecimalPlaces(2,Prisma.Decimal.ROUND_HALF_UP);
+}
