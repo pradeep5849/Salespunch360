@@ -139,7 +139,11 @@ private fun CheckoutCard(q:BillingQuote,back:()->Unit){
                 Text("₹${q.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
             }
         }
-        item{ContentCard("Online Payment","Coming Soon"){Button(onClick={},enabled=false,modifier=Modifier.fillMaxWidth()){Text("Coming Soon")}}}
+        item{
+            ContentCard("Online Payment","Coming Soon"){
+                Button(onClick={},enabled=false,modifier=Modifier.fillMaxWidth()){Text("Coming Soon")}
+            }
+        }
         item{
             ContentCard("Manual Payment","Super Admin activates the subscription only after verifying payment."){
                 error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
