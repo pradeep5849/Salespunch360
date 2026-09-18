@@ -98,3 +98,7 @@
 
 /* Footer live social + QR assets */
 .reference-footer .footer-socials a{width:27px;height:27px;display:grid;place-items:center;border:1px solid #ffffff1c;border-radius:6px;background:#102b41;color:#d8e6f1!important;font-size:10px!important;font-weight:800;text-decoration:none}.reference-footer .qr-preview img{width:48px;height:48px;display:block;border:3px solid #fff;border-radius:3px;background:#fff}.reference-footer .footer-base{justify-content:space-between}.reference-footer .footer-base span{margin-right:0}
+
+/* Exact reference proof figures */
+.reference-proof{grid-template-columns:repeat(4,1fr) 1.35fr!important}.reference-proof .proof-trust{display:flex;align-items:center;justify-content:center;gap:12px;padding:0 12px;color:#fff;font-size:24px}.reference-proof .proof-trust strong{font-size:13px;line-height:1.25;font-style:italic;transform:rotate(-4deg)}
+@media(max-width:800px){.reference-proof{grid-template-columns:1fr 1fr!important}.reference-proof .proof-trust{grid-column:1/-1;min-height:60px;border-top:1px solid #ffffff28}}
