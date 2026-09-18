@@ -116,3 +116,8 @@
 .reference-benefits article>i{display:grid;place-items:center}
 .reference-benefits article>i svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .reference-benefits .benefit-1>i{color:#2477e8}.reference-benefits .benefit-2>i{color:#6657df}.reference-benefits .benefit-3>i{color:#24a56a}.reference-benefits .benefit-4>i{color:#169dc5}.reference-benefits .benefit-5>i{color:#8357d9}.reference-benefits .benefit-6>i{color:#179d9b}
+
+/* Reference industry icon set */
+.reference-industries .industry-card>b{display:grid;place-items:center}
+.reference-industries .industry-card>b svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.reference-industries .industry-1>b,.reference-industries .industry-7>b{color:#e05252}.reference-industries .industry-2>b{color:#31a66a}.reference-industries .industry-3>b{color:#6657df}.reference-industries .industry-4>b,.reference-industries .industry-6>b,.reference-industries .industry-9>b{color:#2879df}.reference-industries .industry-5>b,.reference-industries .industry-8>b{color:#e58b32}
