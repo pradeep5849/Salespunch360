@@ -3110,3 +3110,15 @@ model PublicTestimonial {
   @@index([isPublished, displayOrder])
   @@map("public_testimonials")
 }
+
+
+model PublicSiteSettings {
+  id          String   @id @default("default") @db.VarChar(32)
+  facebookUrl String?  @db.VarChar(500)
+  instagramUrl String? @db.VarChar(500)
+  linkedinUrl String?  @db.VarChar(500)
+  youtubeUrl  String?  @db.VarChar(500)
+  updatedAt   DateTime @updatedAt
+
+  @@map("public_site_settings")
+}
