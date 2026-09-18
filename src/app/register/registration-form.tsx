@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { register, type RegistrationState } from "@/app/actions/register";
 
@@ -26,6 +27,6 @@ export function RegistrationForm({initialProduct}:{initialProduct?:"SALESPUNCH36
       <div className="field"><label htmlFor="adminPassword">Password</label><div className="password-field"><input id="adminPassword" name="adminPassword" type={showPassword ? "text" : "password"} required minLength={12} maxLength={200} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}><PasswordIcon visible={showPassword} /></button></div><FieldError errors={state.fieldErrors?.adminPassword} /></div>
       <div className="field"><label htmlFor="confirmPassword">Confirm password</label><div className="password-field"><input id="confirmPassword" name="confirmPassword" type={showConfirmation ? "text" : "password"} required minLength={12} maxLength={200} autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} /><button type="button" aria-label={showConfirmation ? "Hide confirmed password" : "Show confirmed password"} aria-pressed={showConfirmation} onClick={() => setShowConfirmation(value => !value)}><PasswordIcon visible={showConfirmation} /></button></div>{confirmationEntered&&<span className={passwordsMatch?"password-match":"field-error"} role="status">{passwordsMatch?"✓ Passwords match":"Passwords do not match"}</span>}<FieldError errors={state.fieldErrors?.confirmPassword} /></div>
     </div></div>
-    <div className="honeypot" aria-hidden="true"><label htmlFor="website">Website</label><input id="website" name="website" tabIndex={-1} autoComplete="off" /></div>{state.error&&<p className="form-error" role="alert">{state.error}</p>}<button className="register-button" type="submit" disabled={pending}>{pending?"Creating workspace…":"Start my free trial"}</button><p className="terms">By continuing, you agree to use SalesPunch360 responsibly.</p>
+    <div className="form-section consent-section"><label className="terms-consent"><input type="checkbox" name="legalConsent" value="accepted" required/> <span>I agree to the <Link href="/terms" target="_blank">Terms of Service</Link> and acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link>.</span></label><FieldError errors={state.fieldErrors?.legalConsent}/></div><div className="honeypot" aria-hidden="true"><label htmlFor="website">Website</label><input id="website" name="website" tabIndex={-1} autoComplete="off" /></div>{state.error&&<p className="form-error" role="alert">{state.error}</p>}<button className="register-button" type="submit" disabled={pending}>{pending?"Creating workspace…":"Start my free trial"}</button><p className="terms">Your acceptance is required before registration.</p>
   </form>;
 }
