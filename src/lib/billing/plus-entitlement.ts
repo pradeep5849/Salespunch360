@@ -14,6 +14,6 @@ export async function assertPlusAccountEntitled(
 ){
  if(company.productEdition!=='SALESPUNCH360_PLUS')return;
  if(getTrialStatus(company,now).isInTrial)return;
- const account=await tx.companySubscription.findFirst({where:{companyId,status:'ACTIVE',startsAt:{lte:now},endsAt:{gt:now},sourceOrder:{is:{provider:ACCOUNT_PACKAGE_ORDER_PROVIDER}}},select:{id:true}});
+ const account=await tx.companySubscription.findFirst({where:{companyId,status:'ACTIVE',startsAt:{lte:now},endsAt:{gt:now},OR:[{accountPackages:{gt:0}},{sourceOrder:{is:{provider:ACCOUNT_PACKAGE_ORDER_PROVIDER}}}]},select:{id:true}});
  if(!account)throw new Error('PLUS_ACCOUNT_SUBSCRIPTION_REQUIRED');
 }
