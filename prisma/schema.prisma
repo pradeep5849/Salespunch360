@@ -752,6 +752,9 @@ model User {
   email                      String                   @unique
   passwordHash               String
   sessionVersion             Int                      @default(0)
+  legalAcceptedAt            DateTime?
+  termsVersionAccepted       String?                  @db.VarChar(32)
+  privacyVersionAccepted     String?                  @db.VarChar(32)
   role                       Role
   salesRole                  SalesRole?
   accountRole                AccountRole?
