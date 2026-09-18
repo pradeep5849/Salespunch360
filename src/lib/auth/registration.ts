@@ -57,6 +57,9 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
         salesAccessActive: data.productEdition !== "SALESPUNCH360_ACCOUNT",
         accountAccessActive: data.productEdition !== "SALESPUNCH360",
         companyId: company.id,
+        legalAcceptedAt: trialStartedAt,
+        termsVersionAccepted: "2026-09-18",
+        privacyVersionAccepted: "2026-09-18",
       },
       select: { id: true, name: true, email: true, role: true, companyId: true },
     });

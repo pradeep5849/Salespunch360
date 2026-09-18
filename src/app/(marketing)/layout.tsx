@@ -1,4 +1,4 @@
 import "./marketing.css";
 import {PublicHeader} from "@/components/public/public-header";
 import {PublicFooter} from "@/components/public/public-footer";
-export default function MarketingLayout({children}:{children:React.ReactNode}){return <div className="marketing"><PublicHeader/><main>{children}</main><PublicFooter/></div>}
+export default function MarketingLayout({children}:{children:React.ReactNode}){return <div className="marketing"><PublicHeader/><main>{children}</main><PublicFooter/><a className="whatsapp-float" href="https://wa.me/919611278818" target="_blank" rel="noreferrer" aria-label="Chat with SalesPunch360 on WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3a13 13 0 0 0-11.1 19.8L3 29l6.4-1.7A13 13 0 1 0 16 3Zm0 23.6c-2.1 0-4.1-.6-5.8-1.7l-.4-.2-3.8 1 1-3.7-.2-.4A10.6 10.6 0 1 1 16 26.6Zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.2-.2.2-.3.2-.7.1-1.8-.9-3-1.6-4.2-3.7-.3-.6.3-.5.9-1.8.1-.2 0-.5 0-.7l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9 0 1.7 1.2 3.4 1.4 3.6.2.2 2.4 3.7 5.9 5.2 2.2 1 3.1 1 4.2.8.7-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5-.2-.2-.4-.3-.7-.4Z"/></svg></a></div>}

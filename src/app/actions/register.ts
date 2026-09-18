@@ -16,6 +16,10 @@ export async function register(_: RegistrationState, formData: FormData): Promis
     return { error: "Unable to create your account. Please wait and try again." };
   }
 
+  if (formData.get("legalConsent") !== "accepted") {
+    return { error: "You must agree to the Terms of Service and acknowledge the Privacy Policy.", fieldErrors: { legalConsent: ["Required before registration."] } };
+  }
+
   const input = {
     productEdition: formData.get("productEdition"),
     companyName: formData.get("companyName"),
