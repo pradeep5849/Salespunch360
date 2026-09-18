@@ -10,7 +10,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
-@Composable fun SubscriptionScreen(){val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)};LaunchedEffect(Unit){runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false};when{loading->Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center){CircularProgressIndicator()};error!=null->RetryScreen(error!!,{error=null;loading=true;scope.launch{runCatching{api.billing()}.onSuccess{data=it;error=null}.onFailure{error="Unable to load subscription."};loading=false}});else->SubscriptionContent(data!!)}}
+@Composable fun SubscriptionScreen(){val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)};LaunchedEffect(Unit){runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false};when{loading->Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center){CircularProgressIndicator()};error!=null->RetryScreen(error!!,{error=null;loading=true;scope.launch{runCatching{api.billing()}.onSuccess{data=it;error=null}.onFailure{error="Unable to load subscription."};loading=false}});else->SubscriptionContent(data!!)
+    }
+}
 @Composable
 private fun SubscriptionContent(data:MobileBillingContext){
     var checkout by remember{mutableStateOf<BillingQuote?>(null)}
