@@ -118,13 +118,12 @@ private fun CheckoutCard(q:BillingQuote,back:()->Unit){
     var pending by remember{mutableStateOf<ManualOrderResponse?>(null)}
     var busy by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf<String?>(null)}
-    val pendingOrder=pending
-    if(pendingOrder!=null){
+    pending?.let{o->
         LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             item{
                 Text("Payment Pending",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                ContentCard("Manual Payment","Order ref ${pendingOrder.id.take(8).uppercase()}"){
-                    Text("₹${pendingOrder.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
+                ContentCard("Manual Payment","Order ref ${o.id.take(8).uppercase()}"){
+                    Text("₹${o.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
                     Text("Awaiting Super Admin payment verification. Do not create another payment request.",style=MaterialTheme.typography.bodySmall)
                 }
                 Button(onClick=back,modifier=Modifier.fillMaxWidth()){Text("Back to Subscription")}
@@ -141,36 +140,19 @@ private fun CheckoutCard(q:BillingQuote,back:()->Unit){
                 Text("₹${q.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
             }
         }
-        item{
-            ContentCard("Online Payment","Coming Soon"){
-                Button(onClick={},enabled=false,modifier=Modifier.fillMaxWidth()){Text("Coming Soon")}
-            }
-        }
+        item{ContentCard("Online Payment","Coming Soon"){Button(onClick={},enabled=false,modifier=Modifier.fillMaxWidth()){Text("Coming Soon")}}}
         item{
             ContentCard("Manual Payment","Super Admin activates the subscription only after verifying payment."){
                 error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
                 Button(onClick={
-                    busy=true
-                    error=null
+                    busy=true;error=null
                     scope.launch{
                         val key="android_"+java.util.UUID.randomUUID().toString().replace("-","")
-                        val request = ManualOrderRequest(
-                            kind = q.kind,
-                            billingPeriod = if (q.kind == "ACCOUNT_PACKAGE") "YEARLY" else q.billingPeriod,
-                            adminSeats = q.adminSeats,
-                            managerSeats = q.managerSeats,
-                            salesSeats = q.salesSeats,
-                            quantity = if (q.kind == "ACCOUNT_PACKAGE") (q.quantity ?: 1) else null,
-                            idempotencyKey = key
-                        )
-                        runCatching{api.createManualOrder(request)}
-                            .onSuccess{pending=it}
-                            .onFailure{error="Unable to create payment request."}
+                        val request=ManualOrderRequest(kind=q.kind,billingPeriod=if(q.kind=="ACCOUNT_PACKAGE")"YEARLY" else q.billingPeriod,adminSeats=q.adminSeats,managerSeats=q.managerSeats,salesSeats=q.salesSeats,quantity=if(q.kind=="ACCOUNT_PACKAGE")(q.quantity?:1) else null,idempotencyKey=key)
+                        runCatching{api.createManualOrder(request)}.onSuccess{pending=it}.onFailure{error="Unable to create payment request."}
                         busy=false
                     }
-                },enabled=!busy,modifier=Modifier.fillMaxWidth()){
-                    Text(if(busy)"Creating…" else "Manual Payment")
-                }
+                },enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(if(busy)"Creating…" else "Manual Payment")}
             }
         }
     }
