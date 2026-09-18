@@ -94,6 +94,7 @@ private fun SalesPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit
         }
     }
 }
+}
 @Composable
 private fun AccountPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit){
     val context=LocalContext.current
