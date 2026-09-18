@@ -118,7 +118,8 @@ private fun CheckoutCard(q:BillingQuote,back:()->Unit){
     var pending by remember{mutableStateOf<ManualOrderResponse?>(null)}
     var busy by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf<String?>(null)}
-    pending?.let{o->
+    if(pending!=null){
+        val o=pending!!
         LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             item{
                 Text("Payment Pending",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
