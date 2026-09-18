@@ -39,6 +39,7 @@ class ApiClient(private val session:SecureSession){
   val query=parameters.joinToString("&")
   return json.parseToJsonElement(call("api/v1/mobile/reports?$query")).jsonObject
  }
+ suspend fun billing()=json.decodeFromString<MobileBillingContext>(call("api/v1/mobile/billing"));suspend fun billingQuote(request:BillingQuoteRequest)=json.decodeFromString<BillingQuote>(call("api/v1/mobile/billing","POST",json.encodeToString(request)))
  suspend fun company()=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company"));suspend fun updateOperations(data:OperationsSettings)=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company","PATCH",json.encodeToString(CompanyUpdateRequest("operations",data))));suspend fun updateGeofence(data:GeofenceSettings)=json.decodeFromString<CompanyContext>(call("api/v1/mobile/company","PATCH",json.encodeToString(CompanyUpdateRequest("geofence",data))));suspend fun targets()=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets"));suspend fun monthlyTargets()=json.decodeFromString<MonthlyTargetsContext>(call("api/v1/mobile/targets?view=monthly"));suspend fun createTarget(data:TargetRequest)=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets","POST",json.encodeToString(data)));suspend fun editTarget(data:EditTargetRequest)=json.decodeFromString<TargetsContext>(call("api/v1/mobile/targets","PATCH",json.encodeToString(data)))
 }
 class ApiException(val status:Int,val code:String?=null,val distanceMeters:Double?=null):Exception("API request failed")
