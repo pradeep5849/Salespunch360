@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - name: Billing and entitlement regression tests
-        run: npx vitest run src/lib/billing/combined-order.test.ts src/lib/billing/entitlement.test.ts src/lib/billing/seat-reduction.test.ts
+        run: npx vitest run src/lib/billing/combined-order.test.ts src/lib/billing/current-term.test.ts src/lib/billing/entitlement.test.ts src/lib/billing/seat-reduction.test.ts
       - run: npm run typecheck
       - run: npm run lint
 
