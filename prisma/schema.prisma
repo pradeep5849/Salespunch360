@@ -3093,3 +3093,20 @@ model AssetAssignmentHistory {
   @@index([companyId, assetId, assignedAt])
   @@map("asset_assignment_history")
 }
+
+
+model PublicTestimonial {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerName String  @db.VarChar(160)
+  customerRole String? @db.VarChar(200)
+  companyName  String? @db.VarChar(200)
+  quote         String
+  rating        Int     @default(5)
+  isPublished   Boolean @default(false)
+  displayOrder  Int     @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isPublished, displayOrder])
+  @@map("public_testimonials")
+}
