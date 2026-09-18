@@ -23,6 +23,7 @@ enum SalesRole {
   ADMIN
   MANAGER
   SALES
+  ACCOUNT_PACKAGE
 }
 
 /// Explicit Account workspace identity. One fixed role per user.
