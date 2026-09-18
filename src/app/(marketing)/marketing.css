@@ -111,3 +111,8 @@
 .whatsapp-float:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(7,26,43,.3)}
 .whatsapp-float svg{width:31px;height:31px;fill:#fff}
 @media(max-width:760px){.whatsapp-float{right:14px;bottom:14px;width:50px;height:50px}.whatsapp-float svg{width:28px;height:28px}}
+
+/* Reference benefit icon treatment */
+.reference-benefits article>i{display:grid;place-items:center}
+.reference-benefits article>i svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.reference-benefits .benefit-1>i{color:#2477e8}.reference-benefits .benefit-2>i{color:#6657df}.reference-benefits .benefit-3>i{color:#24a56a}.reference-benefits .benefit-4>i{color:#169dc5}.reference-benefits .benefit-5>i{color:#8357d9}.reference-benefits .benefit-6>i{color:#179d9b}
