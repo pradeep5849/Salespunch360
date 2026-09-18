@@ -35,6 +35,7 @@ fun SubscriptionScreen(){
     }
 }
 
+
 @Composable
 private fun SubscriptionContent(data:MobileBillingContext){
     var checkout by remember{mutableStateOf<BillingQuote?>(null)}
