@@ -127,3 +127,26 @@
 .footer-socials a svg{width:18px;height:18px;display:block;fill:currentColor}
 
 .reference-marketing-image{object-fit:cover;z-index:0}.hero-reference-image{object-fit:contain;object-position:center}.photo-card>.reference-marketing-image{z-index:0}.photo-card::after{pointer-events:none}.photo-card>.sales-checkin-card,.photo-card>.account-menu-float{z-index:4}.reference-hero .photo-hero{overflow:hidden}.reference-hero .hero-reference-image{z-index:1}
+
+/* Mobile screenshot corrections: headline flow, image overlays and footer alignment */
+.reference-hero h1 span,.reference-hero h1 em{white-space:nowrap}
+.reference-sales-card .sales-checkin-card{top:auto;bottom:28px;left:-18px}
+.reference-footer .footer-grid{align-items:start}
+.reference-footer .footer-brand,.reference-footer .footer-app{align-self:start}
+.reference-footer .footer-socials{min-height:27px;margin-top:4px}
+@media(max-width:760px){
+ .reference-hero h1 span,.reference-hero h1 em{white-space:normal}
+ .reference-hero h1 span{white-space:nowrap}
+ .reference-sales-card .sales-checkin-card{top:auto!important;bottom:18px!important;left:10px!important;transform:scale(.82)!important;transform-origin:left bottom!important}
+ .reference-footer .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:start!important}
+ .reference-footer .footer-grid>div{min-width:0}
+ .reference-footer .footer-brand,.reference-footer .footer-app{grid-column:1/-1!important}
+ .reference-footer .footer-grid>div>b{margin-bottom:12px}
+ .reference-footer .footer-grid a{display:block}
+ .reference-footer .footer-base{grid-template-columns:1fr!important;text-align:left!important}
+}
+@media(max-width:430px){
+ .reference-hero h1 span{white-space:normal}
+ .reference-footer .footer-grid{grid-template-columns:1fr 1fr!important}
+ .reference-footer .footer-brand,.reference-footer .footer-app{grid-column:1/-1!important}
+}
