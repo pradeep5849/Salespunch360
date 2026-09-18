@@ -121,3 +121,5 @@
 .reference-industries .industry-card>b{display:grid;place-items:center}
 .reference-industries .industry-card>b svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .reference-industries .industry-1>b,.reference-industries .industry-7>b{color:#e05252}.reference-industries .industry-2>b{color:#31a66a}.reference-industries .industry-3>b{color:#6657df}.reference-industries .industry-4>b,.reference-industries .industry-6>b,.reference-industries .industry-9>b{color:#2879df}.reference-industries .industry-5>b,.reference-industries .industry-8>b{color:#e58b32}
+
+.reference-proof>div>i{display:grid;place-items:center}.reference-proof>div>i svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
