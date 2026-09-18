@@ -3156,3 +3156,19 @@ model PublicBlogPost {
   @@index([isPublished, publishedAt])
   @@map("public_blog_posts")
 }
+
+
+model PublicVideoTutorial {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String   @db.VarChar(240)
+  description  String?  @db.VarChar(800)
+  videoUrl     String   @db.VarChar(500)
+  thumbnailUrl String?  @db.VarChar(500)
+  product      String   @default("ALL") @db.VarChar(40)
+  displayOrder Int      @default(0)
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@index([isPublished, displayOrder])
+  @@map("public_video_tutorials")
+}
