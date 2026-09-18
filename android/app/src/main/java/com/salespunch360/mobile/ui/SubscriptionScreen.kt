@@ -152,11 +152,15 @@ private fun CheckoutCard(q:BillingQuote,back:()->Unit){
                     error=null
                     scope.launch{
                         val key="android_"+java.util.UUID.randomUUID().toString().replace("-","")
-                        val request=if(q.kind=="ACCOUNT_PACKAGE"){
-                            ManualOrderRequest(kind=q.kind,billingPeriod="YEARLY",quantity=q.quantity?:1,idempotencyKey=key)
-                        }else{
-                            ManualOrderRequest(billingPeriod=q.billingPeriod,adminSeats=q.adminSeats,managerSeats=q.managerSeats,salesSeats=q.salesSeats,idempotencyKey=key)
-                        }
+                        val request = ManualOrderRequest(
+                            kind = q.kind,
+                            billingPeriod = if (q.kind == "ACCOUNT_PACKAGE") "YEARLY" else q.billingPeriod,
+                            adminSeats = q.adminSeats,
+                            managerSeats = q.managerSeats,
+                            salesSeats = q.salesSeats,
+                            quantity = if (q.kind == "ACCOUNT_PACKAGE") (q.quantity ?: 1) else null,
+                            idempotencyKey = key
+                        )
                         runCatching{api.createManualOrder(request)}
                             .onSuccess{pending=it}
                             .onFailure{error="Unable to create payment request."}
