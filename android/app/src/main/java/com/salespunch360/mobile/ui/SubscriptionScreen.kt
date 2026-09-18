@@ -11,7 +11,30 @@ import androidx.compose.ui.unit.dp
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 @Composable fun SubscriptionScreen(){val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)};LaunchedEffect(Unit){runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false};when{loading->Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center){CircularProgressIndicator()};error!=null->RetryScreen(error!!,{error=null;loading=true;scope.launch{runCatching{api.billing()}.onSuccess{data=it;error=null}.onFailure{error="Unable to load subscription."};loading=false}});else->SubscriptionContent(data!!)}}
-@Composable private fun SubscriptionContent(data:MobileBillingContext){var checkout by remember{mutableStateOf<BillingQuote?>(null)};if(checkout!=null){CheckoutCard(checkout!!,{checkout=null});return};val pending=data.orders.firstOrNull{it.status=="PENDING"};LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);if(pending!=null)Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){Text("Payment Pending",fontWeight=FontWeight.Bold);Text("Ref ${pending.id.take(8).uppercase()} · ₹${pending.totalAmount}");Text("Continue this pending payment. A new order will not be created while it is active.",style=MaterialTheme.typography.bodySmall)}}};if(data.hasSales)item{SalesPurchase(data){checkout=it}};if(data.hasAccount)item{AccountPurchase(data){checkout=it}};item{Text("Recent orders",fontWeight=FontWeight.Bold)};items(data.orders.take(8)){o->Text("${o.billingPeriod.replace('_',' ')} · ₹${o.totalAmount} · ${o.status}",style=MaterialTheme.typography.bodySmall)}}}
+@Composable
+private fun SubscriptionContent(data:MobileBillingContext){
+    var checkout by remember{mutableStateOf<BillingQuote?>(null)}
+    if(checkout!=null){CheckoutCard(checkout!!){checkout=null};return}
+    val pending=data.orders.firstOrNull{it.status=="PENDING"}
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+        item{
+            Text("Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+            if(pending!=null){
+                Card(Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(14.dp)){
+                        Text("Payment Pending",fontWeight=FontWeight.Bold)
+                        Text("Ref ${pending.id.take(8).uppercase()} · ₹${pending.totalAmount}")
+                        Text("Continue this pending payment. A new order will not be created while it is active.",style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        if(data.hasSales)item{SalesPurchase(data){checkout=it}}
+        if(data.hasAccount)item{AccountPurchase(data){checkout=it}}
+        item{Text("Recent orders",fontWeight=FontWeight.Bold)}
+        items(data.orders.take(8)){o->Text("${o.billingPeriod.replace('_',' ')} · ₹${o.totalAmount} · ${o.status}",style=MaterialTheme.typography.bodySmall)}
+    }
+}
 @Composable private fun SalesPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit){val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var period by remember{mutableStateOf("MONTHLY")};var admins by remember{mutableStateOf("1")};var managers by remember{mutableStateOf(if(data.teamStructure==TeamStructure.SALES_ONLY)"0" else "1")};var sales by remember{mutableStateOf("5")};ContentCard("Sales Subscription","Choose seats and review before payment."){Row{listOf("MONTHLY","SIX_MONTH","YEARLY").forEach{p->FilterChip(selected=period==p,onClick={period=p},label={Text(p.replace('_',' '))});Spacer(Modifier.width(4.dp))}};OutlinedTextField(admins,{admins=it.filter(Char::isDigit)},label={Text("Additional Admin")});if(data.teamStructure!=TeamStructure.SALES_ONLY)OutlinedTextField(managers,{managers=it.filter(Char::isDigit)},label={Text("Manager")});OutlinedTextField(sales,{sales=it.filter(Char::isDigit)},label={Text("Sales")});Button({scope.launch{runCatching{api.billingQuote(BillingQuoteRequest(billingPeriod=period,adminSeats=admins.toIntOrNull()?:0,managerSeats=managers.toIntOrNull()?:0,salesSeats=sales.toIntOrNull()?:0))}.onSuccess(onQuote)}},Modifier.fillMaxWidth()){Text("Continue to Checkout")}}}
 @Composable private fun AccountPurchase(data:MobileBillingContext,onQuote:(BillingQuote)->Unit){val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var quantity by remember{mutableStateOf("1")};val unit=data.prices.firstOrNull{it.role=="ACCOUNT_PACKAGE"&&it.period=="YEARLY"}?.amount?:"700.00";ContentCard("Account Subscription","₹$unit / package / year · fixed Account-role seats."){OutlinedTextField(quantity,{quantity=it.filter(Char::isDigit)},label={Text("Additional packages")});Button({scope.launch{runCatching{api.billingQuote(BillingQuoteRequest(kind="ACCOUNT_PACKAGE",quantity=quantity.toIntOrNull()?:1))}.onSuccess(onQuote)}},Modifier.fillMaxWidth()){Text("Continue to Checkout")}}}
 @Composable
