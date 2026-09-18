@@ -3131,6 +3131,7 @@ model PublicSiteSettings {
   instagramUrl String?  @db.VarChar(500)
   linkedinUrl  String?  @db.VarChar(500)
   youtubeUrl   String?  @db.VarChar(500)
+  googlePlayUrl String? @db.VarChar(500)
   updatedAt    DateTime @updatedAt
   @@map("public_site_settings")
 }
