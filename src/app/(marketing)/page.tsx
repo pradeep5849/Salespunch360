@@ -1,7 +1,6 @@
 import type {Metadata} from "next";
 import Link from "next/link";
 import {CTA} from "@/components/public/marketing-ui";
-import {TRIAL_DURATION_DAYS} from "@/lib/trial/config";
 import {db} from "@/lib/db";
 
 export const metadata:Metadata={title:"Field Sales Tracking & Business Accounts",description:"Track field sales and manage business accounts together with SalesPunch360.",alternates:{canonical:"/"}};
