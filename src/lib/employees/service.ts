@@ -12,6 +12,7 @@ import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { assertAssignableManager, assertCanActivate, assertManagedEmployee, EmployeePolicyError } from "./policy";
 import { assertLeavingManagerSafe, assertManagerOnlyTransitionSafe } from "./manager-type-transition";
 import {salesRoleAssignment,salesRoleTransitionUpdate}from"./role-transition-policy";
+import {assertPlusAccountEntitled} from "@/lib/billing/plus-entitlement";
 import {
   createManagerSchema,
   createSalesSchema,
@@ -65,6 +66,7 @@ async function enforceAdminReadiness(tx:Prisma.TransactionClient,companyId:strin
 
 async function enforceAvailableSeat(tx: Prisma.TransactionClient, companyId: string, salesRole: "MANAGER" | "SALES") {
   const company = await lockAndLoadCompany(tx, companyId);
+  await assertPlusAccountEntitled(tx,companyId,company);
   const activeCount = await tx.user.count({ where: { companyId, salesRole, isActive: true, salesAccessActive:true } });
   const now=new Date(),paid=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrder:{is:{provider:{not:"ACCOUNT_PACKAGE"}}}},orderBy:{endsAt:"desc"}});
   if(paid){const limit=salesRole==="MANAGER"?paid.managerSeats:paid.salesSeats;if(activeCount>=limit)throw new EmployeePolicyError("SEAT_LIMIT");return;}

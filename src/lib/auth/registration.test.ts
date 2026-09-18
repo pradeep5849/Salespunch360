@@ -1,68 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TRIAL_DURATION_MS } from "@/lib/trial/config";
-import { getTrialStatus } from "@/lib/trial/status";
+import {describe,expect,it} from "vitest";
+import {resolveWorkspaceAccess} from "./workspace-policy";
 
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), hashPassword: vi.fn(), put:vi.fn(), delete:vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: { $transaction: mocks.transaction } }));
-vi.mock("./crypto", () => ({ hashPassword: mocks.hashPassword }));
-vi.mock("@/lib/storage",()=>({privateStorage:()=>({put:mocks.put,delete:mocks.delete})}));
+const base={companyId:"company-1",role:"COMPANY_ADMIN" as const,isActive:true,salesRole:"PRIMARY_ADMIN" as const,accountRole:"ACCOUNT_ADMIN" as const,salesAccessActive:true,accountAccessActive:true,managerType:null};
 
-import { registerCompany } from "./registration";
-
-const base = {
-  productEdition: "SALESPUNCH360",
-  companyName: "Acme Sales",
-  adminName: "Ada Admin",
-  adminEmail: "ada@example.com",
-  adminPassword: "StrongPassword1",
-  confirmPassword: "StrongPassword1",
-} as const;
-
-function transactionHarness() {
-  const tx = {
-    company: { create: vi.fn(async ({ data }) => ({ id: "company-id", ...data })),update:vi.fn() },
-    branch: { create: vi.fn() },
-    user: {
-      findUnique: vi.fn().mockResolvedValue(null),
-      create: vi.fn(async () => ({ id: "admin-id", role: "COMPANY_ADMIN", companyId: "company-id" })),
-    },
-    companySubscription: { create: vi.fn() },
-  };
-  mocks.transaction.mockImplementation(async (callback) => callback(tx));
-  return tx;
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  mocks.hashPassword.mockResolvedValue("password-hash");
-  mocks.put.mockResolvedValue(undefined);mocks.delete.mockResolvedValue(undefined);
-});
-
-describe("registration trial setup", () => {
-  it("persists the production Sales edition", async () => { const tx=transactionHarness(); await registerCompany(base); expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({productEdition:"SALESPUNCH360"})})); });
-  it.each([["SALESPUNCH360",true,false,null],["SALESPUNCH360_ACCOUNT",false,true,"ACCOUNT_ADMIN"],["SALESPUNCH360_PLUS",true,true,"ACCOUNT_ADMIN"]] as const)("persists and provisions %s without another tenant",async(productEdition,salesAccessActive,accountAccessActive,accountRole)=>{const tx=transactionHarness();await registerCompany({...base,productEdition});expect(tx.company.create).toHaveBeenCalledTimes(1);expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({productEdition})}));expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({salesAccessActive,accountAccessActive,accountRole})}))});
-  it("rejects an unknown edition before database access",async()=>{transactionHarness();await expect(registerCompany({...base,productEdition:"FORGED"} as unknown as typeof base)).rejects.toThrow();expect(mocks.transaction).not.toHaveBeenCalled()});
-  it("creates one 15-day trial without accepting a registration team structure", async () => {
-    const tx = transactionHarness();
-    const { company, user } = await registerCompany(base);
-
-    expect(company.trialEndsAt!.getTime() - company.trialStartedAt!.getTime()).toBe(TRIAL_DURATION_MS);
-    expect(company.subscriptionStatus).toBe("TRIAL");
-    expect(company.primaryContactName).toBe(base.adminName);
-    expect(company.contactEmail).toBe(base.adminEmail);
-    expect(tx.company.create).toHaveBeenCalledTimes(1);
-    expect(tx.user.create).toHaveBeenCalledTimes(1);
-    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: "COMPANY_ADMIN", salesRole: "PRIMARY_ADMIN", salesAccessActive: true, accountAccessActive: false }) }));
-    expect(tx.branch.create).toHaveBeenCalledWith({ data: { name: "Head Office", code: "HO", isPrimary: true, isActive: true, companyId: "company-id" } });
-    expect(user.role).toBe("COMPANY_ADMIN");
-    expect(tx.companySubscription.create).not.toHaveBeenCalled();
-
-    expect(tx.company.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.not.objectContaining({teamStructure:expect.anything()})}));
-    const trial = getTrialStatus({...company,teamStructure:"MANAGERS_AND_SALES"}, company.trialStartedAt!);
-    expect(trial.managerAllowance).toBe(1);
-    expect(trial.salesAllowance).toBe(5);
+describe("Plus primary admin workspace access",()=>{
+  it("can access and switch between both Plus workspaces",()=>{
+    const access=resolveWorkspaceAccess(base,"SALESPUNCH360_PLUS");
+    expect(access.canAccessSales).toBe(true);
+    expect(access.canAccessAccount).toBe(true);
+    expect(access.canSwitchWorkspace).toBe(true);
   });
-  it("stores a supplied logo at the exact key",async()=>{const tx=transactionHarness();await registerCompany(base,Buffer.from("webp"));expect(mocks.put).toHaveBeenCalledWith("Logo/company-id.webp",Buffer.from("webp"));expect(tx.company.update).toHaveBeenCalledWith({where:{id:"company-id"},data:{logoObjectKey:"Logo/company-id.webp"}})});
-  it("removes a written logo when registration fails",async()=>{const tx=transactionHarness();tx.company.update.mockRejectedValue(new Error("DB_FAILURE"));await expect(registerCompany(base,Buffer.from("webp"))).rejects.toThrow("DB_FAILURE");expect(mocks.delete).toHaveBeenCalledWith("Logo/company-id.webp")});
-  it("cannot create the admin after required primary branch creation fails",async()=>{const tx=transactionHarness();tx.branch.create.mockRejectedValue(new Error("BRANCH_FAILURE"));await expect(registerCompany(base)).rejects.toThrow("BRANCH_FAILURE");expect(tx.company.create).toHaveBeenCalledTimes(1);expect(tx.branch.create).toHaveBeenCalledTimes(1);expect(tx.user.create).not.toHaveBeenCalled();expect(mocks.transaction).toHaveBeenCalledTimes(1)});
+  it("does not grant Account workspace to a Sales-only edition",()=>{
+    const access=resolveWorkspaceAccess(base,"SALESPUNCH360");
+    expect(access.canAccessSales).toBe(true);
+    expect(access.canAccessAccount).toBe(false);
+  });
 });

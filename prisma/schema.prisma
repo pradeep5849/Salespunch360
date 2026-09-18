@@ -1424,6 +1424,7 @@ model CompanySubscription {
   adminSeats    Int                    @default(0)
   managerSeats  Int
   salesSeats    Int
+  accountPackages Int                  @default(0)
   startsAt      DateTime
   endsAt        DateTime
   sourceOrderId String?                @unique @db.Uuid
@@ -1445,6 +1446,7 @@ model BillingOrder {
   adminSeats             Int                  @default(0)
   managerSeats           Int
   salesSeats             Int
+  accountPackages        Int                  @default(0)
   adminUnitPrice         Decimal              @default(0) @db.Decimal(18, 2)
   managerUnitPrice       Decimal              @db.Decimal(18, 2)
   salesUnitPrice         Decimal              @db.Decimal(18, 2)
