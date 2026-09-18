@@ -2,15 +2,6 @@ name: R4 validation
 
 # Validation workflow also serves as the isolated R4/R5 repair-branch gate.
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "android/**"
-      - "src/**"
-      - "prisma/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/r4-validation.yml"
   workflow_dispatch:
 
 permissions:
