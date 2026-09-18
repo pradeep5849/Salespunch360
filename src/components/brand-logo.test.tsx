@@ -9,8 +9,7 @@ describe("BrandLogo", () => {
     expect(markup).toContain('href="/workspace"');
     expect(markup).toContain('aria-label="SalesPunch360 home"');
     expect(markup).toContain('class="brand-logo"');
-    expect(markup).toContain("salespunch360-wordmark.webp");
-    expect(markup).toContain('alt="SalesPunch360"');
-    expect(markup).not.toContain("salespunch360-logo.png");
+    expect(markup).toContain("salespunch360-logo.png");
+    expect(markup).toContain('alt="SalesPunch360 — Track. Punch. Perform."');
   });
 });
