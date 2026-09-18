@@ -24,22 +24,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
 
-  android-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      android: ${{ steps.filter.outputs.android }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            android:
-              - 'android/**'
-
   android:
-    needs: android-changes
-    if: ${{ needs.android-changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
