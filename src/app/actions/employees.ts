@@ -56,7 +56,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     if(code==="COMPANY_PROFILE_REQUIRED")return{error:"Complete the required company profile details before adding employees."};
     if(code==="EMAIL_IN_USE")return{error:"This email address is already in use."};
     if(code==="PHONE_IN_USE")return{error:"This mobile number is already in use in your company."};
-    if(code==="SEAT_LIMIT")return{error:"No Manager seat is available on the current plan."};
+    if(code==="SEAT_LIMIT")return{error:"No seat is available for this role on the current plan."};
     if(code==="LIFECYCLE_BLOCKED")return{error:"Employee creation is unavailable while the subscription is expired or suspended."};
     if(code==="MANAGERS_DISABLED")return{error:"Managers are disabled for this company team structure."};
     if(code==="BRANCH_REQUIRED")return{error:"Select at least one branch when using Selected Branches."};
@@ -67,6 +67,8 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
   }
   revalidatePath("/workspace/employees");
   if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
+  if(operation==="create-manager")return{success:"Manager created successfully."};
+  if(operation==="create-sales")return{success:"Sales employee created successfully."};
   return { success: operation === "reset-password" ? "Password updated and sessions revoked." : "Employee updated successfully." };
 }
 

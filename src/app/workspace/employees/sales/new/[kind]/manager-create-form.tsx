@@ -1,21 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { manageEmployee } from "@/app/actions/employees";
 
 type Branch = { id: string; name: string; code: string };
 
 export function ManagerCreateForm({ branches }: { branches: Branch[] }) {
   const [state, formAction, pending] = useActionState(manageEmployee, {});
+  const router = useRouter();
   const fieldError = (name: string) => state.fieldErrors?.[name]?.[0];
+
+  useEffect(() => {
+    if (!state.success) return;
+    router.replace("/workspace/employees?filter=managers");
+    router.refresh();
+  }, [router, state.success]);
 
   return (
     <form action={formAction} className="employee-form">
-      <input type="hidden" name="returnTo" value="/workspace/employees" />
       <input type="hidden" name="operation" value="create-manager" />
 
       {state.error ? <p className="form-error" role="alert">{state.error}</p> : null}
+      {state.success ? <p className="form-success" role="status">{state.success}</p> : null}
 
       <label>
         Name

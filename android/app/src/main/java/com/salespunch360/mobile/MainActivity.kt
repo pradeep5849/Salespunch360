@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
  val state=vm.state.collectAsStateWithLifecycle().value;LaunchedEffect(deepLink){if(deepLink!=null)vm.handleDeepLink(deepLink)}
  when(state.status){
   AppStatus.STARTING->LoadingScreen("Securing your session…")
-  AppStatus.SIGNED_OUT->if(showSignUp)NativeRegistrationScreen(onBack={showSignUp=false},onRegistered={showSignUp=false}) else LoginScreen(state.message,state.submitting,vm::clearMessage,vm::login){showSignUp=true}
+  AppStatus.SIGNED_OUT->if(showSignUp)NativeRegistrationScreen(onBack={showSignUp=false},onRegistered={showSignUp=false;vm.validateSession()}) else LoginScreen(state.message,state.submitting,vm::clearMessage,vm::login){showSignUp=true}
   AppStatus.RECOVERABLE_ERROR->RetryScreen(state.message?:"Unable to connect",vm::validateSession,vm::logout)
   AppStatus.AUTHENTICATED->{val data=state.bootstrap;val canSwitch=data?.let{it.canSwitchWorkspace&&validatedWorkspaces(it).size==2}==true;if(data==null||state.workspace==null)LoadingScreen() else when(state.workspace){
    Workspace.SALES->{if(data.user.salesRole==null)RetryScreen("Sales access changed. Refresh your session.",vm::validateSession,vm::logout) else {val switch=if(canSwitch){{vm.switchToAccount()}}else null;when(data.user.salesRole){MobileRole.SALES->SalesDrawerAuthenticatedApp(data,state.message,vm::clearMessage,{start,location,done->vm.attendance(start,location,done)},vm::logout,switch);MobileRole.PRIMARY_ADMIN->PrimaryAdminAuthenticatedApp(data,state.message,vm::clearMessage,vm::logout,switch);MobileRole.ADMIN,MobileRole.MANAGER->AdminManagerAuthenticatedApp(data,state.message,vm::clearMessage,{start,location,done->vm.attendance(start,location,done)},vm::logout,switch)}}}
