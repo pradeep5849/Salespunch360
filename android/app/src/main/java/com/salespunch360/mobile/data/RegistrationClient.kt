@@ -48,13 +48,13 @@ class RegistrationClient(private val session: SecureSession) {
 
         http.newCall(request).execute().use { response ->
             val raw = response.body?.string() ?: "{}"
-            val root = runCatching { json.parseToJsonElement(raw).jsonObject }.getOrNull()
+            val parsedRoot = runCatching { json.parseToJsonElement(raw).jsonObject }.getOrNull()
             if (!response.isSuccessful) {
-                val code = root?.get("error")?.jsonPrimitive?.content
+                val code = parsedRoot?.get("error")?.jsonPrimitive?.content
                 throw ApiException(response.code, code)
             }
-            val bootstrap = root?.get("bootstrap")
-                ?: throw ApiException(500, "INVALID_RESPONSE")
+            val root = parsedRoot ?: throw ApiException(500, "INVALID_RESPONSE")
+            val bootstrap = root["bootstrap"] ?: throw ApiException(500, "INVALID_RESPONSE")
             val accessToken = root["accessToken"]?.jsonPrimitive?.content
                 ?: throw ApiException(500, "INVALID_RESPONSE")
             val decoded = json.decodeFromJsonElement(Bootstrap.serializer(), bootstrap)
