@@ -119,7 +119,7 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
         "LIFECYCLE_BLOCKED" -> "Your entitlement currently blocks employee changes."
         "MANAGERS_DISABLED" -> "Managers aren't available for this company structure."
         "INVALID_MANAGER" -> "Choose an active Manager from your company."
-        "INVALID_INPUT" -> "Check the employee details and try again."
+        "INVALID_INPUT" -> "Check the employee details. Password must be at least 12 characters with uppercase, lowercase and a number; phone and employee code must also use valid formats."
         "FORBIDDEN" -> "Employee management requires a Company Admin account."
         else -> if (e is IOException) "You're offline. Reconnect before making changes." else "The change couldn't be completed."
     }
