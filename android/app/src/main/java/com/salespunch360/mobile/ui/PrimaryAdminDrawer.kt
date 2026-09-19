@@ -15,10 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
-private val PrimaryAdminItems = listOf("Dashboard","Employees","Attendance","Customers","Leads","Follow-ups","Targets","Billing & Subscription","Settings","Reports")
+private val PrimaryAdminItems = listOf("Dashboard","Employees","Attendance","Customers","Leads","Follow-ups","Targets","Settings","Reports")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +39,7 @@ fun PrimaryAdminAuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit
                 Spacer(Modifier.height(22.dp))
                 PrimaryAdminItems.forEach{item->
                     NavigationDrawerItem(
-                        label={Text(item,fontWeight=FontWeight.SemiBold)},
+                        label={Text(item,fontSize=13.sp,fontWeight=FontWeight.SemiBold)},
                         selected=route==item,
                         onClick={navigate(item)},
                         colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent,selectedContainerColor=Color.White.copy(alpha=.12f),unselectedTextColor=Color.White,selectedTextColor=Color.White),
@@ -48,7 +49,7 @@ fun PrimaryAdminAuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit
                 if(switchToAccount!=null){
                     HorizontalDivider(Modifier.padding(16.dp),color=Color.White.copy(alpha=.18f))
                     NavigationDrawerItem(
-                        label={Text("⇄  Switch to Accounts",color=Color.White)},
+                        label={Text("⇄  Switch to Accounts",fontSize=13.sp,color=Color.White)},
                         selected=false,
                         onClick={scope.launch{drawer.close()};switchToAccount()},
                         colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent),
@@ -73,11 +74,12 @@ fun PrimaryAdminAuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit
                                 }
                             }
                             DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){
-                                DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;route="Company Details"})
-                                DropdownMenuItem(text={Text("Follow-up Tasks")},onClick={profileMenu=false;route="Follow-ups"})
-                                DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;route="Change Password"})
+                                DropdownMenuItem(text={Text("Company Details",fontSize=13.sp)},onClick={profileMenu=false;route="Company Details"})
+                                DropdownMenuItem(text={Text("Follow-up Tasks",fontSize=13.sp)},onClick={profileMenu=false;route="Follow-ups"})
+                                DropdownMenuItem(text={Text("Billing & Subscription",fontSize=13.sp)},onClick={profileMenu=false;route="Billing & Subscription"})
+                                DropdownMenuItem(text={Text("Change Password",fontSize=13.sp)},onClick={profileMenu=false;route="Change Password"})
                                 HorizontalDivider()
-                                DropdownMenuItem(text={Text("Logout")},onClick={profileMenu=false;logout()})
+                                DropdownMenuItem(text={Text("Logout",fontSize=13.sp)},onClick={profileMenu=false;logout()})
                             }
                         }
                     }
