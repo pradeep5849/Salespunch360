@@ -5,7 +5,9 @@ import { geofenceSettingsSchema } from "@/lib/geofence/validation";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { currentPrices } from "@/lib/billing/service";
 import { PAYMENT_PROVIDER_STATUS } from "@/lib/billing/provider";
+import { companyLogoKey, processCompanyLogo } from "@/lib/company/logo";
 import { profileComplete } from "@/lib/company/profile";
+import { privateStorage } from "@/lib/storage";
 import { mobileCan, type MobilePrincipal } from "./auth";
 
 export class MobileCompanyError extends Error {
@@ -38,7 +40,7 @@ const companyProfileSchema = z.object({
 const settingsSelect = {
   name: true, teamStructure: true, subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true,
   addressLine1: true, addressLine2: true, locality: true, city: true, state: true, postalCode: true,
-  country: true, primaryContactName: true, primaryPhone: true, contactEmail: true,
+  country: true, primaryContactName: true, primaryPhone: true, contactEmail: true, logoObjectKey: true,
   attendanceEnabled: true, gpsTrackingEnabled: true, checkoutRequiredBeforeNextCheckIn: true,
   attendanceGeofenceEnabled: true, attendanceReferenceLatitude: true, attendanceReferenceLongitude: true,
   attendanceGeofenceRadiusMeters: true, customerCheckInGeofenceEnabled: true,
@@ -53,9 +55,11 @@ export async function mobileCompanyContext(principal: MobilePrincipal) {
     currentPrices(),
   ]);
   if (!company) throw new MobileCompanyError("NOT_FOUND", 404);
+  const { logoObjectKey, ...companyFields } = company;
   return {
     company: {
-      ...company,
+      ...companyFields,
+      hasLogo: Boolean(logoObjectKey),
       profileComplete: profileComplete(company as unknown as Record<string, unknown>),
     },
     entitlement,
@@ -106,5 +110,23 @@ export async function mobileUpdateCompany(principal: MobilePrincipal, raw: unkno
       });
     });
   } else throw new MobileCompanyError("INVALID_SECTION");
+  return mobileCompanyContext(principal);
+}
+
+export async function mobileUpdateCompanyLogo(principal: MobilePrincipal, file: File) {
+  const companyId = admin(principal);
+  const company = await db.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new MobileCompanyError("NOT_FOUND", 404);
+
+  let logo: Buffer;
+  try {
+    logo = await processCompanyLogo(file);
+  } catch {
+    throw new MobileCompanyError("LOGO_INVALID", 400);
+  }
+
+  const key = companyLogoKey(companyId);
+  await privateStorage().put(key, logo);
+  await db.company.update({ where: { id: companyId }, data: { logoObjectKey: key } });
   return mobileCompanyContext(principal);
 }

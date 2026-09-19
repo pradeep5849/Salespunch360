@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,11 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,18 +39,21 @@ fun CompanyProfileScreen(
         return
     }
 
-    var name by remember(profile) { mutableStateOf(profile.name) }
-    var address1 by remember(profile) { mutableStateOf(profile.addressLine1.orEmpty()) }
-    var address2 by remember(profile) { mutableStateOf(profile.addressLine2.orEmpty()) }
-    var locality by remember(profile) { mutableStateOf(profile.locality.orEmpty()) }
-    var city by remember(profile) { mutableStateOf(profile.city.orEmpty()) }
-    var region by remember(profile) { mutableStateOf(profile.state.orEmpty()) }
-    var postal by remember(profile) { mutableStateOf(profile.postalCode.orEmpty()) }
-    var country by remember(profile) { mutableStateOf(profile.country ?: "India") }
-    var contactName by remember(profile) { mutableStateOf(profile.primaryContactName.orEmpty()) }
-    var phone by remember(profile) { mutableStateOf(profile.primaryPhone.orEmpty()) }
-    var email by remember(profile) { mutableStateOf(profile.contactEmail.orEmpty()) }
+    var name by remember(profile.name) { mutableStateOf(profile.name) }
+    var address1 by remember(profile.addressLine1) { mutableStateOf(profile.addressLine1.orEmpty()) }
+    var address2 by remember(profile.addressLine2) { mutableStateOf(profile.addressLine2.orEmpty()) }
+    var locality by remember(profile.locality) { mutableStateOf(profile.locality.orEmpty()) }
+    var city by remember(profile.city) { mutableStateOf(profile.city.orEmpty()) }
+    var region by remember(profile.state) { mutableStateOf(profile.state.orEmpty()) }
+    var postal by remember(profile.postalCode) { mutableStateOf(profile.postalCode.orEmpty()) }
+    var country by remember(profile.country) { mutableStateOf(profile.country ?: "India") }
+    var contactName by remember(profile.primaryContactName) { mutableStateOf(profile.primaryContactName.orEmpty()) }
+    var phone by remember(profile.primaryPhone) { mutableStateOf(profile.primaryPhone.orEmpty()) }
+    var email by remember(profile.contactEmail) { mutableStateOf(profile.contactEmail.orEmpty()) }
 
+    val logoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let(vm::uploadLogo)
+    }
     val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
     val valid = name.trim().length >= 2 && address1.trim().length >= 2 && city.trim().length >= 2 &&
         region.trim().length >= 2 && postal.trim().length >= 3 && country.trim().length >= 2 &&
@@ -72,6 +73,24 @@ fun CompanyProfileScreen(
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Company logo", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (profile.hasLogo) "Company logo uploaded." else "Logo is optional. Upload JPG, PNG or WebP up to 5 MB.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedButton(
+                    onClick = { logoPicker.launch("image/*") },
+                    enabled = !state.uploadingLogo && !state.saving,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        when {
+                            state.uploadingLogo -> "Uploading logo…"
+                            profile.hasLogo -> "Change company logo"
+                            else -> "Upload company logo"
+                        }
+                    )
+                }
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Company name") }, singleLine = true)
                 OutlinedTextField(address1, { address1 = it }, Modifier.fillMaxWidth(), label = { Text("Address line 1") })
                 OutlinedTextField(address2, { address2 = it }, Modifier.fillMaxWidth(), label = { Text("Address line 2 (optional)") })
@@ -108,12 +127,14 @@ fun CompanyProfileScreen(
                                 primaryPhone = phone.trim(),
                                 contactEmail = email.trim(),
                             )
-                        )
+                        ) { saved ->
+                            if (saved.profileComplete) onComplete?.invoke()
+                        }
                     },
-                    enabled = valid && !state.saving,
+                    enabled = valid && !state.saving && !state.uploadingLogo,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (state.saving) "Saving…" else "Save company details")
+                    Text(if (state.saving) "Saving…" else "Save and continue")
                 }
             }
         }
