@@ -52,10 +52,17 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     }
   } catch (error) {
     const code=error instanceof Error?error.message:"";
-    if(code==="EMAIL_VERIFICATION_REQUIRED")return{error:"Verify your email to unlock employee creation."};
-    if(code==="COMPANY_PROFILE_REQUIRED")return{error:"Complete your company profile to unlock employee creation."};
-    if(code==="MANAGER_TYPE_CONFLICT")return{error:"Finish or reassign this Manager's open attendance, visit, active leads, pending follow-ups, assigned customers and active targets before changing to Manager Only."};
+    if(code==="EMAIL_VERIFICATION_REQUIRED")return{error:"Verify your email before adding employees."};
+    if(code==="COMPANY_PROFILE_REQUIRED")return{error:"Complete the required company profile details before adding employees."};
+    if(code==="EMAIL_IN_USE")return{error:"This email address is already in use."};
     if(code==="PHONE_IN_USE")return{error:"This mobile number is already in use in your company."};
+    if(code==="SEAT_LIMIT")return{error:"No Manager seat is available on the current plan."};
+    if(code==="LIFECYCLE_BLOCKED")return{error:"Employee creation is unavailable while the subscription is expired or suspended."};
+    if(code==="MANAGERS_DISABLED")return{error:"Managers are disabled for this company team structure."};
+    if(code==="BRANCH_REQUIRED")return{error:"Select at least one branch when using Selected Branches."};
+    if(code==="INVALID_BRANCH")return{error:"One or more selected branches are unavailable."};
+    if(code==="PLUS_ACCOUNT_SUBSCRIPTION_REQUIRED")return{error:"An active Account package is required for this Plus workspace."};
+    if(code==="MANAGER_TYPE_CONFLICT")return{error:"Finish or reassign this Manager's open attendance, visit, active leads, pending follow-ups, assigned customers and active targets before changing to Manager Only."};
     return safeError;
   }
   revalidatePath("/workspace/employees");
