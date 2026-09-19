@@ -17,12 +17,14 @@ data class EmployeesState(
     val notice: String? = null,
     val emailVerified: Boolean? = null,
     val verificationSending: Boolean = false,
+    val companyProfileComplete: Boolean? = null,
 )
 
 class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
     private val session = SecureSession(app)
     private val api = ApiClient(session)
     private val verification = EmailVerificationClient(session)
+    private val companyProfile = CompanyProfileClient(session)
     private val _state = MutableStateFlow(EmployeesState())
     val state: StateFlow<EmployeesState> = _state
 
@@ -33,10 +35,12 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val context = api.employees()
             val verified = runCatching { verification.status() }.getOrNull()
+            val profileComplete = runCatching { companyProfile.load().profileComplete }.getOrNull()
             _state.value = EmployeesState(
                 loading = false,
                 context = context,
                 emailVerified = verified,
+                companyProfileComplete = profileComplete,
             )
         } catch (e: Exception) {
             _state.value = _state.value.copy(
@@ -58,13 +62,15 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
                     context = context,
                     notice = "Employee created.",
                     emailVerified = true,
+                    companyProfileComplete = true,
                 )
                 onSuccess()
             } catch (e: Exception) {
-                val verificationRequired = (e as? ApiException)?.code == "EMAIL_VERIFICATION_REQUIRED"
+                val code = (e as? ApiException)?.code
                 _state.value = _state.value.copy(
                     mutating = false,
-                    emailVerified = if (verificationRequired) false else _state.value.emailVerified,
+                    emailVerified = if (code == "EMAIL_VERIFICATION_REQUIRED") false else _state.value.emailVerified,
+                    companyProfileComplete = if (code == "COMPANY_PROFILE_REQUIRED") false else _state.value.companyProfileComplete,
                     error = message(e),
                 )
             }
@@ -112,7 +118,7 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun message(e: Exception) = when ((e as? ApiException)?.code) {
         "EMAIL_VERIFICATION_REQUIRED" -> "Verify your email before adding employees."
-        "COMPANY_PROFILE_REQUIRED" -> "Complete the required company profile details before adding employees."
+        "COMPANY_PROFILE_REQUIRED" -> "Complete Company Details before adding Managers or Sales employees."
         "EMAIL_IN_USE" -> "This email address is already in use."
         "PHONE_IN_USE" -> "This mobile number is already in use in your company."
         "SEAT_LIMIT" -> "No seat is available for this role."
