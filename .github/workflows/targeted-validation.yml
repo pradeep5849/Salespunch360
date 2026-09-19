@@ -35,6 +35,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Android unit tests and lint
         working-directory: android
         run: ./gradlew testReleaseUnitTest lintRelease --no-daemon
