@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { companyOperationsSchema } from "@/lib/attendance/validation";
@@ -44,7 +45,7 @@ const settingsSelect = {
   attendanceEnabled: true, gpsTrackingEnabled: true, checkoutRequiredBeforeNextCheckIn: true,
   attendanceGeofenceEnabled: true, attendanceReferenceLatitude: true, attendanceReferenceLongitude: true,
   attendanceGeofenceRadiusMeters: true, customerCheckInGeofenceEnabled: true,
-  customerCheckInGeofenceRadiusMeters: true,
+  customerCheckInGeofenceRadiusMeters: true, travelRatePerKm: true,
 } as const;
 
 export async function mobileCompanyContext(principal: MobilePrincipal) {
@@ -86,6 +87,9 @@ export async function mobileUpdateCompany(principal: MobilePrincipal, raw: unkno
       attendanceGeofenceRadiusMeters: data.attendanceGeofenceRadiusMeters ?? null,
       customerCheckInGeofenceRadiusMeters: data.customerCheckInGeofenceRadiusMeters ?? null,
     } });
+  } else if (input.section === "travel") {
+    const data = z.object({travelRatePerKm:z.coerce.number().finite().min(0).max(100000)}).strict().parse(input.data);
+    await db.company.updateMany({where:{id:companyId},data:{travelRatePerKm:new Prisma.Decimal(data.travelRatePerKm.toFixed(2))}});
   } else if (input.section === "profile") {
     const data = companyProfileSchema.parse(input.data);
     await db.$transaction(async tx => {
