@@ -88,8 +88,9 @@ class CompanyProfileViewModel(app: Application) : AndroidViewModel(app) {
         val resolver = getApplication<Application>().contentResolver
         val rawType = resolver.getType(uri)?.lowercase()
         val mimeType = when (rawType) {
-            "image/jpg" -> "image/jpeg"
-            in CompanyProfileClient.LOGO_TYPES -> rawType!!
+            "image/jpg", "image/jpeg" -> "image/jpeg"
+            "image/png" -> "image/png"
+            "image/webp" -> "image/webp"
             else -> throw IllegalArgumentException("LOGO_INVALID")
         }
         val output = ByteArrayOutputStream()
