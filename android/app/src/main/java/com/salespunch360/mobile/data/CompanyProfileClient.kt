@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -27,6 +28,7 @@ data class CompanyProfile(
     val primaryContactName: String? = null,
     val primaryPhone: String? = null,
     val contactEmail: String? = null,
+    val hasLogo: Boolean = false,
     val profileComplete: Boolean = false,
 )
 
@@ -57,6 +59,15 @@ class CompanyProfileClient(private val session: SecureSession) {
         .build()
     private val media = "application/json".toMediaType()
 
+    private fun error(raw: String, status: Int, requestToken: String?): ApiException {
+        val code = runCatching {
+            json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content
+        }.getOrNull()
+        if (status == 401) session.invalidateIfCurrent(requestToken)
+        if (status == 403 && code == "FORBIDDEN") session.authorizationChanged()
+        return ApiException(status, code)
+    }
+
     private suspend fun call(method: String, body: String? = null) = withContext(Dispatchers.IO) {
         val requestToken = session.token()
         val builder = Request.Builder()
@@ -66,14 +77,7 @@ class CompanyProfileClient(private val session: SecureSession) {
         if (method == "PATCH") builder.patch((body ?: "{}").toRequestBody(media))
         http.newCall(builder.build()).execute().use { response ->
             val raw = response.body?.string() ?: "{}"
-            if (!response.isSuccessful) {
-                val code = runCatching {
-                    json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content
-                }.getOrNull()
-                if (response.code == 401) session.invalidateIfCurrent(requestToken)
-                if (response.code == 403 && code == "FORBIDDEN") session.authorizationChanged()
-                throw ApiException(response.code, code)
-            }
+            if (!response.isSuccessful) throw error(raw, response.code, requestToken)
             raw
         }
     }
@@ -85,4 +89,41 @@ class CompanyProfileClient(private val session: SecureSession) {
         json.decodeFromString<CompanyProfileEnvelope>(
             call("PATCH", json.encodeToString(CompanyProfilePatch(data = update)))
         ).company
+
+    suspend fun uploadLogo(bytes: ByteArray, mimeType: String): CompanyProfile = withContext(Dispatchers.IO) {
+        if (bytes.isEmpty() || bytes.size > MAX_LOGO_BYTES) throw ApiException(400, "LOGO_INVALID")
+        val normalizedType = mimeType.lowercase()
+        if (normalizedType !in LOGO_TYPES) throw ApiException(400, "LOGO_INVALID")
+
+        val requestToken = session.token()
+        val extension = when (normalizedType) {
+            "image/jpeg" -> "jpg"
+            "image/png" -> "png"
+            else -> "webp"
+        }
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "logo",
+                "company-logo.$extension",
+                bytes.toRequestBody(normalizedType.toMediaType()),
+            )
+            .build()
+        val builder = Request.Builder()
+            .url(BuildConfig.API_BASE_URL + "api/v1/mobile/company/logo")
+            .header("Accept", "application/json")
+            .post(multipart)
+        requestToken?.let { builder.header("Authorization", "Bearer $it") }
+
+        http.newCall(builder.build()).execute().use { response ->
+            val raw = response.body?.string() ?: "{}"
+            if (!response.isSuccessful) throw error(raw, response.code, requestToken)
+            json.decodeFromString<CompanyProfileEnvelope>(raw).company
+        }
+    }
+
+    companion object {
+        const val MAX_LOGO_BYTES = 5 * 1024 * 1024
+        val LOGO_TYPES = setOf("image/jpeg", "image/png", "image/webp")
+    }
 }
