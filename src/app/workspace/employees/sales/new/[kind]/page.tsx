@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { manageEmployeeForm } from "@/app/actions/employees";
 import { manageAdditionalAdmin } from "@/app/actions/additional-admins";
 import { getProductUserManagementContext } from "@/lib/users/product-user-management";
@@ -7,6 +6,7 @@ import { getEmployeeManagementContext } from "@/lib/employees/service";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { db } from "@/lib/db";
 import { profileComplete } from "@/lib/company/profile";
+import { VerificationResend } from "@/app/workspace/verification-resend";
 import { ManagerCreateForm } from "./manager-create-form";
 
 export default async function Page({params}:{params:Promise<{kind:string}>}) {
@@ -16,7 +16,8 @@ export default async function Page({params}:{params:Promise<{kind:string}>}) {
   if(!additional){
     const setup=await db.company.findUniqueOrThrow({where:{id:ctx.actor.companyId!},select:{name:true,teamStructure:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:ctx.actor.id},select:{emailVerifiedAt:true},take:1}}});
     const verified=Boolean(setup.users[0]?.emailVerifiedAt),complete=profileComplete(setup as unknown as Record<string,unknown>);
-    if(!verified||!complete)redirect("/workspace?setup=1&from=employees");
+    if(!verified)return <main className="employees-shell"><section className="employees-content"><h1>Verify your email</h1><p>Your Primary Admin email must be verified before you can add Managers or Sales employees.</p><VerificationResend/><p><Link href="/workspace">Back to dashboard</Link></p></section></main>;
+    if(!complete)return <main className="employees-shell"><section className="employees-content"><h1>Complete company setup</h1><p>Complete the required company profile details before you can add Managers or Sales employees.</p><p><Link className="primary-button" href="/workspace/company-profile">Complete company details</Link></p><p><Link href="/workspace">Back to dashboard</Link></p></section></main>;
   }
   const seats=await effectiveEntitlement(ctx.actor.companyId!),usage=additional?seats.adminUsage:manager?seats.managerUsage:seats.salesUsage,limit=additional?seats.adminLimit:manager?seats.managerLimit:seats.salesLimit;
   if(usage>=limit)return <main className="employees-shell"><section className="employees-content"><h1>No seat available</h1><p>No seat available. Purchase additional capacity to add another user.</p><Link href="/workspace/employees">Back to Sales Employees</Link></section></main>;
