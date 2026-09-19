@@ -14,7 +14,7 @@ export default async function Page({params}:{params:Promise<{kind:string}>}) {
   if(ctx.actor.salesRole!=="PRIMARY_ADMIN"||!["additional-admin","manager","sales"].includes(kind))throw new Error("Not authorized");
   const additional=kind==="additional-admin",manager=kind==="manager";
   if(!additional){
-    const setup=await db.company.findUniqueOrThrow({where:{id:ctx.actor.companyId!},select:{name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:ctx.actor.id},select:{emailVerifiedAt:true},take:1}}});
+    const setup=await db.company.findUniqueOrThrow({where:{id:ctx.actor.companyId!},select:{name:true,teamStructure:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:ctx.actor.id},select:{emailVerifiedAt:true},take:1}}});
     const verified=Boolean(setup.users[0]?.emailVerifiedAt),complete=profileComplete(setup as unknown as Record<string,unknown>);
     if(!verified||!complete)redirect("/workspace?setup=1&from=employees");
   }
