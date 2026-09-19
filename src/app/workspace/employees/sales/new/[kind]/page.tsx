@@ -1,15 +1,24 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { manageEmployeeForm } from "@/app/actions/employees";
 import { manageAdditionalAdmin } from "@/app/actions/additional-admins";
 import { getProductUserManagementContext } from "@/lib/users/product-user-management";
 import { getEmployeeManagementContext } from "@/lib/employees/service";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
+import { db } from "@/lib/db";
+import { profileComplete } from "@/lib/company/profile";
 import { ManagerCreateForm } from "./manager-create-form";
 
 export default async function Page({params}:{params:Promise<{kind:string}>}) {
   const {kind}=await params,ctx=await getProductUserManagementContext();
   if(ctx.actor.salesRole!=="PRIMARY_ADMIN"||!["additional-admin","manager","sales"].includes(kind))throw new Error("Not authorized");
-  const seats=await effectiveEntitlement(ctx.actor.companyId!),additional=kind==="additional-admin",manager=kind==="manager",usage=additional?seats.adminUsage:manager?seats.managerUsage:seats.salesUsage,limit=additional?seats.adminLimit:manager?seats.managerLimit:seats.salesLimit;
+  const additional=kind==="additional-admin",manager=kind==="manager";
+  if(!additional){
+    const setup=await db.company.findUniqueOrThrow({where:{id:ctx.actor.companyId!},select:{name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true,users:{where:{id:ctx.actor.id},select:{emailVerifiedAt:true},take:1}}});
+    const verified=Boolean(setup.users[0]?.emailVerifiedAt),complete=profileComplete(setup as unknown as Record<string,unknown>);
+    if(!verified||!complete)redirect("/workspace?setup=1&from=employees");
+  }
+  const seats=await effectiveEntitlement(ctx.actor.companyId!),usage=additional?seats.adminUsage:manager?seats.managerUsage:seats.salesUsage,limit=additional?seats.adminLimit:manager?seats.managerLimit:seats.salesLimit;
   if(usage>=limit)return <main className="employees-shell"><section className="employees-content"><h1>No seat available</h1><p>No seat available. Purchase additional capacity to add another user.</p><Link href="/workspace/employees">Back to Sales Employees</Link></section></main>;
   const employeeContext=await getEmployeeManagementContext(),managers=employeeContext.employees.filter(user=>user.salesRole==="MANAGER"&&user.isActive&&user.salesAccessActive);
   if(manager)return <main className="employees-shell"><section className="employees-content"><h1>Add Manager</h1><ManagerCreateForm branches={ctx.branches}/></section></main>;
