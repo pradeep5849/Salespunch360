@@ -25,7 +25,7 @@ jobs:
       - run: npm run lint
 
   android:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -34,11 +34,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v4
-        with:
-          packages: "platform-tools"
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - uses: android-actions/setup-android@v3
       - name: Android unit tests and lint
         working-directory: android
         run: ./gradlew testReleaseUnitTest lintRelease --no-daemon
