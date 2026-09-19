@@ -160,7 +160,7 @@ fun AccountWorkspaceScreen(
                                     }
                                 }
                                 override fun onPageFinished(view: WebView?, url: String?) {
-                                    super.onPageFinished(view, url, favicon = null)
+                                    super.onPageFinished(view, url)
                                     if (classifyAccountUrl(url.orEmpty()) in setOf(AccountNavigation.ACCOUNT, AccountNavigation.ACCOUNT_RESOURCE)) {
                                         loadState = AccountLoadState.READY; message = null; recoveryAttempts = 0; canGoBack = view?.let(::canGoBackSafely) == true
                                     }
