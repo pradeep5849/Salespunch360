@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,7 +26,10 @@ import com.salespunch360.mobile.CompanyProfileViewModel
 import com.salespunch360.mobile.data.CompanyProfileUpdate
 
 @Composable
-fun CompanyProfileScreen(vm: CompanyProfileViewModel = viewModel()) {
+fun CompanyProfileScreen(
+    vm: CompanyProfileViewModel = viewModel(),
+    onComplete: (() -> Unit)? = null,
+) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val profile = state.profile
     if (profile == null && state.loading) {
@@ -59,6 +63,7 @@ fun CompanyProfileScreen(vm: CompanyProfileViewModel = viewModel()) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
+            if (onComplete != null) TextButton(onClick = onComplete) { Text("← Back to Employees") }
             Text("Company Details", style = MaterialTheme.typography.headlineSmall)
             Text(
                 if (profile.profileComplete) "Company profile complete." else "Complete these details before adding Managers or Sales employees.",
@@ -113,6 +118,14 @@ fun CompanyProfileScreen(vm: CompanyProfileViewModel = viewModel()) {
             }
         }
         state.error?.let { item { MessageBanner(it) { vm.load() } } }
-        state.message?.let { item { ContentCard("Saved", it) } }
+        state.message?.let { message ->
+            item {
+                ContentCard("Saved", message) {
+                    if (profile.profileComplete && onComplete != null) {
+                        Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) { Text("Continue to Employees") }
+                    }
+                }
+            }
+        }
     }
 }
