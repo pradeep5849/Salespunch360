@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
@@ -21,7 +22,6 @@ private fun roleMenu(data: Bootstrap): List<RoleMenuItem> {
     val items = mutableListOf(RoleMenuItem("Dashboard"))
     if (data.capabilities.canManageEmployees) items += RoleMenuItem("Employees")
     items += listOf(RoleMenuItem("Attendance"), RoleMenuItem("Customers"), RoleMenuItem("Leads"), RoleMenuItem("Follow-ups"), RoleMenuItem("Targets"))
-    if (data.user.salesRole != MobileRole.ADMIN && data.capabilities.canAccessSalesBilling) items += RoleMenuItem("Billing & Subscription")
     if (data.capabilities.canManageSalesSettings) items += RoleMenuItem("Settings")
     items += RoleMenuItem("Reports")
     return items
@@ -49,15 +49,15 @@ fun AdminManagerAuthenticatedApp(data: Bootstrap, message: String?, dismiss: () 
                 Spacer(Modifier.height(22.dp))
                 roleMenu(data).forEach { item ->
                     if (item.label == "Reports") {
-                        NavigationDrawerItem(label = { Text("Reports", fontWeight = FontWeight.SemiBold) }, selected = route == "Reports", onClick = { reportOpen = !reportOpen }, colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent, selectedContainerColor = Color.White.copy(alpha = .12f), unselectedTextColor = Color.White, selectedTextColor = Color.White), modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp))
-                        if (reportOpen) roleReportItems(role).forEach { (label, type) -> TextButton(onClick = { route = "Reports"; reportType = type; scope.launch { drawer.close() } }, modifier = Modifier.fillMaxWidth().padding(start = 34.dp)) { Text(label, Modifier.fillMaxWidth(), color = Color.White) } }
+                        NavigationDrawerItem(label = { Text("Reports", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }, selected = route == "Reports", onClick = { reportOpen = !reportOpen }, colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent, selectedContainerColor = Color.White.copy(alpha = .12f), unselectedTextColor = Color.White, selectedTextColor = Color.White), modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp))
+                        if (reportOpen) roleReportItems(role).forEach { (label, type) -> TextButton(onClick = { route = "Reports"; reportType = type; scope.launch { drawer.close() } }, modifier = Modifier.fillMaxWidth().padding(start = 34.dp)) { Text(label, Modifier.fillMaxWidth(), fontSize = 11.sp, color = Color.White) } }
                     } else {
-                        NavigationDrawerItem(label = { Text(item.label, fontWeight = FontWeight.SemiBold) }, selected = route == item.label, onClick = { navigate(item.label) }, colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent, selectedContainerColor = Color.White.copy(alpha = .12f), unselectedTextColor = Color.White, selectedTextColor = Color.White), modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp))
+                        NavigationDrawerItem(label = { Text(item.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }, selected = route == item.label, onClick = { navigate(item.label) }, colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent, selectedContainerColor = Color.White.copy(alpha = .12f), unselectedTextColor = Color.White, selectedTextColor = Color.White), modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp))
                     }
                 }
                 if (switchToAccount != null) {
                     HorizontalDivider(Modifier.padding(16.dp), color = Color.White.copy(alpha = .18f))
-                    NavigationDrawerItem(label = { Text("⇄  Switch to Accounts", color = Color.White) }, selected = false, onClick = { scope.launch { drawer.close() }; switchToAccount() }, colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent), modifier = Modifier.padding(horizontal = 12.dp))
+                    NavigationDrawerItem(label = { Text("⇄  Switch to Accounts", fontSize = 13.sp, color = Color.White) }, selected = false, onClick = { scope.launch { drawer.close() }; switchToAccount() }, colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent), modifier = Modifier.padding(horizontal = 12.dp))
                 }
             }
         }
@@ -67,11 +67,12 @@ fun AdminManagerAuthenticatedApp(data: Bootstrap, message: String?, dismiss: () 
                 Box {
                     IconButton(onClick = { profileMenu = true }) { Surface(shape = CircleShape, color = Color(0xFFEAF3FF)) { Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) { Text(data.user.name.trim().firstOrNull()?.uppercase() ?: "U", color = SalesBlue, fontWeight = FontWeight.Bold) } } }
                     DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
-                        DropdownMenuItem(text = { Text("Company Details") }, onClick = { profileMenu = false; route = "Company Details" })
-                        DropdownMenuItem(text = { Text("Follow-up Tasks") }, onClick = { profileMenu = false; route = "Follow-ups" })
-                        DropdownMenuItem(text = { Text("Change Password") }, onClick = { profileMenu = false; route = "Change Password" })
+                        DropdownMenuItem(text = { Text("Company Details", fontSize = 13.sp) }, onClick = { profileMenu = false; route = "Company Details" })
+                        DropdownMenuItem(text = { Text("Follow-up Tasks", fontSize = 13.sp) }, onClick = { profileMenu = false; route = "Follow-ups" })
+                        if (role != MobileRole.ADMIN && data.capabilities.canAccessSalesBilling) DropdownMenuItem(text = { Text("Billing & Subscription", fontSize = 13.sp) }, onClick = { profileMenu = false; route = "Billing & Subscription" })
+                        DropdownMenuItem(text = { Text("Change Password", fontSize = 13.sp) }, onClick = { profileMenu = false; route = "Change Password" })
                         HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Logout") }, onClick = { profileMenu = false; logout() })
+                        DropdownMenuItem(text = { Text("Logout", fontSize = 13.sp) }, onClick = { profileMenu = false; logout() })
                     }
                 }
             })

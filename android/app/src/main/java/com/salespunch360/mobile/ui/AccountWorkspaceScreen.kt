@@ -87,15 +87,7 @@ fun AccountWorkspaceScreen(
         if (current != null && canGoBackSafely(current)) current.goBack() else switchToSales?.invoke()
     }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Column { Text("Account"); Text(data.company.name, style = MaterialTheme.typography.labelSmall) } },
-            actions = {
-                switchToSales?.let { action -> TextButton(onClick = action) { Text("Sales") } }
-                TextButton(onClick = logout) { Text("Sign out") }
-            },
-        )
-    }) { padding ->
+    Scaffold { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             key(rendererEpoch) {
                 AndroidView(
