@@ -15,9 +15,9 @@ import com.salespunch360.mobile.data.MobileRole
 import kotlinx.serialization.json.*
 
 private fun reportTypes(role:MobileRole)=when(role){
- MobileRole.SALES->listOf("check-ins" to "Check-in Report","attendance" to "My Attendance","gps" to "My Travel / Distance","targets" to "My Performance")
- MobileRole.MANAGER->listOf("check-ins" to "Check-in Report","attendance" to "Attendance Report","gps" to "GPS Route Report","geofence" to "Geofence Report","targets" to "Target Analysis")
- MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->listOf("check-ins" to "Check-in Report","attendance" to "Attendance Report","gps" to "GPS Route Report","geofence" to "Geofence Report","targets" to "Target Analysis","expenses" to "Expense Report")
+ MobileRole.SALES->listOf("check-ins" to "Check-in Report","advanced-check-ins" to "Advanced Check-in","attendance" to "My Attendance","gps" to "My Travel / Distance","leads" to "Lead Report","targets" to "My Performance")
+ MobileRole.MANAGER->listOf("check-ins" to "Check-in Report","advanced-check-ins" to "Advanced Check-in","attendance" to "Attendance Report","gps" to "GPS Route Report","geofence" to "Geofence Report","leads" to "Lead Report","targets" to "Target Analysis")
+ MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->listOf("check-ins" to "Check-in Report","advanced-check-ins" to "Advanced Check-in","attendance" to "Attendance Report","gps" to "GPS Route Report","geofence" to "Geofence Report","leads" to "Lead Report","targets" to "Target Analysis","expenses" to "Expense Report")
 }
 @Composable fun ReportsScreen(initialType:String?=null,showMenu:Boolean=true,role:MobileRole=MobileRole.SALES,vm:ReportsViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value;val types=remember(role){reportTypes(role)};var expanded by remember{mutableStateOf(showMenu)}
@@ -26,7 +26,7 @@ private fun reportTypes(role:MobileRole)=when(role){
   item{Text(if(showMenu)"Reports" else types.firstOrNull{it.first==(initialType?:state.type)}?.second?:"Report",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);HorizontalDivider(Modifier.padding(top=8.dp,bottom=if(showMenu)8.dp else 0.dp),color=SalesLine);if(showMenu){OutlinedButton({expanded=!expanded},Modifier.fillMaxWidth()){Text(if(expanded)"Reports ▲" else "Reports ▼")};if(expanded)Column(verticalArrangement=Arrangement.spacedBy(4.dp)){types.forEach{item->TextButton({vm.load(item.first)},Modifier.fillMaxWidth()){Text(item.second,Modifier.fillMaxWidth())}}}}}
   if(showMenu)item{Text(types.firstOrNull{it.first==state.type}?.second?:"Report",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
   item{ReportFilters(state,vm)};if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())};state.message?.let{item{ContentCard("Report unavailable",it)}}
-  state.report?.let{report->item{Text("Asia/Kolkata reporting period",style=MaterialTheme.typography.labelMedium);SummaryCards(report["summary"]?.jsonObject)};val rows=report["rows"]?.jsonArray?:JsonArray(emptyList());if(rows.isEmpty())item{ContentCard("No report records","No records match the selected reporting period.")}else items(rows.size){index->ReportRow(rows[index].jsonObject)}}
+  state.report?.let{report->item{Text("Asia/Kolkata reporting period",style=MaterialTheme.typography.labelMedium);SummaryCards(report["summary"]?.jsonObject)};val rows=report["rows"]?.jsonArray?:report["targets"]?.jsonArray?:JsonArray(emptyList());if(rows.isEmpty())item{ContentCard("No report records","No records match the selected reporting period.")}else items(rows.size){index->ReportRow(rows[index].jsonObject)}}
  }
 }
 @Composable private fun SummaryCards(summary:JsonObject?){if(summary==null)return;FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){summary.entries.take(8).forEach{(label,value)->StatusChip("${label.replaceFirstChar{it.uppercase()}} ${display(value)}")}}}
