@@ -5,7 +5,7 @@ describe("Sales employee directory",()=>{
  it.each(["all","administrators","active","inactive"])("excludes Primary Admin from %s",view=>{const groups=salesGroups(all),rows=view==="administrators"?groups.admins:view==="active"?groups.active:view==="inactive"?groups.inactive:salesDirectoryUsers(all);expect(rows.map(x=>x.id)).not.toContain("owner")});
  it("counts only Additional Admin seats",()=>expect(activeUsage(all,"sales","ADMIN")).toBe(1));
  it("supports trial Additional Admin 0 / 0",()=>expect({active:activeUsage([owner],"sales","ADMIN"),allowed:0}).toEqual({active:0,allowed:0}));
- it("maps Field Manager to FIELD_MANAGER",()=>expect(salesRoleLabel(field)).toBe("Field Manager"));
+ it("maps Sales Manager to FIELD_MANAGER",()=>expect(salesRoleLabel(field)).toBe("Sales Manager"));
  it("maps Office Manager to MANAGER_ONLY",()=>expect(salesRoleLabel(office)).toBe("Office Manager"));
  it("introduces no third manager group",()=>expect([...salesGroups(all).salesManagers,...salesGroups(all).officeManagers]).toHaveLength(2));
  it("returns one combined inactive list",()=>expect(salesGroups([...all,user("suspended",{salesAccessActive:false})]).inactive.map(x=>x.id)).toEqual(["inactive","suspended"]));
