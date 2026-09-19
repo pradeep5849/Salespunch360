@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +32,12 @@ fun PrimaryAdminAuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit
     var pendingLeadId by remember{mutableStateOf<String?>(null)}
     var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
     fun navigate(value:String){route=value;visitTask=null;scope.launch{drawer.close()}}
+
+    BackHandler(enabled=visitTask!=null){visitTask=null}
+    BackHandler(enabled=visitTask==null&&route!="Dashboard"){
+        pendingLeadId=null
+        route="Dashboard"
+    }
 
     ModalNavigationDrawer(
         drawerState=drawer,
