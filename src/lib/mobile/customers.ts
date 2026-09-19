@@ -1,3 +1,4 @@
+import {Prisma} from '@prisma/client';
 import {db} from '@/lib/db';
 import {assignCustomerSchema,createCustomerSchema} from '@/lib/customers/validation';
 import {operationalBranchContext,resolveOperationalWriteBranch} from '@/lib/branches/operational-scope';
@@ -5,7 +6,7 @@ import type {MobilePrincipal} from './auth';
 import {MobileCompanyError} from './company';
 
 function admin(p:MobilePrincipal){if(p.salesRole!=='PRIMARY_ADMIN'&&p.salesRole!=='ADMIN')throw new MobileCompanyError('FORBIDDEN',403);return p.companyId}
-async function createLead(tx:Parameters<Parameters<typeof db.$transaction>[0]>[0],companyId:string,branchId:string,actorId:string,customer:{id:string;name:string;phone:string|null},assignedUserId:string){const existing=await tx.lead.findFirst({where:{companyId,branchId,customerId:customer.id},select:{id:true}});if(existing)return existing;const lead=await tx.lead.create({data:{companyId,branchId,customerId:customer.id,assignedUserId,createdByUserId:actorId,title:customer.name,contactName:customer.name,phone:customer.phone,source:'MANUAL',stage:'NEW'}});await tx.leadActivity.create({data:{companyId,leadId:lead.id,actorUserId:actorId,type:'CREATED',newAssignedUserId:assignedUserId,toStage:'NEW'}});return lead}
+async function createLead(tx:Prisma.TransactionClient,companyId:string,branchId:string,actorId:string,customer:{id:string;name:string;phone:string|null},assignedUserId:string){const existing=await tx.lead.findFirst({where:{companyId,branchId,customerId:customer.id},select:{id:true}});if(existing)return existing;const lead=await tx.lead.create({data:{companyId,branchId,customerId:customer.id,assignedUserId,createdByUserId:actorId,title:customer.name,contactName:customer.name,phone:customer.phone,source:'MANUAL',stage:'NEW'}});await tx.leadActivity.create({data:{companyId,leadId:lead.id,actorUserId:actorId,type:'CREATED',newAssignedUserId:assignedUserId,toStage:'NEW'}});return lead}
 
 export async function mobileCustomerAdminContext(p:MobilePrincipal){const companyId=admin(p),scope=await operationalBranchContext(p);const [customers,assignees,branches]=await Promise.all([
  db.customer.findMany({where:{companyId,branchId:{in:scope.branchIds},assignedUserId:null},select:{id:true,branchId:true,name:true,phone:true,contactPerson:true,email:true,address:true,assignedUserId:true},orderBy:{name:'asc'},take:100}),
