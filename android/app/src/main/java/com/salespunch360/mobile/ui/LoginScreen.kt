@@ -35,3 +35,22 @@ import com.salespunch360.mobile.R
   message?.let{Spacer(Modifier.height(12.dp));MessageBanner(it,onEdit)};Spacer(Modifier.height(20.dp));Button({attempted=true;if(validEmail&&password.isNotBlank())onLogin(email,password)},Modifier.fillMaxWidth().heightIn(min=48.dp),enabled=!submitting&&password.isNotBlank()){if(submitting)CircularProgressIndicator(Modifier.size(22.dp),strokeWidth=2.dp)else Text("Sign in")};Spacer(Modifier.height(18.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center){Text("New to SalesPunch360?");TextButton(onSignUp){Text("Sign up")}}
  }
 }
+
+
+@Composable fun NativeRegistrationScreen(onBack:()->Unit,onRegistered:()->Unit){
+ var product by remember{mutableStateOf("SALESPUNCH360")};var company by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var confirm by remember{mutableStateOf("")};var accepted by remember{mutableStateOf(false)}
+ Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+  TextButton(onBack,contentPadding=PaddingValues(0.dp)){Text("← Back to sign in")}
+  Text("Create your workspace",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("Start your SalesPunch360 free trial.")
+  Text("Choose product",style=MaterialTheme.typography.titleMedium)
+  listOf("SALESPUNCH360" to "SalesPunch360","SALESPUNCH360_ACCOUNT" to "SalesPunch360 Account","SALESPUNCH360_PLUS" to "SalesPunch360 Plus").forEach{(value,label)->FilterChip(selected=product==value,onClick={product=value},label={Text(label)})}
+  OutlinedTextField(company,{company=it},Modifier.fillMaxWidth(),label={Text("Company name")},singleLine=true)
+  OutlinedTextField(name,{name=it},Modifier.fillMaxWidth(),label={Text("Full name")},singleLine=true)
+  OutlinedTextField(email,{email=it},Modifier.fillMaxWidth(),label={Text("Email address")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email))
+  OutlinedTextField(password,{password=it},Modifier.fillMaxWidth(),label={Text("Password")},singleLine=true,visualTransformation=PasswordVisualTransformation(),supportingText={Text("At least 12 characters, with uppercase, lowercase and a number")})
+  OutlinedTextField(confirm,{confirm=it},Modifier.fillMaxWidth(),label={Text("Confirm password")},singleLine=true,visualTransformation=PasswordVisualTransformation(),isError=confirm.isNotEmpty()&&password!=confirm)
+  Row{Checkbox(accepted,{accepted=it});Text("I agree to the Terms of Service and acknowledge the Privacy Policy.",Modifier.padding(top=12.dp))}
+  Button(onClick={},Modifier.fillMaxWidth(),enabled=false){Text("Start my free trial")}
+  Text("Native registration connection is being completed.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+ }
+}
