@@ -17,7 +17,11 @@ type RegistrationBody = {
 
 export async function POST(request: Request) {
   try {
-    const raw = (await request.json()) as RegistrationBody;
+    const json = await request.json();
+    if (!json || typeof json !== "object" || Array.isArray(json)) {
+      return mobileJson({ error: "INVALID_INPUT" }, 400);
+    }
+    const raw = json as RegistrationBody;
     if (raw.legalConsent !== true) {
       return mobileJson({ error: "LEGAL_CONSENT_REQUIRED" }, 400);
     }
