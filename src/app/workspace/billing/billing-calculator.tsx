@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useState,type FormEvent} from 'react';
 import styles from './billing-calculator.module.css';
 
 type Period='SIX_MONTH'|'YEARLY';
@@ -13,7 +13,7 @@ const packageCount=(value:string)=>Math.max(1,Math.min(100,Math.trunc(Number(val
 const packageContents=(count:number)=>`${count} package${count===1?'':'s'} = ${count} Account Admin, ${count} Accountant, ${count} Project Manager, ${count} Data Entry`;
 
 function Retain({role,count,employees}:{role:Employee['salesRole'];count:number;employees:Employee[]}){
- return <fieldset className="billing-retain"><legend>Choose {count} {role.toLowerCase()} user{count===1?'':'s'} to retain (optional)</legend><p>If you do not choose, the oldest active users are retained automatically and the most recently added user(s) are suspended first when the renewed term starts.</p>{employees.filter(e=>e.salesRole===role).map(e=><label key={e.id}><input type="checkbox" name={`retain${role==='ADMIN'?'Admin':role==='MANAGER'?'Manager':'Sales'}UserIds`} value={e.id}/>{e.name}</label>)}</fieldset>;
+ return <fieldset className="billing-retain"><legend>Choose {count} {role.toLowerCase()} user{count===1?'':'s'} to retain (optional)</legend><p>Leave all unchecked to retain the oldest active users automatically, or choose exactly {count} user{count===1?'':'s'} to keep when the renewed term starts.</p>{employees.filter(e=>e.salesRole===role).map(e=><label key={e.id}><input type="checkbox" name={`retain${role==='ADMIN'?'Admin':role==='MANAGER'?'Manager':'Sales'}UserIds`} value={e.id}/>{e.name}</label>)}</fieldset>;
 }
 
 export function BillingCalculator({managersEnabled,adminUsage,managerUsage,salesUsage,prices,isRenewal,activeEmployees,isPlus=false,accountPackages=1,accountPrices={SIX_MONTH:400,YEARLY:700}}:{managersEnabled:boolean;adminUsage:number;managerUsage:number;salesUsage:number;prices:Prices;isRenewal:boolean;activeEmployees:Employee[];isPlus?:boolean;accountPackages?:number;accountPrices?:AccountPrices}){
@@ -22,14 +22,23 @@ export function BillingCalculator({managersEnabled,adminUsage,managerUsage,sales
  const[manager,setManager]=useState(managerUsage);
  const[sales,setSales]=useState(salesUsage);
  const[accounts,setAccounts]=useState(String(Math.max(1,accountPackages)));
+ const[selectionError,setSelectionError]=useState('');
  const p=prices[period];
  const accountsValue=packageCount(accounts);
  const salesSubtotal=admin*p.admin+manager*p.manager+sales*p.sales;
  const accountSubtotal=isPlus?accountsValue*accountPrices[period]:0;
  const total=salesSubtotal+accountSubtotal;
  const hasSalesProduct=manager+sales>0;
+ const initialReduction=!isRenewal&&(admin<adminUsage||(managersEnabled&&manager<managerUsage)||sales<salesUsage);
+ const validateRetention=(event:FormEvent<HTMLFormElement>)=>{
+  setSelectionError('');
+  if(initialReduction){event.preventDefault();setSelectionError('Selected seats cannot be below current active users before a paid renewal. Keep enough seats for the active team.');return}
+  if(!isRenewal)return;
+  const form=new FormData(event.currentTarget),checks:[string,number,boolean][]=[['retainAdminUserIds',admin,admin<adminUsage],['retainManagerUserIds',manager,managersEnabled&&manager<managerUsage],['retainSalesUserIds',sales,sales<salesUsage]];
+  for(const[name,count,reducing]of checks){if(!reducing)continue;const selected=form.getAll(name).length;if(selected!==0&&selected!==count){event.preventDefault();setSelectionError(`For a seat reduction, leave the retention choice empty for automatic retention or select exactly ${count} user${count===1?'':'s'}.`);return}}
+ };
 
- return <form action="/workspace/billing/checkout" method="GET" className={`billing-form billing-calculator ${isPlus?styles.plusForm:''}`}>
+ return <form action="/workspace/billing/checkout" method="GET" className={`billing-form billing-calculator ${isPlus?styles.plusForm:''}`} onSubmit={validateRetention}>
   {isPlus?<>
    <div className={`${styles.plusRow} ${styles.periodRow}`}><strong>Billing Period</strong><select name="billingPeriod" value={period} onChange={e=>setPeriod(e.target.value as Period)}>{Object.entries(labels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
    <div className={styles.plusSection}><strong className={styles.plusHeading}>Account Package</strong><div className={styles.plusRow}><span>Packages</span><select name="accountPackages" value={String(accountsValue)} onChange={e=>setAccounts(e.target.value)}>{Array.from({length:100},(_,i)=>i+1).map(count=><option key={count} value={count}>{count}</option>)}</select><b>{money(accountPrices[period])} / package</b></div><span className="muted">({packageContents(accountsValue)})</span></div>
@@ -41,6 +50,6 @@ export function BillingCalculator({managersEnabled,adminUsage,managerUsage,sales
    {managersEnabled?<label>Manager Seats<input name="managerSeats" type="number" min="0" max="10000" value={manager} onChange={e=>setManager(clamp(Number(e.target.value)))}/><span>{money(p.manager)} each</span></label>:<input type="hidden" name="managerSeats" value="0"/>}
    <label>Sales Seats<input name="salesSeats" type="number" min="0" max="10000" value={sales} onChange={e=>setSales(clamp(Number(e.target.value)))}/><span>{money(p.sales)} each</span></label>
   </>}
-  {isRenewal&&admin<adminUsage&&<Retain role="ADMIN" count={admin} employees={activeEmployees}/>} {isRenewal&&manager<managerUsage&&<Retain role="MANAGER" count={manager} employees={activeEmployees}/>} {isRenewal&&sales<salesUsage&&<Retain role="SALES" count={sales} employees={activeEmployees}/>}<p className="muted">Adding seats is immediate after payment and prorated to the current expiry. Reductions apply from the next renewal.</p><div className="billing-total"><span>Sales Subtotal</span><strong>{money(salesSubtotal)}</strong></div>{isPlus&&<div className="billing-total"><span>Account Subtotal</span><strong>{money(accountSubtotal)}</strong></div>}<div className="billing-total"><span>Total</span><strong>{money(total)}</strong></div>{!hasSalesProduct&&<p className="form-error">Choose at least one Manager or Sales seat to keep Sales active. With no Manager/Sales seats, renew as Account-only.</p>}<button disabled={!hasSalesProduct}>Continue to Checkout</button>
+  {isRenewal&&admin<adminUsage&&<Retain role="ADMIN" count={admin} employees={activeEmployees}/>} {isRenewal&&manager<managerUsage&&<Retain role="MANAGER" count={manager} employees={activeEmployees}/>} {isRenewal&&sales<salesUsage&&<Retain role="SALES" count={sales} employees={activeEmployees}/>}<p className="muted">Adding seats is immediate after payment and prorated to the current expiry. Reductions apply from the next renewal.</p><div className="billing-total"><span>Sales Subtotal</span><strong>{money(salesSubtotal)}</strong></div>{isPlus&&<div className="billing-total"><span>Account Subtotal</span><strong>{money(accountSubtotal)}</strong></div>}<div className="billing-total"><span>Total</span><strong>{money(total)}</strong></div>{!hasSalesProduct&&<p className="form-error">Choose at least one Manager or Sales seat to keep Sales active. With no Manager/Sales seats, renew as Account-only.</p>}{selectionError&&<p className="form-error">{selectionError}</p>}<button disabled={!hasSalesProduct||initialReduction}>Continue to Checkout</button>
  </form>;
 }
