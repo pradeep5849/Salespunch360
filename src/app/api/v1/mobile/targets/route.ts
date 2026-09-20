@@ -1,6 +1,6 @@
 import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileReportActor } from "@/lib/mobile/report-actor";
-import { createTargetForActor, editTargetForActor, listTargetsForActor, monthlyTargetRowsForActor } from "@/lib/targets/service";
+import { createTargetForActor, editTargetForActor, listTargetsForActor, monthlyTargetRowsForActor, saveMonthlyTargetsForActor } from "@/lib/targets/service";
 import { mobileAuthorizationFailure, mobileBranchFailure, mobileJson, mobileUnauthorized, mobileUnexpected } from "@/lib/mobile/http";
 import { ZodError } from "zod";
 
@@ -25,7 +25,16 @@ export async function GET(request: Request) {
   catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {
-  try { const a=await actor(request); await createTargetForActor(a,await request.json()); return mobileJson(await listTargetsForActor(a),201); }
+  try {
+    const a=await actor(request);
+    const body=await request.json();
+    if(body?.action==="SAVE_MONTHLY"){
+      await saveMonthlyTargetsForActor(a,{assignedUserId:body.assignedUserId,leadTarget:body.leadTarget,wonTarget:body.wonTarget,branchId:body.branchId});
+      return mobileJson(await monthlyTargetRowsForActor(a));
+    }
+    await createTargetForActor(a,body);
+    return mobileJson(await listTargetsForActor(a),201);
+  }
   catch (error) { return failure(error); }
 }
 export async function PATCH(request: Request) {
