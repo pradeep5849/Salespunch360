@@ -17,6 +17,9 @@ describe('production safety',()=>{
 
 describe('browser mutation origins',()=>{
   it('accepts the configured origin',()=>expect(isTrustedOrigin('https://salespunch360.com','https://salespunch360.com/path')).toBe(true));
+  it('accepts the active request host when it is a legitimate same-origin alias',()=>expect(isTrustedOrigin('https://salespunch360.com','https://www.salespunch360.com','salespunch360.com','https')).toBe(true));
+  it('rejects a hostile origin even when the active request host is provided',()=>expect(isTrustedOrigin('https://attacker.example','https://www.salespunch360.com','salespunch360.com','https')).toBe(false));
+  it('rejects a host match with the wrong protocol',()=>expect(isTrustedOrigin('http://salespunch360.com','https://www.salespunch360.com','salespunch360.com','https')).toBe(false));
   it('rejects a hostile origin',()=>expect(isTrustedOrigin('https://attacker.example','https://salespunch360.com')).toBe(false));
   it('rejects misleading subdomains and malformed origins',()=>{expect(isTrustedOrigin('https://salespunch360.com.attacker.example','https://salespunch360.com')).toBe(false);expect(isTrustedOrigin('not-a-url','https://salespunch360.com')).toBe(false)});
 });
