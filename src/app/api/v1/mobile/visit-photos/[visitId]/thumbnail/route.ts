@@ -1,11 +1,10 @@
 import { db } from "@/lib/db";
-import { authenticateMobileSalesToken, mobileCan } from "@/lib/mobile/auth";
+import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { privateStorage } from "@/lib/storage";
 
 export async function GET(request: Request, { params }: { params: Promise<{ visitId: string }> }) {
   try {
     const user = await authenticateMobileSalesToken(request.headers.get("authorization"));
-    if (!mobileCan(user, "SALES_CHECK_INS")) return new Response("Not found", { status: 404 });
     const { visitId } = await params;
     const photo = await db.visitPhoto.findFirst({
       where: {
