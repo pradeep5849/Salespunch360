@@ -1,6 +1,7 @@
 package com.salespunch360.mobile.ui
 
 import android.content.Intent
+import android.location.Geocoder
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.DashboardViewModel
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+@Suppress("DEPRECATION")
+private suspend fun trackingAddress(context:android.content.Context,latitude:Double,longitude:Double):String?=withContext(Dispatchers.IO){runCatching{if(!Geocoder.isPresent())return@runCatching null;Geocoder(context,Locale.getDefault()).getFromLocation(latitude,longitude,1)?.firstOrNull()?.getAddressLine(0)}.getOrNull()}
 
 @Composable fun LiveTrackingCard(vm:DashboardViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value;var expanded by remember{mutableStateOf(false)};val context=LocalContext.current
@@ -28,7 +35,11 @@ import com.salespunch360.mobile.DashboardViewModel
    }
    Button(vm::view,enabled=state.selectedEmployeeId!=null&&!state.loading,modifier=Modifier.fillMaxWidth()){Text(if(state.loading)"Loading…" else "View Latest Location")}
    state.message?.let{Text(it,color=SalesMuted,style=MaterialTheme.typography.bodySmall)}
-   state.latestLocation?.let{location->HorizontalDivider(color=SalesLine);Text("Latest Location",fontWeight=FontWeight.Bold,color=SalesInk);Text(location.user.name,fontWeight=FontWeight.SemiBold,color=SalesInk);Text("Last known location captured ${trackingTime(location.capturedAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text("${location.latitude}, ${location.longitude}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);NativeMap(emptyList(),listOf(NativeMapPoint(location.latitude,location.longitude,"${location.user.name} · Last known location")));OutlinedButton({val uri=Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}");runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,uri))}},Modifier.fillMaxWidth()){Text("Open on Map")}}
+   state.latestLocation?.let{location->
+    var address by remember(location.latitude,location.longitude){mutableStateOf<String?>(null)};var resolving by remember(location.latitude,location.longitude){mutableStateOf(true)}
+    LaunchedEffect(location.latitude,location.longitude){resolving=true;address=trackingAddress(context,location.latitude,location.longitude);resolving=false}
+    HorizontalDivider(color=SalesLine);Text("Latest Location",fontWeight=FontWeight.Bold,color=SalesInk);Text(location.user.name,fontWeight=FontWeight.SemiBold,color=SalesInk);Text("Last known location captured ${trackingTime(location.capturedAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text(if(resolving)"Finding address…" else address?:"Address unavailable",style=MaterialTheme.typography.bodySmall,color=SalesMuted);NativeMap(emptyList(),listOf(NativeMapPoint(location.latitude,location.longitude,"${location.user.name} · Last known location")));OutlinedButton({val uri=Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}");runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,uri))}},Modifier.fillMaxWidth()){Text("Open on Map")}
+   }
   }
  }
 }
