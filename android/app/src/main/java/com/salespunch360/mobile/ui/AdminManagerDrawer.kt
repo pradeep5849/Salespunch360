@@ -32,7 +32,7 @@ private fun roleReportItems(role:MobileRole)=if(role==MobileRole.MANAGER)listOf(
    route=="Employees"->EmployeesScreen()
    route=="Attendance"->if(fieldManager)FieldManagerAttendanceScreen(data,attendance)else TeamAttendanceScreen(role)
    route=="Customers"->if(role==MobileRole.ADMIN)CustomerAdminScreen()else CustomersScreen{if(fieldManager)route="Check-ins"}
-   route=="Check-ins"&&fieldManager->FieldScreen(initialFollowUpTask=checkInTask,onInitialFollowUpConsumed={checkInTask=null},initialLead=checkInLead,onInitialLeadConsumed={checkInLead=null},onViewPipeline={route="Leads"})
+   route=="Check-ins"&&fieldManager->FieldScreen(initialFollowUpTask=checkInTask,onInitialFollowUpConsumed={checkInTask=null},initialLead=checkInLead,onInitialLeadConsumed={checkInLead=null})
    route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},onCheckIn={lead->if(fieldManager){checkInLead=lead;route="Check-ins"}})
    route=="Follow-ups"->FollowUpsScreen(startCheckIn={task->if(fieldManager){checkInTask=task;route="Check-ins"}},viewLead={pendingLeadId=it;route="Leads"},viewVisit={visitTask=it})
    route=="Targets"->TargetsScreen(role)

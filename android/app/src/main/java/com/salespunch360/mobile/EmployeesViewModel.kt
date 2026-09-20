@@ -5,8 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.*
 import java.io.IOException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class EmployeesState(
@@ -28,7 +30,10 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(EmployeesState())
     val state: StateFlow<EmployeesState> = _state
 
-    init { refresh() }
+    init {
+        refresh()
+        watchEmailVerification()
+    }
 
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, error = null, notice = null)
@@ -39,6 +44,17 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = EmployeesState(loading=false,context=context,emailVerified=verified,companyProfileComplete=profileComplete)
         } catch (e: Exception) {
             _state.value = _state.value.copy(loading=false,error=if (e is IOException) "You're offline. Reconnect and try again." else "Employees couldn't be loaded. Please try again.")
+        }
+    }
+
+    private fun watchEmailVerification() = viewModelScope.launch {
+        while (isActive) {
+            delay(5_000)
+            val current = _state.value
+            if (current.emailVerified == false && !current.loading) {
+                val verified = runCatching { verification.status() }.getOrNull()
+                if (verified == true) _state.value = _state.value.copy(emailVerified = true)
+            }
         }
     }
 
