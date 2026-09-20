@@ -62,7 +62,7 @@ data class CompanyProfileUpdate(
 )
 
 @Serializable private data class CompanyProfileEnvelope(val company: CompanyProfile)
-@Serializable private data class CompanyProfilePatch(val section: String = "profile", val data: CompanyProfileUpdate)
+@Serializable private data class CompanyProfilePatch(val section: String, val data: CompanyProfileUpdate)
 
 class CompanyProfileClient(private val session: SecureSession) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -101,7 +101,7 @@ class CompanyProfileClient(private val session: SecureSession) {
 
     suspend fun save(update: CompanyProfileUpdate): CompanyProfile =
         json.decodeFromString<CompanyProfileEnvelope>(
-            call("PATCH", json.encodeToString(CompanyProfilePatch(data = update)))
+            call("PATCH", json.encodeToString(CompanyProfilePatch(section = "profile", data = update)))
         ).company
 
     suspend fun uploadLogo(bytes: ByteArray, mimeType: String): CompanyProfile = withContext(Dispatchers.IO) {
