@@ -28,6 +28,13 @@ data class CompanyProfile(
     val primaryContactName: String? = null,
     val primaryPhone: String? = null,
     val contactEmail: String? = null,
+    val alternatePhone: String? = null,
+    val website: String? = null,
+    val gstin: String? = null,
+    val pan: String? = null,
+    val registrationNumber: String? = null,
+    val description: String? = null,
+    val teamStructure: TeamStructure = TeamStructure.MANAGERS_AND_SALES,
     val hasLogo: Boolean = false,
     val profileComplete: Boolean = false,
 )
@@ -45,6 +52,13 @@ data class CompanyProfileUpdate(
     val primaryContactName: String,
     val primaryPhone: String,
     val contactEmail: String,
+    val alternatePhone: String? = null,
+    val website: String? = null,
+    val gstin: String? = null,
+    val pan: String? = null,
+    val registrationNumber: String? = null,
+    val description: String? = null,
+    val teamStructure: TeamStructure,
 )
 
 @Serializable private data class CompanyProfileEnvelope(val company: CompanyProfile)

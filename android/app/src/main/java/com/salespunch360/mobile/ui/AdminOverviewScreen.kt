@@ -7,6 +7,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.salespunch360.mobile.BuildConfig
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -15,13 +23,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.DashboardViewModel
 import com.salespunch360.mobile.data.*
 
-@Composable fun AdminOverviewScreen(data:Bootstrap,role:MobileRole,vm:DashboardViewModel=viewModel(),openCheckInReport:()->Unit){
- val state=vm.state.collectAsStateWithLifecycle().value;val dash=data.adminDashboard;var menu by remember{mutableStateOf(false)}
+@Composable fun AdminOverviewScreen(data:Bootstrap,role:MobileRole,vm:DashboardViewModel=viewModel(),openCheckIns:(()->Unit)?=null,openCheckInReport:()->Unit){
+ val state=vm.state.collectAsStateWithLifecycle().value;val dash=data.adminDashboard;val context=LocalContext.current;val token=remember{SecureSession(context).token()};var menu by remember{mutableStateOf(false)}
  LaunchedEffect(Unit){vm.load()}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{Text(if(role==MobileRole.PRIMARY_ADMIN)"PRIMARY ADMIN" else if(role==MobileRole.ADMIN)"ADDITIONAL ADMIN" else if(data.user.managerType=="MANAGER_ONLY")"OFFICE MANAGER" else "SALES MANAGER",style=MaterialTheme.typography.labelLarge,color=SalesBlue,fontWeight=FontWeight.Bold);Text("Good day, ${data.user.name.substringBefore(' ')}!",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);Text(if(role==MobileRole.MANAGER)"Your assigned team overview." else "Your company field-team overview.",color=SalesMuted)}
+  openCheckIns?.let{action->item{Button(action,Modifier.fillMaxWidth()){Text("+ Add Check-in")}}}
   item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){OverviewMetric("Team members",dash?.teamMemberCount,Modifier.weight(1f));OverviewMetric("Present today",dash?.presentToday,Modifier.weight(1f))};Spacer(Modifier.height(8.dp));Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){OverviewMetric("Check-ins today",dash?.todayVisitCount,Modifier.weight(1f));OverviewMetric("Leads today",dash?.todayLeadCount,Modifier.weight(1f))}}
-  item{OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Check-in Activity",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);TextButton(openCheckInReport){Text("View All")}};Box{OutlinedButton({menu=true},Modifier.fillMaxWidth()){Text(state.employees.firstOrNull{it.id==state.selectedCheckEmployeeId}?.name?:"All authorized employees")};DropdownMenu(menu,{menu=false}){DropdownMenuItem({Text("All authorized employees")},{menu=false;vm.selectCheck(null)});state.employees.forEach{e->DropdownMenuItem({Text("${e.name} · ${e.salesRole.name.replace('_',' ')}")},{menu=false;vm.selectCheck(e.id)})}}};if(state.loading)LinearProgressIndicator(Modifier.fillMaxWidth());if(state.recentVisits.isEmpty()&&!state.loading)Text("No completed check-ins match this selection.",color=SalesMuted);state.recentVisits.take(6).forEach{v->HorizontalDivider(color=SalesLine);Text("${v.userName?:"Employee"} · ${v.customerName?:v.contactName?:"Field prospect"}",fontWeight=FontWeight.Bold);v.checkInAddress?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=SalesMuted)};Text("${overviewTime(v.checkedInAt)}${v.checkoutSentiment?.let{" · $it"}?:""}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);TextButton(openCheckInReport,contentPadding=PaddingValues(0.dp)){Text("Details")}}}}}
+  item{OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Check-in Activity",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);TextButton(openCheckInReport){Text("View All")}};Box{OutlinedButton({menu=true},Modifier.fillMaxWidth()){Text(state.employees.firstOrNull{it.id==state.selectedCheckEmployeeId}?.name?:"All authorized employees")};DropdownMenu(menu,{menu=false}){DropdownMenuItem({Text("All authorized employees")},{menu=false;vm.selectCheck(null)});state.employees.forEach{e->DropdownMenuItem({Text("${e.name} · ${e.salesRole.name.replace('_',' ')}")},{menu=false;vm.selectCheck(e.id)})}}};if(state.loading)LinearProgressIndicator(Modifier.fillMaxWidth());if(state.recentVisits.isEmpty()&&!state.loading)Text("No completed check-ins match this selection.",color=SalesMuted);state.recentVisits.take(6).forEach{v->HorizontalDivider(color=SalesLine);Text("${v.userName?:"Employee"} · ${v.customerName?:v.contactName?:"Field prospect"}",fontWeight=FontWeight.Bold);v.thumbnailUrl?.let{path->val url=if(path.startsWith("http"))path else BuildConfig.API_BASE_URL+path;AsyncImage(model=ImageRequest.Builder(context).data(url).apply{token?.let{httpHeaders(NetworkHeaders.Builder().set("Authorization","Bearer $it").build())}}.crossfade(true).build(),contentDescription="Check-in thumbnail",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(10.dp)))};Text(v.checkInAddress?:if(v.checkInLatitude!=null&&v.checkInLongitude!=null)"%.5f, %.5f".format(v.checkInLatitude,v.checkInLongitude) else "Captured visit location unavailable",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text("${overviewTime(v.checkedInAt)} · ${if(v.checkedOutAt==null)"Checkout pending" else "Out ${overviewTime(v.checkedOutAt)}"}${v.checkoutSentiment?.let{" · $it"}?:""}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);TextButton(openCheckInReport,contentPadding=PaddingValues(0.dp)){Text("Details")}}}}}
   item{LiveTrackingCard(vm)}
  }
 }

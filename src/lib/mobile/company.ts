@@ -8,6 +8,7 @@ import { currentPrices } from "@/lib/billing/service";
 import { PAYMENT_PROVIDER_STATUS } from "@/lib/billing/provider";
 import { companyLogoKey, processCompanyLogo } from "@/lib/company/logo";
 import { profileComplete } from "@/lib/company/profile";
+import { lockBillingCompany } from "@/lib/billing/company-lock";
 import { privateStorage } from "@/lib/storage";
 import { mobileCan, type MobilePrincipal } from "./auth";
 
@@ -36,12 +37,20 @@ const companyProfileSchema = z.object({
   primaryContactName: z.string().trim().min(2).max(120),
   primaryPhone: z.string().trim().min(5).max(30),
   contactEmail: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
+  alternatePhone: optionalText(30),
+  website: z.preprocess(value=>typeof value==="string"&&value.trim()===""?null:value,z.string().trim().url().max(300).nullable().optional()),
+  gstin: z.preprocess(value=>typeof value==="string"&&value.trim()===""?null:value,z.string().trim().toUpperCase().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/).nullable().optional()),
+  pan: z.preprocess(value=>typeof value==="string"&&value.trim()===""?null:value,z.string().trim().toUpperCase().regex(/^[A-Z]{5}\d{4}[A-Z]$/).nullable().optional()),
+  registrationNumber: optionalText(60),
+  description: optionalText(2000),
+  teamStructure: z.enum(["MANAGERS_AND_SALES", "SALES_ONLY"]),
 }).strict();
 
 const settingsSelect = {
   name: true, teamStructure: true, subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true,
   addressLine1: true, addressLine2: true, locality: true, city: true, state: true, postalCode: true,
   country: true, primaryContactName: true, primaryPhone: true, contactEmail: true, logoObjectKey: true,
+  alternatePhone: true, website: true, gstin: true, pan: true, registrationNumber: true, description: true,
   attendanceEnabled: true, gpsTrackingEnabled: true, checkoutRequiredBeforeNextCheckIn: true,
   attendanceGeofenceEnabled: true, attendanceReferenceLatitude: true, attendanceReferenceLongitude: true,
   attendanceGeofenceRadiusMeters: true, customerCheckInGeofenceEnabled: true,
@@ -93,10 +102,21 @@ export async function mobileUpdateCompany(principal: MobilePrincipal, raw: unkno
   } else if (input.section === "profile") {
     const data = companyProfileSchema.parse(input.data);
     await db.$transaction(async tx => {
+      const company=await lockBillingCompany(tx,companyId);
+      if(company.teamStructure==="MANAGERS_AND_SALES"&&data.teamStructure==="SALES_ONLY"){
+        const now=new Date(),[activeManagers,pendingManagerOrder,activeManagerSubscription]=await Promise.all([tx.user.count({where:{companyId,salesRole:"MANAGER",isActive:true,salesAccessActive:true}}),tx.billingOrder.findFirst({where:{companyId,status:"PENDING",managerSeats:{gt:0},OR:[{expiresAt:null},{expiresAt:{gt:now}}]},select:{id:true}}),tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",managerSeats:{gt:0},endsAt:{gt:now}},select:{id:true}})]);
+        if(activeManagers>0||pendingManagerOrder||activeManagerSubscription)throw new MobileCompanyError("TEAM_STRUCTURE_CONFLICT",409);
+      }
       await tx.company.updateMany({ where: { id: companyId }, data: {
         ...data,
         addressLine2: data.addressLine2 ?? null,
         locality: data.locality ?? null,
+        alternatePhone: data.alternatePhone ?? null,
+        website: data.website ?? null,
+        gstin: data.gstin ?? null,
+        pan: data.pan ?? null,
+        registrationNumber: data.registrationNumber ?? null,
+        description: data.description ?? null,
       } });
       await tx.branch.updateMany({
         where: { companyId, isPrimary: true },
@@ -110,9 +130,10 @@ export async function mobileUpdateCompany(principal: MobilePrincipal, raw: unkno
           country: data.country,
           phone: data.primaryPhone,
           email: data.contactEmail,
+          gstin: data.gstin ?? null,
         },
       });
-    });
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
   } else throw new MobileCompanyError("INVALID_SECTION");
   return mobileCompanyContext(principal);
 }

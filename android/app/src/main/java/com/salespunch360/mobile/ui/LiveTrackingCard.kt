@@ -28,7 +28,7 @@ import com.salespunch360.mobile.DashboardViewModel
    }
    Button(vm::view,enabled=state.selectedEmployeeId!=null&&!state.loading,modifier=Modifier.fillMaxWidth()){Text(if(state.loading)"Loading…" else "View Latest Location")}
    state.message?.let{Text(it,color=SalesMuted,style=MaterialTheme.typography.bodySmall)}
-   state.latestLocation?.let{location->HorizontalDivider(color=SalesLine);Text(location.user.name,fontWeight=FontWeight.Bold,color=SalesInk);Text("Last GPS ${trackingTime(location.capturedAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text("${location.latitude}, ${location.longitude}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);OutlinedButton({val uri=Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}");runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,uri))}},Modifier.fillMaxWidth()){Text("Open on Map")}}
+   state.latestLocation?.let{location->HorizontalDivider(color=SalesLine);Text("Latest Location",fontWeight=FontWeight.Bold,color=SalesInk);Text(location.user.name,fontWeight=FontWeight.SemiBold,color=SalesInk);Text("Last known location captured ${trackingTime(location.capturedAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text("${location.latitude}, ${location.longitude}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);NativeMap(emptyList(),listOf(NativeMapPoint(location.latitude,location.longitude,"${location.user.name} · Last known location")));OutlinedButton({val uri=Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}");runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,uri))}},Modifier.fillMaxWidth()){Text("Open on Map")}}
   }
  }
 }
