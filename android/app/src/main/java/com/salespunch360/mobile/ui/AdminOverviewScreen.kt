@@ -15,7 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.DashboardViewModel
 import com.salespunch360.mobile.data.*
 
-@Composable fun AdminOverviewScreen(data:Bootstrap,role:MobileRole,openCheckInReport:()->Unit,vm:DashboardViewModel=viewModel()){
+@Composable fun AdminOverviewScreen(data:Bootstrap,role:MobileRole,vm:DashboardViewModel=viewModel(),openCheckInReport:()->Unit){
  val state=vm.state.collectAsStateWithLifecycle().value;val dash=data.adminDashboard;var menu by remember{mutableStateOf(false)}
  LaunchedEffect(Unit){vm.load()}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
