@@ -10,7 +10,7 @@ async function createLead(tx:Prisma.TransactionClient,companyId:string,branchId:
 
 export async function mobileCustomerAdminContext(p:MobilePrincipal){const companyId=admin(p),scope=await operationalBranchContext(p);const [customers,assignees,branches]=await Promise.all([
  db.customer.findMany({where:{companyId,branchId:{in:scope.branchIds},assignedUserId:null},select:{id:true,branchId:true,name:true,phone:true,contactPerson:true,email:true,address:true,assignedUserId:true},orderBy:{name:'asc'},take:100}),
- db.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,OR:[{salesRole:'SALES'},{salesRole:'MANAGER',managerType:'FIELD_MANAGER'}]},select:{id:true,name:true,salesRole:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}}},orderBy:{name:'asc'}}),
+ db.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,AND:[{OR:[{salesRole:'SALES'},{salesRole:'MANAGER',managerType:'FIELD_MANAGER'}]},{OR:[{branchAccessScope:'ALL_BRANCHES'},{branchAccesses:{some:{branchId:{in:scope.branchIds}}}}]}]},select:{id:true,name:true,salesRole:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}}},orderBy:{name:'asc'}}),
  db.branch.findMany({where:{companyId,id:{in:scope.branchIds},isActive:true},select:{id:true,name:true,code:true,isPrimary:true},orderBy:[{isPrimary:'desc'},{name:'asc'}]})
 ]);return{customers,assignees,branches}}
 

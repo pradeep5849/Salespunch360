@@ -29,8 +29,8 @@ import com.salespunch360.mobile.data.*
    Spacer(Modifier.height(8.dp))
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
     Text("Employee",Modifier.weight(1.15f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
-    Text("Leads Target",Modifier.weight(.8f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
-    Text("Won Target",Modifier.weight(.8f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
+    Text("Check-ins Target",Modifier.weight(.8f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
+    Text("Leads Won Target",Modifier.weight(.8f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
    }
    HorizontalDivider(Modifier.padding(top=6.dp),color=SalesLine)
    state.message?.let{Text(it,Modifier.padding(top=6.dp),style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
@@ -48,14 +48,14 @@ import com.salespunch360.mobile.data.*
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
     Column(Modifier.weight(1.15f)){Text(row.name,fontWeight=FontWeight.Bold,color=SalesInk);Text(salesTargetRole(row),style=MaterialTheme.typography.labelSmall,color=SalesMuted)}
-    TargetCompactField("Leads",leads,editing,{leads=it},"${row.created} created",Modifier.weight(.8f))
-    TargetCompactField("Won",won,editing,{won=it},"${row.won} won",Modifier.weight(.8f))
+    TargetCompactField("Check-ins Target",leads,editing,{leads=it},"${row.created} check-ins",Modifier.weight(.8f))
+    TargetCompactField("Leads Won Target",won,editing,{won=it},"${row.won} won",Modifier.weight(.8f))
    }
    if(canEdit){
     if(editing)Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0);editing=false},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save Targets")}
     else OutlinedButton({editing=true},Modifier.fillMaxWidth()){Text("Edit Targets")}
    } else {
-    Text("Leads ${row.created} / ${row.leadTarget}   ·   Won ${row.won} / ${row.wonTarget}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+    Text("Check-ins ${row.created} / ${row.leadTarget}   ·   Leads Won ${row.won} / ${row.wonTarget}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    }
   }
  }

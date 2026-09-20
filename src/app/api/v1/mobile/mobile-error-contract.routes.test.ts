@@ -108,7 +108,8 @@ describe("final mobile route error contract",()=>{
   });
 
   it.each(["same-company","cross-company"])("returns a private EMAIL_IN_USE conflict for %s duplicates",async()=>{mocks.employeeCreate.mockRejectedValueOnce(new EmployeePolicyError("EMAIL_IN_USE"));const response=await employeesPost(post({role:"SALES"})),body=await response.json(),serialized=JSON.stringify(body);expect(response.status).toBe(409);expect(body).toEqual({error:"EMAIL_IN_USE"});for(const detail of ["company-a","company-b","user-id","Existing User","SALES","P2002"])expect(serialized).not.toContain(detail)});
-  it("keeps unrelated P2002 failures on the safe unexpected path",async()=>{mocks.employeeCreate.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("duplicate phone",{code:"P2002",clientVersion:"6.12.0",meta:{target:["phone"]}}));await expectSafe500(await employeesPost(post({role:"SALES"})))});
+  it("returns a private PHONE_IN_USE conflict for duplicate mobile numbers",async()=>{mocks.employeeCreate.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("duplicate phone",{code:"P2002",clientVersion:"6.12.0",meta:{target:["phone"]}}));const response=await employeesPost(post({role:"SALES"}));expect(response.status).toBe(409);expect(await response.json()).toEqual({error:"PHONE_IN_USE"})});
+  it("keeps unrelated P2002 failures on the safe unexpected path",async()=>{mocks.employeeCreate.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("duplicate employee code",{code:"P2002",clientVersion:"6.12.0",meta:{target:["employeeCode"]}}));await expectSafe500(await employeesPost(post({role:"SALES"})))});
 
   it("preserves password statuses and makes database failures safe",async()=>{
     const body={currentPassword:"OldPassword1",newPassword:"NewPassword123",confirmPassword:"NewPassword123"};
