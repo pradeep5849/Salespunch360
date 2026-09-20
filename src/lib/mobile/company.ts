@@ -36,12 +36,20 @@ const companyProfileSchema = z.object({
   primaryContactName: z.string().trim().min(2).max(120),
   primaryPhone: z.string().trim().min(5).max(30),
   contactEmail: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
+  alternatePhone: optionalText(30),
+  website: optionalText(300),
+  gstin: optionalText(15),
+  pan: optionalText(10),
+  registrationNumber: optionalText(80),
+  description: optionalText(2000),
+  teamStructure: z.enum(["MANAGERS_AND_SALES", "SALES_ONLY"]),
 }).strict();
 
 const settingsSelect = {
   name: true, teamStructure: true, subscriptionStatus: true, trialStartedAt: true, trialEndsAt: true,
   addressLine1: true, addressLine2: true, locality: true, city: true, state: true, postalCode: true,
   country: true, primaryContactName: true, primaryPhone: true, contactEmail: true, logoObjectKey: true,
+  alternatePhone: true, website: true, gstin: true, pan: true, registrationNumber: true, description: true,
   attendanceEnabled: true, gpsTrackingEnabled: true, checkoutRequiredBeforeNextCheckIn: true,
   attendanceGeofenceEnabled: true, attendanceReferenceLatitude: true, attendanceReferenceLongitude: true,
   attendanceGeofenceRadiusMeters: true, customerCheckInGeofenceEnabled: true,
@@ -97,6 +105,12 @@ export async function mobileUpdateCompany(principal: MobilePrincipal, raw: unkno
         ...data,
         addressLine2: data.addressLine2 ?? null,
         locality: data.locality ?? null,
+        alternatePhone: data.alternatePhone ?? null,
+        website: data.website ?? null,
+        gstin: data.gstin ?? null,
+        pan: data.pan ?? null,
+        registrationNumber: data.registrationNumber ?? null,
+        description: data.description ?? null,
       } });
       await tx.branch.updateMany({
         where: { companyId, isPrimary: true },

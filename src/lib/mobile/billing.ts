@@ -16,12 +16,13 @@ export async function mobileBillingContext(p:MobilePrincipal){
  const company=await db.company.findUnique({where:{id:companyId},select:{productEdition:true,teamStructure:true,subscriptionStatus:true,trialStartedAt:true,trialEndsAt:true}});
  if(!company)throw new MobileCompanyError("NOT_FOUND",404);
  const hasSales=editionAllowsSales(company.productEdition),hasAccount=editionAllowsAccount(company.productEdition),isPlus=company.productEdition==="SALESPUNCH360_PLUS";
- const [prices,orders,entitlement,accountSeatUsers,activeSubs]=await Promise.all([
+ const [prices,orders,entitlement,accountSeatUsers,activeSubs,salesSeatUsers]=await Promise.all([
   currentPrices(),
   db.billingOrder.findMany({where:{companyId},orderBy:{createdAt:"desc"},take:30,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,createdAt:true,expiresAt:true}}),
   hasSales?effectiveEntitlement(companyId,now):Promise.resolve(null),
   hasAccount?db.user.findMany({where:{companyId,isActive:true,accountAccessActive:true,accountRole:{not:null}},select:{accountRole:true}}):Promise.resolve([]),
   db.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"},select:{adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,billingPeriod:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}}})
+  ,hasSales?db.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},select:{id:true,name:true,salesRole:true},orderBy:[{salesRole:"asc"},{name:"asc"}]}):Promise.resolve([])
  ]);
  const accountSubs=activeSubs.filter(sub=>sub.accountPackages>0||sub.sourceOrder?.provider==="ACCOUNT_PACKAGE");
  const paidAccountPackages=accountSubs.reduce((sum,sub)=>sum+(sub.accountPackages||(sub.sourceOrder?.provider==="ACCOUNT_PACKAGE"?sub.adminSeats:0)),0);
@@ -33,7 +34,7 @@ export async function mobileBillingContext(p:MobilePrincipal){
   hasSales,hasAccount,isPlus,teamStructure:company.teamStructure,
   prices:prices.map(x=>({...x,amount:x.amount.toFixed(2)})),
   orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2)})),
-  onlinePaymentAvailable:false,
+  onlinePaymentAvailable:false,salesSeatUsers,
   sales:entitlement?{
    status:entitlement.paidActive?"ACTIVE":entitlement.trialActive?"TRIAL":company.subscriptionStatus,
    endsAt:entitlement.subscription?.endsAt??company.trialEndsAt,
@@ -71,7 +72,8 @@ export async function mobileBillingQuote(p:MobilePrincipal,raw:unknown){
  if(plus&&accountPackages<1)throw new MobileCompanyError("PLUS_ACCOUNT_PACKAGE_REQUIRED",409);
  if(!plus&&accountPackages!==0)throw new MobileCompanyError("INVALID_INPUT");
  const accountUnit=plus?(prices.find(x=>x.role==="ACCOUNT_PACKAGE"&&x.period===period)?.amount??new Prisma.Decimal(period==="SIX_MONTH"?ACCOUNT_PACKAGE_SIX_MONTH_PRICE_INR:ACCOUNT_PACKAGE_YEARLY_PRICE_INR)):new Prisma.Decimal(0),now=new Date(),active=await db.companySubscription.findMany({where:{companyId:p.companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},select:{adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}},orderBy:{endsAt:"desc"}}),currentTerm=effectiveCurrentTerm(active),quote=quoteCombinedOrder({period:period as "SIX_MONTH"|"YEARLY",adminSeats:a,managerSeats:m,salesSeats:s,accountPackages:plus?accountPackages:0,adminPrice:ap.amount,managerPrice:mp.amount,salesPrice:sp.amount,accountPrice:plus?accountUnit:undefined,now,currentTerm});
- return{kind:plus?"PLUS":"SALES",billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,accountPackages,totalAmount:quote.subtotal.toFixed(2),salesSubtotal:quote.salesSubtotal.toFixed(2),accountSubtotal:quote.accountSubtotal.toFixed(2),prorated:quote.prorated,coTermEndsAt:quote.coTermEndsAt,currency:"INR"};
+ const ids=(key:string)=>Array.isArray(input[key])?input[key].filter((x):x is string=>typeof x==="string"):[];
+ return{kind:plus?"PLUS":"SALES",billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,accountPackages,retainAdminUserIds:ids("retainAdminUserIds"),retainManagerUserIds:ids("retainManagerUserIds"),retainSalesUserIds:ids("retainSalesUserIds"),totalAmount:quote.subtotal.toFixed(2),salesSubtotal:quote.salesSubtotal.toFixed(2),accountSubtotal:quote.accountSubtotal.toFixed(2),prorated:quote.prorated,coTermEndsAt:quote.coTermEndsAt,currency:"INR"};
 }
 
 export async function mobileManualOrder(p:MobilePrincipal,raw:unknown){

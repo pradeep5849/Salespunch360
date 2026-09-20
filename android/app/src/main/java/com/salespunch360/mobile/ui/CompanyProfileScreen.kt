@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.CompanyProfileViewModel
 import com.salespunch360.mobile.data.CompanyProfileUpdate
+import com.salespunch360.mobile.data.TeamStructure
 
 @Composable
 fun CompanyProfileScreen(
@@ -50,6 +51,13 @@ fun CompanyProfileScreen(
     var contactName by remember(profile.primaryContactName) { mutableStateOf(profile.primaryContactName.orEmpty()) }
     var phone by remember(profile.primaryPhone) { mutableStateOf(profile.primaryPhone.orEmpty()) }
     var email by remember(profile.contactEmail) { mutableStateOf(profile.contactEmail.orEmpty()) }
+    var alternatePhone by remember(profile.alternatePhone) { mutableStateOf(profile.alternatePhone.orEmpty()) }
+    var website by remember(profile.website) { mutableStateOf(profile.website.orEmpty()) }
+    var gstin by remember(profile.gstin) { mutableStateOf(profile.gstin.orEmpty()) }
+    var pan by remember(profile.pan) { mutableStateOf(profile.pan.orEmpty()) }
+    var registration by remember(profile.registrationNumber) { mutableStateOf(profile.registrationNumber.orEmpty()) }
+    var description by remember(profile.description) { mutableStateOf(profile.description.orEmpty()) }
+    var structure by remember(profile.teamStructure) { mutableStateOf(profile.teamStructure) }
 
     val logoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let(vm::uploadLogo)
@@ -111,6 +119,19 @@ fun CompanyProfileScreen(
                     isError = email.isNotBlank() && !emailValid,
                     supportingText = { if (email.isNotBlank() && !emailValid) Text("Enter a valid email address") },
                 )
+                OutlinedTextField(alternatePhone, { alternatePhone = it }, Modifier.fillMaxWidth(), label = { Text("Alternate phone (optional)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
+                OutlinedTextField(website, { website = it }, Modifier.fillMaxWidth(), label = { Text("Website (optional)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+                OutlinedTextField(gstin, { gstin = it.uppercase().take(15) }, Modifier.fillMaxWidth(), label = { Text("GSTIN (optional)") }, singleLine = true)
+                OutlinedTextField(pan, { pan = it.uppercase().take(10) }, Modifier.fillMaxWidth(), label = { Text("PAN (optional)") }, singleLine = true)
+                OutlinedTextField(registration, { registration = it }, Modifier.fillMaxWidth(), label = { Text("Registration number (optional)") }, singleLine = true)
+                Text("Sales Team Structure", style = MaterialTheme.typography.titleMedium)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf(TeamStructure.MANAGERS_AND_SALES to "Admin → Managers → Sales", TeamStructure.SALES_ONLY to "Admin → Sales").forEachIndexed { index, (value, label) ->
+                        SegmentedButton(selected = structure == value, onClick = { structure = value }, shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(label) }
+                    }
+                }
+                Text(if (structure == TeamStructure.SALES_ONLY) "Manager creation and assignment are disabled." else "Managers can supervise Sales employees.", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(description, { description = it.take(2000) }, Modifier.fillMaxWidth(), label = { Text("Company description (optional)") }, minLines = 3)
                 Button(
                     onClick = {
                         vm.save(
@@ -126,6 +147,13 @@ fun CompanyProfileScreen(
                                 primaryContactName = contactName.trim(),
                                 primaryPhone = phone.trim(),
                                 contactEmail = email.trim(),
+                                alternatePhone = alternatePhone.trim().ifBlank { null },
+                                website = website.trim().ifBlank { null },
+                                gstin = gstin.trim().ifBlank { null },
+                                pan = pan.trim().ifBlank { null },
+                                registrationNumber = registration.trim().ifBlank { null },
+                                description = description.trim().ifBlank { null },
+                                teamStructure = structure,
                             )
                         ) { saved ->
                             if (saved.profileComplete) onComplete?.invoke()
