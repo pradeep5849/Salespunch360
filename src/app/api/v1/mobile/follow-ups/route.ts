@@ -4,7 +4,7 @@ import {cancelFollowUpTaskForActor,FollowUpTaskError} from '@/lib/follow-up-task
 import {mobileBranchFailure,mobileJson,mobileUnexpected} from '@/lib/mobile/http';
 
 export async function GET(request:Request){
- try{const user=await authenticateMobileSalesToken(request.headers.get('authorization')),status=new URL(request.url).searchParams.get('status');return mobileJson(await mobileFollowUps(user,status));}
+ try{const user=await authenticateMobileSalesToken(request.headers.get('authorization')),params=new URL(request.url).searchParams,status=params.get('status');return mobileJson(await mobileFollowUps(user,status,params.get('employeeId')));}
  catch(error){const branch=mobileBranchFailure(error);if(branch)return branch;const code=error instanceof Error?error.message:'';if(code==='MOBILE_UNAUTHORIZED')return mobileJson({error:'UNAUTHORIZED'},401);if(code==='MOBILE_FORBIDDEN'||code==='FORBIDDEN')return mobileJson({error:'FORBIDDEN'},403);return mobileUnexpected('MOBILE_FOLLOW_UPS',error);}
 }
 export async function POST(request:Request){

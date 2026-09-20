@@ -11,14 +11,15 @@ import {MobileCompanyError} from "./company";
 
 function access(p:MobilePrincipal){if(p.salesRole!=="PRIMARY_ADMIN"||!mobileCan(p,"SALES_BILLING"))throw new MobileCompanyError("FORBIDDEN",403);return p.companyId}
 
-export async function mobileBillingContext(p:MobilePrincipal){
+export async function mobileBillingContext(p:MobilePrincipal,page=1){
  const companyId=access(p),now=new Date();
  const company=await db.company.findUnique({where:{id:companyId},select:{productEdition:true,teamStructure:true,subscriptionStatus:true,trialStartedAt:true,trialEndsAt:true}});
  if(!company)throw new MobileCompanyError("NOT_FOUND",404);
  const hasSales=editionAllowsSales(company.productEdition),hasAccount=editionAllowsAccount(company.productEdition),isPlus=company.productEdition==="SALESPUNCH360_PLUS";
- const [prices,orders,entitlement,accountSeatUsers,activeSubs,salesSeatUsers]=await Promise.all([
+ const pageSize=10,safePage=Number.isInteger(page)&&page>0?page:1;const [prices,orders,orderCount,entitlement,accountSeatUsers,activeSubs,salesSeatUsers]=await Promise.all([
   currentPrices(),
-  db.billingOrder.findMany({where:{companyId},orderBy:{createdAt:"desc"},take:30,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,createdAt:true,expiresAt:true}}),
+  db.billingOrder.findMany({where:{companyId},orderBy:[{createdAt:"desc"},{id:"desc"}],skip:(safePage-1)*pageSize,take:pageSize,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,createdAt:true,expiresAt:true}}),
+  db.billingOrder.count({where:{companyId}}),
   hasSales?effectiveEntitlement(companyId,now):Promise.resolve(null),
   hasAccount?db.user.findMany({where:{companyId,isActive:true,accountAccessActive:true,accountRole:{not:null}},select:{accountRole:true}}):Promise.resolve([]),
   db.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"},select:{adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,billingPeriod:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}}})
@@ -34,7 +35,7 @@ export async function mobileBillingContext(p:MobilePrincipal){
   hasSales,hasAccount,isPlus,teamStructure:company.teamStructure,
   prices:prices.map(x=>({...x,amount:x.amount.toFixed(2)})),
   orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2)})),
-  onlinePaymentAvailable:false,salesSeatUsers,
+  onlinePaymentAvailable:false,salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
   sales:entitlement?{
    status:entitlement.paidActive?"ACTIVE":entitlement.trialActive?"TRIAL":company.subscriptionStatus,
    endsAt:entitlement.subscription?.endsAt??company.trialEndsAt,

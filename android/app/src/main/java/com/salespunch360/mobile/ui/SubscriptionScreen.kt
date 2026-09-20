@@ -14,13 +14,13 @@ import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
 @Composable fun SubscriptionScreen(){
- val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)}
+ val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)};var loadingMore by remember{mutableStateOf(false)}
  fun reload(){loading=true;error=null;scope.launch{runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false}}
  LaunchedEffect(Unit){runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false}
- when{loading->Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator()};error!=null->RetryScreen(error!!,::reload);else->SubscriptionContent(data!!,::reload)}
+ when{loading->Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator()};error!=null->RetryScreen(error!!,::reload);else->SubscriptionContent(data!!,::reload,loadingMore){if(!loadingMore&&data?.hasMoreOrders==true){loadingMore=true;scope.launch{runCatching{api.billing((data?.orderPage?:1)+1)}.onSuccess{next->data=next.copy(orders=data!!.orders+next.orders)}.onFailure{error="Unable to load more payment history."};loadingMore=false}}}}
 }
 
-@Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit){
+@Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit,loadingMore:Boolean,loadMore:()->Unit){
  var checkout by remember{mutableStateOf<BillingQuote?>(null)};var editing by remember{mutableStateOf<String?>(null)};var showOrders by remember{mutableStateOf(false)}
  if(checkout!=null){CheckoutCard(checkout!!){checkout=null;reload()};return}
  val pending=data.orders.firstOrNull{it.status=="PENDING"}
@@ -30,7 +30,8 @@ import kotlinx.coroutines.launch
   if(data.hasSales)item{CompactSalesSummary(data.sales,data.teamStructure){editing=if(editing=="SALES")null else "SALES"};if(editing=="SALES")SalesPurchase(data){checkout=it}}
   if(data.hasAccount)item{CompactAccountSummary(data.account,data.isPlus){editing=if(data.isPlus)"SALES" else if(editing=="ACCOUNT")null else "ACCOUNT"};if(editing=="ACCOUNT"&&!data.isPlus)AccountPurchase(data){checkout=it};if(data.isPlus&&editing=="SALES"&&!data.hasSales)SalesPurchase(data){checkout=it}}
   item{OutlinedButton({showOrders=!showOrders},Modifier.fillMaxWidth()){Text(if(showOrders)"Hide Payment History" else "Payment History")}}
-  if(showOrders)items(data.orders,key={it.id}){o->OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Order ${o.id.take(8).uppercase()}",fontWeight=FontWeight.Bold);StatusChip(o.status)};Text("${periodLabel(o.billingPeriod)} · ${o.currency} ${o.totalAmount}");Text("Created ${o.createdAt.replace('T',' ').take(19)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){if(o.adminSeats>0)StatusChip("Admin ${o.adminSeats}");if(o.managerSeats>0)StatusChip("Manager ${o.managerSeats}");if(o.salesSeats>0)StatusChip("Sales ${o.salesSeats}");if(o.accountPackages>0)StatusChip("Account packages ${o.accountPackages}")};Text("Provider: ${o.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}
+  if(showOrders)items(data.orders,key={it.id}){o->OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Order ${o.id.take(8).uppercase()}",fontWeight=FontWeight.Bold);StatusChip(o.status)};Text("${periodLabel(o.billingPeriod)} · ${o.currency} ${o.totalAmount}");Text("Created ${o.createdAt.replace('T',' ').take(19)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){if(o.adminSeats>0)StatusChip("Admin ${o.adminSeats}");if(o.managerSeats>0)StatusChip("Manager ${o.managerSeats}");if(o.salesSeats>0)StatusChip("Sales ${o.salesSeats}");if(o.accountPackages>0)StatusChip("Account packages ${o.accountPackages}")};Text("Provider: ${o.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}}
+  if(showOrders&&data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}
  }
 }
 
