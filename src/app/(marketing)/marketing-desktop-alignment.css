@@ -1,0 +1,144 @@
+/* Desktop alignment corrections for the public marketing site.
+   Keep header, hero and content on one centered grid without changing mobile styling. */
+
+@media (min-width:1181px){
+  .public-topbar{
+    padding-left:max(24px,calc((100% - 1180px)/2))!important;
+    padding-right:max(24px,calc((100% - 1180px)/2))!important;
+  }
+
+  .nav-wrap{
+    width:min(1180px,calc(100% - 48px))!important;
+    min-height:78px;
+    gap:18px!important;
+  }
+
+  .marketing .brand-logo{
+    width:158px!important;
+    height:56px!important;
+  }
+
+  .public-header nav{
+    min-width:0;
+    gap:13px!important;
+    font-size:11px!important;
+  }
+
+  .nav-actions{
+    gap:10px!important;
+    flex:0 0 auto;
+  }
+
+  .nav-actions .button{
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+
+  .reference-hero{
+    width:100%!important;
+    max-width:none!important;
+    box-sizing:border-box;
+    padding-left:max(24px,calc((100% - 1180px)/2))!important;
+    padding-right:max(24px,calc((100% - 1180px)/2))!important;
+    grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr)!important;
+    gap:38px!important;
+  }
+
+  .reference-hero .hero-copy,
+  .reference-hero .product-preview{
+    min-width:0;
+  }
+
+  .reference-hero .product-preview{
+    width:100%;
+    margin-right:0!important;
+    overflow:hidden;
+  }
+
+  .reference-products,
+  .reference-industries,
+  .reference-why,
+  .reference-testimonials{
+    width:min(1180px,calc(100% - 48px))!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box;
+  }
+}
+
+/* A full nine-link desktop navigation is too wide on smaller laptop viewports.
+   Switch only the header to the existing mobile navigation pattern instead of
+   allowing the logo/menu/actions to overflow off-screen. */
+@media (min-width:761px) and (max-width:1180px){
+  .public-topbar{
+    padding-left:24px!important;
+    padding-right:24px!important;
+  }
+
+  .nav-wrap{
+    width:calc(100% - 48px)!important;
+    min-height:70px!important;
+    gap:12px!important;
+  }
+
+  .marketing .brand-logo{
+    width:150px!important;
+    height:52px!important;
+  }
+
+  .mobile-auth-actions{
+    display:flex!important;
+  }
+
+  .menu-toggle{
+    display:block!important;
+    margin-left:0!important;
+  }
+
+  .public-header nav{
+    display:none!important;
+    position:absolute;
+    top:70px;
+    left:0;
+    right:0;
+    z-index:60;
+    max-height:calc(100vh - 70px);
+    overflow:auto;
+    padding:18px 24px;
+    background:#fff;
+    border-bottom:1px solid #dce5e7;
+    box-shadow:0 18px 40px #10263f18;
+  }
+
+  .public-header nav.open{
+    display:grid!important;
+    gap:0!important;
+  }
+
+  .public-header nav>a{
+    padding:11px 4px;
+  }
+
+  .public-header nav>a.active::after{
+    display:none;
+  }
+
+  .nav-actions{
+    margin:10px 0 0!important;
+    padding-top:12px;
+    border-top:1px solid #e7edf2;
+    flex-wrap:wrap;
+  }
+
+  .reference-hero{
+    width:100%!important;
+    max-width:none!important;
+    box-sizing:border-box;
+    padding-left:24px!important;
+    padding-right:24px!important;
+  }
+
+  .reference-hero .product-preview{
+    margin-right:0!important;
+  }
+}
