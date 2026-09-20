@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import styles from './billing-calculator.module.css';
 
 type Period='SIX_MONTH'|'YEARLY';
 type Prices=Record<Period,{admin:number;manager:number;sales:number}>;
@@ -27,14 +28,12 @@ export function BillingCalculator({managersEnabled,adminUsage,managerUsage,sales
  const accountSubtotal=isPlus?accountsValue*accountPrices[period]:0;
  const total=salesSubtotal+accountSubtotal;
  const hasSalesProduct=manager+sales>0;
- const rowStyle={display:'grid',gridTemplateColumns:'minmax(150px,1fr) 120px minmax(90px,auto)',alignItems:'center',gap:10} as const;
- const sectionStyle={display:'grid',gap:10,padding:'4px 0'} as const;
 
- return <form action="/workspace/billing/checkout" method="GET" className="billing-form billing-calculator" style={isPlus?{gridTemplateColumns:'1fr',gap:14}:undefined}>
+ return <form action="/workspace/billing/checkout" method="GET" className={`billing-form billing-calculator ${isPlus?styles.plusForm:''}`}>
   {isPlus?<>
-   <div style={{...rowStyle,gridTemplateColumns:'minmax(150px,1fr) minmax(180px,240px)'}}><strong>Billing Period</strong><select name="billingPeriod" value={period} onChange={e=>setPeriod(e.target.value as Period)}>{Object.entries(labels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
-   <div style={sectionStyle}><strong style={{fontSize:15}}>Account Package</strong><div style={rowStyle}><span>Packages</span><select name="accountPackages" value={String(accountsValue)} onChange={e=>setAccounts(e.target.value)}>{Array.from({length:100},(_,i)=>i+1).map(count=><option key={count} value={count}>{count}</option>)}</select><b>{money(accountPrices[period])}</b></div><span className="muted">({packageContents(accountsValue)})</span></div>
-   <div style={sectionStyle}><strong style={{fontSize:15}}>Sales</strong><label style={rowStyle}><span>Admin</span><input name="adminSeats" type="number" min="0" max="10000" value={admin} onChange={e=>setAdmin(clamp(Number(e.target.value)))}/><span>{money(p.admin)} each</span></label>{managersEnabled?<label style={rowStyle}><span>Manager</span><input name="managerSeats" type="number" min="0" max="10000" value={manager} onChange={e=>setManager(clamp(Number(e.target.value)))}/><span>{money(p.manager)} each</span></label>:<input type="hidden" name="managerSeats" value="0"/>}<label style={rowStyle}><span>Sales</span><input name="salesSeats" type="number" min="0" max="10000" value={sales} onChange={e=>setSales(clamp(Number(e.target.value)))}/><span>{money(p.sales)} each</span></label></div>
+   <div className={`${styles.plusRow} ${styles.periodRow}`}><strong>Billing Period</strong><select name="billingPeriod" value={period} onChange={e=>setPeriod(e.target.value as Period)}>{Object.entries(labels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
+   <div className={styles.plusSection}><strong className={styles.plusHeading}>Account Package</strong><div className={styles.plusRow}><span>Packages</span><select name="accountPackages" value={String(accountsValue)} onChange={e=>setAccounts(e.target.value)}>{Array.from({length:100},(_,i)=>i+1).map(count=><option key={count} value={count}>{count}</option>)}</select><b>{money(accountPrices[period])} / package</b></div><span className="muted">({packageContents(accountsValue)})</span></div>
+   <div className={styles.plusSection}><strong className={styles.plusHeading}>Sales</strong><label className={styles.plusRow}><span>Admin</span><input name="adminSeats" type="number" min="0" max="10000" value={admin} onChange={e=>setAdmin(clamp(Number(e.target.value)))}/><span>{money(p.admin)} each</span></label>{managersEnabled?<label className={styles.plusRow}><span>Manager</span><input name="managerSeats" type="number" min="0" max="10000" value={manager} onChange={e=>setManager(clamp(Number(e.target.value)))}/><span>{money(p.manager)} each</span></label>:<input type="hidden" name="managerSeats" value="0"/>}<label className={styles.plusRow}><span>Sales</span><input name="salesSeats" type="number" min="0" max="10000" value={sales} onChange={e=>setSales(clamp(Number(e.target.value)))}/><span>{money(p.sales)} each</span></label></div>
   </>:<>
    <label>Billing Period<select name="billingPeriod" value={period} onChange={e=>setPeriod(e.target.value as Period)}>{Object.entries(labels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
    <div className="included-admin"><strong>Primary Admin</strong><span>Included / Free</span></div>
