@@ -15,6 +15,8 @@ function transport() { const value=config(); return nodemailer.createTransport({
   auth: value.auth,
 }); }
 
+export async function sendTransactionalEmail(to:string|string[],subject:string,text:string){const smtp=config();await transport().sendMail({from:smtp.from,to,subject,text});}
+
 export async function sendVerificationEmail(to: string, token: string) {
   const url = new URL("/verify-email", env.APP_URL);
   url.searchParams.set("token", token);
