@@ -8,6 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -15,10 +16,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.salespunch360.mobile.BuildConfig
 import com.salespunch360.mobile.data.*
 import com.salespunch360.mobile.location.TrackingService
 import kotlinx.coroutines.launch
@@ -48,8 +56,8 @@ private fun SalesVisitDetailsScreen(v: SalesVisitDetails, back: () -> Unit) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(v.subject, fontWeight = FontWeight.Bold, color = SalesInk)
                     Text("Sales: ${v.salesUser}", color = SalesMuted)
-                    Text("Check-in: ${salesVisitTime(v.checkedInAt)}", color = SalesMuted)
-                    v.checkedOutAt?.let { Text("Checkout: ${salesVisitTime(it)}", color = SalesMuted) }
+                    Text("Check In: ${salesVisitTime(v.checkedInAt)}", color = SalesMuted)
+                    v.checkedOutAt?.let { Text("Check Out: ${salesVisitTime(it)}", color = SalesMuted) }
                     v.status?.let { StatusChip(it) }
                 }
             }
@@ -62,6 +70,8 @@ private fun salesVisitTime(value: String) = runCatching {
         .atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata"))
         .format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))
 }.getOrDefault(value)
+
+private fun mobileImageUrl(path:String)=if(path.startsWith("http"))path else BuildConfig.API_BASE_URL.trimEnd('/')+"/"+path.trimStart('/')
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +95,17 @@ fun SalesDrawerAuthenticatedApp(
     fun navigate(to: String) {
         route = to
         scope.launch { drawer.close() }
+    }
+
+    fun openRecentVisit(v:DashboardVisit){
+        visitDetails=SalesVisitDetails(
+            v.id,
+            v.customerName?:v.contactName?:"Field prospect",
+            data.user.name,
+            v.checkedInAt,
+            v.checkedOutAt,
+            v.checkoutSentiment?.lowercase()?.replaceFirstChar{it.uppercase()}
+        )
     }
 
     BackHandler(visitDetails != null) { visitDetails = null }
@@ -140,10 +161,10 @@ fun SalesDrawerAuthenticatedApp(
                 message?.let { MessageBanner(it, dismiss) }
                 when {
                     visitDetails != null -> SalesVisitDetailsScreen(visitDetails!!) { visitDetails = null }
-                    route == "Dashboard" -> SalesDrawerHome(data, ::navigate)
+                    route == "Dashboard" -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
                     route == "Attendance" -> SalesDrawerAttendance(data, attendance)
                     route == "Customers" -> CustomersScreen { navigate("Check-ins") }
-                    route == "Check-ins" -> FieldScreen(pendingTask, { pendingTask = null }, pendingCheckInLead, { pendingCheckInLead = null }, onViewPipeline = { navigate("Leads") })
+                    route == "Check-ins" -> FieldScreen(pendingTask, { pendingTask = null }, pendingCheckInLead, { pendingCheckInLead = null })
                     route == "Leads" -> LeadsScreen(
                         pendingLeadId,
                         { pendingLeadId = null },
@@ -172,7 +193,7 @@ fun SalesDrawerAuthenticatedApp(
                         }
                     }
                     route == "Change Password" -> ChangePasswordScreen()
-                    else -> SalesDrawerHome(data, ::navigate)
+                    else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
                 }
             }
         }
@@ -180,8 +201,10 @@ fun SalesDrawerAuthenticatedApp(
 }
 
 @Composable
-private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit) {
+private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVisit:(DashboardVisit)->Unit) {
     val d = data.salesDashboard
+    val context=LocalContext.current
+    val token=remember{SecureSession(context).token()}
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text("SALES", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = SalesBlue)
@@ -200,14 +223,25 @@ private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit) {
             }
         }
         item {
-            ContentCard("My Recent Check-ins", if (d?.recentVisits.isNullOrEmpty()) "No completed check-ins yet." else "Your latest completed field visits.") {
-                d?.recentVisits?.take(4)?.forEach { v ->
-                    HorizontalDivider()
-                    Text(v.customerName ?: v.contactName ?: "Field prospect", fontWeight = FontWeight.Bold)
-                    v.checkInAddress?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = SalesMuted) }
-                    Text("Completed${v.checkoutSentiment?.let { " · $it" } ?: ""}", style = MaterialTheme.typography.bodySmall, color = SalesMuted)
+            Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,SalesLine)){
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    Text("My Recent Check-ins",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
+                    if(d?.recentVisits.isNullOrEmpty())Text("No check-ins yet.",color=SalesMuted)
+                    d?.recentVisits?.take(4)?.forEach{v->
+                        OutlinedCard(Modifier.fillMaxWidth()){
+                            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                                v.thumbnailUrl?.let{path->AsyncImage(model=ImageRequest.Builder(context).data(mobileImageUrl(path)).apply{token?.let{httpHeaders(NetworkHeaders.Builder().set("Authorization","Bearer $it").build())}}.crossfade(true).build(),contentDescription="Check-in photo",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)))}
+                                Text(v.customerName?:v.contactName?:"Field prospect",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
+                                Text(v.checkInAddress?:"Address unavailable",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                                Text("Check In: ${salesVisitTime(v.checkedInAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                                Text("Check Out: ${v.checkedOutAt?.let(::salesVisitTime)?:"Pending"}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                                v.checkoutSentiment?.let{StatusChip(it.lowercase().replaceFirstChar{c->c.uppercase()})}
+                                TextButton({openVisit(v)},contentPadding=PaddingValues(0.dp)){Text("Details")}
+                            }
+                        }
+                    }
+                    TextButton(onClick = { navigate("Check-ins") }) { Text("View All") }
                 }
-                TextButton(onClick = { navigate("Check-ins") }) { Text("View All") }
             }
         }
         item {
