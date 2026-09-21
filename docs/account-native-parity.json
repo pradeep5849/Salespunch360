@@ -499,7 +499,60 @@
     {
       "feature": "Estimate / Quotation",
       "classification": "PENDING_NATIVE",
-      "reason": "Separate quotation lifecycle, revisions, transitions, sharing, output, and native UI are not yet implemented."
+      "reason": "Functional implementation complete; Android SDK compilation, CI, and device validation remain pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/quotations",
+        "GET/PATCH /api/v1/mobile/account/quotations/{id}",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ],
+      "sharedService": "src/lib/quotations/service.ts actor-parameterized quotation domain",
+      "transitions": [
+        "DRAFT -> PENDING_APPROVAL or CANCELLED",
+        "PENDING_APPROVAL -> APPROVED, REJECTED, or CANCELLED",
+        "APPROVED -> SENT, ACCEPTED, DECLINED, or CANCELLED",
+        "SENT -> ACCEPTED, DECLINED, EXPIRED, or CANCELLED"
+      ],
+      "conversions": [
+        "Accepted Plus lead quotation -> authoritative Project creation (existing backend behavior)"
+      ]
+    },
+    {
+      "feature": "Purchase Bill",
+      "classification": "PENDING_NATIVE",
+      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "api": [
+        "/api/v1/mobile/account/purchases"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Payment-Out / Vendor Payment",
+      "classification": "PENDING_NATIVE",
+      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "api": [
+        "/api/v1/mobile/account/vendor-payments"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Purchase Order",
+      "classification": "PENDING_NATIVE",
+      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "api": [
+        "/api/v1/mobile/account/purchases"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Debit Note / Purchase Return",
+      "classification": "PENDING_NATIVE",
+      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "api": [
+        "/api/v1/mobile/account/purchases"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
     }
   ]
 }
