@@ -1450,6 +1450,7 @@ model BillingOrder {
   managerSeats           Int
   salesSeats             Int
   accountPackages        Int                  @default(0)
+  accountPackageUnitPrice Decimal             @default(0) @db.Decimal(18, 2)
   adminUnitPrice         Decimal              @default(0) @db.Decimal(18, 2)
   managerUnitPrice       Decimal              @db.Decimal(18, 2)
   salesUnitPrice         Decimal              @db.Decimal(18, 2)
