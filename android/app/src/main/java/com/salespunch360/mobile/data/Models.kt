@@ -19,6 +19,18 @@ import kotlinx.serialization.Serializable
 @Serializable enum class Workspace{SALES,ACCOUNT}
 @Serializable data class WebSessionRequest(val redirectPath:String="/workspace/account")
 @Serializable data class WebSessionHandoff(val handoffCode:String,val expiresAt:String)
+@Serializable data class AccountBootstrap(val user:AccountBootstrapUser,val company:AccountBootstrapCompany,val productEdition:ProductEdition,val enabledModules:List<String> = emptyList(),val effectivePermissions:List<String> = emptyList(),val canSwitchWorkspace:Boolean=false,val branch:AccountBranchContext,val availableBranches:List<AccountBranch> = emptyList(),val canConsolidate:Boolean=false,val entitlement:AccountEntitlement,val notifications:AccountNotifications=AccountNotifications(),val navigation:List<AccountNavigationGroup> = emptyList())
+@Serializable data class AccountBootstrapUser(val id:String,val name:String,val accountRole:AccountRole)
+@Serializable data class AccountBootstrapCompany(val name:String)
+@Serializable data class AccountBranchContext(val mode:String,val branchId:String?=null,val branchName:String?=null)
+@Serializable data class AccountBranch(val id:String,val name:String,val isPrimary:Boolean=false)
+@Serializable data class AccountEntitlement(val state:String,val operationalWritesAllowed:Boolean)
+@Serializable data class AccountNotifications(val pendingExpenseApprovals:Int=0)
+@Serializable data class AccountNavigationGroup(val label:String,val items:List<AccountNavigationItem> = emptyList(),val children:List<AccountNavigationGroup> = emptyList())
+@Serializable data class AccountNavigationItem(val label:String,val href:String)
+@Serializable data class AccountDashboard(val title:String,val period:String,val projectOnly:Boolean=false,val metrics:List<AccountDashboardMetric> = emptyList(),val branchComparison:List<AccountBranchComparison> = emptyList())
+@Serializable data class AccountDashboardMetric(val key:String,val label:String,val value:String,val kind:String)
+@Serializable data class AccountBranchComparison(val id:String,val name:String,val sales:String,val expenses:String,val operatingContribution:String)
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)

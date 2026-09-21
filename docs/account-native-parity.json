@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": [
+    "src/app/workspace/account/**",
+    "src/components/account/**",
+    "src/lib/account/**",
+    "src/app/actions/**",
+    "src/app/api/**",
+    "prisma/schema.prisma"
+  ],
+  "classificationDefinitions": {
+    "NATIVE_COMPLETE": "Implemented through native Compose and an authenticated mobile API.",
+    "PENDING_NATIVE": "Audited, but not yet native; it must not be represented as complete.",
+    "NOT_APPLICABLE_TO_MOBILE": "Allowed only with a documented product reason.",
+    "EXTERNAL_LINK": "Help/support-only external destination."
+  },
+  "routes": [
+    {
+      "route": "/workspace/account/[master]",
+      "source": "src/app/workspace/account/[master]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/accounting/[section]",
+      "source": "src/app/workspace/account/accounting/[section]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/assets/[id]/edit",
+      "source": "src/app/workspace/account/assets/[id]/edit/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/assets/[id]",
+      "source": "src/app/workspace/account/assets/[id]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/assets/new",
+      "source": "src/app/workspace/account/assets/new/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/assets",
+      "source": "src/app/workspace/account/assets/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/dashboard",
+      "source": "src/app/workspace/account/dashboard/page.tsx",
+      "classification": "NATIVE_COMPLETE",
+      "reason": null
+    },
+    {
+      "route": "/workspace/account/expenses/[id]",
+      "source": "src/app/workspace/account/expenses/[id]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/expenses/categories",
+      "source": "src/app/workspace/account/expenses/categories/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/expenses/new",
+      "source": "src/app/workspace/account/expenses/new/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/expenses",
+      "source": "src/app/workspace/account/expenses/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/expenses/recurring",
+      "source": "src/app/workspace/account/expenses/recurring/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/inventory/[section]",
+      "source": "src/app/workspace/account/inventory/[section]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/inventory",
+      "source": "src/app/workspace/account/inventory/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/menu",
+      "source": "src/app/workspace/account/menu/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/money/accounts",
+      "source": "src/app/workspace/account/money/accounts/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/money/capital",
+      "source": "src/app/workspace/account/money/capital/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/money/cheques",
+      "source": "src/app/workspace/account/money/cheques/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/money/loans",
+      "source": "src/app/workspace/account/money/loans/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/money",
+      "source": "src/app/workspace/account/money/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/money/transfers",
+      "source": "src/app/workspace/account/money/transfers/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/notifications",
+      "source": "src/app/workspace/account/notifications/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account",
+      "source": "src/app/workspace/account/page.tsx",
+      "classification": "NATIVE_COMPLETE",
+      "reason": null
+    },
+    {
+      "route": "/workspace/account/projects/[id]/costing",
+      "source": "src/app/workspace/account/projects/[id]/costing/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/projects/[id]/edit",
+      "source": "src/app/workspace/account/projects/[id]/edit/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/projects/[id]",
+      "source": "src/app/workspace/account/projects/[id]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/projects/new",
+      "source": "src/app/workspace/account/projects/new/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/projects",
+      "source": "src/app/workspace/account/projects/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/quotations/[id]/edit",
+      "source": "src/app/workspace/account/quotations/[id]/edit/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/quotations/[id]",
+      "source": "src/app/workspace/account/quotations/[id]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/quotations/[id]/pdf",
+      "source": "src/app/workspace/account/quotations/[id]/pdf/route.ts",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/quotations/[id]/revisions/new",
+      "source": "src/app/workspace/account/quotations/[id]/revisions/new/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/quotations/new",
+      "source": "src/app/workspace/account/quotations/new/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/quotations",
+      "source": "src/app/workspace/account/quotations/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/reports/[report]",
+      "source": "src/app/workspace/account/reports/[report]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/reports",
+      "source": "src/app/workspace/account/reports/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/settings/custom-fields",
+      "source": "src/app/workspace/account/settings/custom-fields/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/settings/modules",
+      "source": "src/app/workspace/account/settings/modules/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/settings",
+      "source": "src/app/workspace/account/settings/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/settings/print-templates",
+      "source": "src/app/workspace/account/settings/print-templates/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/tax/[section]",
+      "source": "src/app/workspace/account/tax/[section]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/tax",
+      "source": "src/app/workspace/account/tax/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/transactions/[id]",
+      "source": "src/app/workspace/account/transactions/[id]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/transactions/money",
+      "source": "src/app/workspace/account/transactions/money/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/transactions/new",
+      "source": "src/app/workspace/account/transactions/new/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/transactions",
+      "source": "src/app/workspace/account/transactions/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/audit",
+      "source": "src/app/workspace/account/utilities/audit/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/backup",
+      "source": "src/app/workspace/account/utilities/backup/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/export",
+      "source": "src/app/workspace/account/utilities/export/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/financial-year",
+      "source": "src/app/workspace/account/utilities/financial-year/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/import/[id]",
+      "source": "src/app/workspace/account/utilities/import/[id]/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/import",
+      "source": "src/app/workspace/account/utilities/import/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities",
+      "source": "src/app/workspace/account/utilities/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/period-locks",
+      "source": "src/app/workspace/account/utilities/period-locks/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/recycle-bin",
+      "source": "src/app/workspace/account/utilities/recycle-bin/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    },
+    {
+      "route": "/workspace/account/utilities/verification",
+      "source": "src/app/workspace/account/utilities/verification/page.tsx",
+      "classification": "PENDING_NATIVE",
+      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+    }
+  ],
+  "externalLinks": [
+    {
+      "route": "/contact",
+      "classification": "EXTERNAL_LINK",
+      "reason": "Help/support may use an external browser."
+    },
+    {
+      "route": "/resources/faq",
+      "classification": "EXTERNAL_LINK",
+      "reason": "Help/support may use an external browser."
+    }
+  ]
+}
