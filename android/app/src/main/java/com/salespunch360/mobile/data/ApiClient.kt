@@ -11,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -36,6 +37,13 @@ class ApiClient(private val session:SecureSession){
  suspend fun accountMasterOptions():AccountMasterOptions=json.decodeFromString(call("api/v1/mobile/account/master-data/customers?view=options"))
  suspend fun accountMasterDetail(kind:String,id:String):AccountPartyDetail=json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}/${enc(id)}"))
  suspend fun saveAccountMaster(kind:String,id:String?,payload:kotlinx.serialization.json.JsonObject):AccountMasterRecord{val raw=call("api/v1/mobile/account/master-data/${enc(kind)}${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString());return runCatching{json.decodeFromString<AccountMasterRecord>(raw)}.getOrElse{json.decodeFromString<AccountPartyDetail>(raw).record}}
+ suspend fun accountSalesOptions()=json.parseToJsonElement(call("api/v1/mobile/account/transactions/options")).jsonObject
+ suspend fun accountSalesDocuments(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/transactions"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun accountSalesDocument(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}")).jsonObject
+ suspend fun createAccountSalesDocument(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions","POST",payload.toString())).jsonObject
+ suspend fun postAccountSalesDocument(id:String)=call("api/v1/mobile/account/transactions/${enc(id)}/post","POST")
+ suspend fun createCustomerReceipt(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/receipts","POST",payload.toString())).jsonObject
+ suspend fun customerReceiptContext()=json.parseToJsonElement(call("api/v1/mobile/account/receipts")).jsonObject
  suspend fun dashboard(liveEmployee:String?=null,checkEmployee:String?=null):MobileDashboardContext{val q=buildList{liveEmployee?.let{add("liveEmployee=${enc(it)}")};checkEmployee?.let{add("checkEmployee=${enc(it)}")}}.joinToString("&");return json.decodeFromString(call("api/v1/mobile/dashboard${if(q.isBlank())"" else "?$q"}"))}
  suspend fun createWebSessionHandoff(redirectPath:String="/workspace/account")=json.decodeFromString<WebSessionHandoff>(call("api/v1/mobile/web-session","POST",json.encodeToString(WebSessionRequest(redirectPath))))
  suspend fun registerPush(installationId:String,fcmToken:String){call("api/v1/mobile/push","POST",json.encodeToString(buildJsonObject{put("installationId",installationId);put("fcmToken",fcmToken)}))};suspend fun logout(){try{call("api/v1/mobile/auth/logout","POST")}finally{session.clear()}};suspend fun changePassword(current:String,password:String,confirm:String)=call("api/v1/mobile/auth/password","POST",json.encodeToString(PasswordChangeRequest(current,password,confirm)))

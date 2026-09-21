@@ -425,6 +425,81 @@
         "GET/POST /api/v1/mobile/account/master-data/warehouses",
         "GET/PATCH /api/v1/mobile/account/master-data/warehouses/{id}"
       ]
+    },
+    {
+      "feature": "Sale Invoice",
+      "classification": "PENDING_NATIVE",
+      "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
+      "android": "AccountSalesScreen / SalesDocumentEditor / SalesDocumentDetail",
+      "api": [
+        "GET/POST /api/v1/mobile/account/transactions",
+        "GET /api/v1/mobile/account/transactions/{id}",
+        "POST /api/v1/mobile/account/transactions/{id}/post"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Payment-In / Customer Receipt",
+      "classification": "PENDING_NATIVE",
+      "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
+      "android": "CustomerReceiptScreen",
+      "api": [
+        "GET/POST /api/v1/mobile/account/receipts"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Proforma Invoice",
+      "classification": "PENDING_NATIVE",
+      "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
+      "android": "AccountSalesScreen / SalesDocumentEditor / SalesDocumentDetail",
+      "api": [
+        "GET/POST /api/v1/mobile/account/transactions",
+        "GET /api/v1/mobile/account/transactions/{id}",
+        "POST /api/v1/mobile/account/transactions/{id}/post"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Sale Order",
+      "classification": "PENDING_NATIVE",
+      "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
+      "android": "AccountSalesScreen / SalesDocumentEditor / SalesDocumentDetail",
+      "api": [
+        "GET/POST /api/v1/mobile/account/transactions",
+        "GET /api/v1/mobile/account/transactions/{id}",
+        "POST /api/v1/mobile/account/transactions/{id}/post"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Delivery Challan",
+      "classification": "PENDING_NATIVE",
+      "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
+      "android": "AccountSalesScreen / SalesDocumentEditor / SalesDocumentDetail",
+      "api": [
+        "GET/POST /api/v1/mobile/account/transactions",
+        "GET /api/v1/mobile/account/transactions/{id}",
+        "POST /api/v1/mobile/account/transactions/{id}/post"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Credit Note / Sale Return",
+      "classification": "PENDING_NATIVE",
+      "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
+      "android": "AccountSalesScreen / SalesDocumentEditor / SalesDocumentDetail",
+      "api": [
+        "GET/POST /api/v1/mobile/account/transactions",
+        "GET /api/v1/mobile/account/transactions/{id}",
+        "POST /api/v1/mobile/account/transactions/{id}/post"
+      ],
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+    },
+    {
+      "feature": "Estimate / Quotation",
+      "classification": "PENDING_NATIVE",
+      "reason": "Separate quotation lifecycle, revisions, transitions, sharing, output, and native UI are not yet implemented."
     }
   ]
 }
