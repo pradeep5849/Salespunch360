@@ -61,7 +61,16 @@
       "route": "/workspace/account/expenses/[id]",
       "source": "src/app/workspace/account/expenses/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native list/detail/editor, lifecycle actions, recurring schedule and attachment flow implemented; Android CI/device validation pending.",
+      "android": "ExpenseScreen / AccountExpenseViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/expenses",
+        "GET/PATCH /api/v1/mobile/account/expenses/{id}",
+        "POST /api/v1/mobile/account/expenses/{id}/action",
+        "POST /api/v1/mobile/account/expenses/{id}/attachments",
+        "POST /api/v1/mobile/account/expenses/recurring"
+      ],
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
     },
     {
       "route": "/workspace/account/expenses/categories",
@@ -73,31 +82,70 @@
       "route": "/workspace/account/expenses/new",
       "source": "src/app/workspace/account/expenses/new/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native list/detail/editor, lifecycle actions, recurring schedule and attachment flow implemented; Android CI/device validation pending.",
+      "android": "ExpenseScreen / AccountExpenseViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/expenses",
+        "GET/PATCH /api/v1/mobile/account/expenses/{id}",
+        "POST /api/v1/mobile/account/expenses/{id}/action",
+        "POST /api/v1/mobile/account/expenses/{id}/attachments",
+        "POST /api/v1/mobile/account/expenses/recurring"
+      ],
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
     },
     {
       "route": "/workspace/account/expenses",
       "source": "src/app/workspace/account/expenses/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native list/detail/editor, lifecycle actions, recurring schedule and attachment flow implemented; Android CI/device validation pending.",
+      "android": "ExpenseScreen / AccountExpenseViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/expenses",
+        "GET/PATCH /api/v1/mobile/account/expenses/{id}",
+        "POST /api/v1/mobile/account/expenses/{id}/action",
+        "POST /api/v1/mobile/account/expenses/{id}/attachments",
+        "POST /api/v1/mobile/account/expenses/recurring"
+      ],
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
     },
     {
       "route": "/workspace/account/expenses/recurring",
       "source": "src/app/workspace/account/expenses/recurring/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native list/detail/editor, lifecycle actions, recurring schedule and attachment flow implemented; Android CI/device validation pending.",
+      "android": "ExpenseScreen / AccountExpenseViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/expenses",
+        "GET/PATCH /api/v1/mobile/account/expenses/{id}",
+        "POST /api/v1/mobile/account/expenses/{id}/action",
+        "POST /api/v1/mobile/account/expenses/{id}/attachments",
+        "POST /api/v1/mobile/account/expenses/recurring"
+      ],
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
     },
     {
       "route": "/workspace/account/inventory/[section]",
       "source": "src/app/workspace/account/inventory/[section]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native stock, opening, transfer, adjustment, batch, serial, pricing and low-stock workflows implemented; Android CI/device validation pending.",
+      "android": "InventoryScreen / AccountInventoryViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/inventory/{stock,low-stock,options,batches,serials,prices}",
+        "GET/POST /api/v1/mobile/account/inventory/{opening,transfers,adjustments}"
+      ],
+      "sharedService": "src/lib/account/inventory.ts actor-parameterized authoritative domain"
     },
     {
       "route": "/workspace/account/inventory",
       "source": "src/app/workspace/account/inventory/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native stock, opening, transfer, adjustment, batch, serial, pricing and low-stock workflows implemented; Android CI/device validation pending.",
+      "android": "InventoryScreen / AccountInventoryViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/inventory/{stock,low-stock,options,batches,serials,prices}",
+        "GET/POST /api/v1/mobile/account/inventory/{opening,transfers,adjustments}"
+      ],
+      "sharedService": "src/lib/account/inventory.ts actor-parameterized authoritative domain"
     },
     {
       "route": "/workspace/account/menu",
@@ -367,9 +415,7 @@
   "features": [
     {
       "feature": "Account dashboard",
-      "webRoutes": [
-        "/workspace/account/dashboard"
-      ],
+      "webRoutes": ["/workspace/account/dashboard"],
       "classification": "NATIVE_COMPLETE",
       "android": "NativeAccountAuthenticatedApp / AccountDashboardScreen",
       "api": [
@@ -379,9 +425,7 @@
     },
     {
       "feature": "Customers",
-      "webRoutes": [
-        "/workspace/account/customers"
-      ],
+      "webRoutes": ["/workspace/account/customers"],
       "classification": "NATIVE_COMPLETE",
       "android": "AccountMasterScreen(customers)",
       "api": [
@@ -391,9 +435,7 @@
     },
     {
       "feature": "Vendors",
-      "webRoutes": [
-        "/workspace/account/vendors"
-      ],
+      "webRoutes": ["/workspace/account/vendors"],
       "classification": "NATIVE_COMPLETE",
       "android": "AccountMasterScreen(vendors)",
       "api": [
@@ -416,9 +458,7 @@
     },
     {
       "feature": "Warehouses",
-      "webRoutes": [
-        "/workspace/account/inventory/warehouses"
-      ],
+      "webRoutes": ["/workspace/account/inventory/warehouses"],
       "classification": "NATIVE_COMPLETE",
       "android": "AccountMasterScreen(warehouses)",
       "api": [
@@ -443,9 +483,7 @@
       "classification": "PENDING_NATIVE",
       "reason": "Native list/create/detail and authoritative actions are implemented, but Android SDK compilation and real-device QA have not been completed; do not mark complete prematurely.",
       "android": "CustomerReceiptScreen",
-      "api": [
-        "GET/POST /api/v1/mobile/account/receipts"
-      ],
+      "api": ["GET/POST /api/v1/mobile/account/receipts"],
       "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
     },
     {
@@ -534,9 +572,7 @@
       "feature": "Payment-Out / Vendor Payment",
       "classification": "PENDING_NATIVE",
       "reason": "Functional native workflow implemented; Android SDK compilation, CI, and device validation remain pending.",
-      "api": [
-        "GET/POST /api/v1/mobile/account/vendor-payments"
-      ],
+      "api": ["GET/POST /api/v1/mobile/account/vendor-payments"],
       "sharedService": "src/lib/account/commercial.ts actor-parameterized domain",
       "android": "VendorPaymentScreen / VendorPaymentViewModel"
     },
@@ -563,6 +599,20 @@
       ],
       "sharedService": "src/lib/account/commercial.ts actor-parameterized domain",
       "android": "PurchaseScreen / PurchaseEditor / PurchaseDetail"
+    },
+    {
+      "feature": "Expenses and approvals",
+      "classification": "PENDING_NATIVE",
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "ExpenseScreen / AccountExpenseViewModel",
+      "sharedService": "src/lib/account/expenses.ts"
+    },
+    {
+      "feature": "Inventory movements and stock",
+      "classification": "PENDING_NATIVE",
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "InventoryScreen / AccountInventoryViewModel",
+      "sharedService": "src/lib/account/inventory.ts"
     }
   ]
 }

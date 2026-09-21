@@ -20,7 +20,11 @@ import {
   type ProjectActor,
 } from "./projects";
 import { allocateDocumentNumberInTx } from "./numbering";
-import { postJournalInTx, reverseJournal } from "@/lib/accounting/service";
+import {
+  postJournalInTx,
+  reverseJournal,
+  reverseJournalForActor,
+} from "@/lib/accounting/service";
 import { privateStorage } from "@/lib/storage";
 import { calculateTax } from "./tax";
 const D = Prisma.Decimal,
@@ -87,7 +91,9 @@ async function approvalRequired(
   companyId: string,
   total: Prisma.Decimal,
 ) {
-  const settings = await tx.accountSettings.findUnique({ where: { companyId } });
+  const settings = await tx.accountSettings.findUnique({
+    where: { companyId },
+  });
   return requiresExpenseApproval(
     total,
     settings?.expenseApprovalRequired ?? false,
@@ -217,8 +223,13 @@ const expenseInput = z
     taxRate: money.default("0"),
     cessRate: money.default("0"),
     taxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
-    stateOfSupplyCode: z.string().regex(/^\d{2}$/).optional(),
-    taxCreditTreatment: z.enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"]).default("ELIGIBLE"),
+    stateOfSupplyCode: z
+      .string()
+      .regex(/^\d{2}$/)
+      .optional(),
+    taxCreditTreatment: z
+      .enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"])
+      .default("ELIGIBLE"),
     moneyAccountId: z.string().uuid().optional(),
     employeeReimbursementId: z.string().uuid().optional(),
     reference: z.string().max(160).optional(),
@@ -306,15 +317,37 @@ async function validateExpenseRelations(
     throw new Error("INVALID_REIMBURSEMENT");
   return category;
 }
-export async function createExpense(raw: unknown, occurrenceKey?: string) {
-  const a = await actor("ACCOUNT_EXPENSE_ENTRY", true),
-    d = expenseInput.parse(raw),
+export async function createExpenseForActor(
+  a: Actor,
+  raw: unknown,
+  occurrenceKey?: string,
+) {
+  const d = expenseInput.parse(raw),
     category = await validateExpenseRelations(a, d),
     inputAmount = new D(d.taxableAmount),
-    context = await db.branch.findFirst({where:{id:d.branchId,companyId:a.companyId},select:{gstStateCode:true}}),
-    settings = await db.accountSettings.findUnique({where:{companyId:a.companyId!}}),
-    calculated = calculateTax({amount:inputAmount,taxRate:new D(d.taxRate),cessRate:new D(d.cessRate),taxMode:d.taxMode,sellerStateCode:context?.gstStateCode??settings?.defaultStateCode,stateOfSupplyCode:d.stateOfSupplyCode??context?.gstStateCode??settings?.defaultStateCode,itcEligible:d.taxCreditTreatment==="ELIGIBLE",composition:settings?.compositionEnabled}),
-    taxable = calculated.taxable, tax = calculated.totalTax, total = calculated.grandTotal;
+    context = await db.branch.findFirst({
+      where: { id: d.branchId, companyId: a.companyId },
+      select: { gstStateCode: true },
+    }),
+    settings = await db.accountSettings.findUnique({
+      where: { companyId: a.companyId! },
+    }),
+    calculated = calculateTax({
+      amount: inputAmount,
+      taxRate: new D(d.taxRate),
+      cessRate: new D(d.cessRate),
+      taxMode: d.taxMode,
+      sellerStateCode: context?.gstStateCode ?? settings?.defaultStateCode,
+      stateOfSupplyCode:
+        d.stateOfSupplyCode ??
+        context?.gstStateCode ??
+        settings?.defaultStateCode,
+      itcEligible: d.taxCreditTreatment === "ELIGIBLE",
+      composition: settings?.compositionEnabled,
+    }),
+    taxable = calculated.taxable,
+    tax = calculated.totalTax,
+    total = calculated.grandTotal;
   return db.$transaction(
     async (tx) => {
       const transactionNumber = await allocateDocumentNumberInTx(tx, {
@@ -334,7 +367,10 @@ export async function createExpense(raw: unknown, occurrenceKey?: string) {
             taxableAmount: taxable,
             taxRate: new D(d.taxRate),
             taxAmount: tax,
-            cgstAmount: calculated.cgst, sgstAmount: calculated.sgst, igstAmount: calculated.igst, cessAmount: calculated.cess,
+            cgstAmount: calculated.cgst,
+            sgstAmount: calculated.sgst,
+            igstAmount: calculated.igst,
+            cessAmount: calculated.cess,
             totalAmount: total,
             status: "DRAFT",
             approvedAt: null,
@@ -351,16 +387,33 @@ export async function createExpense(raw: unknown, occurrenceKey?: string) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function updateExpense(id: string, raw: unknown) {
-  const a = await actor("ACCOUNT_EXPENSE_ENTRY", true);
+export async function updateExpenseForActor(
+  a: Actor,
+  id: string,
+  raw: unknown,
+) {
   await scopedExpense(a, id, "DRAFT");
   const d = expenseInput.parse(raw);
   await validateExpenseRelations(a, d);
   const [branch, settings] = await Promise.all([
-      db.branch.findFirst({ where: { id: d.branchId, companyId: a.companyId } }),
+      db.branch.findFirst({
+        where: { id: d.branchId, companyId: a.companyId },
+      }),
       db.accountSettings.findUnique({ where: { companyId: a.companyId! } }),
     ]),
-    calculated = calculateTax({ amount: new D(d.taxableAmount), taxRate: new D(d.taxRate), cessRate: new D(d.cessRate), taxMode: d.taxMode, sellerStateCode: branch?.gstStateCode ?? settings?.defaultStateCode, stateOfSupplyCode: d.stateOfSupplyCode ?? branch?.gstStateCode ?? settings?.defaultStateCode, composition: settings?.compositionEnabled, itcEligible: d.taxCreditTreatment === "ELIGIBLE" }),
+    calculated = calculateTax({
+      amount: new D(d.taxableAmount),
+      taxRate: new D(d.taxRate),
+      cessRate: new D(d.cessRate),
+      taxMode: d.taxMode,
+      sellerStateCode: branch?.gstStateCode ?? settings?.defaultStateCode,
+      stateOfSupplyCode:
+        d.stateOfSupplyCode ??
+        branch?.gstStateCode ??
+        settings?.defaultStateCode,
+      composition: settings?.compositionEnabled,
+      itcEligible: d.taxCreditTreatment === "ELIGIBLE",
+    }),
     changed = await db.expenseTransaction.updateMany({
       where: { id, companyId: a.companyId, status: "DRAFT", createdById: a.id },
       data: {
@@ -377,14 +430,11 @@ export async function updateExpense(id: string, raw: unknown) {
     });
   if (changed.count !== 1) throw new Error("EXPENSE_NOT_EDITABLE");
 }
-export async function transitionExpense(
+export async function transitionExpenseForActor(
+  a: Actor,
   id: string,
   to: ExpenseTransactionStatus,
 ) {
-  const permission = ["APPROVED", "REJECTED"].includes(to)
-      ? "ACCOUNT_EXPENSE_APPROVE"
-      : "ACCOUNT_EXPENSE_ENTRY",
-    a = await actor(permission, true);
   await scopedExpense(a, id);
   return db.$transaction(
     async (tx) => {
@@ -434,8 +484,7 @@ export async function transitionExpense(
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function postExpense(id: string) {
-  const a = await actor("ACCOUNT_EXPENSE_ENTRY", true);
+export async function postExpenseForActor(a: Actor, id: string) {
   if (!["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(a.accountRole ?? ""))
     throw new AuthorizationError();
   await scopedExpense(a, id);
@@ -475,7 +524,16 @@ export async function postExpense(id: string) {
         tx.ledgerAccount.findMany({
           where: {
             companyId: a.companyId,
-            systemKey: { in: ["INPUT_TAX_CREDIT", "ACCOUNTS_PAYABLE", "CGST_ITC", "SGST_ITC", "IGST_ITC", "CESS_ITC"] },
+            systemKey: {
+              in: [
+                "INPUT_TAX_CREDIT",
+                "ACCOUNTS_PAYABLE",
+                "CGST_ITC",
+                "SGST_ITC",
+                "IGST_ITC",
+                "CESS_ITC",
+              ],
+            },
             isActive: true,
             allowPosting: true,
           },
@@ -486,14 +544,45 @@ export async function postExpense(id: string) {
         destination = money?.ledgerAccountId ?? byKey.get("ACCOUNTS_PAYABLE");
       if (!destination) throw new Error("EXPENSE_DESTINATION_MISSING");
       const eligible = row.taxCreditTreatment === "ELIGIBLE",
-        components = [["CGST_ITC", row.cgstAmount], ["SGST_ITC", row.sgstAmount], ["IGST_ITC", row.igstAmount], ["CESS_ITC", row.cessAmount]] as const,
-        postingLines = row.type === "OTHER_INCOME"
-          ? [{ ledgerAccountId: destination, debit: row.totalAmount, credit: Z }, { ledgerAccountId: category.defaultLedgerAccountId, debit: Z, credit: row.totalAmount }]
-          : [
-              { ledgerAccountId: category.defaultLedgerAccountId, debit: row.taxableAmount.add(eligible ? Z : row.taxAmount), credit: Z },
-              ...components.filter(([, amount]) => eligible && amount.gt(0)).map(([key, amount]) => ({ ledgerAccountId: byKey.get(key) ?? "", debit: amount, credit: Z })),
-              { ledgerAccountId: destination, debit: Z, credit: row.totalAmount },
-            ],
+        components = [
+          ["CGST_ITC", row.cgstAmount],
+          ["SGST_ITC", row.sgstAmount],
+          ["IGST_ITC", row.igstAmount],
+          ["CESS_ITC", row.cessAmount],
+        ] as const,
+        postingLines =
+          row.type === "OTHER_INCOME"
+            ? [
+                {
+                  ledgerAccountId: destination,
+                  debit: row.totalAmount,
+                  credit: Z,
+                },
+                {
+                  ledgerAccountId: category.defaultLedgerAccountId,
+                  debit: Z,
+                  credit: row.totalAmount,
+                },
+              ]
+            : [
+                {
+                  ledgerAccountId: category.defaultLedgerAccountId,
+                  debit: row.taxableAmount.add(eligible ? Z : row.taxAmount),
+                  credit: Z,
+                },
+                ...components
+                  .filter(([, amount]) => eligible && amount.gt(0))
+                  .map(([key, amount]) => ({
+                    ledgerAccountId: byKey.get(key) ?? "",
+                    debit: amount,
+                    credit: Z,
+                  })),
+                {
+                  ledgerAccountId: destination,
+                  debit: Z,
+                  credit: row.totalAmount,
+                },
+              ],
         journal = await postJournalInTx(tx, a, {
           financialYearId: fy.id,
           branchId: row.branchId,
@@ -532,16 +621,16 @@ export async function postExpense(id: string) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function reverseExpense(
+export async function reverseExpenseForActor(
+  a: Actor,
   id: string,
   entryDate: Date,
   reason: string,
 ) {
-  const a = await actor("ACCOUNT_EXPENSE_APPROVE", true);
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const row = await scopedExpense(a, id, "POSTED");
   if (!row?.journalEntryId) throw new Error("EXPENSE_NOT_REVERSIBLE");
-  const reversal = await reverseJournal({
+  const reversal = await reverseJournalForActor(a, {
     journalEntryId: row.journalEntryId,
     entryDate,
     reason,
@@ -563,21 +652,18 @@ export async function reverseExpense(
   });
   return reversal;
 }
-export async function listExpenses() {
-  const a = await actor("ACCOUNT_EXPENSE_VIEW");
+export async function listExpensesForActor(a: Actor) {
   return db.expenseTransaction.findMany({
     where: await expenseRecordScope(a),
     orderBy: { transactionDate: "desc" },
     take: 200,
   });
 }
-export async function getExpense(id: string) {
-  const a = await actor("ACCOUNT_EXPENSE_VIEW");
+export async function getExpenseForActor(a: Actor, id: string) {
   return scopedExpense(a, id);
 }
-export async function expenseOptions() {
-  const a = await actor("ACCOUNT_EXPENSE_VIEW"),
-    branchIds = await authorizedProjectBranchIds(a),
+export async function expenseOptionsForActor(a: Actor) {
+  const branchIds = await authorizedProjectBranchIds(a),
     projectScope = projectRecordScope(a, branchIds);
   return {
     categories: await db.expenseCategory.findMany({
@@ -606,9 +692,8 @@ const templateInput = z.object({
   nextDueDate: z.coerce.date(),
   amount: money,
 });
-export async function createRecurringTemplate(raw: unknown) {
-  const a = await actor("ACCOUNT_EXPENSE_ENTRY", true),
-    d = templateInput.parse(raw);
+export async function createRecurringTemplateForActor(a: Actor, raw: unknown) {
+  const d = templateInput.parse(raw);
   if (
     !branchOk(a, d.branchId) ||
     !(await db.branch.findFirst({
@@ -617,10 +702,9 @@ export async function createRecurringTemplate(raw: unknown) {
   )
     throw new AuthorizationError();
   const category = await db.expenseCategory.findFirst({
-      where: { id: d.categoryId, companyId: a.companyId, isActive: true },
-    });
-  if (!category)
-    throw new Error("INVALID_EXPENSE_CATEGORY");
+    where: { id: d.categoryId, companyId: a.companyId, isActive: true },
+  });
+  if (!category) throw new Error("INVALID_EXPENSE_CATEGORY");
   const ledger = await db.ledgerAccount.findFirst({
     where: {
       id: category.defaultLedgerAccountId,
@@ -699,10 +783,9 @@ export async function generateRecurringExpense(
           throw new AuthorizationError();
       }
       const category = await tx.expenseCategory.findFirst({
-          where: { id: t.categoryId, companyId: a.companyId, isActive: true },
-        });
-      if (!category)
-        throw new Error("INVALID_EXPENSE_CATEGORY");
+        where: { id: t.categoryId, companyId: a.companyId, isActive: true },
+      });
+      if (!category) throw new Error("INVALID_EXPENSE_CATEGORY");
       if (
         !["EXPENSE", "BOTH"].includes(category.scope) ||
         !(await tx.ledgerAccount.findFirst({
@@ -769,11 +852,14 @@ export async function generateRecurringExpense(
   );
 }
 const allowedMime = new Set(["application/pdf", "image/jpeg", "image/png"]);
-export async function addExpenseAttachment(expenseId: string, file: File) {
-  const a = await actor("ACCOUNT_EXPENSE_ENTRY", true);
+export async function addExpenseAttachmentForActor(
+  a: Actor,
+  expenseId: string,
+  file: File,
+) {
   if (!file.size || file.size > 10 * 1024 * 1024 || !allowedMime.has(file.type))
     throw new Error("INVALID_EXPENSE_ATTACHMENT");
-  await getExpense(expenseId);
+  await scopedExpense(a, expenseId);
   const id = randomUUID(),
     key = `companies/${a.companyId}/expenses/${expenseId}/${id}`;
   await privateStorage().put(key, Buffer.from(await file.arrayBuffer()));
@@ -803,16 +889,82 @@ export async function addExpenseAttachment(expenseId: string, file: File) {
     throw e;
   }
 }
-export async function downloadExpenseAttachment(id: string) {
-  const a = await actor("ACCOUNT_EXPENSE_VIEW"),
-    row = await db.expenseAttachment.findFirst({
-      where: { id, companyId: a.companyId },
-    });
+export async function downloadExpenseAttachmentForActor(a: Actor, id: string) {
+  const row = await db.expenseAttachment.findFirst({
+    where: { id, companyId: a.companyId },
+  });
   if (!row) throw new AuthorizationError();
-  await getExpense(row.expenseId);
+  await scopedExpense(a, row.expenseId);
   return {
     data: await privateStorage().get(row.storageKey),
     name: row.displayName,
     mimeType: row.mimeType,
   };
+}
+
+export async function createExpense(raw: unknown, occurrenceKey?: string) {
+  return createExpenseForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    raw,
+    occurrenceKey,
+  );
+}
+export async function updateExpense(id: string, raw: unknown) {
+  return updateExpenseForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    id,
+    raw,
+  );
+}
+export async function transitionExpense(
+  id: string,
+  to: ExpenseTransactionStatus,
+) {
+  const p = ["APPROVED", "REJECTED"].includes(to)
+    ? "ACCOUNT_EXPENSE_APPROVE"
+    : "ACCOUNT_EXPENSE_ENTRY";
+  return transitionExpenseForActor(await actor(p, true), id, to);
+}
+export async function postExpense(id: string) {
+  return postExpenseForActor(await actor("ACCOUNT_EXPENSE_ENTRY", true), id);
+}
+export async function reverseExpense(
+  id: string,
+  entryDate: Date,
+  reason: string,
+) {
+  return reverseExpenseForActor(
+    await actor("ACCOUNT_EXPENSE_APPROVE", true),
+    id,
+    entryDate,
+    reason,
+  );
+}
+export async function listExpenses() {
+  return listExpensesForActor(await actor("ACCOUNT_EXPENSE_VIEW"));
+}
+export async function getExpense(id: string) {
+  return getExpenseForActor(await actor("ACCOUNT_EXPENSE_VIEW"), id);
+}
+export async function expenseOptions() {
+  return expenseOptionsForActor(await actor("ACCOUNT_EXPENSE_VIEW"));
+}
+export async function createRecurringTemplate(raw: unknown) {
+  return createRecurringTemplateForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    raw,
+  );
+}
+export async function addExpenseAttachment(expenseId: string, file: File) {
+  return addExpenseAttachmentForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    expenseId,
+    file,
+  );
+}
+export async function downloadExpenseAttachment(id: string) {
+  return downloadExpenseAttachmentForActor(
+    await actor("ACCOUNT_EXPENSE_VIEW"),
+    id,
+  );
 }

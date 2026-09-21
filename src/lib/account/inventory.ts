@@ -1,48 +1,787 @@
 import { Prisma, StockMovementType } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { AuthorizationError, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import {
+  AuthorizationError,
+  requirePermission,
+  requirePermissionForMutation,
+} from "@/lib/auth/authorization";
 import { requireAccountModules } from "./modules";
 import type { ProjectActor } from "./projects";
-const D=Prisma.Decimal,Z=new D(0), qty=z.string().regex(/^\d{1,14}(\.\d{1,4})?$/), money=z.string().regex(/^\d{1,16}(\.\d{1,4})?$/);
-const IN=new Set<StockMovementType>(["OPENING","PURCHASE","SALES_RETURN","TRANSFER_IN","ADJUSTMENT_IN"]);
-export const signedQuantity=(type:StockMovementType, quantity:Prisma.Decimal)=>IN.has(type)?quantity:quantity.neg();
-export function stockValuation(rows:Array<{movementType:StockMovementType;quantity:Prisma.Decimal;unitCost:Prisma.Decimal}>){let quantity=Z,value=Z;for(const row of rows){const q=signedQuantity(row.movementType,row.quantity);if(q.gte(0)){quantity=quantity.add(q);value=value.add(q.mul(row.unitCost));}else{const average=quantity.gt(0)?value.div(quantity):row.unitCost;quantity=quantity.add(q);value=value.add(q.mul(average));}}return {quantity,averageUnitCost:quantity.gt(0)?value.div(quantity).toDecimalPlaces(4):Z,stockValue:value.toDecimalPlaces(2)};}
-export function chooseProductRate(input:{customerRate?:Prisma.Decimal|null;tierRate?:Prisma.Decimal|null;defaultRate?:Prisma.Decimal|null}){return input.customerRate??input.tierRate??input.defaultRate??Z;}
-async function actor(write=false){const a=(write?await requirePermissionForMutation("ACCOUNT_STOCK"):await requirePermission("ACCOUNT_STOCK")) as ProjectActor;await requireAccountModules(a,"INVENTORY");if(a.accountRole==="PROJECT_MANAGER")throw new AuthorizationError();return a;}
-const branchAllowed=(a:ProjectActor,id:string)=>a.branchAccessScope!=="SELECTED_BRANCHES"||a.branchIds?.includes(id);
-async function warehouse(tx:Prisma.TransactionClient,a:ProjectActor,id:string){const row=await tx.warehouse.findFirst({where:{id,companyId:a.companyId,isActive:true}});if(!row||!branchAllowed(a,row.branchId))throw new AuthorizationError();return row;}
-async function product(tx:Prisma.TransactionClient,a:ProjectActor,id:string){const row=await tx.accountProduct.findFirst({where:{id,companyId:a.companyId,isActive:true,trackInventory:true}});if(!row)throw new Error("INVALID_INVENTORY_PRODUCT");return row;}
-async function balance(tx:Prisma.TransactionClient,companyId:string,warehouseId:string,productId:string,batchId?:string,serialNumberId?:string){const rows=await tx.stockMovement.findMany({where:{companyId,warehouseId,productId,...(batchId?{batchId}:{}),...(serialNumberId?{serialNumberId}:{})},select:{movementType:true,quantity:true}});return rows.reduce((n,r)=>n.add(signedQuantity(r.movementType,r.quantity)),Z);}
-const movement=z.object({warehouseId:z.string().uuid(),productId:z.string().uuid(),quantity:qty,unitCost:money.default("0"),movementDate:z.coerce.date(),batchId:z.string().uuid().optional(),serialNumberId:z.string().uuid().optional(),reason:z.string().trim().min(1).max(1000).optional(),sourceType:z.string().max(80),sourceId:z.string().max(160),sourceLineId:z.string().uuid().optional()}).strict();
-export async function createStockMovement(type:StockMovementType,raw:unknown){const a=await actor(true),d=movement.parse(raw);return db.$transaction(async tx=>{await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.warehouseId}:${d.productId}`}))`;const [w,p,settings]=await Promise.all([warehouse(tx,a,d.warehouseId),product(tx,a,d.productId),tx.accountSettings.findUnique({where:{companyId:a.companyId!}})]);const q=new D(d.quantity);if(p.trackingMode==="BATCH"&&!d.batchId)throw new Error("BATCH_REQUIRED");if(p.trackingMode==="SERIAL"&&(!d.serialNumberId||!q.equals(1)))throw new Error("SERIAL_QUANTITY_MISMATCH");if(d.batchId&&!await tx.inventoryBatch.findFirst({where:{id:d.batchId,companyId:a.companyId,productId:p.id}}))throw new AuthorizationError();if(d.serialNumberId&&!await tx.inventorySerialNumber.findFirst({where:{id:d.serialNumberId,companyId:a.companyId,productId:p.id}}))throw new AuthorizationError();if(!IN.has(type)&&!(settings?.negativeStockAllowed??false)&&(await balance(tx,a.companyId!,w.id,p.id,d.batchId,d.serialNumberId)).lt(q))throw new Error("INSUFFICIENT_STOCK");const unitCost=new D(d.unitCost);const row=await tx.stockMovement.create({data:{...d,companyId:a.companyId!,branchId:w.branchId,movementType:type,quantity:q,unitCost,totalCost:q.mul(unitCost).toDecimalPlaces(2),createdById:a.id}});await tx.accountOperationalAudit.create({data:{companyId:a.companyId!,actorUserId:a.id,eventType:`STOCK_${type}`,entityType:"STOCK_MOVEMENT",entityId:row.id,metadata:{reason:d.reason}}});return row;},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}
-export const createOpeningStock=(raw:unknown)=>createStockMovement("OPENING",raw);
-export const adjustStock=(direction:"IN"|"OUT",raw:unknown)=>createStockMovement(direction==="IN"?"ADJUSTMENT_IN":"ADJUSTMENT_OUT",raw);
-export const transferInput=z.object({sourceWarehouseId:z.string().uuid(),destinationWarehouseId:z.string().uuid(),productId:z.string().uuid(),quantity:qty,movementDate:z.coerce.date(),batchId:z.string().uuid().optional(),serialNumberId:z.string().uuid().optional(),reason:z.string().trim().min(1)}).strict();
-export async function transferStock(raw:unknown){const a=await actor(true),d=transferInput.parse(raw);if(d.sourceWarehouseId===d.destinationWarehouseId)throw new Error("SAME_WAREHOUSE");return db.$transaction(async tx=>{await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.productId}:${[d.sourceWarehouseId,d.destinationWarehouseId].sort().join(":")}`}))`;const [source,destination,p,settings]=await Promise.all([warehouse(tx,a,d.sourceWarehouseId),warehouse(tx,a,d.destinationWarehouseId),product(tx,a,d.productId),tx.accountSettings.findUnique({where:{companyId:a.companyId!}})]),sourceRows=await tx.stockMovement.findMany({where:{companyId:a.companyId,warehouseId:source.id,productId:p.id,...(d.batchId?{batchId:d.batchId}:{}),...(d.serialNumberId?{serialNumberId:d.serialNumberId}:{})},orderBy:[{movementDate:"asc"},{createdAt:"asc"}]}),valuation=stockValuation(sourceRows),q=new D(d.quantity);if(!(settings?.negativeStockAllowed??false)&&valuation.quantity.lt(q))throw new Error("INSUFFICIENT_STOCK");if(d.serialNumberId&&(!q.equals(1)||!valuation.quantity.equals(1)))throw new Error("SERIAL_NOT_AVAILABLE");const transferId=crypto.randomUUID(),unitCost=valuation.averageUnitCost,totalCost=q.mul(unitCost).toDecimalPlaces(2),base={companyId:a.companyId!,productId:p.id,quantity:q,unitCost,totalCost,sourceType:"TRANSFER",sourceId:transferId,batchId:d.batchId,serialNumberId:d.serialNumberId,reason:d.reason,movementDate:d.movementDate,createdById:a.id};return Promise.all([tx.stockMovement.create({data:{...base,branchId:source.branchId,warehouseId:source.id,movementType:"TRANSFER_OUT"}}),tx.stockMovement.create({data:{...base,branchId:destination.branchId,warehouseId:destination.id,movementType:"TRANSFER_IN"}})]);},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}
-export async function inventorySnapshot(){const a=await actor(),warehouses=await db.warehouse.findMany({where:{companyId:a.companyId,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{})}}),rows=await db.stockMovement.findMany({where:{companyId:a.companyId,warehouseId:{in:warehouses.map(w=>w.id)}},orderBy:[{movementDate:"asc"},{createdAt:"asc"}]});const grouped=new Map<string,typeof rows>();for(const row of rows){const key=`${row.warehouseId}:${row.productId}`;grouped.set(key,[...(grouped.get(key)??[]),row]);}return [...grouped].map(([key,movements])=>({warehouseId:key.split(":")[0],productId:key.split(":")[1],...stockValuation(movements)}));}
-export function itemProfitability(revenue:Prisma.Decimal,cogs:Prisma.Decimal){return {revenue,cogs,profit:revenue.sub(cogs),marginPercent:revenue.isZero()?Z:revenue.sub(cogs).div(revenue).mul(100)};}
+const D = Prisma.Decimal,
+  Z = new D(0),
+  qty = z.string().regex(/^\d{1,14}(\.\d{1,4})?$/),
+  money = z.string().regex(/^\d{1,16}(\.\d{1,4})?$/);
+const IN = new Set<StockMovementType>([
+  "OPENING",
+  "PURCHASE",
+  "SALES_RETURN",
+  "TRANSFER_IN",
+  "ADJUSTMENT_IN",
+]);
+export const signedQuantity = (
+  type: StockMovementType,
+  quantity: Prisma.Decimal,
+) => (IN.has(type) ? quantity : quantity.neg());
+export function stockValuation(
+  rows: Array<{
+    movementType: StockMovementType;
+    quantity: Prisma.Decimal;
+    unitCost: Prisma.Decimal;
+  }>,
+) {
+  let quantity = Z,
+    value = Z;
+  for (const row of rows) {
+    const q = signedQuantity(row.movementType, row.quantity);
+    if (q.gte(0)) {
+      quantity = quantity.add(q);
+      value = value.add(q.mul(row.unitCost));
+    } else {
+      const average = quantity.gt(0) ? value.div(quantity) : row.unitCost;
+      quantity = quantity.add(q);
+      value = value.add(q.mul(average));
+    }
+  }
+  return {
+    quantity,
+    averageUnitCost: quantity.gt(0)
+      ? value.div(quantity).toDecimalPlaces(4)
+      : Z,
+    stockValue: value.toDecimalPlaces(2),
+  };
+}
+export function chooseProductRate(input: {
+  customerRate?: Prisma.Decimal | null;
+  tierRate?: Prisma.Decimal | null;
+  defaultRate?: Prisma.Decimal | null;
+}) {
+  return input.customerRate ?? input.tierRate ?? input.defaultRate ?? Z;
+}
+async function actor(write = false) {
+  const a = (
+    write
+      ? await requirePermissionForMutation("ACCOUNT_STOCK")
+      : await requirePermission("ACCOUNT_STOCK")
+  ) as ProjectActor;
+  await requireAccountModules(a, "INVENTORY");
+  if (a.accountRole === "PROJECT_MANAGER") throw new AuthorizationError();
+  return a;
+}
+const branchAllowed = (a: ProjectActor, id: string) =>
+  a.branchAccessScope !== "SELECTED_BRANCHES" || a.branchIds?.includes(id);
+async function warehouse(
+  tx: Prisma.TransactionClient,
+  a: ProjectActor,
+  id: string,
+) {
+  const row = await tx.warehouse.findFirst({
+    where: { id, companyId: a.companyId, isActive: true },
+  });
+  if (!row || !branchAllowed(a, row.branchId)) throw new AuthorizationError();
+  return row;
+}
+async function product(
+  tx: Prisma.TransactionClient,
+  a: ProjectActor,
+  id: string,
+) {
+  const row = await tx.accountProduct.findFirst({
+    where: { id, companyId: a.companyId, isActive: true, trackInventory: true },
+  });
+  if (!row) throw new Error("INVALID_INVENTORY_PRODUCT");
+  return row;
+}
+async function balance(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  warehouseId: string,
+  productId: string,
+  batchId?: string,
+  serialNumberId?: string,
+) {
+  const rows = await tx.stockMovement.findMany({
+    where: {
+      companyId,
+      warehouseId,
+      productId,
+      ...(batchId ? { batchId } : {}),
+      ...(serialNumberId ? { serialNumberId } : {}),
+    },
+    select: { movementType: true, quantity: true },
+  });
+  return rows.reduce(
+    (n, r) => n.add(signedQuantity(r.movementType, r.quantity)),
+    Z,
+  );
+}
+const movement = z
+  .object({
+    warehouseId: z.string().uuid(),
+    productId: z.string().uuid(),
+    quantity: qty,
+    unitCost: money.default("0"),
+    movementDate: z.coerce.date(),
+    batchId: z.string().uuid().optional(),
+    serialNumberId: z.string().uuid().optional(),
+    reason: z.string().trim().min(1).max(1000).optional(),
+    sourceType: z.string().max(80),
+    sourceId: z.string().max(160),
+    sourceLineId: z.string().uuid().optional(),
+  })
+  .strict();
+export async function createStockMovementForActor(
+  a: ProjectActor,
+  type: StockMovementType,
+  raw: unknown,
+) {
+  const d = movement.parse(raw);
+  return db.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.warehouseId}:${d.productId}`}))`;
+      const [w, p, settings] = await Promise.all([
+        warehouse(tx, a, d.warehouseId),
+        product(tx, a, d.productId),
+        tx.accountSettings.findUnique({ where: { companyId: a.companyId! } }),
+      ]);
+      const q = new D(d.quantity);
+      if (p.trackingMode === "BATCH" && !d.batchId)
+        throw new Error("BATCH_REQUIRED");
+      if (p.trackingMode === "SERIAL" && (!d.serialNumberId || !q.equals(1)))
+        throw new Error("SERIAL_QUANTITY_MISMATCH");
+      if (
+        d.batchId &&
+        !(await tx.inventoryBatch.findFirst({
+          where: { id: d.batchId, companyId: a.companyId, productId: p.id },
+        }))
+      )
+        throw new AuthorizationError();
+      if (
+        d.serialNumberId &&
+        !(await tx.inventorySerialNumber.findFirst({
+          where: {
+            id: d.serialNumberId,
+            companyId: a.companyId,
+            productId: p.id,
+          },
+        }))
+      )
+        throw new AuthorizationError();
+      if (
+        !IN.has(type) &&
+        !(settings?.negativeStockAllowed ?? false) &&
+        (
+          await balance(
+            tx,
+            a.companyId!,
+            w.id,
+            p.id,
+            d.batchId,
+            d.serialNumberId,
+          )
+        ).lt(q)
+      )
+        throw new Error("INSUFFICIENT_STOCK");
+      const unitCost = new D(d.unitCost);
+      const row = await tx.stockMovement.create({
+        data: {
+          ...d,
+          companyId: a.companyId!,
+          branchId: w.branchId,
+          movementType: type,
+          quantity: q,
+          unitCost,
+          totalCost: q.mul(unitCost).toDecimalPlaces(2),
+          createdById: a.id,
+        },
+      });
+      await tx.accountOperationalAudit.create({
+        data: {
+          companyId: a.companyId!,
+          actorUserId: a.id,
+          eventType: `STOCK_${type}`,
+          entityType: "STOCK_MOVEMENT",
+          entityId: row.id,
+          metadata: { reason: d.reason },
+        },
+      });
+      return row;
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
+export async function createStockMovement(
+  type: StockMovementType,
+  raw: unknown,
+) {
+  return createStockMovementForActor(await actor(true), type, raw);
+}
+export const createOpeningStock = (raw: unknown) =>
+  createStockMovement("OPENING", raw);
+export const adjustStock = (direction: "IN" | "OUT", raw: unknown) =>
+  createStockMovement(
+    direction === "IN" ? "ADJUSTMENT_IN" : "ADJUSTMENT_OUT",
+    raw,
+  );
+export const transferInput = z
+  .object({
+    sourceWarehouseId: z.string().uuid(),
+    destinationWarehouseId: z.string().uuid(),
+    productId: z.string().uuid(),
+    quantity: qty,
+    movementDate: z.coerce.date(),
+    batchId: z.string().uuid().optional(),
+    serialNumberId: z.string().uuid().optional(),
+    reason: z.string().trim().min(1),
+  })
+  .strict();
+export async function transferStockForActor(a: ProjectActor, raw: unknown) {
+  const d = transferInput.parse(raw);
+  if (d.sourceWarehouseId === d.destinationWarehouseId)
+    throw new Error("SAME_WAREHOUSE");
+  return db.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.productId}:${[d.sourceWarehouseId, d.destinationWarehouseId].sort().join(":")}`}))`;
+      const [source, destination, p, settings] = await Promise.all([
+          warehouse(tx, a, d.sourceWarehouseId),
+          warehouse(tx, a, d.destinationWarehouseId),
+          product(tx, a, d.productId),
+          tx.accountSettings.findUnique({ where: { companyId: a.companyId! } }),
+        ]),
+        sourceRows = await tx.stockMovement.findMany({
+          where: {
+            companyId: a.companyId,
+            warehouseId: source.id,
+            productId: p.id,
+            ...(d.batchId ? { batchId: d.batchId } : {}),
+            ...(d.serialNumberId ? { serialNumberId: d.serialNumberId } : {}),
+          },
+          orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
+        }),
+        valuation = stockValuation(sourceRows),
+        q = new D(d.quantity);
+      if (
+        !(settings?.negativeStockAllowed ?? false) &&
+        valuation.quantity.lt(q)
+      )
+        throw new Error("INSUFFICIENT_STOCK");
+      if (d.serialNumberId && (!q.equals(1) || !valuation.quantity.equals(1)))
+        throw new Error("SERIAL_NOT_AVAILABLE");
+      const transferId = crypto.randomUUID(),
+        unitCost = valuation.averageUnitCost,
+        totalCost = q.mul(unitCost).toDecimalPlaces(2),
+        base = {
+          companyId: a.companyId!,
+          productId: p.id,
+          quantity: q,
+          unitCost,
+          totalCost,
+          sourceType: "TRANSFER",
+          sourceId: transferId,
+          batchId: d.batchId,
+          serialNumberId: d.serialNumberId,
+          reason: d.reason,
+          movementDate: d.movementDate,
+          createdById: a.id,
+        };
+      return Promise.all([
+        tx.stockMovement.create({
+          data: {
+            ...base,
+            branchId: source.branchId,
+            warehouseId: source.id,
+            movementType: "TRANSFER_OUT",
+          },
+        }),
+        tx.stockMovement.create({
+          data: {
+            ...base,
+            branchId: destination.branchId,
+            warehouseId: destination.id,
+            movementType: "TRANSFER_IN",
+          },
+        }),
+      ]);
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
+export async function transferStock(raw: unknown) {
+  return transferStockForActor(await actor(true), raw);
+}
+export async function inventorySnapshotForActor(a: ProjectActor) {
+  const warehouses = await db.warehouse.findMany({
+    where: {
+      companyId: a.companyId,
+      isActive: true,
+      ...(a.branchAccessScope === "SELECTED_BRANCHES"
+        ? { branchId: { in: a.branchIds ?? [] } }
+        : {}),
+    },
+  });
+  const rows = await db.stockMovement.findMany({
+    where: {
+      companyId: a.companyId,
+      warehouseId: { in: warehouses.map((w) => w.id) },
+    },
+    orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
+  });
+  const grouped = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const key = `${row.warehouseId}:${row.productId}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), row]);
+  }
+  return [...grouped].map(([key, movements]) => ({
+    warehouseId: key.split(":")[0],
+    productId: key.split(":")[1],
+    ...stockValuation(movements),
+  }));
+}
+export function itemProfitability(
+  revenue: Prisma.Decimal,
+  cogs: Prisma.Decimal,
+) {
+  return {
+    revenue,
+    cogs,
+    profit: revenue.sub(cogs),
+    marginPercent: revenue.isZero()
+      ? Z
+      : revenue.sub(cogs).div(revenue).mul(100),
+  };
+}
 
-const warehouseInput=z.object({branchId:z.string().uuid(),name:z.string().trim().min(1).max(160),code:z.string().trim().min(1).max(60),address:z.string().max(2000).optional(),isDefault:z.coerce.boolean().default(false)}).strict();
-export async function listWarehouses(){const a=await actor();return db.warehouse.findMany({where:{companyId:a.companyId,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{})},orderBy:[{branchId:"asc"},{name:"asc"}]});}
-export async function createWarehouse(raw:unknown){const a=await actor(true),d=warehouseInput.parse(raw);if(!branchAllowed(a,d.branchId)||!await db.branch.findFirst({where:{id:d.branchId,companyId:a.companyId,isActive:true}}))throw new AuthorizationError();return db.$transaction(async tx=>{if(d.isDefault)await tx.warehouse.updateMany({where:{companyId:a.companyId,branchId:d.branchId,isDefault:true},data:{isDefault:false}});const row=await tx.warehouse.create({data:{...d,companyId:a.companyId!}});await auditInventory(tx,a,"WAREHOUSE_CREATED","WAREHOUSE",row.id);return row;});}
-export async function updateWarehouse(id:string,raw:unknown){const a=await actor(true),d=warehouseInput.omit({branchId:true}).partial().parse(raw),current=await db.warehouse.findFirst({where:{id,companyId:a.companyId,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{})}});if(!current)throw new AuthorizationError();return db.$transaction(async tx=>{if(d.isDefault)await tx.warehouse.updateMany({where:{companyId:a.companyId,branchId:current.branchId,isDefault:true,id:{not:id}},data:{isDefault:false}});const row=await tx.warehouse.update({where:{id},data:d});await auditInventory(tx,a,"WAREHOUSE_UPDATED","WAREHOUSE",id);return row;});}
-export async function deactivateWarehouse(id:string){const a=await actor(true),current=await db.warehouse.findFirst({where:{id,companyId:a.companyId,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{})}});if(!current)throw new AuthorizationError();const row=await db.warehouse.update({where:{id},data:{isActive:false,isDefault:false}});return row;}
-const itemInventoryInput=z.object({trackInventory:z.coerce.boolean(),trackingMode:z.enum(["NONE","BATCH","SERIAL"]),barcode:z.string().trim().max(120).optional(),hsnCode:z.string().trim().max(12).optional(),lowStockThreshold:qty.default("0"),costPrice:money.optional(),salePrice:money.optional()}).strict();
-export async function updateInventoryProduct(productId:string,raw:unknown){const a=await actor(true),d=itemInventoryInput.parse(raw),product=await db.accountProduct.findFirst({where:{id:productId,companyId:a.companyId,isActive:true}});if(!product)throw new AuthorizationError();if(!d.trackInventory&&d.trackingMode!=="NONE")throw new Error("TRACKING_REQUIRES_INVENTORY");return db.accountProduct.update({where:{id:productId},data:{...d,barcode:d.barcode||null,hsnCode:d.hsnCode||null,lowStockThreshold:new D(d.lowStockThreshold),costPrice:d.costPrice===undefined?undefined:new D(d.costPrice),salePrice:d.salePrice===undefined?undefined:new D(d.salePrice)}});}
-export async function listInventoryProducts(){const a=await actor();return db.accountProduct.findMany({where:{companyId:a.companyId,isActive:true},include:{unit:true,category:true},orderBy:{name:"asc"}});}
-export async function createBatch(raw:unknown){const a=await actor(true),d=z.object({productId:z.string().uuid(),batchNumber:z.string().trim().min(1).max(100),manufacturedDate:z.coerce.date().optional(),expiryDate:z.coerce.date().optional()}).strict().parse(raw),p=await db.accountProduct.findFirst({where:{id:d.productId,companyId:a.companyId,isActive:true,trackInventory:true,trackingMode:"BATCH"}});if(!p)throw new AuthorizationError();if(d.manufacturedDate&&d.expiryDate&&d.expiryDate<d.manufacturedDate)throw new Error("INVALID_EXPIRY");return db.inventoryBatch.create({data:{...d,companyId:a.companyId!}});}
-export async function listBatches(productId?:string){const a=await actor();return db.inventoryBatch.findMany({where:{companyId:a.companyId,...(productId?{productId}:{})},orderBy:{createdAt:"desc"}});}
-export async function registerSerialNumber(raw:unknown){const a=await actor(true),d=z.object({productId:z.string().uuid(),serialNumber:z.string().trim().min(1).max(160),expiryDate:z.coerce.date().optional()}).strict().parse(raw),p=await db.accountProduct.findFirst({where:{id:d.productId,companyId:a.companyId,isActive:true,trackInventory:true,trackingMode:"SERIAL"}});if(!p)throw new AuthorizationError();return db.inventorySerialNumber.create({data:{...d,companyId:a.companyId!}});}
-export async function listSerialNumbers(productId?:string){const a=await actor();const rows=await db.inventorySerialNumber.findMany({where:{companyId:a.companyId,...(productId?{productId}:{})},orderBy:{createdAt:"desc"}}),movements=await db.stockMovement.findMany({where:{companyId:a.companyId,serialNumberId:{in:rows.map(x=>x.id)}},orderBy:[{movementDate:"asc"},{createdAt:"asc"}]});return rows.map(row=>({...row,quantity:movements.filter(x=>x.serialNumberId===row.id).reduce((n,x)=>n.add(signedQuantity(x.movementType,x.quantity)),Z)}));}
-const priceInput=z.object({productId:z.string().uuid(),priceType:z.enum(["RETAIL","WHOLESALE","CUSTOMER"]),customerId:z.string().uuid().optional(),rate:money,effectiveFrom:z.coerce.date().optional(),effectiveTo:z.coerce.date().optional()}).strict();
-async function validatePrice(a:ProjectActor,d:z.infer<typeof priceInput>){if(!await db.accountProduct.findFirst({where:{id:d.productId,companyId:a.companyId,isActive:true}}))throw new AuthorizationError();if(d.priceType==="CUSTOMER"){if(!d.customerId||!await db.customer.findFirst({where:{id:d.customerId,companyId:a.companyId,isActive:true,isAccountCustomer:true}}))throw new AuthorizationError();}else if(d.customerId)throw new Error("CUSTOMER_ONLY_PRICE");}
-export async function createProductPrice(raw:unknown){const a=await actor(true),d=priceInput.parse(raw);await validatePrice(a,d);return db.productPrice.create({data:{...d,companyId:a.companyId!,rate:new D(d.rate)}});}
-export async function updateProductPrice(id:string,raw:unknown){const a=await actor(true),current=await db.productPrice.findFirst({where:{id,companyId:a.companyId}});if(!current)throw new AuthorizationError();const d=priceInput.parse(raw);await validatePrice(a,d);return db.productPrice.update({where:{id},data:{...d,rate:new D(d.rate)}});}
-export async function deactivateProductPrice(id:string){const a=await actor(true),changed=await db.productPrice.updateMany({where:{id,companyId:a.companyId},data:{isActive:false}});if(changed.count!==1)throw new AuthorizationError();}
-export async function listProductPrices(productId?:string){const a=await actor();return db.productPrice.findMany({where:{companyId:a.companyId,...(productId?{productId}:{})},orderBy:{createdAt:"desc"}});}
-async function auditInventory(tx:Prisma.TransactionClient,a:ProjectActor,eventType:string,entityType:string,entityId:string){await tx.accountOperationalAudit.create({data:{companyId:a.companyId!,actorUserId:a.id,eventType,entityType,entityId}});}
-export async function inventoryOptions(){const a=await actor();const branches=await db.branch.findMany({where:{companyId:a.companyId,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},orderBy:{name:"asc"}});return {branches,warehouses:await db.warehouse.findMany({where:{companyId:a.companyId,isActive:true,branchId:{in:branches.map(x=>x.id)}},orderBy:{name:"asc"}}),products:await db.accountProduct.findMany({where:{companyId:a.companyId,isActive:true},orderBy:{name:"asc"}}),customers:await db.customer.findMany({where:{companyId:a.companyId,isActive:true,isAccountCustomer:true},orderBy:{name:"asc"}}),batches:await db.inventoryBatch.findMany({where:{companyId:a.companyId}}),serials:await db.inventorySerialNumber.findMany({where:{companyId:a.companyId}})};}
-export async function lowStockSnapshot(){const [snapshot,products,warehouses]=await Promise.all([inventorySnapshot(),listInventoryProducts(),listWarehouses()]),p=new Map(products.map(x=>[x.id,x])),w=new Map(warehouses.map(x=>[x.id,x]));return snapshot.filter(x=>p.get(x.productId)?.trackInventory&&x.quantity.lte(p.get(x.productId)!.lowStockThreshold)).map(x=>({...x,product:p.get(x.productId)!,warehouse:w.get(x.warehouseId)!}));}
-export async function recordOpeningStock(raw:unknown){const d=z.object({warehouseId:z.string().uuid(),productId:z.string().uuid(),quantity:qty,unitCost:money,movementDate:z.coerce.date(),batchId:z.string().uuid().optional(),serialNumberId:z.string().uuid().optional()}).strict().parse(raw);return createOpeningStock({...d,sourceType:"OPENING_STOCK",sourceId:crypto.randomUUID()});}
-export async function recordAdjustment(raw:unknown){const d=z.object({direction:z.enum(["IN","OUT"]),warehouseId:z.string().uuid(),productId:z.string().uuid(),quantity:qty,unitCost:money.default("0"),movementDate:z.coerce.date(),batchId:z.string().uuid().optional(),serialNumberId:z.string().uuid().optional(),reason:z.string().trim().min(1).max(1000)}).strict().parse(raw);return adjustStock(d.direction,{...d,sourceType:"STOCK_ADJUSTMENT",sourceId:crypto.randomUUID()});}
+const warehouseInput = z
+  .object({
+    branchId: z.string().uuid(),
+    name: z.string().trim().min(1).max(160),
+    code: z.string().trim().min(1).max(60),
+    address: z.string().max(2000).optional(),
+    isDefault: z.coerce.boolean().default(false),
+  })
+  .strict();
+export async function inventorySnapshot() {
+  return inventorySnapshotForActor(await actor());
+}
+export async function listWarehousesForActor(a: ProjectActor) {
+  return db.warehouse.findMany({
+    where: {
+      companyId: a.companyId,
+      ...(a.branchAccessScope === "SELECTED_BRANCHES"
+        ? { branchId: { in: a.branchIds ?? [] } }
+        : {}),
+    },
+    orderBy: [{ branchId: "asc" }, { name: "asc" }],
+  });
+}
+export async function listWarehouses() {
+  return listWarehousesForActor(await actor());
+}
+export async function createWarehouse(raw: unknown) {
+  const a = await actor(true),
+    d = warehouseInput.parse(raw);
+  if (
+    !branchAllowed(a, d.branchId) ||
+    !(await db.branch.findFirst({
+      where: { id: d.branchId, companyId: a.companyId, isActive: true },
+    }))
+  )
+    throw new AuthorizationError();
+  return db.$transaction(async (tx) => {
+    if (d.isDefault)
+      await tx.warehouse.updateMany({
+        where: {
+          companyId: a.companyId,
+          branchId: d.branchId,
+          isDefault: true,
+        },
+        data: { isDefault: false },
+      });
+    const row = await tx.warehouse.create({
+      data: { ...d, companyId: a.companyId! },
+    });
+    await auditInventory(tx, a, "WAREHOUSE_CREATED", "WAREHOUSE", row.id);
+    return row;
+  });
+}
+export async function updateWarehouse(id: string, raw: unknown) {
+  const a = await actor(true),
+    d = warehouseInput.omit({ branchId: true }).partial().parse(raw),
+    current = await db.warehouse.findFirst({
+      where: {
+        id,
+        companyId: a.companyId,
+        ...(a.branchAccessScope === "SELECTED_BRANCHES"
+          ? { branchId: { in: a.branchIds ?? [] } }
+          : {}),
+      },
+    });
+  if (!current) throw new AuthorizationError();
+  return db.$transaction(async (tx) => {
+    if (d.isDefault)
+      await tx.warehouse.updateMany({
+        where: {
+          companyId: a.companyId,
+          branchId: current.branchId,
+          isDefault: true,
+          id: { not: id },
+        },
+        data: { isDefault: false },
+      });
+    const row = await tx.warehouse.update({ where: { id }, data: d });
+    await auditInventory(tx, a, "WAREHOUSE_UPDATED", "WAREHOUSE", id);
+    return row;
+  });
+}
+export async function deactivateWarehouse(id: string) {
+  const a = await actor(true),
+    current = await db.warehouse.findFirst({
+      where: {
+        id,
+        companyId: a.companyId,
+        ...(a.branchAccessScope === "SELECTED_BRANCHES"
+          ? { branchId: { in: a.branchIds ?? [] } }
+          : {}),
+      },
+    });
+  if (!current) throw new AuthorizationError();
+  const row = await db.warehouse.update({
+    where: { id },
+    data: { isActive: false, isDefault: false },
+  });
+  return row;
+}
+const itemInventoryInput = z
+  .object({
+    trackInventory: z.coerce.boolean(),
+    trackingMode: z.enum(["NONE", "BATCH", "SERIAL"]),
+    barcode: z.string().trim().max(120).optional(),
+    hsnCode: z.string().trim().max(12).optional(),
+    lowStockThreshold: qty.default("0"),
+    costPrice: money.optional(),
+    salePrice: money.optional(),
+  })
+  .strict();
+export async function updateInventoryProduct(productId: string, raw: unknown) {
+  const a = await actor(true),
+    d = itemInventoryInput.parse(raw),
+    product = await db.accountProduct.findFirst({
+      where: { id: productId, companyId: a.companyId, isActive: true },
+    });
+  if (!product) throw new AuthorizationError();
+  if (!d.trackInventory && d.trackingMode !== "NONE")
+    throw new Error("TRACKING_REQUIRES_INVENTORY");
+  return db.accountProduct.update({
+    where: { id: productId },
+    data: {
+      ...d,
+      barcode: d.barcode || null,
+      hsnCode: d.hsnCode || null,
+      lowStockThreshold: new D(d.lowStockThreshold),
+      costPrice: d.costPrice === undefined ? undefined : new D(d.costPrice),
+      salePrice: d.salePrice === undefined ? undefined : new D(d.salePrice),
+    },
+  });
+}
+export async function listInventoryProductsForActor(a: ProjectActor) {
+  return db.accountProduct.findMany({
+    where: { companyId: a.companyId, isActive: true },
+    include: { unit: true, category: true },
+    orderBy: { name: "asc" },
+  });
+}
+export async function listInventoryProducts() {
+  return listInventoryProductsForActor(await actor());
+}
+export async function createBatchForActor(a: ProjectActor, raw: unknown) {
+  const d = z
+      .object({
+        productId: z.string().uuid(),
+        batchNumber: z.string().trim().min(1).max(100),
+        manufacturedDate: z.coerce.date().optional(),
+        expiryDate: z.coerce.date().optional(),
+      })
+      .strict()
+      .parse(raw),
+    p = await db.accountProduct.findFirst({
+      where: {
+        id: d.productId,
+        companyId: a.companyId,
+        isActive: true,
+        trackInventory: true,
+        trackingMode: "BATCH",
+      },
+    });
+  if (!p) throw new AuthorizationError();
+  if (d.manufacturedDate && d.expiryDate && d.expiryDate < d.manufacturedDate)
+    throw new Error("INVALID_EXPIRY");
+  return db.inventoryBatch.create({ data: { ...d, companyId: a.companyId! } });
+}
+export async function createBatch(raw: unknown) {
+  return createBatchForActor(await actor(true), raw);
+}
+export async function listBatchesForActor(a: ProjectActor, productId?: string) {
+  return db.inventoryBatch.findMany({
+    where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
+    orderBy: { createdAt: "desc" },
+  });
+}
+export async function listBatches(productId?: string) {
+  return listBatchesForActor(await actor(), productId);
+}
+export async function registerSerialNumberForActor(
+  a: ProjectActor,
+  raw: unknown,
+) {
+  const d = z
+      .object({
+        productId: z.string().uuid(),
+        serialNumber: z.string().trim().min(1).max(160),
+        expiryDate: z.coerce.date().optional(),
+      })
+      .strict()
+      .parse(raw),
+    p = await db.accountProduct.findFirst({
+      where: {
+        id: d.productId,
+        companyId: a.companyId,
+        isActive: true,
+        trackInventory: true,
+        trackingMode: "SERIAL",
+      },
+    });
+  if (!p) throw new AuthorizationError();
+  return db.inventorySerialNumber.create({
+    data: { ...d, companyId: a.companyId! },
+  });
+}
+export async function registerSerialNumber(raw: unknown) {
+  return registerSerialNumberForActor(await actor(true), raw);
+}
+export async function listSerialNumbersForActor(
+  a: ProjectActor,
+  productId?: string,
+) {
+  const rows = await db.inventorySerialNumber.findMany({
+      where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
+      orderBy: { createdAt: "desc" },
+    }),
+    movements = await db.stockMovement.findMany({
+      where: {
+        companyId: a.companyId,
+        serialNumberId: { in: rows.map((x) => x.id) },
+      },
+      orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
+    });
+  return rows.map((row) => ({
+    ...row,
+    quantity: movements
+      .filter((x) => x.serialNumberId === row.id)
+      .reduce((n, x) => n.add(signedQuantity(x.movementType, x.quantity)), Z),
+  }));
+}
+export async function listSerialNumbers(productId?: string) {
+  return listSerialNumbersForActor(await actor(), productId);
+}
+const priceInput = z
+  .object({
+    productId: z.string().uuid(),
+    priceType: z.enum(["RETAIL", "WHOLESALE", "CUSTOMER"]),
+    customerId: z.string().uuid().optional(),
+    rate: money,
+    effectiveFrom: z.coerce.date().optional(),
+    effectiveTo: z.coerce.date().optional(),
+  })
+  .strict();
+async function validatePrice(a: ProjectActor, d: z.infer<typeof priceInput>) {
+  if (
+    !(await db.accountProduct.findFirst({
+      where: { id: d.productId, companyId: a.companyId, isActive: true },
+    }))
+  )
+    throw new AuthorizationError();
+  if (d.priceType === "CUSTOMER") {
+    if (
+      !d.customerId ||
+      !(await db.customer.findFirst({
+        where: {
+          id: d.customerId,
+          companyId: a.companyId,
+          isActive: true,
+          isAccountCustomer: true,
+        },
+      }))
+    )
+      throw new AuthorizationError();
+  } else if (d.customerId) throw new Error("CUSTOMER_ONLY_PRICE");
+}
+export async function createProductPriceForActor(
+  a: ProjectActor,
+  raw: unknown,
+) {
+  const d = priceInput.parse(raw);
+  await validatePrice(a, d);
+  return db.productPrice.create({
+    data: { ...d, companyId: a.companyId!, rate: new D(d.rate) },
+  });
+}
+export async function createProductPrice(raw: unknown) {
+  return createProductPriceForActor(await actor(true), raw);
+}
+export async function updateProductPrice(id: string, raw: unknown) {
+  const a = await actor(true),
+    current = await db.productPrice.findFirst({
+      where: { id, companyId: a.companyId },
+    });
+  if (!current) throw new AuthorizationError();
+  const d = priceInput.parse(raw);
+  await validatePrice(a, d);
+  return db.productPrice.update({
+    where: { id },
+    data: { ...d, rate: new D(d.rate) },
+  });
+}
+export async function deactivateProductPrice(id: string) {
+  const a = await actor(true),
+    changed = await db.productPrice.updateMany({
+      where: { id, companyId: a.companyId },
+      data: { isActive: false },
+    });
+  if (changed.count !== 1) throw new AuthorizationError();
+}
+export async function listProductPricesForActor(
+  a: ProjectActor,
+  productId?: string,
+) {
+  return db.productPrice.findMany({
+    where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
+    orderBy: { createdAt: "desc" },
+  });
+}
+export async function listProductPrices(productId?: string) {
+  return listProductPricesForActor(await actor(), productId);
+}
+async function auditInventory(
+  tx: Prisma.TransactionClient,
+  a: ProjectActor,
+  eventType: string,
+  entityType: string,
+  entityId: string,
+) {
+  await tx.accountOperationalAudit.create({
+    data: {
+      companyId: a.companyId!,
+      actorUserId: a.id,
+      eventType,
+      entityType,
+      entityId,
+    },
+  });
+}
+export async function inventoryOptionsForActor(a: ProjectActor) {
+  const branches = await db.branch.findMany({
+    where: {
+      companyId: a.companyId,
+      isActive: true,
+      ...(a.branchAccessScope === "SELECTED_BRANCHES"
+        ? { id: { in: a.branchIds ?? [] } }
+        : {}),
+    },
+    orderBy: { name: "asc" },
+  });
+  return {
+    branches,
+    warehouses: await db.warehouse.findMany({
+      where: {
+        companyId: a.companyId,
+        isActive: true,
+        branchId: { in: branches.map((x) => x.id) },
+      },
+      orderBy: { name: "asc" },
+    }),
+    products: await db.accountProduct.findMany({
+      where: { companyId: a.companyId, isActive: true },
+      orderBy: { name: "asc" },
+    }),
+    customers: await db.customer.findMany({
+      where: {
+        companyId: a.companyId,
+        isActive: true,
+        isAccountCustomer: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+    batches: await db.inventoryBatch.findMany({
+      where: { companyId: a.companyId },
+    }),
+    serials: await db.inventorySerialNumber.findMany({
+      where: { companyId: a.companyId },
+    }),
+  };
+}
+export async function inventoryOptions() {
+  return inventoryOptionsForActor(await actor());
+}
+export async function lowStockSnapshotForActor(a: ProjectActor) {
+  const [snapshot, products, warehouses] = await Promise.all([
+      inventorySnapshotForActor(a),
+      listInventoryProductsForActor(a),
+      listWarehousesForActor(a),
+    ]),
+    p = new Map(products.map((x) => [x.id, x])),
+    w = new Map(warehouses.map((x) => [x.id, x]));
+  return snapshot
+    .filter(
+      (x) =>
+        p.get(x.productId)?.trackInventory &&
+        x.quantity.lte(p.get(x.productId)!.lowStockThreshold),
+    )
+    .map((x) => ({
+      ...x,
+      product: p.get(x.productId)!,
+      warehouse: w.get(x.warehouseId)!,
+    }));
+}
+export async function lowStockSnapshot() {
+  return lowStockSnapshotForActor(await actor());
+}
+export async function recordOpeningStock(raw: unknown) {
+  const d = z
+    .object({
+      warehouseId: z.string().uuid(),
+      productId: z.string().uuid(),
+      quantity: qty,
+      unitCost: money,
+      movementDate: z.coerce.date(),
+      batchId: z.string().uuid().optional(),
+      serialNumberId: z.string().uuid().optional(),
+    })
+    .strict()
+    .parse(raw);
+  return createOpeningStock({
+    ...d,
+    sourceType: "OPENING_STOCK",
+    sourceId: crypto.randomUUID(),
+  });
+}
+export async function recordAdjustment(raw: unknown) {
+  const d = z
+    .object({
+      direction: z.enum(["IN", "OUT"]),
+      warehouseId: z.string().uuid(),
+      productId: z.string().uuid(),
+      quantity: qty,
+      unitCost: money.default("0"),
+      movementDate: z.coerce.date(),
+      batchId: z.string().uuid().optional(),
+      serialNumberId: z.string().uuid().optional(),
+      reason: z.string().trim().min(1).max(1000),
+    })
+    .strict()
+    .parse(raw);
+  return adjustStock(d.direction, {
+    ...d,
+    sourceType: "STOCK_ADJUSTMENT",
+    sourceId: crypto.randomUUID(),
+  });
+}
