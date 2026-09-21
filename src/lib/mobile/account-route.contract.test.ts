@@ -18,4 +18,12 @@ describe("native Account mobile API contract", () => {
     expect(source).toContain("Workspace.ACCOUNT->NativeAccountAuthenticatedApp");
     expect(source).not.toContain("Workspace.ACCOUNT->AccountWorkspaceScreen");
   });
+  it("implements scoped native master-data endpoints", () => {
+    const source = readFileSync("src/lib/mobile/account-master-data.ts", "utf8");
+    expect(source).toContain("companyId: user.companyId");
+    expect(source).toContain("branchFilter(user)");
+    expect(source).toContain("assertOperationalWrite(user.companyId)");
+    expect(source).toContain("partySchema");
+    expect(source).toContain("itemSchema");
+  });
 });

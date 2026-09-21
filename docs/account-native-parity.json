@@ -363,5 +363,68 @@
       "classification": "EXTERNAL_LINK",
       "reason": "Help/support may use an external browser."
     }
+  ],
+  "features": [
+    {
+      "feature": "Account dashboard",
+      "webRoutes": [
+        "/workspace/account/dashboard"
+      ],
+      "classification": "NATIVE_COMPLETE",
+      "android": "NativeAccountAuthenticatedApp / AccountDashboardScreen",
+      "api": [
+        "GET /api/v1/mobile/account/bootstrap",
+        "GET /api/v1/mobile/account/dashboard"
+      ]
+    },
+    {
+      "feature": "Customers",
+      "webRoutes": [
+        "/workspace/account/customers"
+      ],
+      "classification": "NATIVE_COMPLETE",
+      "android": "AccountMasterScreen(customers)",
+      "api": [
+        "GET/POST /api/v1/mobile/account/master-data/customers",
+        "GET/PATCH /api/v1/mobile/account/master-data/customers/{id}"
+      ]
+    },
+    {
+      "feature": "Vendors",
+      "webRoutes": [
+        "/workspace/account/vendors"
+      ],
+      "classification": "NATIVE_COMPLETE",
+      "android": "AccountMasterScreen(vendors)",
+      "api": [
+        "GET/POST /api/v1/mobile/account/master-data/vendors",
+        "GET/PATCH /api/v1/mobile/account/master-data/vendors/{id}"
+      ]
+    },
+    {
+      "feature": "Items",
+      "webRoutes": [
+        "/workspace/account/inventory",
+        "/workspace/account/inventory/items"
+      ],
+      "classification": "NATIVE_COMPLETE",
+      "android": "AccountMasterScreen(items)",
+      "api": [
+        "GET/POST /api/v1/mobile/account/master-data/items",
+        "GET/PATCH /api/v1/mobile/account/master-data/items/{id}"
+      ]
+    },
+    {
+      "feature": "Warehouses",
+      "webRoutes": [
+        "/workspace/account/inventory/warehouses"
+      ],
+      "classification": "NATIVE_COMPLETE",
+      "android": "AccountMasterScreen(warehouses)",
+      "api": [
+        "GET/POST /api/v1/mobile/account/master-data/warehouses",
+        "GET/PATCH /api/v1/mobile/account/master-data/warehouses/{id}"
+      ]
+    }
   ]
 }

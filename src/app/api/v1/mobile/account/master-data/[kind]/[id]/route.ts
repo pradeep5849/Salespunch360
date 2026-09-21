@@ -1,0 +1,8 @@
+import { z } from "zod";
+import { authenticateMobileToken } from "@/lib/mobile/auth";
+import { getMobileAccountMaster, MOBILE_MASTER_KINDS, saveMobileAccountMaster } from "@/lib/mobile/account-master-data";
+import { mobileAuthorizationFailure, mobileJson, mobileUnauthorized, mobileUnexpected } from "@/lib/mobile/http";
+
+const invalid = (error: unknown) => error instanceof z.ZodError || error instanceof Error && error.message === "INVALID_INPUT" ? mobileJson({ error: "INVALID_INPUT", fields: error instanceof z.ZodError ? error.flatten().fieldErrors : undefined }, 400) : null;
+export async function GET(request: Request, context: { params: Promise<{ kind: string; id: string }> }) { try { const { kind, id } = await context.params; if (!MOBILE_MASTER_KINDS.has(kind as never)) return mobileJson({ error: "NOT_FOUND" }, 404); return mobileJson(await getMobileAccountMaster(await authenticateMobileToken(request.headers.get("authorization")), kind as never, id)); } catch (error) { return mobileUnauthorized(error) ?? mobileAuthorizationFailure(error) ?? invalid(error) ?? mobileUnexpected("MOBILE_ACCOUNT_MASTER_DETAIL", error); } }
+export async function PATCH(request: Request, context: { params: Promise<{ kind: string; id: string }> }) { try { const { kind, id } = await context.params; if (!MOBILE_MASTER_KINDS.has(kind as never)) return mobileJson({ error: "NOT_FOUND" }, 404); return mobileJson(await saveMobileAccountMaster(await authenticateMobileToken(request.headers.get("authorization")), kind as never, await request.json(), id)); } catch (error) { return mobileUnauthorized(error) ?? mobileAuthorizationFailure(error) ?? invalid(error) ?? mobileUnexpected("MOBILE_ACCOUNT_MASTER_UPDATE", error); } }

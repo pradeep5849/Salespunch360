@@ -31,6 +31,12 @@ import kotlinx.serialization.Serializable
 @Serializable data class AccountDashboard(val title:String,val period:String,val projectOnly:Boolean=false,val metrics:List<AccountDashboardMetric> = emptyList(),val branchComparison:List<AccountBranchComparison> = emptyList())
 @Serializable data class AccountDashboardMetric(val key:String,val label:String,val value:String,val kind:String)
 @Serializable data class AccountBranchComparison(val id:String,val name:String,val sales:String,val expenses:String,val operatingContribution:String)
+@Serializable data class AccountMasterRecord(val id:String,val branchId:String?=null,val name:String,val code:String?=null,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val billingAddress:String?=null,val shippingAddress:String?=null,val gstin:String?=null,val stateCode:String?=null,val gstRegistrationType:String?=null,val pan:String?=null,val notes:String?=null,val description:String?=null,val categoryId:String?=null,val unitId:String?=null,val salePrice:String?=null,val costPrice:String?=null,val taxRate:String?=null,val barcode:String?=null,val hsnCode:String?=null,val trackInventory:Boolean=false,val trackingMode:String="NONE",val lowStockThreshold:String?=null,val isDefault:Boolean=false,val isActive:Boolean=true)
+@Serializable data class AccountMasterOptions(val branches:List<AccountOption> = emptyList(),val units:List<AccountOption> = emptyList(),val categories:List<AccountOption> = emptyList())
+@Serializable data class AccountOption(val id:String,val name:String,val symbol:String?=null)
+@Serializable data class AccountPartyDetail(val record:AccountMasterRecord,val documents:List<AccountPartyDocument> = emptyList(),val settlements:List<AccountPartySettlement> = emptyList())
+@Serializable data class AccountPartyDocument(val id:String,val type:String,val documentNumber:String,val issueDate:String,val status:String,val grandTotal:String?=null,val balanceDue:String?=null)
+@Serializable data class AccountPartySettlement(val id:String,val type:String,val settlementNumber:String,val transactionDate:String,val amount:String?=null)
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)
