@@ -76,7 +76,13 @@
       "route": "/workspace/account/expenses/categories",
       "source": "src/app/workspace/account/expenses/categories/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native category list/create/edit/deactivate workflow implemented; Android CI/device validation pending.",
+      "android": "ExpenseCategoryScreen / ExpenseCategoryViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/expense-categories",
+        "PATCH/DELETE /api/v1/mobile/account/expense-categories/{id}"
+      ],
+      "sharedService": "src/lib/account/expenses.ts category actor domain"
     },
     {
       "route": "/workspace/account/expenses/new",
@@ -157,37 +163,79 @@
       "route": "/workspace/account/money/accounts",
       "source": "src/app/workspace/account/money/accounts/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native money account, transfer, capital/drawings, loan receipt and repayment workflows implemented; Android CI/device validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/money",
+        "POST/PATCH/DELETE money account APIs",
+        "POST money transfers/owners/loans/loan-payments APIs"
+      ],
+      "sharedService": "src/lib/account/money.ts actor domain"
     },
     {
       "route": "/workspace/account/money/capital",
       "source": "src/app/workspace/account/money/capital/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native money account, transfer, capital/drawings, loan receipt and repayment workflows implemented; Android CI/device validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/money",
+        "POST/PATCH/DELETE money account APIs",
+        "POST money transfers/owners/loans/loan-payments APIs"
+      ],
+      "sharedService": "src/lib/account/money.ts actor domain"
     },
     {
       "route": "/workspace/account/money/cheques",
       "source": "src/app/workspace/account/money/cheques/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native money account, transfer, capital/drawings, loan receipt and repayment workflows implemented; Android CI/device validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/money",
+        "POST/PATCH/DELETE money account APIs",
+        "POST money transfers/owners/loans/loan-payments APIs"
+      ],
+      "sharedService": "src/lib/account/money.ts actor domain"
     },
     {
       "route": "/workspace/account/money/loans",
       "source": "src/app/workspace/account/money/loans/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native money account, transfer, capital/drawings, loan receipt and repayment workflows implemented; Android CI/device validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/money",
+        "POST/PATCH/DELETE money account APIs",
+        "POST money transfers/owners/loans/loan-payments APIs"
+      ],
+      "sharedService": "src/lib/account/money.ts actor domain"
     },
     {
       "route": "/workspace/account/money",
       "source": "src/app/workspace/account/money/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native money account, transfer, capital/drawings, loan receipt and repayment workflows implemented; Android CI/device validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/money",
+        "POST/PATCH/DELETE money account APIs",
+        "POST money transfers/owners/loans/loan-payments APIs"
+      ],
+      "sharedService": "src/lib/account/money.ts actor domain"
     },
     {
       "route": "/workspace/account/money/transfers",
       "source": "src/app/workspace/account/money/transfers/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native money account, transfer, capital/drawings, loan receipt and repayment workflows implemented; Android CI/device validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/money",
+        "POST/PATCH/DELETE money account APIs",
+        "POST money transfers/owners/loans/loan-payments APIs"
+      ],
+      "sharedService": "src/lib/account/money.ts actor domain"
     },
     {
       "route": "/workspace/account/notifications",
@@ -205,31 +253,66 @@
       "route": "/workspace/account/projects/[id]/costing",
       "source": "src/app/workspace/account/projects/[id]/costing/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native project list/create/edit/detail and authoritative costing presentation implemented; Android CI/device validation pending.",
+      "android": "ProjectScreen / AccountProjectViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/projects",
+        "GET /api/v1/mobile/account/projects/{id}",
+        "GET /api/v1/mobile/account/projects/{id}/costing"
+      ],
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
     },
     {
       "route": "/workspace/account/projects/[id]/edit",
       "source": "src/app/workspace/account/projects/[id]/edit/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native project list/create/edit/detail and authoritative costing presentation implemented; Android CI/device validation pending.",
+      "android": "ProjectScreen / AccountProjectViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/projects",
+        "GET /api/v1/mobile/account/projects/{id}",
+        "GET /api/v1/mobile/account/projects/{id}/costing"
+      ],
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
     },
     {
       "route": "/workspace/account/projects/[id]",
       "source": "src/app/workspace/account/projects/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native project list/create/edit/detail and authoritative costing presentation implemented; Android CI/device validation pending.",
+      "android": "ProjectScreen / AccountProjectViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/projects",
+        "GET /api/v1/mobile/account/projects/{id}",
+        "GET /api/v1/mobile/account/projects/{id}/costing"
+      ],
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
     },
     {
       "route": "/workspace/account/projects/new",
       "source": "src/app/workspace/account/projects/new/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native project list/create/edit/detail and authoritative costing presentation implemented; Android CI/device validation pending.",
+      "android": "ProjectScreen / AccountProjectViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/projects",
+        "GET /api/v1/mobile/account/projects/{id}",
+        "GET /api/v1/mobile/account/projects/{id}/costing"
+      ],
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
     },
     {
       "route": "/workspace/account/projects",
       "source": "src/app/workspace/account/projects/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native project list/create/edit/detail and authoritative costing presentation implemented; Android CI/device validation pending.",
+      "android": "ProjectScreen / AccountProjectViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/projects",
+        "GET /api/v1/mobile/account/projects/{id}",
+        "GET /api/v1/mobile/account/projects/{id}/costing"
+      ],
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
     },
     {
       "route": "/workspace/account/quotations/[id]/edit",
@@ -361,7 +444,13 @@
       "route": "/workspace/account/utilities/financial-year",
       "source": "src/app/workspace/account/utilities/financial-year/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Phase 9 started: native authoritative overview/list is connected; chart creation and period-lock advancement implemented where applicable. Remaining Accounting mutation parity is pending.",
+      "android": "AccountingScreen / AccountAccountingViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,journals,period-locks}"
+      ],
+      "sharedService": "src/lib/accounting/service.ts actor domain"
     },
     {
       "route": "/workspace/account/utilities/import/[id]",
@@ -385,7 +474,13 @@
       "route": "/workspace/account/utilities/period-locks",
       "source": "src/app/workspace/account/utilities/period-locks/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Phase 9 started: native authoritative overview/list is connected; chart creation and period-lock advancement implemented where applicable. Remaining Accounting mutation parity is pending.",
+      "android": "AccountingScreen / AccountAccountingViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,journals,period-locks}"
+      ],
+      "sharedService": "src/lib/accounting/service.ts actor domain"
     },
     {
       "route": "/workspace/account/utilities/recycle-bin",
@@ -613,6 +708,34 @@
       "reason": "Functional implementation complete / validation pending.",
       "android": "InventoryScreen / AccountInventoryViewModel",
       "sharedService": "src/lib/account/inventory.ts"
+    },
+    {
+      "feature": "Expense categories",
+      "classification": "PENDING_NATIVE",
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "ExpenseCategoryScreen / ExpenseCategoryViewModel",
+      "sharedService": "src/lib/account/expenses.ts"
+    },
+    {
+      "feature": "Projects and project costing",
+      "classification": "PENDING_NATIVE",
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "ProjectScreen / AccountProjectViewModel",
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts"
+    },
+    {
+      "feature": "Cash and bank",
+      "classification": "PENDING_NATIVE",
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "MoneyScreen / AccountMoneyViewModel",
+      "sharedService": "src/lib/account/money.ts"
+    },
+    {
+      "feature": "Accounting foundation",
+      "classification": "PENDING_NATIVE",
+      "reason": "Phase 9 in progress: native read workflows plus chart and period-lock writes are implemented; journals/assets/financial-year lifecycle remain pending.",
+      "android": "AccountingScreen / AccountAccountingViewModel",
+      "sharedService": "src/lib/accounting/service.ts"
     }
   ]
 }

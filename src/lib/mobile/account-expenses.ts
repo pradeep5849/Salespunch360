@@ -3,9 +3,11 @@ import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
   addExpenseAttachmentForActor,
+  deactivateExpenseCategoryForActor,
   createExpenseForActor,
   createRecurringTemplateForActor,
   downloadExpenseAttachmentForActor,
+  saveExpenseCategoryForActor,
   expenseOptionsForActor,
   getExpenseForActor,
   listExpensesForActor,
@@ -15,6 +17,7 @@ import {
   updateExpenseForActor,
 } from "@/lib/account/expenses";
 import { db } from "@/lib/db";
+import { requireAccountModules } from "@/lib/account/modules";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 function permit(
@@ -128,4 +131,52 @@ export async function mobileExpenseDownload(u: MobileAppPrincipal, id: string) {
     permit(u, "ACCOUNT_EXPENSE_VIEW"),
     id,
   );
+}
+export async function mobileExpenseCategories(
+  u: MobileAppPrincipal,
+  q?: string | null,
+) {
+  const a = permit(u, "ACCOUNT_EXPENSE_VIEW");
+  await requireAccountModules(a, "EXPENSES");
+  const [categories, ledgers] = await Promise.all([
+    db.expenseCategory.findMany({
+      where: {
+        companyId: a.companyId,
+        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
+      },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    }),
+    db.ledgerAccount.findMany({
+      where: {
+        companyId: a.companyId,
+        isActive: true,
+        allowPosting: true,
+        accountClass: { in: ["EXPENSE", "INCOME"] },
+      },
+      select: { id: true, name: true, code: true, accountClass: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  return { categories, ledgers };
+}
+export async function mobileSaveExpenseCategory(
+  u: MobileAppPrincipal,
+  raw: unknown,
+  id?: string,
+) {
+  await assertOperationalWrite(u.companyId);
+  const actor = permit(u, "ACCOUNT_EXPENSE_APPROVE");
+  await requireAccountModules(actor, "EXPENSES");
+  const result = await saveExpenseCategoryForActor(actor, raw, id);
+  return result ?? { ok: true };
+}
+export async function mobileDeactivateExpenseCategory(
+  u: MobileAppPrincipal,
+  id: string,
+) {
+  await assertOperationalWrite(u.companyId);
+  const actor = permit(u, "ACCOUNT_EXPENSE_APPROVE");
+  await requireAccountModules(actor, "EXPENSES");
+  await deactivateExpenseCategoryForActor(actor, id);
+  return { ok: true };
 }

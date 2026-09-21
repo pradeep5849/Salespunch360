@@ -179,8 +179,11 @@ const categoryInput = z.object({
   scope: z.nativeEnum(ExpenseCategoryScope),
   defaultLedgerAccountId: z.string().uuid(),
 });
-export async function saveExpenseCategory(raw: unknown, id?: string) {
-  const a = await actor("ACCOUNT_EXPENSE_APPROVE", true);
+export async function saveExpenseCategoryForActor(
+  a: Actor,
+  raw: unknown,
+  id?: string,
+) {
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const d = categoryInput.parse(raw),
     ledger = await db.ledgerAccount.findFirst({
@@ -203,14 +206,27 @@ export async function saveExpenseCategory(raw: unknown, id?: string) {
   }
   return db.expenseCategory.create({ data: { ...d, companyId: a.companyId } });
 }
-export async function deactivateExpenseCategory(id: string) {
-  const a = await actor("ACCOUNT_EXPENSE_APPROVE", true);
+export async function deactivateExpenseCategoryForActor(a: Actor, id: string) {
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const changed = await db.expenseCategory.updateMany({
     where: { id, companyId: a.companyId },
     data: { isActive: false },
   });
   if (changed.count !== 1) throw new AuthorizationError();
+}
+
+export async function saveExpenseCategory(raw: unknown, id?: string) {
+  return saveExpenseCategoryForActor(
+    await actor("ACCOUNT_EXPENSE_APPROVE", true),
+    raw,
+    id,
+  );
+}
+export async function deactivateExpenseCategory(id: string) {
+  return deactivateExpenseCategoryForActor(
+    await actor("ACCOUNT_EXPENSE_APPROVE", true),
+    id,
+  );
 }
 const expenseInput = z
   .object({

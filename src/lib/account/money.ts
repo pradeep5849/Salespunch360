@@ -146,9 +146,8 @@ const accountInput = z.object({
   accountNumberMasked: z.string().max(40).optional(),
   ifsc: z.string().max(20).optional(),
 });
-export async function createMoneyAccount(raw: unknown) {
-  const a = await actor("ACCOUNT_MONEY_ENTRY", true),
-    d = accountInput.parse(raw);
+export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
+  const d = accountInput.parse(raw);
   if (d.branchId) branchOk(a, d.branchId);
   return db.$transaction(
     async (tx) => {
@@ -198,26 +197,30 @@ export async function createMoneyAccount(raw: unknown) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function updateMoneyAccount(id: string, raw: unknown) {
-  const a = await actor("ACCOUNT_MONEY_ENTRY", true),
-    d = accountInput.partial().omit({ type: true, branchId: true }).parse(raw),
+export async function updateMoneyAccountForActor(
+  a: Actor,
+  id: string,
+  raw: unknown,
+) {
+  const d = accountInput
+      .partial()
+      .omit({ type: true, branchId: true })
+      .parse(raw),
     changed = await db.moneyAccount.updateMany({
       where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
       data: d,
     });
   if (changed.count !== 1) throw new AuthorizationError();
 }
-export async function deactivateMoneyAccount(id: string) {
-  const a = await actor("ACCOUNT_MONEY_ENTRY", true),
-    changed = await db.moneyAccount.updateMany({
-      where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
-      data: { isActive: false },
-    });
+export async function deactivateMoneyAccountForActor(a: Actor, id: string) {
+  const changed = await db.moneyAccount.updateMany({
+    where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
+    data: { isActive: false },
+  });
   if (changed.count !== 1) throw new AuthorizationError();
 }
-export async function moneyDashboard() {
-  const a = await actor("ACCOUNT_MONEY_VIEW"),
-    accounts = await db.moneyAccount.findMany({
+export async function moneyDashboardForActor(a: Actor) {
+  const accounts = await db.moneyAccount.findMany({
       where: {
         companyId: a.companyId,
         ...(a.branchAccessScope === "SELECTED_BRANCHES"
@@ -279,9 +282,8 @@ const transferInput = z.object({
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
 });
-export async function createMoneyTransfer(raw: unknown) {
-  const a = await actor("ACCOUNT_MONEY_ENTRY", true),
-    d = transferInput.parse(raw);
+export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
+  const d = transferInput.parse(raw);
   return db.$transaction(
     async (tx) => {
       const existing = await tx.moneyTransfer.findFirst({
@@ -451,11 +453,11 @@ async function createLedger(
     },
   });
 }
-export async function setupOwnerFinancialAccount(
+export async function setupOwnerFinancialAccountForActor(
+  a: Actor,
   userId: string,
   branchId: string,
 ) {
-  const a = await actor("ACCOUNT_LOAN_ADMIN", true);
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   branchOk(a, branchId);
   if (
@@ -531,9 +533,8 @@ const ownerInput = z.object({
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
 });
-export async function postOwnerTransaction(raw: unknown) {
-  const a = await actor("ACCOUNT_LOAN_ADMIN", true),
-    d = ownerInput.parse(raw);
+export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
+  const d = ownerInput.parse(raw);
   return db.$transaction(
     async (tx) => {
       const existing = await tx.ownerTransaction.findFirst({
@@ -626,9 +627,8 @@ const loanInput = z.object({
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
 });
-export async function createAndReceiveLoan(raw: unknown) {
-  const a = await actor("ACCOUNT_LOAN_ADMIN", true),
-    d = loanInput.parse(raw);
+export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
+  const d = loanInput.parse(raw);
   return db.$transaction(
     async (tx) => {
       const existing = await tx.loan.findFirst({
@@ -706,9 +706,8 @@ const paymentInput = z.object({
   charges: money.default("0"),
   idempotencyKey: z.string().min(8).max(160),
 });
-export async function postLoanPayment(raw: unknown) {
-  const a = await actor("ACCOUNT_LOAN_ADMIN", true),
-    d = paymentInput.parse(raw);
+export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
+  const d = paymentInput.parse(raw);
   return db.$transaction(
     async (tx) => {
       const existing = await tx.loanPayment.findFirst({
@@ -798,10 +797,9 @@ export async function postLoanPayment(raw: unknown) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function listMoneyData() {
-  const a = await actor("ACCOUNT_MONEY_VIEW");
+export async function listMoneyDataForActor(a: Actor) {
   return {
-    dashboard: await moneyDashboard(),
+    dashboard: await moneyDashboardForActor(a),
     cheques: await db.cheque.findMany({
       where: { companyId: a.companyId, ...branchScope(a) },
       orderBy: { chequeDate: "desc" },
@@ -830,4 +828,62 @@ export async function listMoneyData() {
       },
     }),
   };
+}
+
+export async function createMoneyAccount(raw: unknown) {
+  return createMoneyAccountForActor(
+    await actor("ACCOUNT_MONEY_ENTRY", true),
+    raw,
+  );
+}
+export async function updateMoneyAccount(id: string, raw: unknown) {
+  return updateMoneyAccountForActor(
+    await actor("ACCOUNT_MONEY_ENTRY", true),
+    id,
+    raw,
+  );
+}
+export async function deactivateMoneyAccount(id: string) {
+  return deactivateMoneyAccountForActor(
+    await actor("ACCOUNT_MONEY_ENTRY", true),
+    id,
+  );
+}
+export async function moneyDashboard() {
+  return moneyDashboardForActor(await actor("ACCOUNT_MONEY_VIEW"));
+}
+export async function createMoneyTransfer(raw: unknown) {
+  return createMoneyTransferForActor(
+    await actor("ACCOUNT_MONEY_ENTRY", true),
+    raw,
+  );
+}
+export async function postOwnerTransaction(raw: unknown) {
+  return postOwnerTransactionForActor(
+    await actor("ACCOUNT_LOAN_ADMIN", true),
+    raw,
+  );
+}
+export async function createAndReceiveLoan(raw: unknown) {
+  return createAndReceiveLoanForActor(
+    await actor("ACCOUNT_LOAN_ADMIN", true),
+    raw,
+  );
+}
+export async function postLoanPayment(raw: unknown) {
+  return postLoanPaymentForActor(await actor("ACCOUNT_LOAN_ADMIN", true), raw);
+}
+export async function listMoneyData() {
+  return listMoneyDataForActor(await actor("ACCOUNT_MONEY_VIEW"));
+}
+
+export async function setupOwnerFinancialAccount(
+  userId: string,
+  branchId: string,
+) {
+  return setupOwnerFinancialAccountForActor(
+    await actor("ACCOUNT_LOAN_ADMIN", true),
+    userId,
+    branchId,
+  );
 }

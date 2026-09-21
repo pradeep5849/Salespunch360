@@ -28,9 +28,10 @@ async function actor(
     : await requirePermission(permission);
   return { ...a, companyId: a.companyId! };
 }
-export async function accountingOverview() {
-  const a = await actor("ACCOUNT_LEDGER_VIEW", false),
-    branchWhere =
+export async function accountingOverviewForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+) {
+  const branchWhere =
       a.branchAccessScope === "SELECTED_BRANCHES"
         ? { id: { in: a.branchIds ?? [] } }
         : {},
@@ -68,9 +69,11 @@ export async function accountingOverview() {
     },
   };
 }
-export async function createLedgerAccount(raw: unknown) {
-  const a = await actor("ACCOUNT_CHART_ADMIN"),
-    d = ledgerAccountSchema.parse(raw);
+export async function createLedgerAccountForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+  raw: unknown,
+) {
+  const d = ledgerAccountSchema.parse(raw);
   if (
     d.parentId &&
     !(await db.ledgerAccount.findFirst({
@@ -222,8 +225,10 @@ export async function postJournalInTx(
   });
   return j;
 }
-export async function postJournal(raw: unknown) {
-  const a = await actor("ACCOUNT_JOURNAL_POST");
+export async function postJournalForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+  raw: unknown,
+) {
   return db.$transaction((tx) => postJournalInTx(tx, a, raw), {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   });
@@ -240,9 +245,11 @@ export async function postOpeningBalances(raw: unknown) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function setPeriodLock(raw: unknown) {
-  const a = await actor("ACCOUNT_PERIOD_LOCK"),
-    d = periodLockSchema.parse(raw);
+export async function setPeriodLockForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+  raw: unknown,
+) {
+  const d = periodLockSchema.parse(raw);
   return db.$transaction(
     async (tx) => {
       await lockCompany(tx, a.companyId);
@@ -392,4 +399,17 @@ export async function reverseJournalForActor(
 
 export async function reverseJournal(raw: unknown) {
   return reverseJournalForActor(await actor("ACCOUNT_JOURNAL_REVERSE"), raw);
+}
+
+export async function accountingOverview() {
+  return accountingOverviewForActor(await actor("ACCOUNT_LEDGER_VIEW", false));
+}
+export async function createLedgerAccount(raw: unknown) {
+  return createLedgerAccountForActor(await actor("ACCOUNT_CHART_ADMIN"), raw);
+}
+export async function postJournal(raw: unknown) {
+  return postJournalForActor(await actor("ACCOUNT_JOURNAL_POST"), raw);
+}
+export async function setPeriodLock(raw: unknown) {
+  return setPeriodLockForActor(await actor("ACCOUNT_PERIOD_LOCK"), raw);
 }
