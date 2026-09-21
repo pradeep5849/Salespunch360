@@ -10,6 +10,7 @@ export function LiveLocationAddress({point}:{point:Point|null}){
  const [address,setAddress]=useState(point?"Finding address…":"Address unavailable");
  useEffect(()=>{
   if(!point){setAddress("Address unavailable");return}
+  setAddress("Finding address…");
   let cancelled=false;
   const key=process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   if(!key){setAddress("Address unavailable");return}
@@ -38,7 +39,7 @@ export function LiveLocationAddress({point}:{point:Point|null}){
   script.addEventListener("load",onLoad);
   script.addEventListener("error",onError);
   return()=>{cancelled=true;script?.removeEventListener("load",onLoad);script?.removeEventListener("error",onError)};
- },[point?.latitude,point?.longitude]);
+ },[point]);
  return <small>{address}</small>;
 }
 
