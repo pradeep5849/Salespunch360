@@ -795,9 +795,8 @@ export async function getProjectFormOptionsForActor(
     : [];
   return { branches, managers, memberCandidates, boqCandidates };
 }
-export async function replaceBudget(raw: unknown) {
+export async function replaceBudgetForActor(actor: ProjectActor, raw: unknown) {
   const data = budgetInput.parse(raw),
-    actor = await projectActor(true),
     ids = await authorizedProjectBranchIds(actor);
   return db.$transaction(
     async (tx) => {
@@ -1172,4 +1171,8 @@ export async function closeProject(
 }
 export async function reopenProject(projectId: string) {
   return reopenProjectForActor(await projectActor(true), projectId);
+}
+
+export async function replaceBudget(raw: unknown) {
+  return replaceBudgetForActor(await projectActor(true), raw);
 }

@@ -7,6 +7,7 @@ import {
   getProjectFormOptionsForActor,
   listProjectsForActor,
   reopenProjectForActor,
+  replaceBudgetForActor,
   updateProjectForActor,
 } from "@/lib/account/projects";
 import { loadProjectCostingForActor } from "@/lib/account/project-costing";
@@ -99,5 +100,17 @@ export async function mobileProjectAction(
     await closeProjectForActor(a, id, { closureNote: d.closureNote });
   else if (d.action === "REOPEN") await reopenProjectForActor(a, id);
   else throw new Error("INVALID_INPUT");
+  return getProjectForActor(a, id);
+}
+
+export async function mobileProjectBudget(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await assertOperationalWrite(u.companyId);
+  const a = await permit(u, "ACCOUNT_PROJECTS"),
+    d = raw as { lines?: unknown[] };
+  await replaceBudgetForActor(a, { projectId: id, lines: d.lines ?? [] });
   return getProjectForActor(a, id);
 }
