@@ -521,38 +521,48 @@
     {
       "feature": "Purchase Bill",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "reason": "Functional native workflow implemented; Android SDK compilation, CI, and device validation remain pending.",
       "api": [
-        "/api/v1/mobile/account/purchases"
+        "GET/POST /api/v1/mobile/account/purchases",
+        "GET /api/v1/mobile/account/purchases/{id}",
+        "POST /api/v1/mobile/account/purchases/{id}/post"
       ],
-      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain",
+      "android": "PurchaseScreen / PurchaseEditor / PurchaseDetail"
     },
     {
       "feature": "Payment-Out / Vendor Payment",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "reason": "Functional native workflow implemented; Android SDK compilation, CI, and device validation remain pending.",
       "api": [
-        "/api/v1/mobile/account/vendor-payments"
+        "GET/POST /api/v1/mobile/account/vendor-payments"
       ],
-      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain",
+      "android": "VendorPaymentScreen / VendorPaymentViewModel"
     },
     {
       "feature": "Purchase Order",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "reason": "Functional native workflow implemented; Android SDK compilation, CI, and device validation remain pending.",
       "api": [
-        "/api/v1/mobile/account/purchases"
+        "GET/POST /api/v1/mobile/account/purchases",
+        "GET /api/v1/mobile/account/purchases/{id}",
+        "POST /api/v1/mobile/account/purchases/{id}/post"
       ],
-      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain",
+      "android": "PurchaseScreen / PurchaseEditor / PurchaseDetail"
     },
     {
       "feature": "Debit Note / Purchase Return",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 4 backend mobile boundary started; native Compose workflow is not yet implemented.",
+      "reason": "Functional native workflow implemented; Android SDK compilation, CI, and device validation remain pending.",
       "api": [
-        "/api/v1/mobile/account/purchases"
+        "GET/POST /api/v1/mobile/account/purchases",
+        "GET /api/v1/mobile/account/purchases/{id}",
+        "POST /api/v1/mobile/account/purchases/{id}/post"
       ],
-      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain"
+      "sharedService": "src/lib/account/commercial.ts actor-parameterized domain",
+      "android": "PurchaseScreen / PurchaseEditor / PurchaseDetail"
     }
   ]
 }

@@ -52,6 +52,13 @@ class ApiClient(private val session:SecureSession){
  suspend fun updateQuotation(id:String,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/quotations/${enc(id)}","PATCH",payload.toString())
  suspend fun quotationAction(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/action","POST",payload.toString()))
  suspend fun quotationPdf(id:String):ByteArray=download("api/v1/mobile/account/quotations/${enc(id)}/pdf")
+ suspend fun purchaseOptions()=json.parseToJsonElement(call("api/v1/mobile/account/purchases/options")).jsonObject
+ suspend fun purchases(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/purchases"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun purchase(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/purchases/${enc(id)}")).jsonObject
+ suspend fun createPurchase(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/purchases","POST",payload.toString())).jsonObject
+ suspend fun postPurchase(id:String)=call("api/v1/mobile/account/purchases/${enc(id)}/post","POST")
+ suspend fun vendorPaymentContext()=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments")).jsonObject
+ suspend fun createVendorPayment(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments","POST",payload.toString())).jsonObject
  suspend fun dashboard(liveEmployee:String?=null,checkEmployee:String?=null):MobileDashboardContext{val q=buildList{liveEmployee?.let{add("liveEmployee=${enc(it)}")};checkEmployee?.let{add("checkEmployee=${enc(it)}")}}.joinToString("&");return json.decodeFromString(call("api/v1/mobile/dashboard${if(q.isBlank())"" else "?$q"}"))}
  suspend fun createWebSessionHandoff(redirectPath:String="/workspace/account")=json.decodeFromString<WebSessionHandoff>(call("api/v1/mobile/web-session","POST",json.encodeToString(WebSessionRequest(redirectPath))))
  suspend fun registerPush(installationId:String,fcmToken:String){call("api/v1/mobile/push","POST",json.encodeToString(buildJsonObject{put("installationId",installationId);put("fcmToken",fcmToken)}))};suspend fun logout(){try{call("api/v1/mobile/auth/logout","POST")}finally{session.clear()}};suspend fun changePassword(current:String,password:String,confirm:String)=call("api/v1/mobile/auth/password","POST",json.encodeToString(PasswordChangeRequest(current,password,confirm)))
