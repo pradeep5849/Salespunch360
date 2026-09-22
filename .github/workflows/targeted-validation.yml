@@ -35,17 +35,10 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
-      - name: Android unit tests, lint and debug APK
+      - name: Android unit tests and lint
         working-directory: android
-        run: ./gradlew testReleaseUnitTest lintRelease assembleDebug --no-daemon
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: salespunch360-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
+        run: ./gradlew testReleaseUnitTest lintRelease --no-daemon
