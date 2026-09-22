@@ -17,8 +17,6 @@ import kotlinx.serialization.Serializable
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
 @Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
 @Serializable enum class Workspace{SALES,ACCOUNT}
-@Serializable data class WebSessionRequest(val redirectPath:String="/workspace/account")
-@Serializable data class WebSessionHandoff(val handoffCode:String,val expiresAt:String)
 @Serializable data class AccountBootstrap(val user:AccountBootstrapUser,val company:AccountBootstrapCompany,val productEdition:ProductEdition,val enabledModules:List<String> = emptyList(),val effectivePermissions:List<String> = emptyList(),val canSwitchWorkspace:Boolean=false,val branch:AccountBranchContext,val availableBranches:List<AccountBranch> = emptyList(),val canConsolidate:Boolean=false,val entitlement:AccountEntitlement,val notifications:AccountNotifications=AccountNotifications(),val navigation:List<AccountNavigationGroup> = emptyList())
 @Serializable data class AccountBootstrapUser(val id:String,val name:String,val accountRole:AccountRole)
 @Serializable data class AccountBootstrapCompany(val name:String)

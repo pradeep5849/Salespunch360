@@ -21,7 +21,8 @@
       "classification": "PENDING_NATIVE",
       "reason": "Native drawer and feature-specific Compose screens replace this Web routing wrapper; Android CI/device validation pending.",
       "android": "NativeAccountAuthenticatedApp dynamic server-authorized drawer",
-      "api": ["GET /api/v1/mobile/account/bootstrap"]
+      "api": ["GET /api/v1/mobile/account/bootstrap"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/accounting/[section]",
@@ -35,7 +36,8 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/assets/[id]/edit",
@@ -49,7 +51,8 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/assets/[id]",
@@ -63,7 +66,8 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/assets/new",
@@ -77,7 +81,8 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/assets",
@@ -91,7 +96,8 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/dashboard",
@@ -112,7 +118,8 @@
         "POST /api/v1/mobile/account/expenses/{id}/attachments",
         "POST /api/v1/mobile/account/expenses/recurring"
       ],
-      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/expenses/categories",
@@ -124,7 +131,8 @@
         "GET/POST /api/v1/mobile/account/expense-categories",
         "PATCH/DELETE /api/v1/mobile/account/expense-categories/{id}"
       ],
-      "sharedService": "src/lib/account/expenses.ts category actor domain"
+      "sharedService": "src/lib/account/expenses.ts category actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/expenses/new",
@@ -139,7 +147,8 @@
         "POST /api/v1/mobile/account/expenses/{id}/attachments",
         "POST /api/v1/mobile/account/expenses/recurring"
       ],
-      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/expenses",
@@ -154,7 +163,8 @@
         "POST /api/v1/mobile/account/expenses/{id}/attachments",
         "POST /api/v1/mobile/account/expenses/recurring"
       ],
-      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/expenses/recurring",
@@ -169,7 +179,8 @@
         "POST /api/v1/mobile/account/expenses/{id}/attachments",
         "POST /api/v1/mobile/account/expenses/recurring"
       ],
-      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain"
+      "sharedService": "src/lib/account/expenses.ts actor-parameterized authoritative domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/inventory/[section]",
@@ -181,7 +192,8 @@
         "GET /api/v1/mobile/account/inventory/{stock,low-stock,options,batches,serials,prices}",
         "GET/POST /api/v1/mobile/account/inventory/{opening,transfers,adjustments}"
       ],
-      "sharedService": "src/lib/account/inventory.ts actor-parameterized authoritative domain"
+      "sharedService": "src/lib/account/inventory.ts actor-parameterized authoritative domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/inventory",
@@ -193,7 +205,8 @@
         "GET /api/v1/mobile/account/inventory/{stock,low-stock,options,batches,serials,prices}",
         "GET/POST /api/v1/mobile/account/inventory/{opening,transfers,adjustments}"
       ],
-      "sharedService": "src/lib/account/inventory.ts actor-parameterized authoritative domain"
+      "sharedService": "src/lib/account/inventory.ts actor-parameterized authoritative domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/menu",
@@ -201,7 +214,8 @@
       "classification": "PENDING_NATIVE",
       "reason": "Native drawer and feature-specific Compose screens replace this Web routing wrapper; Android CI/device validation pending.",
       "android": "NativeAccountAuthenticatedApp dynamic server-authorized drawer",
-      "api": ["GET /api/v1/mobile/account/bootstrap"]
+      "api": ["GET /api/v1/mobile/account/bootstrap"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/money/accounts",
@@ -214,7 +228,8 @@
         "POST/PATCH/DELETE money account APIs",
         "POST money transfers/owners/loans/loan-payments APIs"
       ],
-      "sharedService": "src/lib/account/money.ts actor domain"
+      "sharedService": "src/lib/account/money.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/money/capital",
@@ -227,7 +242,8 @@
         "POST/PATCH/DELETE money account APIs",
         "POST money transfers/owners/loans/loan-payments APIs"
       ],
-      "sharedService": "src/lib/account/money.ts actor domain"
+      "sharedService": "src/lib/account/money.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/money/cheques",
@@ -240,7 +256,8 @@
         "POST/PATCH/DELETE money account APIs",
         "POST money transfers/owners/loans/loan-payments APIs"
       ],
-      "sharedService": "src/lib/account/money.ts actor domain"
+      "sharedService": "src/lib/account/money.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/money/loans",
@@ -253,7 +270,8 @@
         "POST/PATCH/DELETE money account APIs",
         "POST money transfers/owners/loans/loan-payments APIs"
       ],
-      "sharedService": "src/lib/account/money.ts actor domain"
+      "sharedService": "src/lib/account/money.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/money",
@@ -266,7 +284,8 @@
         "POST/PATCH/DELETE money account APIs",
         "POST money transfers/owners/loans/loan-payments APIs"
       ],
-      "sharedService": "src/lib/account/money.ts actor domain"
+      "sharedService": "src/lib/account/money.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/money/transfers",
@@ -279,7 +298,8 @@
         "POST/PATCH/DELETE money account APIs",
         "POST money transfers/owners/loans/loan-payments APIs"
       ],
-      "sharedService": "src/lib/account/money.ts actor domain"
+      "sharedService": "src/lib/account/money.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/notifications",
@@ -287,7 +307,8 @@
       "classification": "PENDING_NATIVE",
       "reason": "Web exposes pending expense approvals only; native scoped attention list and dashboard count are implemented. Android validation pending.",
       "android": "AccountAdministrationScreen(notifications)",
-      "api": ["GET /api/v1/mobile/account/notifications"]
+      "api": ["GET /api/v1/mobile/account/notifications"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account",
@@ -306,7 +327,8 @@
         "GET /api/v1/mobile/account/projects/{id}",
         "GET /api/v1/mobile/account/projects/{id}/costing"
       ],
-      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/projects/[id]/edit",
@@ -319,7 +341,8 @@
         "GET /api/v1/mobile/account/projects/{id}",
         "GET /api/v1/mobile/account/projects/{id}/costing"
       ],
-      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/projects/[id]",
@@ -332,7 +355,8 @@
         "GET /api/v1/mobile/account/projects/{id}",
         "GET /api/v1/mobile/account/projects/{id}/costing"
       ],
-      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/projects/new",
@@ -345,7 +369,8 @@
         "GET /api/v1/mobile/account/projects/{id}",
         "GET /api/v1/mobile/account/projects/{id}/costing"
       ],
-      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/projects",
@@ -358,7 +383,8 @@
         "GET /api/v1/mobile/account/projects/{id}",
         "GET /api/v1/mobile/account/projects/{id}/costing"
       ],
-      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains"
+      "sharedService": "src/lib/account/projects.ts and project-costing.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/quotations/[id]/edit",
@@ -370,7 +396,8 @@
         "GET/POST/PATCH /api/v1/mobile/account/quotations",
         "POST /api/v1/mobile/account/quotations/{id}/action",
         "GET /api/v1/mobile/account/quotations/{id}/pdf"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/quotations/[id]",
@@ -382,7 +409,8 @@
         "GET/POST/PATCH /api/v1/mobile/account/quotations",
         "POST /api/v1/mobile/account/quotations/{id}/action",
         "GET /api/v1/mobile/account/quotations/{id}/pdf"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/quotations/[id]/pdf",
@@ -394,7 +422,8 @@
         "GET/POST/PATCH /api/v1/mobile/account/quotations",
         "POST /api/v1/mobile/account/quotations/{id}/action",
         "GET /api/v1/mobile/account/quotations/{id}/pdf"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/quotations/[id]/revisions/new",
@@ -406,7 +435,8 @@
         "GET/POST/PATCH /api/v1/mobile/account/quotations",
         "POST /api/v1/mobile/account/quotations/{id}/action",
         "GET /api/v1/mobile/account/quotations/{id}/pdf"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/quotations/new",
@@ -418,7 +448,8 @@
         "GET/POST/PATCH /api/v1/mobile/account/quotations",
         "POST /api/v1/mobile/account/quotations/{id}/action",
         "GET /api/v1/mobile/account/quotations/{id}/pdf"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/quotations",
@@ -430,7 +461,8 @@
         "GET/POST/PATCH /api/v1/mobile/account/quotations",
         "POST /api/v1/mobile/account/quotations/{id}/action",
         "GET /api/v1/mobile/account/quotations/{id}/pdf"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/reports/[report]",
@@ -443,7 +475,8 @@
         "GET /api/v1/mobile/account/reports/{report}",
         "GET /api/v1/mobile/account/reports/{report}/{csv|xlsx|pdf}"
       ],
-      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts actor domain"
+      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/reports",
@@ -456,51 +489,56 @@
         "GET /api/v1/mobile/account/reports/{report}",
         "GET /api/v1/mobile/account/reports/{report}/{csv|xlsx|pdf}"
       ],
-      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts actor domain"
+      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts actor domain",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/settings/custom-fields",
       "source": "src/app/workspace/account/settings/custom-fields/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "reason": "Functional native custom-field validation and mutation implemented; Android CI/device validation pending.",
       "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
       "api": [
         "GET /api/v1/mobile/account/settings",
         "POST /api/v1/mobile/account/settings/{section}"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/settings/modules",
       "source": "src/app/workspace/account/settings/modules/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "reason": "Functional native module dependency and entitlement-aware mutation implemented; Android CI/device validation pending.",
       "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
       "api": [
         "GET /api/v1/mobile/account/settings",
         "POST /api/v1/mobile/account/settings/{section}"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/settings",
       "source": "src/app/workspace/account/settings/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "reason": "Functional native settings and authorized-signature upload, replacement, authenticated access and removal implemented; Android CI/device validation pending.",
       "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
       "api": [
         "GET /api/v1/mobile/account/settings",
         "POST /api/v1/mobile/account/settings/{section}"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/settings/print-templates",
       "source": "src/app/workspace/account/settings/print-templates/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "reason": "Functional native versioned template configuration, signature management and server-output sharing implemented; Android CI/device validation pending.",
       "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
       "api": [
         "GET /api/v1/mobile/account/settings",
         "POST /api/v1/mobile/account/settings/{section}"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/tax/[section]",
@@ -508,7 +546,8 @@
       "classification": "PENDING_NATIVE",
       "reason": "Functional native GST settings, branch tax profiles and authoritative posted-document report data implemented; Android validation pending.",
       "android": "AccountAdministrationScreen(tax)",
-      "api": ["GET/POST /api/v1/mobile/account/tax"]
+      "api": ["GET/POST /api/v1/mobile/account/tax"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/tax",
@@ -516,7 +555,8 @@
       "classification": "PENDING_NATIVE",
       "reason": "Functional native GST settings, branch tax profiles and authoritative posted-document report data implemented; Android validation pending.",
       "android": "AccountAdministrationScreen(tax)",
-      "api": ["GET/POST /api/v1/mobile/account/tax"]
+      "api": ["GET/POST /api/v1/mobile/account/tax"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/transactions/[id]",
@@ -526,7 +566,8 @@
       "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
       "api": [
         "mobile transactions, purchases, receipts and vendor-payments APIs"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/transactions/money",
@@ -536,7 +577,8 @@
       "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
       "api": [
         "mobile transactions, purchases, receipts and vendor-payments APIs"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/transactions/new",
@@ -546,7 +588,8 @@
       "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
       "api": [
         "mobile transactions, purchases, receipts and vendor-payments APIs"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/transactions",
@@ -556,7 +599,8 @@
       "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
       "api": [
         "mobile transactions, purchases, receipts and vendor-payments APIs"
-      ]
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/audit",
@@ -564,23 +608,26 @@
       "classification": "PENDING_NATIVE",
       "reason": "Functional native tenant-scoped audit list implemented; Android validation pending.",
       "android": "AccountAdministrationScreen(audit)",
-      "api": ["GET /api/v1/mobile/account/utilities/audit"]
+      "api": ["GET /api/v1/mobile/account/utilities/audit"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/backup",
       "source": "src/app/workspace/account/utilities/backup/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Authoritative server backup domain exists; native download/share wiring remains pending.",
-      "android": "AccountAdministrationScreen utilities hub",
-      "api": ["existing authoritative src/lib/account/utilities.ts"]
+      "reason": "Functional native server-generated tenant backup and Android share flow implemented; Android CI/device validation pending.",
+      "android": "AccountUtilityScreen(backup)",
+      "api": ["GET /api/v1/mobile/account/backup"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/export",
       "source": "src/app/workspace/account/utilities/export/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Server export domain exists and reports exports are native; master-data export UI wiring remains pending.",
-      "android": "AccountAdministrationScreen utilities hub",
-      "api": ["existing authoritative src/lib/account/exports.ts"]
+      "reason": "Functional native server-generated CSV/XLSX master export and Android share flow implemented; Android CI/device validation pending.",
+      "android": "AccountUtilityScreen(export)",
+      "api": ["GET /api/v1/mobile/account/exports/{type}/{csv|xlsx}"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/financial-year",
@@ -594,31 +641,43 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/import/[id]",
       "source": "src/app/workspace/account/utilities/import/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Native import history is implemented; Android document-picker upload/preview/confirm remains pending shared import actor extraction.",
-      "android": "AccountAdministrationScreen(imports)",
-      "api": ["GET /api/v1/mobile/account/utilities/imports"]
+      "reason": "Functional native server preview/result and confirmation execution implemented; Android CI/device validation pending.",
+      "android": "AccountUtilityScreen(import) / AccountUtilityViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/imports",
+        "GET /api/v1/mobile/account/imports/{id}",
+        "POST /api/v1/mobile/account/imports/{id}/execute"
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/import",
       "source": "src/app/workspace/account/utilities/import/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Native import history is implemented; Android document-picker upload/preview/confirm remains pending shared import actor extraction.",
-      "android": "AccountAdministrationScreen(imports)",
-      "api": ["GET /api/v1/mobile/account/utilities/imports"]
+      "reason": "Functional native document picker, authenticated upload, server preview/errors, confirmation, execution, history and detail API implemented; Android CI/device validation pending.",
+      "android": "AccountUtilityScreen(import) / AccountUtilityViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/imports",
+        "GET /api/v1/mobile/account/imports/{id}",
+        "POST /api/v1/mobile/account/imports/{id}/execute"
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities",
       "source": "src/app/workspace/account/utilities/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Native drawer is the utilities hub and routes completed utilities directly; remaining import/backup/export gaps are explicitly tracked.",
+      "reason": "Functional native utilities navigation covers import, export, backup, audit, recycle bin, verification, financial years and period locks; Android CI/device validation pending.",
       "android": "NativeAccountAuthenticatedApp drawer",
-      "api": ["feature-specific mobile APIs"]
+      "api": ["feature-specific mobile APIs"],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/period-locks",
@@ -632,15 +691,20 @@
         "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
         "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains",
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/recycle-bin",
       "source": "src/app/workspace/account/utilities/recycle-bin/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Native tenant-scoped recycle list implemented; restore mutation remains pending shared actor extraction and validation.",
-      "android": "AccountAdministrationScreen(recycle-bin)",
-      "api": ["GET /api/v1/mobile/account/utilities/recycle-bin"]
+      "reason": "Functional native list and conflict-safe authoritative restore with confirmation implemented; permanent delete is not exposed by Web/backend; Android CI/device validation pending.",
+      "android": "AccountUtilityScreen(recycle)",
+      "api": [
+        "GET /api/v1/mobile/account/utilities/recycle-bin",
+        "POST /api/v1/mobile/account/recycle-bin/{id}/restore"
+      ],
+      "pendingCategory": "VALIDATION_ONLY"
     },
     {
       "route": "/workspace/account/utilities/verification",
@@ -648,7 +712,8 @@
       "classification": "PENDING_NATIVE",
       "reason": "Functional native read-only authoritative integrity verification implemented; Android validation pending.",
       "android": "AccountAdministrationScreen(verification)",
-      "api": ["GET /api/v1/mobile/account/utilities/verification"]
+      "api": ["GET /api/v1/mobile/account/utilities/verification"],
+      "pendingCategory": "VALIDATION_ONLY"
     }
   ],
   "externalLinks": [
@@ -919,6 +984,229 @@
         "tax",
         "budget-vs-actual"
       ]
+    }
+  ],
+  "validationGate": {
+    "functionalGapCount": 0,
+    "pendingClassification": "All remaining PENDING_NATIVE entries are VALIDATION_ONLY: Android SDK/CI and real-device QA.",
+    "generatedFrom": "routes[*].reason"
+  },
+  "pendingRouteAudit": [
+    {
+      "route": "/workspace/account/[master]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/accounting/[section]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/assets/[id]/edit",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/assets/[id]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/assets/new",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/assets",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/expenses/[id]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/expenses/categories",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/expenses/new",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/expenses",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/expenses/recurring",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/inventory/[section]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/inventory",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/menu",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/money/accounts",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/money/capital",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/money/cheques",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/money/loans",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/money",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/money/transfers",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/notifications",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/projects/[id]/costing",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/projects/[id]/edit",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/projects/[id]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/projects/new",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/projects",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/quotations/[id]/edit",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/quotations/[id]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/quotations/[id]/pdf",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/quotations/[id]/revisions/new",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/quotations/new",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/quotations",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/reports/[report]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/reports",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/settings/custom-fields",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/settings/modules",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/settings",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/settings/print-templates",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/tax/[section]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/tax",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/transactions/[id]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/transactions/money",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/transactions/new",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/transactions",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/audit",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/backup",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/export",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/financial-year",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/import/[id]",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/import",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/period-locks",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/recycle-bin",
+      "category": "VALIDATION_ONLY"
+    },
+    {
+      "route": "/workspace/account/utilities/verification",
+      "category": "VALIDATION_ONLY"
     }
   ]
 }

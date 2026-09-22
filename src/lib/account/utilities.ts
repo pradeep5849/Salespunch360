@@ -370,8 +370,10 @@ export async function archiveMaster(input: {
     return recycle;
   });
 }
-export async function restoreMaster(recycleId: string) {
-  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+export async function restoreMasterForActor(
+  actor: { id: string; companyId: string; accountRole: string | null },
+  recycleId: string,
+) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   return db.$transaction(async (tx) => {
     const recycle = await tx.accountRecycleRecord.findFirst({
@@ -476,8 +478,11 @@ export async function getAuditHistory() {
   return rows.map((x) => ({ ...x, metadata: redactAuditMetadata(x.metadata) }));
 }
 
-export async function createAccountBackup() {
-  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+export async function createAccountBackupForActor(actor: {
+  id: string;
+  companyId: string;
+  accountRole: string | null;
+}) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const companyId = actor.companyId!;
   const company = await db.company.findUniqueOrThrow({
@@ -562,4 +567,16 @@ export async function closeFinancialYear(input: {
 }) {
   const a = await requirePermissionForMutation("ACCOUNT_PERIOD_LOCK");
   return closeFinancialYearForActor({ ...a, companyId: a.companyId! }, input);
+}
+
+export async function restoreMaster(recycleId: string) {
+  return restoreMasterForActor(
+    (await requirePermissionForMutation("ACCOUNT_SETTINGS")) as never,
+    recycleId,
+  );
+}
+export async function createAccountBackup() {
+  return createAccountBackupForActor(
+    (await requirePermissionForMutation("ACCOUNT_SETTINGS")) as never,
+  );
 }

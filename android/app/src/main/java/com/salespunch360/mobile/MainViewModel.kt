@@ -10,15 +10,12 @@ import com.salespunch360.mobile.data.Bootstrap
 import com.salespunch360.mobile.data.ForbiddenMobileRoleException
 import com.salespunch360.mobile.data.LocationPayload
 import com.salespunch360.mobile.data.SecureSession
-import com.salespunch360.mobile.data.WebSessionHandoff
 import com.salespunch360.mobile.data.Workspace
 import com.salespunch360.mobile.data.WorkspacePreferenceStore
 import com.salespunch360.mobile.data.resolveWorkspace
 import com.salespunch360.mobile.data.validatedWorkspaces
 import com.salespunch360.mobile.location.TrackingService
 import com.salespunch360.mobile.push.PushNotifications
-import com.salespunch360.mobile.web.AccountWebSession
-import com.salespunch360.mobile.web.accountRelativePathOrNull
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -131,7 +128,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val bootstrap = current.bootstrap ?: return
         val authorized = validatedWorkspaces(bootstrap)
         if (Workspace.ACCOUNT !in authorized) return
-        val safe = accountRelativePathOrNull(path) ?: "/workspace/account"
+        val safe = nativeAccountPathOrNull(path) ?: "/workspace/account"
         workspacePreference.save(Workspace.ACCOUNT)
         _state.value = current.copy(workspace = Workspace.ACCOUNT, accountPath = safe, message = null)
     }
@@ -150,43 +147,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun requestAccountHandoff(path: String, onResult: (Result<WebSessionHandoff>) -> Unit) {
-        viewModelScope.launch {
-            val safe = accountRelativePathOrNull(path) ?: "/workspace/account"
-            val result = runCatching { api.createWebSessionHandoff(safe) }
-            val error = result.exceptionOrNull()
-            when {
-                error is ApiException && error.status == 403 -> refreshAuthorization()
-                error is ApiException && error.status == 401 -> secureSignOut("Your session expired. Please sign in again.")
-            }
-            onResult(result)
-        }
-    }
-
-    fun recoverAccountSession() {
-        viewModelScope.launch {
-            try {
-                val refreshed = api.bootstrap()
-                if (applyBootstrap(refreshed, forcedWorkspace = Workspace.ACCOUNT) &&
-                    _state.value.workspace == Workspace.ACCOUNT
-                ) {
-                    _state.value = _state.value.copy(
-                        accountSessionEpoch = _state.value.accountSessionEpoch + 1,
-                        message = null,
-                    )
-                }
-            } catch (error: Exception) {
-                if (error is ApiException && error.status == 401) {
-                    secureSignOut("Your session expired. Please sign in again.")
-                } else {
-                    _state.value = _state.value.copy(message = "Account session could not be refreshed.")
-                }
-            }
-        }
-    }
-
     fun handleDeepLink(raw: String?) {
-        val safe = raw?.let(::accountRelativePathOrNull) ?: return
+        val safe = raw?.let(::nativeAccountPathOrNull) ?: return
         pendingAccountPath = safe
         val bootstrap = _state.value.bootstrap
         if (bootstrap != null && Workspace.ACCOUNT in validatedWorkspaces(bootstrap)) {
@@ -207,7 +169,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             clearSalesLocal(owner)
             session.clear()
             workspacePreference.clear()
-            AccountWebSession.clear()
             pendingAccountPath = null
             _state.value = AppState(AppStatus.SIGNED_OUT)
         }
@@ -273,7 +234,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         clearSalesLocal(invalidatedOwner)
         session.clear()
         workspacePreference.clear()
-        AccountWebSession.clear()
         pendingAccountPath = null
         _state.value = AppState(AppStatus.SIGNED_OUT, message = message)
     }

@@ -370,3 +370,111 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string) {
     });
   throw new Error("INVALID_SECTION");
 }
+
+export async function mobileSignatureUpload(u: MobileAppPrincipal, file: File) {
+  const a = admin(u);
+  await assertOperationalWrite(a.companyId);
+  const { uploadAuthorizedSignatureForActor } =
+    await import("@/lib/account/signatures");
+  return uploadAuthorizedSignatureForActor(a, file);
+}
+export async function mobileSignatureRemove(u: MobileAppPrincipal) {
+  const a = admin(u);
+  await assertOperationalWrite(a.companyId);
+  const { removeCurrentAuthorizedSignatureForActor } =
+    await import("@/lib/account/signatures");
+  return removeCurrentAuthorizedSignatureForActor(a);
+}
+export async function mobileSignatureImage(u: MobileAppPrincipal) {
+  const a = actor(u, "ACCOUNT_SETTINGS"),
+    row = await db.authorizedSignatureVersion.findFirst({
+      where: { companyId: a.companyId, isCurrent: true },
+      orderBy: { createdAt: "desc" },
+    });
+  if (!row) throw new Error("SIGNATURE_NOT_FOUND");
+  const { privateStorage } = await import("@/lib/storage");
+  return privateStorage().get(row.objectKey);
+}
+export async function mobileImportPreview(
+  u: MobileAppPrincipal,
+  type: string,
+  file: File,
+  updateExisting: boolean,
+) {
+  const permission =
+      type === "OPENING_BALANCES"
+        ? "ACCOUNT_OPENING_BALANCE"
+        : "ACCOUNT_ACCOUNTS",
+    a = actor(u, permission);
+  await assertOperationalWrite(a.companyId);
+  if (file.size < 1 || file.size > 10 * 1024 * 1024)
+    throw new Error("INVALID_IMPORT_FILE");
+  const {
+    ACCOUNT_IMPORT_TYPES,
+    previewAccountImportForActor,
+    saveImportPreviewForActor,
+  } = await import("@/lib/account/imports");
+  if (!ACCOUNT_IMPORT_TYPES.includes(type as never))
+    throw new Error("UNSUPPORTED_IMPORT");
+  const preview = await previewAccountImportForActor(a, {
+    type: type as never,
+    fileName: file.name,
+    bytes: new Uint8Array(await file.arrayBuffer()),
+    updateExisting,
+  });
+  const job = await saveImportPreviewForActor(a, preview);
+  return { job, ...preview };
+}
+export async function mobileImportDetail(u: MobileAppPrincipal, id: string) {
+  const a = actor(u, "ACCOUNT_ACCOUNTS"),
+    row = await db.accountImportJob.findFirst({
+      where: { id, companyId: a.companyId },
+    });
+  if (!row) throw new Error("MOBILE_FORBIDDEN");
+  return row;
+}
+export async function mobileImportExecute(u: MobileAppPrincipal, id: string) {
+  const a = actor(u, "ACCOUNT_ACCOUNTS");
+  await assertOperationalWrite(a.companyId);
+  const { executeAccountImportForActor } =
+    await import("@/lib/account/imports");
+  return executeAccountImportForActor(a, id);
+}
+export async function mobileExport(
+  u: MobileAppPrincipal,
+  type: string,
+  format: string,
+) {
+  const a = actor(u, "ACCOUNT_REPORTS"),
+    { exportAccountDataForActor } = await import("@/lib/account/exports");
+  return exportAccountDataForActor(a, type, format);
+}
+export async function mobileBackup(u: MobileAppPrincipal) {
+  const a = admin(u),
+    { createAccountBackupForActor } = await import("@/lib/account/utilities");
+  return createAccountBackupForActor(a);
+}
+export async function mobileRecycleRestore(u: MobileAppPrincipal, id: string) {
+  const a = admin(u);
+  await assertOperationalWrite(a.companyId);
+  const { restoreMasterForActor } = await import("@/lib/account/utilities");
+  return restoreMasterForActor(a, id);
+}
+export async function mobileAccountUsers(u: MobileAppPrincipal) {
+  actor(u, "ACCOUNT_USER_ADMIN");
+  const { getProductUserManagementContextForActor } =
+    await import("@/lib/users/product-user-management");
+  return getProductUserManagementContextForActor(u as never);
+}
+export async function mobileAccountUserSave(
+  u: MobileAppPrincipal,
+  raw: unknown,
+  edit = false,
+) {
+  actor(u, "ACCOUNT_USER_ADMIN");
+  await assertOperationalWrite(u.companyId);
+  const service = await import("@/lib/users/product-user-management");
+  return edit
+    ? service.editAccountUserForActor(u as never, raw)
+    : service.createAccountUserForActor(u as never, raw);
+}
