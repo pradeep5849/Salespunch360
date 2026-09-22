@@ -22,8 +22,8 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
   db.billingOrder.count({where:{companyId}}),
   hasSales?effectiveEntitlement(companyId,now):Promise.resolve(null),
   hasAccount?db.user.findMany({where:{companyId,isActive:true,accountAccessActive:true,accountRole:{not:null}},select:{accountRole:true}}):Promise.resolve([]),
-  db.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"},select:{adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,billingPeriod:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}}})
-  ,hasSales?db.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},select:{id:true,name:true,salesRole:true},orderBy:[{salesRole:"asc"},{name:"asc"}]}):Promise.resolve([])
+  db.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"},select:{adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,billingPeriod:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}}}),
+  hasSales?db.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},select:{id:true,name:true,salesRole:true},orderBy:[{salesRole:"asc"},{name:"asc"}]}):Promise.resolve([])
  ]);
  const accountSubs=activeSubs.filter(sub=>sub.accountPackages>0||sub.sourceOrder?.provider==="ACCOUNT_PACKAGE");
  const paidAccountPackages=accountSubs.reduce((sum,sub)=>sum+(sub.accountPackages||(sub.sourceOrder?.provider==="ACCOUNT_PACKAGE"?sub.adminSeats:0)),0);
@@ -39,6 +39,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
   sales:entitlement?{
    status:entitlement.paidActive?"ACTIVE":entitlement.trialActive?"TRIAL":company.subscriptionStatus,
    endsAt:entitlement.subscription?.endsAt??company.trialEndsAt,
+   billingPeriod:entitlement.subscription?.billingPeriod??null,
    adminUsage:entitlement.adminUsage,adminLimit:entitlement.adminLimit,
    managerUsage:entitlement.managerUsage,managerLimit:entitlement.managerLimit,
    salesUsage:entitlement.salesUsage,salesLimit:entitlement.salesLimit
