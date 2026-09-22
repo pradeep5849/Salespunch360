@@ -25,31 +25,71 @@
       "route": "/workspace/account/accounting/[section]",
       "source": "src/app/workspace/account/accounting/[section]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
+      ],
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/assets/[id]/edit",
       "source": "src/app/workspace/account/assets/[id]/edit/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
+      ],
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/assets/[id]",
       "source": "src/app/workspace/account/assets/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
+      ],
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/assets/new",
       "source": "src/app/workspace/account/assets/new/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
+      ],
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/assets",
       "source": "src/app/workspace/account/assets/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
+      "api": [
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
+      ],
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/dashboard",
@@ -354,13 +394,27 @@
       "route": "/workspace/account/reports/[report]",
       "source": "src/app/workspace/account/reports/[report]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "All current Web Account reports have a functional native hub, filters, result table and CSV/XLSX/PDF share flow; Android CI/device validation pending.",
+      "android": "AccountReportsScreen / AccountReportViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/reports/options",
+        "GET /api/v1/mobile/account/reports/{report}",
+        "GET /api/v1/mobile/account/reports/{report}/{csv|xlsx|pdf}"
+      ],
+      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts actor domain"
     },
     {
       "route": "/workspace/account/reports",
       "source": "src/app/workspace/account/reports/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "All current Web Account reports have a functional native hub, filters, result table and CSV/XLSX/PDF share flow; Android CI/device validation pending.",
+      "android": "AccountReportsScreen / AccountReportViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/reports/options",
+        "GET /api/v1/mobile/account/reports/{report}",
+        "GET /api/v1/mobile/account/reports/{report}/{csv|xlsx|pdf}"
+      ],
+      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts actor domain"
     },
     {
       "route": "/workspace/account/settings/custom-fields",
@@ -444,13 +498,15 @@
       "route": "/workspace/account/utilities/financial-year",
       "source": "src/app/workspace/account/utilities/financial-year/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 9 started: native authoritative overview/list is connected; chart creation and period-lock advancement implemented where applicable. Remaining Accounting mutation parity is pending.",
-      "android": "AccountingScreen / AccountAccountingViewModel",
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
       "api": [
-        "GET /api/v1/mobile/account/accounting",
-        "POST /api/v1/mobile/account/accounting/{ledgers,journals,period-locks}"
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts actor domain"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/utilities/import/[id]",
@@ -474,13 +530,15 @@
       "route": "/workspace/account/utilities/period-locks",
       "source": "src/app/workspace/account/utilities/period-locks/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 9 started: native authoritative overview/list is connected; chart creation and period-lock advancement implemented where applicable. Remaining Accounting mutation parity is pending.",
-      "android": "AccountingScreen / AccountAccountingViewModel",
+      "reason": "Functional native accounting workflow implemented; Android CI/device validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen with AccountAccountingViewModel and AccountAssetViewModel",
       "api": [
-        "GET /api/v1/mobile/account/accounting",
-        "POST /api/v1/mobile/account/accounting/{ledgers,journals,period-locks}"
+        "GET/POST /api/v1/mobile/account/accounting",
+        "POST /api/v1/mobile/account/accounting/{ledgers,cost-centres,journals,opening,period-locks,financial-years}",
+        "GET/POST /api/v1/mobile/account/accounting/journals/{id} actions",
+        "GET/POST/PATCH /api/v1/mobile/account/assets"
       ],
-      "sharedService": "src/lib/accounting/service.ts actor domain"
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts actor domains"
     },
     {
       "route": "/workspace/account/utilities/recycle-bin",
@@ -731,11 +789,38 @@
       "sharedService": "src/lib/account/money.ts"
     },
     {
-      "feature": "Accounting foundation",
+      "feature": "Accounting",
       "classification": "PENDING_NATIVE",
-      "reason": "Phase 9 in progress: native read workflows plus chart and period-lock writes are implemented; journals/assets/financial-year lifecycle remain pending.",
-      "android": "AccountingScreen / AccountAccountingViewModel",
-      "sharedService": "src/lib/accounting/service.ts"
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "ChartOfAccountsScreen / JournalScreen / AssetScreen / FinancialYearScreen",
+      "sharedService": "src/lib/accounting/service.ts, account/assets.ts, account/service.ts, account/utilities.ts"
+    },
+    {
+      "feature": "All Account financial reports",
+      "classification": "PENDING_NATIVE",
+      "reason": "Functional implementation complete / validation pending.",
+      "android": "AccountReportsScreen / AccountReportViewModel",
+      "sharedService": "src/lib/account/reports/service.ts and financial-reports.ts",
+      "reports": [
+        "profit-loss",
+        "balance-sheet",
+        "trial-balance",
+        "cash-flow",
+        "general-ledger",
+        "customer-ledger",
+        "vendor-ledger",
+        "receivable-aging",
+        "payable-aging",
+        "cash-bank",
+        "owner-capital",
+        "projects",
+        "branches",
+        "items",
+        "invoices",
+        "customers",
+        "tax",
+        "budget-vs-actual"
+      ]
     }
   ]
 }

@@ -22,7 +22,6 @@ import {
 import { allocateDocumentNumberInTx } from "./numbering";
 import {
   postJournalInTx,
-  reverseJournal,
   reverseJournalForActor,
 } from "@/lib/accounting/service";
 import { privateStorage } from "@/lib/storage";

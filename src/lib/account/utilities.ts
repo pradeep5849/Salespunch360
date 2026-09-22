@@ -1,47 +1,565 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { AuthorizationError, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import {
+  AuthorizationError,
+  requirePermission,
+  requirePermissionForMutation,
+} from "@/lib/auth/authorization";
 
-export type VerificationResult = { status: "PASS" | "WARNING" | "ERROR"; check: string; affected: number; samples: string[]; recommendation: string };
-const result = (check: string, affected: number, samples: string[], recommendation: string, warning = false): VerificationResult => ({ status: affected ? warning ? "WARNING" : "ERROR" : "PASS", check, affected, samples: samples.slice(0, 5), recommendation });
+export type VerificationResult = {
+  status: "PASS" | "WARNING" | "ERROR";
+  check: string;
+  affected: number;
+  samples: string[];
+  recommendation: string;
+};
+const result = (
+  check: string,
+  affected: number,
+  samples: string[],
+  recommendation: string,
+  warning = false,
+): VerificationResult => ({
+  status: affected ? (warning ? "WARNING" : "ERROR") : "PASS",
+  check,
+  affected,
+  samples: samples.slice(0, 5),
+  recommendation,
+});
 
-export async function verifyAccountData(): Promise<VerificationResult[]> {
-  const actor = await requirePermission("ACCOUNT_REPORTS"), companyId = actor.companyId!;
-  const [journals, documents, systemLedgers, moneyAccounts, movements, projects, assets, assignmentHistory, users] = await Promise.all([
-    db.journalEntry.findMany({ where: { companyId }, select: { journalNumber: true, lines: { select: { debit: true, credit: true } } } }),
-    db.commercialDocument.findMany({ where: { companyId }, select: { documentNumber: true, balanceDue: true, grandTotal: true, payableAmount: true, cgstTotal: true, sgstTotal: true, igstTotal: true, cessTotal: true, taxTotal: true } }),
-    db.ledgerAccount.groupBy({ by: ["systemKey"], where: { companyId, systemKey: { not: null } }, _count: true }),
-    db.moneyAccount.findMany({ where: { companyId }, select: { name: true, ledgerAccountId: true } }),
-    db.stockMovement.findMany({ where: { companyId }, select: { id: true, sourceId: true, movementType: true, quantity: true, warehouseId: true, productId: true } }),
-    db.project.findMany({ where: { companyId }, select: { projectNumber: true, branchId: true, customerId: true } }),
-    db.asset.findMany({ where: { companyId }, select: { id:true,assetNumber: true, branchId: true, assignedUserId: true,status:true } }),
-    db.assetAssignmentHistory.findMany({where:{companyId,returnedAt:null},select:{assetId:true,assignedToId:true}}),
-    db.user.findMany({where:{companyId},select:{id:true,isActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}}}}),
+export async function verifyAccountDataForActor(actor: {
+  id: string;
+  companyId: string;
+}): Promise<VerificationResult[]> {
+  const companyId = actor.companyId;
+  const [
+    journals,
+    documents,
+    systemLedgers,
+    moneyAccounts,
+    movements,
+    projects,
+    assets,
+    assignmentHistory,
+    users,
+  ] = await Promise.all([
+    db.journalEntry.findMany({
+      where: { companyId },
+      select: {
+        journalNumber: true,
+        lines: { select: { debit: true, credit: true } },
+      },
+    }),
+    db.commercialDocument.findMany({
+      where: { companyId },
+      select: {
+        documentNumber: true,
+        balanceDue: true,
+        grandTotal: true,
+        payableAmount: true,
+        cgstTotal: true,
+        sgstTotal: true,
+        igstTotal: true,
+        cessTotal: true,
+        taxTotal: true,
+      },
+    }),
+    db.ledgerAccount.groupBy({
+      by: ["systemKey"],
+      where: { companyId, systemKey: { not: null } },
+      _count: true,
+    }),
+    db.moneyAccount.findMany({
+      where: { companyId },
+      select: { name: true, ledgerAccountId: true },
+    }),
+    db.stockMovement.findMany({
+      where: { companyId },
+      select: {
+        id: true,
+        sourceId: true,
+        movementType: true,
+        quantity: true,
+        warehouseId: true,
+        productId: true,
+      },
+    }),
+    db.project.findMany({
+      where: { companyId },
+      select: { projectNumber: true, branchId: true, customerId: true },
+    }),
+    db.asset.findMany({
+      where: { companyId },
+      select: {
+        id: true,
+        assetNumber: true,
+        branchId: true,
+        assignedUserId: true,
+        status: true,
+      },
+    }),
+    db.assetAssignmentHistory.findMany({
+      where: { companyId, returnedAt: null },
+      select: { assetId: true, assignedToId: true },
+    }),
+    db.user.findMany({
+      where: { companyId },
+      select: {
+        id: true,
+        isActive: true,
+        branchAccessScope: true,
+        branchAccesses: { select: { branchId: true } },
+      },
+    }),
   ]);
-  const badJournals = journals.filter((j) => !j.lines.reduce((n, l) => n.plus(l.debit).minus(l.credit), new Prisma.Decimal(0)).isZero());
-  const negative = documents.filter((d) => d.balanceDue.isNegative() || d.balanceDue.gt(d.grandTotal));
-  const badTax = documents.filter((d) => !d.cgstTotal.plus(d.sgstTotal).plus(d.igstTotal).plus(d.cessTotal).equals(d.taxTotal) || d.payableAmount?.isNegative());
-  const duplicateLedgers = systemLedgers.filter((x) => x._count !== 1), unmappedMoney = moneyAccounts.filter((x) => !x.ledgerAccountId);
-  const badMovement = movements.filter((m) => m.quantity.lte(0) || !m.warehouseId || !m.productId), transferGroups = new Map<string, Set<string>>(); movements.filter((m) => m.movementType === "TRANSFER_IN" || m.movementType === "TRANSFER_OUT").forEach((m) => { const key = m.sourceId ?? m.id; transferGroups.set(key, (transferGroups.get(key) ?? new Set()).add(m.movementType)); }); const unpaired = [...transferGroups].filter(([, x]) => x.size !== 2);
-  const branches = new Set((await db.branch.findMany({ where: { companyId }, select: { id: true } })).map((x) => x.id)), customers = new Set((await db.customer.findMany({ where: { companyId }, select: { id: true } })).map((x) => x.id));
-  const badProjects = projects.filter((p) => !branches.has(p.branchId) || !customers.has(p.customerId)), badAssets = assets.filter((a) => !branches.has(a.branchId));
-  const assignmentIssues=assets.filter(asset=>{const active=assignmentHistory.filter(x=>x.assetId===asset.id);if(active.length!==1)return active.length>1||asset.status==="ASSIGNED"||Boolean(asset.assignedUserId);const assignment=active[0],user=users.find(x=>x.id===assignment.assignedToId);return asset.status!=="ASSIGNED"||asset.assignedUserId!==assignment.assignedToId||!user?.isActive||(user.branchAccessScope==="SELECTED_BRANCHES"&&!user.branchAccesses.some(x=>x.branchId===asset.branchId));});
-  return [result("Journal entries balance", badJournals.length, badJournals.map((x) => x.journalNumber), "Reverse and repost the affected journal."), result("Document outstanding is valid", negative.length, negative.map((x) => x.documentNumber), "Review settlement and advance allocations."), result("System ledgers are unique", duplicateLedgers.length, duplicateLedgers.map((x) => x.systemKey ?? "unknown"), "Restore the canonical system-ledger mapping."), result("Money accounts map to ledgers", unmappedMoney.length, unmappedMoney.map((x) => x.name), "Link each Money Account to one posting ledger."), result("Stock movements have valid positive quantities", badMovement.length, badMovement.map((x) => x.sourceId ?? x.id), "Use a controlled stock correction; never rewrite movements."), result("Inventory transfers are paired", unpaired.length, unpaired.map(([x]) => x), "Complete the matching transfer leg."), result("Stored tax components reconcile", badTax.length, badTax.map((x) => x.documentNumber), "Review the immutable tax snapshot and issue a controlled note."), result("Project tenant references are valid", badProjects.length, badProjects.map((x) => x.projectNumber), "Correct the Project through an authorized workflow."), result("Asset Branch references are valid", badAssets.length, badAssets.map((x) => x.assetNumber), "Correct the Asset assignment through its history workflow."),result("Asset assignment history agrees with current assignment",assignmentIssues.length,assignmentIssues.map(x=>x.assetNumber),"Review assignment history and use the controlled return/assign workflow; verification is read-only.")];
+  const badJournals = journals.filter(
+    (j) =>
+      !j.lines
+        .reduce(
+          (n, l) => n.plus(l.debit).minus(l.credit),
+          new Prisma.Decimal(0),
+        )
+        .isZero(),
+  );
+  const negative = documents.filter(
+    (d) => d.balanceDue.isNegative() || d.balanceDue.gt(d.grandTotal),
+  );
+  const badTax = documents.filter(
+    (d) =>
+      !d.cgstTotal
+        .plus(d.sgstTotal)
+        .plus(d.igstTotal)
+        .plus(d.cessTotal)
+        .equals(d.taxTotal) || d.payableAmount?.isNegative(),
+  );
+  const duplicateLedgers = systemLedgers.filter((x) => x._count !== 1),
+    unmappedMoney = moneyAccounts.filter((x) => !x.ledgerAccountId);
+  const badMovement = movements.filter(
+      (m) => m.quantity.lte(0) || !m.warehouseId || !m.productId,
+    ),
+    transferGroups = new Map<string, Set<string>>();
+  movements
+    .filter(
+      (m) =>
+        m.movementType === "TRANSFER_IN" || m.movementType === "TRANSFER_OUT",
+    )
+    .forEach((m) => {
+      const key = m.sourceId ?? m.id;
+      transferGroups.set(
+        key,
+        (transferGroups.get(key) ?? new Set()).add(m.movementType),
+      );
+    });
+  const unpaired = [...transferGroups].filter(([, x]) => x.size !== 2);
+  const branches = new Set(
+      (
+        await db.branch.findMany({ where: { companyId }, select: { id: true } })
+      ).map((x) => x.id),
+    ),
+    customers = new Set(
+      (
+        await db.customer.findMany({
+          where: { companyId },
+          select: { id: true },
+        })
+      ).map((x) => x.id),
+    );
+  const badProjects = projects.filter(
+      (p) => !branches.has(p.branchId) || !customers.has(p.customerId),
+    ),
+    badAssets = assets.filter((a) => !branches.has(a.branchId));
+  const assignmentIssues = assets.filter((asset) => {
+    const active = assignmentHistory.filter((x) => x.assetId === asset.id);
+    if (active.length !== 1)
+      return (
+        active.length > 1 ||
+        asset.status === "ASSIGNED" ||
+        Boolean(asset.assignedUserId)
+      );
+    const assignment = active[0],
+      user = users.find((x) => x.id === assignment.assignedToId);
+    return (
+      asset.status !== "ASSIGNED" ||
+      asset.assignedUserId !== assignment.assignedToId ||
+      !user?.isActive ||
+      (user.branchAccessScope === "SELECTED_BRANCHES" &&
+        !user.branchAccesses.some((x) => x.branchId === asset.branchId))
+    );
+  });
+  return [
+    result(
+      "Journal entries balance",
+      badJournals.length,
+      badJournals.map((x) => x.journalNumber),
+      "Reverse and repost the affected journal.",
+    ),
+    result(
+      "Document outstanding is valid",
+      negative.length,
+      negative.map((x) => x.documentNumber),
+      "Review settlement and advance allocations.",
+    ),
+    result(
+      "System ledgers are unique",
+      duplicateLedgers.length,
+      duplicateLedgers.map((x) => x.systemKey ?? "unknown"),
+      "Restore the canonical system-ledger mapping.",
+    ),
+    result(
+      "Money accounts map to ledgers",
+      unmappedMoney.length,
+      unmappedMoney.map((x) => x.name),
+      "Link each Money Account to one posting ledger.",
+    ),
+    result(
+      "Stock movements have valid positive quantities",
+      badMovement.length,
+      badMovement.map((x) => x.sourceId ?? x.id),
+      "Use a controlled stock correction; never rewrite movements.",
+    ),
+    result(
+      "Inventory transfers are paired",
+      unpaired.length,
+      unpaired.map(([x]) => x),
+      "Complete the matching transfer leg.",
+    ),
+    result(
+      "Stored tax components reconcile",
+      badTax.length,
+      badTax.map((x) => x.documentNumber),
+      "Review the immutable tax snapshot and issue a controlled note.",
+    ),
+    result(
+      "Project tenant references are valid",
+      badProjects.length,
+      badProjects.map((x) => x.projectNumber),
+      "Correct the Project through an authorized workflow.",
+    ),
+    result(
+      "Asset Branch references are valid",
+      badAssets.length,
+      badAssets.map((x) => x.assetNumber),
+      "Correct the Asset assignment through its history workflow.",
+    ),
+    result(
+      "Asset assignment history agrees with current assignment",
+      assignmentIssues.length,
+      assignmentIssues.map((x) => x.assetNumber),
+      "Review assignment history and use the controlled return/assign workflow; verification is read-only.",
+    ),
+  ];
 }
 
-export async function closeFinancialYear(input: { financialYearId: string; earlyCloseReason?: string }) {
-  const actor = await requirePermissionForMutation("ACCOUNT_PERIOD_LOCK"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
-  const checks = await verifyAccountData(), errors = checks.filter((x) => x.status === "ERROR"); if (errors.length) throw new Error(`FINANCIAL_YEAR_VERIFICATION_FAILED:${errors.map((x) => x.check).join(",")}`);
-  return db.$transaction(async (tx) => { await tx.$queryRaw`SELECT "id" FROM "financial_years" WHERE "id"=${input.financialYearId}::uuid AND "companyId"=${actor.companyId!}::uuid FOR UPDATE`; const year = await tx.financialYear.findFirst({ where: { id: input.financialYearId, companyId: actor.companyId! } }); if (!year) throw new Error("INVALID_FINANCIAL_YEAR"); if (year.status === "CLOSED") return year; if (year.endDate > new Date() && !input.earlyCloseReason?.trim()) throw new Error("EARLY_CLOSE_REASON_REQUIRED");
-    const closed = await tx.financialYear.update({ where: { id: year.id }, data: { status: "CLOSED", isActive: false, isCurrent: false, closedAt: new Date(), closedById: actor.id } }); await tx.accountingPeriodLock.upsert({ where: { companyId_financialYearId: { companyId: actor.companyId!, financialYearId: year.id } }, create: { companyId: actor.companyId!, financialYearId: year.id, lockedThrough: year.endDate, updatedById: actor.id }, update: { lockedThrough: year.endDate, updatedById: actor.id } }); await tx.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "FINANCIAL_YEAR_CLOSED", entityType: "FINANCIAL_YEAR", entityId: year.id, reason: input.earlyCloseReason } }); return closed; });
+export async function closeFinancialYearForActor(
+  actor: { id: string; companyId: string; accountRole?: string | null },
+  input: { financialYearId: string; earlyCloseReason?: string },
+) {
+  if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  const checks = await verifyAccountDataForActor(actor),
+    errors = checks.filter((x) => x.status === "ERROR");
+  if (errors.length)
+    throw new Error(
+      `FINANCIAL_YEAR_VERIFICATION_FAILED:${errors.map((x) => x.check).join(",")}`,
+    );
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "financial_years" WHERE "id"=${input.financialYearId}::uuid AND "companyId"=${actor.companyId!}::uuid FOR UPDATE`;
+    const year = await tx.financialYear.findFirst({
+      where: { id: input.financialYearId, companyId: actor.companyId! },
+    });
+    if (!year) throw new Error("INVALID_FINANCIAL_YEAR");
+    if (year.status === "CLOSED") return year;
+    if (year.endDate > new Date() && !input.earlyCloseReason?.trim())
+      throw new Error("EARLY_CLOSE_REASON_REQUIRED");
+    const closed = await tx.financialYear.update({
+      where: { id: year.id },
+      data: {
+        status: "CLOSED",
+        isActive: false,
+        isCurrent: false,
+        closedAt: new Date(),
+        closedById: actor.id,
+      },
+    });
+    await tx.accountingPeriodLock.upsert({
+      where: {
+        companyId_financialYearId: {
+          companyId: actor.companyId!,
+          financialYearId: year.id,
+        },
+      },
+      create: {
+        companyId: actor.companyId!,
+        financialYearId: year.id,
+        lockedThrough: year.endDate,
+        updatedById: actor.id,
+      },
+      update: { lockedThrough: year.endDate, updatedById: actor.id },
+    });
+    await tx.accountingAuditEvent.create({
+      data: {
+        companyId: actor.companyId!,
+        actorUserId: actor.id,
+        eventType: "FINANCIAL_YEAR_CLOSED",
+        entityType: "FINANCIAL_YEAR",
+        entityId: year.id,
+        reason: input.earlyCloseReason,
+      },
+    });
+    return closed;
+  });
 }
 
-const recycleTypes = { CUSTOMER: "customer", VENDOR: "vendor", PRODUCT: "accountProduct" } as const;
-export async function archiveMaster(input: { entityType: keyof typeof recycleTypes; entityId: string; reason: string }) { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); return db.$transaction(async (tx) => { const delegate = tx[recycleTypes[input.entityType]] as typeof tx.customer; const record = await delegate.findFirst({ where: { id: input.entityId, companyId: actor.companyId! }, select: { id: true, name: true, isActive: true } }); if (!record) throw new Error("RECORD_NOT_FOUND"); await delegate.update({ where: { id: record.id }, data: { isActive: false } }); const recycle = await tx.accountRecycleRecord.upsert({ where: { companyId_entityType_entityId: { companyId: actor.companyId!, entityType: input.entityType, entityId: record.id } }, create: { companyId: actor.companyId!, entityType: input.entityType, entityId: record.id, displayName: record.name, archivedById: actor.id, reason: input.reason }, update: { restoredAt: null, restoredById: null, archivedAt: new Date(), archivedById: actor.id, reason: input.reason } }); await tx.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "RECORD_ARCHIVED", entityType: input.entityType, entityId: record.id, reason: input.reason } }); return recycle; }); }
-export async function restoreMaster(recycleId: string) { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); return db.$transaction(async (tx) => { const recycle = await tx.accountRecycleRecord.findFirst({ where: { id: recycleId, companyId: actor.companyId!, restoredAt: null } }); if (!recycle || !(recycle.entityType in recycleTypes)) throw new Error("RECYCLE_RECORD_NOT_FOUND"); const delegate = tx[recycleTypes[recycle.entityType as keyof typeof recycleTypes]] as typeof tx.customer; const record = await delegate.findFirst({ where: { id: recycle.entityId, companyId: actor.companyId! } }); if (!record) throw new Error("RESTORE_DEPENDENCY_MISSING");let conflict=false;if(recycle.entityType==="CUSTOMER"){const row=await tx.customer.findUnique({where:{id:record.id}});conflict=Boolean(row?.gstin&&await tx.customer.findFirst({where:{companyId:actor.companyId!,gstin:row.gstin,isActive:true,id:{not:row.id}}}));}else if(recycle.entityType==="VENDOR"){const row=await tx.vendor.findUnique({where:{id:record.id}});conflict=Boolean(row?.gstin&&await tx.vendor.findFirst({where:{companyId:actor.companyId!,gstin:row.gstin,isActive:true,id:{not:row.id}}}));}else{const row=await tx.accountProduct.findUnique({where:{id:record.id}});conflict=Boolean(await tx.accountProduct.findFirst({where:{companyId:actor.companyId!,isActive:true,id:{not:row!.id},OR:[...(row?.code?[{code:row.code}]:[]),...(row?.barcode?[{barcode:row.barcode}]:[])]}}));}if(conflict)throw new Error("RESTORE_BUSINESS_KEY_CONFLICT"); await delegate.update({ where: { id: record.id }, data: { isActive: true } }); await tx.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "RECORD_RESTORED", entityType: recycle.entityType, entityId: record.id } }); return tx.accountRecycleRecord.update({ where: { id: recycle.id }, data: { restoredAt: new Date(), restoredById: actor.id } }); }); }
+const recycleTypes = {
+  CUSTOMER: "customer",
+  VENDOR: "vendor",
+  PRODUCT: "accountProduct",
+} as const;
+export async function archiveMaster(input: {
+  entityType: keyof typeof recycleTypes;
+  entityId: string;
+  reason: string;
+}) {
+  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  return db.$transaction(async (tx) => {
+    const delegate = tx[recycleTypes[input.entityType]] as typeof tx.customer;
+    const record = await delegate.findFirst({
+      where: { id: input.entityId, companyId: actor.companyId! },
+      select: { id: true, name: true, isActive: true },
+    });
+    if (!record) throw new Error("RECORD_NOT_FOUND");
+    await delegate.update({
+      where: { id: record.id },
+      data: { isActive: false },
+    });
+    const recycle = await tx.accountRecycleRecord.upsert({
+      where: {
+        companyId_entityType_entityId: {
+          companyId: actor.companyId!,
+          entityType: input.entityType,
+          entityId: record.id,
+        },
+      },
+      create: {
+        companyId: actor.companyId!,
+        entityType: input.entityType,
+        entityId: record.id,
+        displayName: record.name,
+        archivedById: actor.id,
+        reason: input.reason,
+      },
+      update: {
+        restoredAt: null,
+        restoredById: null,
+        archivedAt: new Date(),
+        archivedById: actor.id,
+        reason: input.reason,
+      },
+    });
+    await tx.accountingAuditEvent.create({
+      data: {
+        companyId: actor.companyId!,
+        actorUserId: actor.id,
+        eventType: "RECORD_ARCHIVED",
+        entityType: input.entityType,
+        entityId: record.id,
+        reason: input.reason,
+      },
+    });
+    return recycle;
+  });
+}
+export async function restoreMaster(recycleId: string) {
+  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  return db.$transaction(async (tx) => {
+    const recycle = await tx.accountRecycleRecord.findFirst({
+      where: { id: recycleId, companyId: actor.companyId!, restoredAt: null },
+    });
+    if (!recycle || !(recycle.entityType in recycleTypes))
+      throw new Error("RECYCLE_RECORD_NOT_FOUND");
+    const delegate = tx[
+      recycleTypes[recycle.entityType as keyof typeof recycleTypes]
+    ] as typeof tx.customer;
+    const record = await delegate.findFirst({
+      where: { id: recycle.entityId, companyId: actor.companyId! },
+    });
+    if (!record) throw new Error("RESTORE_DEPENDENCY_MISSING");
+    let conflict = false;
+    if (recycle.entityType === "CUSTOMER") {
+      const row = await tx.customer.findUnique({ where: { id: record.id } });
+      conflict = Boolean(
+        row?.gstin &&
+        (await tx.customer.findFirst({
+          where: {
+            companyId: actor.companyId!,
+            gstin: row.gstin,
+            isActive: true,
+            id: { not: row.id },
+          },
+        })),
+      );
+    } else if (recycle.entityType === "VENDOR") {
+      const row = await tx.vendor.findUnique({ where: { id: record.id } });
+      conflict = Boolean(
+        row?.gstin &&
+        (await tx.vendor.findFirst({
+          where: {
+            companyId: actor.companyId!,
+            gstin: row.gstin,
+            isActive: true,
+            id: { not: row.id },
+          },
+        })),
+      );
+    } else {
+      const row = await tx.accountProduct.findUnique({
+        where: { id: record.id },
+      });
+      conflict = Boolean(
+        await tx.accountProduct.findFirst({
+          where: {
+            companyId: actor.companyId!,
+            isActive: true,
+            id: { not: row!.id },
+            OR: [
+              ...(row?.code ? [{ code: row.code }] : []),
+              ...(row?.barcode ? [{ barcode: row.barcode }] : []),
+            ],
+          },
+        }),
+      );
+    }
+    if (conflict) throw new Error("RESTORE_BUSINESS_KEY_CONFLICT");
+    await delegate.update({
+      where: { id: record.id },
+      data: { isActive: true },
+    });
+    await tx.accountingAuditEvent.create({
+      data: {
+        companyId: actor.companyId!,
+        actorUserId: actor.id,
+        eventType: "RECORD_RESTORED",
+        entityType: recycle.entityType,
+        entityId: record.id,
+      },
+    });
+    return tx.accountRecycleRecord.update({
+      where: { id: recycle.id },
+      data: { restoredAt: new Date(), restoredById: actor.id },
+    });
+  });
+}
 
-export const redactAuditMetadata = (value: unknown): unknown => { if (Array.isArray(value)) return value.map(redactAuditMetadata); if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [/password|secret|token|credential|smtp/i.test(k) ? k : k, /password|secret|token|credential|smtp/i.test(k) ? "[REDACTED]" : redactAuditMetadata(v)])); return value; };
-export async function getAuditHistory() { const actor = await requirePermission("ACCOUNT_REPORTS"); const rows = await db.accountingAuditEvent.findMany({ where: { companyId: actor.companyId! }, orderBy: { createdAt: "desc" }, take: 200, include: { actor: { select: { name: true } } } }); return rows.map((x) => ({ ...x, metadata: redactAuditMetadata(x.metadata) })); }
+export const redactAuditMetadata = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(redactAuditMetadata);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [
+        /password|secret|token|credential|smtp/i.test(k) ? k : k,
+        /password|secret|token|credential|smtp/i.test(k)
+          ? "[REDACTED]"
+          : redactAuditMetadata(v),
+      ]),
+    );
+  return value;
+};
+export async function getAuditHistory() {
+  const actor = await requirePermission("ACCOUNT_REPORTS");
+  const rows = await db.accountingAuditEvent.findMany({
+    where: { companyId: actor.companyId! },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { actor: { select: { name: true } } },
+  });
+  return rows.map((x) => ({ ...x, metadata: redactAuditMetadata(x.metadata) }));
+}
 
-export async function createAccountBackup() { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); const companyId = actor.companyId!; const company = await db.company.findUniqueOrThrow({ where: { id: companyId }, select: { id: true, name: true, slug: true, createdAt: true, financialYears: true, customers: { select: { id: true, branchId: true, name: true, phone: true, email: true, gstin: true, isActive: true } }, vendors: true, accountProducts: true, projects: true, ledgerAccounts: true } }); const manifest = { format: "SalesPunch360 Account Backup", formatVersion: 1, generatedAt: new Date().toISOString(), company: { id: company.id, name: company.name }, appVersion: process.env.npm_package_version ?? "unknown", recordCounts: { customers: company.customers.length, vendors: company.vendors.length, items: company.accountProducts.length, projects: company.projects.length, ledgers: company.ledgerAccounts.length, financialYears: company.financialYears.length }, recovery: "Use authenticated imports and Recycle Bin for application recovery. Provider PostgreSQL backups remain required for disaster recovery." }; const bundle = { manifest, data: company }, bytes = new TextEncoder().encode(JSON.stringify(bundle, (_, value) => typeof value === "bigint" ? value.toString() : value, 2)), checksum = createHash("sha256").update(bytes).digest("hex"); const record = await db.accountBackupRecord.create({ data: { companyId, generatedById: actor.id, manifest, checksum } }); await db.accountingAuditEvent.create({ data: { companyId, actorUserId: actor.id, eventType: "BACKUP_GENERATED", entityType: "ACCOUNT_BACKUP", entityId: record.id, metadata: { checksum, recordCounts: manifest.recordCounts } } }); return { fileName: `salespunch360-${company.slug}-${record.id}.json`, bytes, manifest, checksum }; }
+export async function createAccountBackup() {
+  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  const companyId = actor.companyId!;
+  const company = await db.company.findUniqueOrThrow({
+    where: { id: companyId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      createdAt: true,
+      financialYears: true,
+      customers: {
+        select: {
+          id: true,
+          branchId: true,
+          name: true,
+          phone: true,
+          email: true,
+          gstin: true,
+          isActive: true,
+        },
+      },
+      vendors: true,
+      accountProducts: true,
+      projects: true,
+      ledgerAccounts: true,
+    },
+  });
+  const manifest = {
+    format: "SalesPunch360 Account Backup",
+    formatVersion: 1,
+    generatedAt: new Date().toISOString(),
+    company: { id: company.id, name: company.name },
+    appVersion: process.env.npm_package_version ?? "unknown",
+    recordCounts: {
+      customers: company.customers.length,
+      vendors: company.vendors.length,
+      items: company.accountProducts.length,
+      projects: company.projects.length,
+      ledgers: company.ledgerAccounts.length,
+      financialYears: company.financialYears.length,
+    },
+    recovery:
+      "Use authenticated imports and Recycle Bin for application recovery. Provider PostgreSQL backups remain required for disaster recovery.",
+  };
+  const bundle = { manifest, data: company },
+    bytes = new TextEncoder().encode(
+      JSON.stringify(
+        bundle,
+        (_, value) => (typeof value === "bigint" ? value.toString() : value),
+        2,
+      ),
+    ),
+    checksum = createHash("sha256").update(bytes).digest("hex");
+  const record = await db.accountBackupRecord.create({
+    data: { companyId, generatedById: actor.id, manifest, checksum },
+  });
+  await db.accountingAuditEvent.create({
+    data: {
+      companyId,
+      actorUserId: actor.id,
+      eventType: "BACKUP_GENERATED",
+      entityType: "ACCOUNT_BACKUP",
+      entityId: record.id,
+      metadata: { checksum, recordCounts: manifest.recordCounts },
+    },
+  });
+  return {
+    fileName: `salespunch360-${company.slug}-${record.id}.json`,
+    bytes,
+    manifest,
+    checksum,
+  };
+}
+
+export async function verifyAccountData() {
+  const a = await requirePermission("ACCOUNT_REPORTS");
+  return verifyAccountDataForActor({ id: a.id, companyId: a.companyId! });
+}
+export async function closeFinancialYear(input: {
+  financialYearId: string;
+  earlyCloseReason?: string;
+}) {
+  const a = await requirePermissionForMutation("ACCOUNT_PERIOD_LOCK");
+  return closeFinancialYearForActor({ ...a, companyId: a.companyId! }, input);
+}

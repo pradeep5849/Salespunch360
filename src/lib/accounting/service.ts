@@ -88,9 +88,11 @@ export async function createLedgerAccountForActor(
     throw new Error("INVALID_PARENT_ACCOUNT");
   return db.ledgerAccount.create({ data: { companyId: a.companyId, ...d } });
 }
-export async function createCostCentre(raw: unknown) {
-  const a = await actor("ACCOUNT_CHART_ADMIN"),
-    d = costCentreSchema.parse(raw);
+export async function createCostCentreForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+  raw: unknown,
+) {
+  const d = costCentreSchema.parse(raw);
   return db.costCentre.create({ data: { companyId: a.companyId, ...d } });
 }
 function assertBalanced(lines: { debit: string; credit: string }[]) {
@@ -233,8 +235,10 @@ export async function postJournalForActor(
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   });
 }
-export async function postOpeningBalances(raw: unknown) {
-  const a = await actor("ACCOUNT_OPENING_BALANCE");
+export async function postOpeningBalancesForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+  raw: unknown,
+) {
   return db.$transaction(
     async (tx) => {
       const input = postingSchema.parse(raw);
@@ -412,4 +416,14 @@ export async function postJournal(raw: unknown) {
 }
 export async function setPeriodLock(raw: unknown) {
   return setPeriodLockForActor(await actor("ACCOUNT_PERIOD_LOCK"), raw);
+}
+
+export async function createCostCentre(raw: unknown) {
+  return createCostCentreForActor(await actor("ACCOUNT_CHART_ADMIN"), raw);
+}
+export async function postOpeningBalances(raw: unknown) {
+  return postOpeningBalancesForActor(
+    await actor("ACCOUNT_OPENING_BALANCE"),
+    raw,
+  );
 }

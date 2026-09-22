@@ -1,25 +1,308 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
-import { categorySchema, currencySchema, customFieldSchema, financialYearSchema, itemSchema, numberingSeriesSchema, partySchema, unitSchema, workCategorySchema, workPackageSchema } from "./validation";
+import {
+  requirePermission,
+  requirePermissionForMutation,
+} from "@/lib/auth/authorization";
+import {
+  categorySchema,
+  currencySchema,
+  customFieldSchema,
+  financialYearSchema,
+  itemSchema,
+  numberingSeriesSchema,
+  partySchema,
+  unitSchema,
+  workCategorySchema,
+  workPackageSchema,
+} from "./validation";
 import { allocateDocumentNumberInTx } from "./numbering";
 
-const readActor=()=>requirePermission("ACCOUNT_DASHBOARD");
-const writeActor=()=>requirePermissionForMutation("ACCOUNT_ACCOUNTS");
-const settingsActor=()=>requirePermissionForMutation("ACCOUNT_SETTINGS");
-export async function accountOverview(){const a=await readActor();return db.company.findUniqueOrThrow({where:{id:a.companyId!},select:{name:true,accountSettings:true,financialYears:{orderBy:{startDate:"desc"}},vendors:{orderBy:{name:"asc"}},accountUnits:{orderBy:{name:"asc"}},accountCategories:{orderBy:{name:"asc"}},accountProducts:{orderBy:{name:"asc"},include:{unit:true,category:true}},accountServices:{orderBy:{name:"asc"},include:{unit:true,category:true}},workCategories:{orderBy:{name:"asc"}},workPackages:{orderBy:{name:"asc"},include:{unit:true,workCategory:true}},customers:{where:{isAccountCustomer:true},orderBy:{name:"asc"}},customFieldDefinitions:{orderBy:[{entityType:"asc"},{position:"asc"}]}}});}
-export async function setCurrency(raw:unknown){const a=await settingsActor();const d=currencySchema.parse(raw);return db.accountSettings.upsert({where:{companyId:a.companyId!},create:{companyId:a.companyId!,...d},update:d});}
-export async function createFinancialYear(raw:unknown){const a=await settingsActor();const d=financialYearSchema.parse(raw);return db.$transaction(async tx=>{await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId!}::uuid FOR UPDATE`;const overlap=await tx.financialYear.findFirst({where:{companyId:a.companyId!,isActive:true,startDate:{lte:d.endDate},endDate:{gte:d.startDate}}});if(overlap)throw new Error("FINANCIAL_YEAR_OVERLAP");if(d.isCurrent)await tx.financialYear.updateMany({where:{companyId:a.companyId!,isCurrent:true},data:{isCurrent:false}});return tx.financialYear.create({data:{companyId:a.companyId!,...d}});},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}
-export async function createUnit(raw:unknown){const a=await writeActor();return db.accountUnit.create({data:{companyId:a.companyId!,...unitSchema.parse(raw)}});}
-export async function createCategory(raw:unknown){const a=await writeActor();return db.accountCategory.create({data:{companyId:a.companyId!,...categorySchema.parse(raw)}});}
-export async function createVendor(raw:unknown){const a=await writeActor(),d=partySchema.parse(raw);return db.vendor.create({data:{companyId:a.companyId!,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes}});}
-export async function createAccountCustomer(raw:unknown){const a=await writeActor();const d=partySchema.parse(raw);const branch=await db.branch.findFirst({where:{companyId:a.companyId!,isPrimary:true,isActive:true},select:{id:true}});if(!branch)throw new Error("PRIMARY_BRANCH_REQUIRED");return db.customer.create({data:{companyId:a.companyId!,branchId:branch.id,isAccountCustomer:true,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,billingAddress:d.address,shippingAddress:d.shippingAddress,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes}});}
-async function refs(companyId:string,d:{unitId?:string;categoryId?:string},kind:"PRODUCT"|"SERVICE"){if(d.unitId&&!await db.accountUnit.findFirst({where:{id:d.unitId,companyId,isActive:true}}))throw new Error("INVALID_UNIT");if(d.categoryId&&!await db.accountCategory.findFirst({where:{id:d.categoryId,companyId,isActive:true,scope:{in:[kind,"BOTH"]}}}))throw new Error("INVALID_CATEGORY");}
-export async function createProduct(raw:unknown){const a=await writeActor(),d=itemSchema.parse(raw);await refs(a.companyId!,d,"PRODUCT");return db.accountProduct.create({data:{companyId:a.companyId!,name:d.name,code:d.code,categoryId:d.categoryId,unitId:d.unitId,description:d.description,salePrice:d.sellingRate,costPrice:d.cost,taxRate:d.taxRate,hsnCode:d.hsnSacCode}});}
-export async function createService(raw:unknown){const a=await writeActor(),d=itemSchema.parse(raw);await refs(a.companyId!,d,"SERVICE");return db.accountService.create({data:{companyId:a.companyId!,name:d.name,code:d.code,categoryId:d.categoryId,unitId:d.unitId,description:d.description,sellingRate:d.sellingRate,estimatedCost:d.cost,taxRate:d.taxRate,sacCode:d.hsnSacCode}});}
-export async function createWorkCategory(raw:unknown){const a=await writeActor();return db.workCategory.create({data:{companyId:a.companyId!,...workCategorySchema.parse(raw)}});}
-export async function createWorkPackage(raw:unknown){const a=await writeActor(),d=workPackageSchema.parse(raw);if(d.unitId&&!await db.accountUnit.findFirst({where:{id:d.unitId,companyId:a.companyId!,isActive:true}}))throw new Error("INVALID_UNIT");if(!await db.workCategory.findFirst({where:{id:d.workCategoryId,companyId:a.companyId!,isActive:true}}))throw new Error("INVALID_WORK_CATEGORY");return db.workPackage.create({data:{companyId:a.companyId!,name:d.name,code:d.code,workCategoryId:d.workCategoryId,unitId:d.unitId,description:d.description,sellingRate:d.sellingRate,estimatedCost:d.cost}});}
-export async function createCustomField(raw:unknown){const a=await settingsActor(),d=customFieldSchema.parse(raw);return db.customFieldDefinition.create({data:{companyId:a.companyId!,...d,options:d.options??Prisma.JsonNull}});}
-export async function createNumberingSeries(raw:unknown){const a=await settingsActor(),d=numberingSeriesSchema.parse(raw);if(d.branchId&&a.branchAccessScope==="SELECTED_BRANCHES"&&!(a.branchIds??[]).includes(d.branchId))throw new Error("INVALID_BRANCH");if(d.branchId&&!await db.branch.findFirst({where:{id:d.branchId,companyId:a.companyId!,isActive:true}}))throw new Error("INVALID_BRANCH");return db.numberingSeries.create({data:{companyId:a.companyId!,...d}});}
+const readActor = () => requirePermission("ACCOUNT_DASHBOARD");
+const writeActor = () => requirePermissionForMutation("ACCOUNT_ACCOUNTS");
+const settingsActor = () => requirePermissionForMutation("ACCOUNT_SETTINGS");
+export async function accountOverview() {
+  const a = await readActor();
+  return db.company.findUniqueOrThrow({
+    where: { id: a.companyId! },
+    select: {
+      name: true,
+      accountSettings: true,
+      financialYears: { orderBy: { startDate: "desc" } },
+      vendors: { orderBy: { name: "asc" } },
+      accountUnits: { orderBy: { name: "asc" } },
+      accountCategories: { orderBy: { name: "asc" } },
+      accountProducts: {
+        orderBy: { name: "asc" },
+        include: { unit: true, category: true },
+      },
+      accountServices: {
+        orderBy: { name: "asc" },
+        include: { unit: true, category: true },
+      },
+      workCategories: { orderBy: { name: "asc" } },
+      workPackages: {
+        orderBy: { name: "asc" },
+        include: { unit: true, workCategory: true },
+      },
+      customers: {
+        where: { isAccountCustomer: true },
+        orderBy: { name: "asc" },
+      },
+      customFieldDefinitions: {
+        orderBy: [{ entityType: "asc" }, { position: "asc" }],
+      },
+    },
+  });
+}
+export async function setCurrency(raw: unknown) {
+  const a = await settingsActor();
+  const d = currencySchema.parse(raw);
+  return db.accountSettings.upsert({
+    where: { companyId: a.companyId! },
+    create: { companyId: a.companyId!, ...d },
+    update: d,
+  });
+}
+export async function createFinancialYearForActor(
+  a: { id: string; companyId: string },
+  raw: unknown,
+) {
+  const d = financialYearSchema.parse(raw);
+  return db.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId!}::uuid FOR UPDATE`;
+      const overlap = await tx.financialYear.findFirst({
+        where: {
+          companyId: a.companyId!,
+          isActive: true,
+          startDate: { lte: d.endDate },
+          endDate: { gte: d.startDate },
+        },
+      });
+      if (overlap) throw new Error("FINANCIAL_YEAR_OVERLAP");
+      if (d.isCurrent)
+        await tx.financialYear.updateMany({
+          where: { companyId: a.companyId!, isCurrent: true },
+          data: { isCurrent: false },
+        });
+      return tx.financialYear.create({
+        data: { companyId: a.companyId!, ...d },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
+export async function createUnit(raw: unknown) {
+  const a = await writeActor();
+  return db.accountUnit.create({
+    data: { companyId: a.companyId!, ...unitSchema.parse(raw) },
+  });
+}
+export async function createCategory(raw: unknown) {
+  const a = await writeActor();
+  return db.accountCategory.create({
+    data: { companyId: a.companyId!, ...categorySchema.parse(raw) },
+  });
+}
+export async function createVendor(raw: unknown) {
+  const a = await writeActor(),
+    d = partySchema.parse(raw);
+  return db.vendor.create({
+    data: {
+      companyId: a.companyId!,
+      name: d.name,
+      contactPerson: d.contactPerson,
+      phone: d.phone,
+      email: d.email,
+      address: d.address,
+      gstin: d.gstin,
+      stateCode: d.stateCode,
+      gstRegistrationType: d.gstRegistrationType,
+      pan: d.pan,
+      notes: d.notes,
+    },
+  });
+}
+export async function createAccountCustomer(raw: unknown) {
+  const a = await writeActor();
+  const d = partySchema.parse(raw);
+  const branch = await db.branch.findFirst({
+    where: { companyId: a.companyId!, isPrimary: true, isActive: true },
+    select: { id: true },
+  });
+  if (!branch) throw new Error("PRIMARY_BRANCH_REQUIRED");
+  return db.customer.create({
+    data: {
+      companyId: a.companyId!,
+      branchId: branch.id,
+      isAccountCustomer: true,
+      name: d.name,
+      contactPerson: d.contactPerson,
+      phone: d.phone,
+      email: d.email,
+      address: d.address,
+      billingAddress: d.address,
+      shippingAddress: d.shippingAddress,
+      gstin: d.gstin,
+      stateCode: d.stateCode,
+      gstRegistrationType: d.gstRegistrationType,
+      pan: d.pan,
+      notes: d.notes,
+    },
+  });
+}
+async function refs(
+  companyId: string,
+  d: { unitId?: string; categoryId?: string },
+  kind: "PRODUCT" | "SERVICE",
+) {
+  if (
+    d.unitId &&
+    !(await db.accountUnit.findFirst({
+      where: { id: d.unitId, companyId, isActive: true },
+    }))
+  )
+    throw new Error("INVALID_UNIT");
+  if (
+    d.categoryId &&
+    !(await db.accountCategory.findFirst({
+      where: {
+        id: d.categoryId,
+        companyId,
+        isActive: true,
+        scope: { in: [kind, "BOTH"] },
+      },
+    }))
+  )
+    throw new Error("INVALID_CATEGORY");
+}
+export async function createProduct(raw: unknown) {
+  const a = await writeActor(),
+    d = itemSchema.parse(raw);
+  await refs(a.companyId!, d, "PRODUCT");
+  return db.accountProduct.create({
+    data: {
+      companyId: a.companyId!,
+      name: d.name,
+      code: d.code,
+      categoryId: d.categoryId,
+      unitId: d.unitId,
+      description: d.description,
+      salePrice: d.sellingRate,
+      costPrice: d.cost,
+      taxRate: d.taxRate,
+      hsnCode: d.hsnSacCode,
+    },
+  });
+}
+export async function createService(raw: unknown) {
+  const a = await writeActor(),
+    d = itemSchema.parse(raw);
+  await refs(a.companyId!, d, "SERVICE");
+  return db.accountService.create({
+    data: {
+      companyId: a.companyId!,
+      name: d.name,
+      code: d.code,
+      categoryId: d.categoryId,
+      unitId: d.unitId,
+      description: d.description,
+      sellingRate: d.sellingRate,
+      estimatedCost: d.cost,
+      taxRate: d.taxRate,
+      sacCode: d.hsnSacCode,
+    },
+  });
+}
+export async function createWorkCategory(raw: unknown) {
+  const a = await writeActor();
+  return db.workCategory.create({
+    data: { companyId: a.companyId!, ...workCategorySchema.parse(raw) },
+  });
+}
+export async function createWorkPackage(raw: unknown) {
+  const a = await writeActor(),
+    d = workPackageSchema.parse(raw);
+  if (
+    d.unitId &&
+    !(await db.accountUnit.findFirst({
+      where: { id: d.unitId, companyId: a.companyId!, isActive: true },
+    }))
+  )
+    throw new Error("INVALID_UNIT");
+  if (
+    !(await db.workCategory.findFirst({
+      where: { id: d.workCategoryId, companyId: a.companyId!, isActive: true },
+    }))
+  )
+    throw new Error("INVALID_WORK_CATEGORY");
+  return db.workPackage.create({
+    data: {
+      companyId: a.companyId!,
+      name: d.name,
+      code: d.code,
+      workCategoryId: d.workCategoryId,
+      unitId: d.unitId,
+      description: d.description,
+      sellingRate: d.sellingRate,
+      estimatedCost: d.cost,
+    },
+  });
+}
+export async function createCustomField(raw: unknown) {
+  const a = await settingsActor(),
+    d = customFieldSchema.parse(raw);
+  return db.customFieldDefinition.create({
+    data: {
+      companyId: a.companyId!,
+      ...d,
+      options: d.options ?? Prisma.JsonNull,
+    },
+  });
+}
+export async function createNumberingSeries(raw: unknown) {
+  const a = await settingsActor(),
+    d = numberingSeriesSchema.parse(raw);
+  if (
+    d.branchId &&
+    a.branchAccessScope === "SELECTED_BRANCHES" &&
+    !(a.branchIds ?? []).includes(d.branchId)
+  )
+    throw new Error("INVALID_BRANCH");
+  if (
+    d.branchId &&
+    !(await db.branch.findFirst({
+      where: { id: d.branchId, companyId: a.companyId!, isActive: true },
+    }))
+  )
+    throw new Error("INVALID_BRANCH");
+  return db.numberingSeries.create({ data: { companyId: a.companyId!, ...d } });
+}
 /** Atomically reserves one number. Tenant and branch scope always come from the session. */
-export async function allocateDocumentNumber(seriesId:string,branchId?:string){const a=await writeActor();if(branchId&&a.branchAccessScope==="SELECTED_BRANCHES"&&!(a.branchIds??[]).includes(branchId))throw new Error("INVALID_BRANCH");return db.$transaction(tx=>allocateDocumentNumberInTx(tx,{companyId:a.companyId!,branchId,seriesId}),{isolationLevel:Prisma.TransactionIsolationLevel.ReadCommitted});}
+export async function allocateDocumentNumber(
+  seriesId: string,
+  branchId?: string,
+) {
+  const a = await writeActor();
+  if (
+    branchId &&
+    a.branchAccessScope === "SELECTED_BRANCHES" &&
+    !(a.branchIds ?? []).includes(branchId)
+  )
+    throw new Error("INVALID_BRANCH");
+  return db.$transaction(
+    (tx) =>
+      allocateDocumentNumberInTx(tx, {
+        companyId: a.companyId!,
+        branchId,
+        seriesId,
+      }),
+    { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+  );
+}
+
+export async function createFinancialYear(raw: unknown) {
+  const a = await settingsActor();
+  return createFinancialYearForActor({ ...a, companyId: a.companyId! }, raw);
+}

@@ -19,7 +19,7 @@ import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 import type { StockMovementType } from "@prisma/client";
-function permit(u: MobileAppPrincipal, write = false) {
+function permit(u: MobileAppPrincipal) {
   const a = mobileAccountActor(u);
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_STOCK"))
     throw new Error("MOBILE_FORBIDDEN");
@@ -62,7 +62,7 @@ export async function mobileCreateInventoryCatalog(
   kind: string,
   raw: unknown,
 ) {
-  const a = permit(u, true);
+  const a = permit(u);
   await assertOperationalWrite(u.companyId);
   if (kind === "batches") return createBatchForActor(a, raw);
   if (kind === "serials") return registerSerialNumberForActor(a, raw);
@@ -86,7 +86,7 @@ export async function mobileInventoryHistory(
   });
 }
 export async function mobileOpening(u: MobileAppPrincipal, raw: unknown) {
-  const a = permit(u, true);
+  const a = permit(u);
   await assertOperationalWrite(u.companyId);
   const d = raw as Record<string, unknown>;
   return createStockMovementForActor(a, "OPENING", {
@@ -96,13 +96,14 @@ export async function mobileOpening(u: MobileAppPrincipal, raw: unknown) {
   });
 }
 export async function mobileAdjustment(u: MobileAppPrincipal, raw: unknown) {
-  const a = permit(u, true);
+  const a = permit(u);
   await assertOperationalWrite(u.companyId);
   const d = raw as Record<string, unknown>,
     direction = d.direction;
   if (direction !== "IN" && direction !== "OUT")
     throw new Error("INVALID_INPUT");
-  const { direction: _ignored, ...input } = d;
+  const input = { ...d };
+  delete input.direction;
   return createStockMovementForActor(
     a,
     direction === "IN" ? "ADJUSTMENT_IN" : "ADJUSTMENT_OUT",
@@ -110,7 +111,7 @@ export async function mobileAdjustment(u: MobileAppPrincipal, raw: unknown) {
   );
 }
 export async function mobileTransfer(u: MobileAppPrincipal, raw: unknown) {
-  const a = permit(u, true);
+  const a = permit(u);
   await assertOperationalWrite(u.companyId);
   return transferStockForActor(a, raw);
 }
