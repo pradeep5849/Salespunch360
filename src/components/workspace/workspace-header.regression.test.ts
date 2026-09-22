@@ -12,7 +12,7 @@ describe("Sales and Account workspace shell separation", () => {
   });
 
   it("hides the Sales header when Account Employees uses the shared employee route", () => {
-    expect(workspaceLayout).toContain("activeWorkspace={workspace.effectiveWorkspace}");
+    expect(workspaceLayout).toContain('activeWorkspace={workspace.effectiveWorkspace ?? "SALES"}');
     expect(salesHeader).toContain('activeWorkspace==="ACCOUNT"&&pathname.startsWith("/workspace/employees")');
   });
 
