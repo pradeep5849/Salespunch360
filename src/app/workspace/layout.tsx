@@ -14,5 +14,5 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   if (!company || !workspace?.canAccessSales || !presentation) return <>{children}</>;
   const navigation = salesHeaderCapabilities(user, company.productEdition);
   const companyAddress = company ? [company.addressLine1, company.addressLine2, company.locality, company.city, company.state, company.postalCode, company.country].filter(Boolean).join(", ") : "";
-  return <><WorkspaceHeader name={user.name} {...navigation} role={presentation.kind} roleLabel={presentation.label} canSwitchWorkspace={workspace.canSwitchWorkspace} companyName={company?.name || "SalesPunch360"} companyAddress={companyAddress} hasCompanyLogo={Boolean(company?.logoObjectKey)} companyLogoVersion={company?.updatedAt.getTime()} />{children}</>;
+  return <><WorkspaceHeader name={user.name} {...navigation} role={presentation.kind} roleLabel={presentation.label} canSwitchWorkspace={workspace.canSwitchWorkspace} activeWorkspace={workspace.effectiveWorkspace} companyName={company?.name || "SalesPunch360"} companyAddress={companyAddress} hasCompanyLogo={Boolean(company?.logoObjectKey)} companyLogoVersion={company?.updatedAt.getTime()} />{children}</>;
 }
