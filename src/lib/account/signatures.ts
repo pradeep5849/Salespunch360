@@ -1,8 +1,104 @@
-import crypto from"node:crypto";import sharp from"sharp";import{db}from"@/lib/db";import{AuthorizationError,requirePermissionForMutation}from"@/lib/auth/authorization";import{privateStorage}from"@/lib/storage";
-export const MAX_SIGNATURE_BYTES=2*1024*1024,MAX_SIGNATURE_PIXELS=8_000_000;
-export async function processSignatureImage(file:File){if(file.size<1||file.size>MAX_SIGNATURE_BYTES||!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("SIGNATURE_INVALID");try{const image=sharp(Buffer.from(await file.arrayBuffer()),{failOn:"error",limitInputPixels:MAX_SIGNATURE_PIXELS}).rotate();await image.metadata();return await image.resize({width:1200,height:500,fit:"inside",withoutEnlargement:true}).webp({quality:86}).toBuffer()}catch{throw new Error("SIGNATURE_INVALID")}}
-export const signatureObjectKey=(companyId:string,id:string)=>`Signatures/${companyId}/${id}.webp`;
-async function admin(){const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();return actor}
-export async function uploadAuthorizedSignature(file:File){const actor=await admin(),id=crypto.randomUUID(),key=signatureObjectKey(actor.companyId!,id),data=await processSignatureImage(file);await privateStorage().put(key,data);try{return await db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId!}::uuid FOR UPDATE`;await tx.authorizedSignatureVersion.updateMany({where:{companyId:actor.companyId!,isCurrent:true},data:{isCurrent:false,retiredAt:new Date()}});return tx.authorizedSignatureVersion.create({data:{id,companyId:actor.companyId!,objectKey:key,uploadedById:actor.id}})})}catch(error){await privateStorage().delete(key).catch(()=>undefined);throw error}}
-export async function removeCurrentAuthorizedSignature(){const actor=await admin();return db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId!}::uuid FOR UPDATE`;return tx.authorizedSignatureVersion.updateMany({where:{companyId:actor.companyId!,isCurrent:true},data:{isCurrent:false,retiredAt:new Date()}})})}
-export async function currentSignatureVersion(companyId:string){return db.authorizedSignatureVersion.findFirst({where:{companyId,isCurrent:true},orderBy:{createdAt:"desc"}})}
+import crypto from "node:crypto";
+import sharp from "sharp";
+import { db } from "@/lib/db";
+import {
+  AuthorizationError,
+  requirePermissionForMutation,
+} from "@/lib/auth/authorization";
+import { privateStorage } from "@/lib/storage";
+export const MAX_SIGNATURE_BYTES = 2 * 1024 * 1024,
+  MAX_SIGNATURE_PIXELS = 8_000_000;
+export async function processSignatureImage(file: File) {
+  if (
+    file.size < 1 ||
+    file.size > MAX_SIGNATURE_BYTES ||
+    !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+  )
+    throw new Error("SIGNATURE_INVALID");
+  try {
+    const image = sharp(Buffer.from(await file.arrayBuffer()), {
+      failOn: "error",
+      limitInputPixels: MAX_SIGNATURE_PIXELS,
+    }).rotate();
+    await image.metadata();
+    return await image
+      .resize({
+        width: 1200,
+        height: 500,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 86 })
+      .toBuffer();
+  } catch {
+    throw new Error("SIGNATURE_INVALID");
+  }
+}
+export const signatureObjectKey = (companyId: string, id: string) =>
+  `Signatures/${companyId}/${id}.webp`;
+async function admin() {
+  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  return actor;
+}
+export async function uploadAuthorizedSignatureForActor(
+  actor: { id: string; companyId: string },
+  file: File,
+) {
+  const id = crypto.randomUUID(),
+    key = signatureObjectKey(actor.companyId!, id),
+    data = await processSignatureImage(file);
+  await privateStorage().put(key, data);
+  try {
+    return await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId!}::uuid FOR UPDATE`;
+      await tx.authorizedSignatureVersion.updateMany({
+        where: { companyId: actor.companyId!, isCurrent: true },
+        data: { isCurrent: false, retiredAt: new Date() },
+      });
+      return tx.authorizedSignatureVersion.create({
+        data: {
+          id,
+          companyId: actor.companyId!,
+          objectKey: key,
+          uploadedById: actor.id,
+        },
+      });
+    });
+  } catch (error) {
+    await privateStorage()
+      .delete(key)
+      .catch(() => undefined);
+    throw error;
+  }
+}
+export async function removeCurrentAuthorizedSignatureForActor(actor: {
+  id: string;
+  companyId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId!}::uuid FOR UPDATE`;
+    return tx.authorizedSignatureVersion.updateMany({
+      where: { companyId: actor.companyId!, isCurrent: true },
+      data: { isCurrent: false, retiredAt: new Date() },
+    });
+  });
+}
+export async function currentSignatureVersion(companyId: string) {
+  return db.authorizedSignatureVersion.findFirst({
+    where: { companyId, isCurrent: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function uploadAuthorizedSignature(file: File) {
+  return uploadAuthorizedSignatureForActor(
+    (await admin()) as { id: string; companyId: string },
+    file,
+  );
+}
+export async function removeCurrentAuthorizedSignature() {
+  return removeCurrentAuthorizedSignatureForActor(
+    (await admin()) as { id: string; companyId: string },
+  );
+}

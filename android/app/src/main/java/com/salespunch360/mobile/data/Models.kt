@@ -17,8 +17,24 @@ import kotlinx.serialization.Serializable
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
 @Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
 @Serializable enum class Workspace{SALES,ACCOUNT}
-@Serializable data class WebSessionRequest(val redirectPath:String="/workspace/account")
-@Serializable data class WebSessionHandoff(val handoffCode:String,val expiresAt:String)
+@Serializable data class AccountBootstrap(val user:AccountBootstrapUser,val company:AccountBootstrapCompany,val productEdition:ProductEdition,val enabledModules:List<String> = emptyList(),val effectivePermissions:List<String> = emptyList(),val canSwitchWorkspace:Boolean=false,val branch:AccountBranchContext,val availableBranches:List<AccountBranch> = emptyList(),val canConsolidate:Boolean=false,val entitlement:AccountEntitlement,val notifications:AccountNotifications=AccountNotifications(),val navigation:List<AccountNavigationGroup> = emptyList())
+@Serializable data class AccountBootstrapUser(val id:String,val name:String,val accountRole:AccountRole)
+@Serializable data class AccountBootstrapCompany(val name:String)
+@Serializable data class AccountBranchContext(val mode:String,val branchId:String?=null,val branchName:String?=null)
+@Serializable data class AccountBranch(val id:String,val name:String,val isPrimary:Boolean=false)
+@Serializable data class AccountEntitlement(val state:String,val operationalWritesAllowed:Boolean)
+@Serializable data class AccountNotifications(val pendingExpenseApprovals:Int=0)
+@Serializable data class AccountNavigationGroup(val label:String,val items:List<AccountNavigationItem> = emptyList(),val children:List<AccountNavigationGroup> = emptyList())
+@Serializable data class AccountNavigationItem(val label:String,val href:String)
+@Serializable data class AccountDashboard(val title:String,val period:String,val projectOnly:Boolean=false,val metrics:List<AccountDashboardMetric> = emptyList(),val branchComparison:List<AccountBranchComparison> = emptyList())
+@Serializable data class AccountDashboardMetric(val key:String,val label:String,val value:String,val kind:String)
+@Serializable data class AccountBranchComparison(val id:String,val name:String,val sales:String,val expenses:String,val operatingContribution:String)
+@Serializable data class AccountMasterRecord(val id:String,val branchId:String?=null,val name:String,val code:String?=null,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val billingAddress:String?=null,val shippingAddress:String?=null,val gstin:String?=null,val stateCode:String?=null,val gstRegistrationType:String?=null,val pan:String?=null,val notes:String?=null,val description:String?=null,val categoryId:String?=null,val unitId:String?=null,val salePrice:String?=null,val costPrice:String?=null,val taxRate:String?=null,val barcode:String?=null,val hsnCode:String?=null,val trackInventory:Boolean=false,val trackingMode:String="NONE",val lowStockThreshold:String?=null,val isDefault:Boolean=false,val isActive:Boolean=true)
+@Serializable data class AccountMasterOptions(val branches:List<AccountOption> = emptyList(),val units:List<AccountOption> = emptyList(),val categories:List<AccountOption> = emptyList())
+@Serializable data class AccountOption(val id:String,val name:String,val symbol:String?=null)
+@Serializable data class AccountPartyDetail(val record:AccountMasterRecord,val documents:List<AccountPartyDocument> = emptyList(),val settlements:List<AccountPartySettlement> = emptyList())
+@Serializable data class AccountPartyDocument(val id:String,val type:String,val documentNumber:String,val issueDate:String,val status:String,val grandTotal:String?=null,val balanceDue:String?=null)
+@Serializable data class AccountPartySettlement(val id:String,val type:String,val settlementNumber:String,val transactionDate:String,val amount:String?=null)
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)

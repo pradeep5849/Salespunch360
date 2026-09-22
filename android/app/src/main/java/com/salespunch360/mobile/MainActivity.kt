@@ -15,6 +15,7 @@ import com.salespunch360.mobile.data.Workspace
 import com.salespunch360.mobile.data.MobileRole
 import com.salespunch360.mobile.data.validatedWorkspaces
 import com.salespunch360.mobile.ui.*
+import com.salespunch360.mobile.ui.account.NativeAccountAuthenticatedApp
 
 class MainActivity : ComponentActivity() {
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
   AppStatus.RECOVERABLE_ERROR->RetryScreen(state.message?:"Unable to connect",vm::validateSession,vm::logout)
   AppStatus.AUTHENTICATED->{val data=state.bootstrap;val canSwitch=data?.let{it.canSwitchWorkspace&&validatedWorkspaces(it).size==2}==true;if(data==null||state.workspace==null)LoadingScreen() else when(state.workspace){
    Workspace.SALES->{if(data.user.salesRole==null)RetryScreen("Sales access changed. Refresh your session.",vm::validateSession,vm::logout) else {val switch=if(canSwitch){{vm.switchToAccount()}}else null;when(data.user.salesRole){MobileRole.SALES->SalesDrawerAuthenticatedApp(data,state.message,vm::clearMessage,{start,location,done->vm.attendance(start,location,done)},vm::logout,switch);MobileRole.PRIMARY_ADMIN->PrimaryAdminAuthenticatedApp(data,state.message,vm::clearMessage,vm::logout,switch);MobileRole.ADMIN,MobileRole.MANAGER->AdminManagerAuthenticatedApp(data,state.message,vm::clearMessage,{start,location,done->vm.attendance(start,location,done)},vm::logout,switch)}}}
-   Workspace.ACCOUNT->AccountWorkspaceScreen(data,state.accountPath,state.accountSessionEpoch,vm::requestAccountHandoff,vm::recoverAccountSession,if(canSwitch)vm::switchToSales else null,vm::logout)
+   Workspace.ACCOUNT->NativeAccountAuthenticatedApp(data,if(canSwitch)vm::switchToSales else null,vm::logout)
   }}
  }
 }

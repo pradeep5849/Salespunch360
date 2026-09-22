@@ -11,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -25,13 +26,99 @@ class ApiClient(private val session:SecureSession){
   private val sharedHttp=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(20,TimeUnit.SECONDS).writeTimeout(20,TimeUnit.SECONDS).retryOnConnectionFailure(true).build()
  }
  private val json=Json{ignoreUnknownKeys=true};private val http=sharedHttp;private val media="application/json".toMediaType()
- private suspend fun call(path:String,method:String="GET",body:String?=null,auth:Boolean=true)=withContext(Dispatchers.IO){val requestToken=if(auth)session.token() else null;val builder=Request.Builder().url(BuildConfig.API_BASE_URL+path).header("Accept","application/json");requestToken?.let{builder.header("Authorization","Bearer $it")};when(method){"POST"->builder.post((body?:"{}").toRequestBody(media));"PATCH"->builder.patch((body?:"{}").toRequestBody(media))};http.newCall(builder.build()).execute().use{val response=it.body?.string()?:"{}";if(!it.isSuccessful){val code=runCatching{json.parseToJsonElement(response).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull();if(auth){if(it.code==401)session.invalidateIfCurrent(requestToken);if(it.code==403&&code=="FORBIDDEN")session.authorizationChanged()};val distance=runCatching{json.parseToJsonElement(response).jsonObject["distanceMeters"]?.jsonPrimitive?.content?.toDouble()}.getOrNull();throw ApiException(it.code,code,distance)};response}}
+ private suspend fun call(path:String,method:String="GET",body:String?=null,auth:Boolean=true)=withContext(Dispatchers.IO){val requestToken=if(auth)session.token() else null;val builder=Request.Builder().url(BuildConfig.API_BASE_URL+path).header("Accept","application/json");requestToken?.let{builder.header("Authorization","Bearer $it")};when(method){"POST"->builder.post((body?:"{}").toRequestBody(media));"PATCH"->builder.patch((body?:"{}").toRequestBody(media));"DELETE"->builder.delete();"PUT"->builder.put((body?:"{}").toRequestBody(media))};http.newCall(builder.build()).execute().use{val response=it.body?.string()?:"{}";if(!it.isSuccessful){val code=runCatching{json.parseToJsonElement(response).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull();if(auth){if(it.code==401)session.invalidateIfCurrent(requestToken);if(it.code==403&&code=="FORBIDDEN")session.authorizationChanged()};val distance=runCatching{json.parseToJsonElement(response).jsonObject["distanceMeters"]?.jsonPrimitive?.content?.toDouble()}.getOrNull();throw ApiException(it.code,code,distance)};response}}
  private fun decodeBootstrap(raw:String,path:String=""):Bootstrap{val root=json.parseToJsonElement(raw).jsonObject;val payload=if(path.isEmpty())root else root[path]!!.jsonObject;return json.decodeFromJsonElement(Bootstrap.serializer(),payload)}
  private fun enc(value:String)=java.net.URLEncoder.encode(value,"UTF-8")
+ private suspend fun download(path:String)=withContext(Dispatchers.IO){val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.build();http.newCall(request).execute().use{if(!it.isSuccessful){if(it.code==401)session.invalidateIfCurrent(token);throw ApiException(it.code,"DOWNLOAD_FAILED")};it.body?.bytes()?:throw IOException("Empty download")}}
  suspend fun login(identifier:String,password:String):Bootstrap{val raw=call("api/v1/mobile/auth/login","POST",json.encodeToString(LoginRequest(identifier,password)),false);val root=json.parseToJsonElement(raw).jsonObject;val bootstrap=decodeBootstrap(raw,"bootstrap");session.save(root["accessToken"]!!.jsonPrimitive.content,bootstrap.user.id);return bootstrap}
  suspend fun bootstrap()=decodeBootstrap(call("api/v1/mobile/bootstrap"))
+ suspend fun accountBootstrap(branchId:String?=null,companyWide:Boolean=false):AccountBootstrap{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/bootstrap$query"))}
+ suspend fun accountDashboard(branchId:String?=null,companyWide:Boolean=false):AccountDashboard{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/dashboard$query"))}
+ suspend fun accountMasterList(kind:String,q:String="",active:String="true",branchId:String?=null):List<AccountMasterRecord>{val query=buildList{if(q.isNotBlank())add("q=${enc(q)}");add("active=${enc(active)}");branchId?.let{add("branchId=${enc(it)}")}}.joinToString("&",prefix="?");return json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}$query"))}
+ suspend fun accountMasterOptions():AccountMasterOptions=json.decodeFromString(call("api/v1/mobile/account/master-data/customers?view=options"))
+ suspend fun accountMasterDetail(kind:String,id:String):AccountPartyDetail=json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}/${enc(id)}"))
+ suspend fun saveAccountMaster(kind:String,id:String?,payload:kotlinx.serialization.json.JsonObject):AccountMasterRecord{val raw=call("api/v1/mobile/account/master-data/${enc(kind)}${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString());return runCatching{json.decodeFromString<AccountMasterRecord>(raw)}.getOrElse{json.decodeFromString<AccountPartyDetail>(raw).record}}
+ suspend fun accountSalesOptions()=json.parseToJsonElement(call("api/v1/mobile/account/transactions/options")).jsonObject
+ suspend fun accountSalesDocuments(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/transactions"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun accountSalesDocument(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}")).jsonObject
+ suspend fun createAccountSalesDocument(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions","POST",payload.toString())).jsonObject
+ suspend fun postAccountSalesDocument(id:String)=call("api/v1/mobile/account/transactions/${enc(id)}/post","POST")
+ suspend fun createCustomerReceipt(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/receipts","POST",payload.toString())).jsonObject
+ suspend fun customerReceiptContext()=json.parseToJsonElement(call("api/v1/mobile/account/receipts")).jsonObject
+ suspend fun quotationOptions()=json.parseToJsonElement(call("api/v1/mobile/account/quotations/options")).jsonObject
+ suspend fun quotations(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/quotations"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun quotation(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}")).jsonObject
+ suspend fun createQuotation(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations","POST",payload.toString())).jsonObject
+ suspend fun updateQuotation(id:String,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/quotations/${enc(id)}","PATCH",payload.toString())
+ suspend fun quotationAction(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/action","POST",payload.toString()))
+ suspend fun quotationPdf(id:String):ByteArray=download("api/v1/mobile/account/quotations/${enc(id)}/pdf")
+ suspend fun purchaseOptions()=json.parseToJsonElement(call("api/v1/mobile/account/purchases/options")).jsonObject
+ suspend fun purchases(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/purchases"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun purchase(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/purchases/${enc(id)}")).jsonObject
+ suspend fun createPurchase(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/purchases","POST",payload.toString())).jsonObject
+ suspend fun postPurchase(id:String)=call("api/v1/mobile/account/purchases/${enc(id)}/post","POST")
+ suspend fun vendorPaymentContext()=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments")).jsonObject
+ suspend fun createVendorPayment(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments","POST",payload.toString())).jsonObject
+ suspend fun expenseOptions()=json.parseToJsonElement(call("api/v1/mobile/account/expenses/options")).jsonObject
+ suspend fun expenses(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/expenses"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun expense(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/expenses/${enc(id)}")).jsonObject
+ suspend fun saveExpense(id:String?,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/expenses${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())).jsonObject
+ suspend fun expenseAction(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/expenses/${enc(id)}/action","POST",payload.toString())).jsonObject
+ suspend fun saveRecurringExpense(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/expenses/recurring","POST",payload.toString())).jsonObject
+ suspend fun uploadExpenseAttachment(id:String,name:String,mimeType:String,bytes:ByteArray)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("file",name,bytes.toRequestBody(mimeType.toMediaType())).build();val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/expenses/${enc(id)}/attachments").apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).execute().use{if(!it.isSuccessful)throw ApiException(it.code,"ATTACHMENT_UPLOAD_FAILED")}}
+ suspend fun expenseAttachment(id:String)=download("api/v1/mobile/account/expense-attachments/${enc(id)}")
+ suspend fun expenseCategories(q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/expense-categories${if(q.isBlank())"" else "?q=${enc(q)}"}")).jsonObject
+ suspend fun saveExpenseCategory(id:String?,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/expense-categories${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())
+ suspend fun disableExpenseCategory(id:String)=call("api/v1/mobile/account/expense-categories/${enc(id)}","DELETE")
+ suspend fun inventoryOptions()=json.parseToJsonElement(call("api/v1/mobile/account/inventory/options")).jsonObject
+ suspend fun inventoryStock(low:Boolean=false)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${if(low)"low-stock" else "stock"}")).jsonArray
+ suspend fun inventoryCatalog(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${enc(kind)}")).jsonArray
+ suspend fun inventoryHistory(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${enc(kind)}")).jsonArray
+ suspend fun inventoryMutation(kind:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${enc(kind)}","POST",payload.toString()))
+ suspend fun projects(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/projects"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonObject
+ suspend fun projectOptions(id:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/projects/options${id?.let{"?id=${enc(it)}"}.orEmpty()}")).jsonObject
+ suspend fun project(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}")).jsonObject
+ suspend fun projectAction(id:String,action:String)=call("api/v1/mobile/account/projects/${enc(id)}/action","POST",buildJsonObject{put("action",action)}.toString())
+ suspend fun saveProjectBudget(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/budget","PUT",payload.toString())).jsonObject
+ suspend fun projectCosting(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing")).jsonObject
+ suspend fun saveProject(edit:Boolean,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects",if(edit)"PATCH" else "POST",payload.toString())).jsonObject
+ suspend fun moneyContext()=json.parseToJsonElement(call("api/v1/mobile/account/money")).jsonObject
+ suspend fun saveMoneyAccount(id:String?,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/money/accounts${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())
+ suspend fun disableMoneyAccount(id:String)=call("api/v1/mobile/account/money/accounts/${enc(id)}","DELETE")
+ suspend fun moneyAction(kind:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/${enc(kind)}","POST",payload.toString()))
+ suspend fun accountingOverview()=json.parseToJsonElement(call("api/v1/mobile/account/accounting")).jsonObject
+ suspend fun accountingAction(kind:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/${enc(kind)}","POST",payload.toString()))
+ suspend fun journal(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals/${enc(id)}")).jsonObject
+ suspend fun reverseJournal(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals/${enc(id)}/reverse","POST",payload.toString())).jsonObject
+ suspend fun createFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years","POST",payload.toString())).jsonObject
+ suspend fun closeFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years/close","POST",payload.toString())).jsonObject
+ suspend fun assets(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/assets"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun assetOptions()=json.parseToJsonElement(call("api/v1/mobile/account/assets/options")).jsonObject
+ suspend fun asset(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/assets/${enc(id)}")).jsonObject
+ suspend fun saveAsset(id:String?,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/assets${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())).jsonObject
+ suspend fun assetAction(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/assets/${enc(id)}/action","POST",payload.toString())).jsonObject
+ suspend fun uploadAccountSignature(name:String,mime:String,bytes:ByteArray)=multipart("api/v1/mobile/account/signature","signature",name,mime,bytes,emptyMap())
+ suspend fun removeAccountSignature()=call("api/v1/mobile/account/signature","DELETE")
+ suspend fun accountSignature()=download("api/v1/mobile/account/signature")
+ suspend fun uploadAccountImport(type:String,name:String,mime:String,bytes:ByteArray,update:Boolean)=json.parseToJsonElement(multipart("api/v1/mobile/account/imports","file",name,mime,bytes,mapOf("type" to type,"updateExisting" to update.toString()))).jsonObject
+ suspend fun accountImports()=json.parseToJsonElement(call("api/v1/mobile/account/imports")).jsonArray
+ suspend fun accountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}")).jsonObject
+ suspend fun executeAccountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}/execute","POST")).jsonObject
+ suspend fun accountMasterExport(type:String,format:String)=download("api/v1/mobile/account/exports/${enc(type)}/${enc(format)}")
+ suspend fun accountBackup()=download("api/v1/mobile/account/backup")
+ suspend fun restoreAccountRecycle(id:String)=call("api/v1/mobile/account/recycle-bin/${enc(id)}/restore","POST")
+ private suspend fun multipart(path:String,field:String,name:String,mime:String,bytes:ByteArray,fields:Map<String,String>)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{fields.forEach{(k,v)->addFormDataPart(k,v)}}.addFormDataPart(field,name,bytes.toRequestBody(mime.toMediaType())).build();val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).execute().use{val raw=it.body?.string()?: "{}";if(!it.isSuccessful)throw ApiException(it.code,runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull());raw}}
+ suspend fun accountUsers()=json.parseToJsonElement(call("api/v1/mobile/account/users")).jsonObject
+ suspend fun saveAccountUser(edit:Boolean,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/users",if(edit)"PATCH" else "POST",payload.toString()))
+ suspend fun accountAdministration(section:String)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}")).let{if(it is kotlinx.serialization.json.JsonObject)it else buildJsonObject{put("rows",it)}}
+ suspend fun saveAccountAdministration(section:String,action:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}/${enc(action)}","POST",payload.toString()))
+ suspend fun accountTax(filters:Map<String,String> = emptyMap())=json.parseToJsonElement(call("api/v1/mobile/account/tax"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
+ suspend fun saveAccountTax(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/tax","POST",payload.toString()))
+ suspend fun accountUtility(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}")).jsonArray
+ suspend fun accountReportOptions()=json.parseToJsonElement(call("api/v1/mobile/account/reports/options")).jsonObject
+ suspend fun accountReport(name:String,filters:Map<String,String>)=json.parseToJsonElement(call("api/v1/mobile/account/reports/${enc(name)}"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
+ suspend fun accountReportExport(name:String,format:String,filters:Map<String,String>)=download("api/v1/mobile/account/reports/${enc(name)}/${enc(format)}"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})
  suspend fun dashboard(liveEmployee:String?=null,checkEmployee:String?=null):MobileDashboardContext{val q=buildList{liveEmployee?.let{add("liveEmployee=${enc(it)}")};checkEmployee?.let{add("checkEmployee=${enc(it)}")}}.joinToString("&");return json.decodeFromString(call("api/v1/mobile/dashboard${if(q.isBlank())"" else "?$q"}"))}
- suspend fun createWebSessionHandoff(redirectPath:String="/workspace/account")=json.decodeFromString<WebSessionHandoff>(call("api/v1/mobile/web-session","POST",json.encodeToString(WebSessionRequest(redirectPath))))
  suspend fun registerPush(installationId:String,fcmToken:String){call("api/v1/mobile/push","POST",json.encodeToString(buildJsonObject{put("installationId",installationId);put("fcmToken",fcmToken)}))};suspend fun logout(){try{call("api/v1/mobile/auth/logout","POST")}finally{session.clear()}};suspend fun changePassword(current:String,password:String,confirm:String)=call("api/v1/mobile/auth/password","POST",json.encodeToString(PasswordChangeRequest(current,password,confirm)))
  suspend fun attendance(action:String,location:LocationPayload?)=call("api/v1/mobile/attendance","POST",json.encodeToString(attendanceRequest(action,location)));suspend fun attendanceOverview()=json.decodeFromString<TeamAttendanceContext>(call("api/v1/mobile/attendance/overview"));suspend fun upload(point:LocationPayload)=call("api/v1/mobile/locations","POST",json.encodeToString(point))
  suspend fun employees()=json.decodeFromString<EmployeeContext>(call("api/v1/mobile/employees"))

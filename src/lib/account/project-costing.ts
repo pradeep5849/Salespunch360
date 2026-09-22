@@ -226,9 +226,11 @@ export function packageProfitability(
     };
   });
 }
-export async function loadProjectCosting(projectId: string) {
-  const actor = await costingActor(),
-    project = await scopedProject(actor, projectId),
+export async function loadProjectCostingForActor(
+  actor: Actor,
+  projectId: string,
+) {
+  const project = await scopedProject(actor, projectId),
     quotation = project.sourceQuotationId
       ? await db.quotationDocument.findFirst({
           where: {
@@ -295,6 +297,9 @@ export async function loadProjectCosting(projectId: string) {
     ),
     estimateSource: quotation ? "ACCEPTED_QUOTATION" : "PROJECT_BUDGET",
   };
+}
+export async function loadProjectCosting(projectId: string) {
+  return loadProjectCostingForActor(await costingActor(), projectId);
 }
 const changeInput = z
   .object({

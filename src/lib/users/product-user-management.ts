@@ -1,41 +1,611 @@
-import { Prisma, type AccountRole, type BranchAccessScope, type ManagerType, type ProductEdition, type SalesRole } from "@prisma/client";
+import {
+  Prisma,
+  type AccountRole,
+  type BranchAccessScope,
+  type ManagerType,
+  type ProductEdition,
+  type SalesRole,
+} from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser, requireUserForMutation, AuthorizationError } from "@/lib/auth/authorization";
+import {
+  requireUser,
+  requireUserForMutation,
+  AuthorizationError,
+} from "@/lib/auth/authorization";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { hashPassword } from "@/lib/auth/password";
 import { strongPasswordSchema } from "@/lib/auth/validation";
 import { revokeUserAuthenticationWithLock } from "@/lib/auth/session-generation";
 import { projectLegacyRole } from "./role-projection";
-import { assertEditableProductUser, assertProductSalesAssignment, assertSalesAdminBranchScope, validateUserRoleAssignment } from "./product-role-policy";
+import {
+  assertEditableProductUser,
+  assertProductSalesAssignment,
+  assertSalesAdminBranchScope,
+  validateUserRoleAssignment,
+} from "./product-role-policy";
 import { getTrialStatus } from "@/lib/trial/status";
 import { assertCanActivate } from "@/lib/employees/policy";
 import { profileComplete } from "@/lib/company/profile";
-import { accountPackageLimits, ACCOUNT_PACKAGE_ORDER_PROVIDER, ACCOUNT_PACKAGE_ROLES } from "@/lib/billing/account-package";
+import {
+  accountPackageLimits,
+  ACCOUNT_PACKAGE_ORDER_PROVIDER,
+  ACCOUNT_PACKAGE_ROLES,
+} from "@/lib/billing/account-package";
 
-const optional=<T extends z.ZodTypeAny>(schema:T)=>z.preprocess(value=>value===""||value===undefined?null:value,schema.nullable());
-const salesRole=optional(z.enum(["ADMIN","MANAGER","SALES"])),accountRole=optional(z.enum(["ACCOUNT_ADMIN","ACCOUNTANT","PROJECT_MANAGER","DATA_ENTRY"])),managerType=optional(z.enum(["FIELD_MANAGER","MANAGER_ONLY"])),managerId=optional(z.string().uuid());
-const branchFields={branchAccessScope:z.enum(["ALL_BRANCHES","SELECTED_BRANCHES"]),branchIds:z.array(z.string().uuid()).default([])},roleFields={salesRole,accountRole,managerType,managerId};
-export const createProductUserSchema=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().toLowerCase().email().max(320),password:strongPasswordSchema,confirmPassword:z.string(),...roleFields,...branchFields}).strict().superRefine((value,context)=>{if(value.password!==value.confirmPassword)context.addIssue({code:"custom",path:["confirmPassword"],message:"Passwords do not match"})});
-export const editProductUserSchema=z.object({userId:z.string().uuid(),name:z.string().trim().min(1).max(120),email:z.string().trim().toLowerCase().email().max(320),...roleFields,salesAccessActive:z.boolean(),accountAccessActive:z.boolean(),...branchFields}).strict();
-export const createAccountUserSchema=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().toLowerCase().email().max(320),password:strongPasswordSchema,confirmPassword:z.string(),accountRole:z.enum(["ACCOUNT_ADMIN","ACCOUNTANT","PROJECT_MANAGER","DATA_ENTRY"]),...branchFields}).strict().refine(value=>value.password===value.confirmPassword,{path:["confirmPassword"],message:"Passwords do not match"});
-export const editAccountUserSchema=z.object({userId:z.string().uuid(),accountRole,accountAccessActive:z.boolean(),...branchFields}).strict();
-export type ProductUserMutation=z.infer<typeof editProductUserSchema>;
-export function accountDomainUpdate(target:{salesRole:SalesRole|null},accountRoleValue:AccountRole|null,accountAccessActive:boolean){return{accountRole:accountRoleValue,accountAccessActive:accountAccessActive&&!!accountRoleValue,role:projectLegacyRole({salesRole:target.salesRole,accountRole:accountRoleValue})}}
-export function assertAccountEditTarget<T extends {companyId:string|null;salesRole:SalesRole|null;isActive:boolean}|null>(companyId:string,target:T,activate:boolean):asserts target is Exclude<T,null>{assertEditableProductUser(companyId,target);if(!target.isActive&&activate)throw new Error("IDENTITY_INACTIVE")}
+const optional = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (value === "" || value === undefined ? null : value),
+    schema.nullable(),
+  );
+const salesRole = optional(z.enum(["ADMIN", "MANAGER", "SALES"])),
+  accountRole = optional(
+    z.enum(["ACCOUNT_ADMIN", "ACCOUNTANT", "PROJECT_MANAGER", "DATA_ENTRY"]),
+  ),
+  managerType = optional(z.enum(["FIELD_MANAGER", "MANAGER_ONLY"])),
+  managerId = optional(z.string().uuid());
+const branchFields = {
+    branchAccessScope: z.enum(["ALL_BRANCHES", "SELECTED_BRANCHES"]),
+    branchIds: z.array(z.string().uuid()).default([]),
+  },
+  roleFields = { salesRole, accountRole, managerType, managerId };
+export const createProductUserSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(320),
+    password: strongPasswordSchema,
+    confirmPassword: z.string(),
+    ...roleFields,
+    ...branchFields,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.password !== value.confirmPassword)
+      context.addIssue({
+        code: "custom",
+        path: ["confirmPassword"],
+        message: "Passwords do not match",
+      });
+  });
+export const editProductUserSchema = z
+  .object({
+    userId: z.string().uuid(),
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(320),
+    ...roleFields,
+    salesAccessActive: z.boolean(),
+    accountAccessActive: z.boolean(),
+    ...branchFields,
+  })
+  .strict();
+export const createAccountUserSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(320),
+    password: strongPasswordSchema,
+    confirmPassword: z.string(),
+    accountRole: z.enum([
+      "ACCOUNT_ADMIN",
+      "ACCOUNTANT",
+      "PROJECT_MANAGER",
+      "DATA_ENTRY",
+    ]),
+    ...branchFields,
+  })
+  .strict()
+  .refine((value) => value.password === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
+export const editAccountUserSchema = z
+  .object({
+    userId: z.string().uuid(),
+    accountRole,
+    accountAccessActive: z.boolean(),
+    ...branchFields,
+  })
+  .strict();
+export type ProductUserMutation = z.infer<typeof editProductUserSchema>;
+export function accountDomainUpdate(
+  target: { salesRole: SalesRole | null },
+  accountRoleValue: AccountRole | null,
+  accountAccessActive: boolean,
+) {
+  return {
+    accountRole: accountRoleValue,
+    accountAccessActive: accountAccessActive && !!accountRoleValue,
+    role: projectLegacyRole({
+      salesRole: target.salesRole,
+      accountRole: accountRoleValue,
+    }),
+  };
+}
+export function assertAccountEditTarget<
+  T extends {
+    companyId: string | null;
+    salesRole: SalesRole | null;
+    isActive: boolean;
+  } | null,
+>(
+  companyId: string,
+  target: T,
+  activate: boolean,
+): asserts target is Exclude<T, null> {
+  assertEditableProductUser(companyId, target);
+  if (!target.isActive && activate) throw new Error("IDENTITY_INACTIVE");
+}
 
-async function administrationActor(mutation:boolean){const actor=mutation?await requireUserForMutation():await requireUser();if(!actor.companyId||actor.role==="SUPER_ADMIN")throw new AuthorizationError();const company=await db.company.findUnique({where:{id:actor.companyId},select:{id:true,productEdition:true,teamStructure:true,subscriptionStatus:true,trialStartedAt:true,trialEndsAt:true,name:true,addressLine1:true,city:true,state:true,postalCode:true,country:true,primaryContactName:true,primaryPhone:true,contactEmail:true}});if(!company||(!canUsePermission(actor,company.productEdition,"SALES_USER_ADMIN")&&!canUsePermission(actor,company.productEdition,"ACCOUNT_USER_ADMIN")))throw new AuthorizationError();return{actor:{...actor,companyId:actor.companyId},company}}
-async function enforceCreationReadiness(tx:Prisma.TransactionClient,company:Awaited<ReturnType<typeof administrationActor>>["company"],actorId:string){const actor=await tx.user.findFirst({where:{id:actorId,companyId:company.id,isActive:true},select:{emailVerifiedAt:true}});if(!actor?.emailVerifiedAt)throw new Error("EMAIL_VERIFICATION_REQUIRED");if(!profileComplete(company))throw new Error("COMPANY_PROFILE_REQUIRED")}
-function assertAssignment(edition:ProductEdition,input:{salesRole:SalesRole|null;accountRole:AccountRole|null;managerType:ManagerType|null;salesAccessActive?:boolean;accountAccessActive?:boolean}){validateUserRoleAssignment(edition,{salesRole:input.salesRole as Exclude<SalesRole,"PRIMARY_ADMIN">|null,accountRole:input.accountRole,managerType:input.managerType});if(input.salesAccessActive&&!input.salesRole)throw new Error("SALES_ROLE_REQUIRED");if(input.accountAccessActive&&!input.accountRole)throw new Error("ACCOUNT_ROLE_REQUIRED")}
-async function validateRelations(tx:Prisma.TransactionClient,companyId:string,input:{salesRole:SalesRole|null;managerId:string|null;branchAccessScope:BranchAccessScope;branchIds:string[]}){assertSalesAdminBranchScope(input.salesRole,input.branchAccessScope);if(input.salesRole==="SALES"&&input.managerId){const manager=await tx.user.findFirst({where:{id:input.managerId,companyId,isActive:true,salesAccessActive:true,salesRole:"MANAGER"},select:{id:true}});if(!manager)throw new Error("INVALID_MANAGER")}else if(input.managerId)throw new Error("INVALID_MANAGER");const uniqueBranchIds=[...new Set(input.branchIds)];if(input.branchAccessScope==="SELECTED_BRANCHES"){if(!uniqueBranchIds.length)throw new Error("BRANCH_REQUIRED");const count=await tx.branch.count({where:{id:{in:uniqueBranchIds},companyId,isActive:true}});if(count!==uniqueBranchIds.length)throw new Error("INVALID_BRANCH")}return input.branchAccessScope==="SELECTED_BRANCHES"?uniqueBranchIds:[]}
-async function replaceBranches(tx:Prisma.TransactionClient,userId:string,scope:BranchAccessScope,branchIds:string[]){await tx.userBranchAccess.deleteMany({where:{userId}});if(scope==="SELECTED_BRANCHES")await tx.userBranchAccess.createMany({data:branchIds.map(branchId=>({userId,branchId}))})}
-async function activeSubscriptions(tx:Prisma.TransactionClient,companyId:string,now:Date){return tx.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},orderBy:{endsAt:"desc"},select:{adminSeats:true,managerSeats:true,salesSeats:true,sourceOrder:{select:{provider:true}}}})}
-async function enforceSalesSeat(tx:Prisma.TransactionClient,company:Awaited<ReturnType<typeof administrationActor>>["company"],role:Exclude<SalesRole,"PRIMARY_ADMIN">,excludeUserId?:string){const now=new Date(),used=await tx.user.count({where:{companyId:company.id,salesRole:role,isActive:true,salesAccessActive:true,...(excludeUserId?{id:{not:excludeUserId}}:{})}}),subscriptions=await activeSubscriptions(tx,company.id,now),subscription=subscriptions.find(item=>item.sourceOrder?.provider!==ACCOUNT_PACKAGE_ORDER_PROVIDER);if(role==="ADMIN"){if(used>=(subscription?.adminSeats??0))throw new Error("SEAT_LIMIT");return}if(subscription){const limit=role==="MANAGER"?subscription.managerSeats:subscription.salesSeats;if(used>=limit)throw new Error("SEAT_LIMIT");return}assertCanActivate(getTrialStatus(company).effectiveStatus,role,used)}
-async function accountPackageCount(tx:Prisma.TransactionClient,company:Awaited<ReturnType<typeof administrationActor>>["company"],now=new Date()){if(company.productEdition==="SALESPUNCH360")return 0;const subscriptions=await activeSubscriptions(tx,company.id,now),paidPackages=subscriptions.filter(item=>item.sourceOrder?.provider===ACCOUNT_PACKAGE_ORDER_PROVIDER).reduce((sum,item)=>sum+item.adminSeats,0);return 1+paidPackages}
-async function enforceAccountSeat(tx:Prisma.TransactionClient,company:Awaited<ReturnType<typeof administrationActor>>["company"],role:AccountRole,excludeUserId?:string){const limit=accountPackageLimits(await accountPackageCount(tx,company))[role],used=await tx.user.count({where:{companyId:company.id,accountRole:role,isActive:true,accountAccessActive:true,...(excludeUserId?{id:{not:excludeUserId}}:{})}});if(used>=limit)throw new Error("ACCOUNT_SEAT_LIMIT")}
+async function administrationActor(
+  mutation: boolean,
+  provided?: Awaited<ReturnType<typeof requireUser>>,
+) {
+  const actor =
+    provided ??
+    (mutation ? await requireUserForMutation() : await requireUser());
+  if (!actor.companyId || actor.role === "SUPER_ADMIN")
+    throw new AuthorizationError();
+  const company = await db.company.findUnique({
+    where: { id: actor.companyId },
+    select: {
+      id: true,
+      productEdition: true,
+      teamStructure: true,
+      subscriptionStatus: true,
+      trialStartedAt: true,
+      trialEndsAt: true,
+      name: true,
+      addressLine1: true,
+      city: true,
+      state: true,
+      postalCode: true,
+      country: true,
+      primaryContactName: true,
+      primaryPhone: true,
+      contactEmail: true,
+    },
+  });
+  if (
+    !company ||
+    (!canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN") &&
+      !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN"))
+  )
+    throw new AuthorizationError();
+  return { actor: { ...actor, companyId: actor.companyId }, company };
+}
+async function enforceCreationReadiness(
+  tx: Prisma.TransactionClient,
+  company: Awaited<ReturnType<typeof administrationActor>>["company"],
+  actorId: string,
+) {
+  const actor = await tx.user.findFirst({
+    where: { id: actorId, companyId: company.id, isActive: true },
+    select: { emailVerifiedAt: true },
+  });
+  if (!actor?.emailVerifiedAt) throw new Error("EMAIL_VERIFICATION_REQUIRED");
+  if (!profileComplete(company)) throw new Error("COMPANY_PROFILE_REQUIRED");
+}
+function assertAssignment(
+  edition: ProductEdition,
+  input: {
+    salesRole: SalesRole | null;
+    accountRole: AccountRole | null;
+    managerType: ManagerType | null;
+    salesAccessActive?: boolean;
+    accountAccessActive?: boolean;
+  },
+) {
+  validateUserRoleAssignment(edition, {
+    salesRole: input.salesRole as Exclude<SalesRole, "PRIMARY_ADMIN"> | null,
+    accountRole: input.accountRole,
+    managerType: input.managerType,
+  });
+  if (input.salesAccessActive && !input.salesRole)
+    throw new Error("SALES_ROLE_REQUIRED");
+  if (input.accountAccessActive && !input.accountRole)
+    throw new Error("ACCOUNT_ROLE_REQUIRED");
+}
+async function validateRelations(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  input: {
+    salesRole: SalesRole | null;
+    managerId: string | null;
+    branchAccessScope: BranchAccessScope;
+    branchIds: string[];
+  },
+) {
+  assertSalesAdminBranchScope(input.salesRole, input.branchAccessScope);
+  if (input.salesRole === "SALES" && input.managerId) {
+    const manager = await tx.user.findFirst({
+      where: {
+        id: input.managerId,
+        companyId,
+        isActive: true,
+        salesAccessActive: true,
+        salesRole: "MANAGER",
+      },
+      select: { id: true },
+    });
+    if (!manager) throw new Error("INVALID_MANAGER");
+  } else if (input.managerId) throw new Error("INVALID_MANAGER");
+  const uniqueBranchIds = [...new Set(input.branchIds)];
+  if (input.branchAccessScope === "SELECTED_BRANCHES") {
+    if (!uniqueBranchIds.length) throw new Error("BRANCH_REQUIRED");
+    const count = await tx.branch.count({
+      where: { id: { in: uniqueBranchIds }, companyId, isActive: true },
+    });
+    if (count !== uniqueBranchIds.length) throw new Error("INVALID_BRANCH");
+  }
+  return input.branchAccessScope === "SELECTED_BRANCHES" ? uniqueBranchIds : [];
+}
+async function replaceBranches(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  scope: BranchAccessScope,
+  branchIds: string[],
+) {
+  await tx.userBranchAccess.deleteMany({ where: { userId } });
+  if (scope === "SELECTED_BRANCHES")
+    await tx.userBranchAccess.createMany({
+      data: branchIds.map((branchId) => ({ userId, branchId })),
+    });
+}
+async function activeSubscriptions(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  now: Date,
+) {
+  return tx.companySubscription.findMany({
+    where: {
+      companyId,
+      status: "ACTIVE",
+      startsAt: { lte: now },
+      endsAt: { gt: now },
+    },
+    orderBy: { endsAt: "desc" },
+    select: {
+      adminSeats: true,
+      managerSeats: true,
+      salesSeats: true,
+      sourceOrder: { select: { provider: true } },
+    },
+  });
+}
+async function enforceSalesSeat(
+  tx: Prisma.TransactionClient,
+  company: Awaited<ReturnType<typeof administrationActor>>["company"],
+  role: Exclude<SalesRole, "PRIMARY_ADMIN">,
+  excludeUserId?: string,
+) {
+  const now = new Date(),
+    used = await tx.user.count({
+      where: {
+        companyId: company.id,
+        salesRole: role,
+        isActive: true,
+        salesAccessActive: true,
+        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      },
+    }),
+    subscriptions = await activeSubscriptions(tx, company.id, now),
+    subscription = subscriptions.find(
+      (item) => item.sourceOrder?.provider !== ACCOUNT_PACKAGE_ORDER_PROVIDER,
+    );
+  if (role === "ADMIN") {
+    if (used >= (subscription?.adminSeats ?? 0)) throw new Error("SEAT_LIMIT");
+    return;
+  }
+  if (subscription) {
+    const limit =
+      role === "MANAGER" ? subscription.managerSeats : subscription.salesSeats;
+    if (used >= limit) throw new Error("SEAT_LIMIT");
+    return;
+  }
+  assertCanActivate(getTrialStatus(company).effectiveStatus, role, used);
+}
+async function accountPackageCount(
+  tx: Prisma.TransactionClient,
+  company: Awaited<ReturnType<typeof administrationActor>>["company"],
+  now = new Date(),
+) {
+  if (company.productEdition === "SALESPUNCH360") return 0;
+  const subscriptions = await activeSubscriptions(tx, company.id, now),
+    paidPackages = subscriptions
+      .filter(
+        (item) => item.sourceOrder?.provider === ACCOUNT_PACKAGE_ORDER_PROVIDER,
+      )
+      .reduce((sum, item) => sum + item.adminSeats, 0);
+  return 1 + paidPackages;
+}
+async function enforceAccountSeat(
+  tx: Prisma.TransactionClient,
+  company: Awaited<ReturnType<typeof administrationActor>>["company"],
+  role: AccountRole,
+  excludeUserId?: string,
+) {
+  const limit = accountPackageLimits(await accountPackageCount(tx, company))[
+      role
+    ],
+    used = await tx.user.count({
+      where: {
+        companyId: company.id,
+        accountRole: role,
+        isActive: true,
+        accountAccessActive: true,
+        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      },
+    });
+  if (used >= limit) throw new Error("ACCOUNT_SEAT_LIMIT");
+}
 
-export async function getProductUserManagementContext(){const{actor,company}=await administrationActor(false),canManageSalesUsers=canUsePermission(actor,company.productEdition,"SALES_USER_ADMIN"),canManageAccountUsers=canUsePermission(actor,company.productEdition,"ACCOUNT_USER_ADMIN");const now=new Date(),[users,branches,seatUsers,packageSubscriptions]=await Promise.all([db.user.findMany({where:{companyId:company.id,role:{not:"SUPER_ADMIN"},OR:[{salesRole:{not:"PRIMARY_ADMIN"}},{salesRole:null}]},select:{id:true,name:true,email:true,isActive:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}}},orderBy:[{isActive:"desc"},{name:"asc"}]}),db.branch.findMany({where:{companyId:company.id,isActive:true},select:{id:true,name:true,code:true,isPrimary:true},orderBy:[{isPrimary:"desc"},{name:"asc"}]}),db.user.findMany({where:{companyId:company.id,isActive:true,accountAccessActive:true,accountRole:{not:null}},select:{accountRole:true}}),db.companySubscription.findMany({where:{companyId:company.id,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},select:{adminSeats:true,sourceOrder:{select:{provider:true}}}})]);const paidPackages=packageSubscriptions.filter(item=>item.sourceOrder?.provider===ACCOUNT_PACKAGE_ORDER_PROVIDER).reduce((sum,item)=>sum+item.adminSeats,0),accountPackageTotal=company.productEdition==="SALESPUNCH360"?0:1+paidPackages,accountLimits=accountPackageLimits(accountPackageTotal),accountUsage=Object.fromEntries(ACCOUNT_PACKAGE_ROLES.map(role=>[role,seatUsers.filter(user=>user.accountRole===role).length])) as Record<AccountRole,number>;return{actor,edition:company.productEdition,teamStructure:company.teamStructure,users,branches,canManageSalesUsers,canManageAccountUsers,accountPackageCount:accountPackageTotal,accountLimits,accountUsage}}
+export async function getProductUserManagementContextForActor(
+  provided: Awaited<ReturnType<typeof requireUser>>,
+) {
+  const { actor, company } = await administrationActor(false, provided),
+    canManageSalesUsers = canUsePermission(
+      actor,
+      company.productEdition,
+      "SALES_USER_ADMIN",
+    ),
+    canManageAccountUsers = canUsePermission(
+      actor,
+      company.productEdition,
+      "ACCOUNT_USER_ADMIN",
+    );
+  const now = new Date(),
+    [users, branches, seatUsers, packageSubscriptions] = await Promise.all([
+      db.user.findMany({
+        where: {
+          companyId: company.id,
+          role: { not: "SUPER_ADMIN" },
+          OR: [{ salesRole: { not: "PRIMARY_ADMIN" } }, { salesRole: null }],
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          salesRole: true,
+          accountRole: true,
+          managerType: true,
+          managerId: true,
+          salesAccessActive: true,
+          accountAccessActive: true,
+          branchAccessScope: true,
+          branchAccesses: { select: { branchId: true } },
+        },
+        orderBy: [{ isActive: "desc" }, { name: "asc" }],
+      }),
+      db.branch.findMany({
+        where: { companyId: company.id, isActive: true },
+        select: { id: true, name: true, code: true, isPrimary: true },
+        orderBy: [{ isPrimary: "desc" }, { name: "asc" }],
+      }),
+      db.user.findMany({
+        where: {
+          companyId: company.id,
+          isActive: true,
+          accountAccessActive: true,
+          accountRole: { not: null },
+        },
+        select: { accountRole: true },
+      }),
+      db.companySubscription.findMany({
+        where: {
+          companyId: company.id,
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          endsAt: { gt: now },
+        },
+        select: {
+          adminSeats: true,
+          sourceOrder: { select: { provider: true } },
+        },
+      }),
+    ]);
+  const paidPackages = packageSubscriptions
+      .filter(
+        (item) => item.sourceOrder?.provider === ACCOUNT_PACKAGE_ORDER_PROVIDER,
+      )
+      .reduce((sum, item) => sum + item.adminSeats, 0),
+    accountPackageTotal =
+      company.productEdition === "SALESPUNCH360" ? 0 : 1 + paidPackages,
+    accountLimits = accountPackageLimits(accountPackageTotal),
+    accountUsage = Object.fromEntries(
+      ACCOUNT_PACKAGE_ROLES.map((role) => [
+        role,
+        seatUsers.filter((user) => user.accountRole === role).length,
+      ]),
+    ) as Record<AccountRole, number>;
+  return {
+    actor,
+    edition: company.productEdition,
+    teamStructure: company.teamStructure,
+    users,
+    branches,
+    canManageSalesUsers,
+    canManageAccountUsers,
+    accountPackageCount: accountPackageTotal,
+    accountLimits,
+    accountUsage,
+  };
+}
 
-export async function createAccountUser(raw:unknown){const input=createAccountUserSchema.parse(raw);return createProductUser({...input,salesRole:null,managerType:null,managerId:null})}
-export async function editAccountUser(raw:unknown){const{actor,company}=await administrationActor(true);if(!canUsePermission(actor,company.productEdition,"ACCOUNT_USER_ADMIN"))throw new AuthorizationError();const input=editAccountUserSchema.parse(raw);if(input.accountRole&&company.productEdition==="SALESPUNCH360")throw new Error("ACCOUNT_ROLE_NOT_ENTITLED");return db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;const target=await tx.user.findFirst({where:{id:input.userId,companyId:company.id,role:{not:"SUPER_ADMIN"}},select:{id:true,companyId:true,isActive:true,salesRole:true,accountRole:true,managerType:true,managerId:true,salesAccessActive:true,accountAccessActive:true,branchAccessScope:true,branchAccesses:{select:{branchId:true}}}});assertAccountEditTarget(company.id,target,input.accountAccessActive);const currentBranches=target.branchAccesses.map(x=>x.branchId).sort();if(target.salesRole&&(input.branchAccessScope!==target.branchAccessScope||input.branchIds.slice().sort().join(",")!==currentBranches.join(",")))throw new Error("SALES_BRANCH_AUTHORITY_REQUIRED");const branchIds=target.salesRole?currentBranches:await validateRelations(tx,company.id,{salesRole:null,managerId:null,branchAccessScope:input.branchAccessScope,branchIds:input.branchIds});if(!input.accountRole&&!target.salesRole)throw new Error("ROLE_REQUIRED");const accountAccessActive=input.accountAccessActive&&!!input.accountRole;if(input.accountRole&&accountAccessActive&&(target.accountRole!==input.accountRole||!target.accountAccessActive))await enforceAccountSeat(tx,company,input.accountRole,target.id);const securityChanged=target.accountRole!==input.accountRole||target.accountAccessActive!==accountAccessActive||(!target.salesRole&&(input.branchAccessScope!==target.branchAccessScope||input.branchIds.slice().sort().join(",")!==currentBranches.join(",")));await tx.user.update({where:{id:target.id},data:{...accountDomainUpdate(target,input.accountRole,input.accountAccessActive),...(!target.salesRole?{branchAccessScope:input.branchAccessScope}:{})}});if(!target.salesRole)await replaceBranches(tx,target.id,input.branchAccessScope,branchIds);if(securityChanged)await revokeUserAuthenticationWithLock(tx,target.id)},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
-async function createProductUser(raw:unknown){const{actor,company}=await administrationActor(true),input=createProductUserSchema.parse(raw);assertAssignment(company.productEdition,{...input,salesAccessActive:!!input.salesRole,accountAccessActive:!!input.accountRole});assertProductSalesAssignment(company.teamStructure,input.salesRole,input.managerId);if(input.salesRole&&!canUsePermission(actor,company.productEdition,"SALES_USER_ADMIN"))throw new AuthorizationError();if(input.accountRole&&!canUsePermission(actor,company.productEdition,"ACCOUNT_USER_ADMIN"))throw new AuthorizationError();if(company.subscriptionStatus==="SUSPENDED"||company.subscriptionStatus==="EXPIRED")throw new Error("WORKSPACE_SUSPENDED");const passwordHash=await hashPassword(input.password);return db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${company.id}::uuid FOR UPDATE`;await enforceCreationReadiness(tx,company,actor.id);if(input.salesRole)await enforceSalesSeat(tx,company,input.salesRole);if(input.accountRole)await enforceAccountSeat(tx,company,input.accountRole);const branchIds=await validateRelations(tx,company.id,input);const user=await tx.user.create({data:{companyId:company.id,name:input.name,email:input.email,passwordHash,role:projectLegacyRole(input),salesRole:input.salesRole,accountRole:input.accountRole,managerType:input.salesRole==="MANAGER"?input.managerType:null,managerId:input.salesRole==="SALES"?input.managerId:null,salesAccessActive:!!input.salesRole,accountAccessActive:!!input.accountRole,branchAccessScope:input.branchAccessScope}});await replaceBranches(tx,user.id,input.branchAccessScope,branchIds);return user},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
+export async function createAccountUserForActor(
+  provided: Awaited<ReturnType<typeof requireUser>>,
+  raw: unknown,
+) {
+  const input = createAccountUserSchema.parse(raw);
+  return createProductUser(
+    { ...input, salesRole: null, managerType: null, managerId: null },
+    provided,
+  );
+}
+export async function editAccountUserForActor(
+  provided: Awaited<ReturnType<typeof requireUser>>,
+  raw: unknown,
+) {
+  const { actor, company } = await administrationActor(true, provided);
+  if (!canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN"))
+    throw new AuthorizationError();
+  const input = editAccountUserSchema.parse(raw);
+  if (input.accountRole && company.productEdition === "SALESPUNCH360")
+    throw new Error("ACCOUNT_ROLE_NOT_ENTITLED");
+  return db.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
+      const target = await tx.user.findFirst({
+        where: {
+          id: input.userId,
+          companyId: company.id,
+          role: { not: "SUPER_ADMIN" },
+        },
+        select: {
+          id: true,
+          companyId: true,
+          isActive: true,
+          salesRole: true,
+          accountRole: true,
+          managerType: true,
+          managerId: true,
+          salesAccessActive: true,
+          accountAccessActive: true,
+          branchAccessScope: true,
+          branchAccesses: { select: { branchId: true } },
+        },
+      });
+      assertAccountEditTarget(company.id, target, input.accountAccessActive);
+      const currentBranches = target.branchAccesses
+        .map((x) => x.branchId)
+        .sort();
+      if (
+        target.salesRole &&
+        (input.branchAccessScope !== target.branchAccessScope ||
+          input.branchIds.slice().sort().join(",") !==
+            currentBranches.join(","))
+      )
+        throw new Error("SALES_BRANCH_AUTHORITY_REQUIRED");
+      const branchIds = target.salesRole
+        ? currentBranches
+        : await validateRelations(tx, company.id, {
+            salesRole: null,
+            managerId: null,
+            branchAccessScope: input.branchAccessScope,
+            branchIds: input.branchIds,
+          });
+      if (!input.accountRole && !target.salesRole)
+        throw new Error("ROLE_REQUIRED");
+      const accountAccessActive =
+        input.accountAccessActive && !!input.accountRole;
+      if (
+        input.accountRole &&
+        accountAccessActive &&
+        (target.accountRole !== input.accountRole ||
+          !target.accountAccessActive)
+      )
+        await enforceAccountSeat(tx, company, input.accountRole, target.id);
+      const securityChanged =
+        target.accountRole !== input.accountRole ||
+        target.accountAccessActive !== accountAccessActive ||
+        (!target.salesRole &&
+          (input.branchAccessScope !== target.branchAccessScope ||
+            input.branchIds.slice().sort().join(",") !==
+              currentBranches.join(",")));
+      await tx.user.update({
+        where: { id: target.id },
+        data: {
+          ...accountDomainUpdate(
+            target,
+            input.accountRole,
+            input.accountAccessActive,
+          ),
+          ...(!target.salesRole
+            ? { branchAccessScope: input.branchAccessScope }
+            : {}),
+        },
+      });
+      if (!target.salesRole)
+        await replaceBranches(
+          tx,
+          target.id,
+          input.branchAccessScope,
+          branchIds,
+        );
+      if (securityChanged)
+        await revokeUserAuthenticationWithLock(tx, target.id);
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
+async function createProductUser(
+  raw: unknown,
+  provided?: Awaited<ReturnType<typeof requireUser>>,
+) {
+  const { actor, company } = await administrationActor(true, provided),
+    input = createProductUserSchema.parse(raw);
+  assertAssignment(company.productEdition, {
+    ...input,
+    salesAccessActive: !!input.salesRole,
+    accountAccessActive: !!input.accountRole,
+  });
+  assertProductSalesAssignment(
+    company.teamStructure,
+    input.salesRole,
+    input.managerId,
+  );
+  if (
+    input.salesRole &&
+    !canUsePermission(actor, company.productEdition, "SALES_USER_ADMIN")
+  )
+    throw new AuthorizationError();
+  if (
+    input.accountRole &&
+    !canUsePermission(actor, company.productEdition, "ACCOUNT_USER_ADMIN")
+  )
+    throw new AuthorizationError();
+  if (
+    company.subscriptionStatus === "SUSPENDED" ||
+    company.subscriptionStatus === "EXPIRED"
+  )
+    throw new Error("WORKSPACE_SUSPENDED");
+  const passwordHash = await hashPassword(input.password);
+  return db.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${company.id}::uuid FOR UPDATE`;
+      await enforceCreationReadiness(tx, company, actor.id);
+      if (input.salesRole) await enforceSalesSeat(tx, company, input.salesRole);
+      if (input.accountRole)
+        await enforceAccountSeat(tx, company, input.accountRole);
+      const branchIds = await validateRelations(tx, company.id, input);
+      const user = await tx.user.create({
+        data: {
+          companyId: company.id,
+          name: input.name,
+          email: input.email,
+          passwordHash,
+          role: projectLegacyRole(input),
+          salesRole: input.salesRole,
+          accountRole: input.accountRole,
+          managerType: input.salesRole === "MANAGER" ? input.managerType : null,
+          managerId: input.salesRole === "SALES" ? input.managerId : null,
+          salesAccessActive: !!input.salesRole,
+          accountAccessActive: !!input.accountRole,
+          branchAccessScope: input.branchAccessScope,
+        },
+      });
+      await replaceBranches(tx, user.id, input.branchAccessScope, branchIds);
+      return user;
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
+
+export async function getProductUserManagementContext() {
+  return getProductUserManagementContextForActor(await requireUser());
+}
+export async function createAccountUser(raw: unknown) {
+  return createAccountUserForActor(await requireUserForMutation(), raw);
+}
+export async function editAccountUser(raw: unknown) {
+  return editAccountUserForActor(await requireUserForMutation(), raw);
+}
