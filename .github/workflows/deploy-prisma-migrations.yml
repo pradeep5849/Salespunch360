@@ -1,4 +1,4 @@
-name: Deploy Prisma Migrations
+name: Production Prisma Migrations
 
 on:
   workflow_dispatch:
@@ -8,20 +8,25 @@ permissions:
 
 jobs:
   deploy-migrations:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
     steps:
-      - name: Check out repository
+      - name: Check out main
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install locked dependencies
         run: npm ci
 
       - name: Generate Prisma Client
@@ -30,10 +35,19 @@ jobs:
       - name: Validate Prisma schema
         run: npm run prisma:validate
 
-      - name: Deploy Prisma migrations
+      - name: Validate production database secret
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "Required DATABASE_URL repository secret is unavailable." >&2
             exit 1
           fi
-          npx prisma migrate deploy
+
+      - name: Check migration status before deployment
+        continue-on-error: true
+        run: npx --no-install prisma migrate status
+
+      - name: Deploy pending migrations
+        run: npx --no-install prisma migrate deploy
+
+      - name: Verify migration status after deployment
+        run: npx --no-install prisma migrate status
