@@ -1,4 +1,4 @@
-name: R5 final validation
+name: Full validation
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   web:
-    name: Web final regression
+    name: Web full regression
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -48,18 +48,18 @@ jobs:
       - run: npm run build
         env:
           SKIP_ENV_VALIDATION: "1"
-          AUTH_SECRET: "r5-ci-only-auth-secret-not-used-outside-github-actions"
+          AUTH_SECRET: "ci-only-auth-secret-not-used-outside-github-actions"
           APP_URL: "https://www.salespunch360.com"
-          HOSTINGER_STORAGE_PATH: "/tmp/salespunch360-r5-storage"
+          HOSTINGER_STORAGE_PATH: "/tmp/salespunch360-ci-storage"
           SMTP_HOST: "smtp.hostinger.com"
           SMTP_PORT: "465"
           SMTP_SECURE: "true"
-          SMTP_USER: "r5-ci@salespunch360.com"
-          SMTP_PASSWORD: "r5-ci-only-password-not-used-outside-github-actions"
-          MAIL_FROM: "r5-ci@salespunch360.com"
+          SMTP_USER: "ci@salespunch360.com"
+          SMTP_PASSWORD: "ci-only-password-not-used-outside-github-actions"
+          MAIL_FROM: "ci@salespunch360.com"
 
   android:
-    name: Android final regression
+    name: Android full regression
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
       - name: Run Android release tests and lint
         working-directory: android
         run: ./gradlew --no-daemon testReleaseUnitTest lintRelease
-      - name: Assemble unsigned release
+      - name: Assemble unsigned release for verification
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease
       - name: Verify release configuration
