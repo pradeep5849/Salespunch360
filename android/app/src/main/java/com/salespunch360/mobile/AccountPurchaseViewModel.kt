@@ -1,4 +1,215 @@
 package com.salespunch360.mobile
-import android.app.Application;import androidx.lifecycle.AndroidViewModel;import androidx.lifecycle.viewModelScope;import com.salespunch360.mobile.account.*;import com.salespunch360.mobile.data.*;import java.io.IOException;import kotlinx.coroutines.flow.MutableStateFlow;import kotlinx.coroutines.flow.StateFlow;import kotlinx.coroutines.launch;import kotlinx.serialization.json.*
-class AccountPurchaseViewModel(app:Application):AndroidViewModel(app){private val api=ApiClient(SecureSession(app));private val _state=MutableStateFlow(PurchaseState());val state:StateFlow<PurchaseState> = _state;init{refresh()};fun refresh()=viewModelScope.launch{_state.value=_state.value.copy(loading=true,error=null);try{val o=api.purchaseOptions(),rows=api.purchases(_state.value.type,_state.value.query).map{it.jsonObject}.map{SalesDocumentRow(it.str("id"),it.str("type"),it.str("documentNumber"),it.str("partyName"),it.str("issueDate").take(10),it.str("status"),it.str("grandTotal"))};_state.value=_state.value.copy(loading=false,rows=rows,types=o["allowedDocumentTypes"]?.jsonArray?.map{it.jsonPrimitive.content}.orEmpty(),branches=o.array("branches").map{it.option()},vendors=o.array("vendors").map{it.option()},products=o.array("products").map{it.option("costPrice")},services=o.array("services").map{it.option("estimatedCost")},workPackages=o.array("workPackages").map{it.option("estimatedCost")},warehouses=o.array("warehouses").map{it.option()},projects=o.array("projects").map{it.option()},sources=o.array("sourceDocuments"),purchaseOrders=o.array("purchaseOrders"))}catch(e:Exception){fail(e)}};fun search(q:String){_state.value=_state.value.copy(query=q);refresh()};fun filter(t:String?){_state.value=_state.value.copy(type=t);refresh()};fun create(type:String){_state.value=_state.value.copy(draft=PurchaseDraft(type=type,branchId=_state.value.branches.firstOrNull()?.id.orEmpty()))};fun edit(d:PurchaseDraft){_state.value=_state.value.copy(draft=d)};fun closeDraft(){_state.value=_state.value.copy(draft=null)};fun addLine(){_state.value.draft?.let{edit(it.copy(lines=it.lines+SalesLineDraft(lineType="MATERIAL")))}};fun line(i:Int,l:SalesLineDraft){_state.value.draft?.let{edit(it.copy(lines=it.lines.mapIndexed{n,x->if(n==i)l else x}))}};fun remove(i:Int){_state.value.draft?.let{if(it.lines.size>1)edit(it.copy(lines=it.lines.filterIndexed{n,_->n!=i}))}}
- fun save(){val d=_state.value.draft?:return;viewModelScope.launch{_state.value=_state.value.copy(saving=true,error=null);try{val payload=buildJsonObject{put("type",d.type);put("branchId",d.branchId);put("partyId",d.vendorId);d.sourceDocumentId.takeIf{it.isNotBlank()}?.let{put("sourceDocumentId",it)};d.sourcePurchaseOrderId.takeIf{it.isNotBlank()}?.let{put("sourcePurchaseOrderId",it)};put("purchasePurpose",d.purpose);put("purchaseClassification",d.classification);d.projectId.takeIf{it.isNotBlank()}?.let{put("projectId",it)};put("issueDate",d.issueDate);d.dueDate.takeIf{it.isNotBlank()}?.let{put("dueDate",it)};put("taxMode",d.taxMode);d.stateOfSupplyCode.takeIf{it.isNotBlank()}?.let{put("stateOfSupplyCode",it)};put("reverseCharge",d.reverseCharge);put("taxCreditTreatment",d.taxCreditTreatment);put("tdsRate",d.tdsRate);put("notes",d.notes);putJsonArray("lines"){d.lines.forEach{l->add(buildJsonObject{put("lineType",l.lineType);l.sourceId.takeIf{it.isNotBlank()}?.let{put("sourceId",it)};l.itemName.takeIf{it.isNotBlank()}?.let{put("itemName",it)};put("quantity",l.quantity);l.rate.takeIf{it.isNotBlank()}?.let{put("rate",it)};l.discountType.takeIf{it.isNotBlank()}?.let{put("discountType",it);put("discountValue",l.discountValue)};l.taxRate.takeIf{it.isNotBlank()}?.let{put("taxRate",it)};l.warehouseId.takeIf{it.isNotBlank()}?.let{put("warehouseId",it)};l.sourceCommercialLineId.takeIf{it.isNotBlank()}?.let{put("sourceCommercialLineId",it)};put("stockReturnQuantity",l.stockReturnQuantity)})}}};val x=api.createPurchase(payload);_state.value=_state.value.copy(saving=false,draft=null,detail=api.purchase(x.str("id")),message="Purchase draft created with server totals.");refresh()}catch(e:Exception){fail(e)}}};fun open(id:String)=viewModelScope.launch{try{_state.value=_state.value.copy(detail=api.purchase(id))}catch(e:Exception){fail(e)}};fun close(){_state.value=_state.value.copy(detail=null)};fun askPost(id:String){_state.value=_state.value.copy(posting=id)};fun cancelPost(){_state.value=_state.value.copy(posting=null)};fun post()=viewModelScope.launch{val id=_state.value.posting?:return@launch;try{api.postPurchase(id);_state.value=_state.value.copy(posting=null,detail=api.purchase(id),message="Purchase document posted by the server.");refresh()}catch(e:Exception){fail(e)}};private fun fail(e:Exception){_state.value=_state.value.copy(loading=false,saving=false,error=when{e is IOException->"You're offline. No purchase change was confirmed.";e is ApiException&&e.status==403->"You are not authorized for this purchase action.";else->"The server rejected this purchase action."})}}
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.salespunch360.mobile.account.*
+import com.salespunch360.mobile.data.*
+import java.io.IOException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.*
+
+class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
+    private val api = ApiClient(SecureSession(app))
+    private val _state = MutableStateFlow(PurchaseState())
+    val state: StateFlow<PurchaseState> = _state
+
+    init {
+        refresh()
+    }
+
+    fun refresh() = viewModelScope.launch {
+        _state.value = _state.value.copy(loading = true, error = null)
+        try {
+            val options = api.purchaseOptions()
+            val rows = api.purchases(_state.value.type, _state.value.query)
+                .map { it.jsonObject }
+                .map {
+                    SalesDocumentRow(
+                        it.str("id"),
+                        it.str("type"),
+                        it.str("documentNumber"),
+                        it.str("partyName"),
+                        it.str("issueDate").take(10),
+                        it.str("status"),
+                        it.str("grandTotal")
+                    )
+                }
+
+            _state.value = _state.value.copy(
+                loading = false,
+                rows = rows,
+                types = options["allowedDocumentTypes"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
+                branches = options.array("branches").map { it.option() },
+                vendors = options.array("vendors").map { it.option() },
+                products = options.array("products").map { it.option("costPrice") },
+                services = options.array("services").map { it.option("estimatedCost") },
+                workPackages = options.array("workPackages").map { it.option("estimatedCost") },
+                warehouses = options.array("warehouses").map { it.option() },
+                projects = options.array("projects").map { it.option() },
+                sources = options.array("sourceDocuments"),
+                purchaseOrders = options.array("purchaseOrders")
+            )
+        } catch (e: Exception) {
+            fail(e)
+        }
+    }
+
+    fun search(query: String) {
+        _state.value = _state.value.copy(query = query)
+        refresh()
+    }
+
+    fun filter(type: String?) {
+        _state.value = _state.value.copy(type = type)
+        refresh()
+    }
+
+    fun create(type: String) {
+        _state.value = _state.value.copy(
+            draft = PurchaseDraft(
+                type = type,
+                branchId = _state.value.branches.firstOrNull()?.id.orEmpty()
+            )
+        )
+    }
+
+    fun edit(draft: PurchaseDraft) {
+        _state.value = _state.value.copy(draft = draft)
+    }
+
+    fun closeDraft() {
+        _state.value = _state.value.copy(draft = null)
+    }
+
+    fun addLine() {
+        _state.value.draft?.let {
+            edit(it.copy(lines = it.lines + SalesLineDraft(lineType = "MATERIAL")))
+        }
+    }
+
+    fun line(index: Int, line: SalesLineDraft) {
+        _state.value.draft?.let {
+            edit(it.copy(lines = it.lines.mapIndexed { i, current -> if (i == index) line else current }))
+        }
+    }
+
+    fun remove(index: Int) {
+        _state.value.draft?.let {
+            if (it.lines.size > 1) {
+                edit(it.copy(lines = it.lines.filterIndexed { i, _ -> i != index }))
+            }
+        }
+    }
+
+    fun save() {
+        val draft = _state.value.draft ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(saving = true, error = null)
+            try {
+                val payload = buildJsonObject {
+                    put("type", draft.type)
+                    put("branchId", draft.branchId)
+                    put("partyId", draft.vendorId)
+                    draft.sourceDocumentId.takeIf { it.isNotBlank() }?.let { put("sourceDocumentId", it) }
+                    draft.sourcePurchaseOrderId.takeIf { it.isNotBlank() }?.let { put("sourcePurchaseOrderId", it) }
+                    put("purchasePurpose", draft.purpose)
+                    put("purchaseClassification", draft.classification)
+                    draft.projectId.takeIf { it.isNotBlank() }?.let { put("projectId", it) }
+                    put("issueDate", draft.issueDate)
+                    draft.dueDate.takeIf { it.isNotBlank() }?.let { put("dueDate", it) }
+                    put("taxMode", draft.taxMode)
+                    draft.stateOfSupplyCode.takeIf { it.isNotBlank() }?.let { put("stateOfSupplyCode", it) }
+                    put("reverseCharge", draft.reverseCharge)
+                    put("taxCreditTreatment", draft.taxCreditTreatment)
+                    put("tdsRate", draft.tdsRate)
+                    put("notes", draft.notes)
+                    putJsonArray("lines") {
+                        draft.lines.forEach { line ->
+                            add(
+                                buildJsonObject {
+                                    put("lineType", line.lineType)
+                                    line.sourceId.takeIf { it.isNotBlank() }?.let { put("sourceId", it) }
+                                    line.itemName.takeIf { it.isNotBlank() }?.let { put("itemName", it) }
+                                    put("quantity", line.quantity)
+                                    line.rate.takeIf { it.isNotBlank() }?.let { put("rate", it) }
+                                    line.discountType.takeIf { it.isNotBlank() }?.let {
+                                        put("discountType", it)
+                                        put("discountValue", line.discountValue)
+                                    }
+                                    line.taxRate.takeIf { it.isNotBlank() }?.let { put("taxRate", it) }
+                                    line.warehouseId.takeIf { it.isNotBlank() }?.let { put("warehouseId", it) }
+                                    line.sourceCommercialLineId.takeIf { it.isNotBlank() }?.let {
+                                        put("sourceCommercialLineId", it)
+                                    }
+                                    put("stockReturnQuantity", line.stockReturnQuantity)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                val created = api.createPurchase(payload)
+                val id = created.str("id")
+                _state.value = _state.value.copy(
+                    saving = false,
+                    draft = null,
+                    detail = api.purchase(id),
+                    message = "Purchase draft created with server totals."
+                )
+                refresh()
+            } catch (e: Exception) {
+                fail(e)
+            }
+        }
+    }
+
+    fun open(id: String) = viewModelScope.launch {
+        try {
+            _state.value = _state.value.copy(detail = api.purchase(id))
+        } catch (e: Exception) {
+            fail(e)
+        }
+    }
+
+    fun close() {
+        _state.value = _state.value.copy(detail = null)
+    }
+
+    fun askPost(id: String) {
+        _state.value = _state.value.copy(posting = id)
+    }
+
+    fun cancelPost() {
+        _state.value = _state.value.copy(posting = null)
+    }
+
+    fun post() = viewModelScope.launch {
+        val id = _state.value.posting ?: return@launch
+        try {
+            api.postPurchase(id)
+            _state.value = _state.value.copy(
+                posting = null,
+                detail = api.purchase(id),
+                message = "Purchase document posted by the server."
+            )
+            refresh()
+        } catch (e: Exception) {
+            fail(e)
+        }
+    }
+
+    private fun fail(e: Exception) {
+        _state.value = _state.value.copy(
+            loading = false,
+            saving = false,
+            error = when {
+                e is IOException -> "You're offline. No purchase change was confirmed."
+                e is ApiException && e.status == 403 -> "You are not authorized for this purchase action."
+                else -> "The server rejected this purchase action."
+            }
+        )
+    }
+}
