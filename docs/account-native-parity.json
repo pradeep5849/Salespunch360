@@ -19,7 +19,9 @@
       "route": "/workspace/account/[master]",
       "source": "src/app/workspace/account/[master]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Native drawer and feature-specific Compose screens replace this Web routing wrapper; Android CI/device validation pending.",
+      "android": "NativeAccountAuthenticatedApp dynamic server-authorized drawer",
+      "api": ["GET /api/v1/mobile/account/bootstrap"]
     },
     {
       "route": "/workspace/account/accounting/[section]",
@@ -197,7 +199,9 @@
       "route": "/workspace/account/menu",
       "source": "src/app/workspace/account/menu/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Native drawer and feature-specific Compose screens replace this Web routing wrapper; Android CI/device validation pending.",
+      "android": "NativeAccountAuthenticatedApp dynamic server-authorized drawer",
+      "api": ["GET /api/v1/mobile/account/bootstrap"]
     },
     {
       "route": "/workspace/account/money/accounts",
@@ -281,7 +285,9 @@
       "route": "/workspace/account/notifications",
       "source": "src/app/workspace/account/notifications/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Web exposes pending expense approvals only; native scoped attention list and dashboard count are implemented. Android validation pending.",
+      "android": "AccountAdministrationScreen(notifications)",
+      "api": ["GET /api/v1/mobile/account/notifications"]
     },
     {
       "route": "/workspace/account",
@@ -358,37 +364,73 @@
       "route": "/workspace/account/quotations/[id]/edit",
       "source": "src/app/workspace/account/quotations/[id]/edit/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native quotation list/editor/detail/revision/status/PDF share implementation exists; Android CI/device validation pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/quotations",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ]
     },
     {
       "route": "/workspace/account/quotations/[id]",
       "source": "src/app/workspace/account/quotations/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native quotation list/editor/detail/revision/status/PDF share implementation exists; Android CI/device validation pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/quotations",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ]
     },
     {
       "route": "/workspace/account/quotations/[id]/pdf",
       "source": "src/app/workspace/account/quotations/[id]/pdf/route.ts",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native quotation list/editor/detail/revision/status/PDF share implementation exists; Android CI/device validation pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/quotations",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ]
     },
     {
       "route": "/workspace/account/quotations/[id]/revisions/new",
       "source": "src/app/workspace/account/quotations/[id]/revisions/new/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native quotation list/editor/detail/revision/status/PDF share implementation exists; Android CI/device validation pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/quotations",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ]
     },
     {
       "route": "/workspace/account/quotations/new",
       "source": "src/app/workspace/account/quotations/new/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native quotation list/editor/detail/revision/status/PDF share implementation exists; Android CI/device validation pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/quotations",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ]
     },
     {
       "route": "/workspace/account/quotations",
       "source": "src/app/workspace/account/quotations/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native quotation list/editor/detail/revision/status/PDF share implementation exists; Android CI/device validation pending.",
+      "android": "QuotationScreen / QuotationViewModel",
+      "api": [
+        "GET/POST/PATCH /api/v1/mobile/account/quotations",
+        "POST /api/v1/mobile/account/quotations/{id}/action",
+        "GET /api/v1/mobile/account/quotations/{id}/pdf"
+      ]
     },
     {
       "route": "/workspace/account/reports/[report]",
@@ -420,79 +462,125 @@
       "route": "/workspace/account/settings/custom-fields",
       "source": "src/app/workspace/account/settings/custom-fields/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/settings",
+        "POST /api/v1/mobile/account/settings/{section}"
+      ]
     },
     {
       "route": "/workspace/account/settings/modules",
       "source": "src/app/workspace/account/settings/modules/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/settings",
+        "POST /api/v1/mobile/account/settings/{section}"
+      ]
     },
     {
       "route": "/workspace/account/settings",
       "source": "src/app/workspace/account/settings/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/settings",
+        "POST /api/v1/mobile/account/settings/{section}"
+      ]
     },
     {
       "route": "/workspace/account/settings/print-templates",
       "source": "src/app/workspace/account/settings/print-templates/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native settings/custom-field/module/template workflow implemented; signature image and richer template preview remain validation gaps.",
+      "android": "AccountAdministrationScreen / AccountAdministrationViewModel",
+      "api": [
+        "GET /api/v1/mobile/account/settings",
+        "POST /api/v1/mobile/account/settings/{section}"
+      ]
     },
     {
       "route": "/workspace/account/tax/[section]",
       "source": "src/app/workspace/account/tax/[section]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native GST settings, branch tax profiles and authoritative posted-document report data implemented; Android validation pending.",
+      "android": "AccountAdministrationScreen(tax)",
+      "api": ["GET/POST /api/v1/mobile/account/tax"]
     },
     {
       "route": "/workspace/account/tax",
       "source": "src/app/workspace/account/tax/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native GST settings, branch tax profiles and authoritative posted-document report data implemented; Android validation pending.",
+      "android": "AccountAdministrationScreen(tax)",
+      "api": ["GET/POST /api/v1/mobile/account/tax"]
     },
     {
       "route": "/workspace/account/transactions/[id]",
       "source": "src/app/workspace/account/transactions/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Generic Web route maps to the existing native Sales, Purchase, receipt/payment and detail workflows; no duplicate transaction system is needed. Android CI/device validation pending.",
+      "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
+      "api": [
+        "mobile transactions, purchases, receipts and vendor-payments APIs"
+      ]
     },
     {
       "route": "/workspace/account/transactions/money",
       "source": "src/app/workspace/account/transactions/money/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Generic Web route maps to the existing native Sales, Purchase, receipt/payment and detail workflows; no duplicate transaction system is needed. Android CI/device validation pending.",
+      "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
+      "api": [
+        "mobile transactions, purchases, receipts and vendor-payments APIs"
+      ]
     },
     {
       "route": "/workspace/account/transactions/new",
       "source": "src/app/workspace/account/transactions/new/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Generic Web route maps to the existing native Sales, Purchase, receipt/payment and detail workflows; no duplicate transaction system is needed. Android CI/device validation pending.",
+      "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
+      "api": [
+        "mobile transactions, purchases, receipts and vendor-payments APIs"
+      ]
     },
     {
       "route": "/workspace/account/transactions",
       "source": "src/app/workspace/account/transactions/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Generic Web route maps to the existing native Sales, Purchase, receipt/payment and detail workflows; no duplicate transaction system is needed. Android CI/device validation pending.",
+      "android": "AccountSalesScreen / PurchaseScreen / CustomerReceiptScreen / VendorPaymentScreen",
+      "api": [
+        "mobile transactions, purchases, receipts and vendor-payments APIs"
+      ]
     },
     {
       "route": "/workspace/account/utilities/audit",
       "source": "src/app/workspace/account/utilities/audit/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native tenant-scoped audit list implemented; Android validation pending.",
+      "android": "AccountAdministrationScreen(audit)",
+      "api": ["GET /api/v1/mobile/account/utilities/audit"]
     },
     {
       "route": "/workspace/account/utilities/backup",
       "source": "src/app/workspace/account/utilities/backup/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Authoritative server backup domain exists; native download/share wiring remains pending.",
+      "android": "AccountAdministrationScreen utilities hub",
+      "api": ["existing authoritative src/lib/account/utilities.ts"]
     },
     {
       "route": "/workspace/account/utilities/export",
       "source": "src/app/workspace/account/utilities/export/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Server export domain exists and reports exports are native; master-data export UI wiring remains pending.",
+      "android": "AccountAdministrationScreen utilities hub",
+      "api": ["existing authoritative src/lib/account/exports.ts"]
     },
     {
       "route": "/workspace/account/utilities/financial-year",
@@ -512,19 +600,25 @@
       "route": "/workspace/account/utilities/import/[id]",
       "source": "src/app/workspace/account/utilities/import/[id]/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Native import history is implemented; Android document-picker upload/preview/confirm remains pending shared import actor extraction.",
+      "android": "AccountAdministrationScreen(imports)",
+      "api": ["GET /api/v1/mobile/account/utilities/imports"]
     },
     {
       "route": "/workspace/account/utilities/import",
       "source": "src/app/workspace/account/utilities/import/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Native import history is implemented; Android document-picker upload/preview/confirm remains pending shared import actor extraction.",
+      "android": "AccountAdministrationScreen(imports)",
+      "api": ["GET /api/v1/mobile/account/utilities/imports"]
     },
     {
       "route": "/workspace/account/utilities",
       "source": "src/app/workspace/account/utilities/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Native drawer is the utilities hub and routes completed utilities directly; remaining import/backup/export gaps are explicitly tracked.",
+      "android": "NativeAccountAuthenticatedApp drawer",
+      "api": ["feature-specific mobile APIs"]
     },
     {
       "route": "/workspace/account/utilities/period-locks",
@@ -544,13 +638,17 @@
       "route": "/workspace/account/utilities/recycle-bin",
       "source": "src/app/workspace/account/utilities/recycle-bin/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Native tenant-scoped recycle list implemented; restore mutation remains pending shared actor extraction and validation.",
+      "android": "AccountAdministrationScreen(recycle-bin)",
+      "api": ["GET /api/v1/mobile/account/utilities/recycle-bin"]
     },
     {
       "route": "/workspace/account/utilities/verification",
       "source": "src/app/workspace/account/utilities/verification/page.tsx",
       "classification": "PENDING_NATIVE",
-      "reason": "Requires a feature-specific authenticated mobile API and Compose workflow; WebView fallback is prohibited."
+      "reason": "Functional native read-only authoritative integrity verification implemented; Android validation pending.",
+      "android": "AccountAdministrationScreen(verification)",
+      "api": ["GET /api/v1/mobile/account/utilities/verification"]
     }
   ],
   "externalLinks": [
