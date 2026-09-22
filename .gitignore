@@ -1,23 +1,41 @@
+# Node / Next.js
 node_modules/
 .next/
 out/
 coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment and logs
 .env
 .env.local
 .env.*.local
 !.env.example
 *.log
-.DS_Store
-prisma/dev.db*
-*.tsbuildinfo
-next-env.d.ts
 
-# Android
+# Generated repository artifacts
+artifacts/
+
+# Database development files
+prisma/dev.db*
+
+# Android generated output and local configuration
 android/.gradle/
+android/.kotlin/
 android/**/build/
 android/local.properties
+android/app/google-services.json
 *.apk
 *.aab
 *.jks
 *.keystore
-android/app/google-services.json
+
+# IDE / OS temporary files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
