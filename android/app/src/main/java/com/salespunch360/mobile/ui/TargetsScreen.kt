@@ -26,14 +26,15 @@ import com.salespunch360.mobile.data.*
    Text("Sales Targets",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
    Text("${monthly.month.startText} to ${monthly.month.endText}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    Text("Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   state.message?.let{Text(it,Modifier.padding(top=6.dp),style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+   state.message?.let{MessageBanner(it,vm::clear)}
   }
   if(monthly.rows.isEmpty())item{ContentCard("No employees","No active field employees are visible in your current scope.")}
-  items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won->vm.saveMonthly(row.id,lead,won)}}
+  items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won,onSaved->vm.saveMonthly(row.id,lead,won,onSaved)}}
  }
 }
 
-@Composable private fun MonthlyTargetCard(row:MonthlyTargetRow,canEdit:Boolean,saving:Boolean,save:(Int,Int)->Unit){
+@Composable private fun MonthlyTargetCard(row:MonthlyTargetRow,canEdit:Boolean,saving:Boolean,save:(Int,Int,()->Unit)->Unit){
+ var editing by remember(row.id,row.leadTarget,row.wonTarget){mutableStateOf(false)}
  var leads by remember(row.id,row.leadTarget){mutableStateOf(row.leadTarget.toString())}
  var won by remember(row.id,row.wonTarget){mutableStateOf(row.wonTarget.toString())}
  OutlinedCard(Modifier.fillMaxWidth()){
@@ -45,9 +46,13 @@ import com.salespunch360.mobile.data.*
     Text("Type",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=SalesMuted)
     Text("Target",Modifier.width(104.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=SalesMuted)
    }
-   TargetCompactField("Leads",leads,canEdit,{leads=it},row.created,Modifier.fillMaxWidth())
-   TargetCompactField("Leads won",won,canEdit,{won=it},row.won,Modifier.fillMaxWidth())
-   if(canEdit)Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0)},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save Targets")}
+   TargetCompactField("Leads",leads,canEdit&&editing,{leads=it},row.created,Modifier.fillMaxWidth())
+   TargetCompactField("Leads won",won,canEdit&&editing,{won=it},row.won,Modifier.fillMaxWidth())
+   if(canEdit&&!editing)OutlinedButton({editing=true},modifier=Modifier.fillMaxWidth()){Text("Edit")}
+   if(canEdit&&editing){
+    Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0){editing=false}},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save")}
+    TextButton({leads=row.leadTarget.toString();won=row.wonTarget.toString();editing=false},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text("Cancel")}
+   }
   }
  }
 }
