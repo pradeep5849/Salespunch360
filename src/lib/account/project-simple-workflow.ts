@@ -114,7 +114,9 @@ export async function completeSimpleProject(projectId: string) {
         status: project.status,
       },
       data: {
-        status: "COMPLETED",
+        // CLOSED is the existing backend's immutable/final state. The UI presents
+        // it as Completed so all existing accounting/project guards stay active.
+        status: "CLOSED",
         actualEndDate: now,
         closedById: actor.id,
         closedAt: now,
@@ -127,7 +129,11 @@ export async function completeSimpleProject(projectId: string) {
         projectId: project.id,
         actorUserId: actor.id,
         eventType: "PROJECT_STATUS_CHANGED",
-        metadata: { from: project.status, to: "COMPLETED" },
+        metadata: {
+          from: project.status,
+          to: "COMPLETED",
+          storedStatus: "CLOSED",
+        },
       },
     });
   });
