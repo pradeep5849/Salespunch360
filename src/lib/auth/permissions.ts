@@ -49,5 +49,10 @@ export function canUsePermission(user: WorkspacePrincipal, edition: ProductEditi
   return false;
 }
 
-/** Mutation policy closes personal field workflows while preserving scoped supervisor reads. */
-export function canUsePermissionForMutation(user:WorkspacePrincipal,edition:ProductEdition|null,permission:Permission){return canUsePermission(user,edition,permission)&&(!PERSONAL_FIELD_PERMISSIONS.includes(permission)||canUseSalesFieldWorkflow(user));}
+/** Mutation policy closes personal field workflows while preserving scoped supervisor reads. Target services enforce their own supervisor/assignee mutation scope. */
+export function canUsePermissionForMutation(user:WorkspacePrincipal,edition:ProductEdition|null,permission:Permission){
+  const allowed=canUsePermission(user,edition,permission);
+  if(!allowed)return false;
+  if(permission==="SALES_TARGETS")return true;
+  return !PERSONAL_FIELD_PERMISSIONS.includes(permission)||canUseSalesFieldWorkflow(user);
+}
