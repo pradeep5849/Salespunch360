@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireSalesWorkspace, requireSalesWorkspaceForMutation } from "@/lib/auth/authorization";
 import { visibilityWhere } from "@/lib/leads/policy";
+import { assertActiveTelecallerEntitlement } from "@/lib/billing/telecaller";
 import { isTelecaller, SALES_HANDOFF_RESULTS, TELECALLING_RESULTS, type TelecallingResult } from "./policy";
 
 export type LeadCallHistoryItem={
@@ -24,9 +25,14 @@ function actorLeadWhere(actor:{id:string;companyId:string;salesRole:string|null;
  return visibilityWhere({id:actor.id,salesRole:actor.salesRole as "PRIMARY_ADMIN"|"ADMIN"|"MANAGER"|"SALES",managerType:actor.managerType as never});
 }
 
+async function assertActorTelecallerEntitlement(actor:{companyId:string; salesRole:string|null; designation?:string|null}){
+ if(isTelecaller(actor))await assertActiveTelecallerEntitlement(actor.companyId);
+}
+
 async function requireLeadAccess(leadId:string, mutation=false){
  const actor=mutation?await requireSalesWorkspaceForMutation():await requireSalesWorkspace();
  if(!actor.salesRole) throw new Error("NOT_AUTHORIZED");
+ await assertActorTelecallerEntitlement(actor);
  const lead=await db.lead.findFirst({
   where:{id:leadId,companyId:actor.companyId,...actorLeadWhere(actor)},
   select:{id:true,companyId:true,title:true,phone:true,stage:true,assignedUserId:true,assignedUser:{select:{id:true,name:true,designation:true}}},
@@ -43,6 +49,7 @@ function assertResult(value:string):TelecallingResult{
 export async function listTelecallingLeads(search?:string):Promise<TelecallingQueueLead[]>{
  const actor=await requireSalesWorkspace();
  if(!actor.salesRole||!(isTelecaller(actor)||actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN"||actor.salesRole==="MANAGER"))throw new Error("NOT_AUTHORIZED");
+ await assertActorTelecallerEntitlement(actor);
  const leads=await db.lead.findMany({
   where:{companyId:actor.companyId,...actorLeadWhere(actor),...(search?.trim()?{OR:[{title:{contains:search.trim(),mode:"insensitive"}},{contactName:{contains:search.trim(),mode:"insensitive"}},{phone:{contains:search.trim()}}]}:{})},
   select:{id:true,title:true,contactName:true,phone:true,stage:true,assignedUserId:true,assignedUser:{select:{name:true}}},
@@ -89,6 +96,7 @@ export async function recordLeadCall(input:{leadId:string;result:string;notes?:s
 export async function listCallbackQueue():Promise<CallbackQueueItem[]>{
  const actor=await requireSalesWorkspace();
  if(!actor.salesRole||!(isTelecaller(actor)||actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN"||actor.salesRole==="MANAGER"))throw new Error("NOT_AUTHORIZED");
+ await assertActorTelecallerEntitlement(actor);
  const ownOnly=isTelecaller(actor);
  const manager=actor.salesRole==="MANAGER";
  const rows=await db.$queryRaw<CallbackQueueItem[]>(Prisma.sql`
