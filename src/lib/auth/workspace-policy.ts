@@ -37,7 +37,7 @@ export const canAccessSalesWorkspace = (user: WorkspacePrincipal, edition: Produ
   user.companyId !== null &&
   user.role !== "SUPER_ADMIN" &&
   hasSalesRole(user) &&
-  user.salesAccessActive === true &&
+  (user.salesAccessActive === true || isTelecallerDesignation(user.designation)) &&
   editionAllowsSalesWorkspace(edition);
 
 export const canAccessAccountWorkspace = (user: WorkspacePrincipal, edition: ProductEdition) =>
