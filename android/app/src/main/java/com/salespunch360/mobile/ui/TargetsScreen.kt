@@ -26,7 +26,7 @@ import com.salespunch360.mobile.data.*
    Text("Sales Targets",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
    Text("${monthly.month.startText} to ${monthly.month.endText}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    Text("Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   state.message?.let{MessageBanner(it,vm::loadMonthly)}
+   state.message?.let{MessageBanner(it,vm::clear)}
   }
   if(monthly.rows.isEmpty())item{ContentCard("No employees","No active field employees are visible in your current scope.")}
   items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won,onSaved->vm.saveMonthly(row.id,lead,won,onSaved)}}
