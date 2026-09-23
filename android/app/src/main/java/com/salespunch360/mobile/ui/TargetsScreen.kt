@@ -34,7 +34,6 @@ import com.salespunch360.mobile.data.*
 }
 
 @Composable private fun MonthlyTargetCard(row:MonthlyTargetRow,canEdit:Boolean,saving:Boolean,save:(Int,Int)->Unit){
- var editing by remember(row.id,row.leadTarget,row.wonTarget){mutableStateOf(canEdit&&!row.hasTarget)}
  var leads by remember(row.id,row.leadTarget){mutableStateOf(row.leadTarget.toString())}
  var won by remember(row.id,row.wonTarget){mutableStateOf(row.wonTarget.toString())}
  OutlinedCard(Modifier.fillMaxWidth()){
@@ -46,23 +45,20 @@ import com.salespunch360.mobile.data.*
     Text("Type",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=SalesMuted)
     Text("Target",Modifier.width(104.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=SalesMuted)
    }
-   TargetCompactField("Leads",leads,editing,{leads=it},row.created,Modifier.fillMaxWidth())
-   TargetCompactField("Leads won",won,editing,{won=it},row.won,Modifier.fillMaxWidth())
-   if(canEdit){
-    if(editing)Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0)},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save Targets")}
-    else OutlinedButton({editing=true},Modifier.fillMaxWidth()){Text("Edit Targets")}
-   }
+   TargetCompactField("Leads",leads,canEdit,{leads=it},row.created,Modifier.fillMaxWidth())
+   TargetCompactField("Leads won",won,canEdit,{won=it},row.won,Modifier.fillMaxWidth())
+   if(canEdit)Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0)},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save Targets")}
   }
  }
 }
 
-@Composable private fun TargetCompactField(label:String,value:String,editing:Boolean,change:(String)->Unit,actual:Int,modifier:Modifier){
+@Composable private fun TargetCompactField(label:String,value:String,editable:Boolean,change:(String)->Unit,actual:Int,modifier:Modifier){
  Row(modifier,horizontalArrangement=Arrangement.spacedBy(12.dp)){
   Column(Modifier.weight(1f)){
    Text(label,style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.SemiBold,color=SalesInk)
    Text("Actual $actual",style=MaterialTheme.typography.labelSmall,color=SalesMuted)
   }
-  if(editing)OutlinedTextField(value,{change(it.filter(Char::isDigit).take(6))},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.width(104.dp))
+  if(editable)OutlinedTextField(value,{change(it.filter(Char::isDigit).take(6))},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.width(104.dp))
   else Text(value,Modifier.width(104.dp),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
  }
 }
