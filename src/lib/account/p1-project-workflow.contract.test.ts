@@ -19,6 +19,14 @@ const simpleWorkflow = readFileSync(
   "utf8",
 );
 const wonProject = readFileSync("src/lib/leads/won-project.ts", "utf8");
+const mobileProjectApi = readFileSync(
+  "src/lib/mobile/account-projects.ts",
+  "utf8",
+);
+const androidProjectScreen = readFileSync(
+  "android/app/src/main/java/com/salespunch360/mobile/ui/account/project/ProjectScreen.kt",
+  "utf8",
+);
 const migration = readFileSync(
   "prisma/migrations/20260923170000_p1_completed_projects_final/migration.sql",
   "utf8",
@@ -61,6 +69,20 @@ describe("P1 simple project workflow contract", () => {
     expect(wonProject).toContain('siteContactPhone:lead.phone');
     expect(wonProject).toContain("LEGACY_DEFAULT_ACCOUNT_MODULES");
     expect(wonProject).toContain("sourceLeadId:lead.id");
+  });
+
+  it("keeps Android on the same Active Hold Completed workflow", () => {
+    expect(androidProjectScreen).toContain('listOf<String?>(null, "ACTIVE", "ON_HOLD", "COMPLETED")');
+    expect(androidProjectScreen).toContain('listOf("ACTIVE", "ON_HOLD")');
+    expect(androidProjectScreen).toContain('Text("Status: Active")');
+    expect(androidProjectScreen).toContain('Text("Complete")');
+    expect(androidProjectScreen).toContain("Completed project · report only");
+    expect(androidProjectScreen).not.toContain('Pick("Customer"');
+    expect(androidProjectScreen).not.toContain("Target end date");
+    expect(androidProjectScreen).not.toContain('"REOPEN"');
+    expect(androidProjectScreen).not.toContain("Close project");
+    expect(mobileProjectApi).toContain('z.literal("COMPLETE")');
+    expect(mobileProjectApi).not.toContain("reopenProjectForActor");
   });
 
   it("migrates legacy Completed projects into the existing immutable final state", () => {
