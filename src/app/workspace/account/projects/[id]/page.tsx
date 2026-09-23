@@ -4,20 +4,31 @@ import {
   addProjectDocumentAction,
   addProjectMemberAction,
   addTaskAction,
-  closeProjectAction,
+  completeProjectAction,
   linkBoqAction,
-  reopenProjectAction,
   updateMilestoneAction,
   updateTaskAction,
 } from "@/app/actions/projects";
 import { BudgetEditor } from "./budget-editor";
-import { getProject, getProjectFormOptions, type ProjectHistoryParams } from "@/lib/account/projects";
+import {
+  getProject,
+  getProjectFormOptions,
+  type ProjectHistoryParams,
+} from "@/lib/account/projects";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { requireAccountWorkspace } from "@/lib/auth/authorization";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { enabledModulesForCompany } from "@/lib/account/modules";
 import { db } from "@/lib/db";
+
 const date = (value: Date | null) => value?.toISOString().slice(0, 10) ?? "";
+const statusLabel = (status: string) =>
+  status === "ON_HOLD"
+    ? "Hold"
+    : ["COMPLETED", "CLOSED", "CANCELLED"].includes(status)
+      ? "Completed"
+      : "Active";
+
 export default async function Page({
   params,
   searchParams,
@@ -25,10 +36,11 @@ export default async function Page({
   params: Promise<{ id: string }>;
   searchParams: Promise<ProjectHistoryParams>;
 }) {
-  const { id } = await params, query=await searchParams,
+  const { id } = await params,
+    query = await searchParams,
     actor = await requireAccountWorkspace(),
     [project, options, modules, company] = await Promise.all([
-      getProject(id,query),
+      getProject(id, query),
       getProjectFormOptions(id),
       enabledModulesForCompany(actor.companyId),
       db.company.findUniqueOrThrow({
@@ -43,6 +55,7 @@ export default async function Page({
         company.productEdition,
         "ACCOUNT_PROJECT_COST_VIEW",
       );
+
   const sales = project.commercialDocuments.filter((row) =>
     ["SALES_INVOICE", "CREDIT_NOTE"].includes(row.type),
   );
@@ -60,7 +73,10 @@ export default async function Page({
       row.purchasePurpose === "PROJECT" &&
       row.purchaseClassification === "GENERAL_EXPENSES",
   );
-  const mutable = !["CLOSED", "CANCELLED"].includes(project.status);
+  const mutable = !["COMPLETED", "CLOSED", "CANCELLED"].includes(
+    project.status,
+  );
+
   return (
     <main className="employees-shell">
       <section className="employees-content">
@@ -68,11 +84,13 @@ export default async function Page({
           title={`${project.projectNumber} · ${project.name}`}
           backHref="/workspace/account/projects"
         />
-        <p>
-          <Link href={`/workspace/account/projects/${id}/edit`}>
-            Edit project
-          </Link>
-        </p>
+        {mutable && (
+          <p>
+            <Link href={`/workspace/account/projects/${id}/edit`}>
+              Edit project
+            </Link>
+          </p>
+        )}
         {canCost && (
           <p>
             <Link href={`/workspace/account/projects/${id}/costing`}>
@@ -80,6 +98,12 @@ export default async function Page({
             </Link>
           </p>
         )}
+        {!mutable && (
+          <p>
+            <b>Completed project · report only</b>
+          </p>
+        )}
+
         <div className="metric-grid">
           <article>
             <b>Project value</b>
@@ -91,20 +115,21 @@ export default async function Page({
           </article>
           <article>
             <b>Status</b>
-            <p>{project.status}</p>
+            <p>{statusLabel(project.status)}</p>
           </article>
           <article>
             <b>Open tasks</b>
-            <p>
-              {project.openTasks}
-            </p>
+            <p>{project.openTasks}</p>
           </article>
         </div>
+
         <h2>Customer & site</h2>
         <p>
           {project.customer.name} · {project.siteName ?? "No site name"}
         </p>
-        <p>{project.siteAddress}</p>
+        <p>{project.siteAddress || "No site address"}</p>
+        <p>{project.siteContactPhone || project.customer.phone || "No mobile number"}</p>
+
         <h2>Team / project manager</h2>
         <p>{project.projectManager?.name ?? "Unassigned"}</p>
         <ul>
@@ -132,6 +157,7 @@ export default async function Page({
             <button>Add team member</button>
           </form>
         )}
+
         <h2>BOQ history</h2>
         <ul>
           {project.quotationDocuments.map((boq) => (
@@ -140,7 +166,12 @@ export default async function Page({
             </li>
           ))}
         </ul>
-        <HistoryPages id={id} keyName="boqsPage" page={project.history.boqsPage} totalPages={project.history.pages.boqs}/>
+        <HistoryPages
+          id={id}
+          keyName="boqsPage"
+          page={project.history.boqsPage}
+          totalPages={project.history.pages.boqs}
+        />
         {mutable && (
           <form action={linkBoqAction}>
             <input type="hidden" name="projectId" value={id} />
@@ -158,6 +189,7 @@ export default async function Page({
             <button>Link BOQ</button>
           </form>
         )}
+
         <h2>Budget</h2>
         {mutable ? (
           <BudgetEditor
@@ -178,31 +210,44 @@ export default async function Page({
             ))}
           </ul>
         )}
+
         <h2>Milestones</h2>
         {project.milestones.map((milestone) => (
           <form
             key={milestone.id}
-            action={updateMilestoneAction}
+            action={mutable ? updateMilestoneAction : undefined}
             className="stack"
           >
             <input type="hidden" name="projectId" value={id} />
             <input type="hidden" name="milestoneId" value={milestone.id} />
-            <input name="title" defaultValue={milestone.title} required />
+            <input
+              name="title"
+              defaultValue={milestone.title}
+              required
+              disabled={!mutable}
+            />
             <textarea
               name="description"
               defaultValue={milestone.description ?? ""}
+              disabled={!mutable}
             />
             <input
               type="date"
               name="startDate"
               defaultValue={date(milestone.startDate)}
+              disabled={!mutable}
             />
             <input
               type="date"
               name="dueDate"
               defaultValue={date(milestone.dueDate)}
+              disabled={!mutable}
             />
-            <select name="status" defaultValue={milestone.status}>
+            <select
+              name="status"
+              defaultValue={milestone.status}
+              disabled={!mutable}
+            >
               {["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map(
                 (status) => (
                   <option key={status}>{status}</option>
@@ -220,17 +265,32 @@ export default async function Page({
             <button>Add milestone</button>
           </form>
         )}
+
         <h2>Task history</h2>
         {project.tasks.map((task) => (
-          <form key={task.id} action={updateTaskAction} className="stack">
+          <form
+            key={task.id}
+            action={mutable ? updateTaskAction : undefined}
+            className="stack"
+          >
             <input type="hidden" name="projectId" value={id} />
             <input type="hidden" name="taskId" value={task.id} />
-            <input name="title" defaultValue={task.title} required />
+            <input
+              name="title"
+              defaultValue={task.title}
+              required
+              disabled={!mutable}
+            />
             <textarea
               name="description"
               defaultValue={task.description ?? ""}
+              disabled={!mutable}
             />
-            <select name="milestoneId" defaultValue={task.milestoneId ?? ""}>
+            <select
+              name="milestoneId"
+              defaultValue={task.milestoneId ?? ""}
+              disabled={!mutable}
+            >
               <option value="">No milestone</option>
               {project.milestones.map((milestone) => (
                 <option key={milestone.id} value={milestone.id}>
@@ -241,6 +301,7 @@ export default async function Page({
             <select
               name="assigneeUserId"
               defaultValue={task.assigneeUserId ?? ""}
+              disabled={!mutable}
             >
               <option value="">Unassigned</option>
               {project.members.map((member) => (
@@ -253,13 +314,22 @@ export default async function Page({
               type="date"
               name="dueDate"
               defaultValue={date(task.dueDate)}
+              disabled={!mutable}
             />
-            <select name="priority" defaultValue={task.priority}>
+            <select
+              name="priority"
+              defaultValue={task.priority}
+              disabled={!mutable}
+            >
               {[0, 1, 2, 3].map((priority) => (
                 <option key={priority}>{priority}</option>
               ))}
             </select>
-            <select name="status" defaultValue={task.status}>
+            <select
+              name="status"
+              defaultValue={task.status}
+              disabled={!mutable}
+            >
               {["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map(
                 (status) => (
                   <option key={status}>{status}</option>
@@ -284,7 +354,13 @@ export default async function Page({
             <button>Add task</button>
           </form>
         )}
-        <HistoryPages id={id} keyName="tasksPage" page={project.history.tasksPage} totalPages={project.history.pages.tasks}/>
+        <HistoryPages
+          id={id}
+          keyName="tasksPage"
+          page={project.history.tasksPage}
+          totalPages={project.history.pages.tasks}
+        />
+
         <h2>Documents</h2>
         <ul>
           {project.documents.map((document) => (
@@ -295,7 +371,12 @@ export default async function Page({
             </li>
           ))}
         </ul>
-        <HistoryPages id={id} keyName="documentsPage" page={project.history.documentsPage} totalPages={project.history.pages.documents}/>
+        <HistoryPages
+          id={id}
+          keyName="documentsPage"
+          page={project.history.documentsPage}
+          totalPages={project.history.pages.documents}
+        />
         {mutable && (
           <form action={addProjectDocumentAction}>
             <input type="hidden" name="projectId" value={id} />
@@ -303,40 +384,55 @@ export default async function Page({
             <button>Upload private document</button>
           </form>
         )}
+
         <h2>Recent project expenses</h2>
-        <p>{expenses.length} linked general-expense purchase bills on this history page.</p>
+        <p>
+          {expenses.length} linked general-expense purchase bills on this history
+          page.
+        </p>
         <h2>Recent purchases & vendor/subcontractor activity</h2>
         <Documents rows={purchases} />
         <h2>Recent invoices</h2>
         <Documents rows={sales} />
-        <HistoryPages id={id} keyName="commercialPage" page={project.history.commercialPage} totalPages={project.history.pages.commercial}/>
+        <HistoryPages
+          id={id}
+          keyName="commercialPage"
+          page={project.history.commercialPage}
+          totalPages={project.history.pages.commercial}
+        />
+
         <h2>Payments</h2>
         <p>
           Customer payments: {project.customerPayments.toString()} · Vendor
           payments: {project.vendorPayments.toString()}
         </p>
         <p>
-          Totals derive only from existing settlement allocations and advance
-          applications.
+          Totals derive automatically from existing settlement allocations and
+          advance applications.
         </p>
-        <h2>Closure / handover</h2>
-        {project.status === "CLOSED" ? (
-          <form action={reopenProjectAction}>
+
+        <h2>{mutable ? "Complete project" : "Final project report"}</h2>
+        {mutable ? (
+          <form action={completeProjectAction}>
             <input type="hidden" name="projectId" value={id} />
-            <p>Closed {project.closedAt?.toLocaleString()}</p>
-            <button>Reopen project (Account Admin)</button>
+            <p>
+              Completing this project will make it report-only. It cannot be
+              reopened.
+            </p>
+            <button>Complete project</button>
           </form>
         ) : (
-          mutable && (
-            <form action={closeProjectAction}>
-              <input type="hidden" name="projectId" value={id} />
-              <input type="date" name="handoverDate" />
-              <textarea name="handoverNote" placeholder="Handover note" />
-              <textarea name="closureNote" placeholder="Closure note" />
-              <button>Close project</button>
-            </form>
-          )
+          <>
+            <p>
+              Completed: {project.actualEndDate?.toLocaleDateString() ?? project.closedAt?.toLocaleDateString() ?? "—"}
+            </p>
+            <p>
+              Project value, budget, work history, expenses, purchases, invoices,
+              payments and audit history above form the final project report.
+            </p>
+          </>
         )}
+
         <h2>Audit history</h2>
         <ul>
           {project.audits.map((event) => (
@@ -345,12 +441,52 @@ export default async function Page({
             </li>
           ))}
         </ul>
-        <HistoryPages id={id} keyName="auditsPage" page={project.history.auditsPage} totalPages={project.history.pages.audits}/>
+        <HistoryPages
+          id={id}
+          keyName="auditsPage"
+          page={project.history.auditsPage}
+          totalPages={project.history.pages.audits}
+        />
       </section>
     </main>
   );
 }
-function HistoryPages({id,keyName,page,totalPages}:{id:string;keyName:keyof ProjectHistoryParams;page:number;totalPages:number}){if(totalPages<=1)return null;return <nav aria-label={`${keyName} pagination`}><span>Page {page} of {totalPages}</span>{page>1&&<Link href={`/workspace/account/projects/${id}?${keyName}=${page-1}`}>Previous</Link>}{page<totalPages&&<Link href={`/workspace/account/projects/${id}?${keyName}=${page+1}`}>Next</Link>}</nav>}
+
+function HistoryPages({
+  id,
+  keyName,
+  page,
+  totalPages,
+}: {
+  id: string;
+  keyName: keyof ProjectHistoryParams;
+  page: number;
+  totalPages: number;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <nav aria-label={`${keyName} pagination`}>
+      <span>
+        Page {page} of {totalPages}
+      </span>
+      {page > 1 && (
+        <Link
+          href={`/workspace/account/projects/${id}?${keyName}=${page - 1}`}
+        >
+          Previous
+        </Link>
+      )}
+      {page < totalPages && (
+        <Link
+          href={`/workspace/account/projects/${id}?${keyName}=${page + 1}`}
+        >
+          Next
+        </Link>
+      )}
+    </nav>
+  );
+}
+
 function Documents({
   rows,
 }: {
