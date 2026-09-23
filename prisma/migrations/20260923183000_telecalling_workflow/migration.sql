@@ -47,6 +47,37 @@ CREATE TABLE "lead_sales_actions" (
 CREATE INDEX "lead_sales_actions_assignee_status_idx" ON "lead_sales_actions"("companyId","assignedUserId","status","createdAt" DESC);
 CREATE INDEX "lead_sales_actions_company_status_idx" ON "lead_sales_actions"("companyId","status","createdAt" DESC);
 
+-- Telecaller billing is deliberately isolated from billing_orders/company_subscriptions.
+-- This prevents a pending Telecaller purchase from being reused as a Sales renewal and
+-- prevents Telecaller payment confirmation from mutating normal Sales/Account seats.
+CREATE TABLE "telecaller_billing_orders" (
+  "id" UUID NOT NULL,
+  "companyId" UUID NOT NULL,
+  "createdByUserId" UUID NOT NULL,
+  "billingPeriod" VARCHAR(16) NOT NULL,
+  "addedSeats" INTEGER NOT NULL,
+  "targetSeats" INTEGER NOT NULL,
+  "unitPrice" DECIMAL(18,2) NOT NULL,
+  "subtotal" DECIMAL(18,2) NOT NULL,
+  "totalAmount" DECIMAL(18,2) NOT NULL,
+  "status" VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+  "paymentReference" VARCHAR(200),
+  "coTermStartsAt" TIMESTAMP(3) NOT NULL,
+  "coTermEndsAt" TIMESTAMP(3) NOT NULL,
+  "paidAt" TIMESTAMP(3),
+  "expiresAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "telecaller_billing_orders_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "telecaller_billing_orders_company_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT "telecaller_billing_orders_creator_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT "telecaller_billing_orders_period_check" CHECK ("billingPeriod" IN ('SIX_MONTH','YEARLY')),
+  CONSTRAINT "telecaller_billing_orders_status_check" CHECK ("status" IN ('PENDING','PAID','FAILED','CANCELLED','EXPIRED')),
+  CONSTRAINT "telecaller_billing_orders_seat_check" CHECK ("addedSeats" > 0 AND "targetSeats" >= "addedSeats")
+);
+CREATE UNIQUE INDEX "telecaller_billing_orders_payment_ref_key" ON "telecaller_billing_orders"("paymentReference") WHERE "paymentReference" IS NOT NULL;
+CREATE INDEX "telecaller_billing_orders_company_idx" ON "telecaller_billing_orders"("companyId","createdAt" DESC);
+
 CREATE TABLE "telecaller_subscriptions" (
   "id" UUID NOT NULL,
   "companyId" UUID NOT NULL,
@@ -61,32 +92,16 @@ CREATE TABLE "telecaller_subscriptions" (
   CONSTRAINT "telecaller_subscriptions_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "telecaller_subscriptions_order_key" UNIQUE ("sourceOrderId"),
   CONSTRAINT "telecaller_subscriptions_company_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT "telecaller_subscriptions_order_fkey" FOREIGN KEY ("sourceOrderId") REFERENCES "billing_orders"("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT "telecaller_subscriptions_order_fkey" FOREIGN KEY ("sourceOrderId") REFERENCES "telecaller_billing_orders"("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT "telecaller_subscriptions_status_check" CHECK ("status" IN ('ACTIVE','EXPIRED','CANCELLED')),
   CONSTRAINT "telecaller_subscriptions_period_check" CHECK ("billingPeriod" IN ('SIX_MONTH','YEARLY')),
   CONSTRAINT "telecaller_subscriptions_seats_check" CHECK ("seats" >= 0)
 );
 CREATE INDEX "telecaller_subscriptions_company_active_idx" ON "telecaller_subscriptions"("companyId","status","endsAt" DESC);
 
-CREATE TABLE "telecaller_billing_orders" (
-  "billingOrderId" UUID NOT NULL,
-  "companyId" UUID NOT NULL,
-  "addedSeats" INTEGER NOT NULL,
-  "targetSeats" INTEGER NOT NULL,
-  "unitPrice" DECIMAL(18,2) NOT NULL,
-  "coTermStartsAt" TIMESTAMP(3) NOT NULL,
-  "coTermEndsAt" TIMESTAMP(3) NOT NULL,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "telecaller_billing_orders_pkey" PRIMARY KEY ("billingOrderId"),
-  CONSTRAINT "telecaller_billing_orders_order_fkey" FOREIGN KEY ("billingOrderId") REFERENCES "billing_orders"("id") ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT "telecaller_billing_orders_company_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT "telecaller_billing_orders_seat_check" CHECK ("addedSeats" > 0 AND "targetSeats" >= "addedSeats")
-);
-CREATE INDEX "telecaller_billing_orders_company_idx" ON "telecaller_billing_orders"("companyId","createdAt" DESC);
-
 -- Telecaller remains compatible with the existing SALES identity, but its access is
--- authorized by the separate paid telecaller subscription. Keeping salesAccessActive
--- false also guarantees it is never counted as a normal Sales subscription seat.
+-- authorized by the separate paid Telecaller subscription. salesAccessActive is forced
+-- false so normal Sales seat/trial accounting can never count this employee.
 CREATE OR REPLACE FUNCTION enforce_paid_telecaller_seat() RETURNS TRIGGER AS $$
 DECLARE
   seat_limit INTEGER;
