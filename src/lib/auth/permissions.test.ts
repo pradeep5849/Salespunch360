@@ -93,10 +93,13 @@ describe("static module permission matrix", () => {
     });
   });
 
-  it("allows Sales administrators to save targets without opening other field mutations", () => {
+  it("allows Sales administrators to manage targets, leads and follow-ups without opening check-ins", () => {
     expect(canMutate(sales("PRIMARY_ADMIN"), "SALES_TARGETS")).toBe(true);
     expect(canMutate(sales("ADMIN"), "SALES_TARGETS")).toBe(true);
-    expect(canMutate(sales("ADMIN"), "SALES_LEADS")).toBe(false);
+    expect(canMutate(sales("PRIMARY_ADMIN"), "SALES_LEADS")).toBe(true);
+    expect(canMutate(sales("ADMIN"), "SALES_LEADS")).toBe(true);
+    expect(canMutate(sales("PRIMARY_ADMIN"), "SALES_FOLLOW_UPS")).toBe(true);
+    expect(canMutate(sales("ADMIN"), "SALES_FOLLOW_UPS")).toBe(true);
     expect(canMutate(sales("ADMIN"), "SALES_CHECK_INS")).toBe(false);
   });
 
