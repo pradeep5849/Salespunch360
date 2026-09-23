@@ -1,20 +1,47 @@
+import { z } from "zod";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
-  closeProjectForActor,
-  createProjectForActor,
   getProjectForActor,
   getProjectFormOptionsForActor,
   listProjectsForActor,
-  reopenProjectForActor,
   replaceBudgetForActor,
   updateProjectForActor,
+  type ProjectActor,
 } from "@/lib/account/projects";
+import {
+  assertProjectEditableForActor,
+  completeSimpleProjectForActor,
+  createSimpleProjectForActor,
+} from "@/lib/account/project-simple-workflow";
 import { loadProjectCostingForActor } from "@/lib/account/project-costing";
 import { requireAccountModules } from "@/lib/account/modules";
-import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
+
+const optionalText = (max: number) => z.string().trim().max(max).optional();
+const projectValue = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).default("0");
+const createInput = z
+  .object({
+    branchId: z.string().uuid(),
+    name: z.string().trim().min(1).max(240),
+    siteName: optionalText(240),
+    siteAddress: optionalText(4000),
+    siteContactName: optionalText(160),
+    siteContactPhone: optionalText(30),
+    projectManagerId: z.string().uuid().optional(),
+    startDate: z.string().trim().optional(),
+    projectValue,
+  })
+  .strict();
+const updateInput = createInput
+  .omit({ branchId: true })
+  .extend({
+    projectId: z.string().uuid(),
+    status: z.enum(["ACTIVE", "ON_HOLD"]),
+  })
+  .strict();
+
 async function permit(
   u: MobileAppPrincipal,
   p: "ACCOUNT_PROJECTS" | "ACCOUNT_PROJECT_COST_VIEW",
@@ -27,6 +54,13 @@ async function permit(
   else await requireAccountModules(a, "PROJECTS");
   return a;
 }
+
+function workflowStatus(status: string) {
+  if (status === "ON_HOLD") return "ON_HOLD";
+  if (["COMPLETED", "CLOSED", "CANCELLED"].includes(status)) return "COMPLETED";
+  return "ACTIVE";
+}
+
 export async function mobileProjectList(
   u: MobileAppPrincipal,
   q?: string | null,
@@ -34,53 +68,47 @@ export async function mobileProjectList(
 ) {
   const result = await listProjectsForActor(
     await permit(u, "ACCOUNT_PROJECTS"),
-    {
-      pageSize: "50",
-    },
+    { pageSize: "50" },
   );
-  return {
-    ...result,
-    rows: result.rows.filter(
+  const rows = result.rows
+    .map((x) => ({ ...x, status: workflowStatus(x.status) }))
+    .filter(
       (x) =>
         (!status || x.status === status) &&
         (!q ||
           x.name.toLowerCase().includes(q.toLowerCase()) ||
           x.projectNumber.toLowerCase().includes(q.toLowerCase()) ||
           x.customer.name.toLowerCase().includes(q.toLowerCase())),
-    ),
-  };
+    );
+  return { ...result, rows };
 }
+
 export async function mobileProjectDetail(u: MobileAppPrincipal, id: string) {
   return getProjectForActor(await permit(u, "ACCOUNT_PROJECTS"), id);
 }
+
 export async function mobileProjectOptions(u: MobileAppPrincipal, id?: string) {
-  const a = await permit(u, "ACCOUNT_PROJECTS"),
-    base = await getProjectFormOptionsForActor(a, id),
-    customers = await db.customer.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        isAccountCustomer: true,
-        branchId: { in: base.branches.map((x) => x.id) },
-      },
-      select: { id: true, name: true, branchId: true },
-      orderBy: { name: "asc" },
-    });
-  return { ...base, customers };
+  return getProjectFormOptionsForActor(await permit(u, "ACCOUNT_PROJECTS"), id);
 }
+
 export async function mobileCreateProject(u: MobileAppPrincipal, raw: unknown) {
   await assertOperationalWrite(u.companyId);
-  return createProjectForActor(await permit(u, "ACCOUNT_PROJECTS"), raw);
+  const actor = (await permit(u, "ACCOUNT_PROJECTS")) as ProjectActor;
+  return createSimpleProjectForActor(actor, createInput.parse(raw));
 }
+
 export async function mobileUpdateProject(u: MobileAppPrincipal, raw: unknown) {
   await assertOperationalWrite(u.companyId);
-  const a = await permit(u, "ACCOUNT_PROJECTS");
-  await updateProjectForActor(a, raw);
-  return getProjectForActor(
-    a,
-    (raw as { id: string; projectId: string }).projectId,
-  );
+  const actor = (await permit(u, "ACCOUNT_PROJECTS")) as ProjectActor;
+  const data = updateInput.parse(raw);
+  await assertProjectEditableForActor(actor, data.projectId);
+  await updateProjectForActor(actor, {
+    ...data,
+    targetEndDate: undefined,
+  });
+  return getProjectForActor(actor, data.projectId);
 }
+
 export async function mobileProjectCosting(u: MobileAppPrincipal, id: string) {
   return loadProjectCostingForActor(
     await permit(u, "ACCOUNT_PROJECT_COST_VIEW"),
@@ -94,13 +122,11 @@ export async function mobileProjectAction(
   raw: unknown,
 ) {
   await assertOperationalWrite(u.companyId);
-  const a = await permit(u, "ACCOUNT_PROJECTS"),
-    d = raw as { action?: string; closureNote?: string };
-  if (d.action === "CLOSE")
-    await closeProjectForActor(a, id, { closureNote: d.closureNote });
-  else if (d.action === "REOPEN") await reopenProjectForActor(a, id);
-  else throw new Error("INVALID_INPUT");
-  return getProjectForActor(a, id);
+  const actor = (await permit(u, "ACCOUNT_PROJECTS")) as ProjectActor;
+  const action = z.object({ action: z.literal("COMPLETE") }).strict().parse(raw);
+  await completeSimpleProjectForActor(actor, id);
+  void action;
+  return getProjectForActor(actor, id);
 }
 
 export async function mobileProjectBudget(
@@ -109,8 +135,9 @@ export async function mobileProjectBudget(
   raw: unknown,
 ) {
   await assertOperationalWrite(u.companyId);
-  const a = await permit(u, "ACCOUNT_PROJECTS"),
-    d = raw as { lines?: unknown[] };
-  await replaceBudgetForActor(a, { projectId: id, lines: d.lines ?? [] });
-  return getProjectForActor(a, id);
+  const actor = (await permit(u, "ACCOUNT_PROJECTS")) as ProjectActor;
+  await assertProjectEditableForActor(actor, id);
+  const d = raw as { lines?: unknown[] };
+  await replaceBudgetForActor(actor, { projectId: id, lines: d.lines ?? [] });
+  return getProjectForActor(actor, id);
 }
