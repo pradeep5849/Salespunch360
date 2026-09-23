@@ -10,7 +10,7 @@ const fmt=(d:Date)=>d.toLocaleString("en-IN",{timeZone:"Asia/Kolkata",dateStyle:
 
 export default async function FollowUpTasksPage({searchParams}:{searchParams:Promise<{status?:string;employeeId?:string}>}){
  const q=await searchParams,selected=states.includes(q.status as typeof states[number])?q.status!:"TODAY";
- const[actor,rawTasks,employees]=await Promise.all([taskActor(),listFollowUpTasks(q),taskEmployeeOptions()]);
+ const[actor,rawTasks,employees]=await Promise.all([taskActor(),listFollowUpTasks({...q,status:selected}),taskEmployeeOptions()]);
  const tomorrow=new Date(parseIndiaBusinessDate(indiaDateText()).getTime()+86_400_000);
  const tasks=selected==="PENDING"?rawTasks.filter(task=>task.dueDate>=tomorrow):rawTasks;
  return <main className="leads-shell"><section className="leads-content">
@@ -20,7 +20,7 @@ export default async function FollowUpTasksPage({searchParams}:{searchParams:Pro
   <div className="task-list">
    {tasks.length===0&&<p className="pending-empty">No follow-ups in {label(selected)}.</p>}
    {tasks.map(t=>{
-    const own=t.assignedUserId===actor.id,canManage=own||actor.salesRole!=="SALES",isCall=t.type==="CALL";
+    const own=t.assignedUserId===actor.id,isCall=t.type==="CALL";
     const last=t.status==="COMPLETED"?(isCall?"Call completed":"Checkout completed"):t.status==="CANCELLED"?"Cancelled":t.completedVisitId?"Follow-up check-in started":isCall?"Call pending":"Visit pending";
     return <article key={t.id}>
      <div className="card-title"><h2>{t.lead.customer?.name||t.lead.companyName||t.lead.title}</h2><b>{t.status}</b></div>
@@ -30,7 +30,7 @@ export default async function FollowUpTasksPage({searchParams}:{searchParams:Pro
      {t.notes&&<p>{t.notes}</p>}
      <small>Task created by {t.createdByUser.name} · {fmt(t.createdAt)}</small>
      <div className="task-activity"><span>Task created by {t.createdByUser.name}</span><span>→ Assigned to {t.assignedUser.name}</span>{t.completedVisit&&<><span>→ Follow-up check-in done by {t.completedVisit.user.name} · {fmt(t.completedVisit.checkedInAt)}</span>{t.completedVisit.checkedOutAt&&<span>→ Checkout completed · {fmt(t.completedVisit.checkedOutAt)}</span>}</>}{isCall&&t.completedAt&&<span>→ Call completed · {fmt(t.completedAt)}</span>}{!isCall&&t.completedAt&&<span>→ Task completed · {fmt(t.completedAt)}</span>}{t.status==="CANCELLED"&&<span>→ Cancelled</span>}</div>
-     <div className="task-actions"><Link href={`/workspace/leads/${t.leadId}`}>View Lead</Link>{t.completedVisitId&&<Link href={`/workspace/leads/${t.leadId}#visit-${t.completedVisitId}`}>View Visit</Link>}{!isCall&&own&&t.status==="PENDING"&&!t.completedVisitId&&<Link href={`/workspace/check-ins?leadId=${t.leadId}&followUpTaskId=${t.id}`}>Start Follow-up Check-in</Link>}{isCall&&canManage&&t.status==="PENDING"&&!t.completedVisitId&&<form action={completeCallFollowUpTaskAction}><input type="hidden" name="taskId" value={t.id}/><button>Mark Call Completed</button></form>}{t.status==="PENDING"&&!t.completedVisitId&&<form action={cancelFollowUpTaskAction}><input type="hidden" name="taskId" value={t.id}/><button>Cancel</button></form>}</div>
+     <div className="task-actions"><Link href={`/workspace/leads/${t.leadId}`}>View Lead</Link>{t.completedVisitId&&<Link href={`/workspace/leads/${t.leadId}#visit-${t.completedVisitId}`}>View Visit</Link>}{!isCall&&own&&t.status==="PENDING"&&!t.completedVisitId&&<Link href={`/workspace/check-ins?leadId=${t.leadId}&followUpTaskId=${t.id}`}>Start Follow-up Check-in</Link>}{isCall&&own&&t.status==="PENDING"&&!t.completedVisitId&&<form action={completeCallFollowUpTaskAction} className="call-outcome-form"><input type="hidden" name="taskId" value={t.id}/><textarea name="outcomeNote" required maxLength={1000} placeholder="Add call outcome note"/><button>Complete Call</button></form>}{t.status==="PENDING"&&!t.completedVisitId&&<form action={cancelFollowUpTaskAction}><input type="hidden" name="taskId" value={t.id}/><button>Cancel</button></form>}</div>
     </article>;
    })}
   </div>

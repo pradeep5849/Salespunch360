@@ -7,14 +7,15 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 class FollowUpMutationClient(private val session:SecureSession){
  private val http=OkHttpClient()
  private val media="application/json".toMediaType()
- suspend fun completeCall(taskId:String)=mutate("COMPLETE_CALL",taskId)
- private suspend fun mutate(action:String,taskId:String)=withContext(Dispatchers.IO){
+ suspend fun completeCall(taskId:String,outcomeNote:String)=mutate("COMPLETE_CALL",taskId,outcomeNote)
+ private suspend fun mutate(action:String,taskId:String,outcomeNote:String?=null)=withContext(Dispatchers.IO){
   val token=session.token()
-  val body="{\"action\":\"$action\",\"taskId\":\"$taskId\"}"
+  val body=JSONObject().put("action",action).put("taskId",taskId).apply{outcomeNote?.let{put("outcomeNote",it)}}.toString()
   val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/follow-ups").header("Accept","application/json").apply{token?.let{header("Authorization","Bearer $it")}}.post(body.toRequestBody(media)).build()
   http.newCall(request).execute().use{response->if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(token);if(response.code==403)session.authorizationChanged();throw ApiException(response.code,"FOLLOW_UP_MUTATION_FAILED")}}
  }
