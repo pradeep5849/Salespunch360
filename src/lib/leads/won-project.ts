@@ -18,6 +18,7 @@ export async function ensureWonLeadProjectInTx(tx:Prisma.TransactionClient,actor
  }else{
   const customer=await tx.customer.create({data:{companyId:actor.companyId,branchId:lead.branchId,assignedUserId:lead.assignedUserId,name:(lead.companyName||lead.contactName||lead.title).trim(),contactPerson:lead.contactName,phone:lead.phone,email:lead.email,isAccountCustomer:true}});
   customerId=customer.id;
+  await tx.lead.update({where:{id:lead.id},data:{customerId}});
  }
  const projectNumber=await allocateDocumentNumberInTx(tx,{companyId:actor.companyId,branchId:lead.branchId,seriesKey:"PROJECT",defaults:{prefix:"PRJ-",padding:6}});
  const project=await tx.project.create({data:{companyId:actor.companyId,branchId:lead.branchId,projectNumber,name:(lead.customer?.name||lead.companyName||lead.title).trim(),customerId,createdById:actor.id,status:"PLANNING",projectValue:lead.estimatedValue??new Prisma.Decimal(0),sourceLeadId:lead.id,sourceSalesUserId:lead.assignedUserId,sourceSalesManagerId:lead.assignedUser.managerId,handoverDate:now,siteName:lead.companyName??undefined,siteContactName:lead.contactName??undefined,siteContactPhone:lead.phone??undefined}});
