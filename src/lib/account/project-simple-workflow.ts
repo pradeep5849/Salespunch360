@@ -5,12 +5,13 @@ import {
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "@/lib/account/modules";
 import {
-  createProject,
-  getProject,
-  getProjectFormOptions,
+  createProjectForActor,
+  getProjectForActor,
+  getProjectFormOptionsForActor,
+  type ProjectActor,
 } from "@/lib/account/projects";
 
-type ManualProjectInput = {
+export type ManualProjectInput = {
   branchId?: string;
   name?: string;
   siteName?: string;
@@ -24,11 +25,10 @@ type ManualProjectInput = {
 
 const finalStatuses = new Set(["COMPLETED", "CLOSED", "CANCELLED"]);
 
-export async function createSimpleProject(raw: ManualProjectInput) {
-  const actor = await requirePermissionForMutation("ACCOUNT_PROJECTS");
-  if (!actor.companyId) throw new AuthorizationError();
-  await requireAccountModules(actor, "PROJECTS");
-
+export async function createSimpleProjectForActor(
+  actor: ProjectActor,
+  raw: ManualProjectInput,
+) {
   const branchId = String(raw.branchId ?? "").trim();
   const name = String(raw.name ?? "").trim();
   const siteAddress = String(raw.siteAddress ?? "").trim() || undefined;
@@ -36,7 +36,7 @@ export async function createSimpleProject(raw: ManualProjectInput) {
   const siteContactPhone = String(raw.siteContactPhone ?? "").trim() || undefined;
   if (!branchId || !name) throw new Error("INVALID_PROJECT");
 
-  const options = await getProjectFormOptions();
+  const options = await getProjectFormOptionsForActor(actor);
   if (!options.branches.some((branch) => branch.id === branchId))
     throw new AuthorizationError();
 
@@ -53,7 +53,7 @@ export async function createSimpleProject(raw: ManualProjectInput) {
   });
 
   try {
-    const project = await createProject({
+    const project = await createProjectForActor(actor, {
       branchId,
       name,
       customerId: customer.id,
@@ -90,18 +90,34 @@ export async function createSimpleProject(raw: ManualProjectInput) {
   }
 }
 
-export async function assertProjectEditable(projectId: string) {
-  const project = await getProject(projectId);
+export async function createSimpleProject(raw: ManualProjectInput) {
+  const actor = await requirePermissionForMutation("ACCOUNT_PROJECTS");
+  if (!actor.companyId) throw new AuthorizationError();
+  await requireAccountModules(actor, "PROJECTS");
+  return createSimpleProjectForActor(actor as ProjectActor, raw);
+}
+
+export async function assertProjectEditableForActor(
+  actor: ProjectActor,
+  projectId: string,
+) {
+  const project = await getProjectForActor(actor, projectId);
   if (finalStatuses.has(project.status)) throw new Error("PROJECT_FINAL");
   return project;
 }
 
-export async function completeSimpleProject(projectId: string) {
+export async function assertProjectEditable(projectId: string) {
   const actor = await requirePermissionForMutation("ACCOUNT_PROJECTS");
   if (!actor.companyId) throw new AuthorizationError();
   await requireAccountModules(actor, "PROJECTS");
+  return assertProjectEditableForActor(actor as ProjectActor, projectId);
+}
 
-  const project = await getProject(projectId);
+export async function completeSimpleProjectForActor(
+  actor: ProjectActor,
+  projectId: string,
+) {
+  const project = await getProjectForActor(actor, projectId);
   if (!["PLANNING", "ACTIVE", "ON_HOLD"].includes(project.status))
     throw new Error("PROJECT_FINAL");
 
@@ -137,4 +153,11 @@ export async function completeSimpleProject(projectId: string) {
       },
     });
   });
+}
+
+export async function completeSimpleProject(projectId: string) {
+  const actor = await requirePermissionForMutation("ACCOUNT_PROJECTS");
+  if (!actor.companyId) throw new AuthorizationError();
+  await requireAccountModules(actor, "PROJECTS");
+  return completeSimpleProjectForActor(actor as ProjectActor, projectId);
 }
