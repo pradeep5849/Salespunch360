@@ -10,7 +10,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
     user.companyId ? db.company.findUnique({ where: { id: user.companyId }, select: { name: true, productEdition: true, logoObjectKey: true, updatedAt: true, addressLine1: true, addressLine2: true, locality: true, city: true, state: true, postalCode: true, country: true } }) : null,
     webWorkspaceContext(user),
   ]);
-  const presentation = salesHeaderPresentation(user.salesRole, user.managerType);
+  const presentation = salesHeaderPresentation(user.salesRole, user.managerType, user.designation);
   if (!company || !workspace?.canAccessSales || !presentation) return <>{children}</>;
   const navigation = salesHeaderCapabilities(user, company.productEdition);
   const companyAddress = company ? [company.addressLine1, company.addressLine2, company.locality, company.city, company.state, company.postalCode, company.country].filter(Boolean).join(", ") : "";
