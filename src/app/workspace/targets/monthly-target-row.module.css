@@ -1,0 +1,15 @@
+.mobileHeader{display:none}
+
+@media(max-width:760px){
+ .row.row{grid-template-columns:1fr;gap:8px;padding:10px 12px;align-items:stretch}
+ .employee{grid-column:1/-1!important;padding-bottom:6px;border-bottom:1px solid var(--line)}
+ .employee strong{font-size:12px!important;white-space:normal!important}
+ .employee small{font-size:9px!important}
+ .mobileHeader{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:10px;color:var(--muted);font-size:11px;font-weight:800}
+ .metric.metric{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 92px;grid-template-areas:"type target" "actual target";align-items:center;gap:2px 10px;font-size:12px}
+ .metric>small{grid-area:type;font-size:12px!important;font-weight:700;color:var(--ink)!important}
+ .metric>strong{grid-area:target;justify-self:start;font-size:16px}
+ .metric>input:not([type="hidden"]){grid-area:target;width:92px!important;padding:8px!important}
+ .metric>span{grid-area:actual;font-size:10px;font-weight:600!important;color:var(--muted)!important}
+ .action.action{grid-column:1/-1;width:100%;padding:8px 10px!important;font-size:11px!important}
+}
