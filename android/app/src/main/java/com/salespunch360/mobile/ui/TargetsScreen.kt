@@ -25,14 +25,7 @@ import com.salespunch360.mobile.data.*
   item{
    Text("Sales Targets",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
    Text("${monthly.month.startText} to ${monthly.month.endText}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   Text("Monthly targets carry forward; actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   Spacer(Modifier.height(8.dp))
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    Text("Employee",Modifier.weight(1.15f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
-    Text("Check-ins Target",Modifier.weight(.8f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
-    Text("Leads Won Target",Modifier.weight(.8f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
-   }
-   HorizontalDivider(Modifier.padding(top=6.dp),color=SalesLine)
+   Text("Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    state.message?.let{Text(it,Modifier.padding(top=6.dp),style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
   }
   if(monthly.rows.isEmpty())item{ContentCard("No employees","No active field employees are visible in your current scope.")}
@@ -46,26 +39,31 @@ import com.salespunch360.mobile.data.*
  var won by remember(row.id,row.wonTarget){mutableStateOf(row.wonTarget.toString())}
  OutlinedCard(Modifier.fillMaxWidth()){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    Column(Modifier.weight(1.15f)){Text(row.name,fontWeight=FontWeight.Bold,color=SalesInk);Text(salesTargetRole(row),style=MaterialTheme.typography.labelSmall,color=SalesMuted)}
-    TargetCompactField("Check-ins Target",leads,editing,{leads=it},"${row.created} check-ins",Modifier.weight(.8f))
-    TargetCompactField("Leads Won Target",won,editing,{won=it},"${row.won} won",Modifier.weight(.8f))
+   Text(row.name,fontWeight=FontWeight.Bold,color=SalesInk)
+   Text(salesTargetRole(row),style=MaterialTheme.typography.labelSmall,color=SalesMuted)
+   HorizontalDivider(color=SalesLine)
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
+    Text("Type",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=SalesMuted)
+    Text("Target",Modifier.width(104.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=SalesMuted)
    }
+   TargetCompactField("Leads",leads,editing,{leads=it},row.created,Modifier.fillMaxWidth())
+   TargetCompactField("Leads won",won,editing,{won=it},row.won,Modifier.fillMaxWidth())
    if(canEdit){
-    if(editing)Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0);editing=false},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save Targets")}
+    if(editing)Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0)},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save Targets")}
     else OutlinedButton({editing=true},Modifier.fillMaxWidth()){Text("Edit Targets")}
-   } else {
-    Text("Check-ins ${row.created} / ${row.leadTarget}   ·   Leads Won ${row.won} / ${row.wonTarget}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    }
   }
  }
 }
 
-@Composable private fun TargetCompactField(label:String,value:String,editing:Boolean,change:(String)->Unit,actual:String,modifier:Modifier){
- Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
-  if(editing)OutlinedTextField(value,{change(it.filter(Char::isDigit).take(6))},singleLine=true,label={Text(label)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())
-  else Text(value,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
-  Text(actual,style=MaterialTheme.typography.labelSmall,color=SalesMuted)
+@Composable private fun TargetCompactField(label:String,value:String,editing:Boolean,change:(String)->Unit,actual:Int,modifier:Modifier){
+ Row(modifier,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+  Column(Modifier.weight(1f)){
+   Text(label,style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.SemiBold,color=SalesInk)
+   Text("Actual $actual",style=MaterialTheme.typography.labelSmall,color=SalesMuted)
+  }
+  if(editing)OutlinedTextField(value,{change(it.filter(Char::isDigit).take(6))},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.width(104.dp))
+  else Text(value,Modifier.width(104.dp),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
  }
 }
 private fun salesTargetRole(row:MonthlyTargetRow)=when(row.salesRole){MobileRole.SALES->"Sales";MobileRole.MANAGER->if(row.managerType=="MANAGER_ONLY")"Manager Only" else "Field Manager";MobileRole.PRIMARY_ADMIN->"Primary Admin";MobileRole.ADMIN->"Admin"}
