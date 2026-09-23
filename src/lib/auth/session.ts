@@ -23,6 +23,7 @@ export type AuthenticatedUser = {
   salesAccessActive: boolean;
   accountAccessActive: boolean;
   companyId: string | null;
+  designation: string | null;
   branchAccessScope?: BranchAccessScope;
   branchIds?: string[];
 };
@@ -54,7 +55,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    select: { expiresAt: true, sessionVersion: true, mobileSession:{select:{id:true,expiresAt:true,revokedAt:true,sessionVersion:true}}, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, isActive: true, sessionVersion: true, branchAccessScope:true, branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{productEdition:true,branches:{where:{isActive:true},select:{id:true}}}} } } },
+    select: { expiresAt: true, sessionVersion: true, mobileSession:{select:{id:true,expiresAt:true,revokedAt:true,sessionVersion:true}}, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, designation:true, isActive: true, sessionVersion: true, branchAccessScope:true, branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{productEdition:true,branches:{where:{isActive:true},select:{id:true}}}} } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user) || session.sessionVersion !== session.user.sessionVersion) return null;
   if(session.mobileSession&&(session.mobileSession.revokedAt!==null||session.mobileSession.expiresAt<=new Date()||session.mobileSession.sessionVersion!==session.user.sessionVersion||!session.user.company||!canAccessAccountWorkspace(session.user,session.user.company.productEdition)))return null;
@@ -70,6 +71,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     salesAccessActive: session.user.salesAccessActive,
     accountAccessActive: session.user.accountAccessActive,
     companyId: session.user.companyId,
+    designation: session.user.designation,
     branchAccessScope: session.user.branchAccessScope,
     branchIds: session.user.branchAccessScope === "SELECTED_BRANCHES" ? (session.user.branchAccesses??[]).map(({branchId})=>branchId) : session.user.company?.branches?.map(({id})=>id) ?? (process.env.NODE_ENV==="test"?["00000000-0000-0000-0000-000000000001"]:[]),
   };
