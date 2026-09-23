@@ -1,6 +1,7 @@
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
 import {allocateDocumentNumberInTx} from "@/lib/account/numbering";
+import {LEGACY_DEFAULT_ACCOUNT_MODULES} from "@/lib/account/modules";
 
 export type WonLeadProjectActor={id:string;companyId:string};
 
@@ -9,7 +10,8 @@ export async function ensureWonLeadProjectInTx(tx:Prisma.TransactionClient,actor
  const existing=await tx.project.findFirst({where:{companyId:actor.companyId,sourceLeadId:leadId},select:{id:true,projectNumber:true}});
  if(existing)return existing;
  const company=await tx.company.findUnique({where:{id:actor.companyId},select:{productEdition:true,accountSettings:{select:{enabledModules:true}}}});
- if(!company||company.productEdition!=="SALESPUNCH360_PLUS"||!company.accountSettings?.enabledModules.includes("PROJECTS"))return null;
+ const enabledModules=company?.accountSettings?.enabledModules??LEGACY_DEFAULT_ACCOUNT_MODULES;
+ if(!company||company.productEdition!=="SALESPUNCH360_PLUS"||!enabledModules.includes("PROJECTS"))return null;
  const lead=await tx.lead.findFirst({where:{id:leadId,companyId:actor.companyId,stage:"WON"},select:{id:true,branchId:true,title:true,companyName:true,contactName:true,phone:true,email:true,estimatedValue:true,customerId:true,assignedUserId:true,assignedUser:{select:{managerId:true}},customer:{select:{id:true,name:true,address:true,isAccountCustomer:true}}}});
  if(!lead)return null;
  let customerId=lead.customerId;
