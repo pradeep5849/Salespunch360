@@ -9,7 +9,7 @@ describe("monthly Sales targets regression",()=>{
   expect(source).toContain('db.lead.groupBy({by:["assignedUserId"],where:{companyId:a.companyId,branchId:branches.branchId,assignedUserId:{in:userIds},createdAt:{gte:month.start,lt:month.endExclusive}}');
   expect(source).not.toContain("db.customerVisit.groupBy");
  });
- it("labels Web targets as Leads and Leads won with dynamic values",()=>{
+ it("labels Web targets as Leads and Leads won with dynamic values and keeps Admin fields always editable",()=>{
   const page=read("src/app/workspace/targets/page.tsx");
   const row=read("src/app/workspace/targets/monthly-target-row.tsx");
   expect(page).toContain("Leads Target / Actual");
@@ -17,17 +17,22 @@ describe("monthly Sales targets regression",()=>{
   expect(page).not.toContain("Check-ins Target");
   expect(row).toContain("<small>Leads</small>");
   expect(row).toContain("<small>Leads won</small>");
-  expect(row).toContain("row.leadTarget");
-  expect(row).toContain("row.wonTarget");
+  expect(row).toContain('canEdit?<input aria-label="Leads target"');
+  expect(row).toContain('canEdit?<input aria-label="Leads won target"');
+  expect(row).toContain('type="submit">Save</button>');
+  expect(row).not.toContain("Edit</button>");
+  expect(row).not.toContain("useState");
  });
- it("keeps Admin editing and compact Type / Target rows on Android",()=>{
+ it("keeps Admin targets always editable with compact Type / Target rows on Android",()=>{
   const source=read("android/app/src/main/java/com/salespunch360/mobile/ui/TargetsScreen.kt");
   expect(source).toContain("val canEdit=role!=MobileRole.SALES");
   expect(source).toContain('Text("Type"');
   expect(source).toContain('Text("Target"');
-  expect(source).toContain('TargetCompactField("Leads"');
-  expect(source).toContain('TargetCompactField("Leads won"');
+  expect(source).toContain('TargetCompactField("Leads",leads,canEdit');
+  expect(source).toContain('TargetCompactField("Leads won",won,canEdit');
+  expect(source).toContain('Text(if(saving)"Saving…" else "Save Targets")');
+  expect(source).not.toContain("Edit Targets");
+  expect(source).not.toContain("var editing by remember");
   expect(source).not.toContain("Check-ins Target");
-  expect(source).not.toContain(";editing=false");
  });
 });
