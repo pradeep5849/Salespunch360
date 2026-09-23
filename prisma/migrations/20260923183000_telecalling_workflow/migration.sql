@@ -83,3 +83,46 @@ CREATE TABLE "telecaller_billing_orders" (
   CONSTRAINT "telecaller_billing_orders_seat_check" CHECK ("addedSeats" > 0 AND "targetSeats" >= "addedSeats")
 );
 CREATE INDEX "telecaller_billing_orders_company_idx" ON "telecaller_billing_orders"("companyId","createdAt" DESC);
+
+-- Telecaller remains compatible with the existing SALES identity, but its access is
+-- authorized by the separate paid telecaller subscription. Keeping salesAccessActive
+-- false also guarantees it is never counted as a normal Sales subscription seat.
+CREATE OR REPLACE FUNCTION enforce_paid_telecaller_seat() RETURNS TRIGGER AS $$
+DECLARE
+  seat_limit INTEGER;
+  used_seats INTEGER;
+BEGIN
+  IF NEW."salesRole" = 'SALES'::"SalesRole"
+     AND upper(replace(coalesce(NEW.designation,''),' ','')) = 'TELECALLER' THEN
+    NEW."salesAccessActive" := FALSE;
+    IF NEW."isActive" THEN
+      SELECT ts.seats INTO seat_limit
+      FROM "telecaller_subscriptions" ts
+      WHERE ts."companyId" = NEW."companyId"
+        AND ts.status = 'ACTIVE'
+        AND ts."startsAt" <= CURRENT_TIMESTAMP
+        AND ts."endsAt" > CURRENT_TIMESTAMP
+      ORDER BY ts."endsAt" DESC
+      LIMIT 1;
+      IF seat_limit IS NULL THEN
+        RAISE EXCEPTION 'TELECALLER_SUBSCRIPTION_REQUIRED';
+      END IF;
+      SELECT COUNT(*)::int INTO used_seats
+      FROM "users" u
+      WHERE u."companyId" = NEW."companyId"
+        AND u.id <> NEW.id
+        AND u."isActive" = TRUE
+        AND u."salesRole" = 'SALES'::"SalesRole"
+        AND upper(replace(coalesce(u.designation,''),' ','')) = 'TELECALLER';
+      IF used_seats >= seat_limit THEN
+        RAISE EXCEPTION 'TELECALLER_SEAT_LIMIT';
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "users_paid_telecaller_seat_guard"
+BEFORE INSERT OR UPDATE OF designation, "isActive", "salesRole", "salesAccessActive" ON "users"
+FOR EACH ROW EXECUTE FUNCTION enforce_paid_telecaller_seat();
