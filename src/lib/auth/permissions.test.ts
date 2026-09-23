@@ -1,9 +1,10 @@
 import type { WorkspacePrincipal } from "./workspace-policy";
 import { describe, expect, it } from "vitest";
-import { ACCOUNT_ROLE_PERMISSIONS, canUsePermission, PERMISSIONS, SALES_ROLE_PERMISSIONS, type Permission } from "./permissions";
+import { ACCOUNT_ROLE_PERMISSIONS, canUsePermission, canUsePermissionForMutation, PERMISSIONS, SALES_ROLE_PERMISSIONS, type Permission } from "./permissions";
 
 const user = (overrides: Partial<WorkspacePrincipal> = {}): WorkspacePrincipal => ({ companyId: "company", role: "ACCOUNT_USER", isActive: true, salesRole: null, accountRole: null, salesAccessActive: false, accountAccessActive: false, managerType: null, ...overrides });
 const can = (u: WorkspacePrincipal, permission: Permission, edition: "SALESPUNCH360" | "SALESPUNCH360_ACCOUNT" | "SALESPUNCH360_PLUS" = "SALESPUNCH360_PLUS") => canUsePermission(u, edition, permission);
+const canMutate = (u: WorkspacePrincipal, permission: Permission, edition: "SALESPUNCH360" | "SALESPUNCH360_ACCOUNT" | "SALESPUNCH360_PLUS" = "SALESPUNCH360_PLUS") => canUsePermissionForMutation(u, edition, permission);
 
 describe("static module permission matrix", () => {
   const sales = (salesRole: WorkspacePrincipal["salesRole"], overrides = {}) => user({ role: salesRole === "PRIMARY_ADMIN" ? "COMPANY_ADMIN" : salesRole === "ADMIN" ? "FIELD_ADMIN" : salesRole!, salesRole, salesAccessActive: true, ...overrides });
@@ -90,6 +91,13 @@ describe("static module permission matrix", () => {
       expect(can(user({ role: "SUPER_ADMIN", companyId: null, salesRole: "PRIMARY_ADMIN", salesAccessActive: true }), permission)).toBe(false);
       expect(can(sales("ADMIN", { role: "FIELD_ADMIN" }), permission)).toBe(true);
     });
+  });
+
+  it("allows Sales administrators to save targets without opening other field mutations", () => {
+    expect(canMutate(sales("PRIMARY_ADMIN"), "SALES_TARGETS")).toBe(true);
+    expect(canMutate(sales("ADMIN"), "SALES_TARGETS")).toBe(true);
+    expect(canMutate(sales("ADMIN"), "SALES_LEADS")).toBe(false);
+    expect(canMutate(sales("ADMIN"), "SALES_CHECK_INS")).toBe(false);
   });
 
 });
