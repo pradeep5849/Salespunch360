@@ -13,6 +13,6 @@ export function MonthlyTargetRow({row,canEdit}:{row:{id:string;name:string;sales
   <div className={`target-metric ${styles.metric}`}><small>Leads</small>{canEdit&&editing?<input aria-label="Leads target" name="leadTarget" type="number" min="0" step="1" defaultValue={row.leadTarget}/>:<strong>{row.leadTarget}</strong>}<span>Actual {row.created}</span></div>
   <div className={`target-metric ${styles.metric}`}><small>Leads won</small>{canEdit&&editing?<input aria-label="Leads won target" name="wonTarget" type="number" min="0" step="1" defaultValue={row.wonTarget}/>:<strong>{row.wonTarget}</strong>}<span>Actual {row.won}</span></div>
   {canEdit&&!editing&&<button className={styles.action} type="button" onClick={()=>setEditing(true)}>Edit</button>}
-  {canEdit&&editing&&<div className={styles.action}><button type="submit" disabled={pending}>{pending?"Saving…":"Save"}</button><button type="button" disabled={pending} onClick={()=>setEditing(false)}>Cancel</button></div>}
+  {canEdit&&editing&&<><button className={styles.action} type="submit" disabled={pending}>{pending?"Saving…":"Save"}</button><button className={styles.action} type="button" disabled={pending} onClick={()=>setEditing(false)}>Cancel</button></>}
  </form>;
 }
