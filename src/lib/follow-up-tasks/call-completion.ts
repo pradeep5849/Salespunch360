@@ -2,7 +2,7 @@ import {db} from "@/lib/db";
 import {requirePermissionForMutation} from "@/lib/auth/authorization";
 import {assertOperationalWrite} from "@/lib/billing/entitlement";
 import {operationalBranchContext} from "@/lib/branches/operational-scope";
-import {decodeFollowUpNotes} from "./type";
+import {decodeFollowUpNotes,encodeFollowUpNotes} from "./type";
 import {FollowUpTaskError,syncLeadFollowUpAt,taskScope,type TaskActor} from "./service";
 
 async function mutationActor():Promise<TaskActor>{
@@ -11,19 +11,27 @@ async function mutationActor():Promise<TaskActor>{
  return{...user,companyId:user.companyId,salesRole:user.salesRole};
 }
 
-export async function completeCallFollowUpTaskForActor(actor:TaskActor,taskId:string){
+function outcomeNote(raw:unknown){
+ const value=typeof raw==="string"?raw.trim():"";
+ if(!value)throw new FollowUpTaskError("INVALID_STATE");
+ return value.slice(0,1000);
+}
+
+export async function completeCallFollowUpTaskForActor(actor:TaskActor,taskId:string,rawOutcomeNote:unknown){
  await assertOperationalWrite(actor.companyId);
- const branches=await operationalBranchContext(actor);
+ const branches=await operationalBranchContext(actor),outcome=outcomeNote(rawOutcomeNote);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT "id" FROM "follow_up_tasks" WHERE "id"=${taskId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
   const task=await tx.followUpTask.findFirst({where:{id:taskId,branchId:branches.branchId,...taskScope(actor)}});
-  if(!task)throw new FollowUpTaskError("NOT_FOUND");
+  if(!task||task.assignedUserId!==actor.id)throw new FollowUpTaskError("NOT_FOUND");
   if(task.status!=="PENDING"||task.completedVisitId)throw new FollowUpTaskError("INVALID_STATE");
-  if(decodeFollowUpNotes(task.notes).type!=="CALL")throw new FollowUpTaskError("INVALID_TYPE");
-  await tx.followUpTask.update({where:{id:task.id},data:{status:"COMPLETED",completedAt:new Date()}});
+  const presentation=decodeFollowUpNotes(task.notes);
+  if(presentation.type!=="CALL")throw new FollowUpTaskError("INVALID_TYPE");
+  const notes=encodeFollowUpNotes("CALL",[presentation.notes,`Call outcome: ${outcome}`].filter(Boolean).join("\n"));
+  await tx.followUpTask.update({where:{id:task.id},data:{status:"COMPLETED",completedAt:new Date(),notes}});
   await syncLeadFollowUpAt(tx,task.leadId);
   return{ok:true};
  });
 }
 
-export async function completeCallFollowUpTask(taskId:string){return completeCallFollowUpTaskForActor(await mutationActor(),taskId);}
+export async function completeCallFollowUpTask(taskId:string,rawOutcomeNote:unknown){return completeCallFollowUpTaskForActor(await mutationActor(),taskId,rawOutcomeNote);}
