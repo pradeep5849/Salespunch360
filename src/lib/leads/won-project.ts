@@ -10,7 +10,7 @@ export async function ensureWonLeadProjectInTx(tx:Prisma.TransactionClient,actor
  if(existing)return existing;
  const company=await tx.company.findUnique({where:{id:actor.companyId},select:{productEdition:true,accountSettings:{select:{enabledModules:true}}}});
  if(!company||company.productEdition!=="SALESPUNCH360_PLUS"||!company.accountSettings?.enabledModules.includes("PROJECTS"))return null;
- const lead=await tx.lead.findFirst({where:{id:leadId,companyId:actor.companyId,stage:"WON"},select:{id:true,branchId:true,title:true,companyName:true,contactName:true,phone:true,email:true,estimatedValue:true,customerId:true,assignedUserId:true,assignedUser:{select:{managerId:true}},customer:{select:{id:true,name:true,isAccountCustomer:true}}}});
+ const lead=await tx.lead.findFirst({where:{id:leadId,companyId:actor.companyId,stage:"WON"},select:{id:true,branchId:true,title:true,companyName:true,contactName:true,phone:true,email:true,estimatedValue:true,customerId:true,assignedUserId:true,assignedUser:{select:{managerId:true}},customer:{select:{id:true,name:true,address:true,isAccountCustomer:true}}}});
  if(!lead)return null;
  let customerId=lead.customerId;
  if(customerId){
@@ -21,7 +21,7 @@ export async function ensureWonLeadProjectInTx(tx:Prisma.TransactionClient,actor
   await tx.lead.update({where:{id:lead.id},data:{customerId}});
  }
  const projectNumber=await allocateDocumentNumberInTx(tx,{companyId:actor.companyId,branchId:lead.branchId,seriesKey:"PROJECT",defaults:{prefix:"PRJ-",padding:6}});
- const project=await tx.project.create({data:{companyId:actor.companyId,branchId:lead.branchId,projectNumber,name:(lead.customer?.name||lead.companyName||lead.title).trim(),customerId,createdById:actor.id,status:"PLANNING",projectValue:lead.estimatedValue??new Prisma.Decimal(0),sourceLeadId:lead.id,sourceSalesUserId:lead.assignedUserId,sourceSalesManagerId:lead.assignedUser.managerId,handoverDate:now,siteName:lead.companyName??undefined,siteContactName:lead.contactName??undefined,siteContactPhone:lead.phone??undefined}});
+ const project=await tx.project.create({data:{companyId:actor.companyId,branchId:lead.branchId,projectNumber,name:lead.title.trim(),customerId,createdById:actor.id,status:"ACTIVE",startDate:now,projectValue:lead.estimatedValue??new Prisma.Decimal(0),sourceLeadId:lead.id,sourceSalesUserId:lead.assignedUserId,sourceSalesManagerId:lead.assignedUser.managerId,siteName:lead.companyName??undefined,siteAddress:lead.customer?.address??undefined,siteContactName:lead.contactName??undefined,siteContactPhone:lead.phone??undefined}});
  await tx.projectAuditEvent.create({data:{companyId:actor.companyId,projectId:project.id,actorUserId:actor.id,eventType:"PROJECT_CREATED",metadata:{source:"WON_LEAD",sourceLeadId:lead.id}}});
  return{id:project.id,projectNumber:project.projectNumber};
 }
