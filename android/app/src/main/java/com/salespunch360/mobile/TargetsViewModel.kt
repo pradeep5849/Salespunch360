@@ -16,6 +16,7 @@ class TargetsViewModel(app:Application):AndroidViewModel(app){
  fun saveMonthly(userId:String,leadTarget:Int,wonTarget:Int,onSaved:()->Unit={})=viewModelScope.launch{if(_state.value.saving)return@launch;_state.value=_state.value.copy(saving=true,message=null);try{val monthly=api.saveMonthlyTarget(MonthlyTargetSaveRequest(assignedUserId=userId,leadTarget=leadTarget,wonTarget=wonTarget));_state.value=_state.value.copy(loading=false,saving=false,monthly=monthly,message="Monthly targets saved.");onSaved()}catch(e:Exception){_state.value=_state.value.copy(saving=false,message=error(e))}}
  fun create(data:TargetRequest)=save{api.createTarget(data)}
  fun edit(data:EditTargetRequest)=save{api.editTarget(data)}
+ fun clear(){_state.value=_state.value.copy(message=null)}
  private fun save(block:suspend()->TargetsContext)=viewModelScope.launch{_state.value=_state.value.copy(saving=true,message=null);_state.value=try{_state.value.copy(loading=false,saving=false,context=block(),message="Target saved.")}catch(e:Exception){_state.value.copy(saving=false,message=error(e))}}
  private fun error(e:Exception)=apiMessage(e,"Targets couldn't be loaded.")
 }
