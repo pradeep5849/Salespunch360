@@ -49,10 +49,11 @@ export function canUsePermission(user: WorkspacePrincipal, edition: ProductEditi
   return false;
 }
 
-/** Mutation policy closes personal field workflows while preserving scoped supervisor reads. Target services enforce their own supervisor/assignee mutation scope. */
+/** Mutation policy closes personal field workflows while preserving scoped supervisor reads. Target/customer services enforce their own mutation scope. */
 export function canUsePermissionForMutation(user:WorkspacePrincipal,edition:ProductEdition|null,permission:Permission){
   const allowed=canUsePermission(user,edition,permission);
   if(!allowed)return false;
   if(permission==="SALES_TARGETS")return true;
+  if(permission==="SALES_CUSTOMERS")return user.salesRole==="PRIMARY_ADMIN"||user.salesRole==="ADMIN";
   return !PERSONAL_FIELD_PERMISSIONS.includes(permission)||canUseSalesFieldWorkflow(user);
 }
