@@ -51,7 +51,15 @@ export async function moveLead(_: LeadActionState, f: FormData): Promise<LeadAct
     const user = await requirePermissionForMutation("SALES_LEADS");
     if (!user.companyId || !user.salesRole) return { error: "Unable to move this lead. Refresh and try again." };
     const leadId = String(f.get("leadId"));
-    const result = await transitionLeadWithProjectForActor(user, {
+    const actor = {
+      id: user.id,
+      companyId: user.companyId,
+      salesRole: user.salesRole,
+      managerType: user.managerType,
+      branchAccessScope: user.branchAccessScope,
+      branchIds: user.branchIds,
+    };
+    const result = await transitionLeadWithProjectForActor(actor, {
       leadId,
       version: f.get("version"),
       toStage: String(f.get("toStage")),
