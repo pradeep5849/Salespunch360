@@ -211,7 +211,7 @@ internal fun CallResultDialog(
     var callbackText by remember {
         mutableStateOf(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(1).withSecond(0).withNano(0).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
     }
-    val callbackIso = if (result == "CALL_BACK") callbackIso(callbackText) else null
+    val callbackIsoValue = if (result == "CALL_BACK") parseCallbackIso(callbackText) else null
     AlertDialog(
         onDismissRequest = dismiss,
         title = { Text("Save call result") },
@@ -234,7 +234,7 @@ internal fun CallResultDialog(
                         onValueChange = { callbackText = it.take(16) },
                         label = { Text("Callback date & time") },
                         supportingText = { Text("Format: YYYY-MM-DD HH:MM") },
-                        isError = callbackIso == null,
+                        isError = callbackIsoValue == null,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -242,15 +242,15 @@ internal fun CallResultDialog(
         },
         confirmButton = {
             Button(
-                onClick = { save(result, notes.trim().ifBlank { null }, callbackIso) },
-                enabled = !busy && (result != "CALL_BACK" || callbackIso != null),
+                onClick = { save(result, notes.trim().ifBlank { null }, callbackIsoValue) },
+                enabled = !busy && (result != "CALL_BACK" || callbackIsoValue != null),
             ) { Text(if (busy) "Saving…" else "Save") }
         },
         dismissButton = { TextButton(dismiss) { Text("Cancel") } },
     )
 }
 
-private fun callbackIso(value: String): String? = runCatching {
+private fun parseCallbackIso(value: String): String? = runCatching {
     LocalDateTime.parse(value.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
         .atZone(ZoneId.of("Asia/Kolkata"))
         .toInstant()
