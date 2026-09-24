@@ -112,14 +112,15 @@ export async function getTelecallerBillingOverviewForCompany(companyId: string) 
 
 export async function createTelecallerBillingOrder(input: { addedSeats: number; billingPeriod: TelecallerBillingPeriod }) {
   const actor = await requirePermissionForMutation("SALES_BILLING");
-  if (!actor.companyId) throw new Error("NOT_AUTHORIZED");
+  const companyId = actor.companyId;
+  if (!companyId) throw new Error("NOT_AUTHORIZED");
   if (!Number.isInteger(input.addedSeats) || input.addedSeats < 1 || input.addedSeats > 100) throw new Error("INVALID_SEAT_COUNT");
   if (input.billingPeriod !== "SIX_MONTH" && input.billingPeriod !== "YEARLY") throw new Error("INVALID_BILLING_PERIOD");
 
   return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${actor.companyId}::uuid FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
     const now = new Date();
-    const current = await activeSubscription(tx, actor.companyId, now);
+    const current = await activeSubscription(tx, companyId, now);
     const period: TelecallerBillingPeriod = current?.billingPeriod ?? input.billingPeriod;
     const basePrice = priceFor(period);
     const startsAt = now;
@@ -132,12 +133,12 @@ export async function createTelecallerBillingOrder(input: { addedSeats: number; 
     }
     const targetSeats = (current?.seats ?? 0) + input.addedSeats;
     const subtotal = unitPrice.mul(input.addedSeats).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-    await tx.$executeRaw(Prisma.sql`UPDATE "telecaller_billing_orders" SET status='CANCELLED',"updatedAt"=NOW() WHERE "companyId"=${actor.companyId}::uuid AND status='PENDING'`);
+    await tx.$executeRaw(Prisma.sql`UPDATE "telecaller_billing_orders" SET status='CANCELLED',"updatedAt"=NOW() WHERE "companyId"=${companyId}::uuid AND status='PENDING'`);
     const id = randomUUID();
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     await tx.$executeRaw(Prisma.sql`
       INSERT INTO "telecaller_billing_orders" (id,"companyId","createdByUserId","billingPeriod","addedSeats","targetSeats","unitPrice",subtotal,"totalAmount",status,"coTermStartsAt","coTermEndsAt","expiresAt","createdAt","updatedAt")
-      VALUES (${id}::uuid,${actor.companyId}::uuid,${actor.id}::uuid,${period},${input.addedSeats},${targetSeats},${unitPrice},${subtotal},${subtotal},'PENDING',${startsAt},${endsAt},${expiresAt},NOW(),NOW())`);
+      VALUES (${id}::uuid,${companyId}::uuid,${actor.id}::uuid,${period},${input.addedSeats},${targetSeats},${unitPrice},${subtotal},${subtotal},'PENDING',${startsAt},${endsAt},${expiresAt},NOW(),NOW())`);
     return { id, billingPeriod: period, addedSeats: input.addedSeats, targetSeats, unitPrice, totalAmount: subtotal, coTermEndsAt: endsAt, prorated: Boolean(current) };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
