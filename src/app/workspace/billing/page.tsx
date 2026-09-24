@@ -1,7 +1,7 @@
 import {WorkspacePageHeader} from '@/components/workspace/workspace-page-header';
 import {billingDashboard} from '@/lib/billing/service';
 import {getTelecallerBillingOverview} from '@/lib/billing/telecaller';
-import {reconcileTelecallerToSalesTerm,unifiedTelecallerOrderFields} from '@/lib/billing/unified-sales-team';
+import {unifiedTelecallerOrderFields} from '@/lib/billing/unified-sales-team';
 import {AccountIncreaseCalculator,AddTeamCalculator,BillingCalculator} from './billing-calculator';
 import {ACCOUNT_PACKAGE_ORDER_PROVIDER} from '@/lib/billing/account-package';
 import {PLUS_ORDER_PROVIDER} from '@/lib/billing/combined-order';
@@ -16,7 +16,6 @@ const Tile=({value,label}:{value:string;label:string})=><article style={tileStyl
 
 export default async function Page({searchParams}:{searchParams:Search}){
  const q=await searchParams,orderError=one(q.orderError),r=await billingDashboard(),e=r.entitlement;
- if(r.hasSales&&e?.paidActive)await reconcileTelecallerToSalesTerm(r.activeEmployees[0]?.id?e.companyId??'':'' as never).catch(()=>null);
  const telecaller=r.hasSales?await getTelecallerBillingOverview():null;
  const orderTelecaller=await unifiedTelecallerOrderFields(r.orders.map(o=>o.id));
  const managersEnabled=r.company?.teamStructure==='MANAGERS_AND_SALES',backHref=r.company?.productEdition==='SALESPUNCH360_ACCOUNT'?'/workspace/account':'/workspace';
