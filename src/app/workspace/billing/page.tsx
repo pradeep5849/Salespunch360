@@ -11,7 +11,7 @@ const tileStyle={padding:'10px 12px',border:'1px solid var(--line)',borderRadius
 const actionGrid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12} as const;
 const actionCard={padding:'16px',border:'1px solid var(--line)',borderRadius:14,display:'grid',gap:6,textDecoration:'none',color:'inherit',background:'var(--card)'} as const;
 const Tile=({value,label}:{value:string;label:string})=><article style={tileStyle}><strong>{value}</strong><span style={{fontSize:12,color:'var(--muted)'}}>{label}</span></article>;
-function Action({title,copy,href,enabled=true}:{title:string;copy:string;href:string;enabled?:boolean}){return enabled?<Link href={href} style={actionCard}><strong>{title}</strong><span className="muted">{copy}</span><b>Open →</b></Link>:<article style={{...actionCard,opacity:.55}} aria-disabled="true"><strong>{title}</strong><span className="muted">{copy}</span><b>Not available for this edition</b></article>}
+function Action({title,copy,href,enabled=true}:{title:string;copy:string;href:string;enabled?:boolean}){return enabled?<Link href={href} style={actionCard}><strong>{title}</strong><span className="muted">{copy}</span><b>Open →</b></Link>:<article style={{...actionCard,opacity:.55}}><strong>{title}</strong><span className="muted">{copy}</span><b>Not available for this edition</b></article>}
 
 export default async function Page({searchParams}:{searchParams:Search}){
  const q=await searchParams,orderError=one(q.orderError);
