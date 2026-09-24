@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { isTelecallerDesignation } from "@/lib/telecalling/policy";
 import { createSessionToken, hashSessionToken } from "./crypto";
 import { canAuthenticate } from "./eligibility";
 import { canAccessAccountWorkspace } from "./workspace-policy";
@@ -58,6 +59,12 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     select: { expiresAt: true, sessionVersion: true, mobileSession:{select:{id:true,expiresAt:true,revokedAt:true,sessionVersion:true}}, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, designation:true, isActive: true, sessionVersion: true, branchAccessScope:true, branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{productEdition:true,branches:{where:{isActive:true},select:{id:true}}}} } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user) || session.sessionVersion !== session.user.sessionVersion) return null;
+  if (isTelecallerDesignation(session.user.designation)) {
+    if (!session.user.companyId) return null;
+    const now = new Date();
+    const activeTelecaller = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "telecaller_subscriptions" WHERE "companyId"=${session.user.companyId}::uuid AND status='ACTIVE' AND "startsAt"<=${now} AND "endsAt">${now} LIMIT 1`;
+    if (!activeTelecaller.length) return null;
+  }
   if(session.mobileSession&&(session.mobileSession.revokedAt!==null||session.mobileSession.expiresAt<=new Date()||session.mobileSession.sessionVersion!==session.user.sessionVersion||!session.user.company||!canAccessAccountWorkspace(session.user,session.user.company.productEdition)))return null;
   return {
     id: session.user.id,
