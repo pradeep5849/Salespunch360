@@ -46,6 +46,17 @@ function assertResult(value:string):TelecallingResult{
  return value as TelecallingResult;
 }
 
+export function splitCallbackQueue(callbacks:CallbackQueueItem[],now=new Date()){
+ const indiaNow=new Date(now.toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
+ const endToday=new Date(indiaNow);
+ endToday.setHours(23,59,59,999);
+ const nowMs=now.getTime(),endTodayMs=endToday.getTime();
+ const overdue=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()<nowMs);
+ const today=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&x.nextCallbackAt.getTime()<=endTodayMs);
+ const upcoming=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>endTodayMs);
+ return [["Overdue",overdue],["Today",today],["Upcoming",upcoming]] as const;
+}
+
 export async function listTelecallingLeads(search?:string):Promise<TelecallingQueueLead[]>{
  const actor=await requireSalesWorkspace();
  if(!actor.salesRole||!(isTelecaller(actor)||actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN"||actor.salesRole==="MANAGER"))throw new Error("NOT_AUTHORIZED");
