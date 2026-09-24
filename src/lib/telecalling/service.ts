@@ -19,6 +19,12 @@ export type SalesActionItem={
  trigger:"INTERESTED"|"WANTS_VISIT"|"WANTS_QUOTATION";status:"PENDING"|"ACKNOWLEDGED"|"ACTION_TAKEN";notes:string|null;calledAt:Date;createdAt:Date;
 };
 
+const indiaDayFormatter=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"});
+function indiaDayKey(value:Date){
+ const parts=Object.fromEntries(indiaDayFormatter.formatToParts(value).filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
+ return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 function actorLeadWhere(actor:{id:string;companyId:string;salesRole:string|null;managerType?:string|null;designation?:string|null}){
  if(!actor.salesRole) return {id:"__none__"};
  if(isTelecaller(actor)) return {};
@@ -47,13 +53,10 @@ function assertResult(value:string):TelecallingResult{
 }
 
 export function splitCallbackQueue(callbacks:CallbackQueueItem[],now=new Date()){
- const indiaNow=new Date(now.toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
- const endToday=new Date(indiaNow);
- endToday.setHours(23,59,59,999);
- const nowMs=now.getTime(),endTodayMs=endToday.getTime();
+ const todayKey=indiaDayKey(now),nowMs=now.getTime();
  const overdue=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()<nowMs);
- const today=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&x.nextCallbackAt.getTime()<=endTodayMs);
- const upcoming=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>endTodayMs);
+ const today=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&indiaDayKey(x.nextCallbackAt)===todayKey);
+ const upcoming=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&indiaDayKey(x.nextCallbackAt)!==todayKey);
  return [["Overdue",overdue],["Today",today],["Upcoming",upcoming]] as const;
 }
 
