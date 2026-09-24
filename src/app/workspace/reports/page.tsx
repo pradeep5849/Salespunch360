@@ -1,3 +1,7 @@
-import {WorkspacePageHeader} from "@/components/workspace/workspace-page-header";import Link from "next/link";import { reportActor } from "@/lib/reports/scope";
-const reports=[['Check-in Report','Visits, completion, duration and visit-generated leads.','check-ins'],['Advanced Check-in','First/repeat visits, reference distance and visit outcomes.','check-ins/advanced'],['Attendance Report','Historical work sessions, durations and route totals.','attendance'],['GPS Report','Authorized attendance routes and customer check-in events.','gps'],['Geofence Breach Report','Attendance and customer enforcement audit events.','geofence-breaches'],['Lead Report','Pipeline stages, ownership and lead outcomes.','leads'],['Target Analysis','Check-ins Target / Actual and Leads Won Target / Actual.','targets'],['Expense Report','Daily travel distance, amount and Admin approval status.','expenses']];
-export default async function ReportsPage(){await reportActor();return <main className="reports-content"><WorkspacePageHeader title="Reports" backHref="/workspace" backLabel="Back to Dashboard"/><p className="muted">Secure historical reporting for your current role and team scope.</p><section className="report-hub">{reports.map(([name,copy,path])=><Link href={`/workspace/reports/${path}`} key={path}><strong>{name}</strong><span>{copy}</span><b>Open report →</b></Link>)}</section></main>}
+import { redirect } from "next/navigation";
+import { reportActor } from "@/lib/reports/scope";
+
+export default async function ReportsPage(){
+  await reportActor();
+  redirect("/workspace/reports/check-ins");
+}
