@@ -54,7 +54,7 @@ describe("final UI correction contract",()=>{
   expect(billingActions).toContain('>Renewal</Link>');
   expect(billingActions).toContain('/workspace/billing/renewal');
   expect(accountTeam).toContain('title="Add Account Team"');
-  expect(androidBilling).toContain('Text("Billing & Subscription")');
+  expect(androidBilling).toContain('Text("Billing & Subscription",');
   expect(androidBilling).toContain('page="SUBSCRIPTION"');
   expect(androidBilling).toContain('page="BILLING"');
   expect(androidBilling).toContain('SubscriptionSummaryPage(data)');
