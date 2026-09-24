@@ -10,7 +10,7 @@ import { isTelecaller, SALES_HANDOFF_RESULTS, TELECALLING_RESULTS, type Telecall
 export type LeadCallHistoryItem={
  id:string; leadId:string; callerUserId:string; callerName:string; result:TelecallingResult; notes:string|null;
  calledAt:Date; nextCallbackAt:Date|null; callbackAssigneeUserId:string|null;
- dialStartedAt:Date|null;dialEndedAt:Date|null;dialDurationSeconds:number|null;timingSource:DialTimingSource|null;
+ dialStartedAt?:Date|null;dialEndedAt?:Date|null;dialDurationSeconds?:number|null;timingSource?:DialTimingSource|null;
 };
 export type TelecallingQueueLead={
  id:string; title:string; contactName:string|null; phone:string|null; stage:string; assignedUserId:string; ownerName:string; calls:number;
