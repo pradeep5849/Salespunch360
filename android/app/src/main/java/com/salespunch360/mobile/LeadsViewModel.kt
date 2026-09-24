@@ -15,15 +15,19 @@ data class LeadsState(
     val options: List<DashboardEmployee> = emptyList(),
     val query: String = "",
     val employeeId: String? = null,
+    val callCounts: Map<String, Int> = emptyMap(),
     val detail: LeadSummary? = null,
     val detailFollowUps: List<FollowUpTask> = emptyList(),
+    val detailCallHistory: List<LeadCallHistoryItem> = emptyList(),
     val detailLoading: Boolean = false,
     val busy: Boolean = false,
     val message: String? = null,
 )
 
 class LeadsViewModel(app: Application) : AndroidViewModel(app) {
-    private val api = ApiClient(SecureSession(app))
+    private val session = SecureSession(app)
+    private val api = ApiClient(session)
+    private val telecalling = TelecallingClient(session)
     private val _state = MutableStateFlow(LeadsState())
     val state: StateFlow<LeadsState> = _state
 
@@ -42,13 +46,16 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh(q: String = _state.value.query, employee: String? = _state.value.employeeId) = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, message = null)
         _state.value = try {
+            val leads = api.leads(q, employee)
+            val counts = loadCallCounts()
             _state.value.copy(
                 loading = false,
-                leads = api.leads(q, employee),
+                leads = leads,
                 pending = api.pendingLeads(),
                 options = runCatching { api.leadOptions() }.getOrDefault(emptyList()),
                 query = q,
                 employeeId = employee,
+                callCounts = counts,
             )
         } catch (e: Exception) {
             _state.value.copy(loading = false, message = apiMessage(e, "Leads couldn't be loaded."))
@@ -56,18 +63,25 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun open(id: String) = viewModelScope.launch {
-        _state.value = _state.value.copy(detailLoading = true, detail = null, detailFollowUps = emptyList())
+        _state.value = _state.value.copy(detailLoading = true, detail = null, detailFollowUps = emptyList(), detailCallHistory = emptyList())
         _state.value = try {
             val detail = api.lead(id)
             val followUps = loadLeadFollowUps(id)
-            _state.value.copy(detail = detail, detailFollowUps = followUps, detailLoading = false)
+            val history = telecalling.history(id)
+            _state.value.copy(
+                detail = detail,
+                detailFollowUps = followUps,
+                detailCallHistory = history,
+                callCounts = _state.value.callCounts + (id to history.size),
+                detailLoading = false,
+            )
         } catch (e: Exception) {
             _state.value.copy(detailLoading = false, message = apiMessage(e, "Lead details couldn't be loaded."))
         }
     }
 
     fun close() {
-        _state.value = _state.value.copy(detail = null, detailFollowUps = emptyList(), detailLoading = false, message = null)
+        _state.value = _state.value.copy(detail = null, detailFollowUps = emptyList(), detailCallHistory = emptyList(), detailLoading = false, message = null)
     }
 
     fun transition(lead: LeadSummary, stage: LeadStage, reason: String?) {
@@ -93,6 +107,26 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Follow-up couldn't be added."))
+            }
+        }
+    }
+
+    fun recordCall(lead: LeadSummary, result: String, notes: String?, nextCallbackAt: String?) {
+        if (_state.value.busy) return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(busy = true, message = null)
+            try {
+                val saved = telecalling.recordCall(lead.id, result, notes, nextCallbackAt)
+                val counts = loadCallCounts()
+                val history = if (_state.value.detail?.id == lead.id) telecalling.history(lead.id) else _state.value.detailCallHistory
+                _state.value = _state.value.copy(
+                    busy = false,
+                    callCounts = counts,
+                    detailCallHistory = history,
+                    message = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved.",
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Call result couldn't be saved."))
             }
         }
     }
@@ -123,6 +157,10 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(message = null)
     }
 
+    private suspend fun loadCallCounts(): Map<String, Int> = runCatching {
+        telecalling.queue().associate { it.id to it.calls }
+    }.getOrDefault(emptyMap())
+
     private suspend fun loadLeadFollowUps(leadId: String): List<FollowUpTask> {
         return listOf("TODAY", "OVERDUE", "PENDING", "COMPLETED", "CANCELLED")
             .flatMap { api.followUps(it).tasks }
@@ -142,8 +180,10 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
                     busy = false,
                     leads = api.leads(_state.value.query, _state.value.employeeId),
                     pending = api.pendingLeads(),
+                    callCounts = loadCallCounts(),
                     detail = null,
                     detailFollowUps = emptyList(),
+                    detailCallHistory = emptyList(),
                     message = success,
                 )
             } catch (e: Exception) {
