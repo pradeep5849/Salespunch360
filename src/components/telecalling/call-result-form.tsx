@@ -7,14 +7,14 @@ const RESULTS=[
  ["CALL_BACK","Call Back"],["NOT_INTERESTED","Not Interested"],["INTERESTED","Interested"],["WANTS_VISIT","Wants Visit"],["WANTS_QUOTATION","Wants Quotation"],
 ] as const;
 
-export function CallResultForm({leadId,phone,compact=false,followUpTaskId}:{leadId:string;phone:string|null;compact?:boolean;followUpTaskId?:string}){
+export function CallResultForm({leadId,phone,compact=false,followUpTaskId,showDialer=true}:{leadId:string;phone:string|null;compact?:boolean;followUpTaskId?:string;showDialer?:boolean}){
  const [state,action,pending]=useActionState<TelecallingActionState,FormData>(saveLeadCall,{});
  const [result,setResult]=useState("CONNECTED");
  return <div className={compact?"telecalling-call-form":"telecalling-call-form telecalling-call-form-full"}>
-  <div className="telecalling-actions">
+  {showDialer&&<div className="telecalling-actions">
    {phone?<a href={`tel:${phone}`} className="primary">Call {phone}</a>:<span>No mobile number</span>}
    <small>Save the result after the call. Opening the dialer alone does not count.</small>
-  </div>
+  </div>}
   <form action={action} className="telecalling-result-form">
    <input type="hidden" name="leadId" value={leadId}/>{followUpTaskId&&<input type="hidden" name="followUpTaskId" value={followUpTaskId}/>} 
    <label>Call result<select name="result" value={result} onChange={e=>setResult(e.target.value)}>{RESULTS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
