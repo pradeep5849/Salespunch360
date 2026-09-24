@@ -32,9 +32,9 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
   if(pending!=null)item{Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.secondaryContainer){Text("Ref ${pending.id.take(8).uppercase()} · ₹${pending.totalAmount}",Modifier.padding(10.dp),style=MaterialTheme.typography.bodySmall)}}
   if(data.hasSales)item{CompactSalesSummary(data.sales,data.teamStructure)}
   if(data.hasAccount)item{CompactAccountSummary(data.account)}
-  item{ContentCard("Subscription Actions","Each action opens its own page."){
+  item{ContentCard("Subscription Actions","Each action opens its own full page."){
    Button({page="ADD_SALES"},enabled=data.hasSales,modifier=Modifier.fillMaxWidth()){Text("Add Sales Team")}
-   OutlinedButton({page="ADD_ACCOUNT"},enabled=data.hasAccount,modifier=Modifier.fillMaxWidth()){Text("Add Account Package")}
+   OutlinedButton({page="ADD_ACCOUNT"},enabled=data.hasAccount,modifier=Modifier.fillMaxWidth()){Text("Add Account Team")}
    OutlinedButton({page="RENEWAL"},modifier=Modifier.fillMaxWidth()){Text("Renewal")}
   }}
   item{OutlinedButton({page="HISTORY"},Modifier.fillMaxWidth()){Text("Payment History")}}
@@ -42,12 +42,12 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
 }
 
 @Composable private fun SubscriptionActionPage(data:MobileBillingContext,page:String,back:()->Unit,onQuote:(BillingQuote)->Unit,loadingMore:Boolean,loadMore:()->Unit){
- val title=when(page){"ADD_SALES"->"Add Sales Team";"ADD_ACCOUNT"->"Add Account Package";"RENEWAL"->"Renewal";else->"Payment History"}
+ val title=when(page){"ADD_SALES"->"Add Sales Team";"ADD_ACCOUNT"->"Add Account Team";"RENEWAL"->"Renewal";else->"Payment History"}
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Subscription")};Text(title,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
   when(page){
    "ADD_SALES"->item{if(!data.hasSales)ContentCard("Unavailable","This company edition does not include Sales-team billing.") else if(data.sales?.status!="ACTIVE")ContentCard("Start Sales first","Add Sales Team is for mid-term additions. Use Renewal to start or renew the Sales subscription.") else AddTeamPurchase(data,onQuote)}
-   "ADD_ACCOUNT"->item{if(!data.hasAccount)ContentCard("Unavailable","This company edition does not include Account packages.") else if(data.isPlus){if(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")AccountIncreasePurchase(data,onQuote) else ContentCard("Start Plus first","Mid-term Account package additions require an active Plus subscription.")}else AccountPurchase(data,onQuote)}
+   "ADD_ACCOUNT"->item{if(!data.hasAccount)ContentCard("Unavailable","This company edition does not include Account team billing.") else if(data.isPlus){if(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")AccountIncreasePurchase(data,onQuote) else ContentCard("Start Plus first","Mid-term Account team additions require an active Plus subscription.")}else AccountPurchase(data,onQuote)}
    "RENEWAL"->item{if(data.hasSales)SalesPurchase(data,onQuote) else if(data.hasAccount)AccountPurchase(data,onQuote) else ContentCard("Unavailable","No renewable subscription is available.")}
    else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){o->OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Order ${o.id.take(8).uppercase()}",fontWeight=FontWeight.Bold);StatusChip(o.status)};Text("${periodLabel(o.billingPeriod)} · ${o.currency} ${o.totalAmount}");Text("Created ${o.createdAt.replace('T',' ').take(19)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){if(o.adminSeats>0)StatusChip("Admin ${o.adminSeats}");if(o.managerSeats>0)StatusChip("Manager ${o.managerSeats}");if(o.salesSeats>0)StatusChip("Sales ${o.salesSeats}");if(o.accountPackages>0)StatusChip("Account packages ${o.accountPackages}")};Text("Provider: ${o.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
   }
@@ -81,7 +81,7 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
  if(!data.isPlus||s.status!="ACTIVE"||a.status!="ACTIVE")return
  val period=data.orders.firstOrNull{it.status=="PAID"&&it.provider=="PLUS_COMBINED"}?.billingPeriod?:data.orders.firstOrNull{it.status=="PAID"&&(it.adminSeats+it.managerSeats+it.salesSeats)>0}?.billingPeriod?:"SIX_MONTH"
  val currentPackages=a.packageCount.coerceAtLeast(1);var addPackages by remember{mutableStateOf("0")};var busy by remember{mutableStateOf(false)};val addCount=(addPackages.toIntOrNull()?:0).coerceIn(0,(100-currentPackages).coerceAtLeast(0));val targetPackages=currentPackages+addCount;val managerTarget=if(data.teamStructure==TeamStructure.SALES_ONLY)0 else s.managerLimit
- ContentCard("Add Account Package","Add Account capacity now without renewing Plus. Only added Account packages are prorated to the current expiry."){
+ ContentCard("Add Account Team","Add Account team capacity now without renewing Plus. Only added Account packages are prorated to the current expiry."){
   Text("Current packages: $currentPackages",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text("Current period: ${periodLabel(period)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);a.endsAt?.let{Text("Current expiry: ${it.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
   NumberField("Add Account Packages",addPackages){addPackages=it};Text("New Account package total: $targetPackages",style=MaterialTheme.typography.labelMedium);Text(packageContents(targetPackages),style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text("Sales-team seat limits stay unchanged.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
   Button({busy=true;scope.launch{runCatching{api.billingQuote(BillingQuoteRequest(billingPeriod=period,adminSeats=s.adminLimit,managerSeats=managerTarget,salesSeats=s.salesLimit,telecallerSeats=s.telecallerLimit,accountPackages=targetPackages))}.onSuccess(onQuote);busy=false}},enabled=!busy&&addCount>0,modifier=Modifier.fillMaxWidth()){Text(if(busy)"Calculating…" else "Review Prorated Price")}
