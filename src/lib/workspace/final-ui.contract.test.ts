@@ -8,7 +8,9 @@ const mobileDashboard=readFileSync("src/app/api/v1/mobile/dashboard/route.ts","u
 const attendance=readFileSync("src/app/workspace/attendance/page.tsx","utf8");
 const androidAttendance=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/TeamAttendanceScreen.kt","utf8");
 const androidReports=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/ReportsScreen.kt","utf8");
-const billing=readFileSync("src/app/workspace/billing/page.tsx","utf8");
+const billingHub=readFileSync("src/app/workspace/billing/page.tsx","utf8");
+const subscriptionPage=readFileSync("src/app/workspace/billing/subscription/page.tsx","utf8");
+const billingActions=readFileSync("src/app/workspace/billing/actions/page.tsx","utf8");
 const accountTeam=readFileSync("src/app/workspace/billing/add-account-team/page.tsx","utf8");
 const androidBilling=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/SubscriptionScreen.kt","utf8");
 
@@ -37,21 +39,28 @@ describe("final UI correction contract",()=>{
   expect(androidReports).toContain('if(showMenu&&selected==null)');
   expect(androidReports).not.toContain('expanded=false;vm.load(id)');
  });
- it("uses exactly three dedicated Subscription actions on Web and Android",()=>{
-  expect(billing).toContain('title="Add Sales Team"');
-  expect(billing).toContain('/workspace/billing/add-sales-team');
-  expect(billing).toContain('title="Add Account Team"');
-  expect(billing).toContain('/workspace/billing/add-account-team');
-  expect(billing).toContain('title="Renewal"');
-  expect(billing).toContain('/workspace/billing/renewal');
-  expect(billing).not.toContain('<details');
+ it("uses a two-button Billing & Subscription hub with dedicated Subscription and Billing pages",()=>{
+  expect(billingHub).toContain('/workspace/billing/subscription');
+  expect(billingHub).toContain('>Subscription</Link>');
+  expect(billingHub).toContain('/workspace/billing/actions');
+  expect(billingHub).toContain('>Billing</Link>');
+  expect(billingHub).not.toContain('title="Add Sales Team"');
+  expect(subscriptionPage).toContain('Sales Subscription');
+  expect(subscriptionPage).toContain('Account Subscription');
+  expect(billingActions).toContain('>Add Sales Team</Link>');
+  expect(billingActions).toContain('/workspace/billing/add-sales-team');
+  expect(billingActions).toContain('>Add Account Team</Link>');
+  expect(billingActions).toContain('/workspace/billing/add-account-team');
+  expect(billingActions).toContain('>Renewal</Link>');
+  expect(billingActions).toContain('/workspace/billing/renewal');
   expect(accountTeam).toContain('title="Add Account Team"');
+  expect(androidBilling).toContain('Text("Billing & Subscription")');
+  expect(androidBilling).toContain('page="SUBSCRIPTION"');
+  expect(androidBilling).toContain('page="BILLING"');
+  expect(androidBilling).toContain('SubscriptionSummaryPage(data)');
+  expect(androidBilling).toContain('BillingActionsPage');
   expect(androidBilling).toContain('Text("Add Sales Team")');
   expect(androidBilling).toContain('Text("Add Account Team")');
   expect(androidBilling).toContain('Text("Renewal")');
-  expect(androidBilling).toContain('page="ADD_SALES"');
-  expect(androidBilling).toContain('page="ADD_ACCOUNT"');
-  expect(androidBilling).toContain('page="RENEWAL"');
-  expect(androidBilling).toContain('if(page!=null){SubscriptionActionPage');
  });
 });
