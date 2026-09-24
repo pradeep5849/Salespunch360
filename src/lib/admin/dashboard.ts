@@ -1,4 +1,4 @@
-import type { SubscriptionStatus } from "@prisma/client";
+import { Prisma, type SubscriptionStatus } from "@prisma/client";
 import { requireGlobalSuperAdmin } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
 
@@ -6,16 +6,23 @@ const companyIdentitySelect = { id: true, name: true, productEdition: true, subs
 
 export async function getAdminDashboard() {
   await requireGlobalSuperAdmin();
-  const [groupedStatuses, recentCompanies, pendingOrders, capturedPayments, activeUsers] = await Promise.all([
+  const [groupedStatuses, recentCompanies, pendingOrders, capturedPayments, telecallerBilling, activeUsers] = await Promise.all([
     db.company.groupBy({ by: ["subscriptionStatus"], _count: { _all: true } }),
     db.company.findMany({ select: companyIdentitySelect, orderBy: { createdAt: "desc" }, take: 8 }),
     db.billingOrder.count({where:{status:"PENDING"}}),
     db.paymentTransaction.aggregate({where:{status:"CAPTURED"},_count:{_all:true},_sum:{amount:true}}),
+    db.$queryRaw<{pending:bigint;paid:bigint;revenue:Prisma.Decimal}[]>(Prisma.sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status='PENDING' AND ("expiresAt" IS NULL OR "expiresAt">NOW()))::bigint AS pending,
+        COUNT(*) FILTER (WHERE status='PAID')::bigint AS paid,
+        COALESCE(SUM("totalAmount") FILTER (WHERE status='PAID'),0) AS revenue
+      FROM "telecaller_billing_orders"`),
     db.user.count({where:{isActive:true,companyId:{not:null}}}),
   ]);
   const counts: Record<SubscriptionStatus, number> = { TRIAL: 0, ACTIVE: 0, EXPIRED: 0, SUSPENDED: 0 };
   for (const row of groupedStatuses) counts[row.subscriptionStatus] = row._count._all;
-  return { counts: { total: Object.values(counts).reduce((sum, count) => sum + count, 0), ...counts }, billing:{pendingOrders,capturedPayments:capturedPayments._count._all,capturedRevenue:Number(capturedPayments._sum.amount??0),activeUsers}, recentCompanies };
+  const telecaller=telecallerBilling[0];
+  return { counts: { total: Object.values(counts).reduce((sum, count) => sum + count, 0), ...counts }, billing:{pendingOrders:pendingOrders+Number(telecaller?.pending??0),capturedPayments:capturedPayments._count._all+Number(telecaller?.paid??0),capturedRevenue:Number(capturedPayments._sum.amount??0)+Number(telecaller?.revenue??0),activeUsers}, recentCompanies };
 }
 
 export async function getAdminCompanies() {
