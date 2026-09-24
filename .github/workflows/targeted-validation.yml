@@ -23,7 +23,7 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - name: Billing, entitlement and workflow regression tests
-        run: npx vitest run src/lib/billing/combined-order.test.ts src/lib/billing/current-term.test.ts src/lib/billing/entitlement.test.ts src/lib/billing/seat-reduction.test.ts src/lib/billing/telecaller-surface.contract.test.ts src/lib/account/won-project-handoff.contract.test.ts src/lib/telecalling/lead-telecalling-ui.contract.test.ts
+        run: npx vitest run src/lib/billing/combined-order.test.ts src/lib/billing/current-term.test.ts src/lib/billing/entitlement.test.ts src/lib/billing/seat-reduction.test.ts src/lib/billing/telecaller-surface.contract.test.ts src/lib/account/won-project-handoff.contract.test.ts src/lib/telecalling/lead-telecalling-ui.contract.test.ts src/lib/workspace/final-ui.contract.test.ts
       - run: npm run typecheck
       - run: npm run lint
 
