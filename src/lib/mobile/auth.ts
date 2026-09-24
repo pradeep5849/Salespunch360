@@ -12,7 +12,7 @@ import { isTelecallerDesignation } from "@/lib/telecalling/policy";
 const MOBILE_SALES_ROLES: SalesRole[] = ["PRIMARY_ADMIN", "ADMIN", "MANAGER", "SALES"];
 export const isMobileSalesRole = (role: SalesRole | null): role is SalesRole => role !== null && MOBILE_SALES_ROLES.includes(role);
 const SESSION_DAYS = 30;
-export type MobileAppPrincipal = {id:string;name:string;email:string;companyId:string;role:Role;salesRole:SalesRole|null;accountRole:AccountRole|null;managerType:ManagerType|null;designation:string|null;branchAccessScope?:BranchAccessScope;branchIds?:string[];mobileSessionId?:string;productEdition:ProductEdition;authorizedWorkspaces:WebWorkspace[]};
+export type MobileAppPrincipal = {id:string;name:string;email:string;companyId:string;role:Role;salesRole:SalesRole|null;accountRole:AccountRole|null;managerType:ManagerType|null;designation?:string|null;branchAccessScope?:BranchAccessScope;branchIds?:string[];mobileSessionId?:string;productEdition:ProductEdition;authorizedWorkspaces:WebWorkspace[]};
 export type MobileSalesPrincipal = MobileAppPrincipal & { salesRole: SalesRole };
 export type MobilePrincipal = Pick<MobileSalesPrincipal,"id"|"name"|"email"|"companyId"|"salesRole"|"managerType"|"designation"|"branchAccessScope"|"branchIds"|"mobileSessionId">;
 type Eligibility={isActive:boolean;companyId:string|null;role:Role;salesRole:SalesRole|null;accountRole?:AccountRole|null;salesAccessActive:boolean;accountAccessActive?:boolean;managerType?:ManagerType|null;designation?:string|null};
