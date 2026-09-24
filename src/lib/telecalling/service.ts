@@ -4,11 +4,13 @@ import { db } from "@/lib/db";
 import { requireSalesWorkspace, requireSalesWorkspaceForMutation } from "@/lib/auth/authorization";
 import { visibilityWhere } from "@/lib/leads/policy";
 import { assertActiveTelecallerEntitlement } from "@/lib/billing/telecaller";
+import { normalizeDialTiming, type DialTimingSource } from "./dial-timing";
 import { isTelecaller, SALES_HANDOFF_RESULTS, TELECALLING_RESULTS, type TelecallingResult } from "./policy";
 
 export type LeadCallHistoryItem={
  id:string; leadId:string; callerUserId:string; callerName:string; result:TelecallingResult; notes:string|null;
  calledAt:Date; nextCallbackAt:Date|null; callbackAssigneeUserId:string|null;
+ dialStartedAt?:Date|null;dialEndedAt?:Date|null;dialDurationSeconds?:number|null;timingSource?:DialTimingSource|null;
 };
 export type TelecallingQueueLead={
  id:string; title:string; contactName:string|null; phone:string|null; stage:string; assignedUserId:string; ownerName:string; calls:number;
@@ -84,21 +86,22 @@ export async function leadCallCount(leadId:string){
 export async function getLeadCallHistory(leadId:string):Promise<LeadCallHistoryItem[]>{
  const {actor}=await requireLeadAccess(leadId);
  return db.$queryRaw<LeadCallHistoryItem[]>(Prisma.sql`
-  SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId"
+  SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId",c."dialStartedAt",c."dialEndedAt",c."dialDurationSeconds",c."timingSource"
   FROM "lead_calls" c JOIN "users" u ON u.id=c."callerUserId"
   WHERE c."companyId"=${actor.companyId}::uuid AND c."leadId"=${leadId}::uuid ORDER BY c."calledAt" DESC LIMIT 100`);
 }
 
-export async function recordLeadCall(input:{leadId:string;result:string;notes?:string|null;nextCallbackAt?:Date|null}){
+export async function recordLeadCall(input:{leadId:string;result:string;notes?:string|null;nextCallbackAt?:Date|null;dialStartedAt?:unknown;dialEndedAt?:unknown;timingSource?:unknown}){
  const {actor,lead}=await requireLeadAccess(input.leadId,true);
  const result=assertResult(input.result);
  const notes=input.notes?.trim()?.slice(0,2000)||null;
  const nextCallbackAt=result==="CALL_BACK"?input.nextCallbackAt??null:null;
  if(result==="CALL_BACK"&&!nextCallbackAt)throw new Error("CALLBACK_DATE_REQUIRED");
  if(nextCallbackAt&&nextCallbackAt.getTime()<=Date.now())throw new Error("CALLBACK_DATE_MUST_BE_FUTURE");
+ const timing=normalizeDialTiming(input);
  const id=randomUUID();
  await db.$transaction(async tx=>{
-  await tx.$executeRaw(Prisma.sql`INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","createdAt","updatedAt") VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt?actor.id:null}::uuid,NOW(),NOW())`);
+  await tx.$executeRaw(Prisma.sql`INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","dialStartedAt","dialEndedAt","dialDurationSeconds","timingSource","createdAt","updatedAt") VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt?actor.id:null}::uuid,${timing.dialStartedAt},${timing.dialEndedAt},${timing.dialDurationSeconds},${timing.timingSource},NOW(),NOW())`);
   if(SALES_HANDOFF_RESULTS.has(result)&&lead.assignedUserId!==actor.id){
    const actionId=randomUUID();
    await tx.$executeRaw(Prisma.sql`INSERT INTO "lead_sales_actions" (id,"companyId","leadId","leadCallId","assignedUserId","createdByUserId",trigger,status,"createdAt","updatedAt") VALUES (${actionId}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${id}::uuid,${lead.assignedUserId}::uuid,${actor.id}::uuid,${result},'PENDING',NOW(),NOW())`);
@@ -114,7 +117,7 @@ export async function listCallbackQueue():Promise<CallbackQueueItem[]>{
  const ownOnly=isTelecaller(actor);
  const manager=actor.salesRole==="MANAGER";
  const rows=await db.$queryRaw<CallbackQueueItem[]>(Prisma.sql`
- SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId",l.title AS "leadTitle",l.phone,owner.name AS "ownerName"
+ SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId",c."dialStartedAt",c."dialEndedAt",c."dialDurationSeconds",c."timingSource",l.title AS "leadTitle",l.phone,owner.name AS "ownerName"
  FROM "lead_calls" c JOIN "leads" l ON l.id=c."leadId" JOIN "users" u ON u.id=c."callerUserId" JOIN "users" owner ON owner.id=l."assignedUserId"
  WHERE c."companyId"=${actor.companyId}::uuid AND c.result='CALL_BACK' AND c."nextCallbackAt" IS NOT NULL
  ${ownOnly?Prisma.sql`AND c."callbackAssigneeUserId"=${actor.id}::uuid`:Prisma.empty}

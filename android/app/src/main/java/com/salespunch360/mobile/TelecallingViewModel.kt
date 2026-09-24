@@ -49,12 +49,12 @@ class TelecallingViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun closeHistory() { _state.value = _state.value.copy(historyLead = null, history = emptyList()) }
 
-    fun recordCall(lead: TelecallingLead, result: String, notes: String?, nextCallbackAt: String?,followUpTaskId:String?=null) {
+    fun recordCall(lead: TelecallingLead, result: String, notes: String?, nextCallbackAt: String?,followUpTaskId:String?=null,dialStartedAt:String?=null,dialEndedAt:String?=null,timingSource:String?=null) {
         if (_state.value.busy) return
         viewModelScope.launch {
             _state.value = _state.value.copy(busy = true, message = null)
             try {
-                val saved = api.recordCall(lead.id, result, notes, nextCallbackAt,followUpTaskId)
+                val saved = api.recordCall(lead.id, result, notes, nextCallbackAt,followUpTaskId,dialStartedAt,dialEndedAt,timingSource)
                 val queue = if(_state.value.searched&&_state.value.query.isNotBlank())api.queue(_state.value.query) else emptyList()
                 val callbacks = api.callbacks()
                 val history = if (_state.value.historyLead?.id == lead.id) api.history(lead.id) else _state.value.history
