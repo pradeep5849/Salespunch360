@@ -42,23 +42,24 @@ export async function listTelecallerEmployees(): Promise<TelecallerEmployee[]> {
 
 export async function createTelecallerEmployee(raw: unknown) {
   const actor = await requirePermissionForMutation("SALES_USER_ADMIN");
-  if (!actor.companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
+  const companyId = actor.companyId;
+  if (!companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
   const data = createTelecallerSchema.parse(raw);
-  await assertTelecallerSeatAvailable(actor.companyId);
+  await assertTelecallerSeatAvailable(companyId);
   const passwordHash = await hashPassword(data.password);
   try {
     return await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${actor.companyId}::uuid FOR UPDATE`;
-      const company = await tx.company.findUnique({ where: { id: actor.companyId }, select: { productEdition: true } });
+      await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
+      const company = await tx.company.findUnique({ where: { id: companyId }, select: { productEdition: true } });
       if (!company || (company.productEdition !== "SALESPUNCH360" && company.productEdition !== "SALESPUNCH360_PLUS")) throw new Error("SALES_NOT_ENTITLED");
-      const paid = await tx.$queryRaw<{ seats: number }[]>(Prisma.sql`SELECT seats FROM "telecaller_subscriptions" WHERE "companyId"=${actor.companyId}::uuid AND status='ACTIVE' AND "startsAt"<=NOW() AND "endsAt">NOW() ORDER BY "endsAt" DESC LIMIT 1 FOR UPDATE`);
+      const paid = await tx.$queryRaw<{ seats: number }[]>(Prisma.sql`SELECT seats FROM "telecaller_subscriptions" WHERE "companyId"=${companyId}::uuid AND status='ACTIVE' AND "startsAt"<=NOW() AND "endsAt">NOW() ORDER BY "endsAt" DESC LIMIT 1 FOR UPDATE`);
       if (!paid[0]) throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");
-      const used = await tx.$queryRaw<{ count: bigint }[]>(Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "users" WHERE "companyId"=${actor.companyId}::uuid AND "isActive"=TRUE AND "salesRole"='SALES'::"SalesRole" AND upper(replace(coalesce(designation,''),' ',''))='TELECALLER'`);
+      const used = await tx.$queryRaw<{ count: bigint }[]>(Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "users" WHERE "companyId"=${companyId}::uuid AND "isActive"=TRUE AND "salesRole"='SALES'::"SalesRole" AND upper(replace(coalesce(designation,''),' ',''))='TELECALLER'`);
       if (Number(used[0]?.count ?? 0) >= paid[0].seats) throw new Error("TELECALLER_SEAT_LIMIT");
-      if (data.phone) await assertSalesEmployeePhoneUnique(tx, actor.companyId, data.phone);
+      if (data.phone) await assertSalesEmployeePhoneUnique(tx, companyId, data.phone);
       return tx.user.create({
         data: {
-          companyId: actor.companyId,
+          companyId,
           role: "SALES",
           salesRole: "SALES",
           accountRole: null,
@@ -89,11 +90,12 @@ export async function createTelecallerEmployee(raw: unknown) {
 
 export async function setTelecallerActive(userId: string, active: boolean) {
   const actor = await requirePermissionForMutation("SALES_USER_ADMIN");
-  if (!actor.companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
-  if (active) await assertTelecallerSeatAvailable(actor.companyId, userId);
+  const companyId = actor.companyId;
+  if (!companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
+  if (active) await assertTelecallerSeatAvailable(companyId, userId);
   return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${actor.companyId}::uuid FOR UPDATE`;
-    const telecaller = await tx.user.findFirst({ where: { id: userId, companyId: actor.companyId, salesRole: "SALES", designation: { equals: TELECALLER_DESIGNATION, mode: "insensitive" } }, select: { id: true } });
+    await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
+    const telecaller = await tx.user.findFirst({ where: { id: userId, companyId, salesRole: "SALES", designation: { equals: TELECALLER_DESIGNATION, mode: "insensitive" } }, select: { id: true } });
     if (!telecaller) throw new Error("NOT_FOUND");
     const updated = await tx.user.update({ where: { id: userId }, data: { isActive: active, salesAccessActive: false, sessionVersion: { increment: 1 } }, select: { id: true, isActive: true } });
     if (!active) {
