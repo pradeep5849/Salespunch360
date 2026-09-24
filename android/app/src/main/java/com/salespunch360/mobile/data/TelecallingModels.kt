@@ -25,6 +25,10 @@ data class LeadCallHistoryItem(
     val calledAt: String,
     val nextCallbackAt: String? = null,
     val callbackAssigneeUserId: String? = null,
+    val dialStartedAt: String? = null,
+    val dialEndedAt: String? = null,
+    val dialDurationSeconds: Int? = null,
+    val timingSource: String? = null,
 )
 
 @Serializable
@@ -38,6 +42,10 @@ data class CallbackQueueItem(
     val calledAt: String,
     val nextCallbackAt: String? = null,
     val callbackAssigneeUserId: String? = null,
+    val dialStartedAt: String? = null,
+    val dialEndedAt: String? = null,
+    val dialDurationSeconds: Int? = null,
+    val timingSource: String? = null,
     val leadTitle: String,
     val phone: String? = null,
     val ownerName: String,
@@ -71,6 +79,9 @@ data class RecordLeadCallRequest(
     val notes: String? = null,
     val nextCallbackAt: String? = null,
     val followUpTaskId: String? = null,
+    val dialStartedAt: String? = null,
+    val dialEndedAt: String? = null,
+    val timingSource: String? = null,
 )
 
 @Serializable
