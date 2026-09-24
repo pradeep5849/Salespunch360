@@ -9,6 +9,7 @@ import {listLeadFollowUpTasks} from "@/lib/follow-up-tasks/lead-list";
 import {ensureWonLeadProjectForActor} from "@/lib/leads/won-project";
 import {getLeadCallHistory,leadCallCount} from "@/lib/telecalling/service";
 import {CallResultForm} from "@/components/telecalling/call-result-form";
+import {LeadUpdatedNotice} from "./updated-notice";
 
 const callLabel=(s:string)=>s.toLowerCase().split("_").map(x=>x[0]?.toUpperCase()+x.slice(1)).join(" ");
 export default async function LeadDetail({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{updated?:string}>}){
@@ -20,7 +21,7 @@ export default async function LeadDetail({params,searchParams}:{params:Promise<{
  return <main className="leads-shell"><section className="leads-content">
   <WorkspacePageHeader title={lead.title} backHref="/workspace/leads" backLabel="Back to Leads"/>
   <div className="lead-detail-heading"><span className="lead-stage-badge">{lead.stage}</span><span>Check-ins {lead.visits.length}</span><span>Calls {calls}</span></div>
-  {q.updated==="1"&&<p className="lead-update-toast" role="status">Lead updated</p>}
+  {q.updated==="1"&&<LeadUpdatedNotice href={`/workspace/leads/${lead.id}`}/>} 
   {project&&<p className="form-success" role="status">Project handover ready: {project.projectNumber}</p>}
   <div className="lead-detail-actions"><Link className="lead-action-edit" href={`/workspace/leads/${lead.id}/edit`}>Edit Lead</Link>{canManage&&<a className="lead-action-delete" href="#delete-lead">Delete Lead</a>}</div>
   <div className="lead-detail"><p><b>Assigned:</b> {lead.assignedUser.name}</p><p><b>Customer/prospect:</b> {lead.customer?.name||lead.companyName||"Not specified"}</p><p><b>Source:</b> {lead.source}{lead.sourceVisitId?` · Visit ${lead.sourceVisitId}`:""}</p><p><b>Value:</b> {lead.estimatedValue?`${lead.currencyCode} ${lead.estimatedValue.toFixed(2)}`:"Not specified"}</p><p><b>Next follow-up:</b> {lead.followUpAt?formatBusinessDate(lead.followUpAt):"None"}</p>{lead.lostReason&&<p><b>Lost reason:</b> {lead.lostReason}</p>}<p><b>Created:</b> {lead.createdAt.toLocaleString()} · <b>Updated:</b> {lead.updatedAt.toLocaleString()}</p></div>
