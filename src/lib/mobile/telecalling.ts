@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { assertActiveTelecallerEntitlement } from "@/lib/billing/telecaller";
+import { normalizeDialTiming, type DialTimingSource } from "@/lib/telecalling/dial-timing";
 import { isTelecaller, SALES_HANDOFF_RESULTS, TELECALLING_RESULTS, type TelecallingResult } from "@/lib/telecalling/policy";
 import type { MobilePrincipal } from "./auth";
 
@@ -28,6 +29,10 @@ export type MobileLeadCallHistoryItem = {
   calledAt: Date;
   nextCallbackAt: Date | null;
   callbackAssigneeUserId: string | null;
+  dialStartedAt: Date | null;
+  dialEndedAt: Date | null;
+  dialDurationSeconds: number | null;
+  timingSource: DialTimingSource | null;
 };
 
 export type MobileCallbackQueueItem = MobileLeadCallHistoryItem & {
@@ -120,7 +125,7 @@ export async function mobileTelecallingQueue(actor: MobilePrincipal, search?: st
 export async function mobileLeadCallHistory(actor: MobilePrincipal, leadId: string): Promise<MobileLeadCallHistoryItem[]> {
   const lead = await accessibleLead(actor, leadId);
   return db.$queryRaw<MobileLeadCallHistoryItem[]>(Prisma.sql`
-    SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId"
+    SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId",c."dialStartedAt",c."dialEndedAt",c."dialDurationSeconds",c."timingSource"
     FROM "lead_calls" c JOIN "users" u ON u.id=c."callerUserId"
     WHERE c."companyId"=${actor.companyId}::uuid AND c."leadId"=${lead.id}::uuid
     ORDER BY c."calledAt" DESC LIMIT 100`);
@@ -141,12 +146,13 @@ export async function mobileRecordLeadCall(actor: MobilePrincipal, raw: unknown)
   if (result === "CALL_BACK" && !nextCallbackAt) throw new Error("CALLBACK_DATE_REQUIRED");
   if (nextCallbackAt && Number.isNaN(nextCallbackAt.getTime())) throw new Error("INVALID_DATE");
   if (nextCallbackAt && nextCallbackAt.getTime() <= Date.now()) throw new Error("CALLBACK_DATE_MUST_BE_FUTURE");
+  const timing = normalizeDialTiming(input);
   const id = randomUUID();
   const handoffCreated = SALES_HANDOFF_RESULTS.has(result) && lead.assignedUserId !== actor.id;
   await db.$transaction(async tx => {
     await tx.$executeRaw(Prisma.sql`
-      INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","createdAt","updatedAt")
-      VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt ? actor.id : null}::uuid,NOW(),NOW())`);
+      INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","dialStartedAt","dialEndedAt","dialDurationSeconds","timingSource","createdAt","updatedAt")
+      VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt ? actor.id : null}::uuid,${timing.dialStartedAt},${timing.dialEndedAt},${timing.dialDurationSeconds},${timing.timingSource},NOW(),NOW())`);
     if (handoffCreated) {
       const actionId = randomUUID();
       await tx.$executeRaw(Prisma.sql`
@@ -162,7 +168,7 @@ export async function mobileCallbackQueue(actor: MobilePrincipal): Promise<Mobil
   const ownCallbacks = isTelecaller(actor) || actor.salesRole === "SALES";
   const manager = actor.salesRole === "MANAGER";
   return db.$queryRaw<MobileCallbackQueueItem[]>(Prisma.sql`
-    SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId",l.title AS "leadTitle",l.phone,owner.name AS "ownerName"
+    SELECT c.id,c."leadId",c."callerUserId",u.name AS "callerName",c.result,c.notes,c."calledAt",c."nextCallbackAt",c."callbackAssigneeUserId",c."dialStartedAt",c."dialEndedAt",c."dialDurationSeconds",c."timingSource",l.title AS "leadTitle",l.phone,owner.name AS "ownerName"
     FROM "lead_calls" c
     JOIN "leads" l ON l.id=c."leadId"
     JOIN "users" u ON u.id=c."callerUserId"
