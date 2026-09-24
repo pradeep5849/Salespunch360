@@ -54,13 +54,6 @@ export function CallResultForm({leadId,phone,compact=false,followUpTaskId,showDi
   };
  },[finishDialSession]);
 
- useEffect(()=>{
-  if(!state.success)return;
-  setDialSession(null);
-  dialStartedMs.current=null;
-  dialPageHidden.current=false;
- },[state.success]);
-
  return <div className={compact?"telecalling-call-form":"telecalling-call-form telecalling-call-form-full"}>
   {showDialer&&<div className="telecalling-actions">
    {phone?<a href={`tel:${phone}`} className="primary" onClick={startDialSession}>Call {phone}</a>:<span>No mobile number</span>}
