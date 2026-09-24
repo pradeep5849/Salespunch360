@@ -16,17 +16,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Duration
+import java.time.Instant
 
 @Composable
 fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onCheckIn:(LeadSummary)->Unit={},onPendingVisitDetails:(PendingLeadVisit)->Unit={},vm:LeadsViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value
  val context=LocalContext.current
+ val lifecycleOwner=LocalLifecycleOwner.current
  var selectedStage by remember{mutableStateOf<LeadStage?>(null)}
  var pendingView by remember{mutableStateOf(false)}
  var stageMenu by remember{mutableStateOf(false)}
@@ -37,7 +43,27 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
  var phoneVisit by remember{mutableStateOf<PendingLeadVisit?>(null)}
  var editLead by remember{mutableStateOf<LeadSummary?>(null)}
  var callLead by remember{mutableStateOf<LeadSummary?>(null)}
- fun dial(lead:LeadSummary){val phone=lead.phone?.trim().orEmpty();if(phone.isBlank())return;callLead=lead;runCatching{context.startActivity(Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",phone,null)))}}
+ var dialStartedAt by remember{mutableStateOf<String?>(null)}
+ var dialEndedAt by remember{mutableStateOf<String?>(null)}
+ var dialLeftApp by remember{mutableStateOf(false)}
+ fun clearCall(){callLead=null;dialStartedAt=null;dialEndedAt=null;dialLeftApp=false}
+ fun dial(lead:LeadSummary){
+  val phone=lead.phone?.trim().orEmpty();if(phone.isBlank())return
+  callLead=lead;dialStartedAt=Instant.now().toString();dialEndedAt=null;dialLeftApp=false
+  val launched=runCatching{context.startActivity(Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",phone,null)))}.isSuccess
+  if(!launched)clearCall()
+ }
+ DisposableEffect(lifecycleOwner){
+  val observer=LifecycleEventObserver{_,event->
+   when(event){
+    Lifecycle.Event.ON_PAUSE,Lifecycle.Event.ON_STOP->if(dialStartedAt!=null)dialLeftApp=true
+    Lifecycle.Event.ON_RESUME->if(dialStartedAt!=null&&dialLeftApp&&dialEndedAt==null)dialEndedAt=Instant.now().toString()
+    else->Unit
+   }
+  }
+  lifecycleOwner.lifecycle.addObserver(observer)
+  onDispose{lifecycleOwner.lifecycle.removeObserver(observer)}
+ }
  LaunchedEffect(initialLeadId){initialLeadId?.let{vm.open(it);onInitialLeadConsumed()}}
  if(state.detailLoading){LoadingScreen("Loading lead details…");return}
  state.detail?.let{lead->
@@ -68,7 +94,11 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
  followLead?.let{lead->FollowUpDialog(lead,state.telecallers,state.busy,{followLead=null}){date,notes,type,assignedId->vm.followUp(lead,date,notes,type,assignedId);followLead=null}}
  transitionLead?.let{lead->TransitionDialog(lead,state.busy,{transitionLead=null}){target,reason->vm.transition(lead,target,reason);transitionLead=null}}
  phoneVisit?.let{visit->PendingPhoneDialog(visit,state.busy,{phoneVisit=null}){phone->vm.addPendingPhone(visit,phone);phoneVisit=null}}
- callLead?.let{lead->CallResultDialog(lead.title,state.busy,{callLead=null}){result,notes,callbackAt->callLead=null;vm.recordCall(lead,result,notes,callbackAt)}}
+ callLead?.let{lead->
+  CallResultDialog(leadTitle=lead.title,busy=state.busy,dismiss={clearCall()},dialSeconds=leadDialDurationSeconds(dialStartedAt,dialEndedAt)){result,notes,callbackAt->
+   val started=dialStartedAt;val ended=dialEndedAt;clearCall();vm.recordCall(lead,result,notes,callbackAt,started,ended,if(started!=null&&ended!=null)"ANDROID_RESUME" else null)
+  }
+ }
 }
 
 @Composable
@@ -102,3 +132,4 @@ private fun LeadDetails(lead:LeadSummary,followUps:List<FollowUpTask>,callHistor
 private fun stageLabel(stage:LeadStage)=when(stage){LeadStage.NEW->"Lead";LeadStage.QUALIFIED->"Qualified";LeadStage.PROPOSAL->"Prospecting";LeadStage.NEGOTIATION->"Quote Given";LeadStage.WON->"Won";LeadStage.LOST->"Lost"}
 private fun money(value:String)=runCatching{BigDecimal(value).setScale(2,RoundingMode.HALF_UP).toPlainString()}.getOrDefault(value)
 private fun friendlyLeadDateTime(value:String)=runCatching{java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))}.getOrElse{value}
+private fun leadDialDurationSeconds(start:String?,end:String?):Int?{if(start.isNullOrBlank()||end.isNullOrBlank())return null;return runCatching{Duration.between(Instant.parse(start),Instant.parse(end)).seconds.coerceIn(0,86400).toInt()}.getOrNull()}
