@@ -1,25 +1,17 @@
 import Link from 'next/link';
 import {WorkspacePageHeader} from '@/components/workspace/workspace-page-header';
-import {ACCOUNT_PACKAGE_ORDER_PROVIDER} from '@/lib/billing/account-package';
-import {PLUS_ORDER_PROVIDER} from '@/lib/billing/combined-order';
-import {dateText,loadBillingPageData,orderErrors} from './billing-page-data';
+import {loadBillingPageData,orderErrors} from './billing-page-data';
 
 type Search=Promise<Record<string,string|string[]|undefined>>;
 const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v;
-const summaryStyle={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(118px,1fr))',gap:8} as const;
-const tileStyle={padding:'10px 12px',border:'1px solid var(--line)',borderRadius:10,display:'grid',gap:3,minHeight:62} as const;
-const actionGrid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12} as const;
-const actionCard={padding:'16px',border:'1px solid var(--line)',borderRadius:14,display:'grid',gap:6,textDecoration:'none',color:'inherit',background:'var(--card)'} as const;
-const Tile=({value,label}:{value:string;label:string})=><article style={tileStyle}><strong>{value}</strong><span style={{fontSize:12,color:'var(--muted)'}}>{label}</span></article>;
-function Action({title,copy,href,enabled=true}:{title:string;copy:string;href:string;enabled?:boolean}){return enabled?<Link href={href} style={actionCard}><strong>{title}</strong><span className="muted">{copy}</span><b>Open →</b></Link>:<article style={{...actionCard,opacity:.55}}><strong>{title}</strong><span className="muted">{copy}</span><b>Not available for this edition</b></article>}
+const hubGrid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:14} as const;
+const hubButton={display:'grid',placeItems:'center',minHeight:92,padding:'18px',borderRadius:14,background:'#2563eb',color:'#fff',fontWeight:800,fontSize:18,textDecoration:'none',textAlign:'center' as const} as const;
 
 export default async function Page({searchParams}:{searchParams:Search}){
  const q=await searchParams,orderError=one(q.orderError);
- const {r,e,telecaller,managersEnabled,backHref,accountCurrent,isPlus,salesStatus,accountStatus}=await loadBillingPageData();
- return <main className="billing-content"><WorkspacePageHeader title="Billing & Subscription" backHref={backHref}/>{orderError&&<section className="billing-card"><p className="form-error">{orderErrors[orderError]??orderErrors.ORDER_CREATE_FAILED}</p></section>}
- {r.hasSales&&e&&<section className="billing-card"><h2>Sales Subscription</h2><div style={summaryStyle}><Tile value={salesStatus} label="Status"/><Tile value={dateText(e.subscription?.endsAt??r.company?.trialEndsAt)} label="Common renewal / expiry"/><Tile value={`${e.adminUsage} / ${e.adminLimit}`} label="Additional Admin"/>{managersEnabled&&<Tile value={`${e.managerUsage} / ${e.managerLimit}`} label="Manager"/>}<Tile value={`${e.salesUsage} / ${e.salesLimit}`} label="Sales"/>{telecaller&&<Tile value={`${telecaller.used} / ${telecaller.limit}`} label="Telecaller"/>}</div><p className="muted">Sales Admin, Manager, Sales and Telecaller seats share one Sales subscription expiry.</p></section>}
- {r.hasAccount&&<section className="billing-card"><h2>Account Subscription</h2><div style={summaryStyle}><Tile value={accountStatus} label="Status"/><Tile value={dateText(accountCurrent?.endsAt??(accountStatus==='TRIAL'?r.company?.trialEndsAt:null))} label="Valid until / renewal"/><Tile value={`${r.account.packageCount}`} label="Account packages"/><Tile value={`${r.account.usage.ACCOUNT_ADMIN} / ${r.account.limits.ACCOUNT_ADMIN}`} label="Account Admin"/><Tile value={`${r.account.usage.ACCOUNTANT} / ${r.account.limits.ACCOUNTANT}`} label="Accountant"/><Tile value={`${r.account.usage.PROJECT_MANAGER} / ${r.account.limits.PROJECT_MANAGER}`} label="Project Manager"/><Tile value={`${r.account.usage.DATA_ENTRY} / ${r.account.limits.DATA_ENTRY}`} label="Data Entry"/></div></section>}
- <section className="billing-card"><h2>Subscription Actions</h2><div style={actionGrid}><Action title="Add Sales Team" copy="Add Admin, Manager, Sales or Telecaller seats without renewing the term." href="/workspace/billing/add-sales-team" enabled={Boolean(r.hasSales)}/><Action title="Add Account Team" copy="Increase Account team capacity without mixing it with Sales-team changes." href="/workspace/billing/add-account-team" enabled={Boolean(r.hasAccount)}/><Action title="Renewal" copy={isPlus?'Renew Sales-team seats and Account packages together.':'Renew the active subscription for a new term.'} href="/workspace/billing/renewal"/></div></section>
- <section className="billing-card"><div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}><h2>Recent Payments</h2><Link href="/workspace/billing/history">View payment history →</Link></div>{r.orders.length===0&&<p className="muted">No orders yet.</p>}{r.orders.slice(0,5).map(o=><article className="history-row" key={o.id}><div><strong>{o.provider===ACCOUNT_PACKAGE_ORDER_PROVIDER?`${o.accountPackages||o.adminSeats} Account package${(o.accountPackages||o.adminSeats)===1?'':'s'} · ${o.billingPeriod}`:o.provider===PLUS_ORDER_PROVIDER?`${o.billingPeriod} · ${o.adminSeats} Admin / ${o.managerSeats} Manager / ${o.salesSeats} Sales + ${o.accountPackages} Account package${o.accountPackages===1?'':'s'}`:`${o.billingPeriod} · ${o.adminSeats} Admin / ${o.managerSeats} Manager / ${o.salesSeats} Sales team`}</strong><span>{o.createdAt.toLocaleString('en-IN')} · Ref {o.id.slice(0,8)}</span></div><b>{o.currency} {o.totalAmount.toFixed(2)} · {o.status}</b></article>)}</section>
+ const {backHref}=await loadBillingPageData();
+ return <main className="billing-content"><WorkspacePageHeader title="Billing & Subscription" backHref={backHref}/>
+  {orderError&&<section className="billing-card"><p className="form-error">{orderErrors[orderError]??orderErrors.ORDER_CREATE_FAILED}</p></section>}
+  <section className="billing-card"><div style={hubGrid}><Link href="/workspace/billing/subscription" style={hubButton}>Subscription</Link><Link href="/workspace/billing/actions" style={hubButton}>Billing</Link></div></section>
  </main>;
 }

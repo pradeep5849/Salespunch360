@@ -25,26 +25,40 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
 @Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit,loadingMore:Boolean,loadMore:()->Unit){
  var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(null)}
  if(checkout!=null){CheckoutCard(checkout!!){checkout=null;reload()};return}
- if(page!=null){SubscriptionActionPage(data,page!!,{page=null},{checkout=it},loadingMore,loadMore);return}
- val pending=data.orders.firstOrNull{it.status=="PENDING"}
- LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
-  item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);pending?.let{StatusChip("Payment Pending")}}}
-  if(pending!=null)item{Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.secondaryContainer){Text("Ref ${pending.id.take(8).uppercase()} · ₹${pending.totalAmount}",Modifier.padding(10.dp),style=MaterialTheme.typography.bodySmall)}}
+ when(page){
+  "SUBSCRIPTION"->{SubscriptionSummaryPage(data){page=null};return}
+  "BILLING"->{BillingActionsPage({page=null}){page=it};return}
+  null->Unit
+  else->{SubscriptionActionPage(data,page!!,{page="BILLING"},{checkout=it},loadingMore,loadMore);return}
+ }
+ LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+  item{Text("Billing & Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
+  item{Button({page="SUBSCRIPTION"},modifier=Modifier.fillMaxWidth()){Text("Subscription")}}
+  item{Button({page="BILLING"},modifier=Modifier.fillMaxWidth()){Text("Billing")}}
+ }
+}
+
+@Composable private fun SubscriptionSummaryPage(data:MobileBillingContext,back:()->Unit){
+ LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+  item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Billing & Subscription")};Text("Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
   if(data.hasSales)item{CompactSalesSummary(data.sales,data.teamStructure)}
   if(data.hasAccount)item{CompactAccountSummary(data.account)}
-  item{ContentCard("Subscription Actions","Each action opens its own full page."){
-   Button({page="ADD_SALES"},enabled=data.hasSales,modifier=Modifier.fillMaxWidth()){Text("Add Sales Team")}
-   OutlinedButton({page="ADD_ACCOUNT"},enabled=data.hasAccount,modifier=Modifier.fillMaxWidth()){Text("Add Account Team")}
-   OutlinedButton({page="RENEWAL"},modifier=Modifier.fillMaxWidth()){Text("Renewal")}
-  }}
-  item{OutlinedButton({page="HISTORY"},Modifier.fillMaxWidth()){Text("Payment History")}}
+ }
+}
+
+@Composable private fun BillingActionsPage(back:()->Unit,open:(String)->Unit){
+ LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+  item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Billing & Subscription")};Text("Billing",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
+  item{Button({open("ADD_SALES")},modifier=Modifier.fillMaxWidth()){Text("Add Sales Team")}}
+  item{Button({open("ADD_ACCOUNT")},modifier=Modifier.fillMaxWidth()){Text("Add Account Team")}}
+  item{Button({open("RENEWAL")},modifier=Modifier.fillMaxWidth()){Text("Renewal")}}
  }
 }
 
 @Composable private fun SubscriptionActionPage(data:MobileBillingContext,page:String,back:()->Unit,onQuote:(BillingQuote)->Unit,loadingMore:Boolean,loadMore:()->Unit){
  val title=when(page){"ADD_SALES"->"Add Sales Team";"ADD_ACCOUNT"->"Add Account Team";"RENEWAL"->"Renewal";else->"Payment History"}
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-  item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Subscription")};Text(title,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
+  item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Billing")};Text(title,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
   when(page){
    "ADD_SALES"->item{if(!data.hasSales)ContentCard("Unavailable","This company edition does not include Sales-team billing.") else if(data.sales?.status!="ACTIVE")ContentCard("Start Sales first","Add Sales Team is for mid-term additions. Use Renewal to start or renew the Sales subscription.") else AddTeamPurchase(data,onQuote)}
    "ADD_ACCOUNT"->item{if(!data.hasAccount)ContentCard("Unavailable","This company edition does not include Account team billing.") else if(data.isPlus){if(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")AccountIncreasePurchase(data,onQuote) else ContentCard("Start Plus first","Mid-term Account team additions require an active Plus subscription.")}else AccountPurchase(data,onQuote)}
