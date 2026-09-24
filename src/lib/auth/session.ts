@@ -23,7 +23,7 @@ export type AuthenticatedUser = {
   salesAccessActive: boolean;
   accountAccessActive: boolean;
   companyId: string | null;
-  designation: string | null;
+  designation?: string | null;
   branchAccessScope?: BranchAccessScope;
   branchIds?: string[];
 };
