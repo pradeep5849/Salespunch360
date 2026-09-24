@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const billingPage = readFileSync("src/app/workspace/billing/page.tsx", "utf8");
+const addSalesTeamPage = readFileSync("src/app/workspace/billing/add-sales-team/page.tsx", "utf8");
+const renewalPage = readFileSync("src/app/workspace/billing/renewal/page.tsx", "utf8");
 const calculator = readFileSync("src/app/workspace/billing/billing-calculator.tsx", "utf8");
 const telecallerPage = readFileSync("src/app/workspace/billing/telecaller/page.tsx", "utf8");
 const pricing = readFileSync("src/lib/billing/sales-pricing.ts", "utf8");
@@ -12,11 +14,15 @@ const adminOrders = readFileSync("src/app/admin/billing/orders/page.tsx", "utf8"
 const android = readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/SubscriptionScreen.kt", "utf8");
 
 describe("Unified Sales-team subscription surface", () => {
-  it("keeps Telecaller inside Add Team and Renewal instead of a third customer flow", () => {
+  it("keeps Telecaller inside Add Sales Team and Renewal instead of a third customer flow", () => {
     expect(billingPage).toContain('label="Telecaller"');
-    expect(billingPage).toContain('<summary>Add Team</summary>');
-    expect(billingPage).toContain("e.paidActive?'Renewal'");
+    expect(billingPage).toContain('href="/workspace/billing/add-sales-team"');
+    expect(billingPage).toContain('href="/workspace/billing/renewal"');
     expect(billingPage).not.toContain('href="/workspace/billing/telecaller"');
+    expect(addSalesTeamPage).toContain("AddTeamCalculator");
+    expect(addSalesTeamPage).toContain("telecallerLimit");
+    expect(renewalPage).toContain("BillingCalculator");
+    expect(renewalPage).toContain("telecallerUsage");
     expect(calculator).toContain("Add Telecaller Seats");
     expect(calculator).toContain('name="telecallerSeats"');
     expect(telecallerPage).toContain('redirect("/workspace/billing#sales-add-team")');
@@ -38,8 +44,10 @@ describe("Unified Sales-team subscription surface", () => {
     expect(adminOrders).toContain("Payment History");
   });
 
-  it("matches unified Add Team and Renewal on Android", () => {
-    expect(android).toContain('Text("Add Team")');
+  it("matches unified dedicated Add Sales Team and Renewal pages on Android", () => {
+    expect(android).toContain('Text("Add Sales Team")');
+    expect(android).toContain('page="ADD_SALES"');
+    expect(android).toContain('page="RENEWAL"');
     expect(android).toContain('SeatPill("Telecaller"');
     expect(android).toContain("telecallerSeats=telecallerTarget");
     expect(android).toContain("telecallerSubtotal");
