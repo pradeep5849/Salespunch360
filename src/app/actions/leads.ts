@@ -24,19 +24,21 @@ const fields = (f: FormData) => ({
 
 export async function saveLead(_: LeadActionState, f: FormData): Promise<LeadActionState> {
   try {
+    const leadId=String(f.get("leadId")||"");
     if (f.get("visitId")) {
       const all = fields(f);
       const { source, customerId, ...safe } = all;
       void source;
       void customerId;
       await createLeadFromVisit({ ...safe, visitId: f.get("visitId") });
-    } else if (f.get("leadId")) {
-      await editLead({ ...fields(f), leadId: f.get("leadId"), version: f.get("version") } as never);
+    } else if (leadId) {
+      await editLead({ ...fields(f), leadId, version: f.get("version") } as never);
     } else {
       await createLead(fields(f) as never);
     }
     revalidatePath("/workspace/leads");
-    return { success: "Lead saved." };
+    if(leadId)revalidatePath(`/workspace/leads/${leadId}`);
+    return { success: leadId?"Lead updated":"Lead saved." };
   } catch (error) {
     return {
       error: error instanceof LeadError && error.code === "ACTIVE_FOLLOW_UP"
