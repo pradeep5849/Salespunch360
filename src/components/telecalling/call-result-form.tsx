@@ -7,7 +7,7 @@ const RESULTS=[
  ["CALL_BACK","Call Back"],["NOT_INTERESTED","Not Interested"],["INTERESTED","Interested"],["WANTS_VISIT","Wants Visit"],["WANTS_QUOTATION","Wants Quotation"],
 ] as const;
 
-type DialSession={dialStartedAt:string;dialEndedAt:string;dialDurationSeconds:number};
+export type DialSession={dialStartedAt:string;dialEndedAt:string;dialDurationSeconds:number};
 
 function formatDuration(seconds:number){
  const minutes=Math.floor(seconds/60);
@@ -15,7 +15,7 @@ function formatDuration(seconds:number){
  return minutes?`${minutes}m ${remainder}s`:`${remainder}s`;
 }
 
-export function CallResultForm({leadId,phone,compact=false,followUpTaskId,showDialer=true}:{leadId:string;phone:string|null;compact?:boolean;followUpTaskId?:string;showDialer?:boolean}){
+export function CallResultForm({leadId,phone,compact=false,followUpTaskId,showDialer=true,capturedDialSession}:{leadId:string;phone:string|null;compact?:boolean;followUpTaskId?:string;showDialer?:boolean;capturedDialSession?:DialSession|null}){
  const [state,action,pending]=useActionState<TelecallingActionState,FormData>(saveLeadCall,{});
  const [result,setResult]=useState("CONNECTED");
  const [dialSession,setDialSession]=useState<DialSession|null>(null);
@@ -54,14 +54,17 @@ export function CallResultForm({leadId,phone,compact=false,followUpTaskId,showDi
   };
  },[finishDialSession]);
 
+ const effectiveDialSession=capturedDialSession??dialSession;
+
  return <div className={compact?"telecalling-call-form":"telecalling-call-form telecalling-call-form-full"}>
   {showDialer&&<div className="telecalling-actions">
    {phone?<a href={`tel:${phone}`} className="primary" onClick={startDialSession}>Call {phone}</a>:<span>No mobile number</span>}
-   <small>{dialSession?`Dial session captured: ${formatDuration(dialSession.dialDurationSeconds)}. Save the call result below.`:"Save the result after the call. The PWA records dial-session time when you return from the phone app."}</small>
+   <small>{effectiveDialSession?`Dial session captured: ${formatDuration(effectiveDialSession.dialDurationSeconds)}. Save the call result below.`:"Save the result after the call. The PWA records dial-session time when you return from the phone app."}</small>
   </div>}
+  {!showDialer&&effectiveDialSession?<small>Dial session captured: {formatDuration(effectiveDialSession.dialDurationSeconds)}.</small>:null}
   <form action={action} className="telecalling-result-form">
    <input type="hidden" name="leadId" value={leadId}/>{followUpTaskId&&<input type="hidden" name="followUpTaskId" value={followUpTaskId}/>} 
-   {dialSession?<><input type="hidden" name="dialStartedAt" value={dialSession.dialStartedAt}/><input type="hidden" name="dialEndedAt" value={dialSession.dialEndedAt}/><input type="hidden" name="timingSource" value="PWA_VISIBILITY"/></>:null}
+   {effectiveDialSession?<><input type="hidden" name="dialStartedAt" value={effectiveDialSession.dialStartedAt}/><input type="hidden" name="dialEndedAt" value={effectiveDialSession.dialEndedAt}/><input type="hidden" name="timingSource" value="PWA_VISIBILITY"/></>:null}
    <label>Call result<select name="result" value={result} onChange={e=>setResult(e.target.value)}>{RESULTS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
    {result==="CALL_BACK"?<label>Next callback<input required type="datetime-local" name="nextCallbackAt"/></label>:null}
    <label>Notes<textarea name="notes" rows={2} maxLength={2000} placeholder="What did the customer say?"/></label>

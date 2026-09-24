@@ -78,12 +78,28 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun recordCall(lead: LeadSummary, result: String, notes: String?, nextCallbackAt: String?) {
+    fun recordCall(
+        lead: LeadSummary,
+        result: String,
+        notes: String?,
+        nextCallbackAt: String?,
+        dialStartedAt: String? = null,
+        dialEndedAt: String? = null,
+        timingSource: String? = null,
+    ) {
         if (_state.value.busy) return
         viewModelScope.launch {
             _state.value = _state.value.copy(busy = true, message = null)
             try {
-                val saved = telecalling.recordCall(lead.id, result, notes, nextCallbackAt)
+                val saved = telecalling.recordCall(
+                    lead.id,
+                    result,
+                    notes,
+                    nextCallbackAt,
+                    dialStartedAt = dialStartedAt,
+                    dialEndedAt = dialEndedAt,
+                    timingSource = timingSource,
+                )
                 val counts = loadCallCounts();val history = if (_state.value.detail?.id == lead.id) telecalling.history(lead.id) else _state.value.detailCallHistory
                 _state.value = _state.value.copy(busy = false,callCounts = counts,detailCallHistory = history,message = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved.")
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Call result couldn't be saved.")) }
