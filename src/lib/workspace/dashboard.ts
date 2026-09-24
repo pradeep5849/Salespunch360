@@ -15,28 +15,30 @@ export function dashboardEmployeeWhere(actor:DashboardActor){
 }
 export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:string}){
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};const branches=await operationalBranchContext(actor);
- const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true},orderBy:{name:"asc"}});
- const allowed=new Set(employees.map(e=>e.id));
- const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowed.has(requestedCheck)?requestedCheck:undefined;
- const requestedLive=raw.liveEmployee,liveUserId=!isSales(actor)&&requestedLive&&allowed.has(requestedLive)?requestedLive:undefined;
+ const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true,salesRole:true,managerType:true,designation:true},orderBy:{name:"asc"}});
+ const checkInEmployees=employees.filter(e=>e.salesRole==="SALES"||(e.salesRole==="MANAGER"&&e.managerType==="FIELD_MANAGER"));
+ const allowedCheckIn=new Set(checkInEmployees.map(e=>e.id)),allowedLive=new Set(employees.map(e=>e.id));
+ const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowedCheckIn.has(requestedCheck)?requestedCheck:undefined;
+ const requestedLive=raw.liveEmployee,liveUserId=!isSales(actor)&&requestedLive&&allowedLive.has(requestedLive)?requestedLive:undefined;
  const indiaTodayText=indiaDateText(),indiaToday=parseIndiaBusinessDate(indiaTodayText),indiaTomorrow=new Date(indiaToday.getTime()+86400000);
  const [indiaYear,indiaMonth]=indiaTodayText.split("-");const indiaMonthStart=parseIndiaBusinessDate(`${indiaYear}-${indiaMonth}-01`);
  const fieldManager=isManager(actor)&&actor.managerType!=="MANAGER_ONLY";
- const employeeIds=employees.map(e=>e.id);
- const teamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...employeeIds]:employeeIds):employeeIds;
- const presentIds=isSales(actor)?[actor.id]:employeeIds;
+ const employeeIds=employees.map(e=>e.id),fieldEmployeeIds=checkInEmployees.map(e=>e.id);
+ const leadTeamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...employeeIds]:employeeIds):employeeIds;
+ const visitTeamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...fieldEmployeeIds]:fieldEmployeeIds):fieldEmployeeIds;
+ const presentIds=isSales(actor)?[actor.id]:fieldEmployeeIds;
  const [company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks]=await Promise.all([
   db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{name:true,logoObjectKey:true,updatedAt:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,subscriptionStatus:true,trialEndsAt:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?null:db.attendance.findFirst({where:{companyId:actor.companyId,branchId:branches.branchId,userId:actor.id,endedAt:null},include:{_count:{select:{locationPoints:true}}}}),
-  db.customerVisit.findMany({where:{companyId:actor.companyId,branchId:branches.branchId,userId:checkUserId?checkUserId:{in:teamIds},checkedOutAt:{not:null}},orderBy:[{checkedOutAt:"desc"},{id:"desc"}],take:8,select:{id:true,contactName:true,photo:{select:{id:true}},checkedInAt:true,checkedOutAt:true,checkInLatitude:true,checkInLongitude:true,checkInAddress:true,checkoutSentiment:true,checkoutRemarks:true,visitNotes:true,user:{select:{name:true}},customer:{select:{name:true}}}}),
+  db.customerVisit.findMany({where:{companyId:actor.companyId,branchId:branches.branchId,userId:checkUserId?checkUserId:{in:visitTeamIds},checkedOutAt:{not:null}},orderBy:[{checkedOutAt:"desc"},{id:"desc"}],take:8,select:{id:true,contactName:true,photo:{select:{id:true}},checkedInAt:true,checkedOutAt:true,checkInLatitude:true,checkInLongitude:true,checkInAddress:true,checkoutSentiment:true,checkoutRemarks:true,visitNotes:true,user:{select:{name:true}},customer:{select:{name:true}}}}),
   db.user.count({where:{companyId:actor.companyId,id:{in:presentIds},isActive:true,attendances:{some:{companyId:actor.companyId,branchId:branches.branchId,startedAt:{gte:indiaToday,lt:indiaTomorrow}}}}}),
-  db.customerVisit.count({where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:teamIds},checkedInAt:{gte:indiaToday,lt:indiaTomorrow}}}),
-  db.lead.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:{in:teamIds},createdAt:{gte:indiaToday,lt:indiaTomorrow}}}),
-  db.customerVisit.count({where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:teamIds},checkedInAt:{gte:indiaMonthStart,lt:indiaTomorrow}}}),
-  db.lead.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:{in:teamIds},createdAt:{gte:indiaMonthStart,lt:indiaTomorrow}}}),
+  db.customerVisit.count({where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:visitTeamIds},checkedInAt:{gte:indiaToday,lt:indiaTomorrow}}}),
+  db.lead.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:{in:leadTeamIds},createdAt:{gte:indiaToday,lt:indiaTomorrow}}}),
+  db.customerVisit.count({where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:visitTeamIds},checkedInAt:{gte:indiaMonthStart,lt:indiaTomorrow}}}),
+  db.lead.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:{in:leadTeamIds},createdAt:{gte:indiaMonthStart,lt:indiaTomorrow}}}),
   liveUserId?db.locationPoint.findFirst({where:{companyId:actor.companyId,branchId:branches.branchId,userId:liveUserId},orderBy:[{capturedAt:"desc"},{sequenceNumber:"desc"}],select:{latitude:true,longitude:true,capturedAt:true,user:{select:{name:true}}}}):null,
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?0:db.followUpTask.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING",dueDate:{gte:indiaToday,lt:indiaTomorrow}}}),
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?0:db.followUpTask.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING",dueDate:{lt:indiaToday}}})
  ]);
- return{actor,company,employees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks};
+ return{actor,company,employees,checkInEmployees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks};
 }
