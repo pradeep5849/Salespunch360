@@ -12,7 +12,15 @@ export async function saveLeadCall(_:TelecallingActionState,form:FormData):Promi
   const followUpTaskId=String(form.get("followUpTaskId")||"");
   const result=String(form.get("result")||"");
   const rawNext=String(form.get("nextCallbackAt")||"").trim();
-  await recordLeadCall({leadId,result,notes:String(form.get("notes")||""),nextCallbackAt:rawNext?new Date(rawNext):null});
+  await recordLeadCall({
+   leadId,
+   result,
+   notes:String(form.get("notes")||""),
+   nextCallbackAt:rawNext?new Date(rawNext):null,
+   dialStartedAt:String(form.get("dialStartedAt")||""),
+   dialEndedAt:String(form.get("dialEndedAt")||""),
+   timingSource:String(form.get("timingSource")||""),
+  });
   if(followUpTaskId){const actor=await requirePermissionForMutation("SALES_TELECALLING");if(actor.companyId)await completeAssignedTelecallerCallForActor({id:actor.id,companyId:actor.companyId},followUpTaskId,leadId);}
   revalidatePath("/workspace/telecalling");
   revalidatePath("/workspace/follow-up-tasks");
