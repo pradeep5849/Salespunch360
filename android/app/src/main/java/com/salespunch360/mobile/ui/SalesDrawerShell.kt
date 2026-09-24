@@ -222,6 +222,7 @@ private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVis
                 }
             }
         } else {
+            item { SalesHandoffCard() }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SalesDrawerMetric("Check-ins This Month", d?.monthVisitCount, Modifier.weight(1f))
