@@ -1,4 +1,4 @@
-import type { SubscriptionStatus } from "@prisma/client";
+import { Prisma, type SubscriptionStatus } from "@prisma/client";
 import { requireGlobalSuperAdmin } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
 
@@ -6,16 +6,18 @@ const companyIdentitySelect = { id: true, name: true, productEdition: true, subs
 
 export async function getAdminDashboard() {
   await requireGlobalSuperAdmin();
-  const [groupedStatuses, recentCompanies, pendingOrders, capturedPayments, activeUsers] = await Promise.all([
+  const [groupedStatuses, recentCompanies, pendingOrders, capturedPayments, activeUsers, legacyTelecaller] = await Promise.all([
     db.company.groupBy({ by: ["subscriptionStatus"], _count: { _all: true } }),
     db.company.findMany({ select: companyIdentitySelect, orderBy: { createdAt: "desc" }, take: 8 }),
     db.billingOrder.count({where:{status:"PENDING"}}),
     db.paymentTransaction.aggregate({where:{status:"CAPTURED"},_count:{_all:true},_sum:{amount:true}}),
     db.user.count({where:{isActive:true,companyId:{not:null}}}),
+    db.$queryRaw<{pending:bigint;captured:bigint;revenue:Prisma.Decimal|null}[]>(Prisma.sql`SELECT COUNT(*) FILTER (WHERE t.status='PENDING')::bigint AS pending,COUNT(*) FILTER (WHERE t.status='PAID')::bigint AS captured,COALESCE(SUM(t."totalAmount") FILTER (WHERE t.status='PAID'),0) AS revenue FROM "telecaller_billing_orders" t WHERE NOT EXISTS (SELECT 1 FROM "billing_orders" b WHERE b.id=t.id)`),
   ]);
+  const legacy=legacyTelecaller[0]??{pending:0n,captured:0n,revenue:new Prisma.Decimal(0)};
   const counts: Record<SubscriptionStatus, number> = { TRIAL: 0, ACTIVE: 0, EXPIRED: 0, SUSPENDED: 0 };
   for (const row of groupedStatuses) counts[row.subscriptionStatus] = row._count._all;
-  return { counts: { total: Object.values(counts).reduce((sum, count) => sum + count, 0), ...counts }, billing:{pendingOrders,capturedPayments:capturedPayments._count._all,capturedRevenue:Number(capturedPayments._sum.amount??0),activeUsers}, recentCompanies };
+  return { counts: { total: Object.values(counts).reduce((sum, count) => sum + count, 0), ...counts }, billing:{pendingOrders:pendingOrders+Number(legacy.pending),capturedPayments:capturedPayments._count._all+Number(legacy.captured),capturedRevenue:Number(capturedPayments._sum.amount??0)+Number(legacy.revenue??0),activeUsers}, recentCompanies };
 }
 
 export async function getAdminCompanies() {
