@@ -34,14 +34,14 @@ export function AddTeamCalculator({managersEnabled,adminLimit,managerLimit,sales
  </form>;
 }
 
-export function AccountIncreaseCalculator({managersEnabled,adminLimit,managerLimit,salesLimit,period,currentPackages,accountPrice,endsAt}:{managersEnabled:boolean;adminLimit:number;managerLimit:number;salesLimit:number;period:Period;currentPackages:number;accountPrice:number;endsAt?:Date|null}){
+export function AccountIncreaseCalculator({managersEnabled,adminLimit,managerLimit,salesLimit,telecallerLimit=0,period,currentPackages,accountPrice,endsAt}:{managersEnabled:boolean;adminLimit:number;managerLimit:number;salesLimit:number;telecallerLimit?:number;period:Period;currentPackages:number;accountPrice:number;endsAt?:Date|null}){
  const[addPackages,setAddPackages]=useState(0),safeCurrent=Math.max(1,currentPackages),targetPackages=safeCurrent+addPackages,managerTarget=managersEnabled?managerLimit:0;
  return <form action="/workspace/billing/checkout" method="GET" className="billing-form billing-calculator">
-  <input type="hidden" name="purchaseMode" value="ADD_ACCOUNT"/><input type="hidden" name="billingPeriod" value={period}/><input type="hidden" name="adminSeats" value={adminLimit}/><input type="hidden" name="managerSeats" value={managerTarget}/><input type="hidden" name="salesSeats" value={salesLimit}/><input type="hidden" name="accountPackages" value={targetPackages}/>
+  <input type="hidden" name="purchaseMode" value="ADD_ACCOUNT"/><input type="hidden" name="billingPeriod" value={period}/><input type="hidden" name="adminSeats" value={adminLimit}/><input type="hidden" name="managerSeats" value={managerTarget}/><input type="hidden" name="salesSeats" value={salesLimit}/><input type="hidden" name="telecallerSeats" value={telecallerLimit}/><input type="hidden" name="accountPackages" value={targetPackages}/>
   <p className="muted">Increase Account capacity during the current Plus term without renewing. Only the newly added Account packages are charged for the remaining time and the existing expiry date stays unchanged.</p>
   <div className="billing-total"><span>Current Account packages</span><strong>{safeCurrent}</strong></div><div className="billing-total"><span>Current billing period</span><strong>{labels[period]}</strong></div>{endsAt&&<div className="billing-total"><span>Current expiry</span><strong>{endsAt.toLocaleDateString('en-IN')}</strong></div>}
   <label>Add Account Packages<input type="number" min="0" max={Math.max(0,100-safeCurrent)} value={addPackages} onChange={e=>setAddPackages(Math.min(Math.max(0,100-safeCurrent),clamp(Number(e.target.value))))}/><span>{money(accountPrice)} full-period rate per package · new total {targetPackages}</span></label>
-  <p className="muted">{packageContents(targetPackages)}. Sales Admin, Manager and Sales seat limits stay unchanged.</p>
+  <p className="muted">{packageContents(targetPackages)}. Sales Admin, Manager, Sales and Telecaller seat limits stay unchanged.</p>
   {addPackages<1&&<p className="muted">Enter at least one additional Account package to continue.</p>}<button disabled={addPackages<1}>Review Prorated Price</button>
  </form>;
 }
