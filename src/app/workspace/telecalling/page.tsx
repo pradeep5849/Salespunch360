@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {requirePermission} from "@/lib/auth/authorization";
-import {listCallbackQueue,listSalesActions,listTelecallingLeads} from "@/lib/telecalling/service";
+import {listCallbackQueue,listSalesActions,listTelecallingLeads,splitCallbackQueue} from "@/lib/telecalling/service";
 import {CallResultForm} from "@/components/telecalling/call-result-form";
 import {changeSalesAction} from "@/app/actions/telecalling";
 
@@ -11,9 +11,7 @@ export default async function TelecallingPage({searchParams}:{searchParams:Promi
  const actor=await requirePermission("SALES_TELECALLING");
  const {q}=await searchParams;
  const [leads,callbacks,actions]=await Promise.all([listTelecallingLeads(q),listCallbackQueue(),listSalesActions()]);
- const now=Date.now(),endToday=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));endToday.setHours(23,59,59,999);
- const overdue=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()<now),today=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=now&&x.nextCallbackAt.getTime()<=endToday.getTime()),upcoming=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>endToday.getTime());
- const queues=[["Overdue",overdue],["Today",today],["Upcoming",upcoming]] as const;
+ const queues=splitCallbackQueue(callbacks);
  return <main className="page-shell"><div className="page-heading"><div><p className="eyebrow">Sales</p><h1>Telecalling</h1><p>Call company leads, record real call outcomes, schedule callbacks, and hand interested customers back to Sales.</p></div></div>
   <section className="card"><h2>Callback queue</h2><div className="grid gap-4 md:grid-cols-3">{queues.map(([title,items])=><div key={title}><h3>{title} · {items.length}</h3>{items.length?items.slice(0,20).map(item=><article className="rounded-lg border p-3" key={item.id}><strong>{item.leadTitle}</strong><div className="text-sm">{item.phone||"No phone"} · Owner: {item.ownerName}</div><div className="text-xs text-slate-500">{fmt(item.nextCallbackAt)}</div>{item.phone?<a className="text-sm font-semibold" href={`tel:${item.phone}`}>Call</a>:null}</article>):<p className="text-sm text-slate-500">No calls.</p>}</div>)}</div></section>
   {actions.length?<section className="card"><h2>Sales handoffs</h2><p>Interested, Wants Visit and Wants Quotation are routed to the existing lead owner.</p><div className="space-y-2">{actions.map(a=><article className="rounded-lg border p-3" key={a.id}><div className="flex flex-wrap items-center justify-between gap-2"><div><strong>{a.leadTitle}</strong> · {label(a.trigger)}<div className="text-sm">Caller: {a.callerName} · Sales: {a.ownerName} · {fmt(a.calledAt)}</div>{a.notes?<p className="text-sm">{a.notes}</p>:null}</div><div className="flex gap-2"><Link href={`/workspace/leads/${a.leadId}`} className="rounded border px-3 py-2 text-sm">Open Lead</Link>{a.status==="PENDING"?<form action={changeSalesAction}><input type="hidden" name="actionId" value={a.id}/><input type="hidden" name="status" value="ACKNOWLEDGED"/><button className="rounded border px-3 py-2 text-sm">Acknowledge</button></form>:null}{a.status!=="ACTION_TAKEN"?<form action={changeSalesAction}><input type="hidden" name="actionId" value={a.id}/><input type="hidden" name="status" value="ACTION_TAKEN"/><button className="rounded bg-slate-900 px-3 py-2 text-sm text-white">Action Taken</button></form>:<span className="text-sm font-semibold text-emerald-700">Action Taken</span>}</div></div></article>)}</div></section>:null}
