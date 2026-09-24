@@ -41,6 +41,8 @@ data class CallbackQueueItem(
     val leadTitle: String,
     val phone: String? = null,
     val ownerName: String,
+    val assigneeName: String? = null,
+    val followUpTaskId: String? = null,
 )
 
 @Serializable
@@ -68,6 +70,7 @@ data class RecordLeadCallRequest(
     val result: String,
     val notes: String? = null,
     val nextCallbackAt: String? = null,
+    val followUpTaskId: String? = null,
 )
 
 @Serializable
@@ -83,6 +86,9 @@ data class UpdateSalesActionRequest(
     val actionId: String,
     val status: String,
 )
+
+@Serializable
+data class TelecallerOption(val id:String,val name:String)
 
 val TELECALLING_RESULT_OPTIONS = listOf(
     "CONNECTED" to "Connected",
