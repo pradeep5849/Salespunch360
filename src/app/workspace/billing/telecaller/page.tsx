@@ -1,22 +1,5 @@
-import Link from "next/link";
-import { createTelecallerOrderAction } from "@/app/actions/telecaller-billing";
-import { getTelecallerBillingOverview } from "@/lib/billing/telecaller";
+import {redirect} from "next/navigation";
 
-const money=(value:{toString():string}|number)=>`₹${Number(value.toString()).toLocaleString("en-IN",{minimumFractionDigits:0,maximumFractionDigits:2})}`;
-const fmt=(d:Date)=>d.toLocaleDateString("en-IN",{dateStyle:"medium",timeZone:"Asia/Kolkata"});
-const errorText=(code?:string)=>code?({INVALID_SEAT_COUNT:"Enter between 1 and 100 seats.",INVALID_BILLING_PERIOD:"Choose 6 months or 1 year."}[code]??"Could not create the Telecaller order."):null;
-
-export default async function TelecallerBillingPage({searchParams}:{searchParams:Promise<{error?:string;order?:string}>}){
-  const overview=await getTelecallerBillingOverview();
-  const params=await searchParams;
-  const error=errorText(params.error);
-  const highlighted=params.order?overview.orders.find(order=>order.id===params.order):null;
-  const active=overview.subscription;
-  return <main className="billing-shell"><section className="billing-content"><div className="billing-title-row"><div><p className="eyebrow">SalesPunch360</p><h1>Telecaller Subscription</h1><p>Separate paid seats for Telecalling. These seats never consume normal Sales seats and have no trial.</p></div><Link href="/workspace/billing">Back to Subscription</Link></div>
-    {error?<p className="form-error" role="alert">{error}</p>:null}
-    <section className="billing-card"><h2>Current Telecaller seats</h2><div className="employee-stats employee-stats-four"><div><strong>{overview.used} / {overview.limit}</strong><span>Active Telecallers</span></div><div><strong>{overview.available}</strong><span>Available seats</span></div><div><strong>{active?active.billingPeriod==="SIX_MONTH"?"6 months":"1 year":"—"}</strong><span>Plan</span></div><div><strong>{active?fmt(active.endsAt):"—"}</strong><span>Valid until</span></div></div></section>
-    <section className="billing-card"><h2>{active?"Add Telecaller seats":"Purchase Telecaller seats"}</h2><p>{active?`Additional seats are prorated only for the remaining current term and end on ${fmt(active.endsAt)}.`:"Choose 6 months or 1 year. Monthly and trial plans are not available for Telecaller seats."}</p><form action={createTelecallerOrderAction} className="employee-form"><label>Seats<input type="number" name="addedSeats" min="1" max="100" defaultValue="1" required/></label>{active?<><input type="hidden" name="billingPeriod" value={active.billingPeriod}/><p><strong>Current term:</strong> {active.billingPeriod==="SIX_MONTH"?"6 months":"1 year"}</p></>:<label>Billing period<select name="billingPeriod" defaultValue="YEARLY"><option value="SIX_MONTH">6 months — ₹600 / seat</option><option value="YEARLY">1 year — ₹1,000 / seat</option></select></label>}<button>Generate Manual Payment Order</button></form><p className="muted">Pricing: ₹600 per seat for 6 months or ₹1,000 per seat for 1 year. GST/tax remains ₹0 until the main billing tax configuration is enabled.</p></section>
-    {highlighted?<section className="billing-card"><h2>Order created</h2><p><strong>Order:</strong> {highlighted.id}</p><p><strong>Seats:</strong> +{highlighted.addedSeats} → {highlighted.targetSeats} total</p><p><strong>Amount:</strong> {money(highlighted.totalAmount)}</p><p><strong>Status:</strong> {highlighted.status}</p><p>This is a manual-payment order. After payment is verified, the platform Super Admin confirms the transaction reference and the seats activate immediately.</p></section>:null}
-    <section className="billing-card"><h2>Recent Telecaller orders</h2>{overview.orders.length?<div className="employee-list">{overview.orders.map(order=><article className="employee-card" key={order.id}><div className="employee-identity"><h3>{order.status} · {money(order.totalAmount)}</h3><p>{order.billingPeriod==="SIX_MONTH"?"6 months":"1 year"} · +{order.addedSeats} seats · target {order.targetSeats}</p><p>Created {fmt(order.createdAt)} · co-term end {fmt(order.coTermEndsAt)}</p>{order.paymentReference?<p>Reference: {order.paymentReference}</p>:null}</div></article>)}</div>:<p>No Telecaller orders yet.</p>}</section>
-  </section></main>;
+export default function TelecallerBillingPage(){
+  redirect("/workspace/billing#sales-add-team");
 }
