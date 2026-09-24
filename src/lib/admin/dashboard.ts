@@ -14,7 +14,7 @@ export async function getAdminDashboard() {
     db.user.count({where:{isActive:true,companyId:{not:null}}}),
     db.$queryRaw<{pending:bigint;captured:bigint;revenue:Prisma.Decimal|null}[]>(Prisma.sql`SELECT COUNT(*) FILTER (WHERE t.status='PENDING')::bigint AS pending,COUNT(*) FILTER (WHERE t.status='PAID')::bigint AS captured,COALESCE(SUM(t."totalAmount") FILTER (WHERE t.status='PAID'),0) AS revenue FROM "telecaller_billing_orders" t WHERE NOT EXISTS (SELECT 1 FROM "billing_orders" b WHERE b.id=t.id)`),
   ]);
-  const legacy=legacyTelecaller[0]??{pending:0n,captured:0n,revenue:new Prisma.Decimal(0)};
+  const legacy=legacyTelecaller[0]??{pending:BigInt(0),captured:BigInt(0),revenue:new Prisma.Decimal(0)};
   const counts: Record<SubscriptionStatus, number> = { TRIAL: 0, ACTIVE: 0, EXPIRED: 0, SUSPENDED: 0 };
   for (const row of groupedStatuses) counts[row.subscriptionStatus] = row._count._all;
   return { counts: { total: Object.values(counts).reduce((sum, count) => sum + count, 0), ...counts }, billing:{pendingOrders:pendingOrders+Number(legacy.pending),capturedPayments:capturedPayments._count._all+Number(legacy.captured),capturedRevenue:Number(capturedPayments._sum.amount??0)+Number(legacy.revenue??0),activeUsers}, recentCompanies };
