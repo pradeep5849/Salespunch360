@@ -11,7 +11,7 @@ export async function GET(request:Request){
   const isAdmin=user.salesRole==='PRIMARY_ADMIN'||user.salesRole==='ADMIN';
   const fieldManager=user.salesRole==='MANAGER'&&user.managerType!=='MANAGER_ONLY';
   const [employees,company]=await Promise.all([
-   db.user.findMany({where:isAdmin?{companyId:user.companyId,salesRole:{in:['MANAGER','SALES']},salesAccessActive:true,isActive:true}:{companyId:user.companyId,salesRole:'SALES',salesAccessActive:true,isActive:true,managerId:user.id},select:{id:true,name:true,salesRole:true,managerType:true},orderBy:{name:'asc'}}),
+   db.user.findMany({where:isAdmin?{companyId:user.companyId,isActive:true,salesAccessActive:true,OR:[{salesRole:'SALES'},{salesRole:'MANAGER',managerType:'FIELD_MANAGER'}]}:{companyId:user.companyId,salesRole:'SALES',salesAccessActive:true,isActive:true,managerId:user.id},select:{id:true,name:true,salesRole:true,managerType:true},orderBy:{name:'asc'}}),
    db.company.findUnique({where:{id:user.companyId},select:{gpsTrackingEnabled:true}})
   ]);
   const params=new URL(request.url).searchParams,allowed=new Set(employees.map(employee=>employee.id));
