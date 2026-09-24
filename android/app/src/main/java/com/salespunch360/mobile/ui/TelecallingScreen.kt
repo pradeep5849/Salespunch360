@@ -14,6 +14,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.TelecallingViewModel
@@ -25,18 +28,49 @@ import java.time.format.DateTimeFormatter
 fun TelecallingScreen(vm: TelecallingViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var pendingCall by remember { mutableStateOf<TelecallingLead?>(null) }
     var pendingTaskId by remember { mutableStateOf<String?>(null) }
+    var dialStartedAt by remember { mutableStateOf<String?>(null) }
+    var dialEndedAt by remember { mutableStateOf<String?>(null) }
+    var dialLeftApp by remember { mutableStateOf(false) }
+
+    fun clearPendingCall() {
+        pendingCall = null
+        pendingTaskId = null
+        dialStartedAt = null
+        dialEndedAt = null
+        dialLeftApp = false
+    }
 
     fun dial(lead: TelecallingLead,taskId:String?=null) {
         val phone = lead.phone?.trim().orEmpty();if (phone.isBlank()) return
         pendingCall = lead;pendingTaskId=taskId
-        runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null))) }
+        dialStartedAt=Instant.now().toString();dialEndedAt=null;dialLeftApp=false
+        val launched=runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null))) }.isSuccess
+        if(!launched)clearPendingCall()
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when(event) {
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> if(dialStartedAt!=null) dialLeftApp=true
+                Lifecycle.Event.ON_RESUME -> if(dialStartedAt!=null&&dialLeftApp&&dialEndedAt==null) dialEndedAt=Instant.now().toString()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     state.historyLead?.let { lead ->
         TelecallingHistoryScreen(lead,state.history,state.busy,state.message,vm::clearMessage,vm::closeHistory,{ dial(lead) })
-        pendingCall?.let { target -> CallResultDialog(target.title,state.busy,{pendingCall=null;pendingTaskId=null}){result,notes,callbackAt->val task=pendingTaskId;pendingCall=null;pendingTaskId=null;vm.recordCall(target,result,notes,callbackAt,task)} }
+        pendingCall?.let { target ->
+            CallResultDialog(target.title,state.busy,dialDurationSeconds(dialStartedAt,dialEndedAt),::clearPendingCall){result,notes,callbackAt->
+                val task=pendingTaskId;val started=dialStartedAt;val ended=dialEndedAt;clearPendingCall()
+                vm.recordCall(target,result,notes,callbackAt,task,started,ended,if(started!=null&&ended!=null)"ANDROID_RESUME" else null)
+            }
+        }
         return
     }
 
@@ -71,7 +105,12 @@ fun TelecallingScreen(vm: TelecallingViewModel = viewModel()) {
         }
     }
 
-    pendingCall?.let { lead -> CallResultDialog(lead.title,state.busy,{pendingCall=null;pendingTaskId=null}){result,notes,callbackAt->val task=pendingTaskId;pendingCall=null;pendingTaskId=null;vm.recordCall(lead,result,notes,callbackAt,task)} }
+    pendingCall?.let { lead ->
+        CallResultDialog(lead.title,state.busy,dialDurationSeconds(dialStartedAt,dialEndedAt),::clearPendingCall){result,notes,callbackAt->
+            val task=pendingTaskId;val started=dialStartedAt;val ended=dialEndedAt;clearPendingCall()
+            vm.recordCall(lead,result,notes,callbackAt,task,started,ended,if(started!=null&&ended!=null)"ANDROID_RESUME" else null)
+        }
+    }
 }
 
 @Composable
@@ -95,11 +134,13 @@ private fun CallbackCard(callback:CallbackQueueItem,busy:Boolean,onCall:()->Unit
 @Composable
 private fun TelecallingHistoryScreen(lead:TelecallingLead,history:List<LeadCallHistoryItem>,busy:Boolean,message:String?,clearMessage:()->Unit,back:()->Unit,call:()->Unit){LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Back")};Text("Call History",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);Text(lead.title,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text("Owner: ${lead.ownerName} · Calls ${lead.calls}",color=SalesMuted);lead.phone?.let{Text(it,color=SalesMuted)};Button(call,enabled=!busy&&!lead.phone.isNullOrBlank(),modifier=Modifier.fillMaxWidth().padding(top=6.dp)){Text("Call")};message?.let{MessageBanner(it,clearMessage)}};if(history.isEmpty())item{ContentCard("History","No saved call results for this lead.")}else items(history,key={it.id}){CallHistoryCard(it)}}}
 
-@Composable internal fun CallHistoryCard(item:LeadCallHistoryItem){OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(telecallingResultLabel(item.result),fontWeight=FontWeight.Bold);Text("${item.callerName} · ${friendlyCallTime(item.calledAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);item.notes?.let{Text(it,style=MaterialTheme.typography.bodySmall)};item.nextCallbackAt?.let{Text("Next callback: ${friendlyCallTime(it)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}}}
+@Composable internal fun CallHistoryCard(item:LeadCallHistoryItem){OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(telecallingResultLabel(item.result),fontWeight=FontWeight.Bold);Text("${item.callerName} · ${friendlyCallTime(item.calledAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);item.dialDurationSeconds?.let{Text("Dial session: ${formatDialDuration(it)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)};item.notes?.let{Text(it,style=MaterialTheme.typography.bodySmall)};item.nextCallbackAt?.let{Text("Next callback: ${friendlyCallTime(it)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}}}
 
 @Composable
-internal fun CallResultDialog(leadTitle:String,busy:Boolean,dismiss:()->Unit,save:(result:String,notes:String?,nextCallbackAt:String?)->Unit){var result by remember{mutableStateOf("CONNECTED")};var resultMenu by remember{mutableStateOf(false)};var notes by remember{mutableStateOf("")};var callbackText by remember{mutableStateOf(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(1).withSecond(0).withNano(0).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))};val callbackIsoValue=if(result=="CALL_BACK")parseCallbackIso(callbackText) else null;AlertDialog(onDismissRequest=dismiss,title={Text("Save call result")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(leadTitle,fontWeight=FontWeight.Bold);Text("The call is counted only after you save a result.",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Box{OutlinedButton({resultMenu=true},Modifier.fillMaxWidth()){Text(telecallingResultLabel(result))};DropdownMenu(resultMenu,{resultMenu=false}){TELECALLING_RESULT_OPTIONS.forEach{(value,label)->DropdownMenuItem({Text(label)},{result=value;resultMenu=false})}}};OutlinedTextField(notes,{notes=it.take(2000)},label={Text("Notes")},minLines=2,modifier=Modifier.fillMaxWidth());if(result=="CALL_BACK")OutlinedTextField(callbackText,{callbackText=it.take(16)},label={Text("Callback date & time")},supportingText={Text("Format: YYYY-MM-DD HH:MM")},isError=callbackIsoValue==null,modifier=Modifier.fillMaxWidth())}},confirmButton={Button({save(result,notes.trim().ifBlank{null},callbackIsoValue)},enabled=!busy&&(result!="CALL_BACK"||callbackIsoValue!=null)){Text(if(busy)"Saving…" else "Save")}},dismissButton={TextButton(dismiss){Text("Cancel")}})}
+internal fun CallResultDialog(leadTitle:String,busy:Boolean,dialSeconds:Int?,dismiss:()->Unit,save:(result:String,notes:String?,nextCallbackAt:String?)->Unit){var result by remember{mutableStateOf("CONNECTED")};var resultMenu by remember{mutableStateOf(false)};var notes by remember{mutableStateOf("")};var callbackText by remember{mutableStateOf(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(1).withSecond(0).withNano(0).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))};val callbackIsoValue=if(result=="CALL_BACK")parseCallbackIso(callbackText) else null;AlertDialog(onDismissRequest=dismiss,title={Text("Save call result")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(leadTitle,fontWeight=FontWeight.Bold);Text(if(dialSeconds!=null)"Dial session captured: ${formatDialDuration(dialSeconds)}. Select the call result below." else "The call is counted only after you save a result.",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Box{OutlinedButton({resultMenu=true},Modifier.fillMaxWidth()){Text(telecallingResultLabel(result))};DropdownMenu(resultMenu,{resultMenu=false}){TELECALLING_RESULT_OPTIONS.forEach{(value,label)->DropdownMenuItem({Text(label)},{result=value;resultMenu=false})}}};OutlinedTextField(notes,{notes=it.take(2000)},label={Text("Notes")},minLines=2,modifier=Modifier.fillMaxWidth());if(result=="CALL_BACK")OutlinedTextField(callbackText,{callbackText=it.take(16)},label={Text("Callback date & time")},supportingText={Text("Format: YYYY-MM-DD HH:MM")},isError=callbackIsoValue==null,modifier=Modifier.fillMaxWidth())}},confirmButton={Button({save(result,notes.trim().ifBlank{null},callbackIsoValue)},enabled=!busy&&(result!="CALL_BACK"||callbackIsoValue!=null)){Text(if(busy)"Saving…" else "Save")}},dismissButton={TextButton(dismiss){Text("Cancel")}})}
 
+private fun dialDurationSeconds(start:String?,end:String?):Int?{if(start.isNullOrBlank()||end.isNullOrBlank())return null;return runCatching{((Duration.between(Instant.parse(start),Instant.parse(end)).seconds).coerceIn(0,86400)).toInt()}.getOrNull()}
+private fun formatDialDuration(seconds:Int):String{val minutes=seconds/60;val remainder=seconds%60;return if(minutes>0)"${minutes}m ${remainder}s" else "${remainder}s"}
 private fun callbackBucket(item:CallbackQueueItem):String{val zone=ZoneId.of("Asia/Kolkata");val now=ZonedDateTime.now(zone);val due=parseCallTime(item.nextCallbackAt)?.withZoneSameInstant(zone)?:return "Upcoming";return when{due.isBefore(now)->"Overdue";due.toLocalDate()==now.toLocalDate()->"Today";else->"Upcoming"}}
 private fun parseCallTime(value:String?):ZonedDateTime?{if(value.isNullOrBlank())return null;return runCatching{Instant.parse(value).atZone(ZoneId.of("UTC"))}.recoverCatching{OffsetDateTime.parse(value).toZonedDateTime()}.getOrNull()}
 private fun parseCallbackIso(value:String):String?=runCatching{LocalDateTime.parse(value.trim(),DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")).atZone(ZoneId.of("Asia/Kolkata")).toInstant().toString()}.getOrNull()
