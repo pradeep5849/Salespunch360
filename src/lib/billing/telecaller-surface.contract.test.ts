@@ -3,17 +3,15 @@ import { describe, expect, it } from "vitest";
 
 const billingPage = readFileSync("src/app/workspace/billing/page.tsx", "utf8");
 const calculator = readFileSync("src/app/workspace/billing/billing-calculator.tsx", "utf8");
-const legacyPage = readFileSync("src/app/workspace/billing/telecaller/page.tsx", "utf8");
 const pricing = readFileSync("src/lib/billing/sales-pricing.ts", "utf8");
 
 describe("Telecaller subscription surface contract", () => {
-  it("keeps Telecaller seats in the main Sales subscription", () => {
+  it("keeps Telecaller seats only in the main Sales subscription flow", () => {
     expect(billingPage).toContain("getTelecallerBillingOverview");
     expect(billingPage).toContain('label="Telecaller"');
     expect(billingPage).toContain('<summary>Add Team</summary>');
     expect(billingPage).toContain("Renewal");
-    expect(billingPage).not.toContain('href="/workspace/billing/telecaller"');
-    expect(legacyPage).toContain("/workspace/billing#sales-add-team");
+    expect(billingPage).not.toContain('/workspace/billing/telecaller');
   });
 
   it("keeps the locked Telecaller pricing inside Add Team and Renewal", () => {
