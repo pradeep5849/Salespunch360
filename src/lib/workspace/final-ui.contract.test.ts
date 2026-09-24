@@ -9,6 +9,7 @@ const attendance=readFileSync("src/app/workspace/attendance/page.tsx","utf8");
 const androidAttendance=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/TeamAttendanceScreen.kt","utf8");
 const androidReports=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/ReportsScreen.kt","utf8");
 const billing=readFileSync("src/app/workspace/billing/page.tsx","utf8");
+const accountTeam=readFileSync("src/app/workspace/billing/add-account-team/page.tsx","utf8");
 const androidBilling=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/SubscriptionScreen.kt","utf8");
 
 describe("final UI correction contract",()=>{
@@ -36,14 +37,21 @@ describe("final UI correction contract",()=>{
   expect(androidReports).toContain('if(showMenu&&selected==null)');
   expect(androidReports).not.toContain('expanded=false;vm.load(id)');
  });
- it("uses dedicated Subscription pages on Web and Android",()=>{
+ it("uses exactly three dedicated Subscription actions on Web and Android",()=>{
+  expect(billing).toContain('title="Add Sales Team"');
   expect(billing).toContain('/workspace/billing/add-sales-team');
-  expect(billing).toContain('/workspace/billing/add-account-package');
+  expect(billing).toContain('title="Add Account Team"');
+  expect(billing).toContain('/workspace/billing/add-account-team');
+  expect(billing).toContain('title="Renewal"');
   expect(billing).toContain('/workspace/billing/renewal');
-  expect(billing).not.toContain('<details id="sales-add-team"');
+  expect(billing).not.toContain('<details');
+  expect(accountTeam).toContain('title="Add Account Team"');
+  expect(androidBilling).toContain('Text("Add Sales Team")');
+  expect(androidBilling).toContain('Text("Add Account Team")');
+  expect(androidBilling).toContain('Text("Renewal")');
   expect(androidBilling).toContain('page="ADD_SALES"');
   expect(androidBilling).toContain('page="ADD_ACCOUNT"');
   expect(androidBilling).toContain('page="RENEWAL"');
-  expect(androidBilling).toContain('SubscriptionActionPage');
+  expect(androidBilling).toContain('if(page!=null){SubscriptionActionPage');
  });
 });
