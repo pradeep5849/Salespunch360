@@ -85,6 +85,7 @@ fun SalesDrawerAuthenticatedApp(
 ) {
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val telecaller = data.user.salesRole == MobileRole.SALES && !data.features.fieldWorkEnabled
     var route by rememberSaveable { mutableStateOf("Dashboard") }
     var pendingTask by remember { mutableStateOf<FollowUpTask?>(null) }
     var pendingLeadId by remember { mutableStateOf<String?>(null) }
@@ -115,7 +116,7 @@ fun SalesDrawerAuthenticatedApp(
         drawerState = drawer,
         drawerContent = {
             ModalDrawerSheet(Modifier.width(300.dp), drawerContainerColor = SalesNavy) {
-                SalesNavigationDrawerContent(route, data.company.name, data.user.name, ::navigate)
+                SalesNavigationDrawerContent(route, data.company.name, data.user.name, telecaller, ::navigate)
             }
         }
     ) {
@@ -162,10 +163,11 @@ fun SalesDrawerAuthenticatedApp(
                 when {
                     visitDetails != null -> SalesVisitDetailsScreen(visitDetails!!) { visitDetails = null }
                     route == "Dashboard" -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
-                    route == "Attendance" -> SalesDrawerAttendance(data, attendance)
-                    route == "Customers" -> CustomersScreen { navigate("Check-ins") }
-                    route == "Check-ins" -> FieldScreen(pendingTask, { pendingTask = null }, pendingCheckInLead, { pendingCheckInLead = null })
-                    route == "Leads" -> LeadsScreen(
+                    route == "Telecalling" -> TelecallingScreen()
+                    !telecaller && route == "Attendance" -> SalesDrawerAttendance(data, attendance)
+                    !telecaller && route == "Customers" -> CustomersScreen { navigate("Check-ins") }
+                    !telecaller && route == "Check-ins" -> FieldScreen(pendingTask, { pendingTask = null }, pendingCheckInLead, { pendingCheckInLead = null })
+                    !telecaller && route == "Leads" -> LeadsScreen(
                         pendingLeadId,
                         { pendingLeadId = null },
                         onCheckIn = { lead -> pendingCheckInLead = lead; navigate("Check-ins") },
@@ -173,15 +175,15 @@ fun SalesDrawerAuthenticatedApp(
                             visitDetails = SalesVisitDetails(v.id, v.contactName ?: v.customerName ?: "Field prospect", v.userName, v.checkedInAt, v.checkedOutAt, if (v.checkedOutAt == null) "Checkout pending" else "Checkout completed")
                         }
                     )
-                    route == "Follow-ups" -> FollowUpsScreen(
+                    !telecaller && route == "Follow-ups" -> FollowUpsScreen(
                         startCheckIn = { pendingTask = it; navigate("Check-ins") },
                         viewLead = { pendingLeadId = it; navigate("Leads") },
                         viewVisit = { task ->
                             visitDetails = SalesVisitDetails(task.completedVisitId ?: task.id, task.subjectName, task.completedVisitUserName ?: task.assignedUserName ?: "—", task.checkedInAt ?: task.createdAt ?: "—", task.checkedOutAt, if (task.checkedOutAt == null) "Checkout pending" else "Checkout completed")
                         }
                     )
-                    route == "Targets" -> TargetsScreen(MobileRole.SALES)
-                    route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false)
+                    !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
+                    !telecaller && route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false)
                     route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
                         item {
                             Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -203,54 +205,65 @@ fun SalesDrawerAuthenticatedApp(
 @Composable
 private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVisit:(DashboardVisit)->Unit) {
     val d = data.salesDashboard
+    val telecaller = data.user.salesRole == MobileRole.SALES && !data.features.fieldWorkEnabled
     val context=LocalContext.current
     val token=remember{SecureSession(context).token()}
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("SALES", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = SalesBlue)
+            Text(if(telecaller)"TELECALLER" else "SALES", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = SalesBlue)
             Text("Good day, ${data.user.name.substringBefore(' ')}!", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Your field-work overview.", color = SalesMuted)
+            Text(if(telecaller)"Your calling workspace." else "Your field-work overview.", color = SalesMuted)
         }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SalesDrawerMetric("Check-ins This Month", d?.monthVisitCount, Modifier.weight(1f))
-                SalesDrawerMetric("Leads This Month", d?.monthLeadCount, Modifier.weight(1f))
+        if(telecaller){
+            item {
+                ContentCard("Telecalling", "Call leads across the Sales team, save results, and manage callbacks.") {
+                    Button(onClick={navigate("Telecalling")},modifier=Modifier.fillMaxWidth()){Text("Open Telecalling")}
+                    Text("A call is counted only after its result is saved.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                }
             }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SalesDrawerMetric("Check-ins Today", d?.todayVisitCount, Modifier.weight(1f))
-                SalesDrawerMetric("Leads Today", d?.todayLeadCount, Modifier.weight(1f))
+        } else {
+            item { SalesHandoffCard() }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SalesDrawerMetric("Check-ins This Month", d?.monthVisitCount, Modifier.weight(1f))
+                    SalesDrawerMetric("Leads This Month", d?.monthLeadCount, Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SalesDrawerMetric("Check-ins Today", d?.todayVisitCount, Modifier.weight(1f))
+                    SalesDrawerMetric("Leads Today", d?.todayLeadCount, Modifier.weight(1f))
+                }
             }
-        }
-        item {
-            Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,SalesLine)){
-                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                    Text("My Recent Check-ins",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
-                    if(d?.recentVisits.isNullOrEmpty())Text("No check-ins yet.",color=SalesMuted)
-                    d?.recentVisits?.take(4)?.forEach{v->
-                        OutlinedCard(Modifier.fillMaxWidth()){
-                            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                                v.thumbnailUrl?.let{path->AsyncImage(model=ImageRequest.Builder(context).data(mobileImageUrl(path)).apply{token?.let{httpHeaders(NetworkHeaders.Builder().set("Authorization","Bearer $it").build())}}.crossfade(true).build(),contentDescription="Check-in photo",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)))}
-                                Text(v.customerName?:v.contactName?:"Field prospect",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
-                                Text(v.checkInAddress?:"Address unavailable",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-                                Text("Check In: ${salesVisitTime(v.checkedInAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-                                Text("Check Out: ${v.checkedOutAt?.let(::salesVisitTime)?:"Pending"}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-                                v.checkoutSentiment?.let{StatusChip(it.lowercase().replaceFirstChar{c->c.uppercase()})}
-                                TextButton({openVisit(v)},contentPadding=PaddingValues(0.dp)){Text("Details")}
+            item {
+                Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,SalesLine)){
+                    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                        Text("My Recent Check-ins",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
+                        if(d?.recentVisits.isNullOrEmpty())Text("No check-ins yet.",color=SalesMuted)
+                        d?.recentVisits?.take(4)?.forEach{v->
+                            OutlinedCard(Modifier.fillMaxWidth()){
+                                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                                    v.thumbnailUrl?.let{path->AsyncImage(model=ImageRequest.Builder(context).data(mobileImageUrl(path)).apply{token?.let{httpHeaders(NetworkHeaders.Builder().set("Authorization","Bearer $it").build())}}.crossfade(true).build(),contentDescription="Check-in photo",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)))}
+                                    Text(v.customerName?:v.contactName?:"Field prospect",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
+                                    Text(v.checkInAddress?:"Address unavailable",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                                    Text("Check In: ${salesVisitTime(v.checkedInAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                                    Text("Check Out: ${v.checkedOutAt?.let(::salesVisitTime)?:"Pending"}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+                                    v.checkoutSentiment?.let{StatusChip(it.lowercase().replaceFirstChar{c->c.uppercase()})}
+                                    TextButton({openVisit(v)},contentPadding=PaddingValues(0.dp)){Text("Details")}
+                                }
                             }
                         }
+                        TextButton(onClick = { navigate("Check-ins") }) { Text("View All") }
                     }
-                    TextButton(onClick = { navigate("Check-ins") }) { Text("View All") }
                 }
             }
-        }
-        item {
-            ContentCard("My Follow-ups", "Keep today's pending and overdue follow-ups visible.") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SalesDrawerMetric("Pending Today", d?.pendingTodayTasks, Modifier.weight(1f))
-                    SalesDrawerMetric("Overdue", d?.overdueTasks, Modifier.weight(1f))
+            item {
+                ContentCard("My Follow-ups", "Keep today's pending and overdue follow-ups visible.") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SalesDrawerMetric("Pending Today", d?.pendingTodayTasks, Modifier.weight(1f))
+                        SalesDrawerMetric("Overdue", d?.overdueTasks, Modifier.weight(1f))
+                    }
+                    TextButton(onClick = { navigate("Follow-ups") }) { Text("Open follow-ups") }
                 }
-                TextButton(onClick = { navigate("Follow-ups") }) { Text("Open follow-ups") }
             }
         }
     }

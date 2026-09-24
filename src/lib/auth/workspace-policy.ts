@@ -1,4 +1,5 @@
 import type { AccountRole, ManagerType, ProductEdition, Role, SalesRole } from "@prisma/client";
+import {isTelecallerDesignation} from "@/lib/telecalling/policy";
 
 export type WorkspacePrincipal = {
   companyId: string | null;
@@ -9,6 +10,7 @@ export type WorkspacePrincipal = {
   salesAccessActive: boolean;
   accountAccessActive: boolean;
   managerType: ManagerType | null;
+  designation?: string | null;
 };
 
 /** A platform administrator is deliberately outside every tenant. */
@@ -24,8 +26,8 @@ export const isSalesPrimaryAdmin = (user: Pick<WorkspacePrincipal, "salesRole">)
 export const isSalesAdmin = (user: Pick<WorkspacePrincipal, "salesRole">) => user.salesRole === "PRIMARY_ADMIN" || user.salesRole === "ADMIN";
 /** Assignment/capability helpers; callers must use canAccess* for effective authorization. */
 export const canAdministerSalesWorkspace = (user: Pick<WorkspacePrincipal, "salesRole">) => isSalesAdmin(user);
-export const canUseSalesFieldWorkflow = (user: Pick<WorkspacePrincipal, "salesRole" | "managerType">) =>
-  user.salesRole === "SALES" || (user.salesRole === "MANAGER" && user.managerType === "FIELD_MANAGER");
+export const canUseSalesFieldWorkflow = (user: Pick<WorkspacePrincipal, "salesRole" | "managerType" | "designation">) =>
+  !isTelecallerDesignation(user.designation) && (user.salesRole === "SALES" || (user.salesRole === "MANAGER" && user.managerType === "FIELD_MANAGER"));
 export const canUseAccountWorkspace = (user: Pick<WorkspacePrincipal, "accountRole">) => hasAccountRole(user);
 
 export const editionAllowsSalesWorkspace = (edition: ProductEdition) => edition === "SALESPUNCH360" || edition === "SALESPUNCH360_PLUS";
@@ -35,7 +37,7 @@ export const canAccessSalesWorkspace = (user: WorkspacePrincipal, edition: Produ
   user.companyId !== null &&
   user.role !== "SUPER_ADMIN" &&
   hasSalesRole(user) &&
-  user.salesAccessActive === true &&
+  (user.salesAccessActive === true || isTelecallerDesignation(user.designation)) &&
   editionAllowsSalesWorkspace(edition);
 
 export const canAccessAccountWorkspace = (user: WorkspacePrincipal, edition: ProductEdition) =>
