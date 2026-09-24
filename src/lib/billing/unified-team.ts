@@ -1,12 +1,11 @@
-import {Prisma,type BillingPeriod} from '@prisma/client';
+import {Prisma} from '@prisma/client';
 import {db} from '@/lib/db';
 import {addBillingPeriod,prorateToExpiry,renewalWindow} from './math';
 import {effectiveCurrentTerm} from './current-term';
-import {TELECALLER_PRICE_SCHEDULE_INR} from './sales-pricing';
+import {TELECALLER_PRICE_SCHEDULE_INR,type TelecallerBillingPeriod} from './sales-pricing';
 
 export type TeamPurchaseMode='ADD_TEAM'|'RENEW'|'NEW';
 type TelecallerQuote={targetSeats:number;currentSeats:number;addedSeats:number;unitPrice:Prisma.Decimal;subtotal:Prisma.Decimal;coTermStartsAt:Date;coTermEndsAt:Date;prorated:boolean};
-
 type LegacySubscription={seats:number;startsAt:Date;endsAt:Date};
 
 async function currentSalesTerm(companyId:string,now:Date){
@@ -22,7 +21,7 @@ async function telecallerUsage(companyId:string){
  return Number(rows[0]?.count??0);
 }
 
-export async function quoteUnifiedTelecaller(companyId:string,period:BillingPeriod,targetSeats:number,mode:TeamPurchaseMode,now=new Date()):Promise<TelecallerQuote>{
+export async function quoteUnifiedTelecaller(companyId:string,period:TelecallerBillingPeriod,targetSeats:number,mode:TeamPurchaseMode,now=new Date()):Promise<TelecallerQuote>{
  if(!Number.isInteger(targetSeats)||targetSeats<0||targetSeats>10000)throw new Error('INVALID_INPUT');
  const [term,current,used]=await Promise.all([currentSalesTerm(companyId,now),currentTelecaller(companyId,now),telecallerUsage(companyId)]);
  if(targetSeats<used)throw new Error('TELECALLER_SEATS_BELOW_USAGE');
@@ -38,16 +37,16 @@ export async function quoteUnifiedTelecaller(companyId:string,period:BillingPeri
 }
 
 export async function attachTelecallerToBillingOrder(orderId:string,companyId:string,createdByUserId:string,targetSeats:number,mode:TeamPurchaseMode){
- const order=await db.billingOrder.findFirst({where:{id:orderId,companyId}});if(!order)throw new Error('NOT_FOUND');if(order.status!=='PENDING')return order;
- const quote=await quoteUnifiedTelecaller(companyId,order.billingPeriod,targetSeats,mode);
+ const order=await db.billingOrder.findFirst({where:{id:orderId,companyId}});if(!order)throw new Error('NOT_FOUND');if(order.status!=='PENDING')return order;if(order.billingPeriod!=='SIX_MONTH'&&order.billingPeriod!=='YEARLY')throw new Error('INVALID_BILLING_PERIOD');
+ const period:TelecallerBillingPeriod=order.billingPeriod,quote=await quoteUnifiedTelecaller(companyId,period,targetSeats,mode);
  const existing=await db.$queryRaw<{subtotal:Prisma.Decimal}[]>(Prisma.sql`SELECT subtotal FROM "telecaller_billing_orders" WHERE id=${order.id}::uuid LIMIT 1`),old=existing[0]?.subtotal??new Prisma.Decimal(0);
  const nextSubtotal=order.subtotal.minus(old).plus(quote.subtotal),nextTotal=order.totalAmount.minus(old).plus(quote.subtotal);
  await db.$transaction(async tx=>{
   await tx.$executeRaw(Prisma.sql`DELETE FROM "telecaller_billing_orders" WHERE id=${order.id}::uuid`);
-  await tx.$executeRaw(Prisma.sql`INSERT INTO "telecaller_billing_orders" (id,"companyId","createdByUserId","billingPeriod","addedSeats","targetSeats","unitPrice",subtotal,"totalAmount",status,"paymentReference","coTermStartsAt","coTermEndsAt","expiresAt","createdAt","updatedAt") VALUES (${order.id}::uuid,${companyId}::uuid,${createdByUserId}::uuid,${order.billingPeriod},${quote.addedSeats},${quote.targetSeats},${quote.unitPrice},${quote.subtotal},${quote.subtotal},'PENDING','UNIFIED_SALES_ORDER',${quote.coTermStartsAt},${quote.coTermEndsAt},${order.expiresAt},NOW(),NOW())`);
+  await tx.$executeRaw(Prisma.sql`INSERT INTO "telecaller_billing_orders" (id,"companyId","createdByUserId","billingPeriod","addedSeats","targetSeats","unitPrice",subtotal,"totalAmount",status,"paymentReference","coTermStartsAt","coTermEndsAt","expiresAt","createdAt","updatedAt") VALUES (${order.id}::uuid,${companyId}::uuid,${createdByUserId}::uuid,${period},${quote.addedSeats},${quote.targetSeats},${quote.unitPrice},${quote.subtotal},${quote.subtotal},'PENDING','UNIFIED_SALES_ORDER',${quote.coTermStartsAt},${quote.coTermEndsAt},${order.expiresAt},NOW(),NOW())`);
   await tx.billingOrder.update({where:{id:order.id},data:{subtotal:nextSubtotal,totalAmount:nextTotal}});
  });
  return db.billingOrder.findUniqueOrThrow({where:{id:order.id}});
 }
 
-export async function unifiedTelecallerQuoteForDisplay(companyId:string,period:BillingPeriod,targetSeats:number,mode:TeamPurchaseMode){return quoteUnifiedTelecaller(companyId,period,targetSeats,mode)}
+export async function unifiedTelecallerQuoteForDisplay(companyId:string,period:TelecallerBillingPeriod,targetSeats:number,mode:TeamPurchaseMode){return quoteUnifiedTelecaller(companyId,period,targetSeats,mode)}
