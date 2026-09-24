@@ -53,6 +53,11 @@ async function activeSubscription(tx: Prisma.TransactionClient | typeof db, comp
   return rows[0] ?? null;
 }
 
+async function activeSalesTerm(tx: Prisma.TransactionClient | typeof db, companyId:string, now=new Date()){
+  const term=await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{billingPeriod:true,startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}});
+  return term&&term.billingPeriod!=="MONTHLY"?{billingPeriod:term.billingPeriod as TelecallerBillingPeriod,startsAt:term.startsAt,endsAt:term.endsAt}:null;
+}
+
 async function activeTelecallerUsage(tx: Prisma.TransactionClient | typeof db, companyId: string, excludeUserId?: string) {
   const rows = await tx.$queryRaw<{ count: bigint }[]>(Prisma.sql`
     SELECT COUNT(*)::bigint AS count FROM "users"
@@ -63,10 +68,12 @@ async function activeTelecallerUsage(tx: Prisma.TransactionClient | typeof db, c
 }
 
 export async function telecallerBillingState(tx: Prisma.TransactionClient | typeof db, companyId: string, now = new Date()) {
-  const [subscription, used] = await Promise.all([
+  const [legacy, salesTerm, used] = await Promise.all([
     activeSubscription(tx, companyId, now),
+    activeSalesTerm(tx, companyId, now),
     activeTelecallerUsage(tx, companyId),
   ]);
+  const subscription=legacy&&salesTerm?{...legacy,billingPeriod:salesTerm.billingPeriod,endsAt:new Date(Math.min(legacy.endsAt.getTime(),salesTerm.endsAt.getTime()))}:null;
   return {subscription, used, limit: subscription?.seats ?? 0, available: Math.max(0, (subscription?.seats ?? 0) - used)};
 }
 
@@ -95,17 +102,17 @@ export async function syncTelecallerSubscriptionToSalesTerm(
 }
 
 export async function assertActiveTelecallerEntitlement(companyId: string) {
-  const subscription = await activeSubscription(db, companyId);
-  if (!subscription) throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");
-  return subscription;
+  const state=await telecallerBillingState(db,companyId);
+  if (!state.subscription) throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");
+  return state.subscription;
 }
 
 export async function assertTelecallerSeatAvailable(companyId: string, excludeUserId?: string) {
-  const subscription = await activeSubscription(db, companyId);
-  if (!subscription) throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");
-  const used = await activeTelecallerUsage(db, companyId, excludeUserId);
-  if (used >= subscription.seats) throw new Error("TELECALLER_SEAT_LIMIT");
-  return { subscription, used, available: Math.max(0, subscription.seats - used) };
+  const state=await telecallerBillingState(db,companyId);
+  if (!state.subscription) throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");
+  const used = excludeUserId?await activeTelecallerUsage(db, companyId, excludeUserId):state.used;
+  if (used >= state.subscription.seats) throw new Error("TELECALLER_SEAT_LIMIT");
+  return { subscription:state.subscription, used, available: Math.max(0, state.subscription.seats - used) };
 }
 
 export async function getTelecallerBillingOverview() {
@@ -137,13 +144,10 @@ export async function createTelecallerBillingOrder(input: { addedSeats: number; 
   return db.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
     const now = new Date();
-    const salesTerm = await tx.companySubscription.findFirst({
-      where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},
-      select:{billingPeriod:true,startsAt:true,endsAt:true},orderBy:{endsAt:"desc"},
-    });
-    if (!salesTerm || (salesTerm.billingPeriod!=="SIX_MONTH"&&salesTerm.billingPeriod!=="YEARLY")) throw new Error("SALES_SUBSCRIPTION_REQUIRED");
-    const current = await activeSubscription(tx, companyId, now);
-    const period = salesTerm.billingPeriod as TelecallerBillingPeriod;
+    const salesTerm = await activeSalesTerm(tx,companyId,now);
+    if (!salesTerm) throw new Error("SALES_SUBSCRIPTION_REQUIRED");
+    const state=await telecallerBillingState(tx,companyId,now),current=state.subscription;
+    const period = salesTerm.billingPeriod;
     const basePrice = priceFor(period);
     const startsAt = now;
     const endsAt = salesTerm.endsAt;
@@ -186,9 +190,9 @@ export async function confirmTelecallerManualPayment(orderId: string, paymentRef
     const duplicate = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id FROM "telecaller_billing_orders" WHERE "paymentReference"=${reference} AND id<>${order.id}::uuid LIMIT 1`);
     if (duplicate.length) throw new Error("PAYMENT_REFERENCE_IN_USE");
     const now=new Date();
-    const salesTerm=await tx.companySubscription.findFirst({where:{companyId:order.companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{billingPeriod:true,startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}});
-    if(!salesTerm||(salesTerm.billingPeriod!=="SIX_MONTH"&&salesTerm.billingPeriod!=="YEARLY"))throw new Error("SALES_SUBSCRIPTION_REQUIRED");
-    await syncTelecallerSubscriptionToSalesTerm(tx,{companyId:order.companyId,seats:order.targetSeats,billingPeriod:salesTerm.billingPeriod as TelecallerBillingPeriod,startsAt:now,endsAt:salesTerm.endsAt});
+    const salesTerm=await activeSalesTerm(tx,order.companyId,now);
+    if(!salesTerm)throw new Error("SALES_SUBSCRIPTION_REQUIRED");
+    await syncTelecallerSubscriptionToSalesTerm(tx,{companyId:order.companyId,seats:order.targetSeats,billingPeriod:salesTerm.billingPeriod,startsAt:now,endsAt:salesTerm.endsAt});
     await tx.$executeRaw(Prisma.sql`UPDATE "telecaller_billing_orders" SET status='PAID',"coTermEndsAt"=${salesTerm.endsAt},"paymentReference"=${reference},"paidAt"=NOW(),"updatedAt"=NOW() WHERE id=${order.id}::uuid`);
     await tx.billingAuditEvent.create({data:{companyId:order.companyId,actorUserId:admin.id,type:"MANUAL_PAYMENT_CONFIRMED",entityId:order.id,reason:"Telecaller manual payment confirmed",metadata:{kind:"TELECALLER",reference,addedSeats:order.addedSeats,targetSeats:order.targetSeats,period:salesTerm.billingPeriod,coTermEndsAt:salesTerm.endsAt.toISOString()}}});
     return { ...order, status: "PAID" as const, paymentReference: reference, paidAt: now, coTermEndsAt:salesTerm.endsAt };
