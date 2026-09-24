@@ -3,6 +3,7 @@ import type {ManagerType,Role,SalesRole} from "@prisma/client";
 import {requireSalesWorkspace} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
 import{indiaDateText,parseIndiaBusinessDate}from"@/lib/follow-up-tasks/date";
+import {isTelecallerDesignation} from "@/lib/telecalling/policy";
 
 export type DashboardActor={id:string;name:string;email:string;role:Role;salesRole:SalesRole;managerType:ManagerType|null;companyId:string};
 const isAdmin=(actor:DashboardActor)=>actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN";
@@ -15,15 +16,16 @@ export function dashboardEmployeeWhere(actor:DashboardActor){
 }
 export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:string}){
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};const branches=await operationalBranchContext(actor);
- const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true},orderBy:{name:"asc"}});
- const allowed=new Set(employees.map(e=>e.id));
- const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowed.has(requestedCheck)?requestedCheck:undefined;
+ const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true,salesRole:true,managerType:true,designation:true},orderBy:{name:"asc"}});
+ const checkInEmployees=employees.filter(employee=>(employee.salesRole==="SALES"&&!isTelecallerDesignation(employee.designation))||(employee.salesRole==="MANAGER"&&employee.managerType!=="MANAGER_ONLY"));
+ const allowed=new Set(employees.map(e=>e.id)),allowedCheck=new Set(checkInEmployees.map(e=>e.id));
+ const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowedCheck.has(requestedCheck)?requestedCheck:undefined;
  const requestedLive=raw.liveEmployee,liveUserId=!isSales(actor)&&requestedLive&&allowed.has(requestedLive)?requestedLive:undefined;
  const indiaTodayText=indiaDateText(),indiaToday=parseIndiaBusinessDate(indiaTodayText),indiaTomorrow=new Date(indiaToday.getTime()+86400000);
  const [indiaYear,indiaMonth]=indiaTodayText.split("-");const indiaMonthStart=parseIndiaBusinessDate(`${indiaYear}-${indiaMonth}-01`);
  const fieldManager=isManager(actor)&&actor.managerType!=="MANAGER_ONLY";
- const employeeIds=employees.map(e=>e.id);
- const teamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...employeeIds]:employeeIds):employeeIds;
+ const employeeIds=employees.map(e=>e.id),checkEmployeeIds=checkInEmployees.map(e=>e.id);
+ const teamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...checkEmployeeIds]:checkEmployeeIds):checkEmployeeIds;
  const presentIds=isSales(actor)?[actor.id]:employeeIds;
  const [company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks]=await Promise.all([
   db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{name:true,logoObjectKey:true,updatedAt:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,subscriptionStatus:true,trialEndsAt:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),
@@ -38,5 +40,5 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?0:db.followUpTask.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING",dueDate:{gte:indiaToday,lt:indiaTomorrow}}}),
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?0:db.followUpTask.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING",dueDate:{lt:indiaToday}}})
  ]);
- return{actor,company,employees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks};
+ return{actor,company,employees,checkInEmployees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks};
 }
