@@ -1,7 +1,8 @@
+import {randomUUID} from "node:crypto";
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requirePermission} from "@/lib/auth/authorization";
-import {quoteBillingOrder,createBillingOrder,confirmManualPayment} from "./service";
+import {quoteBillingOrder,createBillingOrder,createMobileBillingOrder,confirmManualPayment} from "./service";
 import {orderRequestSchema} from "./validation";
 import {TELECALLER_PRICE_SCHEDULE_INR,type TelecallerBillingPeriod} from "./sales-pricing";
 import {telecallerBillingState,syncTelecallerSubscriptionToSalesTerm} from "./telecaller";
@@ -17,6 +18,7 @@ export async function telecallerQuoteForCompany(companyId:string,period:Telecall
   telecallerBillingState(db,companyId,now),
   db.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}}),
  ]);
+ if(targetSeats<state.used)throw new Error("TELECALLER_SEATS_BELOW_USAGE");
  const unit=new Prisma.Decimal(TELECALLER_PRICE_SCHEDULE_INR[period]);
  if(!salesTerm)return{currentSeats:state.limit,targetSeats,unitPrice:unit,subtotal:unit.mul(targetSeats),prorated:false,coTermEndsAt:null as Date|null};
  const added=Math.max(0,targetSeats-state.limit),subtotal=prorateToExpiry(unit.mul(added),now,salesTerm.startsAt,salesTerm.endsAt);
@@ -29,8 +31,7 @@ export async function quoteUnifiedSalesTeam(raw:unknown){
  return{...base,telecallerSubtotal:telecaller.subtotal,subtotal:base.subtotal.plus(telecaller.subtotal),prorated:base.prorated||telecaller.prorated,coTermEndsAt:base.coTermEndsAt??telecaller.coTermEndsAt};
 }
 
-export async function createUnifiedSalesTeamOrder(raw:unknown){
- const target=parsedTarget(raw),order=await createBillingOrder(raw);
+async function attachTelecallerTarget<T extends {id:string;companyId:string;createdByUserId:string;createdAt:Date}>(order:T,target:ParsedTarget){
  const existing=await db.billingAuditEvent.findFirst({where:{entityId:order.id,type:"ORDER_CREATED",reason:TELECALLER_AUDIT_REASON},select:{id:true}});
  if(existing)return db.billingOrder.findUniqueOrThrow({where:{id:order.id}});
  const telecaller=await telecallerQuoteForCompany(order.companyId,target.billingPeriod,target.telecallerSeats,order.createdAt);
@@ -43,10 +44,34 @@ export async function createUnifiedSalesTeamOrder(raw:unknown){
  });
 }
 
+export async function createUnifiedSalesTeamOrder(raw:unknown){
+ const target=parsedTarget(raw),order=await createBillingOrder(raw);
+ return attachTelecallerTarget(order,target);
+}
+
+export async function createUnifiedMobileSalesTeamOrder(actor:{id:string;companyId:string},raw:unknown){
+ const target=parsedTarget(raw),order=await createMobileBillingOrder(actor,raw);
+ return attachTelecallerTarget(order,target);
+}
+
 function metadataTarget(metadata:Prisma.JsonValue|null):number|null{
  if(!metadata||typeof metadata!=="object"||Array.isArray(metadata))return null;
  const value=(metadata as Prisma.JsonObject).telecallerSeats;
  return typeof value==="number"&&Number.isInteger(value)&&value>=0?value:null;
+}
+
+async function syncTargetToTerm(input:{companyId:string;target:number;billingPeriod:TelecallerBillingPeriod;startsAt:Date;endsAt:Date}){
+ const now=new Date();
+ if(input.startsAt<=now){
+  await db.$transaction(tx=>syncTelecallerSubscriptionToSalesTerm(tx,{companyId:input.companyId,seats:input.target,billingPeriod:input.billingPeriod,startsAt:input.startsAt,endsAt:input.endsAt}));
+  return;
+ }
+ await db.$transaction(async tx=>{
+  const future=await tx.$queryRaw<{id:string}[]>(Prisma.sql`SELECT id FROM "telecaller_subscriptions" WHERE "companyId"=${input.companyId}::uuid AND status='ACTIVE' AND "startsAt"=${input.startsAt} AND "endsAt"=${input.endsAt} ORDER BY "createdAt" DESC LIMIT 1`);
+  if(input.target<=0){if(future[0])await tx.$executeRaw(Prisma.sql`UPDATE "telecaller_subscriptions" SET status='CANCELLED',"updatedAt"=NOW() WHERE id=${future[0].id}::uuid`);return;}
+  if(future[0]){await tx.$executeRaw(Prisma.sql`UPDATE "telecaller_subscriptions" SET "billingPeriod"=${input.billingPeriod},seats=${input.target},"updatedAt"=NOW() WHERE id=${future[0].id}::uuid`);return;}
+  const id=randomUUID();await tx.$executeRaw(Prisma.sql`INSERT INTO "telecaller_subscriptions" (id,"companyId",status,"billingPeriod",seats,"startsAt","endsAt","sourceOrderId","createdAt","updatedAt") VALUES (${id}::uuid,${input.companyId}::uuid,'ACTIVE',${input.billingPeriod},${input.target},${input.startsAt},${input.endsAt},NULL,NOW(),NOW())`);
+ });
 }
 
 export async function confirmUnifiedManualPayment(orderId:string,reference:string){
@@ -55,7 +80,7 @@ export async function confirmUnifiedManualPayment(orderId:string,reference:strin
  if(target===null)return order;
  const now=new Date(),termByOrder=await db.companySubscription.findFirst({where:{sourceOrderId:order.id},select:{billingPeriod:true,startsAt:true,endsAt:true}}),term=termByOrder??await db.companySubscription.findFirst({where:{companyId:order.companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{billingPeriod:true,startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}});
  if(!term||(term.billingPeriod!=="SIX_MONTH"&&term.billingPeriod!=="YEARLY"))throw new Error("SALES_SUBSCRIPTION_REQUIRED");
- await db.$transaction(tx=>syncTelecallerSubscriptionToSalesTerm(tx,{companyId:order.companyId,seats:target,billingPeriod:term.billingPeriod as TelecallerBillingPeriod,startsAt:term.startsAt,endsAt:term.endsAt}));
+ await syncTargetToTerm({companyId:order.companyId,target,billingPeriod:term.billingPeriod as TelecallerBillingPeriod,startsAt:term.startsAt,endsAt:term.endsAt});
  return order;
 }
 
