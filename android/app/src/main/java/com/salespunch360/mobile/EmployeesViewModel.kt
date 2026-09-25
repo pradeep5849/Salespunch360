@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.*
+import com.salespunch360.mobile.ui.MobileRouteSignal
 import java.io.IOException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -61,7 +62,7 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
         while (isActive) {
             delay(5_000)
             val current = _state.value
-            if (current.emailVerified == false && !current.loading) {
+            if (MobileRouteSignal.current.value == "Employees" && current.emailVerified == false && !current.loading) {
                 val verified = runCatching { verification.status() }.getOrNull()
                 if (verified == true) _state.value = _state.value.copy(emailVerified = true)
             }
