@@ -1,5 +1,6 @@
 import {db} from '@/lib/db';
 import {verifyPassword} from '@/lib/auth/crypto';
+import {requiresMobileDeviceLock} from '@/lib/auth/workspace-policy';
 import {isMobileEligible} from './auth';
 
 export class MobileDeviceMismatchError extends Error {
@@ -16,6 +17,7 @@ export async function verifyAndBindMobileDevice(identifier:string,password:strin
     },
   });
   if(!user||!isMobileEligible(user,user.company?.productEdition??null)||!(await verifyPassword(user.passwordHash,password)))throw new Error('INVALID_MOBILE_CREDENTIALS');
+  if(!requiresMobileDeviceLock(user))return;
   const rows=await db.$queryRaw<{deviceId:string}[]>`
     INSERT INTO "mobile_device_bindings" ("userId","deviceId","deviceName","registeredAt","updatedAt")
     VALUES (${user.id}::uuid,${deviceId},${deviceName},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
