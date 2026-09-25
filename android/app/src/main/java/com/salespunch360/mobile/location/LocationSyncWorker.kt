@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.location
+
 import android.content.Context
 import androidx.work.*
 import com.salespunch360.mobile.SalesPunchApp
@@ -17,8 +18,30 @@ class LocationSyncWorker(context:Context,params:WorkerParameters):CoroutineWorke
   val api=ApiClient(session)
   return try{
    for(point in locationDao.batch(owner)){
-    api.upload(LocationPayload(point.latitude,point.longitude,point.accuracy,point.id,point.capturedAt))
-    locationDao.delete(point.id,owner)
+    try{
+     api.upload(LocationPayload(point.latitude,point.longitude,point.accuracy,point.id,point.capturedAt))
+     locationDao.delete(point.id,owner)
+    }catch(error:ApiException){
+     when{
+      error.status==409&&error.code=="NO_OPEN_ATTENDANCE"->{
+       // Attendance is the authority for tracking. Never keep points around to be
+       // attached to a later attendance period.
+       locationDao.clearOwner(owner)
+       TrackingService.stop(applicationContext)
+       return Result.success()
+      }
+      error.status==409&&error.code=="GPS_DISABLED"->{
+       locationDao.clearOwner(owner)
+       TrackingService.stop(applicationContext)
+       return Result.success()
+      }
+      error.status==409&&error.code in setOf("THROTTLED","CAPTURE_TIME_INVALID")->{
+       // The server deliberately rejected only this sample; discard it and continue.
+       locationDao.delete(point.id,owner)
+      }
+      else->throw error
+     }
+    }
    }
    Result.success()
   }catch(error:ApiException){
