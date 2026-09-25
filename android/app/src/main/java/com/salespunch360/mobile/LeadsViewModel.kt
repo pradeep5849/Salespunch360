@@ -71,7 +71,7 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
     fun open(id: String) = viewModelScope.launch {
         val cached = _state.value.leads.firstOrNull { it.id == id }
         _state.value = _state.value.copy(
-            detailLoading = true,
+            detailLoading = cached == null,
             detail = cached,
             detailFollowUps = emptyList(),
             detailCallHistory = emptyList(),
@@ -79,7 +79,8 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
         )
         try {
             val detail = api.lead(id)
-            _state.value = _state.value.copy(detail = detail, detailLoading = true)
+            // Render the lead as soon as its primary record arrives. Histories continue in parallel below.
+            _state.value = _state.value.copy(detail = detail, detailLoading = false)
             supervisorScope {
                 val followUpsDeferred = async { runCatching { loadLeadFollowUps(id) }.getOrDefault(emptyList()) }
                 val historyDeferred = async { runCatching { telecalling.history(id) }.getOrDefault(emptyList()) }
