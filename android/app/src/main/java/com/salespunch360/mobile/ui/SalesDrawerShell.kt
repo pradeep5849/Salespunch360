@@ -98,6 +98,10 @@ fun SalesDrawerAuthenticatedApp(
     var visitDetails by remember { mutableStateOf<SalesVisitDetails?>(null) }
     var profileMenu by remember { mutableStateOf(false) }
 
+    LaunchedEffect(route) {
+        if (route == "Leads") leadsVm.refresh()
+    }
+
     fun navigate(to: String) {
         nav.navigate(to)
         scope.launch { drawer.close() }
@@ -178,18 +182,30 @@ fun SalesDrawerAuthenticatedApp(
                     route == "Telecalling" -> TelecallingScreen()
                     !telecaller && route == "Attendance" -> SalesDrawerAttendance(data, attendance)
                     !telecaller && route == "Customers" -> CustomersScreen { navigate("Check-ins") }
-                    !telecaller && route == "Check-ins" -> FieldScreen(pendingTask, { pendingTask = null }, pendingCheckInLead, { pendingCheckInLead = null })
+                    !telecaller && route == "Check-ins" -> FieldScreen(
+                        pendingTask,
+                        { pendingTask = null },
+                        pendingCheckInLead,
+                        { pendingCheckInLead = null },
+                        onCheckoutSuccess = { leadId ->
+                            pendingTask = null
+                            pendingCheckInLead = null
+                            pendingLeadId = leadId
+                            leadsVm.refresh()
+                            navigate("Leads")
+                        }
+                    )
                     !telecaller && route == "Leads" -> LeadsScreen(
                         pendingLeadId,
                         { pendingLeadId = null },
-                        onCheckIn = { lead -> pendingCheckInLead = lead; navigate("Check-ins") },
+                        onCheckIn = { lead -> pendingTask = null; pendingCheckInLead = lead; navigate("Check-ins") },
                         onPendingVisitDetails = { v ->
                             visitDetails = SalesVisitDetails(v.id, v.contactName ?: v.customerName ?: "Field prospect", v.userName, v.checkedInAt, v.checkedOutAt, if (v.checkedOutAt == null) "Checkout pending" else "Checkout completed")
                         },
                         vm = leadsVm
                     )
                     !telecaller && route == "Follow-ups" -> FollowUpsScreen(
-                        startCheckIn = { pendingTask = it; navigate("Check-ins") },
+                        startCheckIn = { pendingCheckInLead = null; pendingTask = it; navigate("Check-ins") },
                         viewLead = { pendingLeadId = it; navigate("Leads") },
                         viewVisit = { task ->
                             visitDetails = SalesVisitDetails(task.completedVisitId ?: task.id, task.subjectName, task.completedVisitUserName ?: task.assignedUserName ?: "—", task.checkedInAt ?: task.createdAt ?: "—", task.checkedOutAt, if (task.checkedOutAt == null) "Checkout pending" else "Checkout completed")
