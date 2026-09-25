@@ -39,8 +39,8 @@ internal fun SalesNavigationDrawerContent(
  companyName:String,
  userName:String,
  telecaller:Boolean=false,
- switchToAccount:(()->Unit)?=null,
- navigate:(String)->Unit
+ navigate:(String)->Unit,
+ switchToAccount:(()->Unit)?=null
 ){
  val destinations=if(telecaller)telecallerDrawerDestinations else salesDrawerDestinations
  Column(Modifier.fillMaxSize().background(SalesNavy).statusBarsPadding()){
@@ -52,7 +52,7 @@ internal fun SalesNavigationDrawerContent(
    Spacer(Modifier.height(6.dp))
    destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route){navigate(item.route)}}
    if(!telecaller){
-    DrawerRow("Reports",Icons.Default.Assessment,current=="Reports"||current?.startsWith("Report:")==true){navigate("Reports")}
+    DrawerRow("Reports",Icons.Default.Assessment,current?.startsWith("Report:")==true){navigate("Report:check-ins")}
    }
   }
   switchToAccount?.let{action->
