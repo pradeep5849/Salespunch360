@@ -8,6 +8,8 @@ import com.salespunch360.mobile.data.LeadCallHistoryItem
 import com.salespunch360.mobile.data.SecureSession
 import com.salespunch360.mobile.data.TelecallingClient
 import com.salespunch360.mobile.data.TelecallingLead
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -36,9 +38,18 @@ class TelecallingViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh(search:Boolean=_state.value.searched) = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, message = null)
         _state.value = try {
-            val queue = if(search&&_state.value.query.isNotBlank())api.queue(_state.value.query) else emptyList()
-            val callbacks = api.callbacks()
-            _state.value.copy(loading = false, queue = queue, callbacks = callbacks,searched=search)
+            coroutineScope {
+                val queueDeferred = async {
+                    if(search&&_state.value.query.isNotBlank()) api.queue(_state.value.query) else emptyList()
+                }
+                val callbacksDeferred = async { api.callbacks() }
+                _state.value.copy(
+                    loading = false,
+                    queue = queueDeferred.await(),
+                    callbacks = callbacksDeferred.await(),
+                    searched = search,
+                )
+            }
         } catch (e: Exception) { _state.value.copy(loading = false, message = apiMessage(e, "Telecalling queue couldn't be loaded.")) }
     }
 
@@ -55,10 +66,24 @@ class TelecallingViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = _state.value.copy(busy = true, message = null)
             try {
                 val saved = api.recordCall(lead.id, result, notes, nextCallbackAt,followUpTaskId,dialStartedAt,dialEndedAt,timingSource)
-                val queue = if(_state.value.searched&&_state.value.query.isNotBlank())api.queue(_state.value.query) else emptyList()
-                val callbacks = api.callbacks()
-                val history = if (_state.value.historyLead?.id == lead.id) api.history(lead.id) else _state.value.history
-                _state.value = _state.value.copy(busy = false,queue = queue,callbacks = callbacks,history = history,historyLead = _state.value.historyLead?.let { current -> queue.firstOrNull { it.id == current.id } ?: current },message = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved.")
+                coroutineScope {
+                    val queueDeferred = async {
+                        if(_state.value.searched&&_state.value.query.isNotBlank()) api.queue(_state.value.query) else emptyList()
+                    }
+                    val callbacksDeferred = async { api.callbacks() }
+                    val historyDeferred = async {
+                        if (_state.value.historyLead?.id == lead.id) api.history(lead.id) else _state.value.history
+                    }
+                    val queue = queueDeferred.await()
+                    _state.value = _state.value.copy(
+                        busy = false,
+                        queue = queue,
+                        callbacks = callbacksDeferred.await(),
+                        history = historyDeferred.await(),
+                        historyLead = _state.value.historyLead?.let { current -> queue.firstOrNull { it.id == current.id } ?: current },
+                        message = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved.",
+                    )
+                }
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Call result couldn't be saved.")) }
         }
     }
