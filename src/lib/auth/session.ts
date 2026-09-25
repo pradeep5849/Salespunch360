@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 import { isTelecallerDesignation } from "@/lib/telecalling/policy";
 import { createSessionToken, hashSessionToken } from "./crypto";
 import { canAuthenticate } from "./eligibility";
-import { canAccessAccountWorkspace } from "./workspace-policy";
+import { canAccessAccountWorkspace, canUseWebLogin } from "./workspace-policy";
 import { clearUserAuthentication, lockUser, revokeUserAuthenticationWithLock } from "./session-generation";
 
 const COOKIE_NAME = "sp360_session";
@@ -59,6 +59,7 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     select: { expiresAt: true, sessionVersion: true, mobileSession:{select:{id:true,expiresAt:true,revokedAt:true,sessionVersion:true}}, user: { select: { id: true, name: true, email: true, role: true, managerType: true, salesRole: true, accountRole: true, salesAccessActive: true, accountAccessActive: true, companyId: true, designation:true, isActive: true, sessionVersion: true, branchAccessScope:true, branchAccesses:{where:{branch:{isActive:true}},select:{branchId:true}},company:{select:{productEdition:true,branches:{where:{isActive:true},select:{id:true}}}} } } },
   });
   if (!session || session.expiresAt <= new Date() || !canAuthenticate(session.user) || session.sessionVersion !== session.user.sessionVersion) return null;
+  if(!canUseWebLogin(session.user))return null;
   if (isTelecallerDesignation(session.user.designation)) {
     if (!session.user.companyId) return null;
     const now = new Date();
