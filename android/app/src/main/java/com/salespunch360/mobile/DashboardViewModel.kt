@@ -35,14 +35,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 .onSuccess { result ->
                     val currentSelected = _state.value.selectedEmployeeId
                     val selected = currentSelected?.takeIf { id -> result.employees.any { it.id == id } }
-                        ?: result.liveUserId?.takeIf { id -> result.employees.any { it.id == id } }
-                        ?: result.employees.firstOrNull()?.id
                     _state.value = DashboardTrackingState(
                         loading = false,
                         employees = result.employees,
                         selectedEmployeeId = selected,
                         selectedCheckEmployeeId = result.checkUserId,
-                        latestLocation = _state.value.latestLocation?.takeIf { selected == currentSelected },
+                        latestLocation = _state.value.latestLocation?.takeIf { selected != null && selected == currentSelected },
                         recentVisits = result.recentVisits,
                         gpsTrackingEnabled = result.gpsTrackingEnabled,
                     )
