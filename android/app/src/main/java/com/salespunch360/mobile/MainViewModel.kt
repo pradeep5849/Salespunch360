@@ -197,6 +197,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (Workspace.SALES !in authorized) {
             TrackingService.stop(getApplication())
             clearSalesLocal(session.userId())
+        } else {
+            // Server-confirmed attendance is the authority for background GPS. Reconcile on every
+            // bootstrap so an app/process restart cannot leave tracking running while attendance is OFF,
+            // and an active attendance can resume tracking after Android recreates the app.
+            if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) {
+                TrackingService.start(getApplication())
+            } else {
+                TrackingService.stop(getApplication())
+            }
         }
 
         val deepPath = pendingAccountPath
