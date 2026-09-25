@@ -1,15 +1,20 @@
 package com.salespunch360.mobile.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,27 +40,6 @@ private fun roleMenu(data:Bootstrap):List<String>{
  }
 }
 
-private fun roleReportItems(role:MobileRole)=if(role==MobileRole.MANAGER)
- listOf(
-  "Check-in Report" to "check-ins",
-  "Advanced Check-in" to "advanced-check-ins",
-  "Attendance Report" to "attendance",
-  "GPS Route Report" to "gps",
-  "Geofence Report" to "geofence",
-  "Lead Report" to "leads",
-  "Target Analysis" to "targets"
- )
-else listOf(
- "Check-in Report" to "check-ins",
- "Advanced Check-in" to "advanced-check-ins",
- "Attendance Report" to "attendance",
- "GPS Route Report" to "gps",
- "Geofence Report" to "geofence",
- "Lead Report" to "leads",
- "Target Analysis" to "targets",
- "Expense Report" to "expenses"
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminManagerAuthenticatedApp(
@@ -72,7 +56,6 @@ fun AdminManagerAuthenticatedApp(
  val scope=rememberCoroutineScope()
  val nav=rememberMobileRouteHistory("Dashboard")
  val route=nav.current
- var reportOpen by rememberSaveable{mutableStateOf(false)}
  var profileMenu by remember{mutableStateOf(false)}
  var pendingLeadId by remember{mutableStateOf<String?>(null)}
  var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
@@ -97,41 +80,26 @@ fun AdminManagerAuthenticatedApp(
   drawerState=drawer,
   drawerContent={
    ModalDrawerSheet(Modifier.width(300.dp),drawerContainerColor=SalesNavy){
-    Spacer(Modifier.height(22.dp))
-    roleMenu(data).forEach{item->
-     if(item=="Reports"){
-      NavigationDrawerItem(
-       label={Text("Reports",fontSize=13.sp,fontWeight=FontWeight.SemiBold)},
-       selected=route.startsWith("Report:"),
-       onClick={reportOpen=!reportOpen},
-       colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent,selectedContainerColor=Color.White.copy(alpha=.12f),unselectedTextColor=Color.White,selectedTextColor=Color.White),
-       modifier=Modifier.padding(horizontal=12.dp,vertical=2.dp)
-      )
-      if(reportOpen)roleReportItems(role).forEach{(label,type)->
-       TextButton(
-        onClick={navigate("Report:$type")},
-        modifier=Modifier.fillMaxWidth().padding(start=34.dp,end=12.dp)
-       ){Text(label,Modifier.fillMaxWidth(),fontSize=11.sp,color=Color.White)}
+    Column(Modifier.fillMaxSize()){
+     Spacer(Modifier.height(12.dp))
+     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom=8.dp)){
+      roleMenu(data).forEach{item->
+       CompactRoleDrawerItem(
+        label=item,
+        selected=if(item=="Reports") route=="Reports"||route.startsWith("Report:") else route==item,
+        onClick={navigate(item)}
+       )
       }
-     }else{
-      NavigationDrawerItem(
-       label={Text(item,fontSize=13.sp,fontWeight=FontWeight.SemiBold)},
-       selected=route==item,
-       onClick={navigate(item)},
-       colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent,selectedContainerColor=Color.White.copy(alpha=.12f),unselectedTextColor=Color.White,selectedTextColor=Color.White),
-       modifier=Modifier.padding(horizontal=12.dp,vertical=2.dp)
-      )
      }
-    }
-    if(switchToAccount!=null){
-     HorizontalDivider(Modifier.padding(16.dp),color=Color.White.copy(alpha=.18f))
-     NavigationDrawerItem(
-      label={Text("⇄  Switch to Accounts",fontSize=13.sp,color=Color.White)},
-      selected=false,
-      onClick={scope.launch{drawer.close()};switchToAccount()},
-      colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=Color.Transparent),
-      modifier=Modifier.padding(horizontal=12.dp)
-     )
+     if(switchToAccount!=null){
+      HorizontalDivider(Modifier.padding(horizontal=16.dp),color=Color.White.copy(alpha=.18f))
+      CompactRoleDrawerItem(
+       label="⇄  Switch to Accounts",
+       selected=false,
+       onClick={scope.launch{drawer.close()};switchToAccount()}
+      )
+      Spacer(Modifier.height(8.dp))
+     }
     }
    }
   }
@@ -182,6 +150,7 @@ fun AdminManagerAuthenticatedApp(
      route=="Targets"->TargetsScreen(role)
      route=="Billing & Subscription"&&data.capabilities.canAccessSalesBilling->SubscriptionScreen()
      route=="Settings"->SettingsScreen()
+     route=="Reports"->ReportsScreen(showMenu=true,role=role)
      route.startsWith("Report:")->ReportsScreen(initialType=route.substringAfter(':'),showMenu=false,role=role)
      route=="Company Details"->RoleCompanyDetails(data)
      route=="Change Password"->ChangePasswordScreen()
@@ -189,6 +158,17 @@ fun AdminManagerAuthenticatedApp(
     }
    }
   }
+ }
+}
+
+@Composable
+private fun CompactRoleDrawerItem(label:String,selected:Boolean,onClick:()->Unit){
+ val bg=if(selected)Color.White.copy(alpha=.14f) else Color.Transparent
+ Row(
+  Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=1.dp).height(43.dp).clip(RoundedCornerShape(22.dp)).background(bg).clickable(onClick=onClick).padding(horizontal=18.dp),
+  verticalAlignment=Alignment.CenterVertically
+ ){
+  Text(label,fontSize=13.sp,color=Color.White,fontWeight=if(selected)FontWeight.Bold else FontWeight.SemiBold)
  }
 }
 
