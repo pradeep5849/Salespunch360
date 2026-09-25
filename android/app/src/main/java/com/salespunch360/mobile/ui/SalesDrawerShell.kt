@@ -211,7 +211,7 @@ fun SalesDrawerAuthenticatedApp(
                     }
                 )
                 !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
-                !telecaller && route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false, role = MobileRole.SALES)
+                !telecaller && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
                 route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
                     item {
                         Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
