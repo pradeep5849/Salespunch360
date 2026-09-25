@@ -8,6 +8,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/crypto";
 import { loginSchema, strongPasswordSchema } from "@/lib/auth/validation";
 import { requireUser } from "@/lib/auth/authorization";
 import { canAuthenticate } from "@/lib/auth/eligibility";
+import {canUseWebLogin} from "@/lib/auth/workspace-policy";
 import {assertTrustedOrigin,consumeRateLimit,requestFingerprint} from "@/lib/security/request";
 import {authenticatedHome} from "@/lib/auth/routing";
 import { cookies } from "next/headers";
@@ -26,6 +27,9 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
   }
   if (user.role === "SUPER_ADMIN" && user.companyId !== null) {
     return { error: "Invalid email or password." };
+  }
+  if(user.role!=="SUPER_ADMIN"&&!canUseWebLogin(user)){
+    return {error:"This account can sign in only in the SalesPunch360 mobile app."};
   }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
   if(user.role==="SUPER_ADMIN")return redirect("/admin");
