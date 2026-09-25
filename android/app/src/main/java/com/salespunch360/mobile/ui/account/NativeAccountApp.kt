@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
@@ -17,6 +16,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,7 +28,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountViewModel
 import com.salespunch360.mobile.data.AccountNavigationGroup
-import com.salespunch360.mobile.data.AccountNavigationItem
 import com.salespunch360.mobile.data.Bootstrap
 import com.salespunch360.mobile.ui.BranchesScreen
 import com.salespunch360.mobile.ui.ChangePasswordScreen
@@ -230,20 +229,45 @@ private fun AccountHomeScreen(
 
 @Composable
 private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:PaddingValues,open:(String)->Unit){
+    var reportsOpen by rememberSaveable{mutableStateOf(false)}
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
         contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)
     ){
-        item{
+        item(key="account-menu-header"){
             Text("Menu",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
             Text("All Account modules available to your role.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        groups.forEach{group->
-            item{Text(group.label,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(top=10.dp,bottom=2.dp))}
-            items(group.items+group.children.flatMap{it.items},key={it.href}){nav->
-                OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+        groups.forEachIndexed{groupIndex,group->
+            val rows=group.items+group.children.flatMap{it.items}
+            val reports=group.label.equals("Reports",ignoreCase=true)
+            if(reports){
+                item(key="account-group-$groupIndex-${group.label}"){
+                    OutlinedButton(onClick={reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                            Text(group.label,fontWeight=FontWeight.Bold)
+                            Text(if(reportsOpen)"⌃" else "⌄")
+                        }
+                    }
+                }
+                if(reportsOpen){
+                    items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
+                        val nav=rows[rowIndex]
+                        OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+                        }
+                    }
+                }
+            }else{
+                item(key="account-group-$groupIndex-${group.label}"){
+                    Text(group.label,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(top=10.dp,bottom=2.dp))
+                }
+                items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
+                    val nav=rows[rowIndex]
+                    OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+                    }
                 }
             }
         }
