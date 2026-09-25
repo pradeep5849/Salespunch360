@@ -85,7 +85,6 @@ fun SalesDrawerAuthenticatedApp(
     logout: () -> Unit,
     switchToAccount: (() -> Unit)? = null
 ) {
-    val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val telecaller = data.user.salesRole == MobileRole.SALES && !data.features.fieldWorkEnabled
     val nav = rememberMobileRouteHistory("Dashboard")
@@ -97,14 +96,11 @@ fun SalesDrawerAuthenticatedApp(
     var pendingCheckInLead by remember { mutableStateOf<LeadSummary?>(null) }
     var visitDetails by remember { mutableStateOf<SalesVisitDetails?>(null) }
     var profileMenu by remember { mutableStateOf(false) }
-
-    LaunchedEffect(route) {
-        if (route == "Leads") leadsVm.refresh()
-    }
+    var navMenu by remember { mutableStateOf(false) }
 
     fun navigate(to: String) {
+        navMenu = false
         nav.navigate(to)
-        scope.launch { drawer.close() }
     }
 
     fun openRecentVisit(v:DashboardVisit){
@@ -118,114 +114,116 @@ fun SalesDrawerAuthenticatedApp(
         )
     }
 
-    BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
-    BackHandler(!drawer.isOpen && visitDetails != null) { visitDetails = null }
-    BackHandler(!drawer.isOpen && visitDetails == null && route == "Leads" && leadsState.detail != null) {
+    BackHandler(navMenu) { navMenu = false }
+    BackHandler(!navMenu && visitDetails != null) { visitDetails = null }
+    BackHandler(!navMenu && visitDetails == null && route == "Leads" && leadsState.detail != null) {
         leadsVm.close()
     }
-    BackHandler(!drawer.isOpen && visitDetails == null && (route != "Leads" || leadsState.detail == null) && nav.canGoBack) {
+    BackHandler(!navMenu && visitDetails == null && (route != "Leads" || leadsState.detail == null) && nav.canGoBack) {
         pendingTask = null
         pendingLeadId = null
         pendingCheckInLead = null
         nav.back()
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawer,
-        drawerContent = {
-            ModalDrawerSheet(Modifier.width(300.dp), drawerContainerColor = SalesNavy) {
-                SalesNavigationDrawerContent(route, data.company.name, data.user.name, telecaller, ::navigate, switchToAccount)
-            }
-        }
-    ) {
-        Scaffold(
-            containerColor = SalesPale,
-            topBar = {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawer.open() } }) {
+    Scaffold(
+        containerColor = SalesPale,
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
+                navigationIcon = {
+                    Box {
+                        IconButton(onClick = { navMenu = true }) {
                             Icon(Icons.Default.Menu, "Open menu")
                         }
-                    },
-                    title = { CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl) },
-                    actions = {
-                        Box {
-                            IconButton(onClick = { profileMenu = true }) {
-                                Surface(shape = CircleShape, color = SalesNavy) {
-                                    Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            data.user.name.trim().firstOrNull()?.uppercase() ?: "U",
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                    }
+                        SalesCompactNavigationMenu(
+                            expanded = navMenu,
+                            onDismiss = { navMenu = false },
+                            current = route,
+                            telecaller = telecaller,
+                            navigate = ::navigate,
+                            switchToAccount = switchToAccount,
+                        )
+                    }
+                },
+                title = { CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl) },
+                actions = {
+                    Box {
+                        IconButton(onClick = { profileMenu = true }) {
+                            Surface(shape = CircleShape, color = SalesNavy) {
+                                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        data.user.name.trim().firstOrNull()?.uppercase() ?: "U",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
                                 }
                             }
-                            DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
-                                DropdownMenuItem(text = { Text("Company Details") }, onClick = { profileMenu = false; navigate("Company Details") })
-                                DropdownMenuItem(text = { Text("Change Password") }, onClick = { profileMenu = false; navigate("Change Password") })
-                                switchToAccount?.let { action -> DropdownMenuItem(text = { Text("Switch to Accounts") }, onClick = { profileMenu = false; action() }) }
-                                HorizontalDivider()
-                                DropdownMenuItem(text = { Text("Logout") }, onClick = { profileMenu = false; logout() })
-                            }
                         }
+                        DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
+                            DropdownMenuItem(text = { Text("Company Details") }, onClick = { profileMenu = false; navigate("Company Details") })
+                            DropdownMenuItem(text = { Text("Change Password") }, onClick = { profileMenu = false; navigate("Change Password") })
+                            switchToAccount?.let { action -> DropdownMenuItem(text = { Text("Switch to Accounts") }, onClick = { profileMenu = false; action() }) }
+                            HorizontalDivider()
+                            DropdownMenuItem(text = { Text("Logout") }, onClick = { profileMenu = false; logout() })
+                        }
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            message?.let { MessageBanner(it, dismiss) }
+            when {
+                visitDetails != null -> SalesVisitDetailsScreen(visitDetails!!) { visitDetails = null }
+                route == "Dashboard" -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
+                route == "Telecalling" -> TelecallingScreen()
+                !telecaller && route == "Attendance" -> SalesDrawerAttendance(data, attendance)
+                !telecaller && route == "Customers" -> CustomersScreen { navigate("Check-ins") }
+                !telecaller && route == "Check-ins" -> FieldScreen(
+                    pendingTask,
+                    { pendingTask = null },
+                    pendingCheckInLead,
+                    { pendingCheckInLead = null },
+                    onCheckoutSuccess = { leadId ->
+                        pendingTask = null
+                        pendingCheckInLead = null
+                        pendingLeadId = leadId
+                        leadsVm.refresh()
+                        navigate("Leads")
+                    },
+                    onBack = { if (nav.canGoBack) nav.back() else navigate("Dashboard") },
+                )
+                !telecaller && route == "Leads" -> LeadsScreen(
+                    pendingLeadId,
+                    { pendingLeadId = null },
+                    onCheckIn = { lead -> pendingTask = null; pendingCheckInLead = lead; navigate("Check-ins") },
+                    onPendingVisitDetails = { v ->
+                        visitDetails = SalesVisitDetails(v.id, v.contactName ?: v.customerName ?: "Field prospect", v.userName, v.checkedInAt, v.checkedOutAt, if (v.checkedOutAt == null) "Checkout pending" else "Checkout completed")
+                    },
+                    vm = leadsVm
+                )
+                !telecaller && route == "Follow-ups" -> FollowUpsScreen(
+                    startCheckIn = { pendingCheckInLead = null; pendingTask = it; navigate("Check-ins") },
+                    viewLead = { pendingLeadId = it; navigate("Leads") },
+                    viewVisit = { task ->
+                        visitDetails = SalesVisitDetails(task.completedVisitId ?: task.id, task.subjectName, task.completedVisitUserName ?: task.assignedUserName ?: "—", task.checkedInAt ?: task.createdAt ?: "—", task.checkedOutAt, if (task.checkedOutAt == null) "Checkout pending" else "Checkout completed")
                     }
                 )
-            }
-        ) { padding ->
-            Column(Modifier.padding(padding).fillMaxSize()) {
-                message?.let { MessageBanner(it, dismiss) }
-                when {
-                    visitDetails != null -> SalesVisitDetailsScreen(visitDetails!!) { visitDetails = null }
-                    route == "Dashboard" -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
-                    route == "Telecalling" -> TelecallingScreen()
-                    !telecaller && route == "Attendance" -> SalesDrawerAttendance(data, attendance)
-                    !telecaller && route == "Customers" -> CustomersScreen { navigate("Check-ins") }
-                    !telecaller && route == "Check-ins" -> FieldScreen(
-                        pendingTask,
-                        { pendingTask = null },
-                        pendingCheckInLead,
-                        { pendingCheckInLead = null },
-                        onCheckoutSuccess = { leadId ->
-                            pendingTask = null
-                            pendingCheckInLead = null
-                            pendingLeadId = leadId
-                            leadsVm.refresh()
-                            navigate("Leads")
-                        }
-                    )
-                    !telecaller && route == "Leads" -> LeadsScreen(
-                        pendingLeadId,
-                        { pendingLeadId = null },
-                        onCheckIn = { lead -> pendingTask = null; pendingCheckInLead = lead; navigate("Check-ins") },
-                        onPendingVisitDetails = { v ->
-                            visitDetails = SalesVisitDetails(v.id, v.contactName ?: v.customerName ?: "Field prospect", v.userName, v.checkedInAt, v.checkedOutAt, if (v.checkedOutAt == null) "Checkout pending" else "Checkout completed")
-                        },
-                        vm = leadsVm
-                    )
-                    !telecaller && route == "Follow-ups" -> FollowUpsScreen(
-                        startCheckIn = { pendingCheckInLead = null; pendingTask = it; navigate("Check-ins") },
-                        viewLead = { pendingLeadId = it; navigate("Leads") },
-                        viewVisit = { task ->
-                            visitDetails = SalesVisitDetails(task.completedVisitId ?: task.id, task.subjectName, task.completedVisitUserName ?: task.assignedUserName ?: "—", task.checkedInAt ?: task.createdAt ?: "—", task.checkedOutAt, if (task.checkedOutAt == null) "Checkout pending" else "Checkout completed")
-                        }
-                    )
-                    !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
-                    !telecaller && route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false, role = MobileRole.SALES)
-                    route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-                        item {
-                            Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(12.dp))
-                            ContentCard(data.company.name, data.company.address ?: "Company address is not available.") {
-                                CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl)
-                                Text("Signed in as ${data.user.name}")
-                            }
+                !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
+                !telecaller && route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false, role = MobileRole.SALES)
+                route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
+                    item {
+                        Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        ContentCard(data.company.name, data.company.address ?: "Company address is not available.") {
+                            CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl)
+                            Text("Signed in as ${data.user.name}")
                         }
                     }
-                    route == "Change Password" -> ChangePasswordScreen()
-                    else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
                 }
+                route == "Change Password" -> ChangePasswordScreen()
+                else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
             }
         }
     }
@@ -266,7 +264,10 @@ private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVis
             item {
                 Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,SalesLine)){
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                        Text("My Recent Check-ins",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
+                        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+                            Text("My Recent Check-ins",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
+                            TextButton(onClick = { navigate("Check-ins") },contentPadding=PaddingValues(horizontal=6.dp,vertical=0.dp)){Text("View All")}
+                        }
                         if(d?.recentVisits.isNullOrEmpty())Text("No check-ins yet.",color=SalesMuted)
                         d?.recentVisits?.take(4)?.forEach{v->
                             OutlinedCard(Modifier.fillMaxWidth()){
@@ -281,7 +282,6 @@ private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVis
                                 }
                             }
                         }
-                        TextButton(onClick = { navigate("Check-ins") }) { Text("View All") }
                     }
                 }
             }
@@ -292,6 +292,8 @@ private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVis
                         SalesDrawerMetric("Overdue", d?.overdueTasks, Modifier.weight(1f))
                     }
                     TextButton(onClick = { navigate("Follow-ups") }) { Text("Open follow-ups") }
+                    HorizontalDivider(color=SalesLine)
+                    Button(onClick={navigate("Check-ins")},modifier=Modifier.fillMaxWidth()){Text("+ Add Check-in")}
                 }
             }
         }
