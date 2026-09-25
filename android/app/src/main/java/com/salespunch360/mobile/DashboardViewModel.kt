@@ -29,8 +29,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun load(checkEmployee: String? = _state.value.selectedCheckEmployeeId) {
         if (_state.value.loading) return
+        _state.value = _state.value.copy(loading = true, message = null)
         viewModelScope.launch {
-            _state.value = _state.value.copy(loading = true, message = null)
             runCatching { api.dashboard(checkEmployee = checkEmployee) }
                 .onSuccess { result ->
                     val currentSelected = _state.value.selectedEmployeeId
@@ -60,11 +60,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         load(employeeId)
     }
 
-    fun view(silent: Boolean = false) {
+    fun view() {
         val id = _state.value.selectedEmployeeId ?: return
-        if (!silent && _state.value.loading) return
+        if (_state.value.loading) return
+        _state.value = _state.value.copy(loading = true, message = null)
         viewModelScope.launch {
-            if (!silent) _state.value = _state.value.copy(loading = true, message = null)
             runCatching {
                 api.dashboard(liveEmployee = id, checkEmployee = _state.value.selectedCheckEmployeeId)
             }.onSuccess { result ->
@@ -79,9 +79,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     message = if (result.latestLocation == null) "No stored GPS location is available for this employee." else null,
                 )
             }.onFailure {
-                if (!silent) {
-                    _state.value = _state.value.copy(loading = false, message = "Unable to load live tracking location.")
-                }
+                _state.value = _state.value.copy(loading = false, message = "Unable to load live tracking location.")
             }
         }
     }
