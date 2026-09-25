@@ -186,16 +186,9 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.value = _state.value.copy(busy = true, message = null)
             try {
-                coroutineScope {
-                    val detailDeferred = async { api.editLead(request) }
-                    val listDeferred = async { api.leads(_state.value.query, _state.value.employeeId) }
-                    _state.value = _state.value.copy(
-                        busy = false,
-                        detail = detailDeferred.await(),
-                        leads = listDeferred.await(),
-                        message = "Lead updated",
-                    )
-                }
+                val detail = api.editLead(request)
+                val list = api.leads(_state.value.query, _state.value.employeeId)
+                _state.value = _state.value.copy(busy = false, detail = detail, leads = list, message = "Lead updated")
                 delay(1800)
                 if(_state.value.message=="Lead updated") _state.value=_state.value.copy(message=null)
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Lead update wasn't accepted.")) }
