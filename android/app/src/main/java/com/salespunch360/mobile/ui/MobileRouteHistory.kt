@@ -41,7 +41,7 @@ internal class MobileRouteHistory(private val root: String) {
     val canGoBack: Boolean
         get() = previous.isNotEmpty() || current != root
 
-    private fun setCurrent(destination: String) {
+    private fun applyDestination(destination: String) {
         current = destination
         MobileRouteSignal.update(destination)
     }
@@ -50,20 +50,20 @@ internal class MobileRouteHistory(private val root: String) {
         if (destination == current) return
         previous += current
         if (previous.size > 50) previous.removeAt(0)
-        setCurrent(destination)
+        applyDestination(destination)
     }
 
     fun replace(destination: String) {
-        setCurrent(destination)
+        applyDestination(destination)
     }
 
     fun back(): Boolean {
         if (previous.isNotEmpty()) {
-            setCurrent(previous.removeAt(previous.lastIndex))
+            applyDestination(previous.removeAt(previous.lastIndex))
             return true
         }
         if (current != root) {
-            setCurrent(root)
+            applyDestination(root)
             return true
         }
         return false
@@ -71,7 +71,7 @@ internal class MobileRouteHistory(private val root: String) {
 
     fun reset() {
         previous.clear()
-        setCurrent(root)
+        applyDestination(root)
     }
 }
 
