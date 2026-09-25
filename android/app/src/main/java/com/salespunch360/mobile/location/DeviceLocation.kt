@@ -65,9 +65,17 @@ suspend fun currentDeviceLocation(context:Context):LocationPayload {
   kotlinx.coroutines.withTimeout(CURRENT_LOCATION_TIMEOUT_MS){suspendCancellableCoroutine{continuation->
    val token=com.google.android.gms.tasks.CancellationTokenSource()
    continuation.invokeOnCancellation{token.cancel()}
-   LocationServices.getFusedLocationProviderClient(context).getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY,token.token)
-    .addOnSuccessListener{location->if(location==null)continuation.resumeWithException(LocationUnavailable())else try{continuation.resume(locationPayload(location))}catch(error:Throwable){continuation.resumeWithException(error)}}
-    .addOnFailureListener{continuation.resumeWithException(it)}
+   if(ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){
+    continuation.resumeWithException(SecurityException())
+    return@suspendCancellableCoroutine
+   }
+   try{
+    LocationServices.getFusedLocationProviderClient(context).getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY,token.token)
+     .addOnSuccessListener{location->if(location==null)continuation.resumeWithException(LocationUnavailable())else try{continuation.resume(locationPayload(location))}catch(error:Throwable){continuation.resumeWithException(error)}}
+     .addOnFailureListener{continuation.resumeWithException(it)}
+   }catch(error:SecurityException){
+    if(continuation.isActive)continuation.resumeWithException(error)
+   }
   }}
  } catch(_:kotlinx.coroutines.TimeoutCancellationException){throw LocationTimedOut()}
 }
