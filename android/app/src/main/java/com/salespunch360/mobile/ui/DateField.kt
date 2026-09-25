@@ -2,6 +2,7 @@ package com.salespunch360.mobile.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -24,7 +25,7 @@ fun DateField(label:String,value:String,onValue:(String)->Unit,modifier:Modifier
    label={Text(label)},
    placeholder={Text("Select date")},
    trailingIcon={Icon(Icons.Default.DateRange,"Select date")},
-   modifier=Modifier.matchParentSize(),
+   modifier=Modifier.fillMaxWidth(),
   )
   Box(Modifier.matchParentSize().clickable{open=true})
  }
