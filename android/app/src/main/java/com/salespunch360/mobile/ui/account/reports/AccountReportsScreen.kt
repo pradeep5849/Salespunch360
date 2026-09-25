@@ -2,6 +2,7 @@ package com.salespunch360.mobile.ui.account.reports
 
 import android.content.Intent
 import java.io.File
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +43,8 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             vm.consumed()
         }
     }
+
+    BackHandler(enabled=state.report!=null){vm.choose(null)}
 
     if (state.report == null) {
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp)) {

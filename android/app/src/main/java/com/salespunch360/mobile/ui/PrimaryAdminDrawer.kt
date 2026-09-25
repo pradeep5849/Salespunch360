@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,10 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
-private val PrimaryAdminItems=listOf("Dashboard","Employees","Branches","Attendance","Customers","Leads","Telecalling","Follow-ups","Targets","Settings","Reports")
+private val PrimaryAdminItems=listOf("Dashboard","Employees","Branches","Attendance","Customers","Leads","Telecalling","Follow-ups","Targets","Settings")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,9 +41,12 @@ fun PrimaryAdminAuthenticatedApp(
  val scope=rememberCoroutineScope()
  val nav=rememberMobileRouteHistory("Dashboard")
  val route=nav.current
+ val leadsVm:LeadsViewModel=viewModel()
+ val leadsState=leadsVm.state.collectAsStateWithLifecycle().value
  var profileMenu by remember{mutableStateOf(false)}
  var pendingLeadId by remember{mutableStateOf<String?>(null)}
  var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
+ var reportsOpen by rememberSaveable{mutableStateOf(route.startsWith("Report:"))}
 
  fun navigate(value:String){
   pendingLeadId=null
@@ -50,7 +57,8 @@ fun PrimaryAdminAuthenticatedApp(
 
  BackHandler(enabled=drawer.isOpen){scope.launch{drawer.close()}}
  BackHandler(enabled=!drawer.isOpen&&visitTask!=null){visitTask=null}
- BackHandler(enabled=!drawer.isOpen&&visitTask==null&&nav.canGoBack){
+ BackHandler(enabled=!drawer.isOpen&&visitTask==null&&route=="Leads"&&leadsState.detail!=null){leadsVm.close()}
+ BackHandler(enabled=!drawer.isOpen&&visitTask==null&&(route!="Leads"||leadsState.detail==null)&&nav.canGoBack){
   pendingLeadId=null
   nav.back()
  }
@@ -65,10 +73,11 @@ fun PrimaryAdminAuthenticatedApp(
       PrimaryAdminItems.forEach{item->
        CompactAdminDrawerItem(
         label=item,
-        selected=if(item=="Reports") route=="Reports"||route.startsWith("Report:") else route==item,
+        selected=route==item,
         onClick={navigate(item)}
        )
       }
+      SalesReportsDrawerSection(MobileRole.PRIMARY_ADMIN,route,reportsOpen,{reportsOpen=it},::navigate)
      }
      if(switchToAccount!=null){
       HorizontalDivider(Modifier.padding(horizontal=16.dp),color=Color.White.copy(alpha=.18f))
@@ -119,7 +128,7 @@ fun PrimaryAdminAuthenticatedApp(
      route=="Branches"->BranchesScreen()
      route=="Attendance"->TeamAttendanceScreen(MobileRole.PRIMARY_ADMIN)
      route=="Customers"->CustomerAdminScreen()
-     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null})
+     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},vm=leadsVm)
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(startCheckIn={},viewLead={pendingLeadId=it;nav.navigate("Leads")},viewVisit={visitTask=it})
      route=="Targets"->TargetsScreen(MobileRole.PRIMARY_ADMIN)

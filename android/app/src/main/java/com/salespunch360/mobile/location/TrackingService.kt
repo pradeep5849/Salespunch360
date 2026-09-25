@@ -34,6 +34,7 @@ class TrackingService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var fused: FusedLocationProviderClient
     private var requestingUpdates = false
+    private var foregroundReady = false
 
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -63,12 +64,23 @@ class TrackingService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createChannel()
-        startForeground(42, notification("Location updates are active"))
+        foregroundReady = runCatching {
+            createChannel()
+            startForeground(42, notification("Location updates are active"))
+            true
+        }.getOrDefault(false)
+        if (!foregroundReady) {
+            stopSelf()
+            return
+        }
         fused = LocationServices.getFusedLocationProviderClient(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!foregroundReady || !::fused.isInitialized) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             stopSelf()
             return START_NOT_STICKY
@@ -99,6 +111,7 @@ class TrackingService : Service() {
     override fun onDestroy() {
         if (::fused.isInitialized) runCatching { fused.removeLocationUpdates(callback) }
         requestingUpdates = false
+        foregroundReady = false
         scope.cancel()
         super.onDestroy()
     }
