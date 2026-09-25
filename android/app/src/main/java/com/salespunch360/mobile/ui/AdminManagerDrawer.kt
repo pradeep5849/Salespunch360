@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +37,6 @@ private fun roleMenu(data:Bootstrap):List<String>{
   add("Follow-ups")
   add("Targets")
   if(data.capabilities.canManageSalesSettings)add("Settings")
-  add("Reports")
  }
 }
 
@@ -61,6 +61,7 @@ fun AdminManagerAuthenticatedApp(
  var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
  var checkInTask by remember{mutableStateOf<FollowUpTask?>(null)}
  var checkInLead by remember{mutableStateOf<LeadSummary?>(null)}
+ var reportsOpen by rememberSaveable{mutableStateOf(route.startsWith("Report:"))}
 
  fun navigate(value:String){
   visitTask=null
@@ -86,10 +87,11 @@ fun AdminManagerAuthenticatedApp(
       roleMenu(data).forEach{item->
        CompactRoleDrawerItem(
         label=item,
-        selected=if(item=="Reports") route=="Reports"||route.startsWith("Report:") else route==item,
+        selected=route==item,
         onClick={navigate(item)}
        )
       }
+      SalesReportsDrawerSection(role,route,reportsOpen,{reportsOpen=it},::navigate)
      }
      if(switchToAccount!=null){
       HorizontalDivider(Modifier.padding(horizontal=16.dp),color=Color.White.copy(alpha=.18f))
