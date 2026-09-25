@@ -39,7 +39,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
   :null;
  if(!date||!employeeId)return{
   actor,employees,date,employeeId,segments:[],points:[],markers:[],events:[],routeDistanceMeters:0,
-  employee:null,lastSpottedAt:null,visitCount:0,geofence,
+  employee:undefined,lastSpottedAt:null,visitCount:0,geofence,
  };
  const ids=await resolveEmployeeScope(actor,employeeId);
  if(ids.length!==1)throw new AuthorizationError();
