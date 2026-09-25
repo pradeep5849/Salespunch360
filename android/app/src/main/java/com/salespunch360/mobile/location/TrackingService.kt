@@ -38,12 +38,16 @@ class TrackingService : Service() {
 
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
+            if (!isAttendanceTrackingAuthorized(this@TrackingService)) {
+                stopSelf()
+                return
+            }
             val owner = SecureSession(this@TrackingService).userId() ?: run {
                 stopSelf()
                 return
             }
             result.locations.forEach { location ->
-                if (location.accuracy <= 100f) {
+                if (location.accuracy <= 100f && isAttendanceTrackingAuthorized(this@TrackingService)) {
                     scope.launch {
                         LocationQueue((application as SalesPunchApp).database.locations()).enqueue(
                             PendingLocation(
@@ -66,7 +70,7 @@ class TrackingService : Service() {
         super.onCreate()
         foregroundReady = runCatching {
             createChannel()
-            startForeground(42, notification("Location updates are active"))
+            startForeground(42, notification("Location updates are active while attendance is ON"))
             true
         }.getOrDefault(false)
         if (!foregroundReady) {
@@ -81,11 +85,17 @@ class TrackingService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (!isAttendanceTrackingAuthorized(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            setAttendanceTrackingAuthorized(this, false)
             stopSelf()
             return START_NOT_STICKY
         }
         if (SecureSession(this).userId() == null) {
+            setAttendanceTrackingAuthorized(this, false)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -100,6 +110,7 @@ class TrackingService : Service() {
             requestingUpdates = true
             START_STICKY
         } catch (_: SecurityException) {
+            setAttendanceTrackingAuthorized(this, false)
             stopSelf()
             START_NOT_STICKY
         } catch (_: IllegalStateException) {
@@ -125,7 +136,7 @@ class TrackingService : Service() {
                 "Attendance location tracking",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Visible while company-authorized attendance GPS tracking is active"
+                description = "Visible only while company-authorized attendance GPS tracking is active"
             },
         )
     }
@@ -140,16 +151,39 @@ class TrackingService : Service() {
         .build()
 
     companion object {
+        private const val PREFS = "attendance_gps_tracking"
+        private const val KEY_AUTHORIZED = "attendance_active"
+
+        fun isAttendanceTrackingAuthorized(context: Context): Boolean =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTHORIZED, false)
+
+        private fun setAttendanceTrackingAuthorized(context: Context, active: Boolean) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_AUTHORIZED, active)
+                .apply()
+        }
+
         fun start(context: Context): Boolean {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return false
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                setAttendanceTrackingAuthorized(context, false)
+                return false
+            }
+            setAttendanceTrackingAuthorized(context, true)
             return runCatching {
                 ContextCompat.startForegroundService(context, Intent(context, TrackingService::class.java))
                 true
-            }.getOrDefault(false)
+            }.getOrElse {
+                setAttendanceTrackingAuthorized(context, false)
+                false
+            }
         }
 
-        fun stop(context: Context) = runCatching {
-            context.stopService(Intent(context, TrackingService::class.java))
-        }.getOrDefault(false)
+        fun stop(context: Context): Boolean {
+            setAttendanceTrackingAuthorized(context, false)
+            return runCatching {
+                context.stopService(Intent(context, TrackingService::class.java))
+            }.getOrDefault(false)
+        }
     }
 }
