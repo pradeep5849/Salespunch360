@@ -25,7 +25,6 @@ import com.salespunch360.mobile.data.*
 
 @Composable fun AdminOverviewScreen(data:Bootstrap,role:MobileRole,vm:DashboardViewModel=viewModel(),openCheckIns:(()->Unit)?=null,openCheckInReport:()->Unit){
  val state=vm.state.collectAsStateWithLifecycle().value;val dash=data.adminDashboard;val context=LocalContext.current;val token=remember{SecureSession(context).token()};var menu by remember{mutableStateOf(false)}
- LaunchedEffect(Unit){vm.load()}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{Text(if(role==MobileRole.PRIMARY_ADMIN)"PRIMARY ADMIN" else if(role==MobileRole.ADMIN)"ADDITIONAL ADMIN" else if(data.user.managerType=="MANAGER_ONLY")"OFFICE MANAGER" else "SALES MANAGER",style=MaterialTheme.typography.labelLarge,color=SalesBlue,fontWeight=FontWeight.Bold);Text("Good day, ${data.user.name.substringBefore(' ')}!",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);Text(if(role==MobileRole.MANAGER)"Your assigned team overview." else "Your company field-team overview.",color=SalesMuted)}
   openCheckIns?.let{action->item{Button(action,Modifier.fillMaxWidth()){Text("+ Add Check-in")}}}
