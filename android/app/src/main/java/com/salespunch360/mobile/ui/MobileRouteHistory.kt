@@ -1,6 +1,7 @@
 package com.salespunch360.mobile.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,5 +76,10 @@ internal class MobileRouteHistory(private val root: String) {
 }
 
 @Composable
-internal fun rememberMobileRouteHistory(root: String = "Dashboard") =
-    remember(root) { MobileRouteHistory(root) }
+internal fun rememberMobileRouteHistory(root: String = "Dashboard"): MobileRouteHistory {
+    val history = remember(root) { MobileRouteHistory(root) }
+    DisposableEffect(history) {
+        onDispose { MobileRouteSignal.update("") }
+    }
+    return history
+}
