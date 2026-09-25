@@ -21,11 +21,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.salespunch360.mobile.BuildConfig
+import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import com.salespunch360.mobile.location.TrackingService
 import kotlinx.coroutines.launch
@@ -87,6 +90,8 @@ fun SalesDrawerAuthenticatedApp(
     val telecaller = data.user.salesRole == MobileRole.SALES && !data.features.fieldWorkEnabled
     val nav = rememberMobileRouteHistory("Dashboard")
     val route = nav.current
+    val leadsVm: LeadsViewModel = viewModel()
+    val leadsState = leadsVm.state.collectAsStateWithLifecycle().value
     var pendingTask by remember { mutableStateOf<FollowUpTask?>(null) }
     var pendingLeadId by remember { mutableStateOf<String?>(null) }
     var pendingCheckInLead by remember { mutableStateOf<LeadSummary?>(null) }
@@ -111,7 +116,10 @@ fun SalesDrawerAuthenticatedApp(
 
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
     BackHandler(!drawer.isOpen && visitDetails != null) { visitDetails = null }
-    BackHandler(!drawer.isOpen && visitDetails == null && nav.canGoBack) {
+    BackHandler(!drawer.isOpen && visitDetails == null && route == "Leads" && leadsState.detail != null) {
+        leadsVm.close()
+    }
+    BackHandler(!drawer.isOpen && visitDetails == null && (route != "Leads" || leadsState.detail == null) && nav.canGoBack) {
         pendingTask = null
         pendingLeadId = null
         pendingCheckInLead = null
@@ -122,7 +130,7 @@ fun SalesDrawerAuthenticatedApp(
         drawerState = drawer,
         drawerContent = {
             ModalDrawerSheet(Modifier.width(300.dp), drawerContainerColor = SalesNavy) {
-                SalesNavigationDrawerContent(route, data.company.name, data.user.name, telecaller, ::navigate)
+                SalesNavigationDrawerContent(route, data.company.name, data.user.name, telecaller, ::navigate, switchToAccount)
             }
         }
     ) {
@@ -177,7 +185,8 @@ fun SalesDrawerAuthenticatedApp(
                         onCheckIn = { lead -> pendingCheckInLead = lead; navigate("Check-ins") },
                         onPendingVisitDetails = { v ->
                             visitDetails = SalesVisitDetails(v.id, v.contactName ?: v.customerName ?: "Field prospect", v.userName, v.checkedInAt, v.checkedOutAt, if (v.checkedOutAt == null) "Checkout pending" else "Checkout completed")
-                        }
+                        },
+                        vm = leadsVm
                     )
                     !telecaller && route == "Follow-ups" -> FollowUpsScreen(
                         startCheckIn = { pendingTask = it; navigate("Check-ins") },
