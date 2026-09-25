@@ -31,6 +31,7 @@ export async function createSimpleProjectForActor(
 ) {
   const branchId = String(raw.branchId ?? "").trim();
   const name = String(raw.name ?? "").trim();
+  const siteName = String(raw.siteName ?? "").trim() || undefined;
   const siteAddress = String(raw.siteAddress ?? "").trim() || undefined;
   const siteContactName = String(raw.siteContactName ?? "").trim() || undefined;
   const siteContactPhone = String(raw.siteContactPhone ?? "").trim() || undefined;
@@ -40,11 +41,14 @@ export async function createSimpleProjectForActor(
   if (!options.branches.some((branch) => branch.id === branchId))
     throw new AuthorizationError();
 
+  // Every manually-created project gets its own Account customer immediately.
+  // Use the site/project name as the customer identity and keep the person's
+  // name in contactPerson so the customer is easy to find in transaction forms.
   const customer = await db.customer.create({
     data: {
       companyId: actor.companyId,
       branchId,
-      name: siteContactName || name,
+      name: siteName || name,
       contactPerson: siteContactName,
       phone: siteContactPhone,
       address: siteAddress,
@@ -57,7 +61,7 @@ export async function createSimpleProjectForActor(
       branchId,
       name,
       customerId: customer.id,
-      siteName: String(raw.siteName ?? "").trim() || undefined,
+      siteName,
       siteAddress,
       siteContactName,
       siteContactPhone,
