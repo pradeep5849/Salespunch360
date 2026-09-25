@@ -24,11 +24,12 @@ class LocationSyncWorker(context:Context,params:WorkerParameters):CoroutineWorke
     }catch(error:ApiException){
      when{
       error.status==409&&error.code=="NO_OPEN_ATTENDANCE"->{
-       // Attendance is the authority for tracking. Never keep points around to be
-       // attached to a later attendance period.
-       locationDao.clearOwner(owner)
-       TrackingService.stop(applicationContext)
-       return Result.success()
+       // The sample was captured outside an attendance period. Discard only this point so
+       // valid queued points from a later attendance period are not lost.
+       locationDao.delete(point.id,owner)
+       if(!TrackingService.isAttendanceTrackingAuthorized(applicationContext)){
+        TrackingService.stop(applicationContext)
+       }
       }
       error.status==409&&error.code=="GPS_DISABLED"->{
        locationDao.clearOwner(owner)
