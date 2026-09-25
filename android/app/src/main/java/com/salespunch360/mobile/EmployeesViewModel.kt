@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.*
 import java.io.IOException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,10 +40,18 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, error = null, notice = null)
         try {
-            val context = api.employees()
-            val verified = runCatching { verification.status() }.getOrNull()
-            val profileComplete = runCatching { companyProfile.load().profileComplete }.getOrNull()
-            _state.value = EmployeesState(loading=false,context=context,emailVerified=verified,companyProfileComplete=profileComplete)
+            val loaded = coroutineScope {
+                val contextDeferred = async { api.employees() }
+                val verifiedDeferred = async { runCatching { verification.status() }.getOrNull() }
+                val profileDeferred = async { runCatching { companyProfile.load().profileComplete }.getOrNull() }
+                Triple(contextDeferred.await(), verifiedDeferred.await(), profileDeferred.await())
+            }
+            _state.value = EmployeesState(
+                loading = false,
+                context = loaded.first,
+                emailVerified = loaded.second,
+                companyProfileComplete = loaded.third,
+            )
         } catch (e: Exception) {
             _state.value = _state.value.copy(loading=false,error=if (e is IOException) "You're offline. Reconnect and try again." else "Employees couldn't be loaded. Please try again.")
         }
