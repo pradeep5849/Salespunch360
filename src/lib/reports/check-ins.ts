@@ -8,11 +8,12 @@ import { reportActor, reportEmployeeOptions, resolveEmployeeScope, type ReportAc
 export async function checkInReport(raw:SearchParams, advanced=false,providedActor?:ReportActor,exportMode=false) {
   const actor=providedActor??await reportActor(), filters=parseReportFilters(raw,undefined,exportMode?10000:undefined), userIds=await resolveEmployeeScope(actor,filters.employeeId), branches=await operationalBranchContext(actor,reportUuid(raw,"branchId"));
   const status=raw.status === "COMPLETED" || raw.status === "ACTIVE" ? raw.status : "ALL",sentiment=raw.sentiment==="POSITIVE"||raw.sentiment==="NEUTRAL"||raw.sentiment==="NEGATIVE"?raw.sentiment:"ALL",customerId=reportUuid(raw,"customerId");
-  const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,branchId:branches.branchId,userId:{in:userIds},checkedInAt:{gte:filters.start,lt:filters.endExclusive},...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="ACTIVE"?{checkedOutAt:null}:{}),...(sentiment!=="ALL"?{checkoutSentiment:sentiment}:{}),...(customerId?{customerId}:{}),...(advanced&&filters.q?{customer:{name:{contains:filters.q,mode:"insensitive"}}}:{})};
+  const salesUnfiltered=actor.salesRole==="SALES"&&raw.start===undefined&&raw.end===undefined;
+  const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,branchId:branches.branchId,userId:{in:userIds},...(salesUnfiltered?{}:{checkedInAt:{gte:filters.start,lt:filters.endExclusive}}),...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="ACTIVE"?{checkedOutAt:null}:{}),...(sentiment!=="ALL"?{checkoutSentiment:sentiment}:{}),...(customerId?{customerId}:{}),...(advanced&&filters.q?{customer:{name:{contains:filters.q,mode:"insensitive"}}}:{})};
   const [total,completed,pending,leadAgg,visits,employees,customers]=await Promise.all([
     db.customerVisit.count({where}), db.customerVisit.count({where:{...where,checkedOutAt:{not:null}}}), db.customerVisit.count({where:{...where,checkedOutAt:null}}),
     db.lead.count({where:{companyId:actor.companyId,sourceVisit:{is:where}}}),
-    db.customerVisit.findMany({where,include:{user:{select:{name:true,salesRole:true}},customer:{select:{name:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true}},_count:{select:{sourceLeads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
+    db.customerVisit.findMany({where,include:{photo:{select:{id:true}},user:{select:{name:true,salesRole:true}},customer:{select:{name:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true}},_count:{select:{sourceLeads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
     reportEmployeeOptions(actor), db.customer.findMany({where:{companyId:actor.companyId,branchId:branches.branchId},select:{id:true,name:true},orderBy:{name:"asc"}})
   ]);
   const priorVisitIds=new Set<string>();
