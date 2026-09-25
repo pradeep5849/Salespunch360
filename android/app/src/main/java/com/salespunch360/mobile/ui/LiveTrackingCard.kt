@@ -6,8 +6,11 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,7 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val selectedEmployee = state.employees.firstOrNull { it.id == state.selectedEmployeeId }
 
     LaunchedEffect(Unit) { vm.load() }
     LaunchedEffect(state.selectedEmployeeId, state.gpsTrackingEnabled) {
@@ -58,24 +62,58 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
         border = BorderStroke(1.dp, SalesLine),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Live Track", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SalesInk)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Live Track",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = SalesInk,
+                    modifier = Modifier.weight(1f),
+                )
                 StatusChip(
                     if (state.gpsTrackingEnabled == true) "GPS Enabled"
                     else if (state.gpsTrackingEnabled == false) "GPS Disabled"
                     else "Checking",
                 )
             }
+
             if (state.gpsTrackingEnabled == false) {
-                Text("GPS tracking is disabled in Company Settings.", color = SalesMuted, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "GPS tracking is disabled in Company Settings.",
+                    color = SalesMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 return@Column
             }
 
+            Text(
+                "Select User",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = SalesInk,
+            )
             Box(Modifier.fillMaxWidth()) {
-                OutlinedButton({ expanded = true }, Modifier.fillMaxWidth()) {
-                    Text(state.employees.firstOrNull { it.id == state.selectedEmployeeId }?.name ?: "Select employee")
+                OutlinedButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.employees.isNotEmpty(),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    Text(
+                        selectedEmployee?.name
+                            ?: if (state.employees.isEmpty()) "No users available" else "Select user",
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select user")
                 }
-                DropdownMenu(expanded, { expanded = false }) {
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
                     state.employees.forEach { employee ->
                         DropdownMenuItem(
                             text = { Text(employee.name) },
@@ -88,7 +126,10 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
                 }
             }
 
-            state.message?.let { Text(it, color = SalesMuted, style = MaterialTheme.typography.bodySmall) }
+            state.message?.let {
+                Text(it, color = SalesMuted, style = MaterialTheme.typography.bodySmall)
+            }
+
             state.latestLocation?.let { location ->
                 var address by remember(location.latitude, location.longitude) { mutableStateOf<String?>(null) }
                 var resolving by remember(location.latitude, location.longitude) { mutableStateOf(true) }
@@ -105,32 +146,56 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
                             location.latitude,
                             location.longitude,
                             location.user.name,
-                            "Last spotted at ${trackingClock(location.capturedAt)} · As per GPS",
-                            showInfo = true,
+                            "Last spotted ${trackingClock(location.capturedAt)}",
+                            showInfo = false,
                         ),
                     ),
-                    Modifier.fillMaxWidth().height(380.dp),
+                    Modifier.fillMaxWidth().height(280.dp),
                 )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(Modifier.weight(1f)) {
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SalesPale,
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Column(
+                        Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
                         Text(location.user.name, fontWeight = FontWeight.SemiBold, color = SalesInk)
-                        Text("Last spotted at ${trackingClock(location.capturedAt)}", style = MaterialTheme.typography.bodySmall, color = SalesMuted)
-                        Text(if (resolving) "Finding address…" else address ?: "Address unavailable", style = MaterialTheme.typography.bodySmall, color = SalesMuted)
+                        Text(
+                            "Last spotted at ${trackingClock(location.capturedAt)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SalesMuted,
+                        )
+                        Text(
+                            if (resolving) "Finding address…" else address ?: "Address unavailable",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SalesMuted,
+                        )
                     }
                 }
+
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton({ vm.view() }, enabled = !state.loading, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        { vm.view() },
+                        enabled = !state.loading,
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text(if (state.loading) "Refreshing…" else "Refresh")
                     }
                     OutlinedButton(
                         {
-                            val uri = Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}")
+                            val uri = Uri.parse(
+                                "geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}",
+                            )
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
                         },
                         modifier = Modifier.weight(1f),
                     ) { Text("Open Map") }
                 }
             }
+
             if (state.latestLocation == null && state.loading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
