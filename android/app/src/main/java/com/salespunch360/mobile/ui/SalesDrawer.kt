@@ -3,11 +3,12 @@ package com.salespunch360.mobile.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,14 +32,6 @@ private val telecallerDrawerDestinations=listOf(
  SalesDrawerDestination("Dashboard","Dashboard",Icons.Default.Home),
  SalesDrawerDestination("Telecalling","Telecalling",Icons.Default.Phone)
 )
-private val salesDrawerReports=listOf(
- "Check-in Report" to "Report:check-ins",
- "Advanced Check-in" to "Report:advanced-check-ins",
- "My Attendance" to "Report:attendance",
- "My Travel / Distance" to "Report:gps",
- "Lead Report" to "Report:leads",
- "My Performance" to "Report:targets"
-)
 
 @Composable
 internal fun SalesNavigationDrawerContent(
@@ -46,38 +39,36 @@ internal fun SalesNavigationDrawerContent(
  companyName:String,
  userName:String,
  telecaller:Boolean=false,
+ switchToAccount:(()->Unit)?=null,
  navigate:(String)->Unit
 ){
- var reportsExpanded by rememberSaveable{mutableStateOf(current?.startsWith("Report:")==true)}
  val destinations=if(telecaller)telecallerDrawerDestinations else salesDrawerDestinations
- Column(Modifier.fillMaxSize().background(SalesNavy).statusBarsPadding().padding(vertical=18.dp)){
-  Column(Modifier.padding(horizontal=20.dp,vertical=8.dp)){
-   Text(companyName,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
-   Text(userName,color=Color.White.copy(alpha=.7f),style=MaterialTheme.typography.bodySmall)
-  }
-  Spacer(Modifier.height(12.dp))
-  destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route){navigate(item.route)}}
-  if(!telecaller){
-   DrawerRow("Reports",Icons.Default.Assessment,current?.startsWith("Report:")==true||current=="Reports",trailing=if(reportsExpanded)"▲" else "▼"){reportsExpanded=!reportsExpanded}
-   if(reportsExpanded)salesDrawerReports.forEach{(label,route)->
-    Row(
-     Modifier.fillMaxWidth().clickable{navigate(route)}.padding(start=58.dp,end=18.dp,top=11.dp,bottom=11.dp),
-     verticalAlignment=Alignment.CenterVertically
-    ){
-     Text(label,fontSize=11.sp,color=if(current==route)Color.White else Color.White.copy(alpha=.78f),fontWeight=if(current==route)FontWeight.Bold else FontWeight.Normal)
-    }
+ Column(Modifier.fillMaxSize().background(SalesNavy).statusBarsPadding()){
+  Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical=12.dp)){
+   Column(Modifier.padding(horizontal=20.dp,vertical=6.dp)){
+    Text(companyName,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
+    Text(userName,color=Color.White.copy(alpha=.7f),style=MaterialTheme.typography.bodySmall)
    }
+   Spacer(Modifier.height(6.dp))
+   destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route){navigate(item.route)}}
+   if(!telecaller){
+    DrawerRow("Reports",Icons.Default.Assessment,current=="Reports"||current?.startsWith("Report:")==true){navigate("Reports")}
+   }
+  }
+  switchToAccount?.let{action->
+   HorizontalDivider(color=Color.White.copy(alpha=.18f))
+   DrawerRow("Switch to Accounts",Icons.Default.SwapHoriz,false){action()}
+   Spacer(Modifier.height(6.dp))
   }
  }
 }
 
 @Composable
-private fun DrawerRow(label:String,icon:ImageVector,selected:Boolean,trailing:String?=null,onClick:()->Unit){
+private fun DrawerRow(label:String,icon:ImageVector,selected:Boolean,onClick:()->Unit){
  val bg=if(selected)Color.White.copy(alpha=.12f) else Color.Transparent
- Row(Modifier.fillMaxWidth().background(bg).clickable(onClick=onClick).padding(horizontal=20.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically){
-  Icon(icon,null,tint=Color.White,modifier=Modifier.size(22.dp))
-  Spacer(Modifier.width(16.dp))
+ Row(Modifier.fillMaxWidth().background(bg).clickable(onClick=onClick).padding(horizontal=20.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
+  Icon(icon,null,tint=Color.White,modifier=Modifier.size(20.dp))
+  Spacer(Modifier.width(14.dp))
   Text(label,Modifier.weight(1f),fontSize=13.sp,color=Color.White,fontWeight=if(selected)FontWeight.Bold else FontWeight.Medium)
-  trailing?.let{Text(it,fontSize=11.sp,color=Color.White.copy(alpha=.8f))}
  }
 }
