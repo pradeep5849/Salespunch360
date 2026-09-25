@@ -41,7 +41,7 @@ internal fun salesReportDrawerItems(role:MobileRole)=when(role){
  MobileRole.PRIMARY_ADMIN,MobileRole.ADMIN->listOf(
   SalesReportDrawerItem("Check-in Report","check-ins"),
   SalesReportDrawerItem("Attendance Report","attendance"),
-  SalesReportDrawerItem("GPS Route Report","gps"),
+  SalesReportDrawerItem("GPS Report","gps"),
   SalesReportDrawerItem("Geofence Report","geofence"),
   SalesReportDrawerItem("Target Analysis","targets"),
   SalesReportDrawerItem("Expense Report","expenses")
@@ -49,7 +49,7 @@ internal fun salesReportDrawerItems(role:MobileRole)=when(role){
  MobileRole.MANAGER->listOf(
   SalesReportDrawerItem("Check-in Report","check-ins"),
   SalesReportDrawerItem("Attendance Report","attendance"),
-  SalesReportDrawerItem("GPS Route Report","gps"),
+  SalesReportDrawerItem("GPS Report","gps"),
   SalesReportDrawerItem("Geofence Report","geofence"),
   SalesReportDrawerItem("Target Analysis","targets")
  )
@@ -59,6 +59,61 @@ internal fun salesReportDrawerItems(role:MobileRole)=when(role){
   SalesReportDrawerItem("My Travel / Distance","gps"),
   SalesReportDrawerItem("My Performance","targets")
  )
+}
+
+@Composable
+internal fun SalesCompactNavigationMenu(
+ expanded:Boolean,
+ onDismiss:()->Unit,
+ current:String?,
+ telecaller:Boolean,
+ navigate:(String)->Unit,
+ switchToAccount:(()->Unit)?=null,
+){
+ val destinations=if(telecaller)telecallerDrawerDestinations else salesDrawerDestinations.filterNot{it.route=="Telecalling"}
+ var reportsOpen by rememberSaveable{mutableStateOf(current?.startsWith("Report:")==true)}
+ DropdownMenu(
+  expanded=expanded,
+  onDismissRequest=onDismiss,
+  modifier=Modifier.width(248.dp),
+  containerColor=SalesNavy,
+ ){
+  destinations.forEach{item->
+   DropdownMenuItem(
+    text={Text(item.label,color=Color.White,fontSize=13.sp,fontWeight=if(current==item.route)FontWeight.Bold else FontWeight.Medium)},
+    leadingIcon={Icon(item.icon,null,tint=Color.White,modifier=Modifier.size(19.dp))},
+    onClick={navigate(item.route)},
+    contentPadding=PaddingValues(horizontal=14.dp,vertical=0.dp),
+   )
+  }
+  if(!telecaller){
+   DropdownMenuItem(
+    text={Text("Reports",color=Color.White,fontSize=13.sp,fontWeight=if(current?.startsWith("Report:")==true)FontWeight.Bold else FontWeight.Medium)},
+    leadingIcon={Icon(Icons.Default.Assessment,null,tint=Color.White,modifier=Modifier.size(19.dp))},
+    trailingIcon={Text(if(reportsOpen)"⌃" else "⌄",color=Color.White)},
+    onClick={reportsOpen=!reportsOpen},
+    contentPadding=PaddingValues(horizontal=14.dp,vertical=0.dp),
+   )
+   if(reportsOpen){
+    salesReportDrawerItems(MobileRole.SALES).forEach{report->
+     DropdownMenuItem(
+      text={Text(report.label,color=Color.White.copy(alpha=.9f),fontSize=12.sp)},
+      onClick={navigate("Report:${report.type}")},
+      contentPadding=PaddingValues(start=48.dp,end=14.dp),
+     )
+    }
+   }
+  }
+  switchToAccount?.let{action->
+   HorizontalDivider(color=Color.White.copy(alpha=.18f))
+   DropdownMenuItem(
+    text={Text("Switch to Accounts",color=Color.White,fontSize=13.sp)},
+    leadingIcon={Icon(Icons.Default.SwapHoriz,null,tint=Color.White,modifier=Modifier.size(19.dp))},
+    onClick={onDismiss();action()},
+    contentPadding=PaddingValues(horizontal=14.dp,vertical=0.dp),
+   )
+  }
+ }
 }
 
 @Composable

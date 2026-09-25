@@ -20,7 +20,23 @@ export async function dataFor(report:string,raw:Record<string,string>,providedAc
  else if(report==="check-ins"||report==="advanced-check-ins"){const advanced=report.startsWith("advanced"),r=await checkInReport(all,advanced,actor,true);if(r.summary.total>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:advanced?"Advanced Check-in Report":"Check-in Report",range:`${r.filters.startText} to ${r.filters.endText}`,summary:r.summary,headers:["Employee","Role","Customer / prospect","Check-in","Checkout","Status","Duration minutes","Visit kind","Notes","Check-in Address","Latitude","Longitude","Reference distance km","Leads"],rows:r.rows.map(v=>[v.user.name,v.user.salesRole,v.customer?.name||v.contactName||"Field prospect",india(v.checkedInAt),india(v.checkedOutAt),v.checkedOutAt?"COMPLETED":"PENDING",v.durationMs==null?null:v.durationMs/60000,v.visitKind,v.visitNotes,v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`,v.checkInLatitude,v.checkInLongitude,v.referenceDistanceMeters==null?null:v.referenceDistanceMeters/1000,v._count.sourceLeads])}}
  else if(report==="leads"){const r=await leadReport(all,actor,true);if(r.summary.total>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:"Lead & Pipeline Report",range:`${r.filters.startText} to ${r.filters.endText}`,summary:{...r.summary,counts:JSON.stringify(r.summary.counts)},headers:["Lead","Customer / prospect","Assignee","Role","Stage","Source","Value","Currency","Follow-up","Created"],rows:r.rows.map(l=>[l.title,l.customer?.name||l.companyName||l.contactName||"Prospect",l.assignedUser.name,l.assignedUser.salesRole,l.stage,l.source,l.estimatedValue?.toNumber()||0,l.currencyCode,india(l.followUpAt),india(l.createdAt)])}}
  else if(report==="geofence-breaches"){const r=await geofenceReport(all,actor,true);if(r.summary.total>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:"Geofence Breach Report",range:`${r.filters.startText} to ${r.filters.endText}`,summary:r.summary,headers:["Employee","Role","Occurred","Action","Type","Customer","Radius m","Distance km","Accuracy m","Reference latitude","Reference longitude","Actual latitude","Actual longitude"],rows:r.rows.map(e=>[e.employee.name,e.employee.salesRole,india(e.occurredAt),e.action,e.type,e.customer?.name,e.allowedRadiusMeters,e.distanceMeters==null?null:e.distanceMeters/1000,e.accuracyMeters,e.referenceLatitude,e.referenceLongitude,e.actualLatitude,e.actualLongitude])}}
- else if(report==="gps"){const r=await gpsReport(raw,actor);if(r.events.length>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:"GPS Route Report",range:r.date||"No date selected",summary:{employee:r.employee?.name||"",sessions:r.sessions.length,acceptedPoints:r.points.length,distanceKm:r.routeDistanceMeters/1000},headers:["Event","Time","Customer","Detail","Latitude","Longitude","Session"],rows:r.events.map(e=>[e.type,india(e.at),e.customer,e.detail,e.latitude,e.longitude,e.sessionId])}}
+ else if(report==="gps"){
+  const r=await gpsReport(raw,actor);
+  if(r.events.length>MAX_ROWS)throw new Error("ROW_LIMIT");
+  data={
+   name:"GPS Report",
+   range:r.date||"No date selected",
+   summary:{
+    employee:r.employee?.name||"",
+    acceptedPoints:r.points.length,
+    visits:r.visitCount,
+    distanceKm:r.routeDistanceMeters/1000,
+    lastSpotted:india(r.lastSpottedAt),
+   },
+   headers:["Event","Time","Customer","Detail","Latitude","Longitude"],
+   rows:r.events.map(e=>[e.type,india(e.at),e.customer,e.detail,e.latitude,e.longitude]),
+  };
+ }
  else if(report==="targets"){const r=await listTargetsForActor(actor,raw,true);if(r.targets.length>MAX_ROWS)throw new Error("ROW_LIMIT");data={name:"Target Analysis",range:`${raw.start||"All"} to ${raw.end||"All"}`,summary:{targets:r.targets.length},headers:["Employee","Role","Metric","Period","Start","End","Target","Actual","Remaining","Progress %","Status","Currency"],rows:r.targets.map(t=>[t.assignedUser.name,t.assignedUser.salesRole,t.metric,t.periodType,t.startDate.toISOString().slice(0,10),t.endDate.toISOString().slice(0,10),t.targetValue.toNumber(),t.actual.toNumber(),t.remaining.toNumber(),t.percentage.toNumber(),t.status,t.currencyCode])}}
  else if(report==="expenses"){const r=await expenseReport(raw,actor);if(r.rows.length>MAX_ROWS||r.pointLimitExceeded)throw new Error("ROW_LIMIT");data={name:"Expense Report",range:`${r.filters.startText} to ${r.filters.endText}`,summary:{rows:r.rows.length},headers:["Employee","Date","Verified distance km","Travel rate","Travel expense"],rows:r.rows.map(x=>[x.employee,x.date,x.distanceMeters/1000,"Not configured",null])}}
  else throw new Error("NOT_FOUND");return{...data,companyId:actor.companyId};

@@ -147,7 +147,13 @@ fun AdminManagerAuthenticatedApp(
      route=="Employees"->EmployeesScreen()
      route=="Attendance"->if(fieldManager)FieldManagerAttendanceScreen(data,attendance)else TeamAttendanceScreen(role)
      route=="Customers"->if(role==MobileRole.ADMIN)CustomerAdminScreen()else CustomersScreen{if(fieldManager)navigate("Check-ins")}
-     route=="Check-ins"&&fieldManager->FieldScreen(initialFollowUpTask=checkInTask,onInitialFollowUpConsumed={checkInTask=null},initialLead=checkInLead,onInitialLeadConsumed={checkInLead=null})
+     route=="Check-ins"&&fieldManager->FieldScreen(
+      initialFollowUpTask=checkInTask,
+      onInitialFollowUpConsumed={checkInTask=null},
+      initialLead=checkInLead,
+      onInitialLeadConsumed={checkInLead=null},
+      onBack={if(nav.canGoBack)nav.back()else navigate("Dashboard")},
+     )
      route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},onCheckIn={lead->if(fieldManager){checkInLead=lead;navigate("Check-ins")}},vm=leadsVm)
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(
