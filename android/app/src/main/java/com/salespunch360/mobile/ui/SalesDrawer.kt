@@ -75,8 +75,8 @@ internal fun SalesReportsDrawerSection(
   "Reports",
   Icons.Default.Assessment,
   current?.startsWith("Report:")==true,
-  {setExpanded(!expanded)},
-  if(expanded)"⌃" else "⌄"
+  onClick={setExpanded(!expanded)},
+  trailing=if(expanded)"⌃" else "⌄"
  )
  if(expanded){
   reports.forEach{report->
@@ -103,14 +103,14 @@ internal fun SalesNavigationDrawerContent(
     Text(userName,color=Color.White.copy(alpha=.7f),style=MaterialTheme.typography.bodySmall)
    }
    Spacer(Modifier.height(6.dp))
-   destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route){navigate(item.route)}}
+   destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route,onClick={navigate(item.route)})}
    if(!telecaller){
     SalesReportsDrawerSection(MobileRole.SALES,current,reportsOpen,{reportsOpen=it},navigate)
    }
   }
   switchToAccount?.let{action->
    HorizontalDivider(color=Color.White.copy(alpha=.18f))
-   DrawerRow("Switch to Accounts",Icons.Default.SwapHoriz,false){action()}
+   DrawerRow("Switch to Accounts",Icons.Default.SwapHoriz,false,onClick={action()})
    Spacer(Modifier.height(6.dp))
   }
  }
