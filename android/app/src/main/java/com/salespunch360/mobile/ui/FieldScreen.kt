@@ -34,6 +34,7 @@ import com.salespunch360.mobile.FieldViewModel
 import com.salespunch360.mobile.data.*
 import com.salespunch360.mobile.location.currentDeviceLocation
 import com.salespunch360.mobile.location.locationFailureMessage
+import com.salespunch360.mobile.location.recentDeviceLocation
 import kotlinx.coroutines.launch
 
 private fun compressedBitmap(source:Bitmap):ByteArray{
@@ -77,6 +78,7 @@ fun FieldScreen(
  var notes by remember{mutableStateOf("")}
  var photo by remember{mutableStateOf<ByteArray?>(null)}
  var locationState by remember{mutableStateOf("idle")}
+ var preparedLocation by remember{mutableStateOf<LocationPayload?>(null)}
  var permissionAction by remember{mutableStateOf<(() -> Unit)?>(null)}
  val androidContext=LocalContext.current
  val scope=rememberCoroutineScope()
@@ -84,9 +86,19 @@ fun FieldScreen(
  val cameraPermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){if(it)camera.launch(null)else vm.locationError("Camera permission is required. Check-in photos must be taken with the camera.")}
  val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){if(it[Manifest.permission.ACCESS_FINE_LOCATION]==true)permissionAction?.invoke()else{locationState="unavailable";vm.locationError("Precise location is required.")}}
 
- fun resetForm(nextType:String=type){type=nextType;subjectId=null;linkedLeadId=null;followUpTaskId=null;name="";phone="";notes="";photo=null;locationState="idle"}
+ fun resetForm(nextType:String=type){type=nextType;subjectId=null;linkedLeadId=null;followUpTaskId=null;name="";phone="";notes="";photo=null}
  LaunchedEffect(initialFollowUpTask?.id){initialFollowUpTask?.let{resetForm("FOLLOW_UP");subjectId=it.leadId;followUpTaskId=it.id;onInitialFollowUpConsumed()}}
  LaunchedEffect(initialLead?.id,state.loading){initialLead?.takeIf{!state.loading}?.let{lead->resetForm("NEW");subjectId=lead.id;linkedLeadId=lead.id;name=lead.contactName?:lead.title;phone=lead.phone.orEmpty();onInitialLeadConsumed()}}
+ LaunchedEffect(Unit){
+  if(ContextCompat.checkSelfPermission(androidContext,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
+   locationState="getting"
+   val recent=runCatching{recentDeviceLocation(androidContext)}.getOrNull()
+   if(recent!=null){preparedLocation=recent;locationState="ready"}
+   runCatching{currentDeviceLocation(androidContext)}
+    .onSuccess{preparedLocation=it;locationState="ready"}
+    .onFailure{if(preparedLocation==null)locationState="unavailable"}
+  }
+ }
 
  if(context==null&&state.loading){LoadingScreen("Loading check-ins…");return}
  if(context==null){RetryScreen(state.message?:"Check-ins couldn't be loaded.",vm::refresh);return}
@@ -94,7 +106,29 @@ fun FieldScreen(
  val selectedCustomer=context.customers.firstOrNull{it.id==subjectId}
  val selectedFollowUp=state.followUps.firstOrNull{it.id==followUpTaskId}
  val requiredPhoto=(type=="NEW"&&linkedLeadId==null)||(type=="CUSTOMER"&&selectedCustomer?.checkInReferenceSetAt==null)
- val canSubmit=!state.busy&&locationState!="getting"&&when(type){"NEW"->name.isNotBlank()&&(!requiredPhoto||photo!=null);"FOLLOW_UP"->selectedFollowUp!=null;else->subjectId!=null&&(!requiredPhoto||photo!=null)}
+ val canSubmit=!state.busy&&when(type){"NEW"->name.isNotBlank()&&(!requiredPhoto||photo!=null);"FOLLOW_UP"->selectedFollowUp!=null;else->subjectId!=null&&(!requiredPhoto||photo!=null)}
+
+ fun submitCheckIn(){
+  permissionAction={scope.launch{
+   val point=preparedLocation?:runCatching{recentDeviceLocation(androidContext)}.getOrNull()
+   if(point!=null){
+    preparedLocation=point;locationState="ready"
+    vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},point,notes.ifBlank{null},photo,followUpTaskId)
+    if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
+    notes="";photo=null
+    return@launch
+   }
+   locationState="getting"
+   runCatching{currentDeviceLocation(androidContext)}.onSuccess{fresh->
+    preparedLocation=fresh;locationState="ready"
+    vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},fresh,notes.ifBlank{null},photo,followUpTaskId)
+    if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
+    notes="";photo=null
+   }.onFailure{locationState="unavailable";vm.locationError(locationFailureMessage(it))}
+  }}
+  if(ContextCompat.checkSelfPermission(androidContext,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED)permissionAction?.invoke()
+  else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))
+ }
 
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{
@@ -117,7 +151,7 @@ fun FieldScreen(
      Column(verticalArrangement=Arrangement.spacedBy(5.dp)){
       Text("ADD CHECK-IN",style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.ExtraBold,color=SalesBlue)
       Text(when(type){"FOLLOW_UP"->"Follow-up";"CUSTOMER"->"Customer";else->"New"},style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
-      StatusChip(when(locationState){"getting"->"Getting current location…";"ready"->"Location captured";"unavailable"->"Location unavailable";else->"Location checked when you submit"})
+      StatusChip(when(locationState){"getting"->"Preparing location…";"ready"->"Location ready";"unavailable"->"Location will retry when you submit";else->"Location will be prepared automatically"})
      }
      when(type){
       "NEW"->{
@@ -165,20 +199,9 @@ fun FieldScreen(
       Text("Optional",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
      }
      OutlinedTextField(notes,{notes=it.take(2000)},placeholder={Text("Add visit details")},modifier=Modifier.fillMaxWidth(),minLines=3)
-     Button({
-      permissionAction={scope.launch{
-       locationState="getting"
-       runCatching{currentDeviceLocation(androidContext)}.onSuccess{point->
-        locationState="ready"
-        vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},point,notes.ifBlank{null},photo,followUpTaskId)
-        if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
-        notes="";photo=null
-       }.onFailure{locationState="unavailable";vm.locationError(locationFailureMessage(it))}
-      }}
-      permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))
-     },enabled=canSubmit,modifier=Modifier.fillMaxWidth()){
+     Button(::submitCheckIn,enabled=canSubmit,modifier=Modifier.fillMaxWidth()){
       Icon(Icons.Default.LocationOn,null)
-      Text(if(locationState=="getting")" Getting location…" else if(state.busy)" Checking in…" else " Check In Now")
+      Text(if(state.busy)" Checking in…" else " Check In Now")
      }
     }
    }
@@ -187,11 +210,8 @@ fun FieldScreen(
   item{Column{Text("Pending Checkout",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk);Text("Complete before your next visit",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}
   if(open.isEmpty())item{Text("No open visits.",color=SalesMuted)}
   items(open,key={it.id}){v->PendingCheckoutCard(v,state.busy,vm::addPhone){sentiment,remarks->
-   permissionAction={scope.launch{
-    locationState="getting"
-    runCatching{currentDeviceLocation(androidContext)}.onSuccess{point->locationState="ready";vm.checkout(v.id,point,sentiment,remarks){onCheckoutSuccess(v.leadId)}}.onFailure{locationState="unavailable";vm.locationError(locationFailureMessage(it))}
-   }}
-   permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))
+   val checkInLocation=LocationPayload(v.checkInLatitude?:0.0,v.checkInLongitude?:0.0,accuracyMeters=0.0)
+   vm.checkout(v.id,checkInLocation,sentiment,remarks){onCheckoutSuccess(v.leadId)}
   }}
  }
 }
@@ -217,7 +237,7 @@ private fun PendingCheckoutCard(v:FieldVisit,busy:Boolean,addPhone:(String,Strin
     DropdownMenu(resultMenu,{resultMenu=false}){VisitSentiment.entries.forEach{s->DropdownMenuItem({Text(s.name.lowercase().replaceFirstChar{it.uppercase()})},{sentiment=s;resultMenu=false})}}
    }
    OutlinedTextField(remarks,{remarks=it.take(2000)},placeholder={Text("Optional remarks")},modifier=Modifier.fillMaxWidth(),minLines=2)
-   Button({sentiment?.let{checkout(it,remarks.ifBlank{null})}},enabled=!busy&&sentiment!=null,modifier=Modifier.fillMaxWidth()){Text("Checkout with current location")}
+   Button({sentiment?.let{checkout(it,remarks.ifBlank{null})}},enabled=!busy&&sentiment!=null,modifier=Modifier.fillMaxWidth()){Text("Checkout")}
   }
  }
 }
