@@ -39,6 +39,8 @@ fun NativeMap(
             controller.setZoom(16.0)
         }
     }
+    val lastRenderHash = remember(map) { intArrayOf(Int.MIN_VALUE) }
+
     DisposableEffect(map) {
         map.onResume()
         onDispose {
@@ -46,44 +48,52 @@ fun NativeMap(
             map.onDetach()
         }
     }
+
     AndroidView(
         factory = { map },
         modifier = modifier,
         update = { view ->
-            view.overlays.clear()
-            segments.filter { it.isNotEmpty() }.forEach { segment ->
-                view.overlays.add(
-                    Polyline().apply {
-                        setPoints(segment.map { GeoPoint(it.latitude, it.longitude) })
-                        outlinePaint.color = android.graphics.Color.rgb(25, 96, 180)
-                        outlinePaint.strokeWidth = 7f
-                    },
-                )
-            }
-            markers.forEachIndexed { index, point ->
-                val marker = Marker(view).apply {
-                    position = GeoPoint(point.latitude, point.longitude)
-                    title = point.label ?: "Location ${index + 1}"
-                    snippet = point.snippet
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            val renderHash = 31 * segments.hashCode() + markers.hashCode()
+            if (lastRenderHash[0] != renderHash) {
+                lastRenderHash[0] = renderHash
+                view.overlays.clear()
+
+                segments.filter { it.isNotEmpty() }.forEach { segment ->
+                    view.overlays.add(
+                        Polyline().apply {
+                            setPoints(segment.map { GeoPoint(it.latitude, it.longitude) })
+                            outlinePaint.color = android.graphics.Color.rgb(25, 96, 180)
+                            outlinePaint.strokeWidth = 7f
+                        },
+                    )
                 }
-                view.overlays.add(marker)
-                if (point.showInfo) marker.showInfoWindow()
-            }
-            val all = segments.flatten() + markers
-            if (all.isNotEmpty()) {
-                if (all.size == 1) {
-                    view.controller.setCenter(GeoPoint(all[0].latitude, all[0].longitude))
-                    view.controller.setZoom(17.0)
-                } else {
-                    val north = all.maxOf { it.latitude }
-                    val south = all.minOf { it.latitude }
-                    val east = all.maxOf { it.longitude }
-                    val west = all.minOf { it.longitude }
-                    view.zoomToBoundingBox(BoundingBox(north, east, south, west), true, 64)
+
+                markers.forEachIndexed { index, point ->
+                    val marker = Marker(view).apply {
+                        position = GeoPoint(point.latitude, point.longitude)
+                        title = point.label ?: "Location ${index + 1}"
+                        snippet = point.snippet
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    }
+                    view.overlays.add(marker)
+                    if (point.showInfo) marker.showInfoWindow()
                 }
+
+                val all = segments.flatten() + markers
+                if (all.isNotEmpty()) {
+                    if (all.size == 1) {
+                        view.controller.setCenter(GeoPoint(all[0].latitude, all[0].longitude))
+                        view.controller.setZoom(17.0)
+                    } else {
+                        val north = all.maxOf { it.latitude }
+                        val south = all.minOf { it.latitude }
+                        val east = all.maxOf { it.longitude }
+                        val west = all.minOf { it.longitude }
+                        view.zoomToBoundingBox(BoundingBox(north, east, south, west), true, 64)
+                    }
+                }
+                view.invalidate()
             }
-            view.invalidate()
         },
     )
 }
