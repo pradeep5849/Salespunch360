@@ -5,6 +5,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * Lightweight route signal used by route-owned ViewModels to avoid doing
+ * expensive work while their screen is not open.
+ */
+internal object MobileRouteSignal {
+    private val _current = MutableStateFlow("Dashboard")
+    val current: StateFlow<String> = _current.asStateFlow()
+
+    fun update(route: String) {
+        _current.value = route
+    }
+}
 
 /**
  * Small native navigation history for the Android workspace shells.
@@ -17,27 +33,36 @@ internal class MobileRouteHistory(private val root: String) {
     var current by mutableStateOf(root)
         private set
 
+    init {
+        MobileRouteSignal.update(root)
+    }
+
     val canGoBack: Boolean
         get() = previous.isNotEmpty() || current != root
+
+    private fun setCurrent(destination: String) {
+        current = destination
+        MobileRouteSignal.update(destination)
+    }
 
     fun navigate(destination: String) {
         if (destination == current) return
         previous += current
         if (previous.size > 50) previous.removeAt(0)
-        current = destination
+        setCurrent(destination)
     }
 
     fun replace(destination: String) {
-        current = destination
+        setCurrent(destination)
     }
 
     fun back(): Boolean {
         if (previous.isNotEmpty()) {
-            current = previous.removeAt(previous.lastIndex)
+            setCurrent(previous.removeAt(previous.lastIndex))
             return true
         }
         if (current != root) {
-            current = root
+            setCurrent(root)
             return true
         }
         return false
@@ -45,7 +70,7 @@ internal class MobileRouteHistory(private val root: String) {
 
     fun reset() {
         previous.clear()
-        current = root
+        setCurrent(root)
     }
 }
 
