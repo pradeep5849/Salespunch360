@@ -55,9 +55,7 @@ internal fun salesReportDrawerItems(role:MobileRole)=when(role){
  )
  MobileRole.SALES->listOf(
   SalesReportDrawerItem("Check-in Report","check-ins"),
-  SalesReportDrawerItem("My Attendance","attendance"),
-  SalesReportDrawerItem("My Travel / Distance","gps"),
-  SalesReportDrawerItem("My Performance","targets")
+  SalesReportDrawerItem("My Attendance","attendance")
  )
 }
 
