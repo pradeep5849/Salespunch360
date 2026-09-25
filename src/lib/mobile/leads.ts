@@ -10,7 +10,25 @@ import{createLeadFromVisitSchema,transitionLeadSchema}from'@/lib/leads/validatio
 import{z}from'zod';
 const actor=(u:MobilePrincipal)=>u;
 const withVisitCount=<T extends {visits?:unknown[];updatedAt?:Date;assignedUserId?:string;estimatedValue?:unknown}>(lead:T,u:MobilePrincipal)=>({...lead,visitCount:lead.visits?.length??0,updatedAt:lead.updatedAt??null,estimatedValue:lead.estimatedValue==null?null:String(lead.estimatedValue),canAddCheckIn:u.salesRole!=='PRIMARY_ADMIN'&&u.salesRole!=='ADMIN'&&lead.assignedUserId===u.id,canDelete:(u.salesRole==='PRIMARY_ADMIN'||u.salesRole==='ADMIN'||lead.assignedUserId===u.id)});
-export async function mobileLeads(u:MobilePrincipal,raw:unknown){return (await listLeadsForActor(actor(u),raw)).map(lead=>{const visitCount=lead.visits.length,{visits,...rest}=lead;void visits;return{...withVisitCount({...rest,visits:[]},u),visitCount}})}
+export async function mobileLeads(u:MobilePrincipal,raw:unknown){
+ const leads=await listLeadsForActor(actor(u),raw);if(leads.length===0)return[];
+ const leadIds=leads.map(l=>l.id),sourceIds=leads.map(l=>l.sourceVisitId).filter((id):id is string=>Boolean(id));
+ const visitRows=await db.customerVisit.findMany({
+  where:{companyId:u.companyId,OR:[{leadId:{in:leadIds}},...(sourceIds.length?[{id:{in:sourceIds}}]:[])]},
+  select:{id:true,leadId:true,checkedInAt:true,checkedOutAt:true,checkInAddress:true,checkInLatitude:true,checkInLongitude:true,visitNotes:true,user:{select:{name:true}}},
+  orderBy:{checkedInAt:'desc'},
+ });
+ const latestLinked=new Map<string,(typeof visitRows)[number]>(),byId=new Map(visitRows.map(v=>[v.id,v] as const));
+ for(const visit of visitRows)if(visit.leadId&&!latestLinked.has(visit.leadId))latestLinked.set(visit.leadId,visit);
+ return leads.map(lead=>{
+  const sourceAlreadyLinked=Boolean(lead.sourceVisitId&&lead.visits.some(v=>v.id===lead.sourceVisitId));
+  const visitCount=lead.visits.length+(lead.sourceVisitId&&!sourceAlreadyLinked?1:0),{visits,...rest}=lead;void visits;
+  const linked=latestLinked.get(lead.id),source=lead.sourceVisitId?byId.get(lead.sourceVisitId):undefined;
+  const latest=[linked,source].filter((v):v is (typeof visitRows)[number]=>Boolean(v)).sort((a,b)=>b.checkedInAt.getTime()-a.checkedInAt.getTime())[0];
+  const latestVisit=latest?[{id:latest.id,userName:latest.user.name,checkedInAt:latest.checkedInAt,checkedOutAt:latest.checkedOutAt,checkInAddress:latest.checkInAddress??`${latest.checkInLatitude.toFixed(5)}, ${latest.checkInLongitude.toFixed(5)}`,visitNotes:latest.visitNotes}]:[];
+  return{...withVisitCount({...rest,visits:latestVisit},u),visitCount};
+ });
+}
 export async function mobileLeadScopeOptions(u:MobilePrincipal){const where:Prisma.UserWhereInput=u.salesRole==='PRIMARY_ADMIN'||u.salesRole==='ADMIN'?{companyId:u.companyId,isActive:true,salesAccessActive:true,salesRole:{in:['MANAGER','SALES']}}:u.salesRole==='MANAGER'?{companyId:u.companyId,isActive:true,salesAccessActive:true,...(u.managerType==='MANAGER_ONLY'?{salesRole:'SALES',managerId:u.id}:{OR:[{id:u.id,salesRole:'MANAGER'},{salesRole:'SALES',managerId:u.id}]})}:{companyId:u.companyId,id:u.id,isActive:true,salesAccessActive:true};return db.user.findMany({where,select:{id:true,name:true,salesRole:true,managerType:true},orderBy:{name:'asc'}})}
 export async function mobilePendingLeads(u:MobilePrincipal){const visits=await listPendingVisitsScopedForActor(actor(u));return{count:await pendingVisitCountScopedForActor(actor(u)),visits:visits.map(v=>({id:v.id,contactName:v.contactName,customerName:v.customer?.name??null,userId:v.user.id,userName:v.user.name,checkedInAt:v.checkedInAt,checkedOutAt:v.checkedOutAt,visitNotes:v.visitNotes,checkInAddress:v.checkInAddress,checkInLatitude:v.checkInLatitude,checkInLongitude:v.checkInLongitude,hasPhoto:Boolean(v.photo),photoUrl:v.photo?`/api/v1/mobile/visit-photos/${v.id}/thumbnail`:null,canAddPhone:v.user.id===u.id}))}}
 export async function mobileAddPendingPhone(u:MobilePrincipal,raw:unknown){if(!mobileFieldWorkEnabled(u))throw new Error('NOT_FOUND');if(!raw||typeof raw!=='object')throw new Error('INVALID_INPUT');const d=raw as Record<string,unknown>;return addPhoneToVisitForUser(u,{visitId:d.visitId,phone:d.phone})}
