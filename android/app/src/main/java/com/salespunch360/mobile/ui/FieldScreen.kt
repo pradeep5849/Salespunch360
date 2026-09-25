@@ -76,7 +76,7 @@ fun FieldScreen(
  var phone by remember{mutableStateOf("")}
  var notes by remember{mutableStateOf("")}
  var photo by remember{mutableStateOf<ByteArray?>(null)}
- var locationState by remember{mutableStateOf("getting")}
+ var locationState by remember{mutableStateOf("idle")}
  var permissionAction by remember{mutableStateOf<(() -> Unit)?>(null)}
  val androidContext=LocalContext.current
  val scope=rememberCoroutineScope()
@@ -84,8 +84,7 @@ fun FieldScreen(
  val cameraPermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){if(it)camera.launch(null)else vm.locationError("Camera permission is required. Check-in photos must be taken with the camera.")}
  val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){if(it[Manifest.permission.ACCESS_FINE_LOCATION]==true)permissionAction?.invoke()else{locationState="unavailable";vm.locationError("Precise location is required.")}}
 
- fun resetForm(nextType:String=type){type=nextType;subjectId=null;linkedLeadId=null;followUpTaskId=null;name="";phone="";notes="";photo=null}
- LaunchedEffect(Unit){locationState="getting";runCatching{currentDeviceLocation(androidContext)}.onSuccess{locationState="ready"}.onFailure{locationState="unavailable"}}
+ fun resetForm(nextType:String=type){type=nextType;subjectId=null;linkedLeadId=null;followUpTaskId=null;name="";phone="";notes="";photo=null;locationState="idle"}
  LaunchedEffect(initialFollowUpTask?.id){initialFollowUpTask?.let{resetForm("FOLLOW_UP");subjectId=it.leadId;followUpTaskId=it.id;onInitialFollowUpConsumed()}}
  LaunchedEffect(initialLead?.id,state.loading){initialLead?.takeIf{!state.loading}?.let{lead->resetForm("NEW");subjectId=lead.id;linkedLeadId=lead.id;name=lead.contactName?:lead.title;phone=lead.phone.orEmpty();onInitialLeadConsumed()}}
 
@@ -95,7 +94,7 @@ fun FieldScreen(
  val selectedCustomer=context.customers.firstOrNull{it.id==subjectId}
  val selectedFollowUp=state.followUps.firstOrNull{it.id==followUpTaskId}
  val requiredPhoto=(type=="NEW"&&linkedLeadId==null)||(type=="CUSTOMER"&&selectedCustomer?.checkInReferenceSetAt==null)
- val canSubmit=!state.busy&&when(type){"NEW"->name.isNotBlank()&&(!requiredPhoto||photo!=null);"FOLLOW_UP"->selectedFollowUp!=null;else->subjectId!=null&&(!requiredPhoto||photo!=null)}
+ val canSubmit=!state.busy&&locationState!="getting"&&when(type){"NEW"->name.isNotBlank()&&(!requiredPhoto||photo!=null);"FOLLOW_UP"->selectedFollowUp!=null;else->subjectId!=null&&(!requiredPhoto||photo!=null)}
 
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{
@@ -118,7 +117,7 @@ fun FieldScreen(
      Column(verticalArrangement=Arrangement.spacedBy(5.dp)){
       Text("ADD CHECK-IN",style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.ExtraBold,color=SalesBlue)
       Text(when(type){"FOLLOW_UP"->"Follow-up";"CUSTOMER"->"Customer";else->"New"},style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
-      StatusChip(when(locationState){"getting"->"Getting current location…";"ready"->"Location ready";else->"Location unavailable"})
+      StatusChip(when(locationState){"getting"->"Getting current location…";"ready"->"Location captured";"unavailable"->"Location unavailable";else->"Location checked when you submit"})
      }
      when(type){
       "NEW"->{
@@ -179,7 +178,7 @@ fun FieldScreen(
       permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))
      },enabled=canSubmit,modifier=Modifier.fillMaxWidth()){
       Icon(Icons.Default.LocationOn,null)
-      Text(if(state.busy)" Checking in…" else " Check In Now")
+      Text(if(locationState=="getting")" Getting location…" else if(state.busy)" Checking in…" else " Check In Now")
      }
     }
    }
