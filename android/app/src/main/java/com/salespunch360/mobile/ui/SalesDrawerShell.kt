@@ -266,10 +266,10 @@ private fun SalesDrawerHome(data: Bootstrap, navigate: (String) -> Unit, openVis
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
                             Text("My Recent Check-ins",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
-                            TextButton(onClick = { navigate("Check-ins") },contentPadding=PaddingValues(horizontal=6.dp,vertical=0.dp)){Text("View All")}
+                            TextButton(onClick = { navigate("Report:check-ins") },contentPadding=PaddingValues(horizontal=6.dp,vertical=0.dp)){Text("View All")}
                         }
                         if(d?.recentVisits.isNullOrEmpty())Text("No check-ins yet.",color=SalesMuted)
-                        d?.recentVisits?.take(4)?.forEach{v->
+                        d?.recentVisits?.take(5)?.forEach{v->
                             OutlinedCard(Modifier.fillMaxWidth()){
                                 Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                                     v.thumbnailUrl?.let{path->AsyncImage(model=ImageRequest.Builder(context).data(mobileImageUrl(path)).apply{token?.let{httpHeaders(NetworkHeaders.Builder().set("Authorization","Bearer $it").build())}}.crossfade(true).build(),contentDescription="Check-in photo",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)))}
