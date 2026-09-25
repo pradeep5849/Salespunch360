@@ -2,7 +2,9 @@ package com.salespunch360.mobile
 import com.salespunch360.mobile.data.MobileRole
 import com.salespunch360.mobile.data.TeamStructure
 import com.salespunch360.mobile.location.TrackingState
+import com.salespunch360.mobile.ui.MobileRouteHistory
 import com.salespunch360.mobile.ui.RoleNavigation
+import com.salespunch360.mobile.ui.salesReportDrawerItems
 import org.junit.Assert.*
 import org.junit.Test
 class FoundationTest{
@@ -18,4 +20,7 @@ class FoundationTest{
  @Test fun `api errors are safe and actionable`(){assertEquals("You don't have permission for this action.",apiMessage(com.salespunch360.mobile.data.ApiException(403),"fallback"));assertEquals("This record changed. Refresh and try again.",apiMessage(com.salespunch360.mobile.data.ApiException(409,"STALE"),"fallback"))}
  @Test fun `queued points are owned by one authenticated user`(){val point=com.salespunch360.mobile.data.PendingLocation("id","user-a",1.0,2.0,3.0,"2026-01-01T00:00:00Z");assertEquals("user-a",point.ownerUserId)}
  @Test fun `lead stages match server pipeline contract`(){assertEquals(listOf("NEW","QUALIFIED","PROPOSAL","NEGOTIATION","WON","LOST"),com.salespunch360.mobile.data.LeadStage.entries.map{it.name})}
+ @Test fun `sales report drawer matches web mobile links`(){assertEquals(listOf("Check-in Report","My Attendance","My Travel / Distance","My Performance"),salesReportDrawerItems(MobileRole.SALES).map{it.label})}
+ @Test fun `admin report drawer matches web mobile links`(){assertEquals(listOf("Check-in Report","Attendance Report","GPS Route Report","Geofence Report","Target Analysis","Expense Report"),salesReportDrawerItems(MobileRole.PRIMARY_ADMIN).map{it.label})}
+ @Test fun `route history returns one screen at a time`(){val nav=MobileRouteHistory("Dashboard");nav.navigate("Leads");nav.navigate("Follow-ups");nav.navigate("Report:check-ins");assertTrue(nav.back());assertEquals("Follow-ups",nav.current);assertTrue(nav.back());assertEquals("Leads",nav.current);assertTrue(nav.back());assertEquals("Dashboard",nav.current);assertFalse(nav.back())}
 }
