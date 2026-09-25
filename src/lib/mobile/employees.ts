@@ -5,6 +5,7 @@ import {createManagerForCompany,createSalesEmployeeForCompany,getEmployeeManagem
 import {createAdditionalAdminForCompany,listAdditionalAdminsForCompany} from '@/lib/users/additional-admin';
 import {mobileCan,type MobilePrincipal} from './auth';
 import {mobileChangeEmployeeRole,mobileEditEmployee,mobileSetAnyEmployeeActive} from './employee-admin';
+import {resetMobileDeviceForUser} from './device-binding';
 
 export class MobileEmployeeError extends Error{constructor(public code:string,public status=400){super(code)}}
 function admin(principal:MobilePrincipal){if(!mobileCan(principal,'SALES_USER_ADMIN'))throw new MobileEmployeeError('FORBIDDEN',403);return principal.companyId}
@@ -35,3 +36,4 @@ export async function mobileCreateEmployee(principal:MobilePrincipal,raw:unknown
 export async function mobileSetEmployeeActive(principal:MobilePrincipal,raw:unknown){primary(principal);if(!raw||typeof raw!=='object')throw new MobileEmployeeError('INVALID_INPUT');const {employeeId,isActive}=raw as Record<string,unknown>;if(typeof employeeId!=='string'||typeof isActive!=='boolean')throw new MobileEmployeeError('INVALID_INPUT');return mobileSetAnyEmployeeActive(principal,employeeId,isActive)}
 export async function mobileEditEmployeeDetails(principal:MobilePrincipal,raw:unknown){primary(principal);return mobileEditEmployee(principal,raw)}
 export async function mobileChangeRole(principal:MobilePrincipal,raw:unknown){primary(principal);return mobileChangeEmployeeRole(principal,raw)}
+export async function mobileResetEmployeeDevice(principal:MobilePrincipal,raw:unknown){const companyId=primary(principal);if(!raw||typeof raw!=='object')throw new MobileEmployeeError('INVALID_INPUT');const {employeeId}=raw as Record<string,unknown>;if(typeof employeeId!=='string')throw new MobileEmployeeError('INVALID_INPUT');return resetMobileDeviceForUser(companyId,employeeId)}
