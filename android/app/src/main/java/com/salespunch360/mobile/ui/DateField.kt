@@ -3,12 +3,13 @@ package com.salespunch360.mobile.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -21,13 +22,21 @@ fun DateField(label:String,value:String,onValue:(String)->Unit,modifier:Modifier
    value=value,
    onValueChange={},
    readOnly=true,
+   enabled=false,
    singleLine=true,
    label={Text(label)},
    placeholder={Text("Select date")},
    trailingIcon={Icon(Icons.Default.DateRange,"Select date")},
+   colors=OutlinedTextFieldDefaults.colors(
+    disabledTextColor=MaterialTheme.colorScheme.onSurface,
+    disabledBorderColor=MaterialTheme.colorScheme.outline,
+    disabledLabelColor=MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledTrailingIconColor=MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledPlaceholderColor=MaterialTheme.colorScheme.onSurfaceVariant,
+   ),
    modifier=Modifier.fillMaxWidth(),
   )
-  Box(Modifier.matchParentSize().clickable{open=true})
+  Box(Modifier.fillMaxWidth().height(56.dp).clickable{open=true})
  }
  if(open){
   val state=rememberDatePickerState(
