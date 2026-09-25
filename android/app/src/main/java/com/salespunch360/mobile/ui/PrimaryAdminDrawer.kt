@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
-private val PrimaryAdminItems=listOf("Dashboard","Employees","Branches","Attendance","Customers","Leads","Telecalling","Follow-ups","Targets","Settings","Reports")
+private val PrimaryAdminItems=listOf("Dashboard","Employees","Branches","Attendance","Customers","Leads","Telecalling","Follow-ups","Targets","Settings")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +41,7 @@ fun PrimaryAdminAuthenticatedApp(
  var profileMenu by remember{mutableStateOf(false)}
  var pendingLeadId by remember{mutableStateOf<String?>(null)}
  var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
+ var reportsOpen by rememberSaveable{mutableStateOf(route.startsWith("Report:"))}
 
  fun navigate(value:String){
   pendingLeadId=null
@@ -65,10 +67,11 @@ fun PrimaryAdminAuthenticatedApp(
       PrimaryAdminItems.forEach{item->
        CompactAdminDrawerItem(
         label=item,
-        selected=if(item=="Reports") route=="Reports"||route.startsWith("Report:") else route==item,
+        selected=route==item,
         onClick={navigate(item)}
        )
       }
+      SalesReportsDrawerSection(MobileRole.PRIMARY_ADMIN,route,reportsOpen,{reportsOpen=it},::navigate)
      }
      if(switchToAccount!=null){
       HorizontalDivider(Modifier.padding(horizontal=16.dp),color=Color.White.copy(alpha=.18f))
