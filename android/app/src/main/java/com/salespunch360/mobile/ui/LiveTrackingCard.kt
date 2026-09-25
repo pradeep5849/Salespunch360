@@ -20,7 +20,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.DashboardViewModel
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @Suppress("DEPRECATION")
@@ -43,17 +42,6 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val selectedEmployee = state.employees.firstOrNull { it.id == state.selectedEmployeeId }
-
-    LaunchedEffect(Unit) { vm.load() }
-    LaunchedEffect(state.selectedEmployeeId, state.gpsTrackingEnabled) {
-        if (state.selectedEmployeeId != null && state.gpsTrackingEnabled != false) {
-            vm.view()
-            while (true) {
-                delay(30_000)
-                vm.view(silent = true)
-            }
-        }
-    }
 
     Card(
         Modifier.fillMaxWidth(),
@@ -126,6 +114,20 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
                 }
             }
 
+            Button(
+                onClick = { vm.view() },
+                enabled = selectedEmployee != null && !state.loading,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (state.loading) "Checking location…" else "Check Location")
+            }
+
+            Text(
+                "Location is checked only when you select a user and tap Check Location. It does not refresh continuously.",
+                style = MaterialTheme.typography.bodySmall,
+                color = SalesMuted,
+            )
+
             state.message?.let {
                 Text(it, color = SalesMuted, style = MaterialTheme.typography.bodySmall)
             }
@@ -182,7 +184,7 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
                         enabled = !state.loading,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(if (state.loading) "Refreshing…" else "Refresh")
+                        Text(if (state.loading) "Checking…" else "Check Again")
                     }
                     OutlinedButton(
                         {
