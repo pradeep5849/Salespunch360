@@ -28,6 +28,7 @@ data class EmployeesState(
 class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
     private val session = SecureSession(app)
     private val api = ApiClient(session)
+    private val deviceAdmin = DeviceAdminClient(session)
     private val verification = EmailVerificationClient(session)
     private val companyProfile = CompanyProfileClient(session)
     private val _state = MutableStateFlow(EmployeesState())
@@ -72,6 +73,29 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
     fun create(request: CreateEmployeeRequest, onSuccess: () -> Unit) = mutate("Employee created.",onSuccess) { api.createEmployee(request) }
     fun edit(request:EditEmployeeRequest,onSuccess:()->Unit)=mutate("Employee updated.",onSuccess){api.editEmployee(request)}
     fun changeRole(request:ChangeEmployeeRoleRequest,onSuccess:()->Unit)=mutate("Employee role updated.",onSuccess){api.changeEmployeeRole(request)}
+
+    fun resetDevice(employee:Employee,onSuccess:()->Unit){
+        if(_state.value.mutating)return
+        viewModelScope.launch{
+            _state.value=_state.value.copy(mutating=true,error=null,notice=null)
+            try{
+                deviceAdmin.reset(employee.id)
+                _state.value=_state.value.copy(mutating=false,notice="${employee.name}'s registered mobile device was reset.")
+                onSuccess()
+            }catch(e:Exception){
+                val message=when(e){
+                    is IOException->"You're offline. Reconnect before resetting the device."
+                    is DeviceAdminFailure->when(e.code){
+                        "FORBIDDEN"->"Only the Primary Admin can reset employee devices."
+                        "NOT_FOUND"->"This employee is no longer available."
+                        else->"The registered device couldn't be reset."
+                    }
+                    else->"The registered device couldn't be reset."
+                }
+                _state.value=_state.value.copy(mutating=false,error=message)
+            }
+        }
+    }
 
     private fun mutate(notice:String,onSuccess:()->Unit,block:suspend()->Any){
         if (_state.value.mutating) return

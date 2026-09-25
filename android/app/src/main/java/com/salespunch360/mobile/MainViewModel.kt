@@ -9,6 +9,8 @@ import com.salespunch360.mobile.data.ApiException
 import com.salespunch360.mobile.data.Bootstrap
 import com.salespunch360.mobile.data.ForbiddenMobileRoleException
 import com.salespunch360.mobile.data.LocationPayload
+import com.salespunch360.mobile.data.MobileAuthClient
+import com.salespunch360.mobile.data.MobileLoginFailure
 import com.salespunch360.mobile.data.SecureSession
 import com.salespunch360.mobile.data.Workspace
 import com.salespunch360.mobile.data.WorkspacePreferenceStore
@@ -36,6 +38,7 @@ data class AppState(
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val session = SecureSession(app)
     private val api = ApiClient(session)
+    private val auth = MobileAuthClient(app, session)
     private val workspacePreference = WorkspacePreferenceStore(app)
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state
@@ -65,7 +68,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.value = AppState(AppStatus.SIGNED_OUT, submitting = true)
             try {
-                val bootstrap = api.login(email.trim(), password)
+                val bootstrap = auth.login(email.trim(), password)
                 if (applyBootstrap(bootstrap)) {
                     PushNotifications.register(getApplication())
                 }
@@ -198,9 +201,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             TrackingService.stop(getApplication())
             clearSalesLocal(session.userId())
         } else {
-            // Server-confirmed attendance is the authority for background GPS. Reconcile on every
-            // bootstrap so an app/process restart cannot leave tracking running while attendance is OFF,
-            // and an active attendance can resume tracking after Android recreates the app.
             if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) {
                 TrackingService.start(getApplication())
             } else {
@@ -257,6 +257,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun loginMessage(error: Exception) = when {
         error is ForbiddenMobileRoleException -> "This account cannot sign in to the mobile app."
         error is IOException -> "You're offline. Check your connection and try again."
+        error is MobileLoginFailure && error.code == "DEVICE_MISMATCH" -> "This account is registered to another device. Please contact your administrator to reset the registered device."
+        error is MobileLoginFailure && error.status == 429 -> "Too many sign-in attempts. Please wait and try again."
+        error is MobileLoginFailure && error.status in listOf(400, 401, 403) -> "Email or password is incorrect."
         error is ApiException && error.status == 429 -> "Too many sign-in attempts. Please wait and try again."
         error is ApiException && error.status in listOf(400, 401, 403) -> "Email or password is incorrect."
         else -> "Unable to sign in right now. Please try again."
