@@ -111,6 +111,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                                 switch,
                             )
                         }
+                        TrackingSetupPrompt(enabled=data.features.gpsTrackingEnabled&&data.features.fieldWorkEnabled)
                     }
                 }
                 Workspace.ACCOUNT -> NativeAccountAuthenticatedApp(
