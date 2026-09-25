@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
@@ -38,6 +41,8 @@ fun PrimaryAdminAuthenticatedApp(
  val scope=rememberCoroutineScope()
  val nav=rememberMobileRouteHistory("Dashboard")
  val route=nav.current
+ val leadsVm:LeadsViewModel=viewModel()
+ val leadsState=leadsVm.state.collectAsStateWithLifecycle().value
  var profileMenu by remember{mutableStateOf(false)}
  var pendingLeadId by remember{mutableStateOf<String?>(null)}
  var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
@@ -52,7 +57,8 @@ fun PrimaryAdminAuthenticatedApp(
 
  BackHandler(enabled=drawer.isOpen){scope.launch{drawer.close()}}
  BackHandler(enabled=!drawer.isOpen&&visitTask!=null){visitTask=null}
- BackHandler(enabled=!drawer.isOpen&&visitTask==null&&nav.canGoBack){
+ BackHandler(enabled=!drawer.isOpen&&visitTask==null&&route=="Leads"&&leadsState.detail!=null){leadsVm.close()}
+ BackHandler(enabled=!drawer.isOpen&&visitTask==null&&(route!="Leads"||leadsState.detail==null)&&nav.canGoBack){
   pendingLeadId=null
   nav.back()
  }
@@ -122,7 +128,7 @@ fun PrimaryAdminAuthenticatedApp(
      route=="Branches"->BranchesScreen()
      route=="Attendance"->TeamAttendanceScreen(MobileRole.PRIMARY_ADMIN)
      route=="Customers"->CustomerAdminScreen()
-     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null})
+     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},vm=leadsVm)
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(startCheckIn={},viewLead={pendingLeadId=it;nav.navigate("Leads")},viewVisit={visitTask=it})
      route=="Targets"->TargetsScreen(MobileRole.PRIMARY_ADMIN)
