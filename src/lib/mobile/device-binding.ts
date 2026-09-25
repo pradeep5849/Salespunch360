@@ -1,5 +1,6 @@
 import {db} from '@/lib/db';
 import {verifyPassword} from '@/lib/auth/crypto';
+import {requiresMobileDeviceLock} from '@/lib/auth/workspace-policy';
 import {isMobileEligible} from './auth';
 
 export class MobileDeviceMismatchError extends Error {
@@ -16,6 +17,10 @@ export async function verifyAndBindMobileDevice(identifier:string,password:strin
     },
   });
   if(!user||!isMobileEligible(user,user.company?.productEdition??null)||!(await verifyPassword(user.passwordHash,password)))throw new Error('INVALID_MOBILE_CREDENTIALS');
+  if(!requiresMobileDeviceLock(user)){
+    await db.$executeRaw`DELETE FROM "mobile_device_bindings" WHERE "userId"=${user.id}::uuid`;
+    return;
+  }
   const rows=await db.$queryRaw<{deviceId:string}[]>`
     INSERT INTO "mobile_device_bindings" ("userId","deviceId","deviceName","registeredAt","updatedAt")
     VALUES (${user.id}::uuid,${deviceId},${deviceName},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
@@ -28,8 +33,12 @@ export async function verifyAndBindMobileDevice(identifier:string,password:strin
 }
 
 export async function resetMobileDeviceForUser(companyId:string,userId:string){
-  const target=await db.user.findFirst({where:{id:userId,companyId},select:{id:true}});
+  const target=await db.user.findFirst({where:{id:userId,companyId},select:{id:true,salesRole:true,managerType:true}});
   if(!target)throw new Error('NOT_FOUND');
+  if(!requiresMobileDeviceLock(target)){
+    await db.$executeRaw`DELETE FROM "mobile_device_bindings" WHERE "userId"=${userId}::uuid`;
+    return{success:true};
+  }
   await db.$transaction(async tx=>{
     const sessions=await tx.mobileSession.findMany({where:{userId},select:{id:true}});
     if(sessions.length){
