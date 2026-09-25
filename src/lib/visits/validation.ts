@@ -8,7 +8,7 @@ const branchId=z.string().uuid().optional();
 export const checkInSchema = z.object({ customerId: z.string().uuid(), branchId, location: requiredGps, visitNotes: optionalNotes }).strict();
 const phone = z.preprocess(v=>typeof v==="string"&&v.trim()===""?undefined:v,z.string().trim().min(7).max(30).optional());
 export const fieldCheckInSchema=z.discriminatedUnion("visitType",[
- z.object({visitType:z.literal("NEW"),name:z.string().trim().min(2).max(160),phone,branchId,location:requiredGps,visitNotes:optionalNotes}).strict(),
+ z.object({visitType:z.literal("NEW"),name:z.string().trim().min(2).max(160),phone,leadId:z.string().uuid().optional(),branchId,location:requiredGps,visitNotes:optionalNotes}).strict(),
  z.object({visitType:z.literal("FOLLOW_UP"),leadId:z.string().uuid(),followUpTaskId:z.string().uuid().optional(),branchId,location:requiredGps,visitNotes:optionalNotes}).strict(),
  z.object({visitType:z.literal("CUSTOMER"),customerId:z.string().uuid(),branchId,location:requiredGps,visitNotes:optionalNotes}).strict(),
 ]);
