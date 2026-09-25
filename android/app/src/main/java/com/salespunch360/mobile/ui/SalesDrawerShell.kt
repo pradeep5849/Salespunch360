@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,7 +85,8 @@ fun SalesDrawerAuthenticatedApp(
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val telecaller = data.user.salesRole == MobileRole.SALES && !data.features.fieldWorkEnabled
-    var route by rememberSaveable { mutableStateOf("Dashboard") }
+    val nav = rememberMobileRouteHistory("Dashboard")
+    val route = nav.current
     var pendingTask by remember { mutableStateOf<FollowUpTask?>(null) }
     var pendingLeadId by remember { mutableStateOf<String?>(null) }
     var pendingCheckInLead by remember { mutableStateOf<LeadSummary?>(null) }
@@ -94,7 +94,7 @@ fun SalesDrawerAuthenticatedApp(
     var profileMenu by remember { mutableStateOf(false) }
 
     fun navigate(to: String) {
-        route = to
+        nav.navigate(to)
         scope.launch { drawer.close() }
     }
 
@@ -109,8 +109,14 @@ fun SalesDrawerAuthenticatedApp(
         )
     }
 
-    BackHandler(visitDetails != null) { visitDetails = null }
-    BackHandler(visitDetails == null && route != "Dashboard") { route = "Dashboard" }
+    BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
+    BackHandler(!drawer.isOpen && visitDetails != null) { visitDetails = null }
+    BackHandler(!drawer.isOpen && visitDetails == null && nav.canGoBack) {
+        pendingTask = null
+        pendingLeadId = null
+        pendingCheckInLead = null
+        nav.back()
+    }
 
     ModalNavigationDrawer(
         drawerState = drawer,
@@ -132,9 +138,6 @@ fun SalesDrawerAuthenticatedApp(
                     },
                     title = { CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl) },
                     actions = {
-                        switchToAccount?.let { action ->
-                            TextButton(onClick = action) { Text("Account", fontWeight = FontWeight.Bold) }
-                        }
                         Box {
                             IconButton(onClick = { profileMenu = true }) {
                                 Surface(shape = CircleShape, color = SalesNavy) {
@@ -148,8 +151,9 @@ fun SalesDrawerAuthenticatedApp(
                                 }
                             }
                             DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
-                                DropdownMenuItem(text = { Text("Company Details") }, onClick = { profileMenu = false; route = "Company Details" })
-                                DropdownMenuItem(text = { Text("Change Password") }, onClick = { profileMenu = false; route = "Change Password" })
+                                DropdownMenuItem(text = { Text("Company Details") }, onClick = { profileMenu = false; navigate("Company Details") })
+                                DropdownMenuItem(text = { Text("Change Password") }, onClick = { profileMenu = false; navigate("Change Password") })
+                                switchToAccount?.let { action -> DropdownMenuItem(text = { Text("Switch to Accounts") }, onClick = { profileMenu = false; action() }) }
                                 HorizontalDivider()
                                 DropdownMenuItem(text = { Text("Logout") }, onClick = { profileMenu = false; logout() })
                             }
@@ -183,7 +187,7 @@ fun SalesDrawerAuthenticatedApp(
                         }
                     )
                     !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
-                    !telecaller && route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false)
+                    !telecaller && route.startsWith("Report:") -> ReportsScreen(initialType = route.substringAfter(':'), showMenu = false, role = MobileRole.SALES)
                     route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
                         item {
                             Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)

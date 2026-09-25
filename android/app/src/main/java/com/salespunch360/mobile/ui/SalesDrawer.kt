@@ -23,6 +23,7 @@ private val salesDrawerDestinations=listOf(
  SalesDrawerDestination("Customers","Customers",Icons.Default.People),
  SalesDrawerDestination("Check-ins","Check-ins",Icons.Default.LocationOn),
  SalesDrawerDestination("Leads","Leads",Icons.Default.FilterAlt),
+ SalesDrawerDestination("Telecalling","Telecalling",Icons.Default.Phone),
  SalesDrawerDestination("Follow-ups","Follow-ups",Icons.Default.EventNote),
  SalesDrawerDestination("Targets","Targets",Icons.Default.TrackChanges)
 )
@@ -32,9 +33,51 @@ private val telecallerDrawerDestinations=listOf(
 )
 private val salesDrawerReports=listOf(
  "Check-in Report" to "Report:check-ins",
+ "Advanced Check-in" to "Report:advanced-check-ins",
  "My Attendance" to "Report:attendance",
  "My Travel / Distance" to "Report:gps",
+ "Lead Report" to "Report:leads",
  "My Performance" to "Report:targets"
 )
-@Composable internal fun SalesNavigationDrawerContent(current:String?,companyName:String,userName:String,telecaller:Boolean=false,navigate:(String)->Unit){var reportsExpanded by rememberSaveable{mutableStateOf(current?.startsWith("Report:")==true)};val destinations=if(telecaller)telecallerDrawerDestinations else salesDrawerDestinations;Column(Modifier.fillMaxSize().background(SalesNavy).statusBarsPadding().padding(vertical=18.dp)){Column(Modifier.padding(horizontal=20.dp,vertical=8.dp)){Text(companyName,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Text(userName,color=Color.White.copy(alpha=.7f),style=MaterialTheme.typography.bodySmall)};Spacer(Modifier.height(12.dp));destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route){navigate(item.route)}};if(!telecaller){DrawerRow("Reports",Icons.Default.Assessment,current?.startsWith("Report:")==true||current=="Reports",trailing=if(reportsExpanded)"▲" else "▼"){reportsExpanded=!reportsExpanded};if(reportsExpanded)salesDrawerReports.forEach{(label,route)->Row(Modifier.fillMaxWidth().clickable{navigate(route)}.padding(start=58.dp,end=18.dp,top=11.dp,bottom=11.dp),verticalAlignment=Alignment.CenterVertically){Text(label,fontSize=11.sp,color=if(current==route)Color.White else Color.White.copy(alpha=.78f),fontWeight=if(current==route)FontWeight.Bold else FontWeight.Normal)}}}}}
-@Composable private fun DrawerRow(label:String,icon:ImageVector,selected:Boolean,trailing:String?=null,onClick:()->Unit){val bg=if(selected)Color.White.copy(alpha=.12f) else Color.Transparent;Row(Modifier.fillMaxWidth().background(bg).clickable(onClick=onClick).padding(horizontal=20.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,tint=Color.White,modifier=Modifier.size(22.dp));Spacer(Modifier.width(16.dp));Text(label,Modifier.weight(1f),fontSize=13.sp,color=Color.White,fontWeight=if(selected)FontWeight.Bold else FontWeight.Medium);trailing?.let{Text(it,fontSize=11.sp,color=Color.White.copy(alpha=.8f))}}}
+
+@Composable
+internal fun SalesNavigationDrawerContent(
+ current:String?,
+ companyName:String,
+ userName:String,
+ telecaller:Boolean=false,
+ navigate:(String)->Unit
+){
+ var reportsExpanded by rememberSaveable{mutableStateOf(current?.startsWith("Report:")==true)}
+ val destinations=if(telecaller)telecallerDrawerDestinations else salesDrawerDestinations
+ Column(Modifier.fillMaxSize().background(SalesNavy).statusBarsPadding().padding(vertical=18.dp)){
+  Column(Modifier.padding(horizontal=20.dp,vertical=8.dp)){
+   Text(companyName,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
+   Text(userName,color=Color.White.copy(alpha=.7f),style=MaterialTheme.typography.bodySmall)
+  }
+  Spacer(Modifier.height(12.dp))
+  destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route){navigate(item.route)}}
+  if(!telecaller){
+   DrawerRow("Reports",Icons.Default.Assessment,current?.startsWith("Report:")==true||current=="Reports",trailing=if(reportsExpanded)"▲" else "▼"){reportsExpanded=!reportsExpanded}
+   if(reportsExpanded)salesDrawerReports.forEach{(label,route)->
+    Row(
+     Modifier.fillMaxWidth().clickable{navigate(route)}.padding(start=58.dp,end=18.dp,top=11.dp,bottom=11.dp),
+     verticalAlignment=Alignment.CenterVertically
+    ){
+     Text(label,fontSize=11.sp,color=if(current==route)Color.White else Color.White.copy(alpha=.78f),fontWeight=if(current==route)FontWeight.Bold else FontWeight.Normal)
+    }
+   }
+  }
+ }
+}
+
+@Composable
+private fun DrawerRow(label:String,icon:ImageVector,selected:Boolean,trailing:String?=null,onClick:()->Unit){
+ val bg=if(selected)Color.White.copy(alpha=.12f) else Color.Transparent
+ Row(Modifier.fillMaxWidth().background(bg).clickable(onClick=onClick).padding(horizontal=20.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically){
+  Icon(icon,null,tint=Color.White,modifier=Modifier.size(22.dp))
+  Spacer(Modifier.width(16.dp))
+  Text(label,Modifier.weight(1f),fontSize=13.sp,color=Color.White,fontWeight=if(selected)FontWeight.Bold else FontWeight.Medium)
+  trailing?.let{Text(it,fontSize=11.sp,color=Color.White.copy(alpha=.8f))}
+ }
+}
