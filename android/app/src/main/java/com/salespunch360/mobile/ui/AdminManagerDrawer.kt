@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
@@ -56,6 +59,8 @@ fun AdminManagerAuthenticatedApp(
  val scope=rememberCoroutineScope()
  val nav=rememberMobileRouteHistory("Dashboard")
  val route=nav.current
+ val leadsVm:LeadsViewModel=viewModel()
+ val leadsState=leadsVm.state.collectAsStateWithLifecycle().value
  var profileMenu by remember{mutableStateOf(false)}
  var pendingLeadId by remember{mutableStateOf<String?>(null)}
  var visitTask by remember{mutableStateOf<FollowUpTask?>(null)}
@@ -72,7 +77,8 @@ fun AdminManagerAuthenticatedApp(
 
  BackHandler(enabled=drawer.isOpen){scope.launch{drawer.close()}}
  BackHandler(enabled=!drawer.isOpen&&visitTask!=null){visitTask=null}
- BackHandler(enabled=!drawer.isOpen&&visitTask==null&&nav.canGoBack){
+ BackHandler(enabled=!drawer.isOpen&&visitTask==null&&route=="Leads"&&leadsState.detail!=null){leadsVm.close()}
+ BackHandler(enabled=!drawer.isOpen&&visitTask==null&&(route!="Leads"||leadsState.detail==null)&&nav.canGoBack){
   pendingLeadId=null
   nav.back()
  }
@@ -142,7 +148,7 @@ fun AdminManagerAuthenticatedApp(
      route=="Attendance"->if(fieldManager)FieldManagerAttendanceScreen(data,attendance)else TeamAttendanceScreen(role)
      route=="Customers"->if(role==MobileRole.ADMIN)CustomerAdminScreen()else CustomersScreen{if(fieldManager)navigate("Check-ins")}
      route=="Check-ins"&&fieldManager->FieldScreen(initialFollowUpTask=checkInTask,onInitialFollowUpConsumed={checkInTask=null},initialLead=checkInLead,onInitialLeadConsumed={checkInLead=null})
-     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},onCheckIn={lead->if(fieldManager){checkInLead=lead;navigate("Check-ins")}})
+     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},onCheckIn={lead->if(fieldManager){checkInLead=lead;navigate("Check-ins")}},vm=leadsVm)
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(
       startCheckIn={task->if(fieldManager){checkInTask=task;navigate("Check-ins")}},
