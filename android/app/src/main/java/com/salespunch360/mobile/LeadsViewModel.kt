@@ -4,10 +4,14 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 
 data class LeadsState(
     val loading: Boolean = true,
@@ -40,24 +44,62 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refresh(q: String = _state.value.query, employee: String? = _state.value.employeeId) = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, message = null)
+        val current = _state.value
         _state.value = try {
-            val leads = api.leads(q, employee)
-            val counts = loadCallCounts()
-            _state.value.copy(
-                loading = false, leads = leads, pending = api.pendingLeads(),
-                options = runCatching { api.leadOptions() }.getOrDefault(emptyList()),
-                telecallers = runCatching { followUpMutations.telecallers() }.getOrDefault(emptyList()),
-                query = q, employeeId = employee, callCounts = counts,
-            )
-        } catch (e: Exception) { _state.value.copy(loading = false, message = apiMessage(e, "Leads couldn't be loaded.")) }
+            coroutineScope {
+                val leadsDeferred = async { api.leads(q, employee) }
+                val countsDeferred = async { loadCallCounts() }
+                val pendingDeferred = async { api.pendingLeads() }
+                val optionsDeferred = async { runCatching { api.leadOptions() }.getOrDefault(emptyList()) }
+                val telecallersDeferred = async { runCatching { followUpMutations.telecallers() }.getOrDefault(emptyList()) }
+                current.copy(
+                    loading = false,
+                    leads = leadsDeferred.await(),
+                    pending = pendingDeferred.await(),
+                    options = optionsDeferred.await(),
+                    telecallers = telecallersDeferred.await(),
+                    query = q,
+                    employeeId = employee,
+                    callCounts = countsDeferred.await(),
+                )
+            }
+        } catch (e: Exception) {
+            current.copy(loading = false, message = apiMessage(e, "Leads couldn't be loaded."))
+        }
     }
 
     fun open(id: String) = viewModelScope.launch {
-        _state.value = _state.value.copy(detailLoading = true, detail = null, detailFollowUps = emptyList(), detailCallHistory = emptyList())
-        _state.value = try {
-            val detail = api.lead(id);val followUps = loadLeadFollowUps(id);val history = telecalling.history(id)
-            _state.value.copy(detail = detail,detailFollowUps = followUps,detailCallHistory = history,callCounts = _state.value.callCounts + (id to history.size),detailLoading = false)
-        } catch (e: Exception) { _state.value.copy(detailLoading = false, message = apiMessage(e, "Lead details couldn't be loaded.")) }
+        val cached = _state.value.leads.firstOrNull { it.id == id }
+        _state.value = _state.value.copy(
+            detailLoading = true,
+            detail = cached,
+            detailFollowUps = emptyList(),
+            detailCallHistory = emptyList(),
+            message = null,
+        )
+        try {
+            val detail = api.lead(id)
+            _state.value = _state.value.copy(detail = detail, detailLoading = true)
+            supervisorScope {
+                val followUpsDeferred = async { runCatching { loadLeadFollowUps(id) }.getOrDefault(emptyList()) }
+                val historyDeferred = async { runCatching { telecalling.history(id) }.getOrDefault(emptyList()) }
+                val followUps = followUpsDeferred.await()
+                val history = historyDeferred.await()
+                _state.value = _state.value.copy(
+                    detail = detail,
+                    detailFollowUps = followUps,
+                    detailCallHistory = history,
+                    callCounts = _state.value.callCounts + (id to history.size),
+                    detailLoading = false,
+                )
+            }
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(
+                detailLoading = false,
+                detail = cached,
+                message = apiMessage(e, "Lead details couldn't be loaded."),
+            )
+        }
     }
 
     fun close() { _state.value = _state.value.copy(detail = null, detailFollowUps = emptyList(), detailCallHistory = emptyList(), detailLoading = false, message = null) }
@@ -123,7 +165,15 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
     fun clear() { _state.value = _state.value.copy(message = null) }
 
     private suspend fun loadCallCounts(): Map<String, Int> = runCatching { telecalling.queue().associate { it.id to it.calls } }.getOrDefault(emptyMap())
-    private suspend fun loadLeadFollowUps(leadId: String): List<FollowUpTask> = listOf("TODAY", "OVERDUE", "PENDING", "COMPLETED", "CANCELLED").flatMap { api.followUps(it).tasks }.filter { it.leadId == leadId }.distinctBy { it.id }.sortedByDescending { it.createdAt ?: it.dueDate }
+    private suspend fun loadLeadFollowUps(leadId: String): List<FollowUpTask> = coroutineScope {
+        listOf("TODAY", "OVERDUE", "PENDING", "COMPLETED", "CANCELLED")
+            .map { bucket -> async { api.followUps(bucket).tasks } }
+            .awaitAll()
+            .flatten()
+            .filter { it.leadId == leadId }
+            .distinctBy { it.id }
+            .sortedByDescending { it.createdAt ?: it.dueDate }
+    }
 
     private fun mutate(success: String = "Lead updated.", action: suspend () -> Unit) {
         if (_state.value.busy) return
