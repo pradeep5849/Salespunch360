@@ -1,7 +1,7 @@
 import { operationalBranchContext } from "@/lib/branches/operational-scope";
 import {AuthorizationError} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
-import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
+import {calculateTravelDistanceBySession} from "@/lib/location/travel-route";
 import {orderedRoute} from "./metrics";
 import {indiaDateBoundary,reportUuid,type SearchParams} from "./validation";
 import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor} from "./scope";
@@ -38,7 +38,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
   ?{latitude:company.attendanceReferenceLatitude,longitude:company.attendanceReferenceLongitude,radiusMeters:company.attendanceGeofenceRadiusMeters}
   :null;
  if(!date||!employeeId)return{
-  actor,employees,date,employeeId,segments:[],points:[],markers:[],events:[],routeDistanceMeters:0,
+  actor,employees,date,employeeId,segments:[],points:[],markers:[],events:[],sessionDistances:[],routeDistanceMeters:0,dailyDistanceMeters:0,
   employee:undefined,lastSpottedAt:null,visitCount:0,geofence,
  };
  const ids=await resolveEmployeeScope(actor,employeeId);
@@ -67,8 +67,14 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
 
  const segments=sessions.map(s=>orderedRoute(s.locationPoints));
  const points=segments.flat();
- let routeDistanceMeters=0;
- for(const segment of segments)routeDistanceMeters+=calculateTravelDistanceMeters(segment);
+ const distanceBySession=calculateTravelDistanceBySession(segments);
+ const sessionDistances=sessions.map((session,index)=>({
+  sessionId:session.id,
+  startedAt:session.startedAt,
+  endedAt:session.endedAt,
+  distanceMeters:distanceBySession.sessionDistanceMeters[index]??0,
+ }));
+ const routeDistanceMeters=distanceBySession.totalDistanceMeters;
  const events:GpsTimelineEvent[]=[];
  const markers:Array<{latitude:number;longitude:number;label:string}>=[];
  const seenVisits=new Set<string>();
@@ -117,7 +123,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  events.sort((a,b)=>a.at.getTime()-b.at.getTime()||a.id.localeCompare(b.id));
  const lastSpottedAt=points.length?points.at(-1)!.capturedAt:null;
  return{
-  actor,employees,date,employeeId,segments,points,markers,events,routeDistanceMeters,employee,
+  actor,employees,date,employeeId,segments,points,markers,events,sessionDistances,routeDistanceMeters,dailyDistanceMeters:routeDistanceMeters,employee,
   lastSpottedAt,visitCount:seenVisits.size,geofence,
   filters:{startText:date,endText:date},
  };
