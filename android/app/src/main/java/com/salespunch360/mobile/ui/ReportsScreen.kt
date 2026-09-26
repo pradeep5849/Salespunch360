@@ -94,6 +94,19 @@ fun ReportsScreen(
   return
  }
 
+ if(role!=MobileRole.SALES&&activeType=="check-ins"){
+  AdminCheckInReportScreen(state,vm,if(showMenu){{selected=null}}else null)
+  return
+ }
+ if(role!=MobileRole.SALES&&activeType=="attendance"){
+  AdminAttendanceReportScreen(state,vm,if(showMenu){{selected=null}}else null)
+  return
+ }
+ if(role!=MobileRole.SALES&&activeType=="targets"){
+  AdminTargetAnalysisScreen(state,vm,if(showMenu){{selected=null}}else null)
+  return
+ }
+
  val report=state.report
  val rows=report?.get("rows")?.jsonArray?:report?.get("targets")?.jsonArray?:JsonArray(emptyList())
  val title=types.firstOrNull{it.first==(activeType?:state.type)}?.second?:"Report"
@@ -204,10 +217,10 @@ private fun GpsSummary(r:JsonObject){
  val employee=r["employee"]?.jsonObject?.text("name")
  val last=r.text("lastSpottedAt")
  ContentCard(employee?:"Daily GPS Report","Selected employee · selected day"){
-  Text("Distance covered: ${"%.2f".format(metres/1000)} KM",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
+  Text("Total Distance Covered: ${"%.2f".format(metres/1000)} KM",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-   StatusChip("$points GPS points")
-   StatusChip("$visits visit${if(visits==1)"" else "s"}")
+   StatusChip("Accepted GPS points $points")
+   StatusChip("Customer visits $visits")
   }
   Text("Last spotted: ${last?.let(::reportTime)?:"No GPS point recorded"}",fontWeight=FontWeight.SemiBold)
   Text("Distance is the sum of accepted GPS movement only while attendance is ON. Movement between attendance periods is not counted or connected.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
@@ -409,7 +422,7 @@ private fun reportTime(value:String)=runCatching{
 }.getOrDefault(value)
 
 @Composable
-private fun ReportExportControls(state:com.salespunch360.mobile.ReportsState,vm:ReportsViewModel){
+fun ReportExportControls(state:com.salespunch360.mobile.ReportsState,vm:ReportsViewModel){
  val supported=state.type in setOf("attendance","check-ins","advanced-check-ins","leads","gps","geofence","targets","expenses")
  if(!supported)return
  val context=LocalContext.current
