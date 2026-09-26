@@ -7,6 +7,7 @@ import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -88,6 +89,10 @@ class FieldViewModel(app:Application):AndroidViewModel(app){
                 action()
                 _state.value=loadFieldState(success)
                 onSuccess()
+                delay(2500)
+                if(_state.value.message==success){
+                    _state.value=_state.value.copy(message=null)
+                }
             }catch(e:ApiException){
                 _state.value=_state.value.copy(
                     busy=false,
