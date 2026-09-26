@@ -15,6 +15,6 @@ export async function GET(request:Request){
    select:{id:true,name:true,salesRole:true,isActive:true,attendances:{where:{branchId:branches.branchId,OR:[{endedAt:null},{endedAt:{gte:today,lt:tomorrow}}]},orderBy:{startedAt:'desc'},select:{id:true,startedAt:true,endedAt:true,_count:{select:{locationPoints:true}}}}},
    orderBy:{name:'asc'}
   });
-  return mobileJson({employees:employees.map(employee=>{const open=employee.attendances.find(attendance=>attendance.endedAt===null);const latestEnded=employee.attendances.filter(attendance=>attendance.endedAt!==null).sort((a,b)=>b.endedAt!.getTime()-a.endedAt!.getTime())[0];return{id:employee.id,name:employee.name,salesRole:employee.salesRole,isActive:employee.isActive,working:Boolean(open),startedAt:open?.startedAt??null,endedAt:open?null:latestEnded?.endedAt??null,gpsPointCount:open?._count.locationPoints??0}})});
+  return mobileJson({employees:employees.map(employee=>{const open=employee.attendances.find(attendance=>attendance.endedAt===null);const latestEnded=employee.attendances.filter(attendance=>attendance.endedAt!==null).sort((a,b)=>b.endedAt!.getTime()-a.endedAt!.getTime())[0];return{id:employee.id,name:employee.name,salesRole:employee.salesRole,isActive:employee.isActive,working:Boolean(open),startedAt:open?.startedAt??latestEnded?.endedAt??null,gpsPointCount:open?._count.locationPoints??0}})});
  }catch(error){const expected=mobileUnauthorized(error)??mobileBranchFailure(error);if(expected)return expected;return mobileUnexpected('MOBILE_ATTENDANCE_OVERVIEW',error)}
 }
