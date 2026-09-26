@@ -10,6 +10,7 @@ import {
   createManagerSchema, createSalesSchema, editEmployeeSchema,
   employeeIdSchema, resetEmployeePasswordSchema,
 } from "@/lib/employees/validation";
+import {updateEmployeeTravelSettings} from "@/lib/travel/service";
 
 export type EmployeeActionState = { error?: string; success?: string; fieldErrors?: Record<string, string[]> };
 
@@ -29,8 +30,21 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
       const schema = operation === "create-manager" ? createManagerSchema : createSalesSchema;
       const parsed = schema.safeParse(input);
       if (!parsed.success) return { error: "Review the highlighted fields.", fieldErrors: parsed.error.flatten().fieldErrors };
+      if(operation==="create-sales"&&formData.get("configureTravel")==="yes"){
+        const rawRate=formData.get("travelRatePerKm");
+        if(rawRate!=null&&String(rawRate).trim()!==""){
+          const n=Number(rawRate);
+          if(!Number.isFinite(n)||n<0||n>100000)return{error:"Enter a valid travel rate per km.",fieldErrors:{travelRatePerKm:["Enter a valid ₹ per km amount."]}};
+        }
+      }
       if (operation === "create-manager") await createManager(parsed.data);
-      else await createSalesEmployee(parsed.data);
+      else {
+        const employee=await createSalesEmployee(parsed.data);
+        if(formData.get("configureTravel")==="yes"){
+          const mode=formData.get("travelApprovalMode")==="AUTO"?"AUTO":"MANUAL";
+          await updateEmployeeTravelSettings(employee.id,formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null,mode);
+        }
+      }
     } else if (operation === "edit") {
       const input = { employeeId: formData.get("employeeId"), name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"), employeeCode: formData.get("employeeCode"),designation:formData.get("designation"),dateOfJoining:formData.get("dateOfJoining"), managerId: formData.get("managerId"), managerType: formData.get("managerType") ?? undefined };
       const parsed = editEmployeeSchema.safeParse(input);
@@ -63,9 +77,11 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
     if(code==="INVALID_BRANCH")return{error:"One or more selected branches are unavailable."};
     if(code==="PLUS_ACCOUNT_SUBSCRIPTION_REQUIRED")return{error:"An active Account package is required for this Plus workspace."};
     if(code==="MANAGER_TYPE_CONFLICT")return{error:"Finish or reassign this Manager's open attendance, visit, active leads, pending follow-ups, assigned customers and active targets before changing to Manager Only."};
+    if(code==="INVALID_RATE")return{error:"Enter a valid travel rate per km."};
     return safeError;
   }
   revalidatePath("/workspace/employees");
+  revalidatePath("/workspace/reports/expenses");
   if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
   if(operation==="create-manager")return{success:"Manager created successfully."};
   if(operation==="create-sales")return{success:"Sales employee created successfully."};

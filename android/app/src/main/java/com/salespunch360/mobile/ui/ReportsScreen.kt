@@ -55,8 +55,15 @@ private fun reportTypes(role:MobileRole)=when(role){
   "geofence" to "Geofence Report",
   "leads" to "Lead Report",
   "targets" to "Target Analysis",
-  "expenses" to "Expense Report",
  )
+}
+
+private fun reportActorRole(report:JsonObject?):MobileRole?=when(report?.get("actor")?.jsonObject?.get("salesRole")?.jsonPrimitive?.contentOrNull){
+ "PRIMARY_ADMIN"->MobileRole.PRIMARY_ADMIN
+ "ADMIN"->MobileRole.ADMIN
+ "MANAGER"->MobileRole.MANAGER
+ "SALES"->MobileRole.SALES
+ else->null
 }
 
 @Composable
@@ -67,9 +74,10 @@ fun ReportsScreen(
  vm:ReportsViewModel=viewModel(),
 ){
  val state=vm.state.collectAsStateWithLifecycle().value
- val types=remember(role){reportTypes(role)}
  var selected by remember(initialType,showMenu){mutableStateOf(if(showMenu)initialType else initialType?:state.type)}
  val activeType=if(showMenu)selected else selected?:state.type
+ val effectiveRole=reportActorRole(state.report)?:role
+ val types=reportTypes(effectiveRole)
  var gpsIncludeEvents by remember(activeType){mutableStateOf(true)}
  var gpsShowGeofence by remember(activeType){mutableStateOf(false)}
  var gpsRawData by remember(activeType){mutableStateOf(false)}
@@ -77,9 +85,11 @@ fun ReportsScreen(
  var rawLimit by remember(activeType){mutableIntStateOf(40)}
  var deviceDetails by remember{mutableStateOf<JsonObject?>(null)}
 
+ LaunchedEffect(showMenu,initialType){if(showMenu&&initialType==null)vm.load("attendance")}
  LaunchedEffect(activeType){activeType?.let{vm.load(it)}}
 
  if(showMenu&&selected==null){
+  if(state.report==null){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator()};return}
   LazyColumn(
    Modifier.fillMaxSize().padding(horizontal=16.dp),
    contentPadding=PaddingValues(vertical=12.dp),
@@ -91,6 +101,19 @@ fun ReportsScreen(
    }
    items(types){(id,label)->OutlinedButton({selected=id},Modifier.fillMaxWidth()){Text(label,Modifier.fillMaxWidth())}}
   }
+  return
+ }
+
+ if(effectiveRole!=MobileRole.SALES&&activeType=="check-ins"){
+  AdminCheckInReportScreen(state,vm,if(showMenu){{selected=null}}else null)
+  return
+ }
+ if(effectiveRole!=MobileRole.SALES&&activeType=="attendance"){
+  AdminAttendanceReportScreen(state,vm,if(showMenu){{selected=null}}else null)
+  return
+ }
+ if(effectiveRole!=MobileRole.SALES&&activeType=="targets"){
+  AdminTargetAnalysisScreen(state,vm,if(showMenu){{selected=null}}else null)
   return
  }
 
@@ -107,7 +130,7 @@ fun ReportsScreen(
    if(showMenu)TextButton({selected=null},contentPadding=PaddingValues(0.dp)){Text("← Reports")}
    Text(title,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
   }
-  item{ReportFilters(state,vm,role)}
+  item{ReportFilters(state,vm,effectiveRole)}
   if(state.type=="gps"){
    item{
     GpsOptions(
@@ -204,10 +227,10 @@ private fun GpsSummary(r:JsonObject){
  val employee=r["employee"]?.jsonObject?.text("name")
  val last=r.text("lastSpottedAt")
  ContentCard(employee?:"Daily GPS Report","Selected employee · selected day"){
-  Text("Distance covered: ${"%.2f".format(metres/1000)} KM",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
+  Text("Total Distance Covered: ${"%.2f".format(metres/1000)} KM",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)
   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-   StatusChip("$points GPS points")
-   StatusChip("$visits visit${if(visits==1)"" else "s"}")
+   StatusChip("Accepted GPS points $points")
+   StatusChip("Customer visits $visits")
   }
   Text("Last spotted: ${last?.let(::reportTime)?:"No GPS point recorded"}",fontWeight=FontWeight.SemiBold)
   Text("Distance is the sum of accepted GPS movement only while attendance is ON. Movement between attendance periods is not counted or connected.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
@@ -409,8 +432,8 @@ private fun reportTime(value:String)=runCatching{
 }.getOrDefault(value)
 
 @Composable
-private fun ReportExportControls(state:com.salespunch360.mobile.ReportsState,vm:ReportsViewModel){
- val supported=state.type in setOf("attendance","check-ins","advanced-check-ins","leads","gps","geofence","targets","expenses")
+fun ReportExportControls(state:com.salespunch360.mobile.ReportsState,vm:ReportsViewModel){
+ val supported=state.type in setOf("attendance","check-ins","advanced-check-ins","leads","gps","geofence","targets")
  if(!supported)return
  val context=LocalContext.current
  val scope=rememberCoroutineScope()
