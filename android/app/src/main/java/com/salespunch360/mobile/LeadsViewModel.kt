@@ -33,12 +33,12 @@ data class LeadsState(
 )
 
 class LeadsViewModel(app: Application) : AndroidViewModel(app) {
-    private val session=SecureSession(app)
-    private val api=ApiClient(session)
+    private val session = SecureSession(app)
+    private val api = ApiClient(session)
     private val telecalling = TelecallingClient(session)
     private val followUpMutations = FollowUpMutationClient(session)
-    private val _state=MutableStateFlow(LeadsState())
-    val state:StateFlow<LeadsState> = _state
+    private val _state = MutableStateFlow(LeadsState())
+    val state: StateFlow<LeadsState> = _state
     private var initialLoadTriggered = false
 
     init {
