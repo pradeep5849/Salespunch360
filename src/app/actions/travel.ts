@@ -12,7 +12,8 @@ export async function updateCompanyTravelRateAction(formData:FormData){
 }
 export async function updateEmployeeTravelSettingsAction(formData:FormData){
  await mutationGuard("employee-travel",30);
- await updateEmployeeTravelSettings(String(formData.get("employeeId")),formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null);
+ const mode=formData.get("travelApprovalMode")==="AUTO"?"AUTO":"MANUAL";
+ await updateEmployeeTravelSettings(String(formData.get("employeeId")),formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null,mode);
  revalidatePath("/workspace/employees");
  revalidatePath("/workspace/reports/expenses");
  if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
