@@ -219,19 +219,32 @@ private fun AdminEmployeeDropdown(selected:String?,options:JsonArray,change:(Str
  val selectedName=options.firstOrNull{it.jsonObject.adminText("id")==selected}?.jsonObject?.adminText("name")
  Box{
   OutlinedButton({open=true},Modifier.fillMaxWidth()){Column(Modifier.weight(1f),horizontalAlignment=Alignment.Start){Text("Employee",style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text(selectedName?:if(allowAll)"All users" else "Select employee")};Icon(Icons.Default.ArrowDropDown,null)}
-  DropdownMenu(open,{open=false}){
-   if(allowAll)DropdownMenuItem({Text("All users")},{change(null);open=false})
-   options.forEach{item->val o=item.jsonObject;DropdownMenuItem({Text(o.adminText("name")?:"Employee")},{change(o.adminText("id"));open=false})}
+  DropdownMenu(expanded=open,onDismissRequest={open=false}){
+   if(allowAll)DropdownMenuItem(text={Text("All users")},onClick={change(null);open=false})
+   options.forEach{item->
+    val o=item.jsonObject
+    DropdownMenuItem(text={Text(o.adminText("name")?:"Employee")},onClick={change(o.adminText("id"));open=false})
+   }
   }
  }
 }
 
 @Composable
-private fun AdminChoiceRow(label:String,current:String,options:List<String>,change:(String)->Unit){Column{Text(label,style=MaterialTheme.typography.labelMedium);Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){options.forEach{FilterChip(current==it,{change(it)},{Text(it.lowercase().replaceFirstChar(Char::uppercase))})}}}}
+private fun AdminChoiceRow(label:String,current:String,options:List<String>,change:(String)->Unit){
+ Column{
+  Text(label,style=MaterialTheme.typography.labelMedium)
+  Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+   options.forEach{option->FilterChip(current==option,{change(option)},{Text(option.lowercase().replaceFirstChar{it.uppercase()})})}
+  }
+ }
+}
 
 @Composable
 private fun AdminAttendanceSessionCard(row:JsonObject,compact:Boolean=false){
- val start=row.adminText("startedAt"),end=row.adminText("endedAt"),points=row["locationPoints"]?.jsonArray?.size?:0,distance=row["routeDistanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0
+ val start=row.adminText("startedAt")
+ val end=row.adminText("endedAt")
+ val points=row["locationPoints"]?.jsonArray?.size?:0
+ val distance=row["routeDistanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0
  val content:@Composable ()->Unit={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
    Column(Modifier.weight(1f)){Text("START TIME",style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text(start?.let(::adminTime)?:"—",fontWeight=FontWeight.Bold,color=SalesInk)}
@@ -245,7 +258,12 @@ private fun AdminAttendanceSessionCard(row:JsonObject,compact:Boolean=false){
 
 @Composable
 private fun AdminAttendanceDayStats(rows:List<JsonObject>){
- val first=rows.minByOrNull{adminEpoch(it.adminText("startedAt"))},hasOpen=rows.any{it.adminText("endedAt")==null},lastEnd=if(hasOpen)null else rows.mapNotNull{it.adminText("endedAt")}.maxByOrNull(::adminEpoch),total=rows.sumOf(::adminAttendanceDuration),points=rows.sumOf{it["locationPoints"]?.jsonArray?.size?:0},distance=rows.sumOf{it["routeDistanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0}
+ val first=rows.minByOrNull{adminEpoch(it.adminText("startedAt"))}
+ val hasOpen=rows.any{it.adminText("endedAt")==null}
+ val lastEnd=if(hasOpen)null else rows.mapNotNull{it.adminText("endedAt")}.maxByOrNull(::adminEpoch)
+ val total=rows.sumOf(::adminAttendanceDuration)
+ val points=rows.sumOf{it["locationPoints"]?.jsonArray?.size?:0}
+ val distance=rows.sumOf{it["routeDistanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0}
  Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){AdminStat("START",first?.adminText("startedAt")?.let(::adminTime)?:"—",Modifier.weight(1f));AdminStat("END",lastEnd?.let(::adminTime)?:if(hasOpen)"Now" else "—",Modifier.weight(1f));AdminStat("TOTAL",adminDuration(total),Modifier.weight(1f))}
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){AdminStat("GPS","$points",Modifier.weight(1f));AdminStat("TRAVEL","${"%.2f".format(distance/1000)} km",Modifier.weight(1f));AdminStat("SESSIONS","${rows.size}",Modifier.weight(1f))}
@@ -256,7 +274,11 @@ private fun AdminAttendanceDayStats(rows:List<JsonObject>){
 private fun AdminStat(label:String,value:String,modifier:Modifier){Column(modifier){Text(label,style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text(value,fontWeight=FontWeight.Bold,color=SalesInk)}}
 private fun JsonObject.adminText(key:String)=this[key]?.jsonPrimitive?.contentOrNull
 private fun JsonObject.adminObjText(key:String,child:String)=((this[key] as? JsonObject)?.get(child) as? JsonPrimitive)?.contentOrNull
-private fun adminCoords(o:JsonObject,a:String,b:String):String?{val lat=o[a]?.jsonPrimitive?.doubleOrNull,lng=o[b]?.jsonPrimitive?.doubleOrNull;return if(lat!=null&&lng!=null)"%.5f, %.5f".format(lat,lng)else null}
+private fun adminCoords(o:JsonObject,a:String,b:String):String?{
+ val lat=o[a]?.jsonPrimitive?.doubleOrNull
+ val lng=o[b]?.jsonPrimitive?.doubleOrNull
+ return if(lat!=null&&lng!=null)"%.5f, %.5f".format(lat,lng)else null
+}
 private fun adminEpoch(value:String?):Long=value?.let{runCatching{OffsetDateTime.parse(it).toInstant().toEpochMilli()}.getOrNull()}?:0L
 private fun adminAttendanceDay(value:String?):String=value?.let{runCatching{OffsetDateTime.parse(it).atZoneSameInstant(adminReportZone).toLocalDate().toString()}.getOrNull()}.orEmpty()
 private fun adminAttendanceDuration(row:JsonObject):Long{val start=adminEpoch(row.adminText("startedAt"));if(start==0L)return 0L;val end=row.adminText("endedAt")?.let(::adminEpoch)?.takeIf{it>0L}?:System.currentTimeMillis();return(end-start).coerceAtLeast(0L)}
