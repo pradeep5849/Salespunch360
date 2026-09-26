@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {calculateTravelDistanceMeters} from "./travel-route";
+import {calculateTravelDistanceBySession,calculateTravelDistanceMeters} from "./travel-route";
 
 type P={id:string;sequenceNumber:number;latitude:number;longitude:number;accuracyMeters:number|null;capturedAt:Date};
 const point=(id:string,seconds:number,latitude:number,longitude:number,accuracyMeters:number|null=5,sequenceNumber=seconds):P=>({id,sequenceNumber,latitude,longitude,accuracyMeters,capturedAt:new Date(Date.UTC(2026,0,1,0,0,seconds))});
@@ -17,4 +17,13 @@ describe("cleaned attendance travel distance",()=>{
  it("does not connect locations across a long GPS gap",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",3600,19.2,72)])).toBe(0));
  it("keeps a long stationary session with many jitter fixes near zero",()=>{const route=Array.from({length:241},(_,i)=>point(String(i),i*30,19+(i%4-1.5)*0.00005,72+(i%5-2)*0.00005,20,i));expect(calculateTravelDistanceMeters(route)).toBe(0)});
  it("keeps a realistic roughly 30 km route near its expected distance",()=>{const route=Array.from({length:31},(_,i)=>point(String(i),i*120,19+i*0.009,72,8,i));const distance=calculateTravelDistanceMeters(route);expect(distance).toBeGreaterThan(29_000);expect(distance).toBeLessThan(31_000)});
+ it("calculates sessions independently and adds only the session distances",()=>{
+  const first=[point("s1-a",0,19,72),point("s1-b",120,19.005,72)];
+  const second=[point("s2-a",180,19.1,72),point("s2-b",300,19.105,72)];
+  const result=calculateTravelDistanceBySession([first,second]);
+  expect(result.sessionDistanceMeters).toHaveLength(2);
+  expect(result.totalDistanceMeters).toBeCloseTo(result.sessionDistanceMeters[0]+result.sessionDistanceMeters[1],6);
+  expect(result.totalDistanceMeters).toBeGreaterThan(1000);
+  expect(result.totalDistanceMeters).toBeLessThan(1200);
+ });
 });
