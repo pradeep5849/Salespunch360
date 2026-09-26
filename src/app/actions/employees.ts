@@ -30,6 +30,13 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
       const schema = operation === "create-manager" ? createManagerSchema : createSalesSchema;
       const parsed = schema.safeParse(input);
       if (!parsed.success) return { error: "Review the highlighted fields.", fieldErrors: parsed.error.flatten().fieldErrors };
+      if(operation==="create-sales"&&formData.get("configureTravel")==="yes"){
+        const rawRate=formData.get("travelRatePerKm");
+        if(rawRate!=null&&String(rawRate).trim()!==""){
+          const n=Number(rawRate);
+          if(!Number.isFinite(n)||n<0||n>100000)return{error:"Enter a valid travel rate per km.",fieldErrors:{travelRatePerKm:["Enter a valid ₹ per km amount."]}};
+        }
+      }
       if (operation === "create-manager") await createManager(parsed.data);
       else {
         const employee=await createSalesEmployee(parsed.data);
