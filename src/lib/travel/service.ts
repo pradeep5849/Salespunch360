@@ -5,6 +5,8 @@ import {AuthorizationError,requirePermission,requirePermissionForMutation} from 
 import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
 
 const businessDate=(text:string)=>new Date(`${text}T00:00:00.000Z`);
+export type TravelApprovalMode="MANUAL"|"AUTO";
+const approvalMode=(raw:unknown):TravelApprovalMode=>raw==="AUTO"?"AUTO":"MANUAL";
 
 export async function companyTravelSettings(){
  const admin=await requirePermission("SALES_SETTINGS");
@@ -20,7 +22,16 @@ export async function updateCompanyTravelRate(raw:unknown){
  return db.company.update({where:{id:admin.companyId},data:{travelRatePerKm:new Prisma.Decimal(n.toFixed(2))}});
 }
 
-export async function updateEmployeeTravelSettings(employeeId:string,enabled:boolean,customRate:string|null){
+export async function employeeTravelApprovalMode(employeeId:string){
+ const admin=await requirePermission("SALES_TRAVEL");
+ if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
+ if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
+ const rows=await db.$queryRaw<{mode:string}[]>`SELECT "travelApprovalMode" AS mode FROM "users" WHERE "id"=${employeeId}::uuid AND "companyId"=${admin.companyId}::uuid LIMIT 1`;
+ if(!rows[0])throw new Error("NOT_FOUND");
+ return approvalMode(rows[0].mode);
+}
+
+export async function updateEmployeeTravelSettings(employeeId:string,enabled:boolean,customRate:string|null,mode:TravelApprovalMode="MANUAL"){
  const admin=await requirePermissionForMutation("SALES_TRAVEL");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
@@ -31,8 +42,10 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
   if(!Number.isFinite(n)||n<0||n>100000)throw new Error("INVALID_RATE");
   rate=new Prisma.Decimal(n.toFixed(2));
  }
+ const normalizedMode=approvalMode(mode);
  const changed=await db.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate}});
  if(changed.count!==1)throw new Error("NOT_FOUND");
+ await db.$executeRaw`UPDATE "users" SET "travelApprovalMode"=${normalizedMode} WHERE "id"=${employeeId}::uuid AND "companyId"=${companyId}::uuid`;
 }
 
 async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string,branchId:string,employeeId:string,date:string){
