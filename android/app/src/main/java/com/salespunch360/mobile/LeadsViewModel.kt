@@ -33,12 +33,12 @@ data class LeadsState(
 )
 
 class LeadsViewModel(app: Application) : AndroidViewModel(app) {
-    private val session = SecureSession(app)
-    private val api = ApiClient(session)
+    private val session=SecureSession(app)
+    private val api=ApiClient(session)
     private val telecalling = TelecallingClient(session)
     private val followUpMutations = FollowUpMutationClient(session)
-    private val _state = MutableStateFlow(LeadsState())
-    val state: StateFlow<LeadsState> = _state
+    private val _state=MutableStateFlow(LeadsState())
+    val state:StateFlow<LeadsState> = _state
     private var initialLoadTriggered = false
 
     init {
@@ -126,19 +126,21 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 followUpMutations.create(lead.id,dueDate,type,notes,assignedUserId)
                 val detailOpen = _state.value.detail?.id == lead.id
+                val label = if (type == "CALL") "Call" else "Visit"
+                val success = "$label follow-up added successfully."
                 coroutineScope {
                     val detailDeferred = async { if (detailOpen) api.lead(lead.id) else _state.value.detail }
                     val followUpsDeferred = async { if (detailOpen) loadLeadFollowUps(lead.id) else _state.value.detailFollowUps }
                     val listDeferred = async { api.leads(_state.value.query, _state.value.employeeId) }
-                    val label = if (type == "CALL") "Call" else "Visit"
                     _state.value = _state.value.copy(
                         busy = false,
                         detail = detailDeferred.await(),
                         detailFollowUps = followUpsDeferred.await(),
                         leads = listDeferred.await(),
-                        message = "$label follow-up added successfully.",
+                        message = success,
                     )
                 }
+                clearSuccessAfter(success)
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Follow-up couldn't be added.")) }
         }
     }
@@ -165,6 +167,7 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
                     dialEndedAt = dialEndedAt,
                     timingSource = timingSource,
                 )
+                val success = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved."
                 coroutineScope {
                     val countsDeferred = async { loadCallCounts() }
                     val historyDeferred = async {
@@ -174,9 +177,10 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
                         busy = false,
                         callCounts = countsDeferred.await(),
                         detailCallHistory = historyDeferred.await(),
-                        message = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved.",
+                        message = success,
                     )
                 }
+                clearSuccessAfter(success)
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Call result couldn't be saved.")) }
         }
     }
@@ -188,9 +192,9 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val detail = api.editLead(request)
                 val list = api.leads(_state.value.query, _state.value.employeeId)
-                _state.value = _state.value.copy(busy = false, detail = detail, leads = list, message = "Lead updated")
-                delay(1800)
-                if(_state.value.message=="Lead updated") _state.value=_state.value.copy(message=null)
+                val success = "Lead updated"
+                _state.value = _state.value.copy(busy = false, detail = detail, leads = list, message = success)
+                clearSuccessAfter(success)
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Lead update wasn't accepted.")) }
         }
     }
@@ -208,6 +212,11 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
             .filter { it.leadId == leadId }
             .distinctBy { it.id }
             .sortedByDescending { it.createdAt ?: it.dueDate }
+    }
+
+    private suspend fun clearSuccessAfter(success: String) {
+        delay(2500)
+        if (_state.value.message == success) _state.value = _state.value.copy(message = null)
     }
 
     private fun mutate(success: String = "Lead updated.", action: suspend () -> Unit) {
@@ -232,6 +241,7 @@ class LeadsViewModel(app: Application) : AndroidViewModel(app) {
                         message = success,
                     )
                 }
+                clearSuccessAfter(success)
             } catch (e: Exception) { _state.value = _state.value.copy(busy = false, message = apiMessage(e, "Lead update wasn't accepted.")) }
         }
     }
