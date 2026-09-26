@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.salespunch360.mobile.ui
 
 import androidx.compose.foundation.BorderStroke
@@ -30,7 +31,7 @@ fun AdminTargetAnalysisScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()-
   verticalArrangement=Arrangement.spacedBy(10.dp),
  ){
   item{
-   onBack?.let{back->TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Reports")}}
+   onBack?.let{back->TextButton(onClick=back,contentPadding=PaddingValues(0.dp)){Text("← Reports")}}
    Text("Target Analysis",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
    Text("Current calendar-month Target / Actual values use the same rules and data as Web Target Analysis.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
   }
@@ -45,7 +46,6 @@ fun AdminTargetAnalysisScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()-
     }
    }
   }
-  item{ReportExportControls(state,vm)}
   if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
   state.message?.let{item{ContentCard("Report unavailable",it)}}
   if(!state.loading&&state.message==null){
