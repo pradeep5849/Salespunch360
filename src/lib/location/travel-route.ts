@@ -79,3 +79,16 @@ export function calculateTravelDistanceMeters(points: TravelRoutePoint[]): numbe
   }
   return total;
 }
+
+/**
+ * Calculates each attendance session independently, then adds the session totals.
+ * No distance is ever created between the last GPS point of one attendance session
+ * and the first GPS point of a later session.
+ */
+export function calculateTravelDistanceBySession(sessions: TravelRoutePoint[][]) {
+  const sessionDistanceMeters = sessions.map(session => calculateTravelDistanceMeters(session));
+  return {
+    sessionDistanceMeters,
+    totalDistanceMeters: sessionDistanceMeters.reduce((total, distance) => total + distance, 0),
+  };
+}
