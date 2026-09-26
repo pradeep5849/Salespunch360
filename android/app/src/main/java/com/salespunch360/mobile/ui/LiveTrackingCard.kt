@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.DashboardViewModel
+import com.salespunch360.mobile.data.MobileRole
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,7 +42,8 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val selectedEmployee = state.employees.firstOrNull { it.id == state.selectedEmployeeId }
+    val salesEmployees = state.employees.filter { it.salesRole == MobileRole.SALES }
+    val selectedEmployee = salesEmployees.firstOrNull { it.id == state.selectedEmployeeId }
 
     Card(
         Modifier.fillMaxWidth(),
@@ -88,12 +90,12 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
                 OutlinedButton(
                     onClick = { expanded = true },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = state.employees.isNotEmpty(),
+                    enabled = salesEmployees.isNotEmpty(),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                 ) {
                     Text(
                         selectedEmployee?.name
-                            ?: if (state.employees.isEmpty()) "No users available" else "Select user",
+                            ?: if (salesEmployees.isEmpty()) "No Sales users available" else "Select user",
                         modifier = Modifier.weight(1f),
                     )
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "Select user")
@@ -102,7 +104,7 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {
-                    state.employees.forEach { employee ->
+                    salesEmployees.forEach { employee ->
                         DropdownMenuItem(
                             text = { Text(employee.name) },
                             onClick = {
@@ -123,7 +125,7 @@ fun LiveTrackingCard(vm: DashboardViewModel = viewModel()) {
             }
 
             Text(
-                "Location is checked only when you select a user and tap Check Location. It does not refresh continuously.",
+                "Location is checked only when you select a Sales user and tap Check Location. It does not refresh continuously.",
                 style = MaterialTheme.typography.bodySmall,
                 color = SalesMuted,
             )

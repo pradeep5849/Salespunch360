@@ -18,9 +18,10 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};const branches=await operationalBranchContext(actor);
  const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true,salesRole:true,managerType:true,designation:true},orderBy:{name:"asc"}});
  const checkInEmployees=employees.filter(employee=>(employee.salesRole==="SALES"&&!isTelecallerDesignation(employee.designation))||(employee.salesRole==="MANAGER"&&employee.managerType!=="MANAGER_ONLY"));
- const allowed=new Set(employees.map(e=>e.id)),allowedCheck=new Set(checkInEmployees.map(e=>e.id));
+ const liveEmployees=employees.filter(employee=>employee.salesRole==="SALES");
+ const allowedLive=new Set(liveEmployees.map(e=>e.id)),allowedCheck=new Set(checkInEmployees.map(e=>e.id));
  const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowedCheck.has(requestedCheck)?requestedCheck:undefined;
- const requestedLive=raw.liveEmployee,liveUserId=!isSales(actor)&&requestedLive&&allowed.has(requestedLive)?requestedLive:undefined;
+ const requestedLive=raw.liveEmployee,liveUserId=!isSales(actor)&&requestedLive&&allowedLive.has(requestedLive)?requestedLive:undefined;
  const indiaTodayText=indiaDateText(),indiaToday=parseIndiaBusinessDate(indiaTodayText),indiaTomorrow=new Date(indiaToday.getTime()+86400000);
  const [indiaYear,indiaMonth]=indiaTodayText.split("-");const indiaMonthStart=parseIndiaBusinessDate(`${indiaYear}-${indiaMonth}-01`);
  const fieldManager=isManager(actor)&&actor.managerType!=="MANAGER_ONLY";
@@ -40,5 +41,5 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?0:db.followUpTask.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING",dueDate:{gte:indiaToday,lt:indiaTomorrow}}}),
   (isAdmin(actor)||(isManager(actor)&&!fieldManager))?0:db.followUpTask.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING",dueDate:{lt:indiaToday}}})
  ]);
- return{actor,company,employees,checkInEmployees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks};
+ return{actor,company,employees,checkInEmployees,liveEmployees,checkUserId,liveUserId,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks};
 }
