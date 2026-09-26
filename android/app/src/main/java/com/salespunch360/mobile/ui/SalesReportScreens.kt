@@ -26,6 +26,7 @@ import coil3.network.NetworkHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.salespunch360.mobile.BuildConfig
+import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.ReportsState
 import com.salespunch360.mobile.ReportsViewModel
 import com.salespunch360.mobile.data.SecureSession
@@ -63,6 +64,10 @@ fun SalesReportScreen(type:String,vm:ReportsViewModel=viewModel()){
 private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
  val context=LocalContext.current
  val token=remember{SecureSession(context).token()}
+ val linkedLeadsVm:LeadsViewModel=viewModel(key="report-checkin-linked-lead")
+ val linkedLeadsState=linkedLeadsVm.state.collectAsStateWithLifecycle().value
+ if(linkedLeadsState.detailLoading){LoadingScreen("Loading lead details…");return}
+ if(linkedLeadsState.detail!=null){LeadsScreen(vm=linkedLeadsVm);return}
  val rows=state.report?.get("rows")?.jsonArray?:JsonArray(emptyList())
  val totalPages=state.report?.get("totalPages")?.jsonPrimitive?.intOrNull?:1
  var searchDate by rememberSaveable{mutableStateOf("")}
@@ -125,6 +130,7 @@ private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
   items(rows,key={it.jsonObject.salesText("id")?:it.toString()}){item->
    val row=item.jsonObject
    val id=row.salesText("id")
+   val leadId=row.salesText("leadId")
    val customer=row.salesObjText("customer","name")?:row.salesText("contactName")?:"Field prospect"
    val address=row.salesText("checkInAddress")?:run{
     val lat=row["checkInLatitude"]?.jsonPrimitive?.doubleOrNull
@@ -149,7 +155,7 @@ private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
      }
      Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
       Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-       Text(customer,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
+       Text(customer,Modifier.weight(1f).then(if(leadId!=null)Modifier.clickable{linkedLeadsVm.open(leadId)}else Modifier),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
        Surface(shape=RoundedCornerShape(50),color=Color(0xFFEEF3FF)){
         Text(if(row.salesText("checkedOutAt")==null)"Active" else "Completed",Modifier.padding(horizontal=9.dp,vertical=5.dp),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold,color=SalesBlue)
        }

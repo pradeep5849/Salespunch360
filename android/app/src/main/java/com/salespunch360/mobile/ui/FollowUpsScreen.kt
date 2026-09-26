@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -103,7 +104,21 @@ private fun FollowUpTaskCard(
                 Text(task.subjectName, Modifier.weight(1f), fontWeight = FontWeight.Bold, color = SalesInk)
                 StatusChip(task.status)
             }
-            Text("Type: ${if (isCall) "Call" else "Visit"}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = SalesInk)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("Type:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = SalesInk)
+                Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                    color = if (isCall) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        if (isCall) "Call" else "Visit",
+                        Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isCall) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
             Text("Lead: ${task.leadTitle} · Assigned: ${task.assignedUserName ?: "—"}", style = MaterialTheme.typography.bodyMedium, color = SalesInk)
             Text("Due: ${task.dueDate.take(10)} · Last action: ${task.lastAction}", style = MaterialTheme.typography.bodyMedium, color = SalesMuted)
             task.notes?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }

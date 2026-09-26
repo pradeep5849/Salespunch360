@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.FieldViewModel
+import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import com.salespunch360.mobile.location.currentDeviceLocation
 import com.salespunch360.mobile.location.locationFailureMessage
@@ -48,12 +50,20 @@ private fun compressedBitmap(source:Bitmap):ByteArray{
 fun CustomersScreen(openCheckIns:()->Unit={},vm:FieldViewModel=viewModel()){
  val state=vm.state.collectAsStateWithLifecycle().value
  val context=state.context
+ val linkedLeadsVm:LeadsViewModel=viewModel(key="customers-linked-lead")
+ val linkedLeadsState=linkedLeadsVm.state.collectAsStateWithLifecycle().value
+ if(linkedLeadsState.detailLoading){LoadingScreen("Loading lead details…");return}
+ if(linkedLeadsState.detail!=null){LeadsScreen(vm=linkedLeadsVm);return}
  if(context==null&&state.loading){LoadingScreen("Loading customers…");return}
  if(context==null){RetryScreen(state.message?:"Customers couldn't be loaded.",vm::refresh);return}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Customers",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)}
   if(context.customers.isEmpty())item{OutlinedCard(Modifier.fillMaxWidth()){Box(Modifier.fillMaxWidth().padding(vertical=32.dp,horizontal=16.dp)){Text("No customers are assigned to you.",color=SalesMuted)}}}
-  items(context.customers,key={it.id}){c->OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Text(c.name,fontWeight=FontWeight.Bold,color=SalesInk);Text(c.phone?:"No phone number",color=SalesMuted)}}}
+  items(context.customers,key={it.id}){c->
+   val linkedLeadId=state.leads.firstOrNull{it.customer?.id==c.id}?.id
+   val cardModifier=Modifier.fillMaxWidth().then(if(linkedLeadId!=null)Modifier.clickable{linkedLeadsVm.open(linkedLeadId)}else Modifier)
+   OutlinedCard(cardModifier){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Text(c.name,fontWeight=FontWeight.Bold,color=SalesInk);Text(c.phone?:"No phone number",color=SalesMuted)}}
+  }
  }
 }
 
