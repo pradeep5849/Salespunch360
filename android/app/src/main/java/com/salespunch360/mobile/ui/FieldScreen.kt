@@ -287,3 +287,7 @@ private fun followUpBucket(task:FollowUpTask):String{
  val today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
  return when{due<today->"Overdue";due==today->"Due Today";else->"Upcoming"}
 }
+
+private fun formatFieldTime(value:String):String=runCatching{
+ java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))
+}.getOrDefault(value)
