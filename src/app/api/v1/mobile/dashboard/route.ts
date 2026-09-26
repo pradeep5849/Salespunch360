@@ -16,8 +16,9 @@ export async function GET(request:Request){
    db.company.findUnique({where:{id:user.companyId},select:{gpsTrackingEnabled:true}})
   ]);
   const checkInEmployees=employees.filter(employee=>(employee.salesRole==='SALES'&&!isTelecallerDesignation(employee.designation))||(employee.salesRole==='MANAGER'&&employee.managerType!=='MANAGER_ONLY'));
-  const params=new URL(request.url).searchParams,allowed=new Set(employees.map(employee=>employee.id)),allowedCheck=new Set(checkInEmployees.map(employee=>employee.id));
-  const requested=params.get('liveEmployee'),liveUserId=requested&&allowed.has(requested)?requested:null;
+  const liveEmployees=employees.filter(employee=>employee.salesRole==='SALES');
+  const params=new URL(request.url).searchParams,allowedLive=new Set(liveEmployees.map(employee=>employee.id)),allowedCheck=new Set(checkInEmployees.map(employee=>employee.id));
+  const requested=params.get('liveEmployee'),liveUserId=requested&&allowedLive.has(requested)?requested:null;
   const checkRequested=params.get('checkEmployee'),checkUserId=checkRequested&&allowedCheck.has(checkRequested)?checkRequested:null;
   const teamIds=user.salesRole==='MANAGER'&&fieldManager?[user.id,...checkInEmployees.map(employee=>employee.id)]:checkInEmployees.map(employee=>employee.id);
   const visitUserIds=checkUserId?[checkUserId]:teamIds;
