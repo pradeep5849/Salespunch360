@@ -769,6 +769,7 @@ model User {
   dateOfJoining              DateTime?                @db.Date
   travelAllowanceEnabled     Boolean                  @default(false)
   travelRatePerKm            Decimal?                 @db.Decimal(10, 2)
+  travelApprovalMode         String                   @default("MANUAL")
   isActive                   Boolean                  @default(true)
   managerId                  String?                  @db.Uuid
   manager                    User?                    @relation("ManagerReports", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: Restrict)

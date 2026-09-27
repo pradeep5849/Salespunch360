@@ -35,7 +35,7 @@ const employeeSelect = {
   id: true, name: true, email: true, phone: true, employeeCode: true, designation:true,dateOfJoining:true,branchAccessScope:true,branchAccesses:{select:{branch:{select:{id:true,name:true,code:true,isActive:true}}}},
   // Compatibility/display only; authorization and employee identity use salesRole.
   role: true, salesRole: true, salesAccessActive: true, accountRole:true, accountAccessActive:true,
-  isActive: true, managerId: true, managerType: true, companyId: true, travelAllowanceEnabled:true, travelRatePerKm:true,
+  isActive: true, managerId: true, managerType: true, companyId: true, travelAllowanceEnabled:true, travelRatePerKm:true, travelApprovalMode:true,
   manager: { select: { id: true, name: true, isActive: true, salesAccessActive: true } },
 } satisfies Prisma.UserSelect;
 

@@ -23,7 +23,7 @@ export async function mobileEditEmployee(p:MobilePrincipal,raw:unknown){
   await editAdditionalAdminForCompany(companyId,{userId:employeeId,name:input.name,email:input.email,phone:input.phone},p.id);return{ok:true};
  }
  const parsed=editEmployeeSchema.parse({employeeId,name:input.name,email:input.email,phone:input.phone,employeeCode:input.employeeCode,designation:input.designation,dateOfJoining:input.dateOfJoining,managerId:input.managerId,managerType:input.managerType});
- const scope=input.branchAccessScope==='SELECTED_BRANCHES'?'SELECTED_BRANCHES':'ALL_BRANCHES',branchIds=Array.isArray(input.branchIds)?input.branchIds.filter((x):x is string=>typeof x==='string'):[],travelEnabled=Boolean(input.travelAllowanceEnabled),travelRate=normalizedRate(input.travelRatePerKm);
+ const scope=input.branchAccessScope==='SELECTED_BRANCHES'?'SELECTED_BRANCHES':'ALL_BRANCHES',branchIds=Array.isArray(input.branchIds)?input.branchIds.filter((x):x is string=>typeof x==='string'):[],travelEnabled=Boolean(input.travelAllowanceEnabled),travelRate=normalizedRate(input.travelRatePerKm),travelApprovalMode=input.travelApprovalMode==='AUTO'?'AUTO':'MANUAL';
  await db.$transaction(async tx=>{
   await actor(tx,companyId,p.id);
   const company=await tx.company.findUnique({where:{id:companyId},select:{teamStructure:true}});if(!company)throw new EmployeePolicyError('NOT_FOUND');
@@ -35,7 +35,7 @@ export async function mobileEditEmployee(p:MobilePrincipal,raw:unknown){
   const managerId=employee.salesRole==='SALES'&&parsed.managerId!==undefined?(parsed.managerId===employee.managerId?employee.managerId:await assignableManager(tx,companyId,parsed.managerId)):employee.managerId;
   const validBranchIds=await validateBranches(tx,companyId,scope,branchIds);
   await tx.userBranchAccess.deleteMany({where:{userId:employee.id}});
-  await tx.user.update({where:{id:employee.id},data:{name:parsed.name,email:parsed.email,phone:parsed.phone??null,employeeCode:parsed.employeeCode??null,designation:parsed.designation===undefined?employee.designation:parsed.designation,dateOfJoining:parsed.dateOfJoining===undefined?employee.dateOfJoining:parsed.dateOfJoining,managerId,managerType:employee.salesRole==='MANAGER'?(parsed.managerType??employee.managerType??'FIELD_MANAGER'):null,branchAccessScope:scope,branchAccesses:validBranchIds.length?{create:validBranchIds.map(branchId=>({branchId}))}:undefined,travelAllowanceEnabled:travelEnabled,travelRatePerKm:travelRate}});
+  await tx.user.update({where:{id:employee.id},data:{name:parsed.name,email:parsed.email,phone:parsed.phone??null,employeeCode:parsed.employeeCode??null,designation:parsed.designation===undefined?employee.designation:parsed.designation,dateOfJoining:parsed.dateOfJoining===undefined?employee.dateOfJoining:parsed.dateOfJoining,managerId,managerType:employee.salesRole==='MANAGER'?(parsed.managerType??employee.managerType??'FIELD_MANAGER'):null,branchAccessScope:scope,branchAccesses:validBranchIds.length?{create:validBranchIds.map(branchId=>({branchId}))}:undefined,travelAllowanceEnabled:travelEnabled,travelRatePerKm:travelRate,travelApprovalMode}});
  });
  return{ok:true};
 }

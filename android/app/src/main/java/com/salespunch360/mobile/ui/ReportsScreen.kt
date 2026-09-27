@@ -55,6 +55,7 @@ private fun reportTypes(role:MobileRole)=when(role){
   "geofence" to "Geofence Report",
   "leads" to "Lead Report",
   "targets" to "Target Analysis",
+  "expenses" to "Expense Report",
  )
 }
 
@@ -180,7 +181,7 @@ fun ReportsScreen(
    }else{
     item{SummaryCards(r["summary"]?.jsonObject)}
     if(rows.isEmpty())item{ContentCard("No report records","No records match the selected filters.")}
-    else items(rows.size){ReportRow(rows[it].jsonObject)}
+    else items(rows.size){if(state.type=="expenses")ExpenseReportRow(rows[it].jsonObject)else ReportRow(rows[it].jsonObject)}
     val pages=r["totalPages"]?.jsonPrimitive?.intOrNull?:1
     if(pages>1)item{
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -208,6 +209,20 @@ fun ReportsScreen(
    },
    confirmButton={TextButton({deviceDetails=null}){Text("Close")}},
   )
+ }
+}
+
+@Composable
+private fun ExpenseReportRow(row:JsonObject){
+ val distance=(row["distanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0)/1000.0
+ OutlinedCard(Modifier.fillMaxWidth()){
+  Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+   Text(row.text("employee")?:"Employee",fontWeight=FontWeight.Bold)
+   Text(row.text("date")?:"",style=MaterialTheme.typography.bodySmall)
+   Text("Distance: ${"%.2f".format(distance)} km · Rate: ₹${row.text("ratePerKm")?:"Not configured"}")
+   Text("Travel expense: ₹${row.text("amount")?:"—"}",fontWeight=FontWeight.SemiBold)
+   Text("${prettyLabel(row.text("approvalMode")?:"MANUAL")} approval · ${prettyLabel(row.text("status")?:"RATE REQUIRED")}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  }
  }
 }
 
