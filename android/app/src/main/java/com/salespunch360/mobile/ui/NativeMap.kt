@@ -24,6 +24,31 @@ data class NativeMapPoint(
     val showInfo: Boolean = false,
 )
 
+private const val MAX_RENDERED_ROUTE_POINTS = 900
+
+private fun sampledSegments(segments: List<List<NativeMapPoint>>): List<List<NativeMapPoint>> {
+    val nonEmpty = segments.filter { it.isNotEmpty() }
+    val total = nonEmpty.sumOf { it.size }
+    if (total <= MAX_RENDERED_ROUTE_POINTS) return nonEmpty
+
+    val budgetPerSegment = (MAX_RENDERED_ROUTE_POINTS / nonEmpty.size).coerceAtLeast(2)
+    return nonEmpty.map { segment ->
+        if (segment.size <= budgetPerSegment) return@map segment
+        if (budgetPerSegment == 2) return@map listOf(segment.first(), segment.last())
+
+        val sampled = ArrayList<NativeMapPoint>(budgetPerSegment)
+        sampled += segment.first()
+        val interiorBudget = budgetPerSegment - 2
+        val step = (segment.size - 2).toDouble() / interiorBudget
+        repeat(interiorBudget) { index ->
+            val sourceIndex = (1 + index * step).toInt().coerceIn(1, segment.lastIndex - 1)
+            sampled += segment[sourceIndex]
+        }
+        sampled += segment.last()
+        sampled
+    }
+}
+
 @Composable
 fun NativeMap(
     segments: List<List<NativeMapPoint>>,
@@ -32,6 +57,21 @@ fun NativeMap(
 ) {
     val context = LocalContext.current
     Configuration.getInstance().userAgentValue = context.packageName
+
+    // Keep the full report data untouched, but bound the amount of geometry rendered by
+    // OSMDroid. This prevents a dense day of GPS points from blocking the Compose UI thread.
+    val renderedSegments = remember(segments) { sampledSegments(segments) }
+    val renderedMarkers = remember(markers) { markers.distinctBy { Triple(it.latitude, it.longitude, it.label) } }
+    val allRenderedPoints = remember(renderedSegments, renderedMarkers) {
+        buildList {
+            renderedSegments.forEach(::addAll)
+            addAll(renderedMarkers)
+        }
+    }
+    val renderHash = remember(renderedSegments, renderedMarkers) {
+        31 * renderedSegments.hashCode() + renderedMarkers.hashCode()
+    }
+
     val map = remember {
         MapView(context).apply {
             setMultiTouchControls(true)
@@ -53,12 +93,11 @@ fun NativeMap(
         factory = { map },
         modifier = modifier,
         update = { view ->
-            val renderHash = 31 * segments.hashCode() + markers.hashCode()
             if (lastRenderHash[0] != renderHash) {
                 lastRenderHash[0] = renderHash
                 view.overlays.clear()
 
-                segments.filter { it.isNotEmpty() }.forEach { segment ->
+                renderedSegments.forEach { segment ->
                     view.overlays.add(
                         Polyline().apply {
                             setPoints(segment.map { GeoPoint(it.latitude, it.longitude) })
@@ -68,7 +107,7 @@ fun NativeMap(
                     )
                 }
 
-                markers.forEachIndexed { index, point ->
+                renderedMarkers.forEachIndexed { index, point ->
                     val marker = Marker(view).apply {
                         position = GeoPoint(point.latitude, point.longitude)
                         title = point.label ?: "Location ${index + 1}"
@@ -79,16 +118,15 @@ fun NativeMap(
                     if (point.showInfo) marker.showInfoWindow()
                 }
 
-                val all = segments.flatten() + markers
-                if (all.isNotEmpty()) {
-                    if (all.size == 1) {
-                        view.controller.setCenter(GeoPoint(all[0].latitude, all[0].longitude))
+                if (allRenderedPoints.isNotEmpty()) {
+                    if (allRenderedPoints.size == 1) {
+                        view.controller.setCenter(GeoPoint(allRenderedPoints[0].latitude, allRenderedPoints[0].longitude))
                         view.controller.setZoom(17.0)
                     } else {
-                        val north = all.maxOf { it.latitude }
-                        val south = all.minOf { it.latitude }
-                        val east = all.maxOf { it.longitude }
-                        val west = all.minOf { it.longitude }
+                        val north = allRenderedPoints.maxOf { it.latitude }
+                        val south = allRenderedPoints.minOf { it.latitude }
+                        val east = allRenderedPoints.maxOf { it.longitude }
+                        val west = allRenderedPoints.minOf { it.longitude }
                         view.zoomToBoundingBox(BoundingBox(north, east, south, west), true, 64)
                     }
                 }
