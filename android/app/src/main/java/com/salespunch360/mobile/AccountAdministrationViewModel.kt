@@ -77,9 +77,13 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     fun uploadSignature(name: String, mime: String, bytes: ByteArray) {
         viewModelScope.launch {
             runCatching { api.uploadAccountSignature(name, mime, bytes) }
-                .onSuccess { _state.value = _state.value.copy(message = "Signature replaced") }
+                .onSuccess { _state.value = _state.value.copy(message = "Signature replaced", error = null) }
                 .onFailure { _state.value = _state.value.copy(error = it.message) }
         }
+    }
+
+    fun fileError(message: String) {
+        _state.value = _state.value.copy(error = message, message = null)
     }
 
     fun removeSignature() {
