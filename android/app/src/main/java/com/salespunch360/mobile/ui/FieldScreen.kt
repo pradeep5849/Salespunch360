@@ -52,18 +52,21 @@ fun CustomersScreen(openCheckIns:()->Unit={},vm:FieldViewModel=viewModel()){
  val context=state.context
  val linkedLeadsVm:LeadsViewModel=viewModel(key="customers-linked-lead")
  val linkedLeadsState=linkedLeadsVm.state.collectAsStateWithLifecycle().value
+ var customerSearch by remember{mutableStateOf("")}
  if(linkedLeadsState.detailLoading){LoadingScreen("Loading lead details…");return}
  if(linkedLeadsState.detail!=null){LeadsScreen(vm=linkedLeadsVm);return}
  if(context==null&&state.loading){LoadingScreen("Loading customers…");return}
  if(context==null){RetryScreen(state.message?:"Customers couldn't be loaded.",vm::refresh);return}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Customers",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)}
+  item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(customerSearch,{customerSearch=it.take(100)},label={Text("Search assigned customers")},singleLine=true,modifier=Modifier.weight(1f));Button({vm.searchCustomers(customerSearch)},enabled=!state.customerLoading,modifier=Modifier.padding(top=8.dp)){Text("Search")}}}
   if(context.customers.isEmpty())item{OutlinedCard(Modifier.fillMaxWidth()){Box(Modifier.fillMaxWidth().padding(vertical=32.dp,horizontal=16.dp)){Text("No customers are assigned to you.",color=SalesMuted)}}}
   items(context.customers,key={it.id}){c->
    val linkedLeadId=state.leads.firstOrNull{it.customer?.id==c.id}?.id
    val cardModifier=Modifier.fillMaxWidth().then(if(linkedLeadId!=null)Modifier.clickable{linkedLeadsVm.open(linkedLeadId)}else Modifier)
    OutlinedCard(cardModifier){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Text(c.name,fontWeight=FontWeight.Bold,color=SalesInk);Text(c.phone?:"No phone number",color=SalesMuted)}}
   }
+  if(state.customerHasMore)item{OutlinedButton(vm::moreCustomers,enabled=!state.customerLoading,modifier=Modifier.fillMaxWidth()){Text(if(state.customerLoading)"Loading…" else "Load more customers")}}
  }
 }
 
@@ -90,6 +93,8 @@ fun FieldScreen(
  var locationState by remember{mutableStateOf("idle")}
  var preparedLocation by remember{mutableStateOf<LocationPayload?>(null)}
  var permissionAction by remember{mutableStateOf<(() -> Unit)?>(null)}
+ var customerSearch by remember{mutableStateOf("")}
+ var followUpSearch by remember{mutableStateOf("")}
  val androidContext=LocalContext.current
  val scope=rememberCoroutineScope()
  val camera=rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()){bitmap->photo=bitmap?.let(::compressedBitmap)}
@@ -126,7 +131,6 @@ fun FieldScreen(
     preparedLocation=point;locationState="ready"
     vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},point,notes.ifBlank{null},photo,followUpTaskId)
     if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
-
     return@launch
    }
    locationState="getting"
@@ -134,7 +138,6 @@ fun FieldScreen(
     preparedLocation=fresh;locationState="ready"
     vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},fresh,notes.ifBlank{null},photo,followUpTaskId)
     if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
-
    }.onFailure{locationState="unavailable";vm.locationError(locationFailureMessage(it))}
   }}
   if(ContextCompat.checkSelfPermission(androidContext,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED)permissionAction?.invoke()
@@ -174,11 +177,15 @@ fun FieldScreen(
       }
       "FOLLOW_UP"->{
        Text("Scheduled visit follow-up",fontWeight=FontWeight.SemiBold)
+       Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(followUpSearch,{followUpSearch=it.take(100)},label={Text("Search follow-ups")},singleLine=true,modifier=Modifier.weight(1f));OutlinedButton({vm.searchFollowUps(followUpSearch)},enabled=!state.followUpLoading,modifier=Modifier.padding(top=8.dp)){Text("Search")}}
        FollowUpSelector(state.followUps,followUpTaskId){task->subjectId=task.leadId;followUpTaskId=task.id}
+       if(state.followUpHasMore)OutlinedButton(vm::moreFollowUps,enabled=!state.followUpLoading,modifier=Modifier.fillMaxWidth()){Text(if(state.followUpLoading)"Loading…" else "Load more follow-ups")}
       }
       "CUSTOMER"->{
        Text("Customer",fontWeight=FontWeight.SemiBold)
+       Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(customerSearch,{customerSearch=it.take(100)},label={Text("Search customers")},singleLine=true,modifier=Modifier.weight(1f));OutlinedButton({vm.searchCustomers(customerSearch)},enabled=!state.customerLoading,modifier=Modifier.padding(top=8.dp)){Text("Search")}}
        CustomerSelector(context.customers,subjectId){subjectId=it;photo=null}
+       if(state.customerHasMore)OutlinedButton(vm::moreCustomers,enabled=!state.customerLoading,modifier=Modifier.fillMaxWidth()){Text(if(state.customerLoading)"Loading…" else "Load more customers")}
       }
      }
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Bottom){
