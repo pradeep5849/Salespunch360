@@ -4,6 +4,10 @@ import {lockBillingCompany} from "./company-lock";
 import {ACCOUNT_PACKAGE_ORDER_PROVIDER} from "./account-package";
 
 export async function applyDueSeatReductions(companyId:string,now=new Date()){
+ // Ordinary reads do not contend on the company renewal lock. Recheck inside the lock below.
+ const candidates=await db.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrderId:{not:null}},orderBy:{endsAt:"desc"},select:{sourceOrderId:true,sourceOrder:{select:{provider:true,seatReductionAppliedAt:true}}}});
+ const due=candidates.find(item=>item.sourceOrder?.provider!==ACCOUNT_PACKAGE_ORDER_PROVIDER);
+ if(!due?.sourceOrderId||!due.sourceOrder||due.sourceOrder.seatReductionAppliedAt)return;
  await db.$transaction(async tx=>{
   await lockBillingCompany(tx,companyId);
   const candidates=await tx.companySubscription.findMany({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},sourceOrderId:{not:null}},orderBy:{endsAt:"desc"},select:{id:true,sourceOrderId:true,sourceOrder:{select:{provider:true}}}});

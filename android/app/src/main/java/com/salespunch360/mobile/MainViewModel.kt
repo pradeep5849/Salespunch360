@@ -22,6 +22,9 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 enum class AppStatus { STARTING, SIGNED_OUT, AUTHENTICATED, RECOVERABLE_ERROR }
 
@@ -72,7 +75,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 if (applyBootstrap(bootstrap)) {
                     PushNotifications.register(getApplication())
                 }
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {throw error
+        } catch (error: Exception) {
                 if (error is ForbiddenMobileRoleException) session.clear()
                 _state.value = AppState(AppStatus.SIGNED_OUT, message = loginMessage(error))
             }
@@ -86,6 +90,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (applyBootstrap(bootstrap)) {
                 PushNotifications.register(getApplication())
             }
+        } catch (error: CancellationException) {throw error
         } catch (error: Exception) {
             when (error) {
                 is IOException -> _state.value = _state.value.copy(
@@ -140,7 +145,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES)
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {throw error
+        } catch (error: Exception) {
                 if (error is ApiException && error.status == 401) {
                     secureSignOut("Your session expired. Please sign in again.")
                 } else {
@@ -168,18 +174,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         TrackingService.stop(getApplication())
         try {
             api.logout()
+        } catch(error:CancellationException){throw error
+        } catch(_:IOException){
+        } catch(_:ApiException){
         } finally {
+          withContext(NonCancellable){
             clearSalesLocal(owner)
             session.clear()
             workspacePreference.clear()
             pendingAccountPath = null
             _state.value = AppState(AppStatus.SIGNED_OUT)
+          }
         }
     }
 
     private fun refreshAuthorization() = viewModelScope.launch {
         try {
             applyBootstrap(api.bootstrap())
+        } catch (error: CancellationException) {throw error
         } catch (error: Exception) {
             if (error is ApiException && error.status == 401) {
                 secureSignOut("Your session expired. Please sign in again.")

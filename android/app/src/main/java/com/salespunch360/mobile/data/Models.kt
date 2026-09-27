@@ -103,7 +103,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
 @Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
 @Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)
-@Serializable data class LeadEditRequest(val action:String="EDIT",val leadId:String,val title:String,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val assignedUserId:String?=null,val notes:String?=null)
+@Serializable data class LeadEditRequest(val action:String="EDIT",val leadId:String,val version:Int,val title:String,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val assignedUserId:String?=null,val notes:String?=null)
 @Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null,val gpsPointCount:Int=0)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class TeamAttendanceEmployee(val id:String,val name:String,val salesRole:MobileRole,val isActive:Boolean,val working:Boolean,val startedAt:String?=null,val gpsPointCount:Int=0)
