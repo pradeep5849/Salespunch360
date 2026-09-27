@@ -64,7 +64,7 @@ fun NativeMap(
     val renderedMarkers = remember(markers) { markers.distinctBy { Triple(it.latitude, it.longitude, it.label) } }
     val allRenderedPoints = remember(renderedSegments, renderedMarkers) {
         buildList {
-            renderedSegments.forEach(::addAll)
+            renderedSegments.forEach { addAll(it) }
             addAll(renderedMarkers)
         }
     }
