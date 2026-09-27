@@ -14,7 +14,8 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   ]);
   const presentation = salesHeaderPresentation(user.salesRole, user.managerType, user.designation);
   if (!company || !workspace?.canAccessSales || !presentation) return <>{children}</>;
+  const notificationCount = await db.salesNotification.count({where:{companyId:user.companyId!,recipientUserId:user.id,readAt:null}});
   const navigation = salesHeaderCapabilities(user, company.productEdition);
   const companyAddress = company ? [company.addressLine1, company.addressLine2, company.locality, company.city, company.state, company.postalCode, company.country].filter(Boolean).join(", ") : "";
-  return <><WorkspaceHeader name={user.name} {...navigation} role={presentation.kind} roleLabel={presentation.label} canSwitchWorkspace={workspace.canSwitchWorkspace} activeWorkspace={workspace.effectiveWorkspace ?? "SALES"} companyName={company?.name || "SalesPunch360"} companyAddress={companyAddress} hasCompanyLogo={Boolean(company?.logoObjectKey)} companyLogoVersion={company?.updatedAt.getTime()} />{!isTelecaller(user)&&workspace.effectiveWorkspace==="SALES"?<SalesHandoffBanner/>:null}{children}</>;
+  return <><WorkspaceHeader name={user.name} {...navigation} role={presentation.kind} roleLabel={presentation.label} notificationCount={notificationCount} canSwitchWorkspace={workspace.canSwitchWorkspace} activeWorkspace={workspace.effectiveWorkspace ?? "SALES"} companyName={company?.name || "SalesPunch360"} companyAddress={companyAddress} hasCompanyLogo={Boolean(company?.logoObjectKey)} companyLogoVersion={company?.updatedAt.getTime()} />{!isTelecaller(user)&&workspace.effectiveWorkspace==="SALES"?<SalesHandoffBanner/>:null}{children}</>;
 }

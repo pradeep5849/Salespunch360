@@ -717,6 +717,7 @@ model Company {
   leadDeletionAudits                  LeadDeletionAudit[]
   followUpTasks                       FollowUpTask[]
   pushDevices                         PushDevice[]
+  salesNotifications                 SalesNotification[]
   dailyTravelApprovals                DailyTravelApproval[]
   quotationDocuments                  QuotationDocument[]
   quotationRevisions                  QuotationRevision[]
@@ -778,6 +779,8 @@ model User {
   branchAccesses             UserBranchAccess[]
   mobileSessions             MobileSession[]
   pushDevices                PushDevice[]
+  receivedSalesNotifications SalesNotification[] @relation("SalesNotificationRecipient")
+  actedSalesNotifications    SalesNotification[] @relation("SalesNotificationActor")
   attendances                Attendance[]
   locationPoints             LocationPoint[]
   customerVisits             CustomerVisit[]
@@ -1251,6 +1254,31 @@ model PushDevice {
   @@index([companyId, userId])
   @@index([mobileSessionId])
   @@map("push_devices")
+}
+
+model SalesNotification {
+  id                String    @id @default(uuid()) @db.Uuid
+  companyId         String    @db.Uuid
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  recipientUserId   String    @db.Uuid
+  recipientUser     User      @relation("SalesNotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  actorUserId       String?   @db.Uuid
+  actorUser         User?     @relation("SalesNotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  eventType         String    @db.VarChar(80)
+  title             String    @db.VarChar(180)
+  body              String    @db.VarChar(1000)
+  relatedEntityType String?   @db.VarChar(50)
+  relatedEntityId   String?   @db.Uuid
+  navigationTarget  String?   @db.VarChar(500)
+  dedupeKey         String    @db.VarChar(220)
+  readAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@unique([recipientUserId, dedupeKey])
+  @@index([companyId, recipientUserId, createdAt])
+  @@index([companyId, recipientUserId, readAt, createdAt])
+  @@index([recipientUserId, readAt])
+  @@map("sales_notifications")
 }
 
 model GeofenceEvent {

@@ -4,10 +4,13 @@ import { operationalBranchContext, type OperationalActor } from "@/lib/branches/
 import { ensureWonLeadProjectInTx } from "./won-project";
 import { LeadError, transitionKind, visibilityWhere } from "./policy";
 import { transitionLeadSchema } from "./validation";
+import {notifySalesAdmins} from "@/lib/sales-notifications/service";
+import {isTelecallerDesignation} from "@/lib/telecalling/policy";
 
 export type LeadTransitionActor = OperationalActor & {
   salesRole: "PRIMARY_ADMIN" | "ADMIN" | "MANAGER" | "SALES";
   managerType?: "FIELD_MANAGER" | "MANAGER_ONLY" | null;
+  designation?: string | null;
 };
 
 /**
@@ -17,6 +20,7 @@ export type LeadTransitionActor = OperationalActor & {
  * handover silently fails.
  */
 export async function transitionLeadWithProjectForActor(actor: LeadTransitionActor, raw: unknown) {
+  if(isTelecallerDesignation(actor.designation)) throw new LeadError("NOT_FOUND");
   const input = transitionLeadSchema.parse(raw);
   const branches = await operationalBranchContext(actor);
   return db.$transaction(async (tx) => {
@@ -56,6 +60,7 @@ export async function transitionLeadWithProjectForActor(actor: LeadTransitionAct
         toStage: input.toStage,
       },
     });
+    await notifySalesAdmins(tx,{companyId:actor.companyId,actorUserId:actor.id,eventType:"LEAD_STAGE_CHANGED",title:"Lead stage changed",body:`${old.title} moved from ${old.stage} to ${input.toStage}.`,relatedEntityType:"LEAD",relatedEntityId:old.id,navigationTarget:`/workspace/leads/${old.id}`,dedupeKey:`LEAD_STAGE_CHANGED:${old.id}:${input.version}:${input.toStage}`});
 
     const project = input.toStage === "WON"
       ? await ensureWonLeadProjectInTx(tx, { id: actor.id, companyId: actor.companyId }, input.leadId, now)

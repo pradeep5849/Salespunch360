@@ -1,0 +1,5 @@
+import {describe,expect,it} from "vitest";
+import {canUsePermission,canUsePermissionForMutation} from "@/lib/auth/permissions";
+import {visibilityWhere} from "@/lib/leads/policy";
+const telecaller={id:"t",companyId:"c",role:"SALES" as const,salesRole:"SALES" as const,accountRole:null,salesAccessActive:true,accountAccessActive:false,isActive:true,managerType:null,designation:"Telecaller"};
+describe("locked Telecaller permissions",()=>{it("can read all same-company leads and work follow-ups",()=>{expect(visibilityWhere(telecaller)).toEqual({});expect(canUsePermission(telecaller,"SALESPUNCH360","SALES_LEADS")).toBe(true);expect(canUsePermissionForMutation(telecaller,"SALESPUNCH360","SALES_FOLLOW_UPS")).toBe(true)});it("cannot use field, GPS, team, settings, target, or billing functions",()=>{for(const permission of ["SALES_ATTENDANCE","SALES_CHECK_INS","SALES_TRAVEL","SALES_TARGETS","SALES_REPORTS","SALES_USER_ADMIN","SALES_SETTINGS","SALES_BILLING"] as const)expect(canUsePermission(telecaller,"SALESPUNCH360",permission)).toBe(false)})});

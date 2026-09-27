@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.salespunch360.mobile.BuildConfig
 import com.salespunch360.mobile.LeadsViewModel
+import com.salespunch360.mobile.SalesNotificationsViewModel
 import com.salespunch360.mobile.data.*
 import com.salespunch360.mobile.location.TrackingService
 import kotlinx.coroutines.launch
@@ -90,6 +92,8 @@ fun SalesDrawerAuthenticatedApp(
     val nav = rememberMobileRouteHistory("Dashboard")
     val route = nav.current
     val leadsVm: LeadsViewModel = viewModel()
+    val notificationsVm: SalesNotificationsViewModel = viewModel()
+    val notificationsState = notificationsVm.state.collectAsStateWithLifecycle().value
     val leadsState = leadsVm.state.collectAsStateWithLifecycle().value
     var pendingTask by remember { mutableStateOf<FollowUpTask?>(null) }
     var pendingLeadId by remember { mutableStateOf<String?>(null) }
@@ -148,6 +152,7 @@ fun SalesDrawerAuthenticatedApp(
                 },
                 title = { CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl) },
                 actions = {
+                    BadgedBox(badge={if(notificationsState.data.unreadCount>0)Badge{Text(if(notificationsState.data.unreadCount>99)"99+" else notificationsState.data.unreadCount.toString())}}){IconButton(onClick={navigate("Notifications")}){Icon(Icons.Default.Notifications,"Sales notifications")}}
                     Box {
                         IconButton(onClick = { profileMenu = true }) {
                             Surface(shape = CircleShape, color = SalesNavy) {
@@ -194,17 +199,19 @@ fun SalesDrawerAuthenticatedApp(
                     },
                     onBack = { if (nav.canGoBack) nav.back() else navigate("Dashboard") },
                 )
-                !telecaller && route == "Leads" -> LeadsScreen(
-                    pendingLeadId,
+                route == "Notifications" -> SalesNotificationsScreen(notificationsState,notificationsVm::refresh,{notificationsVm.read(it)},{notification->when(notification.relatedEntityType){"LEAD"->{pendingLeadId=notification.relatedEntityId;navigate("Leads")};"FOLLOW_UP"->navigate("Follow-ups");else->Unit}})
+                route == "Leads" -> LeadsScreen(
+                    allowStageActions = !telecaller,
+                    initialLeadId = pendingLeadId,
                     { pendingLeadId = null },
-                    onCheckIn = { lead -> pendingTask = null; pendingCheckInLead = lead; navigate("Check-ins") },
+                    onCheckIn = { lead -> if(!telecaller){pendingTask = null; pendingCheckInLead = lead; navigate("Check-ins")} },
                     onPendingVisitDetails = { v ->
                         visitDetails = SalesVisitDetails(v.id, v.contactName ?: v.customerName ?: "Field prospect", v.userName, v.checkedInAt, v.checkedOutAt, if (v.checkedOutAt == null) "Checkout pending" else "Checkout completed")
                     },
                     vm = leadsVm
                 )
-                !telecaller && route == "Follow-ups" -> FollowUpsScreen(
-                    startCheckIn = { pendingCheckInLead = null; pendingTask = it; navigate("Check-ins") },
+                route == "Follow-ups" -> FollowUpsScreen(
+                    startCheckIn = { if(!telecaller){pendingCheckInLead = null; pendingTask = it; navigate("Check-ins")} },
                     viewLead = { pendingLeadId = it; navigate("Leads") },
                     viewVisit = { task ->
                         visitDetails = SalesVisitDetails(task.completedVisitId ?: task.id, task.subjectName, task.completedVisitUserName ?: task.assignedUserName ?: "—", task.checkedInAt ?: task.createdAt ?: "—", task.checkedOutAt, if (task.checkedOutAt == null) "Checkout pending" else "Checkout completed")

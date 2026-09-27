@@ -34,6 +34,8 @@ private val salesDrawerDestinations=listOf(
 )
 private val telecallerDrawerDestinations=listOf(
  SalesDrawerDestination("Dashboard","Dashboard",Icons.Default.Home),
+ SalesDrawerDestination("Leads","Leads",Icons.Default.FilterAlt),
+ SalesDrawerDestination("Follow-ups","Follow-ups",Icons.Default.EventNote),
  SalesDrawerDestination("Telecalling","Telecalling",Icons.Default.Phone)
 )
 

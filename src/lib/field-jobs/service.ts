@@ -5,6 +5,7 @@ import {db} from '@/lib/db';
 import {reverseGeocode} from '@/lib/maps/reverse-geocode';
 import {deliverFieldEvent,type FieldEvent} from '@/lib/push/service';
 import {z} from 'zod';
+import {notifySalesAdmins} from '@/lib/sales-notifications/service';
 
 export async function enqueueFieldEvent(tx:Prisma.TransactionClient,companyId:string,event:FieldEvent){
  const key=`${event.eventType}:${event.attendanceId??event.visitId}`;
@@ -13,6 +14,7 @@ export async function enqueueFieldEvent(tx:Prisma.TransactionClient,companyId:st
 export async function withAttendanceEvent<T extends{id:string;startedAt:Date;endedAt:Date|null}>(tx:Prisma.TransactionClient,companyId:string,actorUserId:string,eventType:'ATTENDANCE_STARTED'|'ATTENDANCE_ENDED',operation:Promise<T>){
  const attendance=await operation;
  await enqueueFieldEvent(tx,companyId,{eventType,actorUserId,attendanceId:attendance.id,occurredAt:eventType==='ATTENDANCE_STARTED'?attendance.startedAt:attendance.endedAt!});
+ await notifySalesAdmins(tx,{companyId,actorUserId,eventType,title:eventType==='ATTENDANCE_STARTED'?'Attendance ON':'Attendance OFF',body:eventType==='ATTENDANCE_STARTED'?'An employee started attendance.':'An employee ended attendance.',relatedEntityType:'ATTENDANCE',relatedEntityId:attendance.id,navigationTarget:'/workspace/reports/attendance',dedupeKey:`${eventType}:${attendance.id}`});
  return attendance;
 }
 export async function enqueueVisitAddress(tx:Prisma.TransactionClient,companyId:string,visitId:string){
