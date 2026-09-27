@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export function ListPagination({path,query,page,hasMore}:{path:string;query:Record<string,string|undefined>;page:number;hasMore:boolean}){const href=(next:number)=>{const params=new URLSearchParams();for(const [key,value]of Object.entries(query))if(value)params.set(key,value);params.set('page',String(next));return `${path}?${params}`;};return <nav aria-label="Pages" style={{display:'flex',gap:16,marginBlock:16}}>{page>1&&<Link href={href(page-1)}>Previous</Link>}<span>Page {page}</span>{hasMore&&<Link href={href(page+1)}>Next</Link>}</nav>;}

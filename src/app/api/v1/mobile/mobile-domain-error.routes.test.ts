@@ -3,6 +3,7 @@ const mocks=vi.hoisted(()=>({auth:vi.fn(),leadList:vi.fn(),leadGet:vi.fn(),leadF
 vi.mock("@/lib/logging",()=>({logEvent:mocks.log}));
 vi.mock("@/lib/mobile/auth",()=>({authenticateMobileSalesToken:mocks.auth}));
 vi.mock("@/lib/mobile/leads",()=>({mobileLeads:mocks.leadList,mobileLead:mocks.leadGet,mobileLeadFromVisit:mocks.leadFromVisit,mobileTransitionLead:mocks.leadTransition,mobileFollowUp:mocks.followUp}));
+vi.mock("@/lib/mobile/follow-up-create",()=>({mobileCreateFollowUp:mocks.followUp}));
 vi.mock("@/lib/mobile/reports",()=>({mobileReport:mocks.report}));
 vi.mock("@/lib/mobile/report-actor",()=>({mobileReportActor:mocks.reportActor}));
 vi.mock("@/lib/targets/service",()=>({listTargetsForActor:mocks.targetList,createTargetForActor:mocks.targetCreate,editTargetForActor:mocks.targetEdit}));

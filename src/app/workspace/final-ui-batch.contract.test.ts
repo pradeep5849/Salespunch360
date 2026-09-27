@@ -58,7 +58,7 @@ describe('final UI and subscription batch',()=>{
  });
 
  it('matches the two-step Billing and Subscription flow on Android',()=>{
-  expect(androidSubscription).toContain('Text("Billing & Subscription")');
+  expect(androidSubscription).toContain('Text("Billing & Subscription"');
   expect(androidSubscription).toContain('page="SUBSCRIPTION"');
   expect(androidSubscription).toContain('page="BILLING"');
   expect(androidSubscription).toContain('SubscriptionSummaryPage(data)');

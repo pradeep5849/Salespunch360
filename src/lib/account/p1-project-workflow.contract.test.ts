@@ -53,7 +53,7 @@ describe("P1 simple project workflow contract", () => {
 
   it("makes completion a one-way report-only action with no reopen action", () => {
     expect(detailPage).toContain("Complete project");
-    expect(detailPage).toContain("cannot be reopened");
+    expect(detailPage).toMatch(/cannot be\s+reopened/);
     expect(detailPage).toContain("Final project report");
     expect(actions).toContain("completeSimpleProject");
     expect(actions).not.toContain("reopenProject");
@@ -62,13 +62,13 @@ describe("P1 simple project workflow contract", () => {
   });
 
   it("creates Won Lead projects as Active with lead/site contact details", () => {
-    expect(wonProject).toContain('name:lead.title.trim()');
-    expect(wonProject).toContain('status:"ACTIVE"');
-    expect(wonProject).toContain('startDate:now');
-    expect(wonProject).toContain('siteAddress:lead.customer?.address');
-    expect(wonProject).toContain('siteContactPhone:lead.phone');
+    expect(wonProject).toContain('name: lead.title.trim()');
+    expect(wonProject).toContain('status: "ACTIVE"');
+    expect(wonProject).toContain('startDate: now');
+    expect(wonProject).toContain('siteAddress: lead.customer?.address');
+    expect(wonProject).toContain('siteContactPhone: lead.phone');
     expect(wonProject).toContain("LEGACY_DEFAULT_ACCOUNT_MODULES");
-    expect(wonProject).toContain("sourceLeadId:lead.id");
+    expect(wonProject).toContain("sourceLeadId: lead.id");
   });
 
   it("keeps Android on the same Active Hold Completed workflow", () => {

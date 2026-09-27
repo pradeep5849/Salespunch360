@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.admin
 
+import android.content.Context
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -15,7 +17,30 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountAdministrationViewModel
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+
+private const val MAX_SIGNATURE_BYTES = 2 * 1024 * 1024
+
+private suspend fun readSignatureBytes(context: Context, uri: Uri): ByteArray = withContext(Dispatchers.IO) {
+    context.contentResolver.openInputStream(uri)?.use { input ->
+        val out = ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            total += count
+            if (total > MAX_SIGNATURE_BYTES) throw IOException("Signature must be 2 MB or smaller.")
+            out.write(buffer, 0, count)
+        }
+        out.toByteArray()
+    } ?: throw IOException("Unable to read the selected signature.")
+}
 
 @Composable
 fun AccountAdministrationScreen(
@@ -67,11 +92,15 @@ fun AccountAdministrationScreen(
 @Composable
 private fun SettingsForm(data: JsonElement, vm: AccountAdministrationViewModel) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val signaturePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                vm.uploadSignature(uri.lastPathSegment ?: "signature", mime, stream.readBytes())
+            val name = uri.lastPathSegment ?: "signature"
+            scope.launch {
+                runCatching { readSignatureBytes(context, uri) }
+                    .onSuccess { bytes -> vm.uploadSignature(name, mime, bytes) }
+                    .onFailure { error -> vm.fileError(error.message ?: "Unable to read the selected signature.") }
             }
         }
     }

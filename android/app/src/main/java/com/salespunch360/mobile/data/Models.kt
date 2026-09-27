@@ -89,7 +89,7 @@ import kotlinx.serialization.Serializable
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
 @Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val leadCount:Int=0,val contactName:String?=null,val leadId:String?=null,val visitType:String="CUSTOMER",val customer:Customer?=null,val checkInAddress:String?=null,val checkInLatitude:Double?=null,val checkInLongitude:Double?=null)
 @Serializable data class FieldContext(val customers:List<Customer>,val visits:List<FieldVisit>)
-@Serializable data class FollowUpsContext(val status:String,val tasks:List<FollowUpTask>,val employees:List<DashboardEmployee> = emptyList(),val employeeId:String?=null)
+@Serializable data class FollowUpsContext(val page:Int=1,val hasMore:Boolean=false,val status:String,val tasks:List<FollowUpTask>,val employees:List<DashboardEmployee> = emptyList(),val employeeId:String?=null)
 @Serializable data class FollowUpTask(val id:String,val status:String,val dueDate:String,val notes:String?=null,val leadId:String,val leadTitle:String,val subjectName:String,val assignedUserId:String?=null,val assignedUserName:String?=null,val createdByUserName:String?=null,val createdAt:String?=null,val completedAt:String?=null,val completedVisitId:String?=null,val checkedInAt:String?=null,val checkedOutAt:String?=null,val completedVisitUserName:String?=null,val lastAction:String="No action yet",val canStartCheckIn:Boolean=false,val canCancel:Boolean=false)
 @Serializable data class CheckInRequest(val action:String="CHECK_IN",val customerId:String,val location:LocationPayload,val visitNotes:String?=null)
 @Serializable data class CheckoutRequest(val action:String="CHECK_OUT",val visitId:String,val location:LocationPayload,val sentiment:VisitSentiment,val remarks:String?=null)
@@ -103,7 +103,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
 @Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
 @Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)
-@Serializable data class LeadEditRequest(val action:String="EDIT",val leadId:String,val title:String,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val assignedUserId:String?=null,val notes:String?=null)
+@Serializable data class LeadEditRequest(val action:String="EDIT",val leadId:String,val version:Int,val title:String,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val assignedUserId:String?=null,val notes:String?=null)
 @Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null,val gpsPointCount:Int=0)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)
 @Serializable data class TeamAttendanceEmployee(val id:String,val name:String,val salesRole:MobileRole,val isActive:Boolean,val working:Boolean,val startedAt:String?=null,val gpsPointCount:Int=0)
@@ -117,3 +117,11 @@ internal fun selectableManagers(employees:List<Employee>)=employees.filter{it.ro
 internal fun seatSummaryLines(entitlement:Entitlement,structure:TeamStructure)=buildList{add("Primary Admin — Included / Free");add("Additional Admin — ${entitlement.adminUsage} / ${entitlement.adminLimit}");if(structure==TeamStructure.MANAGERS_AND_SALES)add("Manager — ${entitlement.managerUsage} / ${entitlement.managerLimit}");add("Sales — ${entitlement.salesUsage} / ${entitlement.salesLimit}")}
 internal fun subscriptionSeatLines(entitlement:CompanyEntitlement,structure:TeamStructure)=buildList{add("Primary Admin — Included / Free");add("Additional Admin — ${entitlement.adminUsage} / ${entitlement.adminLimit}");if(structure==TeamStructure.MANAGERS_AND_SALES)add("Manager — ${entitlement.managerUsage} / ${entitlement.managerLimit}");add("Sales — ${entitlement.salesUsage} / ${entitlement.salesLimit}")}
 internal fun visiblePricingRoles(structure:TeamStructure)=if(structure==TeamStructure.MANAGERS_AND_SALES)setOf("ADMIN","MANAGER","SALES")else setOf("ADMIN","SALES")
+
+@Serializable data class LocationBatchRequest(val points:List<LocationPayload>)
+@Serializable data class LocationPointResult(val clientPointId:String,val acknowledged:Boolean,val duplicate:Boolean=false,val error:String?=null)
+@Serializable data class LocationBatchResponse(val results:List<LocationPointResult>,val receivedAt:String)
+
+@Serializable data class AttendanceResponse(val attendance:Attendance)
+
+@Serializable data class LeadsPage(val leads:List<LeadSummary> = emptyList(),val page:Int=1,val hasMore:Boolean=false)

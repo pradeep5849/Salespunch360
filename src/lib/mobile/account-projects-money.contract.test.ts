@@ -6,7 +6,7 @@ describe("native project, category and money boundaries", () => {
     const s = read("src/lib/mobile/account-projects.ts");
     for (const x of [
       "listProjectsForActor",
-      "createProjectForActor",
+      "createSimpleProjectForActor",
       "updateProjectForActor",
       "getProjectForActor",
       "loadProjectCostingForActor",
@@ -36,7 +36,7 @@ describe("native project, category and money boundaries", () => {
       "ExpenseCategoryScreen(padding)",
       "ProjectScreen(padding)",
       "MoneyScreen(",
-      "AccountingScreen(",
+      "AccountAdministrationScreen(",
     ])
       expect(s).toContain(x);
     expect(s).not.toContain("AccountWorkspaceScreen");

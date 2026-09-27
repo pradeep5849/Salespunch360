@@ -1,5 +1,6 @@
 import { LeadSource, LeadStage } from "@prisma/client";
 import { z } from "zod";
+import {pageFields} from "@/lib/pagination";
 const emptyToUndefined=(v:unknown)=>v===""||v===null?undefined:v;
 const optionalText=(max:number)=>z.preprocess(emptyToUndefined,z.string().trim().max(max).optional());
 const optionalUuid=z.preprocess(emptyToUndefined,z.string().uuid().optional());
@@ -10,5 +11,5 @@ export const createLeadSchema=z.object({...editable,source:z.nativeEnum(LeadSour
 export const createLeadFromVisitSchema=z.object({...editable,assignedUserId:z.string().uuid(),visitId:z.string().uuid()}).omit({customerId:true,source:true,branchId:true}).strict();
 export const editLeadSchema=z.object({leadId:z.string().uuid(),version:z.coerce.number().int().positive(),...editable,assignedUserId:z.string().uuid()}).strict();
 export const transitionLeadSchema=z.object({leadId:z.string().uuid(),version:z.coerce.number().int().positive(),toStage:z.nativeEnum(LeadStage),lostReason:optionalText(1000)}).strict().superRefine((v,c)=>{if(v.toStage==="LOST"&&!v.lostReason)c.addIssue({code:"custom",path:["lostReason"],message:"A lost reason is required"});});
-export const leadFilterSchema=z.object({stage:z.nativeEnum(LeadStage).optional(),assignedUserId:z.string().uuid().optional(),followUp:z.enum(["overdue","today","upcoming"]).optional(),branchId:optionalUuid,q:z.string().trim().max(100).optional()}).strict();
+export const leadFilterSchema=z.object({...pageFields,stage:z.nativeEnum(LeadStage).optional(),assignedUserId:z.string().uuid().optional(),followUp:z.enum(["overdue","today","upcoming"]).optional(),branchId:optionalUuid,q:z.string().trim().max(100).optional()}).strict();
 export type CreateLeadInput=z.infer<typeof createLeadSchema>; export type EditLeadInput=z.infer<typeof editLeadSchema>; export type TransitionLeadInput=z.infer<typeof transitionLeadSchema>;

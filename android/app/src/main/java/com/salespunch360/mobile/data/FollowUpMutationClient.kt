@@ -24,7 +24,7 @@ class FollowUpMutationClient(private val session: SecureSession) {
             .header("Accept", "application/json")
             .apply { token?.let { header("Authorization", "Bearer $it") } }
             .build()
-        http.newCall(request).execute().use { response ->
+        http.newCall(request).awaitResponse().use { response ->
             val raw = response.body?.string() ?: "[]"
             if (!response.isSuccessful) {
                 if (response.code == 401) session.invalidateIfCurrent(token)
@@ -52,7 +52,7 @@ class FollowUpMutationClient(private val session: SecureSession) {
             .apply { token?.let { header("Authorization", "Bearer $it") } }
             .post(body.toRequestBody(media))
             .build()
-        http.newCall(request).execute().use { response ->
+        http.newCall(request).awaitResponse().use { response ->
             if (!response.isSuccessful) {
                 if (response.code == 401) session.invalidateIfCurrent(token)
                 if (response.code == 403) session.authorizationChanged()
@@ -70,7 +70,7 @@ class FollowUpMutationClient(private val session: SecureSession) {
             .apply { token?.let { header("Authorization", "Bearer $it") } }
             .post(body.toRequestBody(media))
             .build()
-        http.newCall(request).execute().use { response ->
+        http.newCall(request).awaitResponse().use { response ->
             if (!response.isSuccessful) {
                 if (response.code == 401) session.invalidateIfCurrent(token)
                 if (response.code == 403) session.authorizationChanged()

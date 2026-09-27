@@ -7,6 +7,7 @@ vi.mock("@/lib/auth/authorization",()=>({
 }));
 vi.mock("@/lib/db",()=>({db:{
  company:{findUnique:mocks.companyFind,update:mocks.companyUpdate},user:{updateMany:mocks.userUpdate},
+ $executeRaw:vi.fn().mockResolvedValue(1),
  $transaction:async(fn:(tx:unknown)=>unknown)=>fn({user:{findFirst:mocks.userFind},company:{findUnique:mocks.companyFind},locationPoint:{findMany:mocks.points},dailyTravelApproval:{upsert:mocks.approval}}),
 }}));
 import {companyTravelSettings,reviewDailyTravel,updateCompanyTravelRate,updateEmployeeTravelSettings} from "./service";

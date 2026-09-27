@@ -1,6 +1,9 @@
 package com.salespunch360.mobile.ui.account.admin
 
 import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
+import java.io.ByteArrayOutputStream
 import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +19,34 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountUtilityViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+
+private const val MAX_IMPORT_BYTES = 10L * 1024L * 1024L
+
+private suspend fun readImportBytes(context: android.content.Context, uri: Uri): ByteArray = withContext(Dispatchers.IO) {
+    val declaredSize = context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+        if (cursor.moveToFirst()) cursor.getLong(0).takeIf { it >= 0L } else null
+    }
+    if (declaredSize != null && declaredSize > MAX_IMPORT_BYTES) throw IllegalArgumentException("Import file is larger than 10 MB.")
+    val stream = context.contentResolver.openInputStream(uri) ?: throw IllegalArgumentException("The selected file could not be opened.")
+    stream.use { input ->
+        val output = ByteArrayOutputStream(if (declaredSize != null) minOf(declaredSize, MAX_IMPORT_BYTES).toInt() else 32 * 1024)
+        val buffer = ByteArray(32 * 1024)
+        var total = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > MAX_IMPORT_BYTES) throw IllegalArgumentException("Import file is larger than 10 MB.")
+            output.write(buffer, 0, read)
+        }
+        if (total == 0L) throw IllegalArgumentException("Import file is empty.")
+        output.toByteArray()
+    }
+}
 
 @Composable
 fun AccountUtilityScreen(
@@ -26,19 +56,31 @@ fun AccountUtilityScreen(
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var importType by remember { mutableStateOf("CUSTOMERS") }
     var confirmRestore by remember { mutableStateOf<String?>(null) }
+    var fileMessage by remember { mutableStateOf<String?>(null) }
+    var fileBusy by remember { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
+        if (uri != null && !fileBusy) {
             val name = uri.lastPathSegment?.substringAfterLast('/') ?: "import.csv"
-            val mime = context.contentResolver.getType(uri) ?: if (name.endsWith(".xlsx")) {
+            val mime = context.contentResolver.getType(uri) ?: if (name.endsWith(".xlsx", true)) {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             } else {
                 "text/csv"
             }
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                vm.upload(importType, name, mime, stream.readBytes(), false)
+            fileBusy = true
+            fileMessage = null
+            scope.launch {
+                try {
+                    val bytes = readImportBytes(context, uri)
+                    vm.upload(importType, name, mime, bytes, false)
+                } catch (e: Exception) {
+                    fileMessage = e.message ?: "The selected file could not be read."
+                } finally {
+                    fileBusy = false
+                }
             }
         }
     }
@@ -47,26 +89,35 @@ fun AccountUtilityScreen(
 
     LaunchedEffect(state.file) {
         state.file?.let { downloadable ->
-            val file = File(context.cacheDir, downloadable.first)
-            file.writeBytes(downloadable.second)
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-            val mime = if (file.extension == "xlsx") {
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            } else {
-                "application/json"
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    File(context.cacheDir, downloadable.first).also { target ->
+                        target.outputStream().buffered().use { it.write(downloadable.second) }
+                    }
+                }
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                val mime = if (file.extension == "xlsx") {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                } else {
+                    "application/json"
+                }
+                val send = Intent(Intent.ACTION_SEND)
+                    .setType(mime)
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                context.startActivity(Intent.createChooser(send, "Share ${file.name}"))
+            } catch (e: Exception) {
+                fileMessage = e.message ?: "The exported file could not be prepared."
+            } finally {
+                vm.consumed()
             }
-            val send = Intent(Intent.ACTION_SEND)
-                .setType(mime)
-                .putExtra(Intent.EXTRA_STREAM, uri)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            context.startActivity(Intent.createChooser(send, "Share ${file.name}"))
-            vm.consumed()
         }
     }
 
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         Text(mode.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.headlineSmall)
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        fileMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
         when (mode) {
@@ -76,9 +127,12 @@ fun AccountUtilityScreen(
                         FilterChip(importType == type, { importType = type }, { Text(type) })
                     }
                 }
-                Button(onClick = {
-                    picker.launch(arrayOf("text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                }) { Text("Choose CSV or XLSX") }
+                Button(
+                    enabled = !fileBusy,
+                    onClick = { picker.launch(arrayOf("text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }
+                ) { Text(if (fileBusy) "Reading file…" else "Choose CSV or XLSX") }
+                Text("Maximum import size: 10 MB", style = MaterialTheme.typography.bodySmall)
+                if (fileBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 state.preview?.let { preview ->
                     Text("Valid ${preview["validCount"]} · Invalid ${preview["invalidCount"]}")
                     JsonList(preview["rows"] as? JsonArray ?: JsonArray(emptyList()))
@@ -107,9 +161,7 @@ fun AccountUtilityScreen(
             onDismissRequest = { confirmRestore = null },
             title = { Text("Restore record?") },
             text = { Text("The server will verify conflicts and permissions before restoring.") },
-            confirmButton = {
-                Button(onClick = { vm.restored(id); confirmRestore = null }) { Text("Restore") }
-            },
+            confirmButton = { Button(onClick = { vm.restored(id); confirmRestore = null }) { Text("Restore") } },
             dismissButton = { TextButton(onClick = { confirmRestore = null }) { Text("Cancel") } }
         )
     }

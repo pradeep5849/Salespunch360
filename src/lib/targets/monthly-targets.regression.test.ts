@@ -17,11 +17,11 @@ describe("monthly Sales targets regression",()=>{
   expect(page).not.toContain("Check-ins Target");
   expect(row).toContain("<small>Leads</small>");
   expect(row).toContain("<small>Leads won</small>");
-  expect(row).toContain('canEdit?<input aria-label="Leads target"');
-  expect(row).toContain('canEdit?<input aria-label="Leads won target"');
-  expect(row).toContain('type="submit">Save</button>');
-  expect(row).not.toContain("Edit</button>");
-  expect(row).not.toContain("useState");
+  expect(row).toContain('canEdit&&editing?<input aria-label="Leads target"');
+  expect(row).toContain('canEdit&&editing?<input aria-label="Leads won target"');
+  expect(row).toContain('type="submit" disabled={pending}>{pending?"Saving…":"Save"}</button>');
+  expect(row).toContain("Edit</button>");
+  expect(row).toContain("useState");
  });
  it("keeps Admin targets always editable with compact Type / Target rows on Android",()=>{
   const source=read("android/app/src/main/java/com/salespunch360/mobile/ui/TargetsScreen.kt");
@@ -30,9 +30,9 @@ describe("monthly Sales targets regression",()=>{
   expect(source).toContain('Text("Target"');
   expect(source).toContain('TargetCompactField("Leads",leads,canEdit');
   expect(source).toContain('TargetCompactField("Leads won",won,canEdit');
-  expect(source).toContain('Text(if(saving)"Saving…" else "Save Targets")');
+  expect(source).toContain('Text(if(saving)"Saving…" else "Save")');
   expect(source).not.toContain("Edit Targets");
-  expect(source).not.toContain("var editing by remember");
+  expect(source).toContain("var editing by remember");
   expect(source).not.toContain("Check-ins Target");
  });
 });

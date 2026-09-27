@@ -79,6 +79,15 @@ fun FollowUpsScreen(
                 cancel = { vm.cancel(task) },
             )
         }
+        if (state.hasMore || state.loadingMore) {
+            item {
+                Button(
+                    onClick = vm::loadMore,
+                    enabled = !state.loadingMore,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(if (state.loadingMore) "Loading…" else "Load More") }
+            }
+        }
     }
 }
 

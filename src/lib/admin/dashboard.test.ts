@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), group: vi.fn(), companies: vi.fn(), pending:vi.fn(), payments:vi.fn(), users:vi.fn() }));
 vi.mock("@/lib/auth/authorization", () => ({ requireGlobalSuperAdmin: mocks.auth }));
-vi.mock("@/lib/db", () => ({ db: { company: { groupBy: mocks.group, findMany: mocks.companies },billingOrder:{count:mocks.pending},paymentTransaction:{aggregate:mocks.payments},user:{count:mocks.users} } }));
+vi.mock("@/lib/db", () => ({ db: { $queryRaw:vi.fn().mockResolvedValue([]),company: { groupBy: mocks.group, findMany: mocks.companies },billingOrder:{count:mocks.pending},paymentTransaction:{aggregate:mocks.payments},user:{count:mocks.users} } }));
 import { getAdminCompanies, getAdminDashboard } from "./dashboard";
 const company = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha", productEdition: "SALESPUNCH360", subscriptionStatus: "ACTIVE", trialEndsAt: null, createdAt: new Date("2026-01-01") };
 beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue({ role: "SUPER_ADMIN", companyId: null }); mocks.group.mockResolvedValue([{ subscriptionStatus: "ACTIVE", _count: { _all: 2 } }, { subscriptionStatus: "TRIAL", _count: { _all: 1 } }]); mocks.companies.mockResolvedValue([company]);mocks.pending.mockResolvedValue(0);mocks.payments.mockResolvedValue({_count:{_all:0},_sum:{amount:null}});mocks.users.mockResolvedValue(0); });

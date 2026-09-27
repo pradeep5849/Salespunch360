@@ -47,7 +47,7 @@ const secret="postgresql://user:password@private-db-host/database SQL failure /p
 const headers={authorization:`Bearer ${"a".repeat(40)}`,"content-type":"application/json"};
 const get=()=>new Request("http://localhost/api/v1/mobile/test",{headers});
 const post=(body:unknown)=>new Request("http://localhost/api/v1/mobile/test",{method:"POST",headers,body:JSON.stringify(body)});
-const validLogin=()=>post({identifier:"sales@example.com",password:"Password123"});
+const validLogin=()=>post({identifier:"sales@example.com",password:"Password123",deviceId:"11111111-1111-4111-8111-111111111111",deviceName:"Test device"});
 const validPoint=()=>post({clientPointId:crypto.randomUUID(),latitude:1,longitude:2,capturedAt:new Date().toISOString()});
 async function expectSafe500(response:Response){const body=await response.json(),serialized=JSON.stringify(body),logs=JSON.stringify(mocks.log.mock.calls);expect(response.status).toBe(500);expect(body).toEqual({error:"SERVER_ERROR",referenceId:expect.stringMatching(/^[0-9a-f-]{36}$/)});for(const value of ["postgresql://","password","private-db-host","/private/storage","token=secret","SQL failure",secret]){expect(serialized).not.toContain(value);expect(logs).not.toContain(value)}expect(mocks.log).toHaveBeenCalled()}
 

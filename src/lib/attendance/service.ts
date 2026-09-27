@@ -1,3 +1,4 @@
+import {withAttendanceEvent,scheduleFieldJobs} from "@/lib/field-jobs/service";
 import { db } from "@/lib/db";
 import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { haversineDistanceMeters } from "@/lib/location/geo";
@@ -14,7 +15,7 @@ import {
   locationPointSchema,
 } from "./validation";
 import { evaluateGeofence } from "@/lib/geofence/policy";
-import { deliverFieldEvent } from "@/lib/push/service";
+
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import { operationalBranchContext, resolveWriteBranch } from "@/lib/branches/operational-scope";
 
@@ -124,7 +125,7 @@ export async function startAttendance(raw: unknown) {
         ? location
         : undefined;
     return {
-      attendance: await tx.attendance.create({
+      attendance: await withAttendanceEvent(tx,user.companyId,user.id,"ATTENDANCE_STARTED",tx.attendance.create({
         data: {
           companyId: user.companyId,
           branchId,
@@ -134,7 +135,7 @@ export async function startAttendance(raw: unknown) {
           startLongitude: acceptedLocation?.longitude,
           startAccuracyMeters: acceptedLocation?.accuracyMeters,
         },
-      }),
+      })),
     };
   });
   if ("blocked" in result && result.blocked) {
@@ -142,12 +143,7 @@ export async function startAttendance(raw: unknown) {
     await db.geofenceEvent.create({ data: blocked });
     throw new AttendancePolicyError(blocked.type);
   }
-  await deliverFieldEvent({
-    eventType: "ATTENDANCE_STARTED",
-    actorUserId: user.id,
-    attendanceId: result.attendance.id,
-    occurredAt: result.attendance.startedAt,
-  }).catch(() => undefined);
+  scheduleFieldJobs();
   return result.attendance;
 }
 
@@ -169,7 +165,7 @@ export async function endAttendance(raw: unknown) {
     });
     if (!open) throw new AttendancePolicyError("NO_OPEN_ATTENDANCE");
     const acceptedLocation = company?.gpsTrackingEnabled ? location : undefined;
-    return tx.attendance.update({
+    return withAttendanceEvent(tx,user.companyId,user.id,"ATTENDANCE_ENDED",tx.attendance.update({
       where: { id: open.id },
       data: {
         endedAt: new Date(),
@@ -177,14 +173,9 @@ export async function endAttendance(raw: unknown) {
         endLongitude: acceptedLocation?.longitude,
         endAccuracyMeters: acceptedLocation?.accuracyMeters,
       },
-    });
+    }));
   });
-  await deliverFieldEvent({
-    eventType: "ATTENDANCE_ENDED",
-    actorUserId: user.id,
-    attendanceId: attendance.id,
-    occurredAt: attendance.endedAt!,
-  }).catch(() => undefined);
+  scheduleFieldJobs();
   return attendance;
 }
 
