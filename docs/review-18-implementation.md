@@ -2,31 +2,37 @@
 
 Branch: `improvements/review-18-20260926`, based on `5c127a7` (PR #86).
 
-The first local implementation was interrupted before it was pushed. This branch is the restored work. All eighteen findings remain in scope; this document records verified progress without treating unfinished work as released.
+All eighteen findings remain in scope. This document records the current draft implementation and validation state; it does not treat the branch as released.
 
-| Finding | Status |
+Locked product constraints for this batch:
+- Browser camera access is denied globally for every web role (`camera=()`).
+- Sales employees and `FIELD_MANAGER` users are app-only for sign-in and receive: `No access. Please log in using the SalesPunch360 app.`
+- `MANAGER_ONLY` / office managers remain allowed to use web sign-in.
+
+| Finding | Current draft status |
 | --- | --- |
-| R01 Camera policy/errors | Restored; validation pending |
-| R02 Maps/photo CSP | Restored; browser/hosting verification pending |
-| R03 GPS backlog/status/recovery | Draft batch drain, acknowledgements, status card, retry, migrations and tests restored; device/migration validation and legacy queue UX pending |
-| R04 Original lead edit version | Version and conflict/reload UI restored; concurrency and older-client compatibility validation pending |
-| R05 Confirmed save vs refresh | Draft handling restored across main Sales mutation paths; acknowledgement/ambiguous-network behavior tests pending |
-| R06 Offline logout | Restored; validation pending |
-| R07 Entitlement read contention | Restored; validation pending |
-| R08 Photo processing/deferred jobs | Draft photo staging and durable field jobs restored; migration/runner/rollback/retry validation pending |
-| R09 Targeted follow-up queries | Partial: lead history and eligible-visit query restored; selectors and bounded visit/activity detail remain |
-| R10 Sales list pagination | Partial: lead lists and mobile follow-up service restored; customers, general follow-up UI, pending leads and pickers remain |
-| R11 Attendance summary payload | Draft point-count payload and consumers restored; late-point and older-client compatibility checks pending |
-| R12 Account aggregations | Restore pending |
-| R13 Project branch/date scope | Restore pending |
-| R14 Account master queries | Restore pending |
-| R15 Android bounded file I/O | Restore pending |
-| R16 Single mobile password verification | Restored; validation pending |
-| R17 Request cancellation/stale responses | Partial: cancellable HTTP and lead request guards restored; Account report and remaining screens pending |
-| R18 Full regression gate | Partial: full workflow enabled for PR/main and five GPS engine tests added; full regression repairs and behavioral coverage pending |
+| R01 Camera policy/errors | Coded to the corrected product rule: browser camera denied globally. |
+| R02 Maps/photo CSP | Coded; Maps/blob photo resources retained while camera stays denied. Hosting/browser verification remains a release check. |
+| R03 GPS backlog/status/recovery | Coded: draining batches, per-point acknowledgement/dedupe, pending/last-success/status UI, retry, Room migration and engine tests. Logout/session expiry now pauses sync without deleting owner-isolated unsent GPS; Sales-access removal still purges Sales-local state. Device/migration verification remains. |
+| R04 Original lead edit version | Coded: Android submits original version, stale edits conflict, draft/reload recovery remains, and legacy edits without `version` fail closed with `CLIENT_UPGRADE_REQUIRED` (HTTP 426). Concurrency/device acceptance remains. |
+| R05 Confirmed save vs refresh | Coded across main Sales mutation paths: server save acknowledgement is separated from refresh and ambiguous outcomes require refresh before repeating. Behavior validation remains. |
+| R06 Offline logout | Coded: expected remote logout errors no longer block local sign-out; pending GPS is preserved for same-user recovery. |
+| R07 Entitlement read contention | Coded: preflight reads avoid unnecessary company locks; grouped counts replace unnecessary in-memory role counting. Regression tests repaired for the two-stage read/lock behavior. |
+| R08 Photo processing/deferred jobs | Coded: photo staging and durable `FieldJob` work are outside the critical visit transaction. Migration/runner/retry/production configuration remain release checks. |
+| R09 Targeted follow-up queries | Mostly coded: lead-targeted follow-up paging, AVAILABLE visit query, Android follow-up Load More, and bounded mobile lead detail (50 visits / 100 activities). Pending-visit paging is coded through API/client/view-model; the existing Leads Compose screen still needs the final Load More control. |
+| R10 Sales list pagination | Mostly coded: stable lead paging, follow-up paging, pending-visit paging backend/client, and smaller lead summaries. Remaining coding is the final pending-visit UI continuation plus field/customer selector continuation for datasets beyond current selector caps. |
+| R11 Attendance summary payload | Coded: report payload uses summary/count data instead of returning raw GPS arrays. Late-point/mixed-version acceptance remains. |
+| R12 Account aggregations | Coded: ledger opening/period totals and cash-bank summaries use database aggregation; inventory cost lookup is one-pass grouped by source line; project costings are loaded concurrently. Performance/parity benchmarking remains. |
+| R13 Project branch/date scope | Coded: selected branch is intersected with authorized project scope; project profitability and budget-vs-actual are explicitly lifetime-to-date and date controls are removed for those reports. |
+| R14 Account master queries | Coded: selected master only is queried, main lists are searchable/paged, and only required dependent options are loaded. |
+| R15 Android bounded file I/O | Coded on Account utility import/export/backup and expense attachment paths: 10 MB client limits match server contracts, reads/writes run on `Dispatchers.IO`, bounded streaming and visible errors/progress are used. Remaining audit is for any other legacy picker path outside these screens. |
+| R16 Single mobile password verification | Coded: one expensive password verification per mobile login with authoritative state recheck under lock. |
+| R17 Request cancellation/stale responses | Coded for shared cancellable HTTP, lead detail/list reads and Account report/export reads; generation/identity guards reject stale Account report results. Remaining-screen audit is a release check. |
+| R18 Full regression gate | Coded workflow triggers for targeted and full validation. Targeted web regression, TypeScript, lint and Android unit/lint reached a green checkpoint after the Account/file-I/O changes; newer Sales paging changes are being revalidated. Full web/Android release validation is still required before merge. |
 
-Snapshot for the owner's premerge report on 27 September 2026: merge is on hold. TypeScript typecheck passed on the restored web tree. The available full web run from an earlier recovery state had 1,908 passing and 45 failing tests; it is not validation of this final checkpoint. Android validation found two compilation issues (corrected), then a generated-file compiler cache conflict; a clean recheck was started. No final Android pass is claimed here.
+Validation history on 27 September 2026:
+- Targeted checkpoint `7d69a4fc...`: web regression tests passed, TypeScript passed, lint passed, Android unit tests/lint passed.
+- Earlier stale seat-reduction mocks were repaired after CI exposed missing preflight/company-lock test delegates.
+- The newest Sales paging/bounded-history commits are under fresh targeted and full validation and are not yet claimed green here.
 
-Release compatibility remains open: older phones do not send lead versions or consume all new pagination/count contracts. Logout still clears the current owner's queued GPS and sync status. These details need explicit testing and final behavior before release. Adding CI triggers does not configure branch protection or make the incomplete draft safe to merge.
-
-No deployment, migration, merge or APK release has been performed. A draft checkpoint is not a release candidate.
+Release compatibility still requires mixed-version/device/browser acceptance, migration validation, background `FieldJob` runner configuration and final performance/parity checks. No production deployment, production migration, merge or APK release has been performed.
