@@ -29,14 +29,20 @@ export async function processFieldJobs(limit=10){
    if(job.kind==='GEOCODE'){
     const {visitId}=z.object({visitId:z.string().uuid()}).parse(job.payload);
     const visit=await db.customerVisit.findFirst({where:{id:visitId,companyId:job.companyId,checkInAddress:null},select:{checkInLatitude:true,checkInLongitude:true}});
-    if(visit&&process.env.GOOGLE_MAPS_SERVER_API_KEY){const address=await reverseGeocode(visit.checkInLatitude,visit.checkInLongitude);if(!address)throw new Error('GEOCODE_UNAVAILABLE');await db.customerVisit.updateMany({where:{id:visitId,companyId:job.companyId,checkInAddress:null},data:{checkInAddress:address}});}
+    if(visit){
+     if(!process.env.GOOGLE_MAPS_SERVER_API_KEY)throw new Error('GEOCODE_NOT_CONFIGURED');
+     const address=await reverseGeocode(visit.checkInLatitude,visit.checkInLongitude);
+     if(!address)throw new Error('GEOCODE_UNAVAILABLE');
+     await db.customerVisit.updateMany({where:{id:visitId,companyId:job.companyId,checkInAddress:null},data:{checkInAddress:address}});
+    }
    }else if(job.kind==='PUSH'){
     const event=eventSchema.parse(job.payload);
     if(await db.user.findFirst({where:{id:event.actorUserId,companyId:job.companyId},select:{id:true}}))await deliverFieldEvent(event,new Date(),true,job.id);
    }else throw new Error('INVALID_JOB_TYPE');
    await db.fieldJob.updateMany({where:{id:job.id,leaseToken},data:{completedAt:new Date(),lockedUntil:null,leaseToken:null,lastError:null}});completed++;
-  }catch{
-   await db.fieldJob.updateMany({where:{id:job.id,leaseToken},data:{attempts:{increment:1},lastError:'DELIVERY_FAILED',lockedUntil:null,leaseToken:null,nextAttemptAt:new Date(Date.now()+Math.min(3600000,15000*2**Math.min(job.attempts,8)))}});
+  }catch(error){
+   const message=error instanceof Error?error.message:'DELIVERY_FAILED';
+   await db.fieldJob.updateMany({where:{id:job.id,leaseToken},data:{attempts:{increment:1},lastError:message.slice(0,500),lockedUntil:null,leaseToken:null,nextAttemptAt:new Date(Date.now()+Math.min(3600000,15000*2**Math.min(job.attempts,8)))}});
   }
  }
  return{processed:jobs.length,completed};
