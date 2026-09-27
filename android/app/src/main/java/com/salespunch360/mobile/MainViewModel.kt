@@ -3,7 +3,6 @@ package com.salespunch360.mobile
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.WorkManager
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.ApiException
 import com.salespunch360.mobile.data.Bootstrap
@@ -46,7 +45,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val workspacePreference = WorkspacePreferenceStore(app)
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state
-
     private var pendingAccountPath: String? = null
 
     init {
@@ -56,15 +54,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch {
-            SecureSession.authorizationChanges.collect {
-                refreshAuthorization()
-            }
+            SecureSession.authorizationChanges.collect { refreshAuthorization() }
         }
-        if (session.token() == null) {
-            _state.value = AppState(AppStatus.SIGNED_OUT)
-        } else {
-            validateSession()
-        }
+        if (session.token() == null) _state.value = AppState(AppStatus.SIGNED_OUT) else validateSession()
     }
 
     fun login(email: String, password: String) {
@@ -73,11 +65,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = AppState(AppStatus.SIGNED_OUT, submitting = true)
             try {
                 val bootstrap = auth.login(email.trim(), password)
-                if (applyBootstrap(bootstrap)) {
-                    PushNotifications.register(getApplication())
-                }
-            } catch (error: CancellationException) {throw error
-        } catch (error: Exception) {
+                if (applyBootstrap(bootstrap)) PushNotifications.register(getApplication())
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
                 if (error is ForbiddenMobileRoleException) session.clear()
                 _state.value = AppState(AppStatus.SIGNED_OUT, message = loginMessage(error))
             }
@@ -88,55 +79,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(status = AppStatus.STARTING, message = null)
         try {
             val bootstrap = api.bootstrap()
-            if (applyBootstrap(bootstrap)) {
-                PushNotifications.register(getApplication())
-            }
-        } catch (error: CancellationException) {throw error
+            if (applyBootstrap(bootstrap)) PushNotifications.register(getApplication())
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             when (error) {
-                is IOException -> _state.value = _state.value.copy(
-                    status = AppStatus.RECOVERABLE_ERROR,
-                    message = "You're offline. Reconnect and try again.",
-                )
+                is IOException -> _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR, message = "You're offline. Reconnect and try again.")
                 is ForbiddenMobileRoleException -> secureSignOut("This account cannot sign in to the mobile app.")
-                is ApiException -> if (error.status == 401) {
-                    secureSignOut("Your session expired. Please sign in again.")
-                } else {
-                    _state.value = _state.value.copy(
-                        status = AppStatus.RECOVERABLE_ERROR,
-                        message = "We couldn't validate your session. Please try again.",
-                    )
-                }
-                else -> _state.value = _state.value.copy(
-                    status = AppStatus.RECOVERABLE_ERROR,
-                    message = "We couldn't validate your session. Please try again.",
-                )
+                is ApiException -> if (error.status == 401) secureSignOut("Your session expired. Please sign in again.") else _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR, message = "We couldn't validate your session. Please try again.")
+                else -> _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR, message = "We couldn't validate your session. Please try again.")
             }
         }
     }
 
     fun attendance(start: Boolean, location: LocationPayload, onSuccess: () -> Unit) {
-        if(_state.value.submitting)return
-        _state.value=_state.value.copy(submitting=true,message=null)
+        if (_state.value.submitting) return
+        _state.value = _state.value.copy(submitting = true, message = null)
         viewModelScope.launch {
             try {
-                val saved=api.attendance(if(start)"START" else "END",location).attendance
-                val bootstrap=_state.value.bootstrap
-                if(bootstrap!=null)_state.value=_state.value.copy(bootstrap=bootstrap.copy(attendance=if(start)saved else null))
-                if(start&&bootstrap?.features?.gpsTrackingEnabled==true)TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
-                session.userId()?.let{LocationSyncWorker.schedule(getApplication(),it)}
+                val saved = api.attendance(if (start) "START" else "END", location).attendance
+                val bootstrap = _state.value.bootstrap
+                if (bootstrap != null) _state.value = _state.value.copy(bootstrap = bootstrap.copy(attendance = if (start) saved else null))
+                if (start && bootstrap?.features?.gpsTrackingEnabled == true) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
+                session.userId()?.let { LocationSyncWorker.schedule(getApplication(), it) }
                 onSuccess()
-            } catch(e:CancellationException){throw e
-            } catch(e:Exception){
-                if(e is IOException){
-                    try{applyBootstrap(api.bootstrap(),forcedWorkspace=Workspace.SALES)}catch(cancel:CancellationException){throw cancel}catch(_:Exception){_state.value=_state.value.copy(status=AppStatus.RECOVERABLE_ERROR)}
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e is IOException) {
+                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
+                    catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR) }
                 }
-                _state.value=_state.value.copy(message=apiMessage(e,"Could not confirm attendance. Refresh before trying again."),submitting=false)
+                _state.value = _state.value.copy(message = apiMessage(e, "Could not confirm attendance. Refresh before trying again."), submitting = false)
                 return@launch
-            } finally {_state.value=_state.value.copy(submitting=false)}
-            try{applyBootstrap(api.bootstrap(),forcedWorkspace=Workspace.SALES)}
-            catch(e:CancellationException){throw e}
-            catch(_:Exception){_state.value=_state.value.copy(message="Attendance saved; refresh pending. Refresh when connected.")}
+            } finally {
+                _state.value = _state.value.copy(submitting = false)
+            }
+            try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { _state.value = _state.value.copy(message = "Attendance saved; refresh pending. Refresh when connected.") }
         }
     }
 
@@ -152,15 +134,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun switchToSales() {
         viewModelScope.launch {
-            try {
-                applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES)
-            } catch (error: CancellationException) {throw error
-        } catch (error: Exception) {
-                if (error is ApiException && error.status == 401) {
-                    secureSignOut("Your session expired. Please sign in again.")
-                } else {
-                    _state.value = _state.value.copy(message = "Sales access could not be refreshed.")
-                }
+            try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
+            catch (error: CancellationException) { throw error }
+            catch (error: Exception) {
+                if (error is ApiException && error.status == 401) secureSignOut("Your session expired. Please sign in again.")
+                else _state.value = _state.value.copy(message = "Sales access could not be refreshed.")
             }
         }
     }
@@ -169,49 +147,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val safe = raw?.let(::nativeAccountPathOrNull) ?: return
         pendingAccountPath = safe
         val bootstrap = _state.value.bootstrap
-        if (bootstrap != null && Workspace.ACCOUNT in validatedWorkspaces(bootstrap)) {
-            switchToAccount(safe)
-        }
+        if (bootstrap != null && Workspace.ACCOUNT in validatedWorkspaces(bootstrap)) switchToAccount(safe)
     }
 
-    fun clearMessage() {
-        _state.value = _state.value.copy(message = null)
-    }
+    fun clearMessage() { _state.value = _state.value.copy(message = null) }
 
     fun logout() = viewModelScope.launch {
         val owner = session.userId()
         TrackingService.stop(getApplication())
-        try {
-            api.logout()
-        } catch(error:CancellationException){throw error
-        } catch(_:IOException){
-        } catch(_:ApiException){
-        } finally {
-          withContext(NonCancellable){
-            clearSalesLocal(owner)
-            session.clear()
-            workspacePreference.clear()
-            pendingAccountPath = null
-            _state.value = AppState(AppStatus.SIGNED_OUT)
-          }
-        }
-    }
-
-    private fun refreshAuthorization() = viewModelScope.launch {
-        try {
-            applyBootstrap(api.bootstrap())
-        } catch (error: CancellationException) {throw error
-        } catch (error: Exception) {
-            if (error is ApiException && error.status == 401) {
-                secureSignOut("Your session expired. Please sign in again.")
+        try { api.logout() }
+        catch (error: CancellationException) { throw error }
+        catch (_: IOException) { }
+        catch (_: ApiException) { }
+        finally {
+            withContext(NonCancellable) {
+                pauseSalesLocal(owner)
+                session.clear()
+                workspacePreference.clear()
+                pendingAccountPath = null
+                _state.value = AppState(AppStatus.SIGNED_OUT)
             }
         }
     }
 
-    private suspend fun applyBootstrap(
-        bootstrap: Bootstrap,
-        forcedWorkspace: Workspace? = null,
-    ): Boolean {
+    private fun refreshAuthorization() = viewModelScope.launch {
+        try { applyBootstrap(api.bootstrap()) }
+        catch (error: CancellationException) { throw error }
+        catch (error: Exception) { if (error is ApiException && error.status == 401) secureSignOut("Your session expired. Please sign in again.") }
+    }
+
+    private suspend fun applyBootstrap(bootstrap: Bootstrap, forcedWorkspace: Workspace? = null): Boolean {
         val authorized = validatedWorkspaces(bootstrap)
         if (authorized.isEmpty()) {
             secureSignOut("This account no longer has an authorized mobile workspace.")
@@ -220,14 +185,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         if (Workspace.SALES !in authorized) {
             TrackingService.stop(getApplication())
-            clearSalesLocal(session.userId())
+            purgeSalesLocal(session.userId())
         } else {
-            session.userId()?.let{if(bootstrap.features.gpsTrackingEnabled)LocationSyncWorker.schedule(getApplication(),it)}
-            if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) {
-                TrackingService.start(getApplication())
-            } else {
-                TrackingService.stop(getApplication())
-            }
+            session.userId()?.let { if (bootstrap.features.gpsTrackingEnabled) LocationSyncWorker.schedule(getApplication(), it) }
+            if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
         }
 
         val deepPath = pendingAccountPath
@@ -236,7 +197,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             forcedWorkspace != null && forcedWorkspace in authorized -> forcedWorkspace
             else -> resolveWorkspace(authorized, workspacePreference.get())
         }
-
         if (desired == null) {
             secureSignOut("This account no longer has an authorized mobile workspace.")
             return false
@@ -245,7 +205,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val accountPath = deepPath ?: _state.value.accountPath
         if (deepPath != null && desired == Workspace.ACCOUNT) pendingAccountPath = null
         workspacePreference.save(desired)
-
         _state.value = AppState(
             status = AppStatus.AUTHENTICATED,
             bootstrap = bootstrap,
@@ -257,23 +216,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
-    private suspend fun secureSignOut(
-        message: String,
-        invalidatedOwner: String? = session.userId(),
-    ) {
+    private suspend fun secureSignOut(message: String, invalidatedOwner: String? = session.userId()) {
         TrackingService.stop(getApplication())
-        clearSalesLocal(invalidatedOwner)
+        pauseSalesLocal(invalidatedOwner)
         session.clear()
         workspacePreference.clear()
         pendingAccountPath = null
         _state.value = AppState(AppStatus.SIGNED_OUT, message = message)
     }
 
-    private suspend fun clearSalesLocal(owner: String?) {
+    /** Stop retry work but preserve owner-isolated unsent GPS so the same user can recover it after sign-in. */
+    private fun pauseSalesLocal(owner: String?) {
+        owner?.let { LocationSyncWorker.cancel(getApplication(), it) }
+    }
+
+    /** Purge location state only when Sales authorization itself has been removed. */
+    private suspend fun purgeSalesLocal(owner: String?) {
         owner?.let {
             getApplication<SalesPunchApp>().database.locations().clearOwner(it)
             getApplication<SalesPunchApp>().database.locations().clearStatus(it)
-            LocationSyncWorker.cancel(getApplication(),it)
+            LocationSyncWorker.cancel(getApplication(), it)
         }
     }
 
