@@ -1,7 +1,12 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 const events:string[]=[];
 const mocks=vi.hoisted(()=>({transaction:vi.fn(),raw:vi.fn(),company:vi.fn(),subscription:vi.fn(),order:vi.fn(),users:vi.fn(),suspend:vi.fn(),updateOrder:vi.fn(),audit:vi.fn()}));
-vi.mock('@/lib/db',()=>({db:{companySubscription:{findMany:mocks.subscription},$transaction:mocks.transaction}}));
+vi.mock('@/lib/db',()=>({
+ db:{
+  get companySubscription(){return {findMany:mocks.subscription}},
+  $transaction:mocks.transaction,
+ },
+}));
 vi.mock('@/lib/auth/lifecycle',()=>({suspendSalesAccessInTransaction:mocks.suspend}));
 import {applyDueSeatReductions} from './seat-reduction';
 beforeEach(()=>{
