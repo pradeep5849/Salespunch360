@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 data class FieldState(
     val loading:Boolean=true,
@@ -18,6 +19,7 @@ data class FieldState(
     val leads:List<LeadSummary> = emptyList(),
     val followUps:List<FollowUpTask> = emptyList(),
     val busy:Boolean=false,
+    val refreshRequired:Boolean=false,
     val message:String?=null,
 )
 
@@ -29,15 +31,7 @@ class FieldViewModel(app:Application):AndroidViewModel(app){
 
     init{refresh()}
 
-    private suspend fun scheduledVisitFollowUps()=coroutineScope{
-        listOf("OVERDUE","TODAY","PENDING")
-            .map{bucket->async{api.followUps(bucket).tasks}}
-            .awaitAll()
-            .flatten()
-            .filter{it.canStartCheckIn}
-            .distinctBy{it.id}
-            .sortedBy{it.dueDate}
-    }
+    private suspend fun scheduledVisitFollowUps()=api.followUps("AVAILABLE").tasks
 
     private suspend fun loadFieldState(message:String?=null)=coroutineScope{
         val contextDeferred=async{api.fieldContext()}
@@ -57,7 +51,7 @@ class FieldViewModel(app:Application):AndroidViewModel(app){
         _state.value=_state.value.copy(loading=true)
         _state.value=try{
             loadFieldState()
-        }catch(_:Exception){
+        }catch(e:CancellationException){throw e}catch(_:Exception){
             _state.value.copy(loading=false,message="Field information couldn't be loaded.")
         }
     }
@@ -82,18 +76,20 @@ class FieldViewModel(app:Application):AndroidViewModel(app){
     fun clear(){_state.value=_state.value.copy(message=null)}
 
     private fun mutate(success:String,onSuccess:()->Unit={},action:suspend()->Unit){
-        if(_state.value.busy)return
+        if(_state.value.busy||_state.value.refreshRequired)return
+        _state.value=_state.value.copy(busy=true,message=null)
         viewModelScope.launch{
-            _state.value=_state.value.copy(busy=true,message=null)
             try{
                 action()
-                _state.value=loadFieldState(success)
+                _state.value=_state.value.copy(busy=false,message=success,refreshRequired=true)
                 onSuccess()
+                try{_state.value=loadFieldState(success)}catch(e:CancellationException){throw e}catch(_:Exception){_state.value=_state.value.copy(busy=false,message="$success Refresh pending. Tap Refresh before another action.")}
+
                 delay(2500)
                 if(_state.value.message==success){
                     _state.value=_state.value.copy(message=null)
                 }
-            }catch(e:ApiException){
+            }catch(e:CancellationException){throw e}catch(e:ApiException){
                 _state.value=_state.value.copy(
                     busy=false,
                     message=when(e.code){
@@ -110,8 +106,8 @@ class FieldViewModel(app:Application):AndroidViewModel(app){
                         else->apiMessage(e,"The action couldn't be completed.")
                     },
                 )
-            }catch(_:Exception){
-                _state.value=_state.value.copy(busy=false,message="Check your connection and location, then try again.")
+            }catch(e:CancellationException){throw e}catch(_:Exception){
+                _state.value=_state.value.copy(busy=false,refreshRequired=true,message="Could not confirm this action. Refresh before trying again.")
             }
         }
     }

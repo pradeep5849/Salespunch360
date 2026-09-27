@@ -61,7 +61,7 @@ export async function resolvePushDevices(
     select: { id: true, fcmToken: true, userId: true },
   });
 }
-export async function deliverFieldEvent(event: FieldEvent, now = new Date()) {
+export async function deliverFieldEvent(event: FieldEvent, now = new Date(), strict=false, eventId?:string) {
   try {
     const actor = await db.user.findFirst({
       where: { id: event.actorUserId },
@@ -86,6 +86,8 @@ export async function deliverFieldEvent(event: FieldEvent, now = new Date()) {
     };
     if (event.attendanceId) data.attendanceId = event.attendanceId;
     if (event.visitId) data.visitId = event.visitId;
+    if(eventId)data.eventId=eventId;
+    let failures=0;
     await Promise.all(
       devices.map(async (device) => {
         try {
@@ -95,10 +97,11 @@ export async function deliverFieldEvent(event: FieldEvent, now = new Date()) {
             data,
             android: {
               priority: "high",
-              notification: { channelId: "field_activity" },
+              notification: { channelId: "field_activity",...(eventId?{tag:eventId}:{}) },
             },
           });
         } catch (error) {
+          if(!isInvalidFcmToken(error))failures++;
           if (isInvalidFcmToken(error))
             await db.pushDevice
               .deleteMany({
@@ -108,7 +111,9 @@ export async function deliverFieldEvent(event: FieldEvent, now = new Date()) {
         }
       }),
     );
-  } catch {
+    if(strict&&failures)throw new Error("PUSH_DELIVERY_FAILED");
+  } catch(error) {
+    if(strict)throw error;
     /* Push is deliberately best-effort and never affects field writes. */
   }
 }

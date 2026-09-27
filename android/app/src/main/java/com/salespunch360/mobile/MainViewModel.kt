@@ -17,6 +17,7 @@ import com.salespunch360.mobile.data.WorkspacePreferenceStore
 import com.salespunch360.mobile.data.resolveWorkspace
 import com.salespunch360.mobile.data.validatedWorkspaces
 import com.salespunch360.mobile.location.TrackingService
+import com.salespunch360.mobile.location.LocationSyncWorker
 import com.salespunch360.mobile.push.PushNotifications
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -114,20 +115,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun attendance(start: Boolean, location: LocationPayload, onSuccess: () -> Unit) = viewModelScope.launch {
-        try {
-            api.attendance(if (start) "START" else "END", location)
-            val refreshed = api.bootstrap()
-            if (applyBootstrap(refreshed, forcedWorkspace = Workspace.SALES)) onSuccess()
-        } catch (error: ApiException) {
-            if (error.status == 403) refreshAuthorization()
-            _state.value = _state.value.copy(
-                message = "Attendance action could not be completed. Check your location and connection.",
-            )
-        } catch (_: Exception) {
-            _state.value = _state.value.copy(
-                message = "Attendance action could not be completed. Check your location and connection.",
-            )
+    fun attendance(start: Boolean, location: LocationPayload, onSuccess: () -> Unit) {
+        if(_state.value.submitting)return
+        _state.value=_state.value.copy(submitting=true,message=null)
+        viewModelScope.launch {
+            try {
+                val saved=api.attendance(if(start)"START" else "END",location).attendance
+                val bootstrap=_state.value.bootstrap
+                if(bootstrap!=null)_state.value=_state.value.copy(bootstrap=bootstrap.copy(attendance=if(start)saved else null))
+                if(start&&bootstrap?.features?.gpsTrackingEnabled==true)TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
+                session.userId()?.let{LocationSyncWorker.schedule(getApplication(),it)}
+                onSuccess()
+            } catch(e:CancellationException){throw e
+            } catch(e:Exception){
+                if(e is IOException){
+                    try{applyBootstrap(api.bootstrap(),forcedWorkspace=Workspace.SALES)}catch(cancel:CancellationException){throw cancel}catch(_:Exception){_state.value=_state.value.copy(status=AppStatus.RECOVERABLE_ERROR)}
+                }
+                _state.value=_state.value.copy(message=apiMessage(e,"Could not confirm attendance. Refresh before trying again."),submitting=false)
+                return@launch
+            } finally {_state.value=_state.value.copy(submitting=false)}
+            try{applyBootstrap(api.bootstrap(),forcedWorkspace=Workspace.SALES)}
+            catch(e:CancellationException){throw e}
+            catch(_:Exception){_state.value=_state.value.copy(message="Attendance saved; refresh pending. Refresh when connected.")}
         }
     }
 
@@ -213,6 +222,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             TrackingService.stop(getApplication())
             clearSalesLocal(session.userId())
         } else {
+            session.userId()?.let{if(bootstrap.features.gpsTrackingEnabled)LocationSyncWorker.schedule(getApplication(),it)}
             if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) {
                 TrackingService.start(getApplication())
             } else {
@@ -262,7 +272,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun clearSalesLocal(owner: String?) {
         owner?.let {
             getApplication<SalesPunchApp>().database.locations().clearOwner(it)
-            WorkManager.getInstance(getApplication()).cancelUniqueWork("location-sync-$it")
+            getApplication<SalesPunchApp>().database.locations().clearStatus(it)
+            LocationSyncWorker.cancel(getApplication(),it)
         }
     }
 

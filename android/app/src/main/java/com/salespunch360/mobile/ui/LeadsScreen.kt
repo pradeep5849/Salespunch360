@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -33,7 +34,7 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
  val state=vm.state.collectAsStateWithLifecycle().value
  val context=LocalContext.current
  val lifecycleOwner=LocalLifecycleOwner.current
- var selectedStage by remember{mutableStateOf<LeadStage?>(null)}
+ val selectedStage=state.stage
  var pendingView by remember{mutableStateOf(false)}
  var stageMenu by remember{mutableStateOf(false)}
  var employeeMenu by remember{mutableStateOf(false)}
@@ -67,8 +68,8 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
  LaunchedEffect(initialLeadId){initialLeadId?.let{vm.open(it);onInitialLeadConsumed()}}
  if(state.detailLoading){LoadingScreen("Loading lead details…");return}
  state.detail?.let{lead->
-  LeadDetails(lead,state.detailFollowUps,state.detailCallHistory,state.callCounts[lead.id]?:state.detailCallHistory.size,state.message,state.busy,{vm.clear()},{vm.close()},{onCheckIn(lead)},{editLead=lead},{deleteLead=lead})
-  editLead?.let{target->EditLeadDialog(target,state.options,state.busy,{editLead=null}){vm.edit(it);editLead=null}}
+  LeadDetails(lead,state.detailHasMore,vm::moreHistory,state.detailFollowUps,state.detailCallHistory,state.callCounts[lead.id]?:state.detailCallHistory.size,state.message,state.busy,{vm.clear()},{vm.close()},{onCheckIn(lead)},{editLead=lead},{deleteLead=lead})
+  editLead?.let{target->EditLeadDialog(target,lead,state.options,state.busy,state.message,{vm.open(lead.id)},{editLead=null}){vm.edit(it){editLead=null}}}
   deleteLead?.let{target->DeleteLeadDialog(target,state.busy,{deleteLead=null}){vm.delete(target);deleteLead=null}}
   return
  }
@@ -80,14 +81,15 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
    HorizontalDivider(Modifier.padding(top=8.dp,bottom=8.dp),color=SalesLine)
    Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){OutlinedTextField(state.query,vm::setQuery,label={Text("Search name or phone")},singleLine=true,modifier=Modifier.weight(1f));Button({vm.refresh()},Modifier.padding(top=8.dp)){Text("Search")}}
    if(state.options.size>1){Box{OutlinedButton({employeeMenu=true},Modifier.fillMaxWidth()){Text(state.options.firstOrNull{it.id==state.employeeId}?.name?:"All Employees")};DropdownMenu(employeeMenu,{employeeMenu=false}){DropdownMenuItem({Text("All Employees")},{employeeMenu=false;vm.setEmployee(null);vm.refresh(employee=null)});state.options.forEach{u->DropdownMenuItem({Text("${u.name} · ${u.salesRole.name.replace('_',' ')}")},{employeeMenu=false;vm.setEmployee(u.id);vm.refresh(employee=u.id)})}}}}
-   LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){item{SummaryChip("All Leads",state.leads.size,!pendingView&&selectedStage==null){pendingView=false;selectedStage=null}};item{SummaryChip("Pending",state.pending.count,pendingView){pendingView=true}};items(LeadStage.entries){s->SummaryChip(stageLabel(s),state.leads.count{it.stage==s},!pendingView&&selectedStage==s){pendingView=false;selectedStage=s}}}
-   if(!pendingView){Box{OutlinedButton({stageMenu=true},Modifier.fillMaxWidth()){Text(selectedStage?.let(::stageLabel)?:"All stages")};DropdownMenu(stageMenu,{stageMenu=false}){DropdownMenuItem({Text("All stages")},{selectedStage=null;stageMenu=false});LeadStage.entries.forEach{s->DropdownMenuItem({Text(stageLabel(s))},{selectedStage=s;stageMenu=false})}}}}
+   LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){item{SummaryChip("Loaded leads",state.leads.size,!pendingView&&selectedStage==null){pendingView=false;vm.selectStage(null)}};item{SummaryChip("Pending",state.pending.count,pendingView){pendingView=true}};items(LeadStage.entries){s->SummaryChip(stageLabel(s),state.leads.count{it.stage==s},!pendingView&&selectedStage==s){pendingView=false;vm.selectStage(s)}}}
+   if(!pendingView){Box{OutlinedButton({stageMenu=true},Modifier.fillMaxWidth()){Text(selectedStage?.let(::stageLabel)?:"All stages")};DropdownMenu(stageMenu,{stageMenu=false}){DropdownMenuItem({Text("All stages")},{vm.selectStage(null);stageMenu=false});LeadStage.entries.forEach{s->DropdownMenuItem({Text(stageLabel(s))},{vm.selectStage(s);stageMenu=false})}}}}
    state.message?.let{MessageBanner(it,vm::clear)}
   }
   if(pendingView){if(state.pending.visits.isEmpty())item{ContentCard("Pending","No check-ins are waiting for a phone number.")};items(state.pending.visits,key={"pending-${it.id}"}){visit->PendingVisitCard(visit,state.busy,{phoneVisit=visit}){onPendingVisitDetails(visit)}}}
   else{
    if(visible.isEmpty())item{ContentCard("No Leads","No leads match this filter.")}
    item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(selectedStage?.let(::stageLabel)?:"All Leads",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(visible.size.toString(),color=SalesMuted)}}
+   if(state.hasMore)item{OutlinedButton(vm::more,enabled=!state.loading){Text("Load more leads")}}
    items(visible,key={it.id}){lead->LeadCard(lead,state.callCounts[lead.id]?:0,state.busy,selectedStage==null,{vm.open(lead.id)},{followLead=lead},{dial(lead)},{onCheckIn(lead)},{transitionLead=lead})}
   }
  }
@@ -102,11 +104,12 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
 }
 
 @Composable
-private fun LeadDetails(lead:LeadSummary,followUps:List<FollowUpTask>,callHistory:List<LeadCallHistoryItem>,callCount:Int,message:String?,busy:Boolean,clearMessage:()->Unit,back:()->Unit,checkIn:()->Unit,edit:()->Unit,delete:()->Unit){
+private fun LeadDetails(lead:LeadSummary,hasMore:Boolean,more:()->Unit,followUps:List<FollowUpTask>,callHistory:List<LeadCallHistoryItem>,callCount:Int,message:String?,busy:Boolean,clearMessage:()->Unit,back:()->Unit,checkIn:()->Unit,edit:()->Unit,delete:()->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Back")};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Lead Details",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);StatusChip(stageLabel(lead.stage))};Spacer(Modifier.height(4.dp));Text("Check-ins ${lead.visitCount}   |   Calls $callCount",style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.SemiBold);message?.let{MessageBanner(it,clearMessage)}}
   item{OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(lead.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);(lead.customer?.name?:lead.companyName)?.let{Text(it)};Text("Assigned: ${lead.assignedUser.name}",color=SalesMuted);Text("Source: ${lead.source}",color=SalesMuted);lead.phone?.let{Text("Phone: $it",color=SalesMuted)};lead.email?.let{Text("Email: $it",color=SalesMuted)};lead.estimatedValue?.let{Text("Value: ${lead.currencyCode} ${money(it)}",color=SalesMuted)};lead.lostReason?.let{Text("Lost reason: $it",color=SalesMuted)};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(edit,enabled=!busy,modifier=Modifier.weight(1f)){Text("Edit Lead")};if(lead.canDelete)OutlinedButton(delete,enabled=!busy,modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=MaterialTheme.colorScheme.error)){Text("Delete Lead")}};if(lead.canAddCheckIn&&lead.stage !in listOf(LeadStage.WON,LeadStage.LOST))OutlinedButton(checkIn,Modifier.fillMaxWidth()){Text("+ Add Check-in")}}}}
   item{Text("Follow-up History",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+  if(hasMore)item{OutlinedButton(more){Text("Load more follow-ups")}}
   if(followUps.isEmpty())item{Text("No follow-ups added for this lead.",color=SalesMuted)}else items(followUps,key={"follow-${it.id}"}){task->val isCall=task.lastAction.startsWith("Call");OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text("${if(isCall)"Call" else "Visit"} · ${task.status}",fontWeight=FontWeight.Bold);Text("Due ${task.dueDate.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);task.notes?.let{Text(it,style=MaterialTheme.typography.bodySmall)}}}}
   item{Text("Call History",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
   if(callHistory.isEmpty())item{Text("No saved call results for this lead.",color=SalesMuted)}else items(callHistory,key={"call-${it.id}"}){CallHistoryCard(it)}
@@ -117,7 +120,38 @@ private fun LeadDetails(lead:LeadSummary,followUps:List<FollowUpTask>,callHistor
  }
 }
 
-@Composable private fun EditLeadDialog(lead:LeadSummary,options:List<DashboardEmployee>,busy:Boolean,dismiss:()->Unit,save:(LeadEditRequest)->Unit){var title by remember{mutableStateOf(lead.title)};var company by remember{mutableStateOf(lead.companyName?:"")};var contact by remember{mutableStateOf(lead.contactName?:"")};var phone by remember{mutableStateOf(lead.phone?:"")};var email by remember{mutableStateOf(lead.email?:"")};var value by remember{mutableStateOf(lead.estimatedValue?:"")};var notes by remember{mutableStateOf(lead.notes?:"")};var assignee by remember{mutableStateOf(lead.assignedUserId)};var menu by remember{mutableStateOf(false)};AlertDialog(onDismissRequest=dismiss,title={Text("Edit Lead")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(7.dp)){OutlinedTextField(title,{title=it},label={Text("Title")});OutlinedTextField(company,{company=it},label={Text("Company / prospect")});OutlinedTextField(contact,{contact=it},label={Text("Contact name")});OutlinedTextField(phone,{phone=it},label={Text("Phone")});OutlinedTextField(email,{email=it},label={Text("Email")});OutlinedTextField(value,{value=it.filter{c->c.isDigit()||c=='.'}},label={Text("Estimated value")});if(options.isNotEmpty()){Box{OutlinedButton({menu=true},Modifier.fillMaxWidth()){Text(options.firstOrNull{it.id==assignee}?.name?:lead.assignedUser.name)};DropdownMenu(menu,{menu=false}){options.forEach{o->DropdownMenuItem({Text(o.name)},{assignee=o.id;menu=false})}}}};OutlinedTextField(notes,{notes=it.take(5000)},label={Text("Notes")},minLines=2)}},confirmButton={Button({save(LeadEditRequest(leadId=lead.id,version=lead.version,title=title.trim(),companyName=company.ifBlank{null},contactName=contact.ifBlank{null},phone=phone.ifBlank{null},email=email.ifBlank{null},estimatedValue=value.ifBlank{null},currencyCode=lead.currencyCode,assignedUserId=assignee,notes=notes.ifBlank{null}))},enabled=!busy&&title.isNotBlank()){Text(if(busy)"Saving…" else "Save")}},dismissButton={TextButton(dismiss){Text("Cancel")}})}
+@Composable private fun EditLeadDialog(lead:LeadSummary,latest:LeadSummary,options:List<DashboardEmployee>,busy:Boolean,message:String?,reload:()->Unit,dismiss:()->Unit,save:(LeadEditRequest)->Unit){
+ var title by rememberSaveable(lead.id){mutableStateOf(lead.title)}
+ var company by rememberSaveable(lead.id){mutableStateOf(lead.companyName?:"")}
+ var contact by rememberSaveable(lead.id){mutableStateOf(lead.contactName?:"")}
+ var phone by rememberSaveable(lead.id){mutableStateOf(lead.phone?:"")}
+ var email by rememberSaveable(lead.id){mutableStateOf(lead.email?:"")}
+ var value by rememberSaveable(lead.id){mutableStateOf(lead.estimatedValue?:"")}
+ var notes by rememberSaveable(lead.id){mutableStateOf(lead.notes?:"")}
+ var assignee by rememberSaveable(lead.id){mutableStateOf(lead.assignedUserId)}
+ var version by rememberSaveable(lead.id){mutableStateOf(lead.version)}
+ var menu by remember{mutableStateOf(false)}
+ AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text("Edit Lead")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(7.dp)){
+  message?.let{Text(it)}
+  if(message?.contains("changed elsewhere")==true||latest.version!=version){
+   OutlinedButton(reload,enabled=!busy){Text("Reload latest version")}
+   if(latest.version!=version){
+    Text("Latest saved details: ${latest.title} · ${latest.companyName.orEmpty()} · ${latest.contactName.orEmpty()} · ${latest.phone.orEmpty()} · ${latest.email.orEmpty()} · ${latest.estimatedValue.orEmpty()} · ${latest.assignedUser.name}\n${latest.notes.orEmpty()}")
+    Text("Your draft below is unchanged. Review it before applying it over this version.")
+    OutlinedButton({version=latest.version}){Text("Use latest version with my changes")}
+   }
+  }
+  OutlinedTextField(title,{title=it},label={Text("Title")})
+  OutlinedTextField(company,{company=it},label={Text("Company / prospect")})
+  OutlinedTextField(contact,{contact=it},label={Text("Contact name")})
+  OutlinedTextField(phone,{phone=it},label={Text("Phone")})
+  OutlinedTextField(email,{email=it},label={Text("Email")})
+  OutlinedTextField(value,{value=it.filter{c->c.isDigit()||c=='.'}},label={Text("Estimated value")})
+  if(options.isNotEmpty()){Box{OutlinedButton({menu=true},Modifier.fillMaxWidth()){Text(options.firstOrNull{it.id==assignee}?.name?:lead.assignedUser.name)};DropdownMenu(menu,{menu=false}){options.forEach{o->DropdownMenuItem({Text(o.name)},{assignee=o.id;menu=false})}}}}
+  OutlinedTextField(notes,{notes=it.take(5000)},label={Text("Notes")},minLines=2)
+ }},confirmButton={Button({save(LeadEditRequest(leadId=lead.id,version=version,title=title.trim(),companyName=company.ifBlank{null},contactName=contact.ifBlank{null},phone=phone.ifBlank{null},email=email.ifBlank{null},estimatedValue=value.ifBlank{null},currencyCode=lead.currencyCode,assignedUserId=assignee,notes=notes.ifBlank{null}))},enabled=!busy&&title.isNotBlank()&&latest.version==version){Text(if(busy)"Saving…" else "Save")}},dismissButton={TextButton(dismiss,enabled=!busy){Text("Cancel")}})
+}
+
 @Composable private fun PendingVisitCard(visit:PendingLeadVisit,busy:Boolean,addPhone:()->Unit,details:()->Unit){OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){Text(visit.contactName?:visit.customerName?:"Field prospect",fontWeight=FontWeight.Bold);Text("${visit.userName} · ${friendlyLeadDateTime(visit.checkedInAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);Text(if(visit.checkedOutAt!=null)"Checked out ${friendlyLeadDateTime(visit.checkedOutAt)}" else "Checkout pending",style=MaterialTheme.typography.bodySmall,color=SalesMuted);visit.visitNotes?.let{Text(it)};Text(visit.checkInAddress?:"%.5f, %.5f".format(visit.checkInLatitude,visit.checkInLongitude),style=MaterialTheme.typography.bodySmall,color=SalesMuted);if(visit.hasPhoto)TextButton(details){Text("View photo / details")};if(visit.canAddPhone)OutlinedButton(addPhone,enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Add phone to create Lead")}}}}
 @Composable private fun PendingPhoneDialog(visit:PendingLeadVisit,busy:Boolean,dismiss:()->Unit,save:(String)->Unit){var phone by remember{mutableStateOf("")};AlertDialog(onDismissRequest=dismiss,title={Text("Add phone")},text={OutlinedTextField(phone,{phone=it},label={Text("Phone")})},confirmButton={Button({save(phone.trim())},enabled=!busy&&phone.isNotBlank()){Text("Add phone")}},dismissButton={TextButton(dismiss){Text("Cancel")}})}
 @Composable private fun SummaryChip(label:String,count:Int,selected:Boolean,onClick:()->Unit){FilterChip(selected,onClick,{Column{Text(label,fontWeight=FontWeight.SemiBold);Text(count.toString(),style=MaterialTheme.typography.bodySmall)}})}

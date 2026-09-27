@@ -243,7 +243,7 @@ private fun AdminChoiceRow(label:String,current:String,options:List<String>,chan
 private fun AdminAttendanceSessionCard(row:JsonObject,compact:Boolean=false){
  val start=row.adminText("startedAt")
  val end=row.adminText("endedAt")
- val points=row["locationPoints"]?.jsonArray?.size?:0
+ val points=row["gpsPointCount"]?.jsonPrimitive?.intOrNull?:0
  val distance=row["routeDistanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0
  val content:@Composable ()->Unit={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -262,7 +262,7 @@ private fun AdminAttendanceDayStats(rows:List<JsonObject>){
  val hasOpen=rows.any{it.adminText("endedAt")==null}
  val lastEnd=if(hasOpen)null else rows.mapNotNull{it.adminText("endedAt")}.maxByOrNull(::adminEpoch)
  val total=rows.sumOf(::adminAttendanceDuration)
- val points=rows.sumOf{it["locationPoints"]?.jsonArray?.size?:0}
+ val points=rows.sumOf{it["gpsPointCount"]?.jsonPrimitive?.intOrNull?:0}
  val distance=rows.sumOf{it["routeDistanceMeters"]?.jsonPrimitive?.doubleOrNull?:0.0}
  Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){AdminStat("START",first?.adminText("startedAt")?.let(::adminTime)?:"—",Modifier.weight(1f));AdminStat("END",lastEnd?.let(::adminTime)?:if(hasOpen)"Now" else "—",Modifier.weight(1f));AdminStat("TOTAL",adminDuration(total),Modifier.weight(1f))}

@@ -114,6 +114,7 @@ fun FieldScreen(
  if(context==null){RetryScreen(state.message?:"Check-ins couldn't be loaded.",vm::refresh);return}
  val open=context.visits.filter{it.checkedOutAt==null}
  val selectedCustomer=context.customers.firstOrNull{it.id==subjectId}
+ LaunchedEffect(state.message){if(state.message?.startsWith("Checked in.")==true){notes="";photo=null;name="";phone=""}}
  val selectedFollowUp=state.followUps.firstOrNull{it.id==followUpTaskId}
  val requiredPhoto=(type=="NEW"&&linkedLeadId==null)||(type=="CUSTOMER"&&selectedCustomer?.checkInReferenceSetAt==null)
  val canSubmit=!state.busy&&when(type){"NEW"->name.isNotBlank()&&(!requiredPhoto||photo!=null);"FOLLOW_UP"->selectedFollowUp!=null;else->subjectId!=null&&(!requiredPhoto||photo!=null)}
@@ -125,7 +126,7 @@ fun FieldScreen(
     preparedLocation=point;locationState="ready"
     vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},point,notes.ifBlank{null},photo,followUpTaskId)
     if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
-    notes="";photo=null
+
     return@launch
    }
    locationState="getting"
@@ -133,7 +134,7 @@ fun FieldScreen(
     preparedLocation=fresh;locationState="ready"
     vm.checkIn(type,subjectId,name.ifBlank{null},phone.ifBlank{null},fresh,notes.ifBlank{null},photo,followUpTaskId)
     if(type=="NEW"&&linkedLeadId==null){name="";phone=""}
-    notes="";photo=null
+
    }.onFailure{locationState="unavailable";vm.locationError(locationFailureMessage(it))}
   }}
   if(ContextCompat.checkSelfPermission(androidContext,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED)permissionAction?.invoke()
@@ -216,7 +217,8 @@ fun FieldScreen(
     }
    }
   }
-  state.message?.let{item{MessageBanner(it,vm::clear)}}
+  if(state.refreshRequired){item{OutlinedButton({vm.refresh()}){Text("Refresh saved status")}}}
+   state.message?.let{item{MessageBanner(it,vm::clear)}}
   item{Column{Text("Pending Checkout",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk);Text("Complete before your next visit",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}
   if(open.isEmpty())item{Text("No open visits.",color=SalesMuted)}
   items(open,key={it.id}){v->PendingCheckoutCard(v,state.busy,vm::addPhone){sentiment,remarks->

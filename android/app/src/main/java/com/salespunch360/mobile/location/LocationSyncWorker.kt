@@ -4,76 +4,47 @@ import android.content.Context
 import androidx.work.*
 import com.salespunch360.mobile.SalesPunchApp
 import com.salespunch360.mobile.data.*
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class LocationSyncWorker(context:Context,params:WorkerParameters):CoroutineWorker(context,params){
- override suspend fun doWork():Result{
-  val app=applicationContext as SalesPunchApp
-  val locationDao=app.database.locations()
+ override suspend fun doWork():Result=uploadLock.withLock{
+  val dao=(applicationContext as SalesPunchApp).database.locations()
   val session=SecureSession(applicationContext)
-  val owner=inputData.getString("owner_user_id")?:return Result.failure()
-  if(session.token()==null||session.userId()!=owner){
-   locationDao.clearOwner(owner)
-   return Result.failure()
-  }
-  val api=ApiClient(session)
-  return try{
-   for(point in locationDao.batch(owner)){
-    try{
-     api.upload(LocationPayload(point.latitude,point.longitude,point.accuracy,point.id,point.capturedAt))
-     locationDao.delete(point.id,owner)
-    }catch(error:ApiException){
-     when{
-      error.status==409&&error.code=="NO_OPEN_ATTENDANCE"->{
-       // The sample was captured outside an attendance period. Discard only this point so
-       // valid queued points from a later attendance period are not lost.
-       locationDao.delete(point.id,owner)
-       if(!TrackingService.isAttendanceTrackingAuthorized(applicationContext)){
-        TrackingService.stop(applicationContext)
-       }
-      }
-      error.status==409&&error.code=="GPS_DISABLED"->{
-       locationDao.clearOwner(owner)
-       TrackingService.stop(applicationContext)
-       return Result.success()
-      }
-      error.status==409&&error.code in setOf("THROTTLED","CAPTURE_TIME_INVALID")->{
-       // The server deliberately rejected only this sample; discard it and continue.
-       locationDao.delete(point.id,owner)
-      }
-      else->throw error
-     }
-    }
-   }
-   Result.success()
-  }catch(error:ApiException){
-   when(error.status){
-    401->{
-     locationDao.clearOwner(owner)
-     session.invalidate()
-     TrackingService.stop(applicationContext)
-     Result.failure()
-    }
-    403->{
-     session.authorizationChanged()
-     TrackingService.stop(applicationContext)
-     Result.failure()
-    }
+  val owner=inputData.getString("owner_user_id")?:return@withLock Result.failure()
+  val token=session.token()?:return@withLock Result.failure()
+  if(session.userId()!=owner)return@withLock Result.failure()
+  val api=ApiClient(session,token)
+  dao.ensureStatus(LocationSyncStatus(owner))
+  try{
+   val complete=LocationSyncEngine(
+    nextBatch={dao.batch(owner)},
+    upload={points->api.uploadLocations(points.map{LocationPayload(it.latitude,it.longitude,it.accuracy,it.id,it.capturedAt)})},
+    acknowledge={point,at->dao.acknowledge(point,at)},discard={point,reason->dao.discard(point,reason)},
+    currentOwner={session.userId()==owner&&session.token()==token},
+   ).drain()
+   if(complete)Result.success() else Result.retry()
+  }catch(error:CancellationException){throw error}
+  catch(error:ApiException){
+   if(session.userId()!=owner||session.token()!=token)return@withLock Result.failure()
+   when{
+    error.status==401->{session.invalidateIfCurrent(token);Result.failure()}
+    error.status==403->{dao.setIssue(owner,"ACCESS_CHANGED");session.authorizationChanged();TrackingService.stop(applicationContext);Result.failure()}
+    error.code=="GPS_DISABLED"->{dao.setIssue(owner,"GPS_DISABLED");TrackingService.stop(applicationContext);Result.failure()}
     else->Result.retry()
    }
-  }catch(_:Exception){
-   Result.retry()
-  }
+  }catch(_:Exception){Result.retry()}
  }
-
  companion object{
-  fun schedule(context:Context,ownerUserId:String)=WorkManager.getInstance(context).enqueueUniqueWork(
-   "location-sync-$ownerUserId",
-   ExistingWorkPolicy.KEEP,
-   OneTimeWorkRequestBuilder<LocationSyncWorker>()
-    .setInputData(workDataOf("owner_user_id" to ownerUserId))
-    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,15,java.util.concurrent.TimeUnit.SECONDS)
-    .build()
-  )
+  private val uploadLock=Mutex()
+  private fun request(owner:String)=OneTimeWorkRequestBuilder<LocationSyncWorker>().setInputData(workDataOf("owner_user_id" to owner)).setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).setBackoffCriteria(BackoffPolicy.EXPONENTIAL,15,TimeUnit.SECONDS).build()
+  fun schedule(context:Context,ownerUserId:String,retryNow:Boolean=false){
+   val manager=WorkManager.getInstance(context)
+   manager.enqueueUniqueWork("location-sync-$ownerUserId",if(retryNow)ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,request(ownerUserId))
+   manager.enqueueUniquePeriodicWork("location-recovery-$ownerUserId",ExistingPeriodicWorkPolicy.KEEP,PeriodicWorkRequestBuilder<LocationSyncWorker>(15,TimeUnit.MINUTES).setInputData(workDataOf("owner_user_id" to ownerUserId)).setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build())
+  }
+  fun cancel(context:Context,owner:String){val manager=WorkManager.getInstance(context);manager.cancelUniqueWork("location-sync-$owner");manager.cancelUniqueWork("location-recovery-$owner")}
  }
 }

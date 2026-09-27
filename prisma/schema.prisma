@@ -636,6 +636,7 @@ enum ProjectAuditEventType {
 }
 
 model Company {
+  fieldJobs FieldJob[]
   id                                  String                     @id @default(uuid()) @db.Uuid
   name                                String
   slug                                String                     @unique
@@ -3160,4 +3161,23 @@ model PublicVideoTutorial {
   updatedAt    DateTime @updatedAt
   @@index([isPublished, displayOrder])
   @@map("public_video_tutorials")
+}
+
+model FieldJob {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+ key String @unique @db.VarChar(160)
+ kind String @db.VarChar(30)
+ payload Json
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ lockedUntil DateTime?
+ leaseToken String? @db.Uuid
+ completedAt DateTime?
+ lastError String? @db.VarChar(80)
+ createdAt DateTime @default(now())
+ @@index([completedAt,nextAttemptAt,lockedUntil])
+ @@index([companyId])
+ @@map("field_jobs")
 }
