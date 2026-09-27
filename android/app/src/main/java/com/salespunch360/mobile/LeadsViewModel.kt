@@ -11,35 +11,37 @@ import kotlinx.coroutines.flow.StateFlow
 
 data class LeadsState(
  val loading:Boolean=true,val leads:List<LeadSummary> = emptyList(),val page:Int=1,val hasMore:Boolean=false,val stage:LeadStage?=null,
- val pending:PendingLeadsContext=PendingLeadsContext(),val options:List<DashboardEmployee> = emptyList(),val telecallers:List<TelecallerOption> = emptyList(),
+ val pending:PendingLeadsContext=PendingLeadsContext(),val pendingPage:Int=1,val pendingHasMore:Boolean=false,val pendingLoading:Boolean=false,
+ val options:List<DashboardEmployee> = emptyList(),val telecallers:List<TelecallerOption> = emptyList(),
  val query:String="",val employeeId:String?=null,val callCounts:Map<String,Int> = emptyMap(),val detail:LeadSummary?=null,
  val detailFollowUps:List<FollowUpTask> = emptyList(),val detailFollowUpPage:Int=1,val detailHasMore:Boolean=false,
  val detailCallHistory:List<LeadCallHistoryItem> = emptyList(),val detailLoading:Boolean=false,val busy:Boolean=false,val message:String?=null,
 )
 class LeadsViewModel(app:Application):AndroidViewModel(app){
- private val session=SecureSession(app);private val api=ApiClient(session);private val telecalling=TelecallingClient(session);private val followUpMutations=FollowUpMutationClient(session)
+ private val session=SecureSession(app);private val api=ApiClient(session);private val pendingClient=PendingLeadsClient(session);private val telecalling=TelecallingClient(session);private val followUpMutations=FollowUpMutationClient(session)
  private val _state=MutableStateFlow(LeadsState());val state:StateFlow<LeadsState> = _state
- private var readJob:Job?=null;private var detailJob:Job?=null;private var requestedDetail:String?=null;private var initialized=false
+ private var readJob:Job?=null;private var pendingJob:Job?=null;private var detailJob:Job?=null;private var requestedDetail:String?=null;private var initialized=false
  init{viewModelScope.launch{MobileRouteSignal.current.collect{if(it=="Leads"&&!initialized){initialized=true;refresh()}}}}
  fun setQuery(value:String){_state.value=_state.value.copy(query=value.take(100))}
  fun setEmployee(value:String?){_state.value=_state.value.copy(employeeId=value)}
  fun selectStage(value:LeadStage?){_state.value=_state.value.copy(stage=value);refresh()}
  fun refresh(q:String=_state.value.query,employee:String?=_state.value.employeeId,savedNotice:String?=null){
-  readJob?.cancel();_state.value=_state.value.copy(loading=true,query=q,employeeId=employee)
+  readJob?.cancel();pendingJob?.cancel();_state.value=_state.value.copy(loading=true,query=q,employeeId=employee,pendingLoading=true)
   val stage=_state.value.stage
   readJob=viewModelScope.launch{try{
    coroutineScope{
     val page=async{api.leadsPage(q,employee,stage=stage)}
-    val pending=async{api.pendingLeads()}
+    val pending=async{pendingClient.page(1,q,employee)}
     val options=async{if(_state.value.options.isEmpty())api.leadOptions() else _state.value.options}
     val callers=async{if(_state.value.telecallers.isEmpty())optional(emptyList<TelecallerOption>()){followUpMutations.telecallers()} else _state.value.telecallers}
     val counts=async{optional(_state.value.callCounts){telecalling.queue().associate{it.id to it.calls}}}
-    val result=page.await()
-    _state.value=_state.value.copy(loading=false,leads=result.leads,page=result.page,hasMore=result.hasMore,pending=pending.await(),options=options.await(),telecallers=callers.await(),callCounts=counts.await())
+    val result=page.await();val pendingResult=pending.await()
+    _state.value=_state.value.copy(loading=false,leads=result.leads,page=result.page,hasMore=result.hasMore,pending=PendingLeadsContext(pendingResult.count,pendingResult.visits),pendingPage=pendingResult.page,pendingHasMore=pendingResult.hasMore,pendingLoading=false,options=options.await(),telecallers=callers.await(),callCounts=counts.await())
    }
-  }catch(e:CancellationException){throw e}catch(e:Exception){_state.value=_state.value.copy(loading=false,message=savedNotice?.let{"$it Refresh pending. Tap Search to refresh."}?:apiMessage(e,"Leads couldn't be loaded."))}}
+  }catch(e:CancellationException){throw e}catch(e:Exception){_state.value=_state.value.copy(loading=false,pendingLoading=false,message=savedNotice?.let{"$it Refresh pending. Tap Search to refresh."}?:apiMessage(e,"Leads couldn't be loaded."))}}
  }
  fun more(){if(_state.value.loading||!_state.value.hasMore)return;val current=_state.value;readJob?.cancel();_state.value=current.copy(loading=true);readJob=viewModelScope.launch{try{val result=api.leadsPage(current.query,current.employeeId,current.page+1,current.stage);_state.value=_state.value.copy(loading=false,leads=(current.leads+result.leads).distinctBy{it.id},page=result.page,hasMore=result.hasMore)}catch(e:CancellationException){throw e}catch(e:Exception){_state.value=_state.value.copy(loading=false,message=apiMessage(e,"More leads couldn't be loaded."))}}}
+ fun morePending(){val current=_state.value;if(current.pendingLoading||!current.pendingHasMore)return;pendingJob?.cancel();_state.value=current.copy(pendingLoading=true);pendingJob=viewModelScope.launch{try{val result=pendingClient.page(current.pendingPage+1,current.query,current.employeeId);_state.value=_state.value.copy(pending=PendingLeadsContext(result.count,(current.pending.visits+result.visits).distinctBy{it.id}),pendingPage=result.page,pendingHasMore=result.hasMore,pendingLoading=false)}catch(e:CancellationException){throw e}catch(e:Exception){_state.value=_state.value.copy(pendingLoading=false,message=apiMessage(e,"More pending visits couldn't be loaded."))}}}
  fun open(id:String){
   detailJob?.cancel();requestedDetail=id
   val cached=_state.value.detail?.takeIf{it.id==id}?:_state.value.leads.firstOrNull{it.id==id}
