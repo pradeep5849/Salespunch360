@@ -34,17 +34,19 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
 
  fun load(type:String=_state.value.type,page:Int=1)=viewModelScope.launch{
   val current=_state.value
-  val requestStart=if(type=="gps")current.start.ifBlank{LocalDate.now(ZoneId.of("Asia/Kolkata")).toString()} else current.start
-  val base=current.copy(loading=true,type=type,page=page,start=requestStart,message=null)
+  val today=LocalDate.now(ZoneId.of("Asia/Kolkata")).toString()
+  val requestStart=if(type=="gps")current.start.ifBlank{today} else current.start
+  val requestEnd=if(type=="gps")current.end.ifBlank{requestStart} else current.end
+  val base=current.copy(loading=true,type=type,page=page,start=requestStart,end=requestEnd,message=null)
   _state.value=base
   _state.value=try{
-   val report=api.report(type,requestStart.ifBlank{null},current.end.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page)
+   val report=api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page)
    val filters=report["filters"]?.jsonObject
    base.copy(
     loading=false,
     report=report,
     start=filters?.get("startText")?.jsonPrimitive?.contentOrNull?:requestStart,
-    end=filters?.get("endText")?.jsonPrimitive?.contentOrNull?:current.end,
+    end=filters?.get("endText")?.jsonPrimitive?.contentOrNull?:requestEnd,
     page=page,
    )
   }catch(e:Exception){base.copy(loading=false,message=apiMessage(e,"Report couldn't be loaded."))}
