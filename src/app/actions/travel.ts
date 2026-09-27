@@ -11,12 +11,21 @@ export async function updateCompanyTravelRateAction(formData:FormData){
  revalidatePath("/workspace/reports/expenses");
 }
 export async function updateEmployeeTravelSettingsAction(formData:FormData){
- await mutationGuard("employee-travel",30);
- const mode=formData.get("travelApprovalMode")==="AUTO"?"AUTO":"MANUAL";
- await updateEmployeeTravelSettings(String(formData.get("employeeId")),formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null,mode);
- revalidatePath("/workspace/employees");
- revalidatePath("/workspace/reports/expenses");
- if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
+ const returnTo=String(formData.get("returnTo")??"");
+ const safeReturnTo=/^\/workspace\/employees\/sales\/edit\/[0-9a-f-]+$/.test(returnTo)?returnTo:"/workspace/employees";
+ try{
+  await mutationGuard("employee-travel",30);
+  const mode=formData.get("travelApprovalMode")==="AUTO"?"AUTO":"MANUAL";
+  await updateEmployeeTravelSettings(String(formData.get("employeeId")),formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null,mode);
+  revalidatePath("/workspace/employees");
+  revalidatePath("/workspace/reports/expenses");
+  redirect(`${safeReturnTo}?travelSaved=1`);
+ }catch(error){
+  if(error&&typeof error==="object"&&"digest" in error)throw error;
+  const code=error instanceof Error?error.message:"";
+  const message=code==="INVALID_RATE"?"Enter a valid KM rate.":code==="NOT_FOUND"?"This employee is unavailable.":"Travel settings could not be saved.";
+  redirect(`${safeReturnTo}?travelError=${encodeURIComponent(message)}`);
+ }
 }
 export async function reviewDailyTravelAction(formData:FormData){
  await mutationGuard("travel-approval",60);

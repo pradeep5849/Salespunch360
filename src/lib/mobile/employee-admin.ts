@@ -15,6 +15,7 @@ async function actor(tx:Prisma.TransactionClient,companyId:string,actorId:string
 async function assignableManager(tx:Prisma.TransactionClient,companyId:string,managerId?:string|null){if(!managerId)return null;const manager=await tx.user.findFirst({where:{id:managerId,companyId},select:{id:true,companyId:true,salesRole:true,isActive:true,salesAccessActive:true}});assertAssignableManager(companyId,manager);return manager.id}
 async function validateBranches(tx:Prisma.TransactionClient,companyId:string,scope:'ALL_BRANCHES'|'SELECTED_BRANCHES',ids:string[]){const unique=[...new Set(ids)];if(scope==='SELECTED_BRANCHES'){if(!unique.length)throw new Error('BRANCH_REQUIRED');const count=await tx.branch.count({where:{companyId,id:{in:unique},isActive:true}});if(count!==unique.length)throw new Error('INVALID_BRANCH')}return scope==='SELECTED_BRANCHES'?unique:[]}
 function normalizedRate(value:unknown){if(value===null||value===undefined||value==='')return null;const n=Number(value);if(!Number.isFinite(n)||n<0||n>100000)throw new Error('INVALID_RATE');return new Prisma.Decimal(n.toFixed(2))}
+export function mobileTravelApprovalMode(value:unknown){if(value==='AUTO'||value==='MANUAL')return value;throw new MobileEmployeeError('INVALID_INPUT')}
 
 export async function mobileEditEmployee(p:MobilePrincipal,raw:unknown){
  const companyId=primary(p);if(!raw||typeof raw!=='object')throw new MobileEmployeeError('INVALID_INPUT');const input=raw as Record<string,unknown>,employeeId=String(input.employeeId??'');
@@ -23,7 +24,7 @@ export async function mobileEditEmployee(p:MobilePrincipal,raw:unknown){
   await editAdditionalAdminForCompany(companyId,{userId:employeeId,name:input.name,email:input.email,phone:input.phone},p.id);return{ok:true};
  }
  const parsed=editEmployeeSchema.parse({employeeId,name:input.name,email:input.email,phone:input.phone,employeeCode:input.employeeCode,designation:input.designation,dateOfJoining:input.dateOfJoining,managerId:input.managerId,managerType:input.managerType});
- const scope=input.branchAccessScope==='SELECTED_BRANCHES'?'SELECTED_BRANCHES':'ALL_BRANCHES',branchIds=Array.isArray(input.branchIds)?input.branchIds.filter((x):x is string=>typeof x==='string'):[],travelEnabled=Boolean(input.travelAllowanceEnabled),travelRate=normalizedRate(input.travelRatePerKm);
+ const scope=input.branchAccessScope==='SELECTED_BRANCHES'?'SELECTED_BRANCHES':'ALL_BRANCHES',branchIds=Array.isArray(input.branchIds)?input.branchIds.filter((x):x is string=>typeof x==='string'):[],travelEnabled=Boolean(input.travelAllowanceEnabled),travelRate=normalizedRate(input.travelRatePerKm),travelApprovalMode=mobileTravelApprovalMode(input.travelApprovalMode);
  await db.$transaction(async tx=>{
   await actor(tx,companyId,p.id);
   const company=await tx.company.findUnique({where:{id:companyId},select:{teamStructure:true}});if(!company)throw new EmployeePolicyError('NOT_FOUND');
@@ -35,7 +36,7 @@ export async function mobileEditEmployee(p:MobilePrincipal,raw:unknown){
   const managerId=employee.salesRole==='SALES'&&parsed.managerId!==undefined?(parsed.managerId===employee.managerId?employee.managerId:await assignableManager(tx,companyId,parsed.managerId)):employee.managerId;
   const validBranchIds=await validateBranches(tx,companyId,scope,branchIds);
   await tx.userBranchAccess.deleteMany({where:{userId:employee.id}});
-  await tx.user.update({where:{id:employee.id},data:{name:parsed.name,email:parsed.email,phone:parsed.phone??null,employeeCode:parsed.employeeCode??null,designation:parsed.designation===undefined?employee.designation:parsed.designation,dateOfJoining:parsed.dateOfJoining===undefined?employee.dateOfJoining:parsed.dateOfJoining,managerId,managerType:employee.salesRole==='MANAGER'?(parsed.managerType??employee.managerType??'FIELD_MANAGER'):null,branchAccessScope:scope,branchAccesses:validBranchIds.length?{create:validBranchIds.map(branchId=>({branchId}))}:undefined,travelAllowanceEnabled:travelEnabled,travelRatePerKm:travelRate}});
+  await tx.user.update({where:{id:employee.id},data:{name:parsed.name,email:parsed.email,phone:parsed.phone??null,employeeCode:parsed.employeeCode??null,designation:parsed.designation===undefined?employee.designation:parsed.designation,dateOfJoining:parsed.dateOfJoining===undefined?employee.dateOfJoining:parsed.dateOfJoining,managerId,managerType:employee.salesRole==='MANAGER'?(parsed.managerType??employee.managerType??'FIELD_MANAGER'):null,branchAccessScope:scope,branchAccesses:validBranchIds.length?{create:validBranchIds.map(branchId=>({branchId}))}:undefined,travelAllowanceEnabled:travelEnabled,travelRatePerKm:travelRate,travelApprovalMode}});
  });
  return{ok:true};
 }

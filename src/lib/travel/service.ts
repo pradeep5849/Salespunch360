@@ -26,9 +26,9 @@ export async function employeeTravelApprovalMode(employeeId:string){
  const admin=await requirePermission("SALES_TRAVEL");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
- const rows=await db.$queryRaw<{mode:string}[]>`SELECT "travelApprovalMode" AS mode FROM "users" WHERE "id"=${employeeId}::uuid AND "companyId"=${admin.companyId}::uuid LIMIT 1`;
- if(!rows[0])throw new Error("NOT_FOUND");
- return approvalMode(rows[0].mode);
+ const employee=await db.user.findFirst({where:{id:employeeId,companyId:admin.companyId},select:{travelApprovalMode:true}});
+ if(!employee)throw new Error("NOT_FOUND");
+ return approvalMode(employee.travelApprovalMode);
 }
 
 export async function updateEmployeeTravelSettings(employeeId:string,enabled:boolean,customRate:string|null,mode:TravelApprovalMode="MANUAL"){
@@ -43,9 +43,8 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
   rate=new Prisma.Decimal(n.toFixed(2));
  }
  const normalizedMode=approvalMode(mode);
- const changed=await db.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate}});
+ const changed=await db.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate,travelApprovalMode:normalizedMode}});
  if(changed.count!==1)throw new Error("NOT_FOUND");
- await db.$executeRaw`UPDATE "users" SET "travelApprovalMode"=${normalizedMode} WHERE "id"=${employeeId}::uuid AND "companyId"=${companyId}::uuid`;
 }
 
 async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string,branchId:string,employeeId:string,date:string){

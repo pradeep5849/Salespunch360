@@ -11,18 +11,17 @@ type ApprovalMode="MANUAL"|"AUTO";
 
 export async function expenseReport(raw:SearchParams,provided?:ReportActor){
  const actor=provided??await reportActor(),filters=parseReportFilters(raw),ids=await resolveEmployeeScope(actor,filters.employeeId),employees=await reportEmployeeOptions(actor),branches=await operationalBranchContext(actor,typeof raw.branchId==="string"?raw.branchId:undefined);
- const [company,eligible,points,modes]=await Promise.all([
+ const [company,eligible,points]=await Promise.all([
   db.company.findUnique({where:{id:actor.companyId},select:{travelRatePerKm:true}}),
-  db.user.findMany({where:{companyId:actor.companyId,id:{in:ids},travelAllowanceEnabled:true},select:{id:true,name:true,travelRatePerKm:true}}),
+  db.user.findMany({where:{companyId:actor.companyId,id:{in:ids},travelAllowanceEnabled:true},select:{id:true,name:true,travelRatePerKm:true,travelApprovalMode:true}}),
   db.locationPoint.findMany({
    where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:ids},capturedAt:{gte:filters.start,lt:filters.endExclusive}},
    select:{id:true,branchId:true,userId:true,attendanceId:true,latitude:true,longitude:true,accuracyMeters:true,capturedAt:true,sequenceNumber:true},
    orderBy:[{userId:"asc"},{attendanceId:"asc"},{capturedAt:"asc"},{sequenceNumber:"asc"},{id:"asc"}],
    take:100001
-  }),
-  ids.length?db.$queryRaw<{id:string;mode:string}[]>(Prisma.sql`SELECT "id", "travelApprovalMode" AS mode FROM "users" WHERE "companyId"=${actor.companyId}::uuid AND "id" IN (${Prisma.join(ids.map(id=>Prisma.sql`${id}::uuid`))})`):Promise.resolve([])
+  })
  ]);
- const eligibleMap=new Map(eligible.map(u=>[u.id,u])),modeMap=new Map(modes.map(row=>[row.id,(row.mode==="AUTO"?"AUTO":"MANUAL") as ApprovalMode]));
+ const eligibleMap=new Map(eligible.map(u=>[u.id,u]));
  const attendanceGroups=new Map<string,typeof points>();
  for(const p of points){
   if(!eligibleMap.has(p.userId))continue;
@@ -34,7 +33,7 @@ export async function expenseReport(raw:SearchParams,provided?:ReportActor){
   const dayKey=`${branchId}:${employeeId}:${date}`,existing=daily.get(dayKey);
   const distance=Math.round(calculateTravelDistanceMeters(row));
   if(existing)existing.distanceMeters+=distance;
-  else daily.set(dayKey,{branchId,employeeId,employee:u.name,date,distanceMeters:distance,rate:u.travelRatePerKm??company?.travelRatePerKm??null,approvalMode:modeMap.get(employeeId)??"MANUAL"});
+  else daily.set(dayKey,{branchId,employeeId,employee:u.name,date,distanceMeters:distance,rate:u.travelRatePerKm??company?.travelRatePerKm??null,approvalMode:u.travelApprovalMode==="AUTO"?"AUTO":"MANUAL"});
  }
  // Calculable days are snapshotted. Manual users stay pending; Auto users are approved automatically.
  // Approved/Rejected historical snapshots are never rewritten by a later rate or mode change.
