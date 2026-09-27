@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.SecureSession
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -32,21 +34,27 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
     private val api = ApiClient(SecureSession(app))
     private val _state = MutableStateFlow(AccountReportState())
     val state: StateFlow<AccountReportState> = _state
+    private var reportJob: Job? = null
+    private var exportJob: Job? = null
+    private var requestGeneration = 0L
 
-    init {
-        options()
-    }
+    init { options() }
 
     private fun options() = viewModelScope.launch {
         try {
             _state.value = _state.value.copy(options = api.accountReportOptions())
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             fail(e)
         }
     }
 
     fun choose(report: String?) {
-        _state.value = _state.value.copy(report = report, data = null)
+        requestGeneration++
+        reportJob?.cancel()
+        exportJob?.cancel()
+        _state.value = _state.value.copy(report = report, data = null, export = null, loading = false, error = null)
         if (report != null) run()
     }
 
@@ -65,9 +73,12 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun filters() = buildMap {
-        put("from", _state.value.from)
-        put("to", _state.value.to)
+    private fun filters(report: String? = _state.value.report) = buildMap {
+        val lifetimeProject = report == "projects" || report == "budget-vs-actual"
+        if (!lifetimeProject) {
+            put("from", _state.value.from)
+            put("to", _state.value.to)
+        }
         listOf(
             "branchId" to _state.value.branchId,
             "projectId" to _state.value.projectId,
@@ -76,44 +87,55 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "vendorId" to _state.value.vendorId,
             "productId" to _state.value.productId
         ).forEach { (key, value) ->
-            if (value.isNotBlank()) put(key, value)
+            if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId")) put(key, value)
         }
     }
 
-    fun run() = viewModelScope.launch {
-        val report = _state.value.report ?: return@launch
-        try {
-            _state.value = _state.value.copy(loading = true, error = null)
-            val data = api.accountReport(report, filters())
-            _state.value = _state.value.copy(loading = false, data = data)
-        } catch (e: Exception) {
-            fail(e)
+    fun run() {
+        val report = _state.value.report ?: return
+        reportJob?.cancel()
+        val generation = ++requestGeneration
+        val requestFilters = filters(report)
+        reportJob = viewModelScope.launch {
+            try {
+                _state.value = _state.value.copy(loading = true, error = null)
+                val data = api.accountReport(report, requestFilters)
+                if (generation == requestGeneration && _state.value.report == report) {
+                    _state.value = _state.value.copy(loading = false, data = data)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (generation == requestGeneration && _state.value.report == report) fail(e)
+            }
         }
     }
 
-    fun export(format: String) = viewModelScope.launch {
-        val report = _state.value.report ?: return@launch
-        try {
-            _state.value = _state.value.copy(
-                export = "$report.$format" to api.accountReportExport(report, format, filters())
-            )
-        } catch (e: Exception) {
-            fail(e)
+    fun export(format: String) {
+        val report = _state.value.report ?: return
+        exportJob?.cancel()
+        val generation = requestGeneration
+        val requestFilters = filters(report)
+        exportJob = viewModelScope.launch {
+            try {
+                val bytes = api.accountReportExport(report, format, requestFilters)
+                if (generation == requestGeneration && _state.value.report == report) {
+                    _state.value = _state.value.copy(export = "$report.$format" to bytes)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (generation == requestGeneration && _state.value.report == report) fail(e)
+            }
         }
     }
 
-    fun consumed() {
-        _state.value = _state.value.copy(export = null)
-    }
+    fun consumed() { _state.value = _state.value.copy(export = null) }
 
     private fun fail(e: Exception) {
         _state.value = _state.value.copy(
             loading = false,
-            error = if (e is IOException) {
-                "Offline. Report was not refreshed."
-            } else {
-                "Report request rejected by server."
-            }
+            error = if (e is IOException) "Offline. Report was not refreshed." else "Report request rejected by server."
         )
     }
 }
