@@ -7,7 +7,7 @@ import {createTelecallerCallFollowUpForActor,telecallerOptionsForCompany} from '
 import {mobileBranchFailure,mobileJson,mobileUnexpected} from '@/lib/mobile/http';
 
 export async function GET(request:Request){
- try{const user=await authenticateMobileSalesToken(request.headers.get('authorization')),params=new URL(request.url).searchParams;if(params.get('view')==='telecallers')return mobileJson(await telecallerOptionsForCompany(user.companyId));const status=params.get('status');return mobileJson(await mobileFollowUps(user,status,params.get('employeeId'),{leadId:params.get('leadId')??undefined,page:params.get('page')??undefined,q:params.get('q')??undefined}));}
+ try{const user=await authenticateMobileSalesToken(request.headers.get('authorization')),params=new URL(request.url).searchParams;if(params.get('view')==='telecallers')return mobileJson(await telecallerOptionsForCompany(user.companyId));const status=params.get('status');return mobileJson(await mobileFollowUps(user,status,params.get('employeeId'),{leadId:params.get('leadId')??undefined,page:params.get('page')??undefined,pageSize:params.get('pageSize')??undefined,q:params.get('q')??undefined}));}
  catch(error){if(error instanceof ZodError)return mobileJson({error:'INVALID_INPUT'},400);const branch=mobileBranchFailure(error);if(branch)return branch;const code=error instanceof Error?error.message:'';if(code==='MOBILE_UNAUTHORIZED')return mobileJson({error:'UNAUTHORIZED'},401);if(code==='MOBILE_FORBIDDEN'||code==='FORBIDDEN')return mobileJson({error:'FORBIDDEN'},403);return mobileUnexpected('MOBILE_FOLLOW_UPS',error);}
 }
 export async function POST(request:Request){
