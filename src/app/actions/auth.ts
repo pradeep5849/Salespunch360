@@ -29,7 +29,7 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
     return { error: "Invalid email or password." };
   }
   if(user.role!=="SUPER_ADMIN"&&!canUseWebLogin(user)){
-    return {error:"This account can sign in only in the SalesPunch360 mobile app."};
+    return {error:"No access. Please log in using the SalesPunch360 app."};
   }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
   if(user.role==="SUPER_ADMIN")return redirect("/admin");
