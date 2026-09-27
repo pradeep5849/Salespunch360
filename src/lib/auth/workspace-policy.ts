@@ -27,11 +27,11 @@ export const isSalesAdmin = (user: Pick<WorkspacePrincipal, "salesRole">) => use
 /** Assignment/capability helpers; callers must use canAccess* for effective authorization. */
 export const canAdministerSalesWorkspace = (user: Pick<WorkspacePrincipal, "salesRole">) => isSalesAdmin(user);
 export const isFieldMobileOnlyRole = (user: Pick<WorkspacePrincipal, "salesRole" | "managerType">) =>
-  user.salesRole === "SALES" || (user.salesRole === "MANAGER" && user.managerType === "FIELD_MANAGER");
+  user.salesRole === "SALES" || user.salesRole === "MANAGER";
 export const canUseWebLogin = (user: Pick<WorkspacePrincipal, "salesRole" | "managerType">) => !isFieldMobileOnlyRole(user);
 export const requiresMobileDeviceLock = (user: Pick<WorkspacePrincipal, "salesRole" | "managerType">) => isFieldMobileOnlyRole(user);
 export const canUseSalesFieldWorkflow = (user: Pick<WorkspacePrincipal, "salesRole" | "managerType" | "designation">) =>
-  !isTelecallerDesignation(user.designation) && isFieldMobileOnlyRole(user);
+  !isTelecallerDesignation(user.designation) && isFieldMobileOnlyRole(user) && (user.salesRole !== "MANAGER" || user.managerType === "FIELD_MANAGER");
 export const canUseAccountWorkspace = (user: Pick<WorkspacePrincipal, "accountRole">) => hasAccountRole(user);
 
 export const editionAllowsSalesWorkspace = (edition: ProductEdition) => edition === "SALESPUNCH360" || edition === "SALESPUNCH360_PLUS";
