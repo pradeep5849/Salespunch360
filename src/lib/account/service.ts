@@ -55,6 +55,30 @@ export async function accountOverview() {
     },
   });
 }
+
+const MASTER_PAGE_SIZE=50;
+const masterKinds=new Set(["financial-years","customers","vendors","units","categories","products","services","work-categories","work-packages"]);
+export async function accountMasterOverview(master:string,raw:{q?:string;page?:string|number}={}){
+  if(!masterKinds.has(master))throw new Error("INVALID_MASTER_TYPE");
+  const a=await readActor(),companyId=a.companyId!,q=(raw.q??"").trim().slice(0,100),parsedPage=Number(raw.page??1),page=Number.isFinite(parsedPage)&&parsedPage>0?Math.floor(parsedPage):1,skip=(page-1)*MASTER_PAGE_SIZE;
+  const nameWhere=q?{name:{contains:q,mode:"insensitive" as const}}:{};
+  const paged={skip,take:MASTER_PAGE_SIZE+1};
+  const [accountSettings,financialYears,vendors,accountUnits,accountCategories,accountProducts,accountServices,workCategories,workPackages,customers]=await Promise.all([
+    master==="financial-years"?db.accountSettings.findUnique({where:{companyId}}):Promise.resolve(null),
+    master==="financial-years"?db.financialYear.findMany({where:{companyId,...nameWhere},orderBy:{startDate:"desc"},...paged}):Promise.resolve([]),
+    master==="vendors"?db.vendor.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
+    master==="units"?db.accountUnit.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(["products","services","work-packages"].includes(master)?db.accountUnit.findMany({where:{companyId,isActive:true},select:{id:true,name:true,symbol:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
+    master==="categories"?db.accountCategory.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(["products","services"].includes(master)?db.accountCategory.findMany({where:{companyId,isActive:true},select:{id:true,name:true,scope:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
+    master==="products"?db.accountProduct.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,category:true},...paged}):Promise.resolve([]),
+    master==="services"?db.accountService.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,category:true},...paged}):Promise.resolve([]),
+    master==="work-categories"?db.workCategory.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(master==="work-packages"?db.workCategory.findMany({where:{companyId,isActive:true},select:{id:true,name:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
+    master==="work-packages"?db.workPackage.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,workCategory:true},...paged}):Promise.resolve([]),
+    master==="customers"?db.customer.findMany({where:{companyId,isAccountCustomer:true,...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
+  ]);
+  const primary=master==="customers"?customers:master==="vendors"?vendors:master==="units"?accountUnits:master==="categories"?accountCategories:master==="products"?accountProducts:master==="services"?accountServices:master==="work-categories"?workCategories:master==="work-packages"?workPackages:financialYears;
+  const hasMore=primary.length>MASTER_PAGE_SIZE;
+  return{accountSettings,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
+}
 export async function setCurrency(raw: unknown) {
   const a = await settingsActor();
   const d = currencySchema.parse(raw);
