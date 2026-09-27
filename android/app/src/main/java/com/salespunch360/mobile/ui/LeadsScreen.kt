@@ -85,7 +85,11 @@ fun LeadsScreen(initialLeadId:String?=null,onInitialLeadConsumed:()->Unit={},onC
    if(!pendingView){Box{OutlinedButton({stageMenu=true},Modifier.fillMaxWidth()){Text(selectedStage?.let(::stageLabel)?:"All stages")};DropdownMenu(stageMenu,{stageMenu=false}){DropdownMenuItem({Text("All stages")},{vm.selectStage(null);stageMenu=false});LeadStage.entries.forEach{s->DropdownMenuItem({Text(stageLabel(s))},{vm.selectStage(s);stageMenu=false})}}}}
    state.message?.let{MessageBanner(it,vm::clear)}
   }
-  if(pendingView){if(state.pending.visits.isEmpty())item{ContentCard("Pending","No check-ins are waiting for a phone number.")};items(state.pending.visits,key={"pending-${it.id}"}){visit->PendingVisitCard(visit,state.busy,{phoneVisit=visit}){onPendingVisitDetails(visit)}}}
+  if(pendingView){
+   if(state.pending.visits.isEmpty())item{ContentCard("Pending","No check-ins are waiting for a phone number.")}
+   items(state.pending.visits,key={"pending-${it.id}"}){visit->PendingVisitCard(visit,state.busy,{phoneVisit=visit}){onPendingVisitDetails(visit)}}
+   if(state.pendingHasMore)item{OutlinedButton(vm::morePending,enabled=!state.pendingLoading,modifier=Modifier.fillMaxWidth()){Text(if(state.pendingLoading)"Loading…" else "Load more pending visits")}}
+  }
   else{
    if(visible.isEmpty())item{ContentCard("No Leads","No leads match this filter.")}
    item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(selectedStage?.let(::stageLabel)?:"All Leads",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(visible.size.toString(),color=SalesMuted)}}
