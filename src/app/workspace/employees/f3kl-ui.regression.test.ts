@@ -2,7 +2,7 @@ import{readFileSync}from"node:fs";import{describe,expect,it}from"vitest";const p
 describe("F3KL user-management presentation",()=>{
  it("keeps Sales and Account employee domains",()=>{expect(page).toContain("Sales Employees");expect(page).toContain("Account Employees")});
  it("excludes Primary Admin centrally",()=>expect(policy).toContain('user.salesRole!=="PRIMARY_ADMIN"'));
- it("treats suspended access as inactive",()=>{expect(policy).toContain('x.isActive&&x.salesAccessActive');expect(policy).toContain('!x.isActive||!x.salesAccessActive')});
+ it("treats suspended access as inactive while preserving independently billed Telecallers",()=>{expect(policy).toContain('x.isActive&&(x.salesAccessActive||isTelecallerDesignation(x.designation))');expect(policy).toContain('!x.isActive||(!x.salesAccessActive&&!isTelecallerDesignation(x.designation))')});
  it("gates mutation links to management authority",()=>expect(page).toContain('canManage=context.actor.salesRole==="PRIMARY_ADMIN"'));
  it("uses dedicated add and edit routes",()=>{expect(page).toContain('/workspace/employees/sales/new/');expect(page).toContain('/workspace/employees/${domain}/edit/')});
  it("shows one Manager section and no separate Office Managers section",()=>{expect(page).toContain('group("Manager",managers,"MANAGER"');expect(page).not.toContain('<EmployeeGroup title="Office Managers"')});

@@ -1,4 +1,5 @@
 import{beforeEach,describe,expect,it,vi}from"vitest";
+vi.mock("@/lib/field-jobs/service",()=>({withAttendanceEvent:async(_tx:unknown,_companyId:string,_userId:string,_event:string,operation:Promise<unknown>)=>operation,scheduleFieldJobs:vi.fn()}));
 const mocks=vi.hoisted(()=>({company:vi.fn(),findAttendance:vi.fn(),createAttendance:vi.fn(),query:vi.fn(),entitlement:vi.fn()}));
 vi.mock("@/lib/db",()=>({db:{$transaction:vi.fn(async(fn)=>fn({$queryRaw:mocks.query,company:{findUnique:mocks.company},attendance:{findFirst:mocks.findAttendance,create:mocks.createAttendance}}))}}));
 vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:mocks.entitlement}));

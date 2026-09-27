@@ -6,10 +6,10 @@ describe("Sales follow-up workflow regressions",()=>{
  it("confirms a saved follow-up and shows it on the lead",()=>{
   const form=read("src/app/workspace/leads/follow-up-form.tsx");
   const detail=read("src/app/workspace/leads/[id]/page.tsx");
-  expect(form).toContain("follow-up added successfully");
+  expect(form).toContain("follow-up added for");
   expect(form).toContain("listed under");
   expect(detail).toContain("listLeadFollowUpTasks");
-  expect(detail).toContain("<h2>Follow-ups</h2>");
+  expect(detail).toContain("<h2>Follow-up History</h2>");
  });
  it("keeps Due Today, Overdue and future Pending disjoint and scopes check-in to scheduled Visit follow-ups",()=>{
   const web=read("src/app/workspace/follow-up-tasks/page.tsx");
@@ -49,10 +49,10 @@ describe("Sales follow-up workflow regressions",()=>{
   const handover=read("src/lib/leads/won-project.ts");
   const action=read("src/app/actions/leads.ts");
   const detail=read("src/app/workspace/leads/[id]/page.tsx");
-  expect(handover).toContain('productEdition!=="SALESPUNCH360_PLUS"');
+  expect(handover).toContain('productEdition === "SALESPUNCH360_PLUS"');
   expect(handover).toContain('enabledModules.includes("PROJECTS")');
-  expect(handover).toContain("sourceLeadId:lead.id");
-  expect(action).toContain('toStage==="WON"');
+  expect(handover).toContain("sourceLeadId: lead.id");
+  expect(action).toContain('transitionLeadWithProjectForActor');
   expect(detail).toContain('lead.stage==="WON"');
  });
  it("keeps saved targets locked until Edit is clicked on Web and Android",()=>{

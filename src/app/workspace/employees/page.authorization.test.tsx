@@ -7,7 +7,7 @@ vi.mock("@/lib/employees/service", () => ({ getEmployeeManagementContext: mocks.
 vi.mock("@/lib/branches/assignment",()=>({listBranchAssignmentOptions:vi.fn().mockResolvedValue([])}));
 vi.mock("@/lib/users/additional-admin",()=>({listAdditionalAdmins:vi.fn().mockResolvedValue([])}));
 vi.mock("@/lib/users/primary-admin",()=>({listPrimaryAdminTransferCandidates:vi.fn().mockResolvedValue([])}));
-vi.mock("@/lib/db", () => ({ db: { company: { findUnique: mocks.company }, user:{count:mocks.userCount}, companySubscription:{findFirst:vi.fn().mockResolvedValue(null)} } }));
+vi.mock("@/lib/db", () => ({ db: { $executeRaw:vi.fn().mockResolvedValue(0),$queryRaw:vi.fn().mockResolvedValue([]),company: { findUnique: mocks.company }, user:{count:mocks.userCount}, companySubscription:{findFirst:vi.fn().mockResolvedValue(null)} } }));
 vi.mock("@/components/workspace/workspace-page-header", () => ({ WorkspacePageHeader: () => null }));
 vi.mock("./employee-manager", () => ({ EmployeeManager: () => null }));
 vi.mock("./product-user-manager",()=>({ProductUserManager:()=>null}));

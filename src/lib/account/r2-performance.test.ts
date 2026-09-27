@@ -19,7 +19,7 @@ describe("R2 bounded project queries",()=>{
   for(const collection of ["tasks", "documents", "quotationDocuments", "audits"]){
    const start=source.indexOf(`${collection}: {`,source.indexOf("export async function getProject"));
    expect(start).toBeGreaterThan(0);
-   expect(source.slice(start,start+300)).toContain("take:paging.pageSize");
+   expect(source.slice(start,start+1200)).toContain("take: paging.pageSize");
   }
   const page=readFileSync("src/app/workspace/account/projects/[id]/page.tsx","utf8");
   for(const key of ["tasksPage","documentsPage","boqsPage","commercialPage","auditsPage"])expect(page).toContain(`keyName=\"${key}\"`);

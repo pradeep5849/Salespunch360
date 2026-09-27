@@ -2,6 +2,7 @@ import{beforeEach,describe,expect,it,vi}from"vitest";
 const mocks=vi.hoisted(()=>({auth:vi.fn(),list:vi.fn(),get:vi.fn(),fromVisit:vi.fn(),transition:vi.fn(),followUp:vi.fn()}));
 vi.mock("@/lib/mobile/auth",async importOriginal=>({...await importOriginal<typeof import("@/lib/mobile/auth")>(),authenticateMobileSalesToken:mocks.auth}));
 vi.mock("@/lib/leads/service",()=>({listLeadsForActor:mocks.list,getLeadForActor:mocks.get,createLeadFromVisitForActor:mocks.fromVisit,transitionLeadForActor:mocks.transition}));
+vi.mock("@/lib/mobile/lead-detail",async()=>{const{z}=await import("zod");return{mobileLeadDetail:(_user:unknown,id:string)=>mocks.get(z.string().uuid().parse(id))}});
 vi.mock("@/lib/follow-up-tasks/service",()=>({createFollowUpTaskForActor:mocks.followUp}));
 import{GET,POST}from"./leads/route";
 const headers={authorization:`Bearer ${"a".repeat(40)}`,"content-type":"application/json"},principal={id:"11111111-1111-4111-8111-111111111111",companyId:"22222222-2222-4222-8222-222222222222",name:"Sales",email:"sales@example.com",salesRole:"SALES"as const,managerType:null};

@@ -15,7 +15,7 @@ describe("native Account mobile API contract", () => {
   });
   it("does not route the Android Account workspace to its WebView", () => {
     const source = readFileSync("android/app/src/main/java/com/salespunch360/mobile/MainActivity.kt", "utf8");
-    expect(source).toContain("Workspace.ACCOUNT->NativeAccountAuthenticatedApp");
+    expect(source).toContain("Workspace.ACCOUNT -> NativeAccountAuthenticatedApp");
     expect(source).not.toContain("Workspace.ACCOUNT->AccountWorkspaceScreen");
   });
   it("implements scoped native master-data endpoints", () => {
