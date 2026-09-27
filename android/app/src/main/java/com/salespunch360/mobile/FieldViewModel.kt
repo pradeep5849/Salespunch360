@@ -4,8 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +18,14 @@ data class FieldState(
     val context:FieldContext?=null,
     val leads:List<LeadSummary> = emptyList(),
     val followUps:List<FollowUpTask> = emptyList(),
+    val customerPage:Int=1,
+    val customerHasMore:Boolean=false,
+    val customerLoading:Boolean=false,
+    val customerQuery:String="",
+    val followUpPage:Int=1,
+    val followUpHasMore:Boolean=false,
+    val followUpLoading:Boolean=false,
+    val followUpQuery:String="",
     val busy:Boolean=false,
     val refreshRequired:Boolean=false,
     val message:String?=null,
@@ -26,33 +34,102 @@ data class FieldState(
 class FieldViewModel(app:Application):AndroidViewModel(app){
     private val session=SecureSession(app)
     private val api=ApiClient(session)
+    private val lookup=FieldLookupClient(session)
     private val _state=MutableStateFlow(FieldState())
     val state:StateFlow<FieldState> = _state
+    private var customerLookupJob:Job?=null
+    private var followUpLookupJob:Job?=null
 
     init{refresh()}
 
-    private suspend fun scheduledVisitFollowUps()=api.followUps("AVAILABLE").tasks
-
     private suspend fun loadFieldState(message:String?=null)=coroutineScope{
-        val contextDeferred=async{api.fieldContext()}
+        val contextDeferred=async{lookup.customers(page=1)}
         val leadsDeferred=async{api.leads()}
-        val followUpsDeferred=async{scheduledVisitFollowUps()}
+        val followUpsDeferred=async{lookup.visitFollowUps(page=1)}
         val owner=session.userId()
+        val context=contextDeferred.await()
+        val follow=followUpsDeferred.await()
         FieldState(
             loading=false,
-            context=contextDeferred.await(),
+            context=context,
             leads=leadsDeferred.await().filter{it.assignedUserId==owner},
-            followUps=followUpsDeferred.await(),
+            followUps=follow.tasks,
+            customerPage=1,
+            customerHasMore=context.customers.size>=50,
+            followUpPage=follow.page,
+            followUpHasMore=follow.hasMore,
             message=message,
         )
     }
 
     fun refresh()=viewModelScope.launch{
+        customerLookupJob?.cancel();followUpLookupJob?.cancel()
         _state.value=_state.value.copy(loading=true)
         _state.value=try{
             loadFieldState()
         }catch(e:CancellationException){throw e}catch(_:Exception){
             _state.value.copy(loading=false,message="Field information couldn't be loaded.")
+        }
+    }
+
+    fun searchCustomers(value:String){
+        val q=value.take(100)
+        customerLookupJob?.cancel()
+        _state.value=_state.value.copy(customerLoading=true,customerQuery=q,customerPage=1)
+        customerLookupJob=viewModelScope.launch{
+            try{
+                val result=lookup.customers(q,1)
+                _state.value=_state.value.copy(context=result,customerPage=1,customerHasMore=result.customers.size>=50,customerLoading=false)
+            }catch(e:CancellationException){throw e}catch(e:Exception){
+                _state.value=_state.value.copy(customerLoading=false,message=apiMessage(e,"Customers couldn't be loaded."))
+            }
+        }
+    }
+
+    fun moreCustomers(){
+        val current=_state.value
+        if(current.customerLoading||!current.customerHasMore)return
+        val existing=current.context?:return
+        customerLookupJob?.cancel()
+        _state.value=current.copy(customerLoading=true)
+        customerLookupJob=viewModelScope.launch{
+            try{
+                val nextPage=current.customerPage+1
+                val result=lookup.customers(current.customerQuery,nextPage)
+                val combined=(existing.customers+result.customers).distinctBy{it.id}
+                _state.value=_state.value.copy(context=result.copy(customers=combined),customerPage=nextPage,customerHasMore=result.customers.size>=50,customerLoading=false)
+            }catch(e:CancellationException){throw e}catch(e:Exception){
+                _state.value=_state.value.copy(customerLoading=false,message=apiMessage(e,"More customers couldn't be loaded."))
+            }
+        }
+    }
+
+    fun searchFollowUps(value:String){
+        val q=value.take(100)
+        followUpLookupJob?.cancel()
+        _state.value=_state.value.copy(followUpLoading=true,followUpQuery=q,followUpPage=1)
+        followUpLookupJob=viewModelScope.launch{
+            try{
+                val result=lookup.visitFollowUps(q,1)
+                _state.value=_state.value.copy(followUps=result.tasks,followUpPage=result.page,followUpHasMore=result.hasMore,followUpLoading=false)
+            }catch(e:CancellationException){throw e}catch(e:Exception){
+                _state.value=_state.value.copy(followUpLoading=false,message=apiMessage(e,"Scheduled follow-ups couldn't be loaded."))
+            }
+        }
+    }
+
+    fun moreFollowUps(){
+        val current=_state.value
+        if(current.followUpLoading||!current.followUpHasMore)return
+        followUpLookupJob?.cancel()
+        _state.value=current.copy(followUpLoading=true)
+        followUpLookupJob=viewModelScope.launch{
+            try{
+                val result=lookup.visitFollowUps(current.followUpQuery,current.followUpPage+1)
+                _state.value=_state.value.copy(followUps=(current.followUps+result.tasks).distinctBy{it.id},followUpPage=result.page,followUpHasMore=result.hasMore,followUpLoading=false)
+            }catch(e:CancellationException){throw e}catch(e:Exception){
+                _state.value=_state.value.copy(followUpLoading=false,message=apiMessage(e,"More scheduled follow-ups couldn't be loaded."))
+            }
         }
     }
 
