@@ -128,7 +128,11 @@ fun PrimaryAdminAuthenticatedApp(
      route=="Branches"->BranchesScreen()
      route=="Attendance"->TeamAttendanceScreen(MobileRole.PRIMARY_ADMIN)
      route=="Customers"->CustomerAdminScreen()
-     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},vm=leadsVm)
+     route=="Leads"->LeadsScreen(
+      initialLeadId=pendingLeadId,
+      onInitialLeadConsumed={pendingLeadId=null},
+      vm=leadsVm
+     )
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(startCheckIn={},viewLead={pendingLeadId=it;nav.navigate("Leads")},viewVisit={visitTask=it})
      route=="Targets"->TargetsScreen(MobileRole.PRIMARY_ADMIN)

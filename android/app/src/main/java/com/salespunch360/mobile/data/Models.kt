@@ -24,6 +24,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class AccountBranch(val id:String,val name:String,val isPrimary:Boolean=false)
 @Serializable data class AccountEntitlement(val state:String,val operationalWritesAllowed:Boolean)
 @Serializable data class AccountNotifications(val pendingExpenseApprovals:Int=0)
+@Serializable data class SalesNotification(val id:String,val eventType:String,val title:String,val body:String,val relatedEntityType:String?=null,val relatedEntityId:String?=null,val navigationTarget:String?=null,val createdAt:String,val readAt:String?=null)
+@Serializable data class SalesNotificationsContext(val items:List<SalesNotification> = emptyList(),val unreadCount:Int=0)
 @Serializable data class AccountNavigationGroup(val label:String,val items:List<AccountNavigationItem> = emptyList(),val children:List<AccountNavigationGroup> = emptyList())
 @Serializable data class AccountNavigationItem(val label:String,val href:String)
 @Serializable data class AccountDashboard(val title:String,val period:String,val projectOnly:Boolean=false,val metrics:List<AccountDashboardMetric> = emptyList(),val branchComparison:List<AccountBranchComparison> = emptyList())

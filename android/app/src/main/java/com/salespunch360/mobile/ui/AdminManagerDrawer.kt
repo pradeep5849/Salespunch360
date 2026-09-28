@@ -154,7 +154,12 @@ fun AdminManagerAuthenticatedApp(
       onInitialLeadConsumed={checkInLead=null},
       onBack={if(nav.canGoBack)nav.back()else navigate("Dashboard")},
      )
-     route=="Leads"->LeadsScreen(pendingLeadId,{pendingLeadId=null},onCheckIn={lead->if(fieldManager){checkInLead=lead;navigate("Check-ins")}},vm=leadsVm)
+     route=="Leads"->LeadsScreen(
+      initialLeadId=pendingLeadId,
+      onInitialLeadConsumed={pendingLeadId=null},
+      onCheckIn={lead->if(fieldManager){checkInLead=lead;navigate("Check-ins")}},
+      vm=leadsVm
+     )
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(
       startCheckIn={task->if(fieldManager){checkInTask=task;navigate("Check-ins")}},

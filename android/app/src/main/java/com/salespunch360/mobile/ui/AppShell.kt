@@ -99,7 +99,10 @@ fun AuthenticatedApp(data:Bootstrap,message:String?,dismiss:()->Unit,attendance:
                 selected==1&&data.capabilities.canManageEmployees->EmployeesScreen()
                 selected==1&&role==MobileRole.MANAGER->ReportsScreen()
                 selected==1&&role==MobileRole.SALES->CustomersScreen{salesPage="Check-ins"}
-                selected==2&&role==MobileRole.SALES->LeadsScreen(pendingLeadId,{pendingLeadId=null})
+                selected==2&&role==MobileRole.SALES->LeadsScreen(
+                    initialLeadId=pendingLeadId,
+                    onInitialLeadConsumed={pendingLeadId=null}
+                )
                 selected==2&&role!=MobileRole.SALES->ReportsScreen()
                 selected==destinations.lastIndex->MoreScreen(data,role,logout,::salesNavigate)
                 else->FoundationScreen(destinations[selected].label)

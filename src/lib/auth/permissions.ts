@@ -45,7 +45,7 @@ export function canUsePermission(user: WorkspacePrincipal, edition: ProductEditi
   const category = PERMISSION_CATEGORY[permission];
   if (category === "SALES") {
     if(!salesActive||!user.salesRole)return false;
-    if(user.salesRole==="SALES"&&isTelecallerDesignation(user.designation))return permission==="SALES_DASHBOARD"||permission==="SALES_TELECALLING";
+    if(user.salesRole==="SALES"&&isTelecallerDesignation(user.designation))return ["SALES_DASHBOARD","SALES_LEADS","SALES_FOLLOW_UPS","SALES_TELECALLING"].includes(permission);
     return SALES_ROLE_PERMISSIONS[user.salesRole].includes(permission);
   }
   if (category === "ACCOUNT") return accountActive && !!user.accountRole && ACCOUNT_ROLE_PERMISSIONS[user.accountRole].includes(permission);
@@ -62,6 +62,6 @@ export function canUsePermissionForMutation(user:WorkspacePrincipal,edition:Prod
   if(permission==="SALES_TELECALLING")return true;
   if(permission==="SALES_TARGETS")return true;
   if(permission==="SALES_CUSTOMERS")return user.salesRole==="PRIMARY_ADMIN"||user.salesRole==="ADMIN";
-  if((permission==="SALES_LEADS"||permission==="SALES_FOLLOW_UPS")&&(user.salesRole==="PRIMARY_ADMIN"||user.salesRole==="ADMIN"))return true;
+  if((permission==="SALES_LEADS"||permission==="SALES_FOLLOW_UPS")&&((user.salesRole==="PRIMARY_ADMIN"||user.salesRole==="ADMIN")||(user.salesRole==="SALES"&&isTelecallerDesignation(user.designation))))return true;
   return !PERSONAL_FIELD_PERMISSIONS.includes(permission)||canUseSalesFieldWorkflow(user);
 }
