@@ -275,7 +275,8 @@ private fun AccountHomeScreen(
 }
 
 private fun sharePdf(context:android.content.Context,number:String,bytes:ByteArray,title:String){
-    val file=File(context.cacheDir,"$number.pdf").also{it.writeBytes(bytes)},uri=FileProvider.getUriForFile(context,"${context.packageName}.files",file)
+    val file = File(context.cacheDir, "$number.pdf").also { it.writeBytes(bytes) }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),title))
 }
 
