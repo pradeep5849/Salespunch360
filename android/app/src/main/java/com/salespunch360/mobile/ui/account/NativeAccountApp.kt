@@ -147,6 +147,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
+            state.selectedPath=="/workspace/account/projects/material"->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding)
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding)
             moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)

@@ -41,10 +41,14 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
                         state.purchaseOrders.filter { it.str("branchId") == draft.branchId && it.str("vendorId") == draft.vendorId }.map { it.str("id") to it.str("documentNumber") }
                     ) { vm.edit(draft.copy(sourcePurchaseOrderId = it)) }
                 }
+                if(draft.type=="PURCHASE_BILL") { item { OutlinedTextField(draft.vendorInvoiceNumber,{vm.edit(draft.copy(vendorInvoiceNumber=it))},label={Text("Vendor invoice number")}) }; item { OutlinedTextField(draft.vendorInvoiceDate,{vm.edit(draft.copy(vendorInvoiceDate=it))},label={Text("Vendor invoice date")}) } }
                 item { OutlinedTextField(draft.issueDate, { vm.edit(draft.copy(issueDate = it)) }, label = { Text("Issue date") }) }
+                item { OutlinedTextField(draft.postingDate, { vm.edit(draft.copy(postingDate = it)) }, label = { Text("Accounting date") }) }
+                item { OutlinedTextField(draft.paymentTerms, { vm.edit(draft.copy(paymentTerms = it)) }, label = { Text("Payment terms") }) }
+                item { OutlinedTextField(draft.grnReference, { vm.edit(draft.copy(grnReference = it)) }, label = { Text("GRN / challan reference") }) }
                 item { OutlinedTextField(draft.dueDate, { vm.edit(draft.copy(dueDate = it)) }, label = { Text("Due date") }) }
-                item { SelectField("Purpose", draft.purpose, listOf("OFFICE" to "Office", "PROJECT" to "Project")) { vm.edit(draft.copy(purpose = it)) } }
-                if (draft.purpose == "PROJECT") item { SelectField("Project", draft.projectId, state.projects.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it)) } }
+                item { SelectField("Purpose", draft.purpose, listOf("INVENTORY_SALES" to "Inventory / Sales", "PROJECT" to "Project", "GENERAL_OFFICE" to "General / Office", "FIXED_ASSET" to "Fixed Asset", "MIXED" to "Mixed Allocation")) { vm.edit(draft.copy(purpose = it)) } }
+                if (draft.purpose == "PROJECT") { item { SelectField("Project", draft.projectId, state.projects.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it,projectBudgetLineId="")) } }; item { SelectField("Budget line",draft.projectBudgetLineId,state.projectBudgetLines.filter{it.str("projectId")==draft.projectId}.map{it.str("id") to it.str("title")}){vm.edit(draft.copy(projectBudgetLineId=it))} }; item { SelectField("Material treatment",draft.materialTreatment,listOf("DIRECT_TO_PROJECT" to "Direct to Project","RECEIVE_IN_INVENTORY" to "Receive in Inventory")){vm.edit(draft.copy(materialTreatment=it))} } }
                 item {
                     SelectField("Classification", draft.classification, listOf("PURCHASE_COST" to "Purchase cost", "GENERAL_EXPENSES" to "General expenses", "FIXED_ASSET" to "Fixed asset")) { vm.edit(draft.copy(classification = it)) }
                 }
@@ -68,6 +72,7 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
     }
     ElevatedCard {
         Column(Modifier.padding(10.dp)) {
+            if (draft.purpose == "MIXED") { Text("Line allocations",style=MaterialTheme.typography.titleSmall); line.purchaseAllocations.forEachIndexed { ai,a -> SelectField("Allocation ${ai+1}",a.allocationType,listOf("INVENTORY" to "Inventory","PROJECT" to "Project","GENERAL_EXPENSE" to "General expense","FIXED_ASSET" to "Fixed asset")){v->vm.line(index,line.copy(purchaseAllocations=line.purchaseAllocations.mapIndexed{i,x->if(i==ai)x.copy(allocationType=v) else x}))}; OutlinedTextField(a.quantity,{v->vm.line(index,line.copy(purchaseAllocations=line.purchaseAllocations.mapIndexed{i,x->if(i==ai)x.copy(quantity=v) else x}))},label={Text("Allocated quantity")}) }; OutlinedButton(onClick={vm.line(index,line.copy(purchaseAllocations=line.purchaseAllocations+PurchaseAllocationDraft(quantity=line.quantity,warehouseId=line.warehouseId)))}){Text("Add allocation")} }
             if (draft.type == "DEBIT_NOTE") {
                 SelectField("Original line", line.sourceCommercialLineId, sourceLines.map { it.str("id") to "${it.str("itemName")} · ${it.str("quantity")}" }) { id ->
                     val source = sourceLines.first { it.str("id") == id }
