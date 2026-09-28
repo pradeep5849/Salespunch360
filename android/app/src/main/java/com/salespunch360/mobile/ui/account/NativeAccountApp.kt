@@ -4,16 +4,17 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -81,8 +82,7 @@ fun NativeAccountAuthenticatedApp(
     val bottom=buildList{
         add(AccountBottomDestination("Home",ACCOUNT_HOME,Icons.Default.Home))
         add(AccountBottomDestination("Dashboard",ACCOUNT_DASHBOARD,Icons.Default.Dashboard))
-        if("INVENTORY" in modules)add(AccountBottomDestination("Items","/workspace/account/inventory",Icons.Default.Inventory2))
-        if("PROJECTS" in modules)add(AccountBottomDestination("Projects","/workspace/account/projects",Icons.Default.Work))
+        add(AccountBottomDestination("Items",if("INVENTORY" in modules)"/workspace/account/inventory" else ACCOUNT_MENU,Icons.Default.Inventory2))
         add(AccountBottomDestination("Menu",ACCOUNT_MENU,Icons.Default.Menu))
     }
 
@@ -192,22 +192,34 @@ private fun AccountHomeScreen(
     navigate:(String)->Unit
 ){
     val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
-    val preferred=listOf("invoice","purchase","expense","payment","project","inventory")
-    val actions=preferred.mapNotNull{key->all.firstOrNull{it.label.lowercase().contains(key)}}.distinctBy{it.href}.ifEmpty{all.take(6)}
+    var partyMode by rememberSaveable{mutableStateOf(false)}
+    val transactionActions=listOf(
+        "Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),
+        "Sale Report" to (all.firstOrNull{it.label.contains("sales",true)&&it.label.contains("report",true)}?.href?:"/workspace/account/reports/sales-register"),
+        "Txn Settings" to "/workspace/account/settings",
+        "Show All" to ACCOUNT_MENU
+    )
+    val partyActions=listOf("Network" to "", "Party Statement" to "/workspace/account/reports/customer-outstanding", "Party Settings" to "/workspace/account/settings", "Show All" to ACCOUNT_MENU)
+    val actions=if(partyMode)partyActions else transactionActions
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
         contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)
     ){
+        item{AccountSegmentedTabs(partyMode){partyMode=it}}
         item{
-            Text("Home",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-            Text("Quick actions, recent work and things needing attention.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if(actions.isNotEmpty()){
-            item{Text("Quick actions",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
-            items(actions,key={it.href}){action->
-                OutlinedButton(onClick={navigate(action.href)},modifier=Modifier.fillMaxWidth()){
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(action.label);Text("→")}
+            ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    Text("Quick Actions",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                        actions.forEach{action->
+                            Column(Modifier.weight(1f).clickable(enabled=action.second.isNotBlank()){navigate(action.second)}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                                Surface(shape=RoundedCornerShape(12.dp),color=Color(0xFFEFF6FF)){Text("◆",Modifier.padding(12.dp),color=Color(0xFF2563EB))}
+                                Spacer(Modifier.height(6.dp));Text(action.first,style=MaterialTheme.typography.labelMedium,maxLines=2)
+                                if(action.second.isBlank())Text("Later",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -221,6 +233,20 @@ private fun AccountHomeScreen(
                             Text(formatMetric(metric.value,metric.kind),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountSegmentedTabs(partyMode:Boolean,onChange:(Boolean)->Unit){
+    Surface(shape=RoundedCornerShape(14.dp),border=androidx.compose.foundation.BorderStroke(1.dp,Color(0xFFE2E8F0)),color=Color.White){
+        Row(Modifier.fillMaxWidth().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            listOf(false to "Transaction Details",true to "Party Details").forEach{(party,label)->
+                val selected=partyMode==party
+                Surface(Modifier.weight(1f).clickable{onChange(party)},shape=RoundedCornerShape(10.dp),color=if(selected)Color(0xFF2563EB) else Color.Transparent){
+                    Box(Modifier.heightIn(min=44.dp),contentAlignment=Alignment.Center){Text(label,color=if(selected)Color.White else Color(0xFF64748B),fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)}
                 }
             }
         }
