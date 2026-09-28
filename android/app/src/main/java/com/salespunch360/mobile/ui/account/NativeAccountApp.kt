@@ -134,7 +134,7 @@ fun NativeAccountAuthenticatedApp(
         val sales=salesType(state.selectedPath)
         val purchase=purchaseType(state.selectedPath)
         when{
-            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.dashboard,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
+            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
             state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding)
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
@@ -195,7 +195,6 @@ private fun AccountBottomBar(items:List<AccountBottomDestination>,current:String
 @Composable
 private fun AccountHomeScreen(
     groups:List<AccountNavigationGroup>,
-    dashboard:com.salespunch360.mobile.data.AccountDashboard?,
     home:com.salespunch360.mobile.data.AccountHome?,
     homeQuery:String,
     homeTypes:Set<String>,
@@ -211,11 +210,11 @@ private fun AccountHomeScreen(
     val filters=listOf("SALES_INVOICE","SALES_ORDER","CREDIT_NOTE","PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE","PROFORMA_INVOICE","DELIVERY_CHALLAN","SUBCONTRACT_PURCHASE")
     val transactionActions=listOf(
         "Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),
-        "Sale Report" to (all.firstOrNull{it.label.contains("sales",true)&&it.label.contains("report",true)}?.href?:"/workspace/account/reports/sales-register"),
+        "Sale Report" to "/workspace/account/reports/invoices",
         "Txn Settings" to "/workspace/account/settings/transactions",
         "Show All" to ACCOUNT_MENU
     )
-    val partyActions=listOf("Network" to "", "Party Statement" to "/workspace/account/reports/customer-outstanding", "Party Settings" to "/workspace/account/settings", "Show All" to ACCOUNT_MENU)
+    val partyActions=listOf("Network" to "", "Party Statement" to "/workspace/account/reports/customer-ledger", "Party Settings" to "/workspace/account/settings/custom-fields", "Show All" to ACCOUNT_MENU)
     val actions=if(partyMode)partyActions else transactionActions
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -271,19 +270,6 @@ private fun AccountHomeScreen(
                 ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${party.lastActivity.take(10)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}
             }
             item{Button(onClick={navigate("/workspace/account/customers")},modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)){Text("＋ New Party")}}
-        }
-        dashboard?.metrics?.take(4)?.let{metrics->
-            if(metrics.isNotEmpty()){
-                item{Text("Overview",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
-                items(metrics,key={it.key}){metric->
-                    ElevatedCard(Modifier.fillMaxWidth()){
-                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                            Text(metric.label,style=MaterialTheme.typography.labelLarge)
-                            Text(formatMetric(metric.value,metric.kind),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                        }
-                    }
-                }
-            }
         }
     }
 }
