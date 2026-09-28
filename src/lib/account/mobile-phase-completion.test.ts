@@ -6,9 +6,9 @@ const read=(path:string)=>readFileSync(path,"utf8");
 const actor={id:"u",companyId:"c",role:"COMPANY_ADMIN",isActive:true,managerType:null,salesRole:null,accountRole:"ACCOUNT_ADMIN",accountAccessActive:true,salesAccessActive:false,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as const;
 
 describe("Account mobile phase completion",()=>{
-  it("places Module Selection in permission-filtered Menu navigation only",()=>{
+  it("keeps Module Selection out of the main Menu so the profile menu is its single entry",()=>{
     const navigation=buildAccountNavigation(actor,"SALESPUNCH360_ACCOUNT",[]);
-    expect(hasAccountNavigationItem(navigation,"Module Selection","/workspace/account/settings/modules")).toBe(true);
+    expect(hasAccountNavigationItem(navigation,"Module Selection","/workspace/account/settings/modules")).toBe(false);
     expect(read("src/app/workspace/account/settings/page.tsx")).not.toContain('href="/workspace/account/settings/modules"');
   });
   it("uses one shared bounded Home service for web and Android",()=>{
