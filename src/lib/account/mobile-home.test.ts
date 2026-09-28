@@ -10,4 +10,8 @@ describe("account mobile Home filters", () => {
     expect(accountHomeTransactionTypes).not.toContain("EXPENSE");
     expect(accountHomeTransactionTypes).not.toContain("PAYMENT_IN");
   });
+  it("includes the implemented subcontract purchase document type", () => {
+    expect(normalizedHomeTypes(["SUBCONTRACT_PURCHASE", "JOB_WORK_OUT"]))
+      .toEqual(["SUBCONTRACT_PURCHASE"]);
+  });
 });

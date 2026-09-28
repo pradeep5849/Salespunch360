@@ -2,6 +2,8 @@ package com.salespunch360.mobile.ui.account
 
 import android.content.Intent
 import android.net.Uri
+import java.io.File
+import androidx.core.content.FileProvider
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
@@ -132,7 +134,7 @@ fun NativeAccountAuthenticatedApp(
         val sales=salesType(state.selectedPath)
         val purchase=purchaseType(state.selectedPath)
         when{
-            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.dashboard,padding,vm::select)
+            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.dashboard,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
             state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding)
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
@@ -194,15 +196,23 @@ private fun AccountBottomBar(items:List<AccountBottomDestination>,current:String
 private fun AccountHomeScreen(
     groups:List<AccountNavigationGroup>,
     dashboard:com.salespunch360.mobile.data.AccountDashboard?,
+    home:com.salespunch360.mobile.data.AccountHome?,
+    homeQuery:String,
+    homeTypes:Set<String>,
     padding:PaddingValues,
-    navigate:(String)->Unit
+    navigate:(String)->Unit,
+    search:(String,Set<String>)->Unit,
+    pdf:(String,String,(ByteArray)->Unit)->Unit
 ){
+    val context=LocalContext.current
     val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
     var partyMode by rememberSaveable{mutableStateOf(false)}
+    var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
+    val filters=listOf("SALES_INVOICE","SALES_ORDER","CREDIT_NOTE","PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE","PROFORMA_INVOICE","DELIVERY_CHALLAN","SUBCONTRACT_PURCHASE")
     val transactionActions=listOf(
         "Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),
         "Sale Report" to (all.firstOrNull{it.label.contains("sales",true)&&it.label.contains("report",true)}?.href?:"/workspace/account/reports/sales-register"),
-        "Txn Settings" to "/workspace/account/settings",
+        "Txn Settings" to "/workspace/account/settings/transactions",
         "Show All" to ACCOUNT_MENU
     )
     val partyActions=listOf("Network" to "", "Party Statement" to "/workspace/account/reports/customer-outstanding", "Party Settings" to "/workspace/account/settings", "Show All" to ACCOUNT_MENU)
@@ -229,6 +239,39 @@ private fun AccountHomeScreen(
                 }
             }
         }
+        item{
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically){
+                OutlinedTextField(query,{query=it},label={Text(if(partyMode)"Search parties" else "Search party or document")},singleLine=true,modifier=Modifier.weight(1f))
+                Button(onClick={search(query,homeTypes)}){Text("Search")}
+            }
+        }
+        if(!partyMode)item{
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                items(filters){type->FilterChip(selected=type in homeTypes,onClick={val next=if(type in homeTypes)homeTypes-type else homeTypes+type;search(query,next)},label={Text(type.replace('_',' '),maxLines=1)})}
+            }
+        }
+        if(!partyMode){
+            items(home?.transactions.orEmpty(),key={it.id}){tx->
+                ElevatedCard(Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(tx.partyName,fontWeight=FontWeight.SemiBold);AssistChip(onClick={},label={Text(tx.status.replace('_',' '))})}
+                        Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(tx.issueDate.take(10),style=MaterialTheme.typography.bodySmall)
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total ${formatMetric(tx.grandTotal,"MONEY")}");Text("Balance ${formatMetric(tx.balanceDue,"MONEY")}")}
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
+                            TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"View / print PDF")}}){Text("Print")}
+                            TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"Share transaction")}}){Text("Share")}
+                            TextButton(onClick={navigate("/workspace/account/transactions/${tx.id}")}){Text("More")}
+                        }
+                    }
+                }
+            }
+            item{Button(onClick={navigate("/workspace/account/transactions/new?type=SALES_INVOICE")},modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)){Text("＋ New Sale")}}
+        }else{
+            items(home?.parties.orEmpty(),key={it.id}){party->
+                ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${party.lastActivity.take(10)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}
+            }
+            item{Button(onClick={navigate("/workspace/account/customers")},modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)){Text("＋ New Party")}}
+        }
         dashboard?.metrics?.take(4)?.let{metrics->
             if(metrics.isNotEmpty()){
                 item{Text("Overview",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
@@ -243,6 +286,11 @@ private fun AccountHomeScreen(
             }
         }
     }
+}
+
+private fun sharePdf(context:android.content.Context,number:String,bytes:ByteArray,title:String){
+    val file=File(context.cacheDir,"$number.pdf").also{it.writeBytes(bytes)},uri=FileProvider.getUriForFile(context,"${context.packageName}.files",file)
+    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),title))
 }
 
 @Composable
@@ -334,14 +382,14 @@ private fun AccountDashboardScreen(
                 TextButton(enabled=!refreshing,onClick=onRefresh){Text(if(refreshing)"Refreshing…" else "Refresh")}
             }
         }
-        items(data?.metrics.orEmpty()){metric->
-            ElevatedCard(Modifier.fillMaxWidth()){
-                Column(Modifier.padding(18.dp)){
-                    Text(metric.label,style=MaterialTheme.typography.labelLarge)
-                    Text(formatMetric(metric.value,metric.kind),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                }
-            }
-        }
+        if(data?.projectOnly!=true){
+            item{DashboardMetricCard("SALE OVERVIEW · CURRENT MONTH",formatMetric(data?.currentMonthSales?:"0","MONEY"),data?.salesGrowthPercent?.let{"$it% from previous month"}?:"Comparison available after the first recorded month")}
+            item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){Box(Modifier.weight(1f)){DashboardMetricCard("EXPENSES",formatMetric(data?.currentMonthExpenses?:"0","MONEY"),"Posted this month")};Box(Modifier.weight(1f)){DashboardMetricCard("CASH & BANK",formatMetric(data?.metrics?.firstOrNull{it.key=="cashBank"}?.value?:"0","MONEY"),"Ledger-backed")}}}
+            item{DashboardMetricCard("INVENTORY",formatMetric(data?.metrics?.firstOrNull{it.key=="stockValue"}?.value?:"0","MONEY"),"${data?.itemCount?:0} items · ${data?.lowStockItems?:0} low stock")}
+            item{DashboardMetricCard("REPORTS","Business reports","Financial, sales, tax and inventory reports")}
+            item{Text("EXPENSE BREAKDOWN · CURRENT MONTH",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+            items(data?.expenseBreakdown.orEmpty()){row->ListItem(headlineContent={Text(row.category)},trailingContent={Text(formatMetric(row.amount,"MONEY"),fontWeight=FontWeight.SemiBold)})}
+        }else items(data?.metrics.orEmpty()){metric->DashboardMetricCard(metric.label,formatMetric(metric.value,metric.kind),"")}
         if(data?.branchComparison?.isNotEmpty()==true){
             item{Text("Branch comparison",style=MaterialTheme.typography.titleLarge)}
             items(data.branchComparison){row->
@@ -354,6 +402,8 @@ private fun AccountDashboardScreen(
         }
     }
 }
+
+@Composable private fun DashboardMetricCard(label:String,value:String,detail:String){ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){Text(label,style=MaterialTheme.typography.labelMedium,color=Color(0xFF64748B),fontWeight=FontWeight.Bold);Text(value,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);if(detail.isNotBlank())Text(detail,style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))}}}
 
 @Composable
 private fun NativeDestinationNotice(modifier:Modifier,title:String){
@@ -400,6 +450,7 @@ private fun reportName(path:String)=path.removePrefix("/workspace/account/report
 private fun adminMode(path:String)=when{
     path=="/workspace/account/notifications"->"notifications"
     path=="/workspace/account/settings"->"settings"
+    path.endsWith("/settings/transactions")->"transaction-settings"
     path.endsWith("/settings/custom-fields")->"custom-fields"
     path.endsWith("/settings/modules")->"modules"
     path.endsWith("/settings/print-templates")->"print-templates"

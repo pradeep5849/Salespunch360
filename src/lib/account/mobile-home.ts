@@ -6,6 +6,7 @@ import { accountHomeScopes } from "./account-home";
 export const accountHomeTransactionTypes = [
   "SALES_INVOICE", "SALES_ORDER", "CREDIT_NOTE", "PURCHASE_BILL",
   "PURCHASE_ORDER", "DEBIT_NOTE", "PROFORMA_INVOICE", "DELIVERY_CHALLAN",
+  "SUBCONTRACT_PURCHASE",
 ] as const satisfies readonly CommercialDocumentType[];
 
 export function normalizedHomeTypes(values: string[] | undefined): CommercialDocumentType[] {
