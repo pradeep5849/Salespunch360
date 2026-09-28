@@ -1570,6 +1570,7 @@ model AccountSettings {
   compositionEnabled        Boolean         @default(false)
   defaultTaxMode            TaxMode         @default(EXCLUSIVE)
   transactionDefaults      Json?
+  itemSettings             Json?
   projectDefaults          Json?
   printProfile             Json?
   createdAt                DateTime        @default(now())

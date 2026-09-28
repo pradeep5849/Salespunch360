@@ -309,7 +309,7 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
 export async function transferStock(raw: unknown) {
   return transferStockForActor(await actor(true), raw);
 }
-export async function inventorySnapshotForActor(a: ProjectActor) {
+export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
   const warehouses = await db.warehouse.findMany({
     where: {
       companyId: a.companyId,
@@ -323,6 +323,7 @@ export async function inventorySnapshotForActor(a: ProjectActor) {
     where: {
       companyId: a.companyId,
       warehouseId: { in: warehouses.map((w) => w.id) },
+      ...(asOf ? { movementDate: { lte: asOf } } : {}),
     },
     orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
   });
@@ -360,8 +361,8 @@ const warehouseInput = z
     isDefault: z.coerce.boolean().default(false),
   })
   .strict();
-export async function inventorySnapshot() {
-  return inventorySnapshotForActor(await actor());
+export async function inventorySnapshot(asOf?: Date) {
+  return inventorySnapshotForActor(await actor(), asOf);
 }
 export async function listWarehousesForActor(a: ProjectActor) {
   return db.warehouse.findMany({

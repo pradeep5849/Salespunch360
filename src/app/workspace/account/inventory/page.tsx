@@ -1,2 +1,9 @@
-import Link from "next/link";import {requirePermission} from "@/lib/auth/authorization";import {requireAccountModules} from "@/lib/account/modules";const sections=["items","warehouses","stock","opening","transfers","adjustments","low-stock","batches"];
-export default async function Page(){const actor=await requirePermission("ACCOUNT_STOCK");await requireAccountModules(actor,"INVENTORY");return <main className="employees-shell"><section className="employees-content"><h1>Inventory</h1><p>Stock is derived from the immutable movement ledger. Posted sales invoices are the v1 sales issue event; delivery challans do not move stock.</p><nav className="employee-actions">{sections.map(x=><Link key={x} href={`/workspace/account/inventory/${x}`}>{x.replaceAll("-"," ")}</Link>)}</nav></section></main>}
+import {inventorySnapshot,listInventoryProducts} from "@/lib/account/inventory";
+import {ItemsScreen} from "@/components/account/items-screen";
+export const metadata={title:"Items | SalesPunch360"};
+export default async function Page(){
+  const [products,stock]=await Promise.all([listInventoryProducts(),inventorySnapshot()]);
+  const quantities=new Map<string,number>();
+  stock.forEach(row=>quantities.set(row.productId,(quantities.get(row.productId)??0)+Number(row.quantity)));
+  return <ItemsScreen items={products.map(p=>({id:p.id,name:p.name,code:p.code,category:p.category?.name??null,salePrice:p.salePrice?.toString()??"0",purchasePrice:p.costPrice?.toString()??"0",stock:quantities.get(p.id)??0}))}/>;
+}
