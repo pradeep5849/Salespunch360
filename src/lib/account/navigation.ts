@@ -47,4 +47,11 @@ export function buildAccountNavigation(actor: WorkspacePrincipal, edition: Produ
   };
   return groups.map(filter).filter((group): group is AccountNavGroup => group !== null);
 }
+/** Reads the existing entitlement- and permission-filtered navigation result. */
+export function hasAccountNavigationItem(navigation: readonly AccountNavGroup[], label: string, href: string): boolean {
+  return navigation.some(group =>
+    group.items.some(item => item.label === label && item.href === href) ||
+    hasAccountNavigationItem(group.children ?? [], label, href),
+  );
+}
 export function rolePermissionSummary(role: AccountRole | null) { return role ? ACCOUNT_ROLE_PERMISSIONS[role] : []; }

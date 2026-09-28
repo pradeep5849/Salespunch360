@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -79,9 +80,14 @@ fun NativeAccountAuthenticatedApp(
     val account=state.bootstrap
     val modules=account?.enabledModules.orEmpty()
     val navigation=account?.navigation.orEmpty()
+    // Bootstrap navigation is already filtered by the shared module and permission policy.
+    val showProjects=navigation.any{group->
+        (group.items+group.children.flatMap{it.items}).any{it.label=="Projects"&&it.href=="/workspace/account/projects"}
+    }
     val bottom=buildList{
         add(AccountBottomDestination("Home",ACCOUNT_HOME,Icons.Default.Home))
         add(AccountBottomDestination("Dashboard",ACCOUNT_DASHBOARD,Icons.Default.Dashboard))
+        if(showProjects)add(AccountBottomDestination("Projects","/workspace/account/projects",Icons.Default.Work))
         add(AccountBottomDestination("Items",if("INVENTORY" in modules)"/workspace/account/inventory" else ACCOUNT_MENU,Icons.Default.Inventory2))
         add(AccountBottomDestination("Menu",ACCOUNT_MENU,Icons.Default.Menu))
     }
