@@ -191,6 +191,22 @@ enum DiscountType {
 enum PurchasePurpose {
   OFFICE
   PROJECT
+  INVENTORY_SALES
+  GENERAL_OFFICE
+  FIXED_ASSET
+  MIXED
+}
+
+enum MaterialTreatment {
+  DIRECT_TO_PROJECT
+  RECEIVE_IN_INVENTORY
+}
+
+enum PurchaseAllocationType {
+  INVENTORY
+  PROJECT
+  GENERAL_EXPENSE
+  FIXED_ASSET
 }
 
 enum PurchaseClassification {
@@ -2286,6 +2302,8 @@ model CommercialDocument {
   sourcePurchaseOrderId  String?                  @db.Uuid
   purchasePurpose        PurchasePurpose?
   purchaseClassification PurchaseClassification?
+  materialTreatment      MaterialTreatment?
+  projectBudgetLineId    String?                  @db.Uuid
   projectReference       String?                  @db.VarChar(240)
   projectId              String?                  @db.Uuid
   issueDate              DateTime                 @db.Date
@@ -2380,6 +2398,7 @@ model CommercialDocumentLine {
   cessRate       Decimal            @default(0) @db.Decimal(7, 4)
   lineTotal      Decimal            @db.Decimal(18, 2)
   document       CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  purchaseAllocations PurchaseLineAllocation[]
   product        AccountProduct?    @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   service        AccountService?    @relation(fields: [companyId, serviceId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   workPackage    WorkPackage?       @relation(fields: [companyId, workPackageId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -2387,6 +2406,32 @@ model CommercialDocumentLine {
   @@unique([companyId, id])
   @@unique([companyId, documentId, position])
   @@map("commercial_document_lines")
+}
+
+model PurchaseLineAllocation {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  companyId           String                 @db.Uuid
+  documentLineId      String                 @db.Uuid
+  allocationType      PurchaseAllocationType
+  projectId           String?                @db.Uuid
+  projectBudgetLineId String?                @db.Uuid
+  warehouseId         String?                @db.Uuid
+  materialTreatment   MaterialTreatment?
+  quantity            Decimal                @db.Decimal(18, 4)
+  baseAmount          Decimal                @db.Decimal(18, 2)
+  discountAmount      Decimal                @db.Decimal(18, 2)
+  taxableAmount       Decimal                @db.Decimal(18, 2)
+  taxAmount           Decimal                @db.Decimal(18, 2)
+  cessAmount          Decimal                @db.Decimal(18, 2)
+  totalAmount         Decimal                @db.Decimal(18, 2)
+  position            Int
+  createdAt           DateTime               @default(now())
+  documentLine        CommercialDocumentLine @relation(fields: [companyId, documentLineId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([companyId, documentLineId, position])
+  @@index([companyId, projectId])
+  @@map("purchase_line_allocations")
 }
 
 model AccountSettlement {
