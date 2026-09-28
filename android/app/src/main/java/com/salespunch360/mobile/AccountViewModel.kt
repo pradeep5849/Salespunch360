@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.AccountBootstrap
 import com.salespunch360.mobile.data.AccountDashboard
+import com.salespunch360.mobile.data.AccountHome
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.ApiException
 import com.salespunch360.mobile.data.SecureSession
@@ -20,6 +21,9 @@ data class AccountUiState(
     val refreshing:Boolean=false,
     val bootstrap:AccountBootstrap?=null,
     val dashboard:AccountDashboard?=null,
+    val home:AccountHome?=null,
+    val homeQuery:String="",
+    val homeTypes:Set<String> = emptySet(),
     val selectedPath:String=ACCOUNT_ROOT,
     val error:String?=null
 )
@@ -37,7 +41,8 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
   try{
    val bootstrap=api.accountBootstrap()
    val dashboard=api.accountDashboard(bootstrap.branch.branchId,bootstrap.branch.mode=="COMPANY")
-   _state.value=_state.value.copy(loading=false,refreshing=false,bootstrap=bootstrap,dashboard=dashboard)
+   val home=api.accountHome(branchId=bootstrap.branch.branchId,companyWide=bootstrap.branch.mode=="COMPANY")
+   _state.value=_state.value.copy(loading=false,refreshing=false,bootstrap=bootstrap,dashboard=dashboard,home=home)
   }catch(error:Exception){
    _state.value=_state.value.copy(loading=false,refreshing=false,error=message(error))
   }
@@ -63,13 +68,21 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
 
  fun resetNavigation(){history.clear();_state.value=_state.value.copy(selectedPath=ACCOUNT_ROOT)}
 
+ fun searchHome(query:String=_state.value.homeQuery,types:Set<String> = _state.value.homeTypes)=viewModelScope.launch{
+  _state.value=_state.value.copy(homeQuery=query,homeTypes=types,refreshing=true,error=null)
+  try{val branch=_state.value.bootstrap?.branch;val home=api.accountHome(query,types,branch?.branchId,branch?.mode=="COMPANY");_state.value=_state.value.copy(home=home,refreshing=false)}catch(error:Exception){_state.value=_state.value.copy(refreshing=false,error=message(error))}
+ }
+
+ fun downloadDocumentPdf(type:String,id:String,onReady:(ByteArray)->Unit)=viewModelScope.launch{try{onReady(api.accountDocumentPdf(type,id))}catch(error:Exception){_state.value=_state.value.copy(error=message(error))}}
+
  fun selectBranch(branchId:String?,companyWide:Boolean)=viewModelScope.launch{
   _state.value=_state.value.copy(refreshing=true,error=null)
   try{
    val bootstrap=api.accountBootstrap(branchId,companyWide)
    val dashboard=api.accountDashboard(branchId,companyWide)
+   val home=api.accountHome(branchId=branchId,companyWide=companyWide)
    history.clear()
-   _state.value=_state.value.copy(refreshing=false,bootstrap=bootstrap,dashboard=dashboard,selectedPath=ACCOUNT_ROOT)
+   _state.value=_state.value.copy(refreshing=false,bootstrap=bootstrap,dashboard=dashboard,home=home,selectedPath=ACCOUNT_ROOT)
   }catch(error:Exception){
    _state.value=_state.value.copy(refreshing=false,error=message(error))
   }

@@ -29,7 +29,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 when (mode) {
                     "users" -> api.accountUsers()
-                    "settings", "custom-fields", "modules", "print-templates" -> api.accountAdministration("settings")
+                    "settings", "transaction-settings", "custom-fields", "modules", "print-templates" -> api.accountAdministration("settings")
                     "notifications" -> api.accountAdministration("notifications")
                     "tax-settings" -> api.accountTax()
                     "tax-reports" -> api.accountTax(

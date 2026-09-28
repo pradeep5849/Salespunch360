@@ -33,7 +33,7 @@ const groups: AccountNavGroup[] = [
   { label: "Utilities", items: [{ label: "Import, export & backup", href: "/workspace/account/utilities", permission: "ACCOUNT_REPORTS" }] },
   { label: "Company / Branch", items: [{ label: "Company details", href: "/workspace/company-profile", permission: "COMPANY_VIEW" }] },
   { label: "Users & Permissions", items: [{ label: "Employees", href: "/workspace/employees", permission: "ACCOUNT_USER_ADMIN" }] },
-  { label: "Settings", items: [{ label: "Settings", href: "/workspace/account/settings", permission: "ACCOUNT_SETTINGS" }] },
+  { label: "Settings", items: [{ label: "Module Selection", href: "/workspace/account/settings/modules", permission: "ACCOUNT_SETTINGS" }, { label: "Settings", href: "/workspace/account/settings", permission: "ACCOUNT_SETTINGS" }] },
   { label: "Help / Support", items: [{ label: "Contact SalesPunch360", href: "/contact" }, { label: "Frequently asked questions", href: "/resources/faq" }] },
 ];
 
@@ -46,5 +46,12 @@ export function buildAccountNavigation(actor: WorkspacePrincipal, edition: Produ
     return items.length || children?.length ? { ...group, items, children } : null;
   };
   return groups.map(filter).filter((group): group is AccountNavGroup => group !== null);
+}
+/** Reads the existing entitlement- and permission-filtered navigation result. */
+export function hasAccountNavigationItem(navigation: readonly AccountNavGroup[], label: string, href: string): boolean {
+  return navigation.some(group =>
+    group.items.some(item => item.label === label && item.href === href) ||
+    hasAccountNavigationItem(group.children ?? [], label, href),
+  );
 }
 export function rolePermissionSummary(role: AccountRole | null) { return role ? ACCOUNT_ROLE_PERMISSIONS[role] : []; }

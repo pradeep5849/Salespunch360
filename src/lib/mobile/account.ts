@@ -7,6 +7,7 @@ import { buildAccountNavigation, rolePermissionSummary } from "@/lib/account/nav
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { canUsePermission } from "@/lib/auth/permissions";
+import { accountMobileHomeData } from "@/lib/account/mobile-home";
 import type { MobileAppPrincipal } from "./auth";
 
 function accountActor(user: MobileAppPrincipal) {
@@ -89,6 +90,21 @@ export async function mobileAccountDashboard(user: MobileAppPrincipal, requested
     title: branch.context.mode === "COMPANY" ? "Company Consolidated Dashboard" : `${branch.context.branchName} Dashboard`,
     period: year?.name ?? from.toISOString().slice(0, 10), projectOnly: false,
     metrics: metrics.map(([key, label, value, kind]) => ({ key, label, value: typeof value === "number" ? String(value) : decimalText(value), kind })),
+    currentMonthSales: decimalText(data.currentMonthSales),
+    previousMonthSales: decimalText(data.previousMonthSales),
+    currentMonthExpenses: decimalText(data.currentMonthExpenses),
+    salesGrowthPercent: data.salesGrowthPercent?.toString() ?? null,
+    salesTrend: data.salesTrend.map(point => ({ month: point.month, total: decimalText(point.total) })),
+    itemCount: data.itemCount,
+    lowStockItems: data.lowStockItems,
+    expenseBreakdown: data.expenseBreakdown.map(row => ({ category: row.category, amount: decimalText(row.amount) })),
     branchComparison: data.branchComparison.map(row => ({ id: row.id, name: row.name, sales: decimalText(row.sales), expenses: decimalText(row.expenses), operatingContribution: decimalText(row.operatingContribution) })),
   };
+}
+
+export async function mobileAccountHome(user: MobileAppPrincipal, input: { branchId?: string | null; scope?: string | null; q?: string; types?: string[] }) {
+  const actor = accountActor(user);
+  if (!canUsePermission(actor, user.productEdition, "ACCOUNT_LEDGER_VIEW")) throw new Error("MOBILE_FORBIDDEN");
+  const branch = await resolveAccountBranchContext(actor, input);
+  return accountMobileHomeData(actor, branch.context, input);
 }

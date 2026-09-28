@@ -80,6 +80,7 @@ fun AccountAdministrationScreen(
         when (mode) {
             "users" -> UserView(state.data, vm)
             "settings" -> SettingsForm(state.data, vm)
+            "transaction-settings" -> SettingsForm(state.data, vm)
             "custom-fields" -> CustomFieldView(state.data, vm)
             "modules" -> ModuleView(state.data, vm)
             "print-templates" -> TemplateView(state.data, vm)
