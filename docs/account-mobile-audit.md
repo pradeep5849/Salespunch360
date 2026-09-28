@@ -29,3 +29,22 @@ Phase one modernizes the Home and Dashboard entry experience and connects only r
 already have a real workflow. Network, Mobile POS, WhatsApp marketing, image invoice sharing,
 e-Invoice generation, and the much larger settings expansion are not represented by fake or
 cosmetic actions. They require separate domain/runtime work before they can be safely exposed.
+
+## Completion-pass re-audit
+
+- Web Home has bounded server-side transaction/party search, supported commercial filters,
+  real print/PDF share, type-aware More actions, and route-backed quick actions.
+- Android Home now consumes the same `/api/v1/mobile/account/home` service for bounded
+  transactions and parties; it does not calculate balances locally.
+- Dashboard sales trend, current/previous month comparison, inventory item/low-stock counts,
+  and expense-category breakdown are database aggregates shared with Android.
+- Module Selection remains the existing `/workspace/account/settings/modules` workflow, but is
+  now placed directly in permission-filtered Menu navigation and removed from Settings content.
+- Payment-In/Out, expenses, and transfers remain real standalone domains rather than fake
+  `CommercialDocumentType` filters. Unsupported requested filters are: Party-to-Party received
+  and paid, Sale FA, Purchase FA, cancelled-as-a-type, Job Work Out, Purchase Job Work, and
+  repeating sales. `SUBCONTRACT_PURCHASE` is the existing supported subcontract/job-cost type.
+- Mobile POS, transaction SMS settings, loyalty, invitations, reminder settings, WhatsApp
+  marketing, invoice-image sharing, and e-Invoice generation remain unavailable. Transaction
+  and party settings not already backed by `AccountSettings`, custom fields, numbering series,
+  tax, or print profiles remain deferred rather than being exposed as cosmetic toggles.
