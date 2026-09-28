@@ -33,11 +33,12 @@ const decimalText = (value: { toString(): string }) => value.toString();
 
 export async function mobileAccountBootstrap(user: MobileAppPrincipal, requested?: { branchId?: string | null; scope?: string | null }) {
   const actor = accountActor(user);
-  const [company, modules, branch, entitlement] = await Promise.all([
+  const [company, modules, branch, entitlement, settings] = await Promise.all([
     db.company.findUniqueOrThrow({ where: { id: actor.companyId }, select: { name: true, productEdition: true } }),
     enabledModulesForCompany(actor.companyId),
     resolveAccountBranchContext(actor, requested),
     effectiveEntitlement(actor.companyId),
+    db.accountSettings.findUnique({where:{companyId:actor.companyId},select:{itemSettings:true}}),
   ]);
   const filter = branch.context.mode === "BRANCH" ? { branchId: branch.context.branchId } : {};
   const pendingExpenseApprovals = modules.includes("EXPENSES")
@@ -48,6 +49,7 @@ export async function mobileAccountBootstrap(user: MobileAppPrincipal, requested
     company: { name: company.name },
     productEdition: company.productEdition,
     enabledModules: modules,
+    itemSettings: settings?.itemSettings ?? {},
     effectivePermissions: rolePermissionSummary(actor.accountRole),
     canSwitchWorkspace: user.authorizedWorkspaces.includes("SALES"),
     branch: branch.context,

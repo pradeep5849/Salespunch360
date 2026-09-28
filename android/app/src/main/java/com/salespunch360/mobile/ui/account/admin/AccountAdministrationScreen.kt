@@ -83,12 +83,16 @@ fun AccountAdministrationScreen(
             "transaction-settings" -> SettingsForm(state.data, vm)
             "custom-fields" -> CustomFieldView(state.data, vm)
             "modules" -> ModuleView(state.data, vm)
+            "item-settings" -> ItemSettingsView(state.data,vm)
             "print-templates" -> TemplateView(state.data, vm)
             "tax-settings" -> TaxSettingsForm(state.data, vm)
             else -> JsonRows(state.data)
         }
     }
 }
+
+@Composable private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){val saved=data.jsonObject["settings"]?.jsonObject?.get("itemSettings")?.jsonObject;var enabled by remember(saved){mutableStateOf(saved?.get("enabled")?.jsonPrimitive?.booleanOrNull?:true)};var units by remember(saved){mutableStateOf(saved?.get("itemUnits")?.jsonPrimitive?.booleanOrNull?:true)};var decimals by remember(saved){mutableStateOf(saved?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2)};LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("Supported item behaviour",style=MaterialTheme.typography.titleMedium)};item{SwitchRow("Enable Items",enabled){enabled=it}};item{SwitchRow("Item Units",units){units=it}};item{Text("Quantity decimal places");Slider(decimals.toFloat(),{decimals=it.toInt()},valueRange=0f..4f,steps=3);Text(decimals.toString())};item{ListItem(headlineContent={Text("Manufacturing · Coming Soon")},supportingContent={Text("No manufacturing backend is available.")})};item{Button(onClick={vm.save("item-settings",buildJsonObject{put("enabled",enabled);put("itemUnits",units);put("quantityDecimals",decimals)})}){Text("Save Item Settings")}}}}
+@Composable private fun SwitchRow(label:String,checked:Boolean,set:(Boolean)->Unit){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Switch(checked,set)}}
 
 @Composable
 private fun SettingsForm(data: JsonElement, vm: AccountAdministrationViewModel) {

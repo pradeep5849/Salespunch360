@@ -90,11 +90,13 @@ fun NativeAccountAuthenticatedApp(
     val showProjects=navigation.any{group->
         (group.items+group.children.flatMap{it.items}).any{it.label=="Projects"&&it.href=="/workspace/account/projects"}
     }
+    val canStock="ACCOUNT_STOCK" in account?.effectivePermissions.orEmpty()&&"INVENTORY" in modules&&account?.itemSettings?.get("enabled")?.toString()!="false"
+    val canSettings="ACCOUNT_SETTINGS" in account?.effectivePermissions.orEmpty()&&data.user.accountRole==com.salespunch360.mobile.data.AccountRole.ACCOUNT_ADMIN
     val bottom=buildList{
         add(AccountBottomDestination("Home",ACCOUNT_HOME,Icons.Default.Home))
         add(AccountBottomDestination("Dashboard",ACCOUNT_DASHBOARD,Icons.Default.Dashboard))
         if(showProjects)add(AccountBottomDestination("Projects","/workspace/account/projects",Icons.Default.Work))
-        add(AccountBottomDestination("Items",if("INVENTORY" in modules)"/workspace/account/inventory" else ACCOUNT_MENU,Icons.Default.Inventory2))
+        if(canStock)add(AccountBottomDestination("Items","/workspace/account/inventory",Icons.Default.Inventory2))
     }
 
     BackHandler(enabled=state.selectedPath!=ACCOUNT_HOME){vm.back()}
@@ -124,7 +126,7 @@ fun NativeAccountAuthenticatedApp(
                             DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;vm.select("/workspace/company-profile")})
                             DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
                             DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;vm.select("/workspace/change-password")})
-                            DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
+                            if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
                             DropdownMenuItem(text={Text("Settings · Coming soon")},enabled=false,onClick={})
                             onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             HorizontalDivider()
@@ -164,6 +166,9 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
+            state.selectedPath=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select)
+            state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
+            state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
@@ -419,7 +424,7 @@ private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else runCa
 private fun purchaseType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE")} else null
 
 private fun inventoryMode(path:String)=when{
-    path=="/workspace/account/inventory"||path.endsWith("/inventory/stock")->"stock"
+    path.endsWith("/inventory/stock")||path.endsWith("/inventory/stock-summary")->"stock"
     path.endsWith("/inventory/low-stock")->"low-stock"
     path.endsWith("/inventory/opening")->"opening"
     path.endsWith("/inventory/transfers")->"transfers"
