@@ -209,6 +209,52 @@ enum PurchaseAllocationType {
   FIXED_ASSET
 }
 
+enum ProjectMaterialMovementType {
+  DIRECT_PROJECT_RECEIPT
+  INVENTORY_ISSUE_TO_PROJECT
+  CONSUMPTION
+  RETURN_TO_INVENTORY
+  TRANSFER_OUT
+  TRANSFER_IN
+  REVERSAL
+}
+
+model ProjectMaterialMovement {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  companyId             String                      @db.Uuid
+  branchId              String                      @db.Uuid
+  projectId             String                      @db.Uuid
+  movementType          ProjectMaterialMovementType
+  purchaseDocumentId    String?                     @db.Uuid
+  purchaseLineId        String?                     @db.Uuid
+  purchaseAllocationId  String?                     @db.Uuid
+  productId             String                      @db.Uuid
+  warehouseId           String?                     @db.Uuid
+  projectLocation       String?
+  batchId               String?                     @db.Uuid
+  serialNumberId        String?                     @db.Uuid
+  quantity              Decimal                     @db.Decimal(20, 6)
+  originalUnitCost      Decimal                     @db.Decimal(20, 6)
+  totalCost             Decimal                     @db.Decimal(20, 2)
+  movementDate          DateTime                    @db.Date
+  sourceProjectId       String?                     @db.Uuid
+  destinationProjectId  String?                     @db.Uuid
+  projectBudgetLineId   String?                     @db.Uuid
+  reason                String?
+  notes                 String?
+  attachmentKey         String?
+  createdById           String                      @db.Uuid
+  sourceMovementId      String?                     @db.Uuid
+  reversalOfId          String?                     @unique @db.Uuid
+  idempotencyKey        String
+  createdAt             DateTime                    @default(now())
+
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, branchId, projectId, productId, movementDate])
+  @@index([companyId, purchaseAllocationId, projectId])
+  @@map("project_material_movements")
+}
+
 enum PurchaseClassification {
   PURCHASE_COST
   GENERAL_EXPENSES
