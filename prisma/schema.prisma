@@ -2306,6 +2306,16 @@ model CommercialDocument {
   projectBudgetLineId    String?                  @db.Uuid
   projectReference       String?                  @db.VarChar(240)
   projectId              String?                  @db.Uuid
+  vendorInvoiceNumber    String?                  @db.VarChar(120)
+  vendorInvoiceNumberNormalized String?           @db.VarChar(120)
+  vendorInvoiceDate      DateTime?                @db.Date
+  postingDate            DateTime?                @db.Date
+  paymentTerms           String?                  @db.VarChar(500)
+  partyAddress           String?
+  grnReference           String?                  @db.VarChar(160)
+  purchaseLocation       String?                  @db.VarChar(240)
+  vendorInvoiceAttachmentKey String?              @db.VarChar(512)
+  purchaseFinancialYearId String?                 @db.Uuid
   issueDate              DateTime                 @db.Date
   dueDate                DateTime?                @db.Date
   subtotal               Decimal                  @db.Decimal(18, 2)
@@ -2320,6 +2330,9 @@ model CommercialDocument {
   sgstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
   igstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
   cessTotal              Decimal                  @default(0) @db.Decimal(18, 2)
+  freightAmount          Decimal                  @default(0) @db.Decimal(18, 2)
+  otherChargesAmount     Decimal                  @default(0) @db.Decimal(18, 2)
+  roundOffAmount         Decimal                  @default(0) @db.Decimal(18, 2)
   reverseCharge          Boolean                  @default(false)
   taxCreditTreatment     TaxCreditTreatment       @default(ELIGIBLE)
   tdsAmount              Decimal                  @default(0) @db.Decimal(18, 2)
@@ -2352,6 +2365,7 @@ model CommercialDocument {
 
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, documentNumber])
+  @@unique([companyId, vendorId, purchaseFinancialYearId, vendorInvoiceNumberNormalized])
   @@index([companyId, type, issueDate])
   @@index([companyId, branchId, status, type, issueDate])
   @@index([companyId, customerId])

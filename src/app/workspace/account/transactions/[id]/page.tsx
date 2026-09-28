@@ -35,10 +35,15 @@ export default async function Page({
         {x.dueDate && `· Due ${x.dueDate.toLocaleDateString()}`}
       </p>
       {x.purchasePurpose && (
-        <p>
-          Purpose {x.purchasePurpose}
+        <section className="account-card">
+          <h2>Purchase information</h2><p>Purchase For {x.purchasePurpose}
           {x.projectReference && ` · Project reference ${x.projectReference}`}
-        </p>
+          {x.materialTreatment&&` · ${x.materialTreatment.replaceAll("_"," ")}`}</p>
+          <p>Vendor invoice {x.vendorInvoiceNumber??"—"} {x.vendorInvoiceDate&&`· ${x.vendorInvoiceDate.toLocaleDateString()}`} · Accounting date {(x.postingDate??x.issueDate).toLocaleDateString()}</p>
+          <p>Vendor GSTIN {x.partyGstin??"—"} · Address {x.partyAddress??"—"} · GRN {x.grnReference??"—"}</p>
+          <p>Payment terms {x.paymentTerms??"—"} · Location {x.purchaseLocation??"—"}</p>
+          <p>Freight {x.freightAmount.toString()} · Other charges {x.otherChargesAmount.toString()} · Round-off {x.roundOffAmount.toString()}</p>
+        </section>
       )}
       <table>
         <thead>
