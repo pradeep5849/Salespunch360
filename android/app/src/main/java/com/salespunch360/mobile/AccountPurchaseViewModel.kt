@@ -49,6 +49,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                 workPackages = options.array("workPackages").map { it.option("estimatedCost") },
                 warehouses = options.array("warehouses").map { it.option() },
                 projects = options.array("projects").map { it.option() },
+                projectBudgetLines = options.array("projectBudgetLines"),
                 sources = options.array("sourceDocuments"),
                 purchaseOrders = options.array("purchaseOrders")
             )
@@ -118,6 +119,13 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                     put("purchasePurpose", draft.purpose)
                     put("purchaseClassification", draft.classification)
                     draft.projectId.takeIf { it.isNotBlank() }?.let { put("projectId", it) }
+                    draft.projectBudgetLineId.takeIf { it.isNotBlank() }?.let { put("projectBudgetLineId", it) }
+                    draft.materialTreatment.takeIf { it.isNotBlank() }?.let { put("materialTreatment", it) }
+                    draft.vendorInvoiceNumber.takeIf { it.isNotBlank() }?.let { put("vendorInvoiceNumber", it) }
+                    draft.vendorInvoiceDate.takeIf { it.isNotBlank() }?.let { put("vendorInvoiceDate", it) }
+                    draft.postingDate.takeIf { it.isNotBlank() }?.let { put("postingDate", it) }
+                    draft.paymentTerms.takeIf { it.isNotBlank() }?.let { put("paymentTerms", it) }
+                    draft.grnReference.takeIf { it.isNotBlank() }?.let { put("grnReference", it) }
                     put("issueDate", draft.issueDate)
                     draft.dueDate.takeIf { it.isNotBlank() }?.let { put("dueDate", it) }
                     put("taxMode", draft.taxMode)
@@ -145,6 +153,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                                         put("sourceCommercialLineId", it)
                                     }
                                     put("stockReturnQuantity", line.stockReturnQuantity)
+                                    if (draft.purpose == "MIXED") putJsonArray("purchaseAllocations") { line.purchaseAllocations.forEach { a -> add(buildJsonObject { put("allocationType", a.allocationType); put("quantity", a.quantity); a.projectId.takeIf { it.isNotBlank() }?.let { put("projectId", it) }; a.projectBudgetLineId.takeIf { it.isNotBlank() }?.let { put("projectBudgetLineId", it) }; a.warehouseId.takeIf { it.isNotBlank() }?.let { put("warehouseId", it) }; if(a.allocationType=="PROJECT") put("materialTreatment",a.materialTreatment) }) } }
                                 }
                             )
                         }

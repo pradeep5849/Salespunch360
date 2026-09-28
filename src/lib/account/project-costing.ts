@@ -13,6 +13,7 @@ import {
   type ProjectActor,
 } from "./projects";
 import { allocateDocumentNumberInTx } from "./numbering";
+import { projectMaterialCostBreakdown } from "./project-material";
 const D = Prisma.Decimal,
   Z = new D(0),
   sum = (xs: Prisma.Decimal[]) => xs.reduce((a, b) => a.add(b), Z);
@@ -29,6 +30,12 @@ export function projectCosting(input: {
   estimatedCost: Prisma.Decimal;
   budget: Prisma.Decimal;
   documents: CostDocument[];
+  allocatedPurchaseCost?: Prisma.Decimal;
+  committedAllocatedCost?: Prisma.Decimal;
+  materialAdjustments?: {inventoryIssued: Prisma.Decimal; transferIn: Prisma.Decimal; returned: Prisma.Decimal; transferOut: Prisma.Decimal; consumed: Prisma.Decimal; unused: Prisma.Decimal};
+  advanceReceived?: Prisma.Decimal;
+  amountReceived?: Prisma.Decimal;
+  accountingReceivable?: Prisma.Decimal;
   expenses?: Prisma.Decimal[];
   approvedChanges?: Array<{
     valueDelta: Prisma.Decimal;
@@ -44,7 +51,7 @@ export function projectCosting(input: {
     estimated = input.estimatedCost.add(
       sum(changes.map((x) => x.estimatedCostDelta)),
     ),
-    actualPurchases = sum(
+    documentPurchases = sum(
       input.documents
         .filter((x) => x.status === "POSTED" && x.type === "PURCHASE_BILL")
         .map((x) => x.taxableTotal),
@@ -55,7 +62,10 @@ export function projectCosting(input: {
           .map((x) => x.taxableTotal),
       ),
     ),
-    actualCost = actualPurchases.add(sum(input.expenses ?? [])),
+    actualPurchases = input.allocatedPurchaseCost ?? documentPurchases,
+    material = input.materialAdjustments,
+    materialNet = material ? material.inventoryIssued.add(material.transferIn).sub(material.returned).sub(material.transferOut) : Z,
+    actualCost = actualPurchases.add(materialNet).add(sum(input.expenses ?? [])),
     billed = new Map<string, Prisma.Decimal>();
   for (const bill of input.documents.filter(
     (x) =>
@@ -67,7 +77,7 @@ export function projectCosting(input: {
       bill.sourcePurchaseOrderId!,
       (billed.get(bill.sourcePurchaseOrderId!) ?? Z).add(bill.taxableTotal),
     );
-  const committed = sum(
+  const committed = input.committedAllocatedCost ?? sum(
       input.documents
         .filter((x) => x.status === "POSTED" && x.type === "PURCHASE_ORDER")
         .map((po) =>
@@ -104,11 +114,22 @@ export function projectCosting(input: {
     contractRevenueBase,
     estimatedCost: estimated,
     actualCost,
+    directProjectPurchases: actualPurchases,
+    inventoryMaterialIssued: material?.inventoryIssued ?? Z,
+    materialConsumed: material?.consumed ?? Z,
+    materialUnused: material?.unused ?? Z,
+    materialReturned: material?.returned ?? Z,
+    materialTransferredIn: material?.transferIn ?? Z,
+    materialTransferredOut: material?.transferOut ?? Z,
     committedCost: committed,
     remainingForecast: forecastCost.sub(actualCost),
     forecastCost,
     budgetVariance: input.budget.sub(actualCost),
     revenue,
+    advanceReceived: input.advanceReceived ?? Z,
+    amountReceived: input.amountReceived ?? Z,
+    contractBalance: contractRevenueBase.sub(input.advanceReceived ?? Z),
+    accountingReceivable: input.accountingReceivable ?? Z,
     profit,
     expectedProfit,
     forecastProfit,
@@ -118,6 +139,7 @@ export function projectCosting(input: {
     actualMarginPercent: margin(profit, revenue),
   };
 }
+export function projectAdvancePosition(input:{contractValue:Prisma.Decimal;advanceReceived:Prisma.Decimal;advanceApplied:Prisma.Decimal;invoiced:Prisma.Decimal;cashReceipts?:Prisma.Decimal}){if(input.advanceApplied.gt(input.advanceReceived)||input.advanceApplied.gt(input.invoiced))throw new Error("ADVANCE_APPLICATION_EXCEEDS_BALANCE");return{contractBalance:input.contractValue.sub(input.advanceReceived),accountingReceivable:input.invoiced.sub(input.advanceApplied).sub(input.cashReceipts??Z),advanceLiability:input.advanceReceived.sub(input.advanceApplied),revenue:input.invoiced,amountReceived:input.advanceApplied.add(input.cashReceipts??Z)}}
 type Actor = ProjectActor;
 async function costingActor(edit = false) {
   const actor = (
@@ -134,7 +156,7 @@ async function scopedProject(actor: Actor, id: string) {
       where: { id, ...projectRecordScope(actor, branches) },
       include: {
         budgetLines: true,
-        commercialDocuments: { include: { lines: true } },
+        commercialDocuments: { include: { lines: true, allocations:true, advanceApplications:true, adjustments:{where:{status:"POSTED"}} } },
         customer: true,
       },
     });
@@ -260,6 +282,15 @@ export async function loadProjectCostingForActor(
         type: { in: ["PROJECT_EXPENSE", "REIMBURSEMENT"] },
       },
     }),
+    purchaseAllocations = await db.purchaseLineAllocation.findMany({where:{companyId:actor.companyId,projectId},include:{documentLine:{include:{document:true}}}}),
+    materialRows = await db.projectMaterialMovement.findMany({where:{companyId:actor.companyId,projectId}}),
+    projectSettlements = await db.accountSettlement.findMany({where:{companyId:actor.companyId,projectId},include:{applications:true}}),
+    material = projectMaterialCostBreakdown(materialRows),
+    allocatedPurchaseCost = sum(purchaseAllocations.filter(x=>x.documentLine.document.status==="POSTED"&&x.documentLine.document.type==="PURCHASE_BILL").map(x=>x.taxableAmount.add(x.documentLine.document.taxCreditTreatment==="ELIGIBLE"?0:x.taxAmount))),
+    advanceReceived = sum(projectSettlements.filter(x=>x.type==="CUSTOMER_ADVANCE").map(x=>x.amount)),
+    amountReceived = sum(projectSettlements.filter(x=>x.type==="CUSTOMER_RECEIPT").map(x=>x.amount)).add(sum(projectSettlements.flatMap(x=>x.applications).map(x=>x.amount))),
+    accountingReceivable = sum(project.commercialDocuments.filter(x=>x.type==="SALES_INVOICE"&&x.status==="POSTED").map(x=>x.grandTotal.sub(sum(x.allocations.map(a=>a.amount))).sub(sum(x.advanceApplications.map(a=>a.amount))).sub(sum(x.adjustments.map(a=>a.grandTotal))))),
+    committedAllocatedCost = sum(purchaseAllocations.filter(x=>x.documentLine.document.status==="POSTED"&&x.documentLine.document.type==="PURCHASE_ORDER").map(x=>x.taxableAmount)),
     budget = sum(project.budgetLines.map((x) => x.amount)),
     estimate = quotation?.revisions[0]?.internalCostTotal ?? budget,
     metrics = projectCosting({
@@ -269,6 +300,10 @@ export async function loadProjectCostingForActor(
       estimatedCost: estimate,
       budget,
       documents: project.commercialDocuments,
+      allocatedPurchaseCost,
+      committedAllocatedCost,
+      advanceReceived,amountReceived,accountingReceivable,
+      materialAdjustments:{inventoryIssued:material.inventoryIssued,transferIn:material.transferIn,returned:material.returned,transferOut:material.transferOut,consumed:material.consumed,unused:material.unused},
       expenses: expenses.map((x) => x.taxableAmount),
       approvedChanges: changes.filter((x) => x.status === "APPROVED"),
       closed: project.status === "CLOSED",

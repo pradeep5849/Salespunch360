@@ -35,10 +35,43 @@ export default async function Page({
         {x.dueDate && `· Due ${x.dueDate.toLocaleDateString()}`}
       </p>
       {x.purchasePurpose && (
+        <section className="account-card">
+          <h2>Purchase information</h2>
+          <p>
+            Purchase For {x.purchasePurpose}
+            {x.projectReference && ` · Project reference ${x.projectReference}`}
+            {x.materialTreatment &&
+              ` · ${x.materialTreatment.replaceAll("_", " ")}`}
+          </p>
+          <p>
+            Vendor invoice {x.vendorInvoiceNumber ?? "—"}{" "}
+            {x.vendorInvoiceDate &&
+              `· ${x.vendorInvoiceDate.toLocaleDateString()}`}{" "}
+            · Accounting date{" "}
+            {(x.postingDate ?? x.issueDate).toLocaleDateString()}
+          </p>
+          <p>
+            Vendor GSTIN {x.partyGstin ?? "—"} · Address {x.partyAddress ?? "—"}{" "}
+            · GRN {x.grnReference ?? "—"}
+          </p>
+          <p>
+            Payment terms {x.paymentTerms ?? "—"} · Location{" "}
+            {x.purchaseLocation ?? "—"}
+          </p>
+          <p>
+            Freight {x.freightAmount.toString()} · Other charges{" "}
+            {x.otherChargesAmount.toString()} · Round-off{" "}
+            {x.roundOffAmount.toString()}
+          </p>
+        </section>
+      )}
+      {x.project && (
         <p>
-          Purpose {x.purchasePurpose}
-          {x.projectReference && ` · Project reference ${x.projectReference}`}
+          Project {x.project.projectNumber} · {x.project.name}
         </p>
+      )}
+      {x.sourcePurchaseOrder && (
+        <p>Purchase Order {x.sourcePurchaseOrder.documentNumber}</p>
       )}
       <table>
         <thead>
@@ -64,6 +97,20 @@ export default async function Page({
               <td>{line.lineTotal.toString()}</td>
             </tr>
           ))}
+          {x.lines
+            .flatMap((line) =>
+              line.purchaseAllocations.map((allocation) => (
+                <tr key={allocation.id}>
+                  <td colSpan={7}>
+                    Allocation: {allocation.allocationType.replaceAll("_", " ")}{" "}
+                    · Qty {allocation.quantity.toString()} · Taxable{" "}
+                    {allocation.taxableAmount.toString()} · Tax{" "}
+                    {allocation.taxAmount.toString()}
+                  </td>
+                </tr>
+              )),
+            )
+            .map((row) => row)}
         </tbody>
       </table>
       <p>
@@ -95,7 +142,34 @@ export default async function Page({
             <button>Post / Issue</button>
           </form>
         )}
-      <p><Link href={`/api/account/print/${x.type}/${x.id}`}>Print / Preview</Link> · <Link href={`/api/account/print/${x.type}/${x.id}?format=pdf`}>Download PDF</Link></p><h2>Adjustments and payments</h2>
+      {(x.stockMovements.length > 0 ||
+        x.projectMaterialMovements.length > 0) && (
+        <section>
+          <h2>Inventory and Project material history</h2>
+          {x.stockMovements.map((m) => (
+            <p key={m.id}>
+              Stock {m.movementType.replaceAll("_", " ")} · Qty{" "}
+              {m.quantity.toString()} · Value {m.totalCost.toString()}
+            </p>
+          ))}
+          {x.projectMaterialMovements.map((m) => (
+            <p key={m.id}>
+              Project material {m.movementType.replaceAll("_", " ")} · Qty{" "}
+              {m.quantity.toString()} · Value {m.totalCost.toString()}
+            </p>
+          ))}
+        </section>
+      )}
+      <p>
+        <Link href={`/api/account/print/${x.type}/${x.id}`}>
+          Print / Preview
+        </Link>{" "}
+        ·{" "}
+        <Link href={`/api/account/print/${x.type}/${x.id}?format=pdf`}>
+          Download PDF
+        </Link>
+      </p>
+      <h2>Adjustments and payments</h2>
       {x.adjustments.map((a) => (
         <p key={a.id}>
           {a.type} {a.documentNumber}: {a.grandTotal.toString()}

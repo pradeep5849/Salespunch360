@@ -16,7 +16,8 @@ import com.salespunch360.mobile.CustomerReceiptViewModel
 fun CustomerReceiptScreen(padding: PaddingValues, vm: CustomerReceiptViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val customers = state.customers.filter { it.branchId == state.branchId }
-    val invoices = state.invoices.filter { it.branchId == state.branchId && it.customerId == state.customerId }
+    val projects = state.projects.filter { it.branchId == state.branchId }
+    val invoices = state.invoices.filter { it.branchId == state.branchId && it.customerId == state.customerId && (state.projectId.isBlank() || it.projectId == state.projectId) }
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
         contentPadding = PaddingValues(16.dp),
@@ -28,6 +29,7 @@ fun CustomerReceiptScreen(padding: PaddingValues, vm: CustomerReceiptViewModel =
         state.message?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.primary) } }
         item { SelectField("Branch", state.branchId, state.branches.map { it.id to it.name }) { id -> vm.update { it.copy(branchId = id, customerId = "", invoiceId = "") } } }
         item { SelectField("Customer", state.customerId, customers.map { it.id to it.name }) { id -> vm.update { it.copy(customerId = id, invoiceId = "") } } }
+        item { SelectField("Project", state.projectId, listOf("" to "Non-project") + projects.map { it.id to it.name }) { id -> vm.update { it.copy(projectId = id, invoiceId = "") } } }
         item { SelectField("Invoice", state.invoiceId, invoices.map { it.id to "${it.number} · Outstanding ₹${it.outstanding}" }) { id -> val invoice = invoices.first { it.id == id }; vm.update { it.copy(invoiceId = id, amount = invoice.outstanding) } } }
         item { OutlinedTextField(state.amount, { value -> vm.update { it.copy(amount = value) } }, label = { Text("Amount") }, modifier = Modifier.fillMaxWidth()) }
         item { OutlinedTextField(state.date, { value -> vm.update { it.copy(date = value) } }, label = { Text("Receipt date (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth()) }

@@ -47,6 +47,8 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun postAccountSalesDocument(id:String)=call("api/v1/mobile/account/transactions/${enc(id)}/post","POST")
  suspend fun createCustomerReceipt(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/receipts","POST",payload.toString())).jsonObject
  suspend fun customerReceiptContext()=json.parseToJsonElement(call("api/v1/mobile/account/receipts")).jsonObject
+ suspend fun projectMaterialContext()=json.parseToJsonElement(call("api/v1/mobile/account/project-material")).jsonObject
+ suspend fun postProjectMaterial(action:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/project-material","POST",buildJsonObject{put("action",action);put("payload",payload)}.toString())).jsonObject
  suspend fun quotationOptions()=json.parseToJsonElement(call("api/v1/mobile/account/quotations/options")).jsonObject
  suspend fun quotations(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/quotations"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
  suspend fun quotation(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}")).jsonObject

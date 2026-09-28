@@ -191,6 +191,68 @@ enum DiscountType {
 enum PurchasePurpose {
   OFFICE
   PROJECT
+  INVENTORY_SALES
+  GENERAL_OFFICE
+  FIXED_ASSET
+  MIXED
+}
+
+enum MaterialTreatment {
+  DIRECT_TO_PROJECT
+  RECEIVE_IN_INVENTORY
+}
+
+enum PurchaseAllocationType {
+  INVENTORY
+  PROJECT
+  GENERAL_EXPENSE
+  FIXED_ASSET
+}
+
+enum ProjectMaterialMovementType {
+  DIRECT_PROJECT_RECEIPT
+  INVENTORY_ISSUE_TO_PROJECT
+  CONSUMPTION
+  RETURN_TO_INVENTORY
+  TRANSFER_OUT
+  TRANSFER_IN
+  REVERSAL
+}
+
+model ProjectMaterialMovement {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  companyId             String                      @db.Uuid
+  branchId              String                      @db.Uuid
+  projectId             String                      @db.Uuid
+  movementType          ProjectMaterialMovementType
+  purchaseDocumentId    String?                     @db.Uuid
+  purchaseLineId        String?                     @db.Uuid
+  purchaseAllocationId  String?                     @db.Uuid
+  productId             String                      @db.Uuid
+  warehouseId           String?                     @db.Uuid
+  projectLocation       String?
+  batchId               String?                     @db.Uuid
+  serialNumberId        String?                     @db.Uuid
+  quantity              Decimal                     @db.Decimal(20, 6)
+  originalUnitCost      Decimal                     @db.Decimal(20, 6)
+  totalCost             Decimal                     @db.Decimal(20, 2)
+  movementDate          DateTime                    @db.Date
+  sourceProjectId       String?                     @db.Uuid
+  destinationProjectId  String?                     @db.Uuid
+  projectBudgetLineId   String?                     @db.Uuid
+  reason                String?
+  notes                 String?
+  attachmentKey         String?
+  createdById           String                      @db.Uuid
+  sourceMovementId      String?                     @db.Uuid
+  reversalOfId          String?                     @unique @db.Uuid
+  idempotencyKey        String
+  createdAt             DateTime                    @default(now())
+
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, branchId, projectId, productId, movementDate])
+  @@index([companyId, purchaseAllocationId, projectId])
+  @@map("project_material_movements")
 }
 
 enum PurchaseClassification {
@@ -1570,6 +1632,7 @@ model AccountSettings {
   compositionEnabled        Boolean         @default(false)
   defaultTaxMode            TaxMode         @default(EXCLUSIVE)
   transactionDefaults      Json?
+  itemSettings             Json?
   projectDefaults          Json?
   printProfile             Json?
   createdAt                DateTime        @default(now())
@@ -2285,8 +2348,20 @@ model CommercialDocument {
   sourcePurchaseOrderId  String?                  @db.Uuid
   purchasePurpose        PurchasePurpose?
   purchaseClassification PurchaseClassification?
+  materialTreatment      MaterialTreatment?
+  projectBudgetLineId    String?                  @db.Uuid
   projectReference       String?                  @db.VarChar(240)
   projectId              String?                  @db.Uuid
+  vendorInvoiceNumber    String?                  @db.VarChar(120)
+  vendorInvoiceNumberNormalized String?           @db.VarChar(120)
+  vendorInvoiceDate      DateTime?                @db.Date
+  postingDate            DateTime?                @db.Date
+  paymentTerms           String?                  @db.VarChar(500)
+  partyAddress           String?
+  grnReference           String?                  @db.VarChar(160)
+  purchaseLocation       String?                  @db.VarChar(240)
+  vendorInvoiceAttachmentKey String?              @db.VarChar(512)
+  purchaseFinancialYearId String?                 @db.Uuid
   issueDate              DateTime                 @db.Date
   dueDate                DateTime?                @db.Date
   subtotal               Decimal                  @db.Decimal(18, 2)
@@ -2301,6 +2376,9 @@ model CommercialDocument {
   sgstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
   igstTotal              Decimal                  @default(0) @db.Decimal(18, 2)
   cessTotal              Decimal                  @default(0) @db.Decimal(18, 2)
+  freightAmount          Decimal                  @default(0) @db.Decimal(18, 2)
+  otherChargesAmount     Decimal                  @default(0) @db.Decimal(18, 2)
+  roundOffAmount         Decimal                  @default(0) @db.Decimal(18, 2)
   reverseCharge          Boolean                  @default(false)
   taxCreditTreatment     TaxCreditTreatment       @default(ELIGIBLE)
   tdsAmount              Decimal                  @default(0) @db.Decimal(18, 2)
@@ -2333,6 +2411,7 @@ model CommercialDocument {
 
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, documentNumber])
+  @@unique([companyId, vendorId, purchaseFinancialYearId, vendorInvoiceNumberNormalized])
   @@index([companyId, type, issueDate])
   @@index([companyId, branchId, status, type, issueDate])
   @@index([companyId, customerId])
@@ -2379,6 +2458,7 @@ model CommercialDocumentLine {
   cessRate       Decimal            @default(0) @db.Decimal(7, 4)
   lineTotal      Decimal            @db.Decimal(18, 2)
   document       CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  purchaseAllocations PurchaseLineAllocation[]
   product        AccountProduct?    @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   service        AccountService?    @relation(fields: [companyId, serviceId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   workPackage    WorkPackage?       @relation(fields: [companyId, workPackageId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -2386,6 +2466,32 @@ model CommercialDocumentLine {
   @@unique([companyId, id])
   @@unique([companyId, documentId, position])
   @@map("commercial_document_lines")
+}
+
+model PurchaseLineAllocation {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  companyId           String                 @db.Uuid
+  documentLineId      String                 @db.Uuid
+  allocationType      PurchaseAllocationType
+  projectId           String?                @db.Uuid
+  projectBudgetLineId String?                @db.Uuid
+  warehouseId         String?                @db.Uuid
+  materialTreatment   MaterialTreatment?
+  quantity            Decimal                @db.Decimal(18, 4)
+  baseAmount          Decimal                @db.Decimal(18, 2)
+  discountAmount      Decimal                @db.Decimal(18, 2)
+  taxableAmount       Decimal                @db.Decimal(18, 2)
+  taxAmount           Decimal                @db.Decimal(18, 2)
+  cessAmount          Decimal                @db.Decimal(18, 2)
+  totalAmount         Decimal                @db.Decimal(18, 2)
+  position            Int
+  createdAt           DateTime               @default(now())
+  documentLine        CommercialDocumentLine @relation(fields: [companyId, documentLineId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([companyId, documentLineId, position])
+  @@index([companyId, projectId])
+  @@map("purchase_line_allocations")
 }
 
 model AccountSettlement {
@@ -2401,6 +2507,7 @@ model AccountSettlement {
   idempotencyKey   String                 @db.VarChar(120)
   paymentMode      PaymentMode
   moneyAccountId   String?                @db.Uuid
+  projectId        String?                @db.Uuid
   amount           Decimal                @db.Decimal(18, 2)
   remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
   transactionDate  DateTime               @db.Date
@@ -2488,6 +2595,7 @@ model AdvanceApplication {
   companyId       String             @db.Uuid
   advanceId       String             @db.Uuid
   documentId      String             @db.Uuid
+  projectId       String?            @db.Uuid
   amount          Decimal            @db.Decimal(18, 2)
   applicationDate DateTime           @db.Date
   idempotencyKey  String             @db.VarChar(120)

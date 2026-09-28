@@ -18,6 +18,10 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,12 +90,13 @@ fun NativeAccountAuthenticatedApp(
     val showProjects=navigation.any{group->
         (group.items+group.children.flatMap{it.items}).any{it.label=="Projects"&&it.href=="/workspace/account/projects"}
     }
+    val canStock="ACCOUNT_STOCK" in account?.effectivePermissions.orEmpty()&&"INVENTORY" in modules&&account?.itemSettings?.get("enabled")?.toString()!="false"
+    val canSettings="ACCOUNT_SETTINGS" in account?.effectivePermissions.orEmpty()&&data.user.accountRole==com.salespunch360.mobile.data.AccountRole.ACCOUNT_ADMIN
     val bottom=buildList{
         add(AccountBottomDestination("Home",ACCOUNT_HOME,Icons.Default.Home))
         add(AccountBottomDestination("Dashboard",ACCOUNT_DASHBOARD,Icons.Default.Dashboard))
         if(showProjects)add(AccountBottomDestination("Projects","/workspace/account/projects",Icons.Default.Work))
-        add(AccountBottomDestination("Items",if("INVENTORY" in modules)"/workspace/account/inventory" else ACCOUNT_MENU,Icons.Default.Inventory2))
-        add(AccountBottomDestination("Menu",ACCOUNT_MENU,Icons.Default.Menu))
+        if(canStock)add(AccountBottomDestination("Items","/workspace/account/inventory",Icons.Default.Inventory2))
     }
 
     BackHandler(enabled=state.selectedPath!=ACCOUNT_HOME){vm.back()}
@@ -102,6 +107,7 @@ fun NativeAccountAuthenticatedApp(
             TopAppBar(
                 colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White),
                 title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},
+                navigationIcon={IconButton(onClick={vm.select(ACCOUNT_MENU)}){Icon(Icons.Default.Menu,"Open Account menu")}},
                 actions={
                     account?.notifications?.pendingExpenseApprovals?.let{count->
                         IconButton(onClick={vm.select("/workspace/account/notifications")}){
@@ -120,6 +126,8 @@ fun NativeAccountAuthenticatedApp(
                             DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;vm.select("/workspace/company-profile")})
                             DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
                             DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;vm.select("/workspace/change-password")})
+                            if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
+                            DropdownMenuItem(text={Text("Settings · Coming soon")},enabled=false,onClick={})
                             onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             HorizontalDivider()
                             DropdownMenuItem(text={Text("Sign out")},onClick={profileMenu=false;onLogout()})
@@ -139,6 +147,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
+            state.selectedPath=="/workspace/account/projects/material"->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding)
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding)
             moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
@@ -158,6 +167,9 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
+            state.selectedPath=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select)
+            state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
+            state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
@@ -225,11 +237,11 @@ private fun AccountHomeScreen(
         item{
             ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                    Text("Quick Actions",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+                    Text("Quick Links",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         actions.forEach{action->
                             Column(Modifier.weight(1f).clickable(enabled=action.second.isNotBlank()){navigate(action.second)}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                                Surface(shape=RoundedCornerShape(12.dp),color=Color(0xFFEFF6FF)){Text("◆",Modifier.padding(12.dp),color=Color(0xFF2563EB))}
+                                Surface(shape=RoundedCornerShape(12.dp),color=Color(0xFFEFF6FF)){Icon(when(action.first){"Add Txn"->Icons.Default.Add;"Sale Report"->Icons.Default.Assessment;"Txn Settings"->Icons.Default.Settings;else->Icons.Default.Apps},action.first,Modifier.padding(10.dp),tint=Color(0xFF2563EB))}
                                 Spacer(Modifier.height(6.dp));Text(action.first,style=MaterialTheme.typography.labelMedium,maxLines=2)
                                 if(action.second.isBlank())Text("Later",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))
                             }
@@ -413,7 +425,7 @@ private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else runCa
 private fun purchaseType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE")} else null
 
 private fun inventoryMode(path:String)=when{
-    path=="/workspace/account/inventory"||path.endsWith("/inventory/stock")->"stock"
+    path.endsWith("/inventory/stock")||path.endsWith("/inventory/stock-summary")->"stock"
     path.endsWith("/inventory/low-stock")->"low-stock"
     path.endsWith("/inventory/opening")->"opening"
     path.endsWith("/inventory/transfers")->"transfers"

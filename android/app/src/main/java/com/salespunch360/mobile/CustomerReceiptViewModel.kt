@@ -16,6 +16,7 @@ data class ReceiptInvoice(
     val id: String,
     val branchId: String,
     val customerId: String,
+    val projectId: String,
     val number: String,
     val outstanding: String
 )
@@ -28,10 +29,12 @@ data class ReceiptState(
     val customers: List<SalesOption> = emptyList(),
     val branches: List<SalesOption> = emptyList(),
     val moneyAccounts: List<SalesOption> = emptyList(),
+    val projects: List<SalesOption> = emptyList(),
     val invoices: List<ReceiptInvoice> = emptyList(),
     val history: List<ReceiptRow> = emptyList(),
     val branchId: String = "",
     val customerId: String = "",
+    val projectId: String = "",
     val invoiceId: String = "",
     val amount: String = "",
     val date: String = java.time.LocalDate.now().toString(),
@@ -59,11 +62,13 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
             val branches = context.array("branches").map { it.option() }
             val customers = context.array("customers").map { it.option() }
             val accounts = context.array("moneyAccounts").map { it.option() }
+            val projects = context.array("projects").map { it.option() }
             val documents = context.array("documents").map {
                 ReceiptInvoice(
                     it.str("id"),
                     it.str("branchId"),
                     it.str("customerId"),
+                    it.str("projectId"),
                     it.str("documentNumber"),
                     it.str("outstanding")
                 )
@@ -82,6 +87,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
                 branches = branches,
                 customers = customers,
                 moneyAccounts = accounts,
+                projects = projects,
                 invoices = documents,
                 history = history,
                 branchId = _state.value.branchId.ifBlank { branches.firstOrNull()?.id.orEmpty() }
@@ -110,6 +116,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
                     put("type", "CUSTOMER_RECEIPT")
                     put("branchId", current.branchId)
                     put("partyId", current.customerId)
+                    current.projectId.takeIf { it.isNotBlank() }?.let { put("projectId", it) }
                     put("paymentMode", current.mode)
                     current.moneyAccountId.takeIf { it.isNotBlank() }?.let { put("moneyAccountId", it) }
                     put("amount", current.amount)
