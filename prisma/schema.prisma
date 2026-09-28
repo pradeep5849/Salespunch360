@@ -2507,6 +2507,7 @@ model AccountSettlement {
   idempotencyKey   String                 @db.VarChar(120)
   paymentMode      PaymentMode
   moneyAccountId   String?                @db.Uuid
+  projectId        String?                @db.Uuid
   amount           Decimal                @db.Decimal(18, 2)
   remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
   transactionDate  DateTime               @db.Date
@@ -2594,6 +2595,7 @@ model AdvanceApplication {
   companyId       String             @db.Uuid
   advanceId       String             @db.Uuid
   documentId      String             @db.Uuid
+  projectId       String?            @db.Uuid
   amount          Decimal            @db.Decimal(18, 2)
   applicationDate DateTime           @db.Date
   idempotencyKey  String             @db.VarChar(120)
