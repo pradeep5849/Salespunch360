@@ -11,6 +11,7 @@ import { taxProfileInput } from "@/lib/account/tax";
 import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
+import { normalizeTransactionPreferences, PREFIX_TYPES, transactionPreferencesSchema } from "@/lib/account/transaction-settings";
 
 const actor = (
   u: MobileAppPrincipal,
@@ -32,7 +33,7 @@ const branchWhere = (a: ReturnType<typeof mobileAccountActor>) =>
     : {};
 export async function mobileSettings(u: MobileAppPrincipal) {
   const a = actor(u, "ACCOUNT_SETTINGS");
-  const [settings, fields, templates, modules, branches] = await Promise.all([
+  const [settings, fields, templates, modules, branches, numberingSeries] = await Promise.all([
     db.accountSettings.findUnique({ where: { companyId: a.companyId } }),
     db.customFieldDefinition.findMany({
       where: { companyId: a.companyId },
@@ -47,6 +48,7 @@ export async function mobileSettings(u: MobileAppPrincipal) {
       where: { companyId: a.companyId, ...branchWhere(a) },
       orderBy: { name: "asc" },
     }),
+    db.numberingSeries.findMany({where:{companyId:a.companyId,seriesKey:{in:PREFIX_TYPES.map(([key])=>key)}},select:{branchId:true,seriesKey:true,prefix:true}}),
   ]);
   return {
     settings,
@@ -57,6 +59,7 @@ export async function mobileSettings(u: MobileAppPrincipal) {
     catalog: MODULE_SETUP_CATALOG,
     recommendations: recommendedSetupModules(settings?.businessType ?? "OTHER_MIXED"),
     branches,
+    numberingSeries,
   };
 }
 export async function mobileSaveSettings(
@@ -79,7 +82,8 @@ export async function mobileSaveSettings(
       v = schema.parse(raw),
       threshold = new Prisma.Decimal(v.expenseApprovalThreshold);
     if (threshold.isNegative()) throw new Error("INVALID_APPROVAL_THRESHOLD");
-    const transactionDefaults = v.transactionDefaults as Prisma.InputJsonValue;
+    const existing=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true}});
+    const transactionDefaults = {...((existing?.transactionDefaults as Record<string,unknown>|null)??{}),...v.transactionDefaults} as Prisma.InputJsonValue;
     const printProfile = v.printProfile as Prisma.InputJsonValue;
     return db.accountSettings.upsert({
       where: { companyId: a.companyId },
@@ -101,6 +105,12 @@ export async function mobileSaveSettings(
   if (section === "general") {
     const v = z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.enum(["SYSTEM","LIGHT","DARK"])}).strict().parse(raw);
     return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,...v},update:v});
+  }
+  if (section === "transaction-settings") {
+    const v=z.object({preferences:transactionPreferencesSchema,branchId:z.string().uuid(),prefixes:z.record(z.string(),z.string().max(30))}).strict().parse(raw);
+    if(!await db.branch.findFirst({where:{id:v.branchId,companyId:a.companyId,isActive:true,...branchWhere(a)}}))throw new Error("MOBILE_FORBIDDEN");
+    const allowed=new Set(PREFIX_TYPES.map(([key])=>key));if(Object.keys(v.prefixes).some(key=>!allowed.has(key as never)))throw new Error("INVALID_PREFIX_TYPE");
+    return db.$transaction(async tx=>{const current=await tx.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true,itemSettings:true}}),defaults=(current?.transactionDefaults as Record<string,unknown>|null)??{},items=(current?.itemSettings as Record<string,unknown>|null)??{},preferences=normalizeTransactionPreferences(v.preferences);const saved=await tx.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}},update:{transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}}});for(const[seriesKey,prefix]of Object.entries(v.prefixes)){const row=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey}});if(row)await tx.numberingSeries.update({where:{id:row.id},data:{prefix}});else await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey,prefix,padding:6}})}return saved});
   }
   if (section === "modules") {
     const v = z.object({
