@@ -1,0 +1,5 @@
+-- Additive only: existing Account settings and module arrays remain unchanged.
+ALTER TYPE "BusinessType" ADD VALUE IF NOT EXISTS 'RESTAURANT_FOOD';
+ALTER TYPE "BusinessType" ADD VALUE IF NOT EXISTS 'WHOLESALE_DISTRIBUTION';
+ALTER TYPE "BusinessType" ADD VALUE IF NOT EXISTS 'PROFESSIONAL_CONSULTANCY';
+ALTER TYPE "AccountModule" ADD VALUE IF NOT EXISTS 'POS';

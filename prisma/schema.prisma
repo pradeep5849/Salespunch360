@@ -63,6 +63,9 @@ enum BusinessType {
   RETAIL_TRADING
   SERVICE_BUSINESS
   MANUFACTURING
+  RESTAURANT_FOOD
+  WHOLESALE_DISTRIBUTION
+  PROFESSIONAL_CONSULTANCY
   OTHER_MIXED
 }
 
@@ -87,6 +90,7 @@ enum AccountModule {
   PROJECT_COSTING
   INVENTORY
   BARCODE
+  POS
   EXPENSES
   ASSETS
   GST_ADVANCED
@@ -1622,6 +1626,11 @@ model AccountSettings {
   companyId                String          @id @db.Uuid
   company                  Company         @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   baseCurrency             String          @default("INR") @db.Char(3)
+  appLanguage             String          @default("en") @db.VarChar(10)
+  displayDecimalPlaces    Int             @default(2)
+  dateFormat              String          @default("DD/MM/YYYY") @db.VarChar(16)
+  warnUnsavedChanges      Boolean         @default(true)
+  appearance              String          @default("SYSTEM") @db.VarChar(16)
   businessType             BusinessType    @default(OTHER_MIXED)
   enabledModules           AccountModule[] @default([])
   expenseApprovalRequired  Boolean         @default(false)
