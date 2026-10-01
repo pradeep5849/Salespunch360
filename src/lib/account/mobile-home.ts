@@ -9,22 +9,34 @@ export const accountHomeTransactionTypes = [
   "SUBCONTRACT_PURCHASE",
 ] as const satisfies readonly CommercialDocumentType[];
 
-export function normalizedHomeTypes(values: string[] | undefined): CommercialDocumentType[] {
-  const supported = new Set<string>(accountHomeTransactionTypes);
-  return [...new Set((values ?? []).filter((value): value is CommercialDocumentType => supported.has(value)))];
+export const accountHomeFilterKeys = [...accountHomeTransactionTypes,
+  "CUSTOMER_RECEIPT", "VENDOR_PAYMENT", "ESTIMATE", "EXPENSE", "P2P_RECEIVED", "P2P_PAID",
+  "SALE_FA", "PURCHASE_FA", "SALE_CANCELLED", "JOB_WORK_OUT", "SALE_REPEATING",
+] as const;
+
+export function normalizedHomeTypes(values: string[] | undefined): string[] {
+  const supported = new Set<string>(accountHomeFilterKeys);
+  return [...new Set((values ?? []).filter(value => supported.has(value)))];
 }
 
 export async function accountMobileHomeData(actor: AccountBranchActor, context: AccountBranchContext, input: { tab?: string; q?: string; types?: string[] }) {
   const scopes = accountHomeScopes(actor, context);
   const q = input.q?.trim().slice(0, 100) ?? "";
   const types = normalizedHomeTypes(input.types);
+  const commercialTypes = types.filter((type): type is CommercialDocumentType => (accountHomeTransactionTypes as readonly string[]).includes(type));
+  const documentFilters: Prisma.CommercialDocumentWhereInput[] = commercialTypes.map(type => ({ type }));
+  if (types.includes("SALE_CANCELLED")) documentFilters.push({ type: "SALES_INVOICE", status: "CANCELLED" });
+  // The current home feed is commercial-document backed. Selecting a category owned by
+  // another ledger prevents unrelated documents from being shown until that feed is present.
   const documentWhere: Prisma.CommercialDocumentWhereInput = {
     ...scopes.document,
-    ...(types.length ? { type: { in: types } } : {}),
-    ...(q ? { OR: [
-      { partyName: { contains: q, mode: "insensitive" } },
-      { documentNumber: { contains: q, mode: "insensitive" } },
-      { projectReference: { contains: q, mode: "insensitive" } },
+    ...((types.length || q) ? { AND: [
+      ...(types.length ? [{ OR: documentFilters.length ? documentFilters : [{ id: { equals: "__no_commercial_document__" } }] }] : []),
+      ...(q ? [{ OR: [
+        { partyName: { contains: q, mode: "insensitive" as const } },
+        { documentNumber: { contains: q, mode: "insensitive" as const } },
+        { projectReference: { contains: q, mode: "insensitive" as const } },
+      ] }] : []),
     ] } : {}),
   };
   const partyWhere: Prisma.CustomerWhereInput = {

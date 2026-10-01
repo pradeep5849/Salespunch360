@@ -4,11 +4,9 @@ import { db } from "@/lib/db";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
-  ACCOUNT_MODULE_CATALOG,
-  IMPLEMENTED_ACCOUNT_MODULES,
   enabledModulesForCompany,
-  validateEnabledModules,
 } from "@/lib/account/modules";
+import {BUSINESS_TYPES,MODULE_SETUP_CATALOG,expandSetupModules,optionalModulesFromStored,recommendedSetupModules} from "@/lib/account/module-setup";
 import { taxProfileInput } from "@/lib/account/tax";
 import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
@@ -54,11 +52,10 @@ export async function mobileSettings(u: MobileAppPrincipal) {
     settings,
     fields,
     templates,
-    modules,
-    catalog: IMPLEMENTED_ACCOUNT_MODULES.map((key) => ({
-      key,
-      ...ACCOUNT_MODULE_CATALOG[key],
-    })),
+    modules: optionalModulesFromStored(modules),
+    businessTypes: BUSINESS_TYPES,
+    catalog: MODULE_SETUP_CATALOG,
+    recommendations: recommendedSetupModules(settings?.businessType ?? "OTHER_MIXED"),
     branches,
   };
 }
@@ -101,29 +98,26 @@ export async function mobileSaveSettings(
       },
     });
   }
+  if (section === "general") {
+    const v = z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.enum(["SYSTEM","LIGHT","DARK"])}).strict().parse(raw);
+    return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,...v},update:v});
+  }
   if (section === "modules") {
-    const v = z
-      .object({
-        businessType: z.enum([
-          "INTERIOR_CONSTRUCTION",
-          "RETAIL_TRADING",
-          "SERVICE_BUSINESS",
-          "MANUFACTURING",
-          "OTHER_MIXED",
-        ]),
-        enabledModules: z.array(z.enum(IMPLEMENTED_ACCOUNT_MODULES)),
-      })
-      .parse(raw);
+    const v = z.object({
+      businessType: z.enum(BUSINESS_TYPES.map(type => type.key) as [typeof BUSINESS_TYPES[number]["key"], ...typeof BUSINESS_TYPES[number]["key"][]]),
+      enabledModules: z.array(z.enum(["PROJECTS", "BARCODE", "POS"])),
+    }).strict().parse(raw);
+    const enabledModules = expandSetupModules(v.enabledModules);
     return db.accountSettings.upsert({
       where: { companyId: a.companyId },
       create: {
         companyId: a.companyId,
-        ...v,
-        enabledModules: validateEnabledModules(v.enabledModules),
+        businessType: v.businessType,
+        enabledModules,
       },
       update: {
-        ...v,
-        enabledModules: validateEnabledModules(v.enabledModules),
+        businessType: v.businessType,
+        enabledModules,
       },
     });
   }

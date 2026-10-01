@@ -5,13 +5,17 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +84,7 @@ fun AccountAdministrationScreen(
         when (mode) {
             "users" -> UserView(state.data, vm)
             "settings" -> SettingsForm(state.data, vm)
+            "general" -> GeneralSettingsView(state.data, vm)
             "transaction-settings" -> SettingsForm(state.data, vm)
             "custom-fields" -> CustomFieldView(state.data, vm)
             "modules" -> ModuleView(state.data, vm)
@@ -171,27 +176,60 @@ private fun CustomFieldView(data: JsonElement, vm: AccountAdministrationViewMode
 private fun ModuleView(data: JsonElement, vm: AccountAdministrationViewModel) {
     val root = data as? JsonObject ?: return
     val enabled = root["modules"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty()
+    val types = root["businessTypes"]?.jsonArray?.toList().orEmpty()
+    val initialType = root["settings"]?.jsonObject?.get("businessType")?.jsonPrimitive?.content ?: "OTHER_MIXED"
     var selected by remember(root) { mutableStateOf(enabled) }
-    LazyColumn {
+    var businessType by remember(root) { mutableStateOf(initialType) }
+    var typeMenu by remember { mutableStateOf(false) }
+    val recommendations = root["recommendations"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty()
+    LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        item {
+            ElevatedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text("Step 1",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
+                    Text("Business Type",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+                    Box {
+                        OutlinedButton(onClick={typeMenu=true},modifier=Modifier.fillMaxWidth()) {
+                            val label=types.firstOrNull{it.jsonObject["key"]?.jsonPrimitive?.content==businessType}?.jsonObject?.get("label")?.jsonPrimitive?.content?:"Other / Mixed"
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Text("⌄")}
+                        }
+                        DropdownMenu(expanded=typeMenu,onDismissRequest={typeMenu=false}) {
+                            types.forEach { type ->
+                                val item=type.jsonObject
+                                DropdownMenuItem(text={Text(item["label"]!!.jsonPrimitive.content)},onClick={businessType=item["key"]!!.jsonPrimitive.content;typeMenu=false})
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item { Text("Step 2",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("Modules",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold) }
         items(root["catalog"]?.jsonArray?.toList().orEmpty()) { element ->
             val item = element.jsonObject
             val key = item["key"]!!.jsonPrimitive.content
-            Row {
-                Checkbox(key in selected, { checked -> selected = if (checked) selected + key else selected - key })
-                Text(item["name"]!!.jsonPrimitive.content)
+            val available=item["available"]!!.jsonPrimitive.boolean
+            val core=key=="BASIC_ACCOUNTING"
+            ElevatedCard(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().clickable(enabled=available&&!core){selected=if(key in selected)selected-key else selected+key}.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(item["label"]!!.jsonPrimitive.content,fontWeight=FontWeight.SemiBold)
+                        val recommended=key in recommendations&&available&&!core
+                        Text(item["note"]!!.jsonPrimitive.content+(if(recommended)" · Recommended" else ""),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    when { core->Text("Core",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);!available->Text("Coming Soon",color=MaterialTheme.colorScheme.onSurfaceVariant);else->Switch(checked=key in selected,onCheckedChange={checked->selected=if(checked)selected+key else selected-key}) }
+                }
             }
         }
         item {
             Button(onClick = {
                 vm.save("modules", buildJsonObject {
-                    put("businessType", root["settings"]?.jsonObject?.get("businessType")?.jsonPrimitive?.content ?: "OTHER_MIXED")
+                    put("businessType", businessType)
                     putJsonArray("enabledModules") { selected.forEach { add(it) } }
                 })
-            }) { Text("Save modules") }
+            },modifier=Modifier.fillMaxWidth()) { Text("Save setup") }
         }
     }
 }
-
 @Composable
 private fun TemplateView(data: JsonElement, vm: AccountAdministrationViewModel) {
     val root = data as? JsonObject ?: return
@@ -310,3 +348,44 @@ private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
         }
     }
 }
+
+private val accountSettingsDestinations=listOf(
+    "General" to "/workspace/account/settings/general","Transaction" to "/workspace/account/settings/transactions","Invoice Print" to "/workspace/account/settings/print-templates","Taxes & GST" to "/workspace/account/tax/settings","User Management" to "/workspace/employees","Transaction SMS" to "/workspace/account/settings/transactions","Reminders" to "/workspace/account/settings/transactions","Party" to "/workspace/account/settings/custom-fields","Item" to "/workspace/account/inventory/item-settings","Multi-Currency" to "/workspace/account/financial-years"
+)
+
+@Composable
+fun AccountSettingsMenuScreen(padding:PaddingValues,navigate:(String)->Unit,back:()->Boolean){
+    var query by remember{mutableStateOf("")}
+    val rows=accountSettingsDestinations.filter{it.first.contains(query,true)}
+    Column(Modifier.fillMaxSize().padding(padding).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Row(verticalAlignment=Alignment.CenterVertically){TextButton(onClick={back()}){Text("‹ Back")};Text("Settings",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
+        OutlinedTextField(query,{query=it},placeholder={Text("Search settings")},singleLine=true,modifier=Modifier.fillMaxWidth())
+        LazyColumn(Modifier.weight(1f)){items(rows){item->ListItem(headlineContent={Text(item.first)},leadingContent={Icon(Icons.Default.Settings,null)},trailingContent={Text("›")},modifier=Modifier.clickable{navigate(item.second)});HorizontalDivider()}}
+    }
+}
+
+@Composable
+private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){
+    val context=LocalContext.current
+    val current=data.jsonObject["settings"]?.jsonObject?:JsonObject(emptyMap())
+    var language by remember(current){mutableStateOf(current["appLanguage"]?.jsonPrimitive?.content?:"en")}
+    var currency by remember(current){mutableStateOf(current["baseCurrency"]?.jsonPrimitive?.content?:"INR")}
+    var decimals by remember(current){mutableStateOf(current["displayDecimalPlaces"]?.jsonPrimitive?.intOrNull?:2)}
+    var dateFormat by remember(current){mutableStateOf(current["dateFormat"]?.jsonPrimitive?.content?:"DD/MM/YYYY")}
+    var warning by remember(current){mutableStateOf(current["warnUnsavedChanges"]?.jsonPrimitive?.booleanOrNull?:true)}
+    var appearance by remember(current){mutableStateOf(current["appearance"]?.jsonPrimitive?.content?:"SYSTEM")}
+    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
+        item{Text("Application",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+        item{ChoiceSetting("App Language",language,listOf("en" to "English","hi" to "Hindi")){language=it}}
+        item{ChoiceSetting("Business Currency",currency,listOf("INR","USD","EUR","GBP","AED").map{it to it}){currency=it}}
+        item{ChoiceSetting("Decimal Places",decimals.toString(),(0..4).map{it.toString() to it.toString()}){decimals=it.toInt()};Text("General amount precision; item quantity decimals remain in Item Settings.",style=MaterialTheme.typography.bodySmall)}
+        item{ChoiceSetting("Date Format",dateFormat,listOf("DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD").map{it to it}){dateFormat=it}}
+        item{SwitchRow("Show warning for unsaved changes",warning){warning=it}}
+        item{ChoiceSetting("Theme / Appearance",appearance,listOf("SYSTEM" to "Use device setting","LIGHT" to "Light","DARK" to "Dark")){appearance=it}}
+        item{Text("Security",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);ListItem(headlineContent={Text("Passcode / Fingerprint")},supportingContent={Text("Managed by Android device security")},trailingContent={Text("›")},modifier=Modifier.clickable{context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))})}
+        item{Button(onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance)})},modifier=Modifier.fillMaxWidth()){Text("Save General Settings")}}
+    }
+}
+
+@Composable
+private fun ChoiceSetting(label:String,value:String,choices:List<Pair<String,String>>,change:(String)->Unit){var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},modifier=Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Text(choices.firstOrNull{it.first==value}?.second?:value)}};DropdownMenu(expanded=open,onDismissRequest={open=false}){choices.forEach{choice->DropdownMenuItem(text={Text(choice.second)},onClick={change(choice.first);open=false})}}}}

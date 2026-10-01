@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +28,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,13 +50,13 @@ import com.salespunch360.mobile.ui.BranchesScreen
 import com.salespunch360.mobile.ui.ChangePasswordScreen
 import com.salespunch360.mobile.ui.CompanyIdentity
 import com.salespunch360.mobile.ui.CompanyProfileScreen
-import com.salespunch360.mobile.ui.SettingsScreen
 import com.salespunch360.mobile.ui.SubscriptionScreen
 import com.salespunch360.mobile.ui.account.accounting.AssetScreen
 import com.salespunch360.mobile.ui.account.accounting.ChartOfAccountsScreen
 import com.salespunch360.mobile.ui.account.accounting.FinancialYearScreen
 import com.salespunch360.mobile.ui.account.accounting.JournalScreen
 import com.salespunch360.mobile.ui.account.admin.AccountAdministrationScreen
+import com.salespunch360.mobile.ui.account.admin.AccountSettingsMenuScreen
 import com.salespunch360.mobile.ui.account.admin.AccountUtilityScreen
 import com.salespunch360.mobile.ui.account.expense.ExpenseCategoryScreen
 import com.salespunch360.mobile.ui.account.expense.ExpenseScreen
@@ -109,10 +118,9 @@ fun NativeAccountAuthenticatedApp(
                 title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},
                 navigationIcon={IconButton(onClick={vm.select(ACCOUNT_MENU)}){Icon(Icons.Default.Menu,"Open Account menu")}},
                 actions={
-                    account?.notifications?.pendingExpenseApprovals?.let{count->
-                        IconButton(onClick={vm.select("/workspace/account/notifications")}){
-                            BadgedBox(badge={if(count>0)Badge{Text(if(count>99)"99+" else count.toString())}}){Icon(Icons.Default.Notifications,"Account notifications")}
-                        }
+                    val notificationCount=account?.notifications?.pendingExpenseApprovals?:0
+                    IconButton(onClick={vm.select("/workspace/account/notifications")}){
+                        BadgedBox(badge={if(notificationCount>0)Badge{Text(if(notificationCount>99)"99+" else notificationCount.toString())}}){Icon(Icons.Default.Notifications,"Account notifications")}
                     }
                     Box{
                         IconButton(onClick={profileMenu=true}){
@@ -127,7 +135,7 @@ fun NativeAccountAuthenticatedApp(
                             DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
                             DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;vm.select("/workspace/change-password")})
                             if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
-                            DropdownMenuItem(text={Text("Settings · Coming soon")},enabled=false,onClick={})
+                            DropdownMenuItem(text={Text("Settings")},onClick={profileMenu=false;vm.select("/workspace/account/settings")})
                             onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             HorizontalDivider()
                             DropdownMenuItem(text={Text("Sign out")},onClick={profileMenu=false;onLogout()})
@@ -163,7 +171,7 @@ fun NativeAccountAuthenticatedApp(
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding)
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
-            state.selectedPath=="/workspace/account/settings"->Box(Modifier.padding(padding)){SettingsScreen()}
+            state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
             state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
@@ -204,6 +212,7 @@ private fun AccountBottomBar(items:List<AccountBottomDestination>,current:String
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountHomeScreen(
     groups:List<AccountNavigationGroup>,
@@ -219,73 +228,78 @@ private fun AccountHomeScreen(
     val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
     var partyMode by rememberSaveable{mutableStateOf(false)}
     var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
-    val filters=listOf("SALES_INVOICE","SALES_ORDER","CREDIT_NOTE","PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE","PROFORMA_INVOICE","DELIVERY_CHALLAN","SUBCONTRACT_PURCHASE")
-    val transactionActions=listOf(
-        "Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),
-        "Sale Report" to "/workspace/account/reports/invoices",
-        "Txn Settings" to "/workspace/account/settings/transactions",
-        "Show All" to ACCOUNT_MENU
+    var filterOpen by rememberSaveable{mutableStateOf(false)}
+    var moreContext by rememberSaveable{mutableStateOf<String?>(null)}
+    var draftTypes by remember(homeTypes,filterOpen){mutableStateOf(homeTypes)}
+    val listState=rememberLazyListState()
+    val floatingVisible by remember{derivedStateOf{!listState.isScrollInProgress}}
+    val filters=listOf(
+        "SALES_INVOICE" to "Sale","SALES_ORDER" to "Sale Order","CREDIT_NOTE" to "Credit Note","PURCHASE_BILL" to "Purchase",
+        "PURCHASE_ORDER" to "Purchase Order","DEBIT_NOTE" to "Debit Note","CUSTOMER_RECEIPT" to "Payment-In","VENDOR_PAYMENT" to "Payment-Out",
+        "ESTIMATE" to "Estimate","PROFORMA_INVOICE" to "Proforma Invoice","EXPENSE" to "Expense","DELIVERY_CHALLAN" to "Delivery Challan",
+        "P2P_RECEIVED" to "Party To Party [Rcvd]","P2P_PAID" to "Party To Party [Paid]","SALE_FA" to "Sale FA","PURCHASE_FA" to "Purchase FA",
+        "SALE_CANCELLED" to "Sale [Cancelled]","JOB_WORK_OUT" to "Job work out (Challan)","SUBCONTRACT_PURCHASE" to "Purchase (Job work)","SALE_REPEATING" to "Sale [Repeating]"
     )
-    val partyActions=listOf("Network" to "", "Party Statement" to "/workspace/account/reports/customer-ledger", "Party Settings" to "/workspace/account/settings/custom-fields", "Show All" to ACCOUNT_MENU)
+    val transactionMore=listOf("Bank Accounts" to "/workspace/account/money/accounts","Day Book" to "/workspace/account/reports/general-ledger","All Txns Report" to "/workspace/account/transactions","Profit & Loss" to "/workspace/account/reports/profit-loss","Balance Sheet" to "/workspace/account/reports/balance-sheet","Billwise PnL" to "/workspace/account/reports/invoices","Print Settings" to "/workspace/account/settings/print-templates","Txn SMS Settings" to "")
+    val partyMore=listOf("All Parties Report" to "/workspace/account/reports/customers","Import Party" to "/workspace/account/utilities/import","Partywise P&L" to "/workspace/account/reports/customers")
+    val transactionActions=listOf("Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),"Sale Report" to "/workspace/account/reports/invoices","Txn Settings" to "/workspace/account/settings/transactions","Show All" to "")
+    val partyActions=listOf("Network" to "","Party Statement" to "/workspace/account/reports/customer-ledger","Party Settings" to "/workspace/account/settings/custom-fields","Show All" to "")
     val actions=if(partyMode)partyActions else transactionActions
-    LazyColumn(
-        Modifier.fillMaxSize().padding(padding),
-        contentPadding=PaddingValues(16.dp),
-        verticalArrangement=Arrangement.spacedBy(12.dp)
-    ){
-        item{AccountSegmentedTabs(partyMode){partyMode=it}}
-        item{
-            ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){
-                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                    Text("Quick Links",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        actions.forEach{action->
-                            Column(Modifier.weight(1f).clickable(enabled=action.second.isNotBlank()){navigate(action.second)}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                                Surface(shape=RoundedCornerShape(12.dp),color=Color(0xFFEFF6FF)){Icon(when(action.first){"Add Txn"->Icons.Default.Add;"Sale Report"->Icons.Default.Assessment;"Txn Settings"->Icons.Default.Settings;else->Icons.Default.Apps},action.first,Modifier.padding(10.dp),tint=Color(0xFF2563EB))}
-                                Spacer(Modifier.height(6.dp));Text(action.first,style=MaterialTheme.typography.labelMedium,maxLines=2)
-                                if(action.second.isBlank())Text("Later",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))
+
+    Box(Modifier.fillMaxSize().padding(padding)){
+        LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,top=16.dp,end=16.dp,bottom=92.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            item{AccountSegmentedTabs(partyMode){next->partyMode=next;query="";search("",emptySet())}}
+            item{
+                ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){
+                    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                        Text("Quick Links",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                            actions.forEach{action->
+                                val enabled=action.second.isNotBlank()||action.first=="Show All"
+                                Column(Modifier.weight(1f).clickable(enabled=enabled){if(action.first=="Show All")moreContext=if(partyMode)"party" else "transaction" else navigate(action.second)}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                                    Surface(shape=RoundedCornerShape(12.dp),color=Color(0xFFEFF6FF)){Icon(when(action.first){"Add Txn"->Icons.Default.Add;"Sale Report"->Icons.Default.Assessment;"Txn Settings"->Icons.Default.Settings;else->Icons.Default.Apps},action.first,Modifier.padding(10.dp),tint=Color(0xFF2563EB))}
+                                    Spacer(Modifier.height(6.dp));Text(action.first,style=MaterialTheme.typography.labelMedium,maxLines=2)
+                                    if(!enabled)Text("Later",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-        item{
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically){
-                OutlinedTextField(query,{query=it},label={Text(if(partyMode)"Search parties" else "Search party or document")},singleLine=true,modifier=Modifier.weight(1f))
-                Button(onClick={search(query,homeTypes)}){Text("Search")}
+            item{
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
+                    OutlinedTextField(query,{query=it},placeholder={Text(if(partyMode)"Search parties" else "Search party or document")},singleLine=true,modifier=Modifier.weight(1f),leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={IconButton(onClick={search(query,homeTypes)}){Icon(Icons.Default.Search,"Search")}})
+                    if(!partyMode)OutlinedIconButton(onClick={draftTypes=homeTypes;filterOpen=true}){Icon(Icons.Default.FilterList,"Filter transactions")}
+                }
             }
-        }
-        if(!partyMode)item{
-            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                items(filters){type->FilterChip(selected=type in homeTypes,onClick={val next=if(type in homeTypes)homeTypes-type else homeTypes+type;search(query,next)},label={Text(type.replace('_',' '),maxLines=1)})}
-            }
-        }
-        if(!partyMode){
-            items(home?.transactions.orEmpty(),key={it.id}){tx->
-                ElevatedCard(Modifier.fillMaxWidth()){
-                    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(tx.partyName,fontWeight=FontWeight.SemiBold);AssistChip(onClick={},label={Text(tx.status.replace('_',' '))})}
-                        Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(tx.issueDate.take(10),style=MaterialTheme.typography.bodySmall)
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total ${formatMetric(tx.grandTotal,"MONEY")}");Text("Balance ${formatMetric(tx.balanceDue,"MONEY")}")}
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
-                            TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"View / print PDF")}}){Text("Print")}
-                            TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"Share transaction")}}){Text("Share")}
-                            TextButton(onClick={navigate("/workspace/account/transactions/${tx.id}")}){Text("More")}
+            if(!partyMode){
+                items(home?.transactions.orEmpty(),key={it.id}){tx->
+                    ElevatedCard(Modifier.fillMaxWidth()){
+                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(tx.partyName,fontWeight=FontWeight.SemiBold);AssistChip(onClick={},label={Text(tx.status.replace('_',' '))})}
+                            Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(tx.issueDate.take(10),style=MaterialTheme.typography.bodySmall)
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total ${formatMetric(tx.grandTotal,"MONEY")}");Text("Balance ${formatMetric(tx.balanceDue,"MONEY")}")}
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"View / print PDF")}}){Text("Print")};TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"Share transaction")}}){Text("Share")};TextButton(onClick={navigate("/workspace/account/transactions/${tx.id}")}){Text("More")}}
                         }
                     }
                 }
+            }else{
+                items(home?.parties.orEmpty(),key={it.id}){party->ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${party.lastActivity.take(10)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}}
             }
-            item{Button(onClick={navigate("/workspace/account/transactions/new?type=SALES_INVOICE")},modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)){Text("＋ New Sale")}}
-        }else{
-            items(home?.parties.orEmpty(),key={it.id}){party->
-                ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${party.lastActivity.take(10)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}
-            }
-            item{Button(onClick={navigate("/workspace/account/customers")},modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)){Text("＋ New Party")}}
+        }
+        AnimatedVisibility(visible=floatingVisible,modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
+            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"New Party" else "New Sale")})
         }
     }
+    if(filterOpen)ModalBottomSheet(onDismissRequest={filterOpen=false},dragHandle=null){
+        Column(Modifier.fillMaxWidth().heightIn(max=640.dp)){
+            Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Filter By",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);IconButton(onClick={filterOpen=false}){Icon(Icons.Default.Close,"Close")}}
+            LazyColumn(Modifier.weight(1f)){items(filters){filter->Row(Modifier.fillMaxWidth().clickable{draftTypes=if(filter.first in draftTypes)draftTypes-filter.first else draftTypes+filter.first}.padding(horizontal=16.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically){Checkbox(filter.first in draftTypes,{checked->draftTypes=if(checked)draftTypes+filter.first else draftTypes-filter.first});Text(filter.second)}}}
+            Surface(shadowElevation=8.dp){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={draftTypes=emptySet()},Modifier.weight(1f)){Text("Clear")};Button(onClick={search(query,draftTypes);filterOpen=false},Modifier.weight(1f)){Text("Apply")}}}
+        }
+    }
+    moreContext?.let{kind->ModalBottomSheet(onDismissRequest={moreContext=null},dragHandle=null){Column(Modifier.fillMaxWidth().padding(bottom=24.dp)){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("More Options",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);IconButton(onClick={moreContext=null}){Icon(Icons.Default.Close,"Close")}};(if(kind=="transaction")transactionMore else partyMore).forEach{option->ListItem(headlineContent={Text(option.first)},leadingContent={Icon(Icons.Default.Apps,null)},modifier=Modifier.clickable(enabled=option.second.isNotBlank()){moreContext=null;navigate(option.second)});HorizontalDivider()}}}}
 }
-
 private fun sharePdf(context:android.content.Context,number:String,bytes:ByteArray,title:String){
     val file = File(context.cacheDir, "$number.pdf").also { it.writeBytes(bytes) }
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
@@ -448,7 +462,7 @@ private fun reportName(path:String)=path.removePrefix("/workspace/account/report
 
 private fun adminMode(path:String)=when{
     path=="/workspace/account/notifications"->"notifications"
-    path=="/workspace/account/settings"->"settings"
+    path.endsWith("/settings/general")->"general"
     path.endsWith("/settings/transactions")->"transaction-settings"
     path.endsWith("/settings/custom-fields")->"custom-fields"
     path.endsWith("/settings/modules")->"modules"
