@@ -229,6 +229,7 @@ private fun AccountHomeScreen(
     var partyMode by rememberSaveable{mutableStateOf(false)}
     var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
     var filterOpen by rememberSaveable{mutableStateOf(false)}
+    var addLauncherOpen by rememberSaveable{mutableStateOf(false)}
     var moreContext by rememberSaveable{mutableStateOf<String?>(null)}
     var draftTypes by remember(homeTypes,filterOpen){mutableStateOf(homeTypes)}
     val listState=rememberLazyListState()
@@ -256,7 +257,7 @@ private fun AccountHomeScreen(
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                             actions.forEach{action->
                                 val enabled=action.second.isNotBlank()||action.first=="Show All"
-                                Column(Modifier.weight(1f).clickable(enabled=enabled){if(action.first=="Show All")moreContext=if(partyMode)"party" else "transaction" else navigate(action.second)}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                                Column(Modifier.weight(1f).clickable(enabled=enabled){if(action.first=="Add Txn")addLauncherOpen=true else if(action.first=="Show All")moreContext=if(partyMode)"party" else "transaction" else navigate(action.second)}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
                                     Surface(shape=RoundedCornerShape(12.dp),color=Color(0xFFEFF6FF)){Icon(when(action.first){"Add Txn"->Icons.Default.Add;"Sale Report"->Icons.Default.Assessment;"Txn Settings"->Icons.Default.Settings;else->Icons.Default.Apps},action.first,Modifier.padding(10.dp),tint=Color(0xFF2563EB))}
                                     Spacer(Modifier.height(6.dp));Text(action.first,style=MaterialTheme.typography.labelMedium,maxLines=2)
                                     if(!enabled)Text("Later",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))
@@ -298,7 +299,23 @@ private fun AccountHomeScreen(
             Surface(shadowElevation=8.dp){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={draftTypes=emptySet()},Modifier.weight(1f)){Text("Clear")};Button(onClick={search(query,draftTypes);filterOpen=false},Modifier.weight(1f)){Text("Apply")}}}
         }
     }
+    if(addLauncherOpen) AddTransactionLauncher(onDismiss={addLauncherOpen=false}){path->addLauncherOpen=false;navigate(path)}
     moreContext?.let{kind->ModalBottomSheet(onDismissRequest={moreContext=null},dragHandle=null){Column(Modifier.fillMaxWidth().padding(bottom=24.dp)){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("More Options",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);IconButton(onClick={moreContext=null}){Icon(Icons.Default.Close,"Close")}};(if(kind=="transaction")transactionMore else partyMore).forEach{option->ListItem(headlineContent={Text(option.first)},leadingContent={Icon(Icons.Default.Apps,null)},modifier=Modifier.clickable(enabled=option.second.isNotBlank()){moreContext=null;navigate(option.second)});HorizontalDivider()}}}}
+}
+
+private data class LauncherItem(val label:String,val path:String?=null)
+private val launcherGroups=listOf(
+    "Sale transactions" to listOf(LauncherItem("Payment-In","/workspace/account/transactions/money?type=CUSTOMER_RECEIPT"),LauncherItem("Sale Return","/workspace/account/transactions/new?type=CREDIT_NOTE"),LauncherItem("Delivery Challan","/workspace/account/transactions/new?type=DELIVERY_CHALLAN"),LauncherItem("Estimate / Quotation","/workspace/account/quotations/new"),LauncherItem("Proforma Invoice","/workspace/account/transactions/new?type=PROFORMA_INVOICE"),LauncherItem("Sale Order","/workspace/account/transactions/new?type=SALES_ORDER"),LauncherItem("Sale Invoice","/workspace/account/transactions/new?type=SALES_INVOICE"),LauncherItem("Mobile POS")),
+    "Purchase transactions" to listOf(LauncherItem("Purchase","/workspace/account/transactions/new?type=PURCHASE_BILL"),LauncherItem("Payment-Out","/workspace/account/transactions/money?type=VENDOR_PAYMENT"),LauncherItem("Purchase Return","/workspace/account/transactions/new?type=DEBIT_NOTE"),LauncherItem("Purchase Order","/workspace/account/transactions/new?type=PURCHASE_ORDER")),
+    "Other transactions" to listOf(LauncherItem("Expenses","/workspace/account/expenses/new"),LauncherItem("P2P Transfer","/workspace/account/money/transfers"))
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun AddTransactionLauncher(onDismiss:()->Unit,navigate:(String)->Unit){
+    ModalBottomSheet(onDismissRequest=onDismiss,dragHandle=null){LazyColumn(Modifier.fillMaxWidth().heightIn(max=720.dp),contentPadding=PaddingValues(bottom=28.dp)){
+        item{Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Add Transaction",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close")}}}
+        launcherGroups.forEach{group->item{Text(group.first.uppercase(),Modifier.padding(horizontal=16.dp,vertical=10.dp),style=MaterialTheme.typography.labelMedium,color=Color(0xFF64748B),fontWeight=FontWeight.Bold)};items(group.second.chunked(3)){row->Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{entry->Surface(Modifier.weight(1f).heightIn(min=96.dp).clickable(enabled=entry.path!=null){entry.path?.let(navigate)},shape=RoundedCornerShape(12.dp),border=androidx.compose.foundation.BorderStroke(1.dp,Color(0xFFE2E8F0)),color=Color.White){Column(Modifier.fillMaxSize().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Surface(shape=RoundedCornerShape(10.dp),color=Color(0xFFEFF6FF)){Icon(Icons.Default.Add,null,Modifier.padding(9.dp),tint=Color(0xFF2563EB))};Spacer(Modifier.height(5.dp));Text(entry.label,style=MaterialTheme.typography.labelMedium,maxLines=2);if(entry.path==null)Text("Coming Soon",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))}}};repeat(3-row.size){Spacer(Modifier.weight(1f))}}}}
+    }}
 }
 private fun sharePdf(context:android.content.Context,number:String,bytes:ByteArray,title:String){
     val file = File(context.cacheDir, "$number.pdf").also { it.writeBytes(bytes) }
