@@ -25,7 +25,7 @@ export default async function Page() {
     [["Received",`₹${metrics.received}`],["Outstanding",`₹${metrics.outstanding}`]],
   ];
   const quick=[
-    ["Project Invoice","/workspace/account/transactions/new?type=SALES_INVOICE&project=select","invoice"],
+    ["Project Invoice","/workspace/account/transactions/new?type=SALES_INVOICE&project=select","report"],
     ["Move / Return Stock","/workspace/account/projects/material","items"],
     ["Project Settings","/workspace/account/settings/modules","settings"],
     ["View All","/workspace/account/projects/actions","grid"],
