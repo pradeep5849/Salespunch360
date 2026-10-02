@@ -145,7 +145,7 @@ export async function setItemsActive(kind:"products"|"services",ids:string[],isA
     :db.accountService.updateMany({where:{companyId:a.companyId!,id:{in:unique}},data:{isActive}});
 }
 export async function saveUnitConversion(raw:{baseUnitId:string;secondaryUnitId:string;rate:string}){
-  const a=await settingsActor();
+  const a=await requirePermissionForMutation("ACCOUNT_STOCK");
   const rate=Number(raw.rate);
   if(!raw.baseUnitId||!raw.secondaryUnitId||raw.baseUnitId===raw.secondaryUnitId||!Number.isFinite(rate)||rate<=0)throw new Error("INVALID_UNIT_CONVERSION");
   const units=await db.accountUnit.count({where:{companyId:a.companyId!,id:{in:[raw.baseUnitId,raw.secondaryUnitId]},isActive:true}});
