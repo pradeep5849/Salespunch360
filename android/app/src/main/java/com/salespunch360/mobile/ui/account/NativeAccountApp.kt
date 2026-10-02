@@ -181,6 +181,9 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select)
             state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
             state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)
+            state.selectedPath=="/workspace/account/inventory/categories"->com.salespunch360.mobile.ui.account.inventory.CategoriesManagementScreen(vm::back,vm::select)
+            state.selectedPath=="/workspace/account/inventory/units"->com.salespunch360.mobile.ui.account.inventory.UnitsManagementScreen(vm::back,vm::select)
+            state.selectedPath.startsWith("/workspace/account/inventory/active")->com.salespunch360.mobile.ui.account.inventory.ActiveItemsManagementScreen(queryValue(state.selectedPath,"mode")=="activate",vm::back)
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)

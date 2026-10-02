@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createAccountCustomer, createAccountCustomerForBranch, createCategory, createFinancialYear, createProduct, createService, createUnit, createVendor, createWorkCategory, createWorkPackage, setCurrency } from "@/lib/account/service";
+import { createAccountCustomer, createAccountCustomerForBranch, createCategory, createFinancialYear, createProduct, createService, createUnit, createVendor, createWorkCategory, createWorkPackage, setCurrency, updateUnit, setItemsActive, saveUnitConversion } from "@/lib/account/service";
 
 export async function saveAccountMaster(formData:FormData){
  const type=String(formData.get("type")); const raw=Object.fromEntries(formData.entries());
@@ -18,3 +18,14 @@ export async function createAccountUnitAction(raw:{name:string;symbol:string}){c
 export async function createAccountCategoryAction(raw:{name:string;description?:string;scope?:"PRODUCT"|"SERVICE"|"BOTH"}){const row=await createCategory({name:raw.name,description:raw.description,scope:raw.scope??"BOTH"});revalidatePath("/workspace/account/inventory/items/new");return{id:row.id,name:row.name}}
 export type CreateSaleCustomerInput={name:string;phone?:string;email?:string;billingAddress?:string;shippingAddress?:string;gstin?:string;stateCode?:string;gstRegistrationType?:"UNREGISTERED"|"REGULAR"|"COMPOSITION"|"SEZ"};
 export async function createSaleCustomerAction(branchId:string,raw:CreateSaleCustomerInput){const row=await createAccountCustomerForBranch(branchId,{name:raw.name,phone:raw.phone,email:raw.email,address:raw.billingAddress,shippingAddress:raw.shippingAddress,gstin:raw.gstin,stateCode:raw.stateCode,gstRegistrationType:raw.gstRegistrationType??"UNREGISTERED"});revalidatePath("/workspace/account/transactions/new");return{id:row.id,name:row.name,phone:row.phone,branchId:row.branchId,balance:"0.00"}}
+
+
+export async function updateAccountUnitAction(id:string,raw:{name:string;symbol:string}){
+ const row=await updateUnit(id,raw);revalidatePath("/workspace/account/inventory/units");revalidatePath("/workspace/account/inventory/items/new");return{id:row.id,name:row.name,symbol:row.symbol};
+}
+export async function setItemsActiveAction(kind:"products"|"services",ids:string[],isActive:boolean){
+ const row=await setItemsActive(kind,ids,isActive);revalidatePath("/workspace/account/inventory");revalidatePath("/workspace/account/inventory/items");revalidatePath("/workspace/account/inventory/active");return row;
+}
+export async function saveUnitConversionAction(raw:{baseUnitId:string;secondaryUnitId:string;rate:string}){
+ await saveUnitConversion(raw);revalidatePath("/workspace/account/inventory/units");return{ok:true};
+}

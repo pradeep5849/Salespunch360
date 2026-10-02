@@ -96,8 +96,98 @@ fun AccountAdministrationScreen(
     }
 }
 
-@Composable private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){val saved=data.jsonObject["settings"]?.jsonObject?.get("itemSettings")?.jsonObject;var enabled by remember(saved){mutableStateOf(saved?.get("enabled")?.jsonPrimitive?.booleanOrNull?:true)};var units by remember(saved){mutableStateOf(saved?.get("itemUnits")?.jsonPrimitive?.booleanOrNull?:true)};var decimals by remember(saved){mutableStateOf(saved?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2)};LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("Supported item behaviour",style=MaterialTheme.typography.titleMedium)};item{SwitchRow("Enable Items",enabled){enabled=it}};item{SwitchRow("Item Units",units){units=it}};item{Text("Quantity decimal places");Slider(decimals.toFloat(),{decimals=it.toInt()},valueRange=0f..4f,steps=3);Text(decimals.toString())};item{ListItem(headlineContent={Text("Manufacturing · Coming Soon")},supportingContent={Text("No manufacturing backend is available.")})};item{Button(onClick={vm.save("item-settings",buildJsonObject{put("enabled",enabled);put("itemUnits",units);put("quantityDecimals",decimals)})}){Text("Save Item Settings")}}}}
-@Composable private fun SwitchRow(label:String,checked:Boolean,set:(Boolean)->Unit){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Switch(checked,set)}}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){
+    val saved=data.jsonObject["settings"]?.jsonObject?.get("itemSettings")?.jsonObject
+    fun bool(key:String,default:Boolean)=saved?.get(key)?.jsonPrimitive?.booleanOrNull?:default
+    var enabled by remember(saved){mutableStateOf(bool("enabled",true))}
+    var itemType by remember(saved){mutableStateOf(saved?.get("itemType")?.jsonPrimitive?.content?:"BOTH")}
+    var barcode by remember(saved){mutableStateOf(bool("barcodeScanning",false))}
+    var stock by remember(saved){mutableStateOf(bool("stockMaintenance",true))}
+    var units by remember(saved){mutableStateOf(bool("itemUnits",true))}
+    var defaultUnit by remember(saved){mutableStateOf(saved?.get("defaultUnit")?.jsonPrimitive?.content.orEmpty())}
+    var category by remember(saved){mutableStateOf(bool("itemCategory",true))}
+    var partyRate by remember(saved){mutableStateOf(bool("partyWiseRate",true))}
+    var wholesale by remember(saved){mutableStateOf(bool("wholesalePrice",true))}
+    var decimals by remember(saved){mutableStateOf(saved?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2)}
+    var itemTax by remember(saved){mutableStateOf(bool("itemWiseTax",true))}
+    var taxOnMrp by remember(saved){mutableStateOf(bool("taxOnMrp",false))}
+    var itemDiscount by remember(saved){mutableStateOf(bool("itemWiseDiscount",true))}
+    var updateSale by remember(saved){mutableStateOf(bool("updateSalePrice",false))}
+    var additionalFields by remember(saved){mutableStateOf(bool("additionalFields",true))}
+    var customFields by remember(saved){mutableStateOf(bool("customFields",true))}
+    var description by remember(saved){mutableStateOf(bool("description",true))}
+    var hsn by remember(saved){mutableStateOf(bool("hsnSac",true))}
+    var cess by remember(saved){mutableStateOf(bool("additionalCess",true))}
+    var typeOpen by remember{mutableStateOf(false)}
+    LazyColumn(contentPadding=PaddingValues(bottom=90.dp),verticalArrangement=Arrangement.spacedBy(0.dp)){
+        item{SwitchRow("Enable Item",enabled){enabled=it}}
+        item{
+            ExposedDropdownMenuBox(expanded=typeOpen,onExpandedChange={typeOpen=it}){
+                OutlinedTextField(
+                    value=when(itemType){"PRODUCTS"->"Products";"SERVICES"->"Services";else->"Products and Services"},
+                    onValueChange={},
+                    readOnly=true,
+                    label={Text("Item Type")},
+                    modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded=typeOpen,onDismissRequest={typeOpen=false}){
+                    listOf("PRODUCTS" to "Products","SERVICES" to "Services","BOTH" to "Products and Services").forEach{(value,label)->
+                        DropdownMenuItem({Text(label)},{itemType=value;typeOpen=false})
+                    }
+                }
+            }
+        }
+        item{SwitchRow("Barcode scanning for items",barcode){barcode=it}}
+        item{SwitchRow("Stock maintenance",stock){stock=it}}
+        item{SwitchRow("Manufacturing",false,enabled=false){}}
+        item{SwitchRow("Item Units",units){units=it}}
+        item{
+            Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
+                Text("Default Unit",Modifier.weight(1f))
+                Switch(checked=defaultUnit.isNotBlank(),onCheckedChange={checked->defaultUnit=if(checked)defaultUnit.ifBlank{"Unit"} else ""})
+            }
+        }
+        item{SwitchRow("Item Category",category){category=it}}
+        item{SwitchRow("Party wise item rate",partyRate){partyRate=it}}
+        item{SwitchRow("Wholesale Price",wholesale){wholesale=it}}
+        item{
+            Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
+                Text("Quantity (Upto Decimal places)",Modifier.weight(1f))
+                IconButton(onClick={if(decimals>0)decimals--}){Text("−")}
+                Text(decimals.toString(),style=MaterialTheme.typography.titleMedium)
+                IconButton(onClick={if(decimals<4)decimals++}){Text("+")}
+            }
+        }
+        item{SwitchRow("Item wise tax",itemTax){itemTax=it}}
+        item{SwitchRow("Calculate tax based on MRP",taxOnMrp){taxOnMrp=it}}
+        item{SwitchRow("Item wise discount",itemDiscount){itemDiscount=it}}
+        item{SwitchRow("Update sale price from transaction",updateSale){updateSale=it}}
+        item{SwitchRow("Additional Item Fields",additionalFields){additionalFields=it}}
+        item{SwitchRow("Item Custom Fields",customFields){customFields=it}}
+        item{SwitchRow("Description",description){description=it}}
+        item{SwitchRow("HSN/SAC Code",hsn){hsn=it}}
+        item{SwitchRow("Additional CESS",cess){cess=it}}
+        item{
+            Button(
+                onClick={vm.save("item-settings",buildJsonObject{
+                    put("enabled",enabled);put("itemType",itemType);put("barcodeScanning",barcode);put("stockMaintenance",stock);put("itemUnits",units);put("defaultUnit",defaultUnit);put("itemCategory",category);put("partyWiseRate",partyRate);put("wholesalePrice",wholesale);put("quantityDecimals",decimals);put("itemWiseTax",itemTax);put("taxOnMrp",taxOnMrp);put("itemWiseDiscount",itemDiscount);put("updateSalePrice",updateSale);put("additionalFields",additionalFields);put("customFields",customFields);put("description",description);put("hsnSac",hsn);put("additionalCess",cess)
+                })},
+                modifier=Modifier.fillMaxWidth().padding(top=12.dp)
+            ){Text("Save Item Settings")}
+        }
+    }
+}
+@Composable
+private fun SwitchRow(label:String,checked:Boolean,enabled:Boolean=true,set:(Boolean)->Unit){
+    Row(Modifier.fillMaxWidth().padding(vertical=6.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f))
+        Switch(checked=checked,onCheckedChange=if(enabled)set else null,enabled=enabled)
+    }
+}
+
+
 
 private val transactionSettingGroups=listOf(
     "TRANSACTION HEADER" to listOf("showInvoiceNumber" to "Invoice/Bill Number","cashSaleByDefault" to "Cash Sale by default","billingName" to "Billing name of Parties","customerPoDetails" to "PO Details (of customer)","transactionTime" to "Add Time On Transactions"),
