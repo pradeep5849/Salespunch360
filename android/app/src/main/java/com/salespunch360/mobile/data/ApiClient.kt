@@ -118,7 +118,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountUsers()=json.parseToJsonElement(call("api/v1/mobile/account/users")).jsonObject
  suspend fun saveAccountUser(edit:Boolean,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/users",if(edit)"PATCH" else "POST",payload.toString()))
  suspend fun accountAdministration(section:String)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}")).let{if(it is kotlinx.serialization.json.JsonObject)it else buildJsonObject{put("rows",it)}}
- suspend fun saveAccountAdministration(section:String,action:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}/${enc(action)}","POST",payload.toString()))
+ suspend fun saveAccountAdministration(section:String,action:String,payload:kotlinx.serialization.json.JsonElement)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}/${enc(action)}","POST",payload.toString()))
  suspend fun accountTax(filters:Map<String,String> = emptyMap())=json.parseToJsonElement(call("api/v1/mobile/account/tax"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
  suspend fun saveAccountTax(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/tax","POST",payload.toString()))
  suspend fun accountUtility(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}")).jsonArray
