@@ -13,7 +13,7 @@ export async function POST(request:Request){
   if(body.action==="UNIT_CONVERSION"){
    return mobileJson(await saveMobileUnitConversion(user,{baseUnitId:body.baseUnitId,secondaryUnitId:body.secondaryUnitId,rate:body.rate}));
   }
-  return mobileJson({error:"INVALID_INPUT"},{status:400});
+  return mobileJson({error:"INVALID_INPUT"},400);
  }catch(e){
   return mobileUnauthorized(e)??mobileAuthorizationFailure(e)??mobileUnexpected("MOBILE_ITEM_MANAGEMENT",e);
  }
