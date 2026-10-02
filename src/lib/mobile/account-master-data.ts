@@ -84,6 +84,7 @@ export async function saveMobileUnitConversion(user:MobileAppPrincipal,raw:unkno
   const current=(settings?.itemSettings??{}) as Record<string,unknown>;
   const conversions=Array.isArray(current.unitConversions)?current.unitConversions.filter((x):x is Record<string,unknown>=>Boolean(x)&&typeof x==="object"):[];
   const next=[...conversions.filter(x=>!(x.baseUnitId===input.baseUnitId&&x.secondaryUnitId===input.secondaryUnitId)),input];
-  const itemSettings={...current,unitConversions:next} as Prisma.InputJsonObject;\n  await db.accountSettings.upsert({where:{companyId:user.companyId},create:{companyId:user.companyId,itemSettings},update:{itemSettings}});
+  const itemSettings={...current,unitConversions:next} as Prisma.InputJsonObject;
+  await db.accountSettings.upsert({where:{companyId:user.companyId},create:{companyId:user.companyId,itemSettings},update:{itemSettings}});
   return{ok:true,conversion:input};
 }
