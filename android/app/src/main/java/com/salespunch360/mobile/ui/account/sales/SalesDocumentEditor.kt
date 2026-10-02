@@ -3,10 +3,15 @@ package com.salespunch360.mobile.ui.account.sales
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import com.salespunch360.mobile.account.*
 import kotlinx.serialization.json.JsonObject
 
@@ -22,6 +27,10 @@ fun SalesDocumentEditor(
     onClose: () -> Unit,
     onSave: () -> Unit
 ) {
+    if (draft.type == "SALES_INVOICE") {
+        DirectSaleInvoiceEditor(draft, options, saving, onDraft, onAdd, onLine, onRemove, onClose, onSave)
+        return
+    }
     val sources = options.sourceDocuments.filter {
         it.str("type") == "SALES_INVOICE" && it.str("branchId") == draft.branchId && it.str("customerId") == draft.customerId
     }
@@ -55,6 +64,39 @@ fun SalesDocumentEditor(
             }
         }
     )
+}
+
+/** Native B5 surface. It deliberately delegates lines and save to the existing sales ViewModel/API. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun DirectSaleInvoiceEditor(draft:SalesEditorDraft,options:SalesOptions,saving:Boolean,onDraft:(SalesEditorDraft)->Unit,onAdd:()->Unit,onLine:(Int,SalesLineDraft)->Unit,onRemove:(Int)->Unit,onClose:()->Unit,onSave:()->Unit){
+    var cash by rememberSaveable{mutableStateOf(false)};var settings by remember{mutableStateOf(false)};var invoiceDialog by remember{mutableStateOf(false)};var items by remember{mutableStateOf(false)};var datePicker by remember{mutableStateOf(false)}
+    Scaffold(topBar={TopAppBar(title={Text("Sale")},navigationIcon={TextButton(onClick=onClose){Text("‹ Back")}},actions={SingleChoiceSegmentedButtonRow{listOf("Credit","Cash").forEachIndexed{i,label->SegmentedButton(selected=cash==(i==1),onClick={cash=i==1},shape=SegmentedButtonDefaults.itemShape(i,2)){Text(label)}}};IconButton(onClick={settings=true}){Text("⚙")}})},bottomBar={Surface(shadowElevation=8.dp){Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onSave,enabled=!saving,modifier=Modifier.weight(1f)){Text("Save & New")};Button(onClick=onSave,enabled=!saving,modifier=Modifier.weight(1f)){Text(if(saving)"Saving…" else "Save")};IconButton(onClick={settings=true}){Text("⋮")}}}}){padding->LazyColumn(Modifier.fillMaxSize().padding(padding).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Column(Modifier.clickable{invoiceDialog=true}){Text("Invoice No.",style=MaterialTheme.typography.labelSmall);Text("Next on save ⌄",fontWeight=FontWeight.Bold)};Column(Modifier.clickable{datePicker=true},horizontalAlignment=Alignment.End){Text("Date",style=MaterialTheme.typography.labelSmall);Text("${draft.issueDate} ⌄",fontWeight=FontWeight.Bold)}}};item{SelectField("Customer *",draft.customerId,options.customers.filter{it.branchId==null||it.branchId==draft.branchId}.map{it.id to it.name}){onDraft(draft.copy(customerId=it))}};item{OutlinedTextField("",{},label={Text("Billing Name (Optional)")},modifier=Modifier.fillMaxWidth())};item{OutlinedButton(onClick={items=true},modifier=Modifier.fillMaxWidth()){Text("+ Add Items (Optional)")}};itemsIndexed(draft.lines){index,line->SalesLineEditor(index,line,draft,options,emptyList(),onLine,onRemove)};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total Amount",fontWeight=FontWeight.Bold);Text("Server calculated",fontWeight=FontWeight.Bold)}}}}
+    if(datePicker){
+        val state=rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest={datePicker=false},
+            confirmButton={
+                TextButton(
+                    onClick={
+                        state.selectedDateMillis?.let{
+                            onDraft(
+                                draft.copy(
+                                    issueDate=java.time.Instant.ofEpochMilli(it)
+                                        .atZone(java.time.ZoneOffset.UTC)
+                                        .toLocalDate()
+                                        .toString()
+                                )
+                            )
+                        }
+                        datePicker=false
+                    }
+                ){Text("OK")}
+            }
+        ){DatePicker(state=state)}
+    }
+    if(invoiceDialog)AlertDialog(onDismissRequest={invoiceDialog=false},title={Text("Change Invoice No.")},text={Column{Text("Invoice Prefix");RadioButton(true,{});Text("Add Prefix");OutlinedTextField("",{},label={Text("Invoice No.")});Text("Number is validated by branch numbering rules.")}},confirmButton={Button(onClick={invoiceDialog=false}){Text("SAVE")}},dismissButton={TextButton(onClick={invoiceDialog=false}){Text("Close")}})
+    if(items)ModalBottomSheet(onDismissRequest={items=false}){LazyColumn(Modifier.fillMaxWidth().padding(16.dp)){item{Text("Add Items",style=MaterialTheme.typography.titleLarge)};items(options.products){product->ListItem(headlineContent={Text(product.name)},modifier=Modifier.clickable{onLine(0,draft.lines.first().copy(lineType="PRODUCT",sourceId=product.id,itemName=product.name,rate=product.rate.orEmpty(),taxRate=product.taxRate.orEmpty()));items=false})}}}
+    if(settings)ModalBottomSheet(onDismissRequest={settings=false}){Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){Text("Settings",style=MaterialTheme.typography.titleLarge);Text("Sale Prefix\nUses canonical NumberingSeries");Text("Transaction SMS\nNot enabled");Text("Additional Fields  ›");Text("Additional Charges  ›");Text("Billing Type",fontWeight=FontWeight.Bold);Text("◉ Full Sale");Text("○ Mobile POS — Coming Soon",color=MaterialTheme.colorScheme.onSurfaceVariant);Text("⚙ More Settings",color=MaterialTheme.colorScheme.primary)}}
 }
 
 @Composable

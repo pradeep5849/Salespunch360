@@ -15,6 +15,11 @@ export async function saveCommercialDocument(form: FormData) {
   const row = await createCommercialDocument(payload(form));
   redirect(`/workspace/account/transactions/${row.id}`);
 }
+/** Client sale entry uses the same authoritative creator without forcing a redirect. */
+export async function createCommercialDocumentAction(raw: unknown) {
+  const row = await createCommercialDocument(raw);
+  return { id: row.id, documentNumber: row.documentNumber };
+}
 export async function finalizeCommercialAction(form: FormData) {
   const id = String(form.get("id"));
   await finalizeNonFinancialDocument({ documentId: id });

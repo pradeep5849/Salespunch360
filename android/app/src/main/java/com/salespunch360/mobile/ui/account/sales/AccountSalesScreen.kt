@@ -21,7 +21,7 @@ import com.salespunch360.mobile.AccountSalesViewModel
 @Composable
 fun AccountSalesScreen(initialType: String?, padding: PaddingValues, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
+    LaunchedEffect(initialType) { if (initialType != null) { vm.filter(initialType); if (initialType == "SALES_INVOICE") vm.newDocument(initialType) } }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or customer") }, singleLine = true, modifier = Modifier.weight(1f))
