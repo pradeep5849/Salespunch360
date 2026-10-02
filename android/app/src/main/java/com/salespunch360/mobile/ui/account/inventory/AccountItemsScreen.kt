@@ -20,6 +20,8 @@ import com.salespunch360.mobile.AccountInventoryViewModel
 import com.salespunch360.mobile.data.AccountMasterRecord
 import kotlinx.serialization.json.*
 
+private data class ItemsDisplayItem(val kind:String,val record:AccountMasterRecord,val stock:Double?)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountItemsScreen(
@@ -44,11 +46,10 @@ fun AccountItemsScreen(
             product?.get("id")?.jsonPrimitive?.content.orEmpty() to (row["quantity"]?.jsonPrimitive?.content?.toDoubleOrNull()?:0.0)
         }
     }
-    data class DisplayItem(val kind:String,val record:AccountMasterRecord,val stock:Double?)
     val allItems=remember(state.itemRecords,state.serviceRecords,state.rows){
         buildList{
-            state.itemRecords.forEach{add(DisplayItem("PRODUCT",it,stockById[it.id]?:0.0))}
-            state.serviceRecords.forEach{add(DisplayItem("SERVICE",it,null))}
+            state.itemRecords.forEach{add(ItemsDisplayItem("PRODUCT",it,stockById[it.id]?:0.0))}
+            state.serviceRecords.forEach{add(ItemsDisplayItem("SERVICE",it,null))}
         }.sortedBy{it.record.name.lowercase()}
     }
     val shown=allItems.filter{item->
