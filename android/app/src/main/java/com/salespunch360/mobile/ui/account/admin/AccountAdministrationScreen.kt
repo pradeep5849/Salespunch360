@@ -155,9 +155,9 @@ private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel)
         item{
             Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
                 Text("Quantity (Upto Decimal places)",Modifier.weight(1f))
-                IconButton(onClick={if(decimals>0){{decimals--}}else{{}}}){Text("−")}
+                IconButton(onClick={if(decimals>0)decimals--}){Text("−")}
                 Text(decimals.toString(),style=MaterialTheme.typography.titleMedium)
-                IconButton(onClick={if(decimals<4){{decimals++}}else{{}}}){Text("+")}
+                IconButton(onClick={if(decimals<4)decimals++}){Text("+")}
             }
         }
         item{SwitchRow("Item wise tax",itemTax){itemTax=it}}
