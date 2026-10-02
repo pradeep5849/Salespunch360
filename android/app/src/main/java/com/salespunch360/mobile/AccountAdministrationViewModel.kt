@@ -56,7 +56,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun save(section: String, payload: JsonObject) {
+    fun save(section: String, payload: JsonElement) {
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             runCatching {
