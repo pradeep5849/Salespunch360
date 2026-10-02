@@ -35,74 +35,94 @@ fun ProjectScreen(
     vm: AccountProjectViewModel = viewModel(),
 ) {
     val s = vm.state.collectAsStateWithLifecycle().value
-    Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-        Row {
-            OutlinedTextField(
-                s.query,
-                vm::search,
-                label = { Text("Search projects") },
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(vm::load) { Icon(Icons.Default.Refresh, "Refresh") }
-            FilledIconButton(vm::create) { Icon(Icons.Default.Add, "New project") }
-        }
-        LazyRow {
-            items(listOf<String?>(null, "ACTIVE", "ON_HOLD", "COMPLETED")) { value ->
-                FilterChip(
-                    s.status == value,
-                    { vm.filter(value) },
-                    {
-                        Text(
-                            when (value) {
-                                "ACTIVE" -> "Active"
-                                "ON_HOLD" -> "Hold"
-                                "COMPLETED" -> "Completed"
-                                else -> "All"
-                            },
-                        )
-                    },
-                )
+    Box(Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding=PaddingValues(start=14.dp,end=14.dp,top=14.dp,bottom=104.dp),
+            verticalArrangement=Arrangement.spacedBy(14.dp)
+        ) {
+            item { Text("Projects",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold) }
+            item {
+                Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        ProjectMetric("Active Projects",s.metrics["activeProjects"]?.jsonPrimitive?.content?:"0",Modifier.weight(1f))
+                        ProjectMetric("Projects Closed",s.metrics["projectsClosed"]?.jsonPrimitive?.content?:"0",Modifier.weight(1f))
+                    }
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        ProjectMetric("Received","₹${s.metrics["received"]?.jsonPrimitive?.content?:"0"}",Modifier.weight(1f))
+                        ProjectMetric("Outstanding","₹${s.metrics["outstanding"]?.jsonPrimitive?.content?:"0"}",Modifier.weight(1f))
+                    }
+                    ProjectMetric("Total Project Value","₹${s.metrics["totalProjectValue"]?.jsonPrimitive?.content?:"0"}",Modifier.fillMaxWidth())
+                }
+            }
+            item {
+                ElevatedCard(colors=CardDefaults.elevatedCardColors(containerColor=MaterialTheme.colorScheme.surface)){
+                    Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                        Text("Quick Links",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                            listOf(
+                                Triple("Project Invoice",Icons.Default.ReceiptLong,"/workspace/account/transactions/new?type=SALES_INVOICE&project=select"),
+                                Triple("Move / Return Stock",Icons.Default.Inventory2,"/workspace/account/projects/material"),
+                                Triple("Project Settings",Icons.Default.Settings,"/workspace/account/settings/modules"),
+                                Triple("View All",Icons.Default.Apps,"/workspace/account/projects/actions")
+                            ).forEach{(label,icon,path)->
+                                Column(
+                                    Modifier.weight(1f).clickable{navigate(path)}.padding(vertical=8.dp,horizontal=2.dp),
+                                    horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,
+                                    verticalArrangement=Arrangement.spacedBy(5.dp)
+                                ){
+                                    Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer){Icon(icon,label,Modifier.padding(9.dp),tint=MaterialTheme.colorScheme.primary)}
+                                    Text(label,style=MaterialTheme.typography.labelSmall,maxLines=2)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                OutlinedTextField(s.query,vm::search,label={Text("Search projects")},modifier=Modifier.fillMaxWidth(),singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)})
+            }
+            item { Text("All Projects",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold) }
+            if(s.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
+            s.error?.let { error -> item { Text(error,color=MaterialTheme.colorScheme.error) } }
+            items(s.rows,key={it.str("id")}){row->
+                ElevatedCard(Modifier.fillMaxWidth().clickable{vm.open(row.str("id"))}){
+                    Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                            Column(Modifier.weight(1f)){Text(row.str("name"),fontWeight=FontWeight.Bold);Text(row["customer"]?.jsonObject?.str("name").orEmpty(),style=MaterialTheme.typography.bodySmall)}
+                            Text(workflowStatusLabel(row.str("status")),style=MaterialTheme.typography.labelMedium)
+                        }
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                            Text("Value ₹${row.str("finalProjectValue").ifBlank{row.str("projectValue")}}",style=MaterialTheme.typography.bodySmall)
+                            Text("Received ₹${row.str("received").ifBlank{row.str("customerPayments")}}",style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             }
         }
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(listOf("Active Projects" to "activeProjects","Projects Closed" to "projectsClosed","Total Project Value" to "totalProjectValue","Received" to "received","Outstanding" to "outstanding")){(label,key)->ElevatedCard{Column(Modifier.padding(12.dp)){Text(label,style=MaterialTheme.typography.labelSmall);Text(s.metrics[key]?.jsonPrimitive?.content?:"0",fontWeight=FontWeight.Bold)}}}}
-        Text("Quick Actions",style=MaterialTheme.typography.titleMedium)
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(listOf("Project Invoice" to "/workspace/account/transactions/new?type=SALES_INVOICE&project=select","Move / Return Stock" to "/workspace/account/projects/material","Project Settings" to "/workspace/account/settings/modules","View All" to "/workspace/account/projects/actions")){(label,path)->OutlinedButton({navigate(path)}){Text(label)}}}
-        if (s.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        LazyColumn {
-            items(s.rows, key = { it.str("id") }) { row ->
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            "${row.str("projectNumber")} · ${row.str("name")}",
-                            fontWeight = FontWeight.Bold,
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            "${row["customer"]?.jsonObject?.str("name")} · ${row["branch"]?.jsonObject?.str("name")}",
-                        )
-                    },
-                    trailingContent = { Text(workflowStatusLabel(row.str("status"))) },
-                    modifier = Modifier.clickable { vm.open(row.str("id")) },
-                )
-            }
-        }
-        ExtendedFloatingActionButton(onClick=vm::create,text={Text("Create New Project")},icon={Icon(Icons.Default.Add,"Create")})
+        ExtendedFloatingActionButton(
+            onClick=vm::create,
+            text={Text("Create New Project")},
+            icon={Icon(Icons.Default.Add,"Create")},
+            modifier=Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(16.dp)
+        )
     }
     s.editing?.let { ProjectEditor(it, s.options, vm::close, vm::save) }
     s.detail?.let {
-        ProjectDetail(
-            it,
-            s.costing,
-            vm::close,
-            vm::edit,
-            vm::action,
-            vm::editBudget,
-        )
+        ProjectDetail(it,s.costing,vm::close,vm::edit,vm::action,vm::editBudget)
     }
     if (s.budgetEditing && s.detail != null) {
         BudgetDialog(s.detail!!, { vm.editBudget(false) }, vm::saveBudget)
+    }
+}
+
+@Composable
+private fun ProjectMetric(label:String,value:String,modifier:Modifier=Modifier){
+    ElevatedCard(modifier,colors=CardDefaults.elevatedCardColors(containerColor=MaterialTheme.colorScheme.surface)){
+        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=14.dp),horizontalArrangement=Arrangement.SpaceBetween){
+            Text(label,style=MaterialTheme.typography.labelSmall)
+            Text(value,fontWeight=FontWeight.Bold)
+        }
     }
 }
 
