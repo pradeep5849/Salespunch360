@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createAccountCustomer, createCategory, createFinancialYear, createProduct, createService, createUnit, createVendor, createWorkCategory, createWorkPackage, setCurrency } from "@/lib/account/service";
+import { createAccountCustomer, createAccountCustomerForBranch, createCategory, createFinancialYear, createProduct, createService, createUnit, createVendor, createWorkCategory, createWorkPackage, setCurrency } from "@/lib/account/service";
 
 export async function saveAccountMaster(formData:FormData){
  const type=String(formData.get("type")); const raw=Object.fromEntries(formData.entries());
@@ -13,3 +13,4 @@ export async function createAccountItemAction(raw:{type:"products"|"services";na
  revalidatePath("/workspace/account/inventory");
  return {id:row.id};
 }
+export async function createSaleCustomerAction(branchId:string,raw:{name:string;phone?:string}){const row=await createAccountCustomerForBranch(branchId,raw);revalidatePath("/workspace/account/transactions/new");return{id:row.id,name:row.name,phone:row.phone,branchId:row.branchId,balance:"0.00"}}

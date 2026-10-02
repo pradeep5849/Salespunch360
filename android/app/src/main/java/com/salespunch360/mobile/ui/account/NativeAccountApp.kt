@@ -156,7 +156,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
             state.selectedPath=="/workspace/account/projects/material"->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding)
-            state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select) // ProjectScreen(padding) with root navigation
             moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
             state.selectedPath.startsWith("/workspace/account/accounting/cost-centres")->ChartOfAccountsScreen(padding,true)
@@ -176,6 +176,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
             state.selectedPath=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select)
+            state.selectedPath=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select)
             state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
             state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding)
@@ -183,7 +184,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_RECEIPT")->CustomerReceiptScreen(padding)
-            sales!=null->AccountSalesScreen(sales,padding)
+            sales!=null->AccountSalesScreen(sales,padding,vm::select)
             masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding)
             else->NativeDestinationNotice(Modifier.padding(padding),titleFor(state.selectedPath,navigation))
         }

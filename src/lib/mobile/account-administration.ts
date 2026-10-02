@@ -69,6 +69,16 @@ export async function mobileSaveSettings(
 ) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+  if(section==="sales-invoice-prefix"){
+    const v=z.object({branchId:z.string().uuid(),prefix:z.string().trim().max(30)}).strict().parse(raw);
+    if(!await db.branch.findFirst({where:{id:v.branchId,companyId:a.companyId,isActive:true,...branchWhere(a)}}))throw new Error("MOBILE_FORBIDDEN");
+    return db.$transaction(async tx=>{
+      const existing=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey:"SALES_INVOICE"}});
+      const series=existing?await tx.numberingSeries.update({where:{id:existing.id},data:{prefix:v.prefix}}):await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey:"SALES_INVOICE",prefix:v.prefix,padding:2}});
+      await tx.accountingAuditEvent.create({data:{companyId:a.companyId,actorUserId:a.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:a.companyId,metadata:{sections:["NUMBERING_PREFIXES"],branchId:v.branchId,source:"ANDROID_SALE"}}});
+      return{branchId:v.branchId,prefix:series.prefix,suffix:series.suffix,padding:series.padding,nextSequence:Number(series.nextSequence)};
+    });
+  }
   if (section === "settings") {
     const schema = z
         .object({

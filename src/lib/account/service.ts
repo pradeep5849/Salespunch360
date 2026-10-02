@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
+  AuthorizationError,
   requirePermission,
   requirePermissionForMutation,
 } from "@/lib/auth/authorization";
@@ -175,6 +176,11 @@ export async function createAccountCustomer(raw: unknown) {
       notes: d.notes,
     },
   });
+}
+export async function createAccountCustomerForBranch(branchId:string,raw:unknown){
+  const a=await writeActor(),d=partySchema.parse(raw),branch=await db.branch.findFirst({where:{id:branchId,companyId:a.companyId!,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},select:{id:true}});
+  if(!branch)throw new AuthorizationError();
+  return db.customer.create({data:{companyId:a.companyId!,branchId:branch.id,isAccountCustomer:true,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,billingAddress:d.address,shippingAddress:d.shippingAddress,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes}});
 }
 async function refs(
   companyId: string,

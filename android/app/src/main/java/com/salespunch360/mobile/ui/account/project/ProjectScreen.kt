@@ -31,6 +31,7 @@ private fun workflowStatusLabel(status: String) = when (workflowStatus(status)) 
 @Composable
 fun ProjectScreen(
     padding: PaddingValues,
+    navigate:(String)->Unit={},
     vm: AccountProjectViewModel = viewModel(),
 ) {
     val s = vm.state.collectAsStateWithLifecycle().value
@@ -63,6 +64,9 @@ fun ProjectScreen(
                 )
             }
         }
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(listOf("Active Projects" to "activeProjects","Projects Closed" to "projectsClosed","Total Project Value" to "totalProjectValue","Received" to "received","Outstanding" to "outstanding")){(label,key)->ElevatedCard{Column(Modifier.padding(12.dp)){Text(label,style=MaterialTheme.typography.labelSmall);Text(s.metrics[key]?.jsonPrimitive?.content?:"0",fontWeight=FontWeight.Bold)}}}}
+        Text("Quick Actions",style=MaterialTheme.typography.titleMedium)
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(listOf("Project Invoice" to "/workspace/account/transactions/new?type=SALES_INVOICE&project=select","Move / Return Stock" to "/workspace/account/projects/material","Project Settings" to "/workspace/account/settings/modules","View All" to "/workspace/account/menu#projects")){(label,path)->OutlinedButton({navigate(path)}){Text(label)}}}
         if (s.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         LazyColumn {
@@ -84,6 +88,7 @@ fun ProjectScreen(
                 )
             }
         }
+        ExtendedFloatingActionButton(onClick=vm::create,text={Text("Create New Project")},icon={Icon(Icons.Default.Add,"Create")})
     }
     s.editing?.let { ProjectEditor(it, s.options, vm::close, vm::save) }
     s.detail?.let {
