@@ -8,8 +8,7 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 
 data class ItemManagementState(
     val loading:Boolean=false,
@@ -18,6 +17,7 @@ data class ItemManagementState(
     val categories:List<AccountMasterRecord> = emptyList(),
     val items:List<AccountMasterRecord> = emptyList(),
     val services:List<AccountMasterRecord> = emptyList(),
+    val stock:List<JsonObject> = emptyList(),
     val error:String?=null
 )
 
@@ -34,7 +34,8 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
             val categories=api.accountMasterList("categories","", "true")
             val items=api.accountMasterList("items","", "all")
             val services=api.accountMasterList("services","", "all")
-            _state.value=_state.value.copy(loading=false,units=units,categories=categories,items=items,services=services)
+            val stock=runCatching{api.inventoryStock().map{it.jsonObject}}.getOrDefault(emptyList())
+            _state.value=_state.value.copy(loading=false,units=units,categories=categories,items=items,services=services,stock=stock)
         }catch(e:Exception){fail(e)}
     }
 
