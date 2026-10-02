@@ -144,7 +144,7 @@ fun NativeAccountAuthenticatedApp(
                 }
             )
         },
-        bottomBar={AccountBottomBar(bottom,state.selectedPath,vm::select)},
+        bottomBar={if(bottom.any{it.path==state.selectedPath})AccountBottomBar(bottom,state.selectedPath,vm::select)},
         snackbarHost={state.error?.let{Snackbar{Row{Text(it,Modifier.weight(1f));TextButton(onClick={vm.load(true)}){Text("Retry")}}}}}
     ){padding->
         val sales=salesType(state.selectedPath)

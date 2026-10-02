@@ -7,3 +7,9 @@ export async function saveAccountMaster(formData:FormData){
  const calls:Record<string,(v:unknown)=>Promise<unknown>>={customers:createAccountCustomer,vendors:createVendor,units:createUnit,categories:createCategory,products:createProduct,services:createService,"work-categories":createWorkCategory,"work-packages":createWorkPackage,"financial-years":createFinancialYear,currency:setCurrency};
  const call=calls[type]; if(!call)throw new Error("INVALID_MASTER_TYPE"); await call(raw); revalidatePath(`/workspace/account/${type}`); revalidatePath("/workspace/account");
 }
+export async function createAccountItemAction(raw:{type:"products"|"services";name:string;unitId?:string}){
+ const call=raw.type==="products"?createProduct:createService;
+ const row=await call({name:raw.name,unitId:raw.unitId,code:"",description:"",sellingRate:"0",cost:"0",taxRate:"0",hsnSacCode:""});
+ revalidatePath("/workspace/account/inventory");
+ return {id:row.id};
+}
