@@ -65,3 +65,25 @@ export async function saveMobileAccountMaster(user: MobileAppPrincipal, kind: Ma
 export async function mobileMasterOptions(user: MobileAppPrincipal) { actor(user, "customers"); const [branches, units, categories] = await Promise.all([db.branch.findMany({ where: { companyId: user.companyId, isActive: true, ...(user.branchAccessScope === "SELECTED_BRANCHES" ? { id: { in: user.branchIds ?? [] } } : {}) }, select: { id: true, name: true }, orderBy: { name: "asc" } }), db.accountUnit.findMany({ where: { companyId: user.companyId, isActive: true }, select: { id: true, name: true, symbol: true }, orderBy: { name: "asc" } }), db.accountCategory.findMany({ where: { companyId: user.companyId, isActive: true, scope: { in: ["PRODUCT", "BOTH"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })]); return { branches, units, categories }; }
 async function requireInventory(user: MobileAppPrincipal) { if (!(await enabledModulesForCompany(user.companyId)).includes("INVENTORY")) throw new Error("MOBILE_FORBIDDEN"); }
 export const MOBILE_MASTER_KINDS = new Set<MasterKind>(["customers", "vendors", "items", "services", "warehouses", "units", "categories"]);
+
+
+export async function bulkSetMobileItemsActive(user:MobileAppPrincipal,kind:"items"|"services",ids:string[],isActive:boolean){
+  actor(user,kind,true);await assertOperationalWrite(user.companyId);await requireInventory(user);
+  const unique=[...new Set(ids)].filter(x=>z.string().uuid().safeParse(x).success);
+  if(!unique.length)return{count:0};
+  return kind==="items"
+    ?db.accountProduct.updateMany({where:{companyId:user.companyId,id:{in:unique}},data:{isActive}})
+    :db.accountService.updateMany({where:{companyId:user.companyId,id:{in:unique}},data:{isActive}});
+}
+export async function saveMobileUnitConversion(user:MobileAppPrincipal,raw:unknown){
+  actor(user,"units",true);await assertOperationalWrite(user.companyId);await requireInventory(user);
+  const input=z.object({baseUnitId:z.string().uuid(),secondaryUnitId:z.string().uuid(),rate:z.coerce.number().positive()}).parse(raw);
+  if(input.baseUnitId===input.secondaryUnitId)throw new Error("INVALID_INPUT");
+  if(await db.accountUnit.count({where:{companyId:user.companyId,id:{in:[input.baseUnitId,input.secondaryUnitId]},isActive:true}})!==2)throw new Error("INVALID_INPUT");
+  const settings=await db.accountSettings.findUnique({where:{companyId:user.companyId},select:{itemSettings:true}});
+  const current=(settings?.itemSettings??{}) as Record<string,unknown>;
+  const conversions=Array.isArray(current.unitConversions)?current.unitConversions.filter((x):x is Record<string,unknown>=>Boolean(x)&&typeof x==="object"):[];
+  const next=[...conversions.filter(x=>!(x.baseUnitId===input.baseUnitId&&x.secondaryUnitId===input.secondaryUnitId)),input];
+  await db.accountSettings.upsert({where:{companyId:user.companyId},create:{companyId:user.companyId,itemSettings:{...current,unitConversions:next}},update:{itemSettings:{...current,unitConversions:next}}});
+  return{ok:true,conversion:input};
+}
