@@ -61,7 +61,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching {
                 if (section.startsWith("tax")) {
-                    api.saveAccountTax(payload)
+                    api.saveAccountTax(payload.jsonObject)
                 } else {
                     api.saveAccountAdministration("settings", section, payload)
                 }
