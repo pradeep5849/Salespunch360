@@ -18,9 +18,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
 @Composable
-fun PurchaseScreen(initialType: String?, padding: PaddingValues, vm: AccountPurchaseViewModel = viewModel()) {
+fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
+    LaunchedEffect(initialType,initialProjectId,state.loading) { if(initialType!=null&&!state.loading&&state.draft==null)vm.create(initialType,initialProjectId) }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
         Row {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or vendor") }, modifier = Modifier.weight(1f))

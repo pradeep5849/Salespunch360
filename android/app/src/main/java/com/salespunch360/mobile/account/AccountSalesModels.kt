@@ -10,6 +10,7 @@ data class SalesEditorDraft(val type:String="SALES_INVOICE",val branchId:String=
 data class NumberingPreview(val branchId:String,val prefix:String="",val suffix:String="",val padding:Int=2,val nextSequence:Long=1)
 data class SalesOptions(val types:List<String> = emptyList(),val branches:List<SalesOption> = emptyList(),val customers:List<SalesOption> = emptyList(),val products:List<SalesOption> = emptyList(),val services:List<SalesOption> = emptyList(),val workPackages:List<SalesOption> = emptyList(),val warehouses:List<SalesOption> = emptyList(),val projects:List<SalesOption> = emptyList(),val sourceDocuments:List<JsonObject> = emptyList(),val numberingSeries:List<NumberingPreview> = emptyList())
 data class AccountSalesState(val loading:Boolean=true,val saving:Boolean=false,val query:String="",val typeFilter:String?=null,val rows:List<SalesDocumentRow> = emptyList(),val options:SalesOptions=SalesOptions(),val editor:SalesEditorDraft?=null,val detail:JsonObject?=null,val postingId:String?=null,val error:String?=null,val message:String?=null)
+fun applyCreatedSaleCustomer(state:AccountSalesState,customer:SalesOption)=state.copy(saving=false,options=state.options.copy(customers=state.options.customers.filterNot{it.id==customer.id}+customer),editor=state.editor?.copy(customerId=customer.id))
 
 internal fun JsonObject.str(key:String)=this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
 internal fun JsonObject.bool(key:String)=this[key]?.jsonPrimitive?.booleanOrNull?:false

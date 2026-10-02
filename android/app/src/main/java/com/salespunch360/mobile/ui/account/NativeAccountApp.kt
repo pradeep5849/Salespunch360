@@ -155,7 +155,8 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
-            state.selectedPath=="/workspace/account/projects/material"->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding)
+            state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
+            state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding)
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select) // ProjectScreen(padding) with root navigation
             moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
@@ -182,7 +183,7 @@ fun NativeAccountAuthenticatedApp(
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
-            purchase!=null->PurchaseScreen(purchase,padding)
+            purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_RECEIPT")->CustomerReceiptScreen(padding)
             sales!=null->AccountSalesScreen(sales,padding,vm::select)
             masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding)
@@ -455,6 +456,7 @@ private fun masterKind(path:String)=when{
 private fun salesType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("SALES_INVOICE","PROFORMA_INVOICE","SALES_ORDER","DELIVERY_CHALLAN","CREDIT_NOTE")} else null
 private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else runCatching{NumberFormat.getCurrencyInstance(Locale("en","IN")).format(BigDecimal(raw))}.getOrDefault(raw)
 private fun purchaseType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE")} else null
+private fun queryValue(path:String,key:String)=Regex("(?:\\?|&)${Regex.escape(key)}=([^&#]+)").find(path)?.groupValues?.get(1)
 
 private fun inventoryMode(path:String)=when{
     path.endsWith("/inventory/stock")||path.endsWith("/inventory/stock-summary")->"stock"
