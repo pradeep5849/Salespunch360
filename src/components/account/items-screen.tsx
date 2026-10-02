@@ -16,7 +16,7 @@ export function ItemsScreen({items,categories,canConfigure,quantityDecimals}:{it
    return search&&typeOk&&catOk;
  }),[items,q,types,cats]);
  const openFilter=()=>{setDraftTypes(new Set(types));setDraftCats(new Set(cats));setFilterOpen(true)};
- const toggle=(set:Set<string>,value:string)=>{const next=new Set(set);next.has(value)?next.delete(value):next.add(value);return next};
+ const toggle=(set:Set<string>,value:string)=>{const next=new Set(set);if(next.has(value))next.delete(value);else next.add(value);return next};
  const share=async(item:Item)=>{const text=`${item.name}${item.code?` (${item.code})`:""} · ${currency.format(Number(item.salePrice))}`;if(navigator.share)await navigator.share({title:item.name,text});else await navigator.clipboard.writeText(text)};
  return <div className="account-items-screen">
   <header className="account-page-header"><div><h1>Items</h1><p>Products, services and live inventory</p></div></header>
