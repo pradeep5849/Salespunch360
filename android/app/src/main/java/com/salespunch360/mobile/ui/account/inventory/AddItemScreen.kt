@@ -430,7 +430,7 @@ private fun AddItemUnitScreen(
             Row(Modifier.fillMaxWidth().navigationBarsPadding()){
                 TextButton(onClick=onBack,modifier=Modifier.weight(1f).height(64.dp)){Text("Cancel")}
                 Button(
-                    onClick={onSave(p,s)},
+                    onClick={ { onSave(p,s) } },
                     enabled=!p.isNullOrBlank(),
                     modifier=Modifier.weight(1f).height(64.dp),
                     shape=MaterialTheme.shapes.extraSmall
@@ -538,7 +538,7 @@ private fun CategorySelectorScreen(
         bottomBar={
             Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)){
                 Button(
-                    onClick={onApply(draft)},
+                    onClick={ { onApply(draft) } },
                     modifier=Modifier.fillMaxWidth().height(56.dp)
                 ){Text("Apply")}
             }
