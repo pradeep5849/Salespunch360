@@ -170,7 +170,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding)
             utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding)
-            adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding)
+            adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select)
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
@@ -488,6 +488,9 @@ private fun reportName(path:String)=path.removePrefix("/workspace/account/report
 private fun adminMode(path:String)=when{
     path=="/workspace/account/notifications"->"notifications"
     path.endsWith("/settings/general")->"general"
+    path.endsWith("/settings/party")->"party-settings"
+    path.endsWith("/settings/party/additional-fields")->"party-additional-fields"
+    path.endsWith("/settings/transaction-sms")->"transaction-sms"
     path.endsWith("/settings/transactions")->"transaction-settings"
     path.endsWith("/settings/custom-fields")->"custom-fields"
     path.endsWith("/settings/modules")->"modules"

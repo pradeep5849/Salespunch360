@@ -1,10 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createAccountCustomer, createAccountCustomerForBranch, createCategory, createFinancialYear, createProduct, createService, createUnit, createVendor, createWorkCategory, createWorkPackage, setCurrency, updateUnit, setItemsActive, saveUnitConversion } from "@/lib/account/service";
+import { createAccountCustomerForBranch, createCategory, createFinancialYear, createProduct, createService, createUnit, createWorkCategory, createWorkPackage, setCurrency, updateUnit, setItemsActive, saveUnitConversion,createPartyWithCustomValues } from "@/lib/account/service";
 
 export async function saveAccountMaster(formData:FormData){
  const type=String(formData.get("type")); const raw=Object.fromEntries(formData.entries());
- const calls:Record<string,(v:unknown)=>Promise<unknown>>={customers:createAccountCustomer,vendors:createVendor,units:createUnit,categories:createCategory,products:createProduct,services:createService,"work-categories":createWorkCategory,"work-packages":createWorkPackage,"financial-years":createFinancialYear,currency:setCurrency};
+ const customValues=Object.fromEntries([...formData.entries()].filter(([key])=>key.startsWith("custom_")).map(([key,value])=>[key.slice(7),value]));
+ const calls:Record<string,(v:unknown)=>Promise<unknown>>={customers:v=>createPartyWithCustomValues("customers",v,customValues),vendors:v=>createPartyWithCustomValues("vendors",v,customValues),units:createUnit,categories:createCategory,products:createProduct,services:createService,"work-categories":createWorkCategory,"work-packages":createWorkPackage,"financial-years":createFinancialYear,currency:setCurrency};
  const call=calls[type]; if(!call)throw new Error("INVALID_MASTER_TYPE"); await call(raw); revalidatePath(`/workspace/account/${type}`); revalidatePath("/workspace/account");
 }
 export type CreateAccountItemInput={type:"products"|"services";name:string;unitId?:string;categoryId?:string;code?:string;barcode?:string;description?:string;sellingRate?:string;cost?:string;taxRate?:string;hsnSacCode?:string;trackInventory?:boolean;trackingMode?:"NONE"|"BATCH"|"SERIAL";lowStockThreshold?:string};

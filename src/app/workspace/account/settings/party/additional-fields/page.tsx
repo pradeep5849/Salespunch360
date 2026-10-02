@@ -1,0 +1,2 @@
+import {AccountPageHeader} from "@/components/account/account-shell";import {PartyAdditionalFieldsForm} from "@/components/account/party-additional-fields-form";import {getPartyAdditionalFields} from "@/lib/account/party-settings";
+export default async function Page(){return <main className="account-inner-page settings-inner-page"><AccountPageHeader title="Party Additional Fields" backHref="/workspace/account/settings/party"/><PartyAdditionalFieldsForm fields={await getPartyAdditionalFields()}/></main>}

@@ -1,0 +1,2 @@
+import {AccountPageHeader} from "@/components/account/account-shell";import {PartySettingsForm} from "@/components/account/party-settings-form";import {getPartySettings} from "@/lib/account/party-settings";
+export default async function Page(){return <main className="account-inner-page settings-inner-page"><AccountPageHeader title="Party Settings" backHref="/workspace/account/settings"/><PartySettingsForm values={await getPartySettings()}/></main>}
