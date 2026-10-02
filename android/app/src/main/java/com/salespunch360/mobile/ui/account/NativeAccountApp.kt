@@ -109,10 +109,11 @@ fun NativeAccountAuthenticatedApp(
     }
 
     BackHandler(enabled=state.selectedPath!=ACCOUNT_HOME){vm.back()}
+    val rootChrome=bottom.any{it.path==state.selectedPath}
 
     Scaffold(
         containerColor=Color(0xFFF7F8FC),
-        topBar={
+        topBar={if(rootChrome){
             TopAppBar(
                 colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White),
                 title={CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)},
@@ -143,8 +144,8 @@ fun NativeAccountAuthenticatedApp(
                     }
                 }
             )
-        },
-        bottomBar={if(bottom.any{it.path==state.selectedPath})AccountBottomBar(bottom,state.selectedPath,vm::select)},
+        }},
+        bottomBar={if(rootChrome)AccountBottomBar(bottom,state.selectedPath,vm::select)},
         snackbarHost={state.error?.let{Snackbar{Row{Text(it,Modifier.weight(1f));TextButton(onClick={vm.load(true)}){Text("Retry")}}}}}
     ){padding->
         val sales=salesType(state.selectedPath)

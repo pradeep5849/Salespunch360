@@ -7,10 +7,14 @@ export async function saveAccountMaster(formData:FormData){
  const calls:Record<string,(v:unknown)=>Promise<unknown>>={customers:createAccountCustomer,vendors:createVendor,units:createUnit,categories:createCategory,products:createProduct,services:createService,"work-categories":createWorkCategory,"work-packages":createWorkPackage,"financial-years":createFinancialYear,currency:setCurrency};
  const call=calls[type]; if(!call)throw new Error("INVALID_MASTER_TYPE"); await call(raw); revalidatePath(`/workspace/account/${type}`); revalidatePath("/workspace/account");
 }
-export async function createAccountItemAction(raw:{type:"products"|"services";name:string;unitId?:string}){
+export type CreateAccountItemInput={type:"products"|"services";name:string;unitId?:string;categoryId?:string;code?:string;barcode?:string;description?:string;sellingRate?:string;cost?:string;taxRate?:string;hsnSacCode?:string;trackInventory?:boolean;trackingMode?:"NONE"|"BATCH"|"SERIAL";lowStockThreshold?:string};
+export async function createAccountItemAction(raw:CreateAccountItemInput){
  const call=raw.type==="products"?createProduct:createService;
- const row=await call({name:raw.name,unitId:raw.unitId,code:"",description:"",sellingRate:"0",cost:"0",taxRate:"0",hsnSacCode:""});
+ const row=await call({name:raw.name,unitId:raw.unitId,categoryId:raw.categoryId,code:raw.code??"",barcode:raw.barcode,description:raw.description??"",sellingRate:raw.sellingRate??"0",cost:raw.cost??"0",taxRate:raw.taxRate??"0",hsnSacCode:raw.hsnSacCode??"",trackInventory:raw.type==="products"&&Boolean(raw.trackInventory),trackingMode:raw.type==="products"?(raw.trackingMode??"NONE"):"NONE",lowStockThreshold:raw.type==="products"?(raw.lowStockThreshold??"0"):"0"});
  revalidatePath("/workspace/account/inventory");
  return {id:row.id};
 }
-export async function createSaleCustomerAction(branchId:string,raw:{name:string;phone?:string}){const row=await createAccountCustomerForBranch(branchId,raw);revalidatePath("/workspace/account/transactions/new");return{id:row.id,name:row.name,phone:row.phone,branchId:row.branchId,balance:"0.00"}}
+export async function createAccountUnitAction(raw:{name:string;symbol:string}){const row=await createUnit(raw);revalidatePath("/workspace/account/inventory/items/new");return{id:row.id,name:row.name,symbol:row.symbol}}
+export async function createAccountCategoryAction(raw:{name:string;description?:string;scope?:"PRODUCT"|"SERVICE"|"BOTH"}){const row=await createCategory({name:raw.name,description:raw.description,scope:raw.scope??"BOTH"});revalidatePath("/workspace/account/inventory/items/new");return{id:row.id,name:row.name}}
+export type CreateSaleCustomerInput={name:string;phone?:string;email?:string;billingAddress?:string;shippingAddress?:string;gstin?:string;stateCode?:string;gstRegistrationType?:"UNREGISTERED"|"REGULAR"|"COMPOSITION"|"SEZ"};
+export async function createSaleCustomerAction(branchId:string,raw:CreateSaleCustomerInput){const row=await createAccountCustomerForBranch(branchId,{name:raw.name,phone:raw.phone,email:raw.email,address:raw.billingAddress,shippingAddress:raw.shippingAddress,gstin:raw.gstin,stateCode:raw.stateCode,gstRegistrationType:raw.gstRegistrationType??"UNREGISTERED"});revalidatePath("/workspace/account/transactions/new");return{id:row.id,name:row.name,phone:row.phone,branchId:row.branchId,balance:"0.00"}}

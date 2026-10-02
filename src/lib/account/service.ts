@@ -223,6 +223,10 @@ export async function createProduct(raw: unknown) {
       costPrice: d.cost,
       taxRate: d.taxRate,
       hsnCode: d.hsnSacCode,
+      barcode: d.barcode,
+      trackInventory: d.trackInventory,
+      trackingMode: d.trackInventory ? d.trackingMode : "NONE",
+      lowStockThreshold: d.lowStockThreshold,
     },
   });
 }
