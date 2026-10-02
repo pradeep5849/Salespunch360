@@ -346,14 +346,57 @@ private fun DirectSaleInvoiceEditor(
                         item{OutlinedTextField(customerEmail,{customerEmail=it},label={Text("Email Address")},modifier=Modifier.fillMaxWidth())}
                     }else{
                         item{
-                            SelectField(
-                                "GST Type",gstType,
-                                listOf("UNREGISTERED" to "Unregistered/Consumer","REGULAR" to "Registered - Regular","COMPOSITION" to "Registered - Composite","SEZ" to "SEZ")
-                            ){gstType=it}
+                            OutlinedButton(onClick={gstTypeOpen=true},modifier=Modifier.fillMaxWidth()){
+                                Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.Start){
+                                    Text("GST Type",style=MaterialTheme.typography.labelSmall)
+                                    Text(when(gstType){"REGULAR"->"Registered - Regular";"COMPOSITION"->"Registered - Composite";"SEZ"->"SEZ";else->"Unregistered/Consumer"})
+                                }
+                            }
                         }
-                        item{SelectField("State",customerState,states){customerState=it}}
+                        item{
+                            OutlinedButton(onClick={stateOpen=true},modifier=Modifier.fillMaxWidth()){
+                                Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.Start){
+                                    Text("State",style=MaterialTheme.typography.labelSmall)
+                                    Text(states.firstOrNull{it.first==customerState}?.second?:"Select State")
+                                }
+                            }
+                        }
                     }
                 }
+            }
+        }
+        if(gstTypeOpen)ModalBottomSheet(onDismissRequest={gstTypeOpen=false}){
+            Column(Modifier.fillMaxWidth()){
+                Row(Modifier.fillMaxWidth().padding(20.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                    Text("GST Type",style=MaterialTheme.typography.titleLarge)
+                    IconButton(onClick={gstTypeOpen=false}){Text("×")}
+                }
+                listOf(
+                    "UNREGISTERED" to "Unregistered/Consumer",
+                    "REGULAR" to "Registered - Regular",
+                    "COMPOSITION" to "Registered - Composite",
+                    "SEZ" to "SEZ"
+                ).forEach{(value,label)->
+                    ListItem(headlineContent={Text(label)},modifier=Modifier.clickable{gstType=value;gstTypeOpen=false})
+                    HorizontalDivider()
+                }
+                Spacer(Modifier.navigationBarsPadding())
+            }
+        }
+        if(stateOpen)ModalBottomSheet(onDismissRequest={stateOpen=false}){
+            Column(Modifier.fillMaxWidth().heightIn(max=700.dp)){
+                Row(Modifier.fillMaxWidth().padding(20.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                    Text("State",style=MaterialTheme.typography.titleLarge)
+                    IconButton(onClick={stateOpen=false}){Text("×")}
+                }
+                LazyColumn{
+                    item{ListItem(headlineContent={Text("Select State")},modifier=Modifier.clickable{customerState="";stateOpen=false});HorizontalDivider()}
+                    items(states){(code,label)->
+                        ListItem(headlineContent={Text(label)},modifier=Modifier.clickable{customerState=code;stateOpen=false})
+                        HorizontalDivider()
+                    }
+                }
+                Spacer(Modifier.navigationBarsPadding())
             }
         }
         if(partyHelp=="OPENING"){
