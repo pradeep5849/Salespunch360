@@ -17,6 +17,7 @@ data class InventoryState(
  val options:JsonObject=buildJsonObject{},
  val itemRecords:List<AccountMasterRecord> = emptyList(),
  val serviceRecords:List<AccountMasterRecord> = emptyList(),
+ val categories:List<AccountOption> = emptyList(),
  val editing:String?=null,
  val error:String?=null,
  val message:String?=null
@@ -43,7 +44,8 @@ class AccountInventoryViewModel(app:Application):AndroidViewModel(app){
    }.map{it.jsonObject}
    val items=runCatching{api.accountMasterList("items","", "true")}.getOrDefault(emptyList())
    val services=runCatching{api.accountMasterList("services","", "true")}.getOrDefault(emptyList())
-   _state.value=_state.value.copy(loading=false,options=o,rows=r,itemRecords=items,serviceRecords=services)
+   val masterOptions=runCatching{api.accountMasterOptions()}.getOrDefault(AccountMasterOptions())
+   _state.value=_state.value.copy(loading=false,options=o,rows=r,itemRecords=items,serviceRecords=services,categories=masterOptions.categories)
   }catch(e:Exception){fail(e)}
  }
  fun save(kind:String,payload:JsonObject)=viewModelScope.launch{
