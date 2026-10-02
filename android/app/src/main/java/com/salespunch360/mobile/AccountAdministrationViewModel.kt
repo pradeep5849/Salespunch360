@@ -56,6 +56,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // Administration settings can use either object or array JSON payloads.
     fun save(section: String, payload: JsonElement) {
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
