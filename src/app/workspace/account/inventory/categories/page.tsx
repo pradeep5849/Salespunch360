@@ -4,10 +4,12 @@ import {CategoriesManager} from "@/components/account/categories-manager";
 export const metadata={title:"Categories | SalesPunch360"};
 export default async function Page(){
  const actor=await requirePermission("ACCOUNT_STOCK"),companyId=actor.companyId!;
- const [categories,uncategorizedProducts,uncategorizedServices]=await Promise.all([
-  db.accountCategory.findMany({where:{companyId,isActive:true},orderBy:{name:"asc"},select:{id:true,name:true,_count:{select:{products:true,services:true}}}}),
-  db.accountProduct.count({where:{companyId,isActive:true,categoryId:null}}),
-  db.accountService.count({where:{companyId,isActive:true,categoryId:null}})
+ const [categories,products,services]=await Promise.all([
+  db.accountCategory.findMany({where:{companyId,isActive:true},orderBy:{name:"asc"},select:{id:true,name:true}}),
+  db.accountProduct.findMany({where:{companyId,isActive:true},select:{categoryId:true}}),
+  db.accountService.findMany({where:{companyId,isActive:true},select:{categoryId:true}})
  ]);
- return <CategoriesManager categories={categories.map(x=>({id:x.id,name:x.name,count:x._count.products+x._count.services}))} uncategorizedCount={uncategorizedProducts+uncategorizedServices}/>;
+ const counts=new Map<string,number>();let uncategorizedCount=0;
+ for(const row of [...products,...services]){if(!row.categoryId)uncategorizedCount++;else counts.set(row.categoryId,(counts.get(row.categoryId)??0)+1)}
+ return <CategoriesManager categories={categories.map(x=>({id:x.id,name:x.name,count:counts.get(x.id)??0}))} uncategorizedCount={uncategorizedCount}/>;
 }
