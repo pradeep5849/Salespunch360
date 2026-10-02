@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 
 type NumberingTx = Pick<Prisma.TransactionClient, "numberingSeries" | "$queryRaw">;
+/** Canonical policy used by both invoice previews and save-time allocation. */
+export const SALES_INVOICE_NUMBERING_DEFAULTS = Object.freeze({ prefix: "", suffix: "", padding: 2 });
 export type NumberingAllocation = {
   companyId: string;
   branchId?: string;

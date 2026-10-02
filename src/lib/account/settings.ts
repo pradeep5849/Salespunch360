@@ -39,7 +39,7 @@ export async function updateTransactionSettings(raw: unknown) {
     for (const [seriesKey, prefix] of Object.entries(input.prefixes)) {
       const existing = await tx.numberingSeries.findFirst({ where: { companyId: actor.companyId!, branchId: branch.id, seriesKey } });
       if (existing) await tx.numberingSeries.update({ where: { id: existing.id }, data: { prefix } });
-      else await tx.numberingSeries.create({ data: { companyId: actor.companyId!, branchId: branch.id, seriesKey, prefix, padding: 6 } });
+      else await tx.numberingSeries.create({ data: { companyId: actor.companyId!, branchId: branch.id, seriesKey, prefix, padding: seriesKey === "SALES_INVOICE" ? 2 : 6 } });
     }
     await tx.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "SETTINGS_CHANGED", entityType: "ACCOUNT_SETTINGS", entityId: actor.companyId!, metadata: { sections: ["TRANSACTION_SETTINGS", "NUMBERING_PREFIXES"], branchId: branch.id } } });
     return settings;

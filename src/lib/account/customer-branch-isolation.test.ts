@@ -6,7 +6,8 @@ const m=vi.hoisted(()=>({auth:vi.fn(),company:vi.fn(),modules:vi.fn(),enabled:vi
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class extends Error{},requirePermission:m.auth,requirePermissionForMutation:m.auth}));
 vi.mock("./modules",()=>({requireAccountModules:m.modules,enabledModulesForCompany:m.enabled}));
 vi.mock("./projects",()=>({authorizeProjectForCommercial:vi.fn(),listOpenProjectOptionsForActor:m.projects}));
-vi.mock("./numbering",()=>({allocateDocumentNumberInTx:m.number}));
+vi.mock("./numbering",()=>({allocateDocumentNumberInTx:m.number,SALES_INVOICE_NUMBERING_DEFAULTS:{prefix:"",suffix:"",padding:2}}));
+vi.mock("./opening-balances",()=>({listOpeningOutstandings:vi.fn().mockResolvedValue([])}));
 vi.mock("@/lib/accounting/service",()=>({postJournalInTx:m.post}));
 const tx={branch:{findFirst:m.branch},customer:{findFirst:m.customer},vendor:{findFirst:vi.fn()},accountSettings:{findUnique:m.settings},commercialDocument:{create:m.documentCreate,findFirst:m.documentFind,findMany:m.documentMany,aggregate:m.documentAggregate},commercialAuditEvent:{create:m.audit},accountSettlement:{findUnique:m.settlementFind,create:m.settlementCreate},financialYear:{findFirst:m.fy},ledgerAccount:{findMany:m.ledgers},accountingPeriodLock:{findFirst:m.lock},moneyAccount:{findFirst:vi.fn()},settlementAllocation:{aggregate:m.allocationAggregate},advanceApplication:{aggregate:m.applicationAggregate},$queryRaw:m.raw,$executeRaw:m.execute};
 vi.mock("@/lib/db",()=>({db:{$transaction:m.transaction,company:{findUniqueOrThrow:m.company},commercialDocument:{findMany:m.documentMany},branch:{findMany:m.findMany},customer:{findMany:m.findMany},vendor:{findMany:m.findMany},accountProduct:{findMany:m.findMany},warehouse:{findMany:m.findMany},inventoryBatch:{findMany:m.findMany},inventorySerialNumber:{findMany:m.findMany},accountSettings:{findUnique:m.settings},accountService:{findMany:m.findMany},workPackage:{findMany:m.findMany}}}));
