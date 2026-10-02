@@ -487,7 +487,119 @@ private val partyHelp=mapOf(
 )
 @Composable private fun PartyInfoDialog(help:PartyHelp?,close:()->Unit){if(help!=null)AlertDialog(onDismissRequest=close,title={Text(help.title,fontWeight=FontWeight.Bold)},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){if(help.comingSoon)Text("Coming Soon",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("What is this?",fontWeight=FontWeight.Bold);Text(help.what);Text("Why to use?",fontWeight=FontWeight.Bold);Text(help.why)}},confirmButton={Button(onClick=close,modifier=Modifier.fillMaxWidth()){Text("OK")}})}
 @Composable private fun PartySettingRow(label:String,checked:Boolean,enabled:Boolean=true,help:PartyHelp,change:(Boolean)->Unit,open:(PartyHelp)->Unit){ListItem(headlineContent={Text(label)},supportingContent=if(!enabled){{Text("Coming Soon")}}else null,trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={open(help)}){Text("ⓘ")};Switch(checked,onCheckedChange=if(enabled)change else null,enabled=enabled)}});HorizontalDivider()}
-@Composable private fun PartySettingsView(data:JsonElement,vm:AccountAdministrationViewModel,navigate:(String)->Unit){val saved=data.jsonObject["settings"]?.jsonObject?.get("transactionDefaults")?.jsonObject?.get("partySettings")?.jsonObject;fun bool(key:String,default:Boolean)=saved?.get(key)?.jsonPrimitive?.booleanOrNull?:default;var gstin by remember(saved){mutableStateOf(bool("gstinEnabled",true))};var grouping by remember(saved){mutableStateOf(bool("groupingEnabled",false))};var shipping by remember(saved){mutableStateOf(bool("shippingAddressEnabled",true))};var printShipping by remember(saved){mutableStateOf(bool("printShippingAddress",false))};var help by remember{mutableStateOf<PartyHelp?>(null)};LazyColumn{item{PartySettingRow("GSTIN Number",gstin,true,partyHelp.getValue("gstin"),{gstin=it},{help=it})};item{PartySettingRow("Party Grouping",grouping,true,partyHelp.getValue("grouping"),{grouping=it},{help=it})};item{ListItem(headlineContent={Text("Party Additional Fields")},modifier=Modifier.clickable{navigate("/workspace/account/settings/party/additional-fields")},trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={help=partyHelp.getValue("additional")}){Text("ⓘ")};Text("›")}})};item{PartySettingRow("Party Shipping Address",shipping,true,partyHelp.getValue("shipping"),{shipping=it},{help=it})};item{PartySettingRow("Print Shipping Address",printShipping,shipping,partyHelp.getValue("print"),{printShipping=it},{help=it})};item{PartySettingRow("Loyalty Points",false,false,partyHelp.getValue("loyalty"),{},{help=it})};item{Button(onClick={vm.save("party-settings",buildJsonObject{put("gstinEnabled",gstin);put("groupingEnabled",grouping);put("shippingAddressEnabled",shipping);put("printShippingAddress",printShipping)})},modifier=Modifier.fillMaxWidth().padding(top=16.dp)){Text("Save Party Settings")}}};PartyInfoDialog(help){help=null}}
+@Composable
+private fun PartySettingsView(
+    data: JsonElement,
+    vm: AccountAdministrationViewModel,
+    navigate: (String) -> Unit
+) {
+    val saved = data.jsonObject["settings"]
+        ?.jsonObject
+        ?.get("transactionDefaults")
+        ?.jsonObject
+        ?.get("partySettings")
+        ?.jsonObject
+
+    fun bool(key: String, default: Boolean) =
+        saved?.get(key)?.jsonPrimitive?.booleanOrNull ?: default
+
+    var gstin by remember(saved) { mutableStateOf(bool("gstinEnabled", true)) }
+    var grouping by remember(saved) { mutableStateOf(bool("groupingEnabled", false)) }
+    var shipping by remember(saved) { mutableStateOf(bool("shippingAddressEnabled", true)) }
+    var printShipping by remember(saved) { mutableStateOf(bool("printShippingAddress", false)) }
+    var help by remember { mutableStateOf<PartyHelp?>(null) }
+
+    LazyColumn {
+        item {
+            PartySettingRow(
+                "GSTIN Number",
+                gstin,
+                true,
+                partyHelp.getValue("gstin"),
+                { gstin = it },
+                { help = it }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Party Grouping",
+                grouping,
+                true,
+                partyHelp.getValue("grouping"),
+                { grouping = it },
+                { help = it }
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text("Party Additional Fields") },
+                modifier = Modifier.clickable {
+                    navigate("/workspace/account/settings/party/additional-fields")
+                },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { help = partyHelp.getValue("additional") }) {
+                            Text("ⓘ")
+                        }
+                        Text("›")
+                    }
+                }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Party Shipping Address",
+                shipping,
+                true,
+                partyHelp.getValue("shipping"),
+                { shipping = it },
+                { help = it }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Print Shipping Address",
+                printShipping,
+                shipping,
+                partyHelp.getValue("print"),
+                { printShipping = it },
+                { help = it }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Loyalty Points",
+                false,
+                false,
+                partyHelp.getValue("loyalty"),
+                {},
+                { help = it }
+            )
+        }
+        item {
+            Button(
+                onClick = {
+                    vm.save(
+                        "party-settings",
+                        buildJsonObject {
+                            put("gstinEnabled", gstin)
+                            put("groupingEnabled", grouping)
+                            put("shippingAddressEnabled", shipping)
+                            put("printShippingAddress", printShipping)
+                        }
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+            ) {
+                Text("Save Party Settings")
+            }
+        }
+    }
+
+    PartyInfoDialog(help) { help = null }
+}
 @Composable private fun PartyAdditionalFieldsView(data:JsonElement,vm:AccountAdministrationViewModel){val existing=data.jsonObject["fields"]?.jsonArray.orEmpty().filter{it.jsonObject["entityType"]?.jsonPrimitive?.content=="CUSTOMER"}.associateBy{it.jsonObject["fieldKey"]?.jsonPrimitive?.content.orEmpty()};val keys=listOf("party_additional_1","party_additional_2","party_additional_3","party_date");var enabled by remember(existing){mutableStateOf(keys.map{existing[it]?.jsonObject?.get("isActive")?.jsonPrimitive?.booleanOrNull?:false})};var labels by remember(existing){mutableStateOf(keys.mapIndexed{i,key->existing[key]?.jsonObject?.get("label")?.jsonPrimitive?.content?:if(key=="party_date")"Date Field" else "Additional Field ${i+1}"})};var printing by remember(existing){mutableStateOf(keys.map{key->existing[key]?.jsonObject?.get("validation")?.jsonObject?.get("showInPrint")?.jsonPrimitive?.booleanOrNull?:false})};LazyColumn(contentPadding=PaddingValues(bottom=90.dp)){items(keys.size){i->Text(if(i==3)"Date Field" else "Additional Field ${i+1}",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=16.dp));SwitchRow("Enable",enabled[i]){value->enabled=enabled.mapIndexed{index,old->if(index==i)value else old}};OutlinedTextField(labels[i],{value->labels=labels.mapIndexed{index,old->if(index==i)value else old}},label={Text("Field Name")},enabled=enabled[i],modifier=Modifier.fillMaxWidth());if(i==3)OutlinedTextField("dd/MM/yyyy",{},readOnly=true,label={Text("Date Format")},enabled=enabled[i],modifier=Modifier.fillMaxWidth());SwitchRow("Show in print",printing[i],enabled[i]){value->printing=printing.mapIndexed{index,old->if(index==i)value else old}}};item{Button(onClick={vm.save("party-additional-fields",buildJsonArray{keys.forEachIndexed{i,key->add(buildJsonObject{put("key",key);put("enabled",enabled[i]);put("label",labels[i]);put("showInPrint",printing[i]);if(i==3)put("dateFormat","DD/MM/YYYY")})}})},modifier=Modifier.fillMaxWidth().padding(top=16.dp)){Text("Save")}}}}
 @Composable private fun TransactionSmsView(){Column{Text("Coming Soon",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(vertical=16.dp));listOf("Send to party","Send SMS Copy to Self","Automatically Share Invoices on SalesPunch360 Network").forEach{ListItem(headlineContent={Text(it)},supportingContent={Text("Coming Soon")},trailingContent={Switch(false,null,enabled=false)});HorizontalDivider()}}}
 
