@@ -142,7 +142,29 @@ export async function mobileSaveSettings(
     });
   }
   if(section==="item-settings"){
-    const v=z.object({enabled:z.boolean(),itemUnits:z.boolean(),quantityDecimals:z.number().int().min(0).max(4)}).strict().parse(raw),current=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{itemSettings:true}}),itemSettings={...((current?.itemSettings as Record<string,unknown>|null)??{}),...v} as Prisma.InputJsonValue;
+    const v=z.object({
+      enabled:z.boolean(),
+      itemType:z.enum(["PRODUCTS","SERVICES","BOTH"]),
+      barcodeScanning:z.boolean(),
+      stockMaintenance:z.boolean(),
+      itemUnits:z.boolean(),
+      defaultUnit:z.string().max(40),
+      itemCategory:z.boolean(),
+      partyWiseRate:z.boolean(),
+      wholesalePrice:z.boolean(),
+      quantityDecimals:z.number().int().min(0).max(4),
+      itemWiseTax:z.boolean(),
+      taxOnMrp:z.boolean(),
+      itemWiseDiscount:z.boolean(),
+      updateSalePrice:z.boolean(),
+      additionalFields:z.boolean(),
+      customFields:z.boolean(),
+      description:z.boolean(),
+      hsnSac:z.boolean(),
+      additionalCess:z.boolean()
+    }).strict().parse(raw),
+    current=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{itemSettings:true}}),
+    itemSettings={...((current?.itemSettings as Record<string,unknown>|null)??{}),...v} as Prisma.InputJsonValue;
     return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,itemSettings},update:{itemSettings}})
   }
   if (section === "custom-fields") {
