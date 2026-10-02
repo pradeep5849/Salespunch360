@@ -7,7 +7,7 @@ type Row={id:string;name:string;code:string|null;stock:number|null};
 export function ActiveItemsManager({activate,products,services}:{activate:boolean;products:Row[];services:Row[]}){
  const router=useRouter(),[kind,setKind]=useState<"products"|"services">("products"),[q,setQ]=useState(""),[selected,setSelected]=useState<Set<string>>(new Set()),[pending,startTransition]=useTransition();
  const rows=kind==="products"?products:services,visible=useMemo(()=>rows.filter(x=>`${x.name} ${x.code??""}`.toLowerCase().includes(q.toLowerCase())),[rows,q]);
- const toggle=(id:string)=>setSelected(old=>{const n=new Set(old);n.has(id)?n.delete(id):n.add(id);return n});
+ const toggle=(id:string)=>setSelected(old=>{const n=new Set(old);if(n.has(id))n.delete(id);else n.add(id);return n});
  const allVisible=visible.length>0&&visible.every(x=>selected.has(x.id));
  const submit=()=>startTransition(async()=>{await setItemsActiveAction(kind,[...selected],activate);router.push("/workspace/account/inventory");router.refresh()});
  return <main className="active-items-page">
