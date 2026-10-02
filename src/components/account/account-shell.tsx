@@ -8,17 +8,17 @@ import { AccountIcon } from "./account-icons";
 import { AccountProfileMenu } from "./account-profile-menu";
 import {CompanyIdentity} from "@/components/workspace/company-identity";
 
-type ShellProps={children:React.ReactNode;companyName:string;companyAddress?:string;hasCompanyLogo?:boolean;companyLogoVersion?:number;userName:string;role:string;isPlusPrimaryAdmin?:boolean;notifications:number;navigation:AccountNavGroup[];showItems:boolean};
+type ShellProps={children:React.ReactNode;companyName:string;companyAddress?:string;hasCompanyLogo?:boolean;companyLogoVersion?:number;userName:string;role:string;isPlusPrimaryAdmin?:boolean;canSwitchWorkspace?:boolean;notifications:number;navigation:AccountNavGroup[];showItems:boolean};
 const ROOT_ACCOUNT_PATHS=new Set(["/workspace/account","/workspace/account/dashboard","/workspace/account/projects","/workspace/account/inventory"]);
 
-export function AccountShell({children,companyName,companyAddress,hasCompanyLogo=false,companyLogoVersion,userName,role,isPlusPrimaryAdmin=false,notifications,navigation,showItems}:ShellProps){
+export function AccountShell({children,companyName,companyAddress,hasCompanyLogo=false,companyLogoVersion,userName,role,isPlusPrimaryAdmin=false,canSwitchWorkspace=false,notifications,navigation,showItems}:ShellProps){
  const pathname=usePathname();
  const isRoot=ROOT_ACCOUNT_PATHS.has(pathname);
  const showProjects=hasAccountNavigationItem(navigation,"Projects","/workspace/account/projects");
  const bottom:AccountBottomItem[]=[{label:"Home",href:"/workspace/account",icon:"home"},{label:"Dashboard",href:"/workspace/account/dashboard",icon:"dashboard"},...(showProjects?[{label:"Projects",href:"/workspace/account/projects",icon:"projects"} as const]:[]),...(showItems?[{label:"Items",href:"/workspace/account/inventory",icon:"items"} as const]:[])];
  return <div className={`account-shell${isRoot?"":" account-inner-shell"}`}>
   {isRoot&&<><header className="account-topbar"><Link className="account-hamburger" href="/workspace/account/menu" aria-label="Open Account menu"><AccountIcon name="menu"/></Link><CompanyIdentity href="/workspace/account" name={companyName} address={companyAddress} hasLogo={hasCompanyLogo} version={companyLogoVersion} className="account-identity workspace-identity"/><div className="account-top-actions">
-   <Link aria-label={`${notifications} account notifications`} className="account-icon-button" href="/workspace/account/notifications"><AccountIcon name="bell"/>{notifications>0&&<b>{notifications>99?"99+":notifications}</b>}</Link><AccountProfileMenu userName={userName} role={role} isPlusPrimaryAdmin={isPlusPrimaryAdmin}/></div></header>
+   <Link aria-label={`${notifications} account notifications`} className="account-icon-button" href="/workspace/account/notifications"><AccountIcon name="bell"/>{notifications>0&&<b>{notifications>99?"99+":notifications}</b>}</Link><AccountProfileMenu userName={userName} role={role} isPlusPrimaryAdmin={isPlusPrimaryAdmin} canSwitchWorkspace={canSwitchWorkspace}/></div></header>
    <div className="account-desktop-nav" aria-label="Account modules">{navigation.map(group=><Link key={group.label} href={`/workspace/account/menu#${accountNavSectionId(group.label)}`}>{group.label}</Link>)}</div></>}
   <main className="account-main">{children}</main>
   {isRoot&&<AccountBottomNav items={bottom}/>}

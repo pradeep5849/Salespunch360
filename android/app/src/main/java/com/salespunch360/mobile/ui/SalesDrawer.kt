@@ -104,15 +104,7 @@ internal fun SalesCompactNavigationMenu(
     }
    }
   }
-  switchToAccount?.let{action->
-   HorizontalDivider(color=Color.White.copy(alpha=.18f))
-   DropdownMenuItem(
-    text={Text("Switch to Accounts",color=Color.White,fontSize=13.sp)},
-    leadingIcon={Icon(Icons.Default.SwapHoriz,null,tint=Color.White,modifier=Modifier.size(19.dp))},
-    onClick={onDismiss();action()},
-    contentPadding=PaddingValues(horizontal=14.dp,vertical=0.dp),
-   )
-  }
+
  }
 }
 
@@ -162,11 +154,6 @@ internal fun SalesNavigationDrawerContent(
    if(!telecaller){
     SalesReportsDrawerSection(MobileRole.SALES,current,reportsOpen,{reportsOpen=it},navigate)
    }
-  }
-  switchToAccount?.let{action->
-   HorizontalDivider(color=Color.White.copy(alpha=.18f))
-   DrawerRow("Switch to Accounts",Icons.Default.SwapHoriz,false,onClick={action()})
-   Spacer(Modifier.height(6.dp))
   }
  }
 }

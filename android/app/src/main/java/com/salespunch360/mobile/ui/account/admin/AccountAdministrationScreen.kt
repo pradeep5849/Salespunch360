@@ -458,7 +458,7 @@ private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
 }
 
 private val accountSettingsDestinations=listOf(
-    "General" to "/workspace/account/settings/general","Transaction" to "/workspace/account/settings/transactions","Invoice Print" to "/workspace/account/settings/print-templates","Taxes & GST" to "/workspace/account/tax/settings","User Management" to "/workspace/employees","Transaction SMS" to "/workspace/account/settings/transactions","Reminders" to "/workspace/account/settings/transactions","Party" to "/workspace/account/settings/custom-fields","Item" to "/workspace/account/inventory/item-settings","Multi-Currency" to "/workspace/account/financial-years"
+    "General" to "/workspace/account/settings/general","Transaction" to "/workspace/account/settings/transactions","Invoice Print" to "/workspace/account/settings/print-templates","Taxes & GST" to "/workspace/account/tax/settings","User Management" to "/workspace/employees","Transaction SMS" to "/workspace/account/settings/transactions","Reminders" to "/workspace/account/settings/transactions","Party" to "/workspace/account/settings/custom-fields","Item" to "/workspace/account/inventory/item-settings","Multi-Currency" to "/workspace/account/settings/multi-currency"
 )
 
 @Composable
@@ -481,15 +481,15 @@ private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewMod
     var decimals by remember(current){mutableStateOf(current["displayDecimalPlaces"]?.jsonPrimitive?.intOrNull?:2)}
     var dateFormat by remember(current){mutableStateOf(current["dateFormat"]?.jsonPrimitive?.content?:"DD/MM/YYYY")}
     var warning by remember(current){mutableStateOf(current["warnUnsavedChanges"]?.jsonPrimitive?.booleanOrNull?:true)}
-    var appearance by remember(current){mutableStateOf(current["appearance"]?.jsonPrimitive?.content?:"SYSTEM")}
+    val appearance="STANDARD"
     LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
         item{Text("Application",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
         item{ChoiceSetting("App Language",language,listOf("en" to "English","hi" to "Hindi")){language=it}}
         item{ChoiceSetting("Business Currency",currency,listOf("INR","USD","EUR","GBP","AED").map{it to it}){currency=it}}
-        item{ChoiceSetting("Decimal Places",decimals.toString(),(0..4).map{it.toString() to it.toString()}){decimals=it.toInt()};Text("General amount precision; item quantity decimals remain in Item Settings.",style=MaterialTheme.typography.bodySmall)}
+        item{ListItem(headlineContent={Text("Decimal Places")},supportingContent={Text("Display precision only; stored calculation precision is unchanged.")},trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={decimals=(decimals-1).coerceAtLeast(0)},enabled=decimals>0){Text("−")};Text(decimals.toString());IconButton(onClick={decimals=(decimals+1).coerceAtMost(4)},enabled=decimals<4){Text("+")}}})}
         item{ChoiceSetting("Date Format",dateFormat,listOf("DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD").map{it to it}){dateFormat=it}}
         item{SwitchRow("Show warning for unsaved changes",warning){warning=it}}
-        item{ChoiceSetting("Theme / Appearance",appearance,listOf("SYSTEM" to "Use device setting","LIGHT" to "Light","DARK" to "Dark")){appearance=it}}
+        item{ChoiceSetting("Theme",appearance,listOf("STANDARD" to "Standard","TRENDING_DISABLED" to "Trending — Coming Soon","MODERN_DISABLED" to "Modern — Coming Soon")){}}
         item{Text("Security",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);ListItem(headlineContent={Text("Passcode / Fingerprint")},supportingContent={Text("Managed by Android device security")},trailingContent={Text("›")},modifier=Modifier.clickable{context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))})}
         item{Button(onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance)})},modifier=Modifier.fillMaxWidth()){Text("Save General Settings")}}
     }

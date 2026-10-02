@@ -99,15 +99,6 @@ fun AdminManagerAuthenticatedApp(
       }
       SalesReportsDrawerSection(role,route,reportsOpen,{reportsOpen=it},::navigate)
      }
-     if(switchToAccount!=null){
-      HorizontalDivider(Modifier.padding(horizontal=16.dp),color=Color.White.copy(alpha=.18f))
-      CompactRoleDrawerItem(
-       label="⇄  Switch to Accounts",
-       selected=false,
-       onClick={scope.launch{drawer.close()};switchToAccount()}
-      )
-      Spacer(Modifier.height(8.dp))
-     }
     }
    }
   }

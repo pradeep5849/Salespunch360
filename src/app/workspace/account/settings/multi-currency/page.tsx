@@ -1,0 +1,2 @@
+import {AccountPageHeader} from "@/components/account/account-shell";
+export default function Page(){return <><AccountPageHeader title="Multi-Currency" backHref="/workspace/account/settings"/><section className="settings-coming-soon" aria-labelledby="multi-currency-status"><span aria-hidden>¤</span><h2 id="multi-currency-status">Coming Soon</h2><p>Multi-currency accounting and exchange-rate controls are not available yet. Your current business currency remains unchanged.</p></section></>}

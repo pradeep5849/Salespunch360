@@ -79,15 +79,6 @@ fun PrimaryAdminAuthenticatedApp(
       }
       SalesReportsDrawerSection(MobileRole.PRIMARY_ADMIN,route,reportsOpen,{reportsOpen=it},::navigate)
      }
-     if(switchToAccount!=null){
-      HorizontalDivider(Modifier.padding(horizontal=16.dp),color=Color.White.copy(alpha=.18f))
-      CompactAdminDrawerItem(
-       label="⇄  Switch to Accounts",
-       selected=false,
-       onClick={scope.launch{drawer.close()};switchToAccount()}
-      )
-      Spacer(Modifier.height(8.dp))
-     }
     }
    }
   }

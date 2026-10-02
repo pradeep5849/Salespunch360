@@ -132,12 +132,12 @@ fun NativeAccountAuthenticatedApp(
                             }
                         }
                         DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){
+                            onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;vm.select("/workspace/company-profile")})
                             DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
                             DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;vm.select("/workspace/change-password")})
                             if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
                             DropdownMenuItem(text={Text("Settings")},onClick={profileMenu=false;vm.select("/workspace/account/settings")})
-                            onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             HorizontalDivider()
                             DropdownMenuItem(text={Text("Sign out")},onClick={profileMenu=false;onLogout()})
                         }
@@ -174,6 +174,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
+            state.selectedPath=="/workspace/account/settings/multi-currency"->Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Multi-Currency",style=MaterialTheme.typography.headlineSmall);Text("Coming Soon",style=MaterialTheme.typography.titleLarge);Text("Exchange rates and multi-currency accounting are not available yet.")}}
             state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}

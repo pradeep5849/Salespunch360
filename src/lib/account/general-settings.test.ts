@@ -3,7 +3,7 @@ const m=vi.hoisted(()=>({auth:vi.fn(),upsert:vi.fn(),audit:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class extends Error{},requirePermission:vi.fn(),requirePermissionForMutation:m.auth}));
 vi.mock("@/lib/db",()=>({db:{accountSettings:{upsert:m.upsert},accountingAuditEvent:{create:m.audit}}}));
 import {generalSettingsSchema,updateGeneralSettings} from "./settings";
-const valid={appLanguage:"en",baseCurrency:"INR",displayDecimalPlaces:2,dateFormat:"DD/MM/YYYY",warnUnsavedChanges:true,appearance:"SYSTEM"};
+const valid={appLanguage:"en",baseCurrency:"INR",displayDecimalPlaces:2,dateFormat:"DD/MM/YYYY",warnUnsavedChanges:true,appearance:"STANDARD"} as const;
 describe("Account General settings",()=>{
  beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({id:"user",companyId:"company",accountRole:"ACCOUNT_ADMIN"});m.upsert.mockResolvedValue(valid);m.audit.mockResolvedValue({})});
  it("accepts supported preferences and normalizes currency",()=>expect(generalSettingsSchema.parse({...valid,baseCurrency:"usd"}).baseCurrency).toBe("USD"));
