@@ -23,7 +23,7 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
         onDismissRequest = vm::closeDraft,
         title = { Text("New ${draft.type.replace('_', ' ')}") },
         confirmButton = {
-            Button(enabled = !state.saving && draft.vendorId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text("Create draft") }
+            Button(enabled = !state.saving && draft.vendorId.isNotBlank() && draft.lines.isNotEmpty() && (draft.purpose != "PROJECT" || draft.projectId.isNotBlank() && draft.projectBudgetLineId.isNotBlank()), onClick = vm::save) { Text("Create draft") }
         },
         dismissButton = { TextButton(onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
@@ -47,8 +47,8 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
                 item { OutlinedTextField(draft.paymentTerms, { vm.edit(draft.copy(paymentTerms = it)) }, label = { Text("Payment terms") }) }
                 item { OutlinedTextField(draft.grnReference, { vm.edit(draft.copy(grnReference = it)) }, label = { Text("GRN / challan reference") }) }
                 item { OutlinedTextField(draft.dueDate, { vm.edit(draft.copy(dueDate = it)) }, label = { Text("Due date") }) }
-                item { SelectField("Purpose", draft.purpose, listOf("INVENTORY_SALES" to "Inventory / Sales", "PROJECT" to "Project", "GENERAL_OFFICE" to "General / Office", "FIXED_ASSET" to "Fixed Asset", "MIXED" to "Mixed Allocation")) { vm.edit(draft.copy(purpose = it)) } }
-                if (draft.purpose == "PROJECT") { item { SelectField("Project", draft.projectId, state.projects.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it,projectBudgetLineId="")) } }; item { SelectField("Budget line",draft.projectBudgetLineId,state.projectBudgetLines.filter{it.str("projectId")==draft.projectId}.map{it.str("id") to it.str("title")}){vm.edit(draft.copy(projectBudgetLineId=it))} }; item { SelectField("Material treatment",draft.materialTreatment,listOf("DIRECT_TO_PROJECT" to "Direct to Project","RECEIVE_IN_INVENTORY" to "Receive in Inventory")){vm.edit(draft.copy(materialTreatment=it))} } }
+                if(draft.type=="PURCHASE_BILL"&&state.projects.isNotEmpty())item{Column{Text("Purchase For");SingleChoiceSegmentedButtonRow{SegmentedButton(selected=draft.purpose!="PROJECT",onClick={vm.edit(draft.copy(purpose="INVENTORY_SALES",projectId="",projectBudgetLineId="",materialTreatment=""))},shape=SegmentedButtonDefaults.itemShape(0,2)){Text("Regular")};SegmentedButton(selected=draft.purpose=="PROJECT",onClick={vm.edit(draft.copy(purpose="PROJECT",materialTreatment=""))},shape=SegmentedButtonDefaults.itemShape(1,2)){Text("Project")}}}}
+                if (draft.purpose == "PROJECT") { item { SelectField("Project", draft.projectId, state.projects.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it,projectBudgetLineId="")) } }; item { SelectField("Budget line",draft.projectBudgetLineId,state.projectBudgetLines.filter{it.str("projectId")==draft.projectId}.map{it.str("id") to it.str("title")}){vm.edit(draft.copy(projectBudgetLineId=it))} } } else item { SelectField("Advanced purchase purpose",draft.purpose,listOf("INVENTORY_SALES" to "Inventory / Sales","GENERAL_OFFICE" to "General / Office","FIXED_ASSET" to "Fixed Asset","MIXED" to "Mixed Allocation")){vm.edit(draft.copy(purpose=it))} }
                 item {
                     SelectField("Classification", draft.classification, listOf("PURCHASE_COST" to "Purchase cost", "GENERAL_EXPENSES" to "General expenses", "FIXED_ASSET" to "Fixed asset")) { vm.edit(draft.copy(classification = it)) }
                 }

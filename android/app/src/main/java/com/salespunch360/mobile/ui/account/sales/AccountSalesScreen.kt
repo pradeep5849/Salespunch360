@@ -19,7 +19,7 @@ import com.salespunch360.mobile.AccountSalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSalesScreen(initialType: String?, padding: PaddingValues, vm: AccountSalesViewModel = viewModel()) {
+fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialType) { if (initialType != null) { vm.filter(initialType); if (initialType == "SALES_INVOICE") vm.newDocument(initialType) } }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
@@ -52,7 +52,7 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, vm: Account
             }
         }
     }
-    state.editor?.let { SalesDocumentEditor(it, state.options, state.saving, vm::editDraft, vm::addLine, vm::updateLine, vm::removeLine, vm::closeEditor, vm::save) }
+    state.editor?.let { SalesDocumentEditor(it, state.options, state.saving, vm::editDraft, vm::addLine, vm::updateLine, vm::removeLine, vm::closeEditor, vm::save,vm::updateInvoicePrefix,vm::createSaleCustomer,navigate) }
     state.detail?.let { SalesDocumentDetail(it, state.saving, vm::closeDetail, vm::requestPost) }
     state.postingId?.let {
         AlertDialog(

@@ -69,6 +69,16 @@ export async function mobileSaveSettings(
 ) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+  if(section==="sales-invoice-prefix"){
+    const v=z.object({branchId:z.string().uuid(),prefix:z.string().trim().max(30)}).strict().parse(raw);
+    if(!await db.branch.findFirst({where:{id:v.branchId,companyId:a.companyId,isActive:true,...branchWhere(a)}}))throw new Error("MOBILE_FORBIDDEN");
+    return db.$transaction(async tx=>{
+      const existing=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey:"SALES_INVOICE"}});
+      const series=existing?await tx.numberingSeries.update({where:{id:existing.id},data:{prefix:v.prefix}}):await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey:"SALES_INVOICE",prefix:v.prefix,padding:2}});
+      await tx.accountingAuditEvent.create({data:{companyId:a.companyId,actorUserId:a.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:a.companyId,metadata:{sections:["NUMBERING_PREFIXES"],branchId:v.branchId,source:"ANDROID_SALE"}}});
+      return{branchId:v.branchId,prefix:series.prefix,suffix:series.suffix,padding:series.padding,nextSequence:Number(series.nextSequence)};
+    });
+  }
   if (section === "settings") {
     const schema = z
         .object({
@@ -110,7 +120,7 @@ export async function mobileSaveSettings(
     const v=z.object({preferences:transactionPreferencesSchema,branchId:z.string().uuid(),prefixes:z.record(z.string(),z.string().max(30))}).strict().parse(raw);
     if(!await db.branch.findFirst({where:{id:v.branchId,companyId:a.companyId,isActive:true,...branchWhere(a)}}))throw new Error("MOBILE_FORBIDDEN");
     const allowed=new Set(PREFIX_TYPES.map(([key])=>key));if(Object.keys(v.prefixes).some(key=>!allowed.has(key as never)))throw new Error("INVALID_PREFIX_TYPE");
-    return db.$transaction(async tx=>{const current=await tx.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true,itemSettings:true}}),defaults=(current?.transactionDefaults as Record<string,unknown>|null)??{},items=(current?.itemSettings as Record<string,unknown>|null)??{},preferences=normalizeTransactionPreferences(v.preferences);const saved=await tx.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}},update:{transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}}});for(const[seriesKey,prefix]of Object.entries(v.prefixes)){const row=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey}});if(row)await tx.numberingSeries.update({where:{id:row.id},data:{prefix}});else await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey,prefix,padding:6}})}return saved});
+    return db.$transaction(async tx=>{const current=await tx.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true,itemSettings:true}}),defaults=(current?.transactionDefaults as Record<string,unknown>|null)??{},items=(current?.itemSettings as Record<string,unknown>|null)??{},preferences=normalizeTransactionPreferences(v.preferences);const saved=await tx.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}},update:{transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}}});for(const[seriesKey,prefix]of Object.entries(v.prefixes)){const row=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey}});if(row)await tx.numberingSeries.update({where:{id:row.id},data:{prefix}});else await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey,prefix,padding:seriesKey==="SALES_INVOICE"?2:6}})}return saved});
   }
   if (section === "modules") {
     const v = z.object({

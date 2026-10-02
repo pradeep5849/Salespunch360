@@ -561,6 +561,15 @@ export async function listProjectsForActor(
     totalPages: Math.max(1, Math.ceil(total / paging.pageSize)),
   };
 }
+export async function projectDashboard(){return projectDashboardForActor(await projectActor(false))}
+export function summarizeProjectDashboardRows(rows:Array<{status:string;finalProjectValue:Prisma.Decimal;received:Prisma.Decimal;outstanding:Prisma.Decimal}>){const zero=()=>new Prisma.Decimal(0),sum=(values:Prisma.Decimal[])=>values.reduce((n,x)=>n.add(x),zero());return{activeProjects:rows.filter(x=>!["CLOSED","CANCELLED"].includes(x.status)).length,projectsClosed:rows.filter(x=>x.status==="CLOSED").length,totalProjectValue:sum(rows.map(x=>x.finalProjectValue)),received:sum(rows.map(x=>x.received)),outstanding:sum(rows.map(x=>x.outstanding))}}
+export async function projectDashboardForActor(actor:ProjectActor){
+  await assertProjectCapability(actor);const branchIds=await authorizedProjectBranchIds(actor),where=projectRecordScope(actor,branchIds);
+  const projects=await db.project.findMany({where,select:{id:true,name:true,projectNumber:true,status:true,projectValue:true,customer:{select:{name:true}},commercialDocuments:{where:{type:"SALES_INVOICE",status:"POSTED"},select:{grandTotal:true,allocations:{select:{amount:true}},advanceApplications:{select:{amount:true}},adjustments:{where:{status:"POSTED"},select:{grandTotal:true}}}}},orderBy:[{createdAt:"desc"},{id:"desc"}]}),projectIds=projects.map(x=>x.id),[changes,settlements]=await Promise.all([db.projectChangeOrder.findMany({where:{companyId:actor.companyId,status:"APPROVED",projectId:{in:projectIds}},select:{projectId:true,valueDelta:true}}),db.accountSettlement.findMany({where:{companyId:actor.companyId,projectId:{in:projectIds},type:{in:["CUSTOMER_RECEIPT","CUSTOMER_ADVANCE"]}},select:{projectId:true,amount:true}})]);
+  const z=()=>new Prisma.Decimal(0),sum=(xs:Prisma.Decimal[])=>xs.reduce((n,x)=>n.add(x),z());
+  const rows=projects.map(project=>{const approvedVariations=sum(changes.filter(x=>x.projectId===project.id).map(x=>x.valueDelta)),finalProjectValue=project.projectValue.add(approvedVariations),invoiced=sum(project.commercialDocuments.map(x=>x.grandTotal)),received=sum(settlements.filter(x=>x.projectId===project.id).map(x=>x.amount)),outstanding=sum(project.commercialDocuments.map(x=>x.grandTotal.sub(sum(x.allocations.map(a=>a.amount))).sub(sum(x.advanceApplications.map(a=>a.amount))).sub(sum(x.adjustments.map(a=>a.grandTotal)))));return{id:project.id,name:project.name,projectNumber:project.projectNumber,customer:project.customer,status:project.status,originalProjectValue:project.projectValue,approvedVariations,finalProjectValue,invoiced,received,outstanding}});
+  return{metrics:summarizeProjectDashboardRows(rows),rows};
+}
 export function deriveProjectPaymentTotal(
   documents: Array<{
     type: string;

@@ -39,11 +39,18 @@ export async function updateTransactionSettings(raw: unknown) {
     for (const [seriesKey, prefix] of Object.entries(input.prefixes)) {
       const existing = await tx.numberingSeries.findFirst({ where: { companyId: actor.companyId!, branchId: branch.id, seriesKey } });
       if (existing) await tx.numberingSeries.update({ where: { id: existing.id }, data: { prefix } });
-      else await tx.numberingSeries.create({ data: { companyId: actor.companyId!, branchId: branch.id, seriesKey, prefix, padding: 6 } });
+      else await tx.numberingSeries.create({ data: { companyId: actor.companyId!, branchId: branch.id, seriesKey, prefix, padding: seriesKey === "SALES_INVOICE" ? 2 : 6 } });
     }
     await tx.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "SETTINGS_CHANGED", entityType: "ACCOUNT_SETTINGS", entityId: actor.companyId!, metadata: { sections: ["TRANSACTION_SETTINGS", "NUMBERING_PREFIXES"], branchId: branch.id } } });
     return settings;
   });
+}
+
+/** Updates the existing canonical sale series; allocation remains save-time only. */
+export async function updateSalesInvoicePrefix(branchId:string,prefix:string){
+ const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const value=z.string().trim().max(30).parse(prefix);
+ const branch=await db.branch.findFirst({where:{id:branchId,companyId:actor.companyId!,isActive:true}});if(!branch||actor.branchAccessScope==="SELECTED_BRANCHES"&&!actor.branchIds?.includes(branch.id))throw new AuthorizationError();
+ return db.$transaction(async tx=>{const existing=await tx.numberingSeries.findFirst({where:{companyId:actor.companyId!,branchId,seriesKey:"SALES_INVOICE"}});const series=existing?await tx.numberingSeries.update({where:{id:existing.id},data:{prefix:value}}):await tx.numberingSeries.create({data:{companyId:actor.companyId!,branchId,seriesKey:"SALES_INVOICE",prefix:value,padding:2}});await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["NUMBERING_PREFIXES"],branchId}}});return{prefix:series.prefix,padding:series.padding,nextSequence:Number(series.nextSequence),suffix:series.suffix}});
 }
 
 const fieldSchema = z.object({ id: z.string().uuid().optional(), entityType: z.nativeEnum(CustomFieldEntity), fieldKey: z.string().regex(/^[a-z][a-z0-9_]{1,59}$/), label: z.string().min(1).max(100), dataType: z.nativeEnum(CustomFieldDataType), isRequired: z.boolean().default(false), position: z.number().int().min(0).max(1000).default(0), options: z.array(z.string().min(1).max(100)).max(100).optional() }).strict();

@@ -68,11 +68,13 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
-    fun create(type: String) {
+    fun create(type: String, projectId:String?=null) {
         _state.value = _state.value.copy(
             draft = PurchaseDraft(
                 type = type,
-                branchId = _state.value.branches.firstOrNull()?.id.orEmpty()
+                branchId = _state.value.branches.firstOrNull()?.id.orEmpty(),
+                purpose=if(projectId.isNullOrBlank())"INVENTORY_SALES" else "PROJECT",
+                projectId=projectId.orEmpty()
             )
         )
     }
@@ -120,7 +122,6 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                     put("purchaseClassification", draft.classification)
                     draft.projectId.takeIf { it.isNotBlank() }?.let { put("projectId", it) }
                     draft.projectBudgetLineId.takeIf { it.isNotBlank() }?.let { put("projectBudgetLineId", it) }
-                    draft.materialTreatment.takeIf { it.isNotBlank() }?.let { put("materialTreatment", it) }
                     draft.vendorInvoiceNumber.takeIf { it.isNotBlank() }?.let { put("vendorInvoiceNumber", it) }
                     draft.vendorInvoiceDate.takeIf { it.isNotBlank() }?.let { put("vendorInvoiceDate", it) }
                     draft.postingDate.takeIf { it.isNotBlank() }?.let { put("postingDate", it) }

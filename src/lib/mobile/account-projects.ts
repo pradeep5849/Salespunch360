@@ -4,7 +4,7 @@ import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
   getProjectForActor,
   getProjectFormOptionsForActor,
-  listProjectsForActor,
+  projectDashboardForActor,
   replaceBudgetForActor,
   updateProjectForActor,
   type ProjectActor,
@@ -61,15 +61,13 @@ function workflowStatus(status: string) {
   return "ACTIVE";
 }
 
+// Project listing remains governed by listProjectsForActor scope through projectDashboardForActor.
 export async function mobileProjectList(
   u: MobileAppPrincipal,
   q?: string | null,
   status?: string | null,
 ) {
-  const result = await listProjectsForActor(
-    await permit(u, "ACCOUNT_PROJECTS"),
-    { pageSize: "50" },
-  );
+  const actor=await permit(u,"ACCOUNT_PROJECTS"),dashboard=await projectDashboardForActor(actor),result={rows:dashboard.rows,page:1,pageSize:dashboard.rows.length,total:dashboard.rows.length,totalPages:1};
   const rows = result.rows
     .map((x) => ({ ...x, status: workflowStatus(x.status) }))
     .filter(
@@ -80,7 +78,7 @@ export async function mobileProjectList(
           x.projectNumber.toLowerCase().includes(q.toLowerCase()) ||
           x.customer.name.toLowerCase().includes(q.toLowerCase())),
     );
-  return { ...result, rows };
+  return { ...result, rows, metrics:dashboard.metrics };
 }
 
 export async function mobileProjectDetail(u: MobileAppPrincipal, id: string) {
