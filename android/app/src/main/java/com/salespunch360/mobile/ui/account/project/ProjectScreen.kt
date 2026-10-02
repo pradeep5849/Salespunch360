@@ -22,6 +22,8 @@ private fun workflowStatus(status: String) = when (status) {
     else -> "ACTIVE"
 }
 
+private val projectStatusFilters = listOf<String?>(null, "ACTIVE", "ON_HOLD", "COMPLETED")
+
 private fun workflowStatusLabel(status: String) = when (workflowStatus(status)) {
     "ON_HOLD" -> "Hold"
     "COMPLETED" -> "Completed"
