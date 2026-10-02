@@ -154,7 +154,7 @@ export async function saveUnitConversion(raw:{baseUnitId:string;secondaryUnitId:
   const current=(settings?.itemSettings??{}) as Record<string,unknown>;
   const conversions=Array.isArray(current.unitConversions)?current.unitConversions.filter((x):x is Record<string,unknown>=>Boolean(x)&&typeof x==="object"):[];
   const next=[...conversions.filter(x=>!(x.baseUnitId===raw.baseUnitId&&x.secondaryUnitId===raw.secondaryUnitId)),{baseUnitId:raw.baseUnitId,secondaryUnitId:raw.secondaryUnitId,rate}];
-  return db.accountSettings.upsert({where:{companyId:a.companyId!},create:{companyId:a.companyId!,itemSettings:{...current,unitConversions:next}},update:{itemSettings:{...current,unitConversions:next}}});
+  const itemSettings={...current,unitConversions:next} as Prisma.InputJsonObject;\n  return db.accountSettings.upsert({where:{companyId:a.companyId!},create:{companyId:a.companyId!,itemSettings},update:{itemSettings}});
 }
 export async function createVendor(raw: unknown) {
   const a = await writeActor(),
