@@ -57,7 +57,7 @@ fun AccountItemsScreen(
         val categoryOk=categories.isEmpty()||item.record.categoryId in categories
         search&&typeOk&&categoryOk
     }
-    val categoryOptions=state.options["categories"]?.jsonArray?.mapNotNull{it.jsonObject}.orEmpty()
+    val categoryOptions=state.categories
 
     Box(Modifier.fillMaxSize().padding(padding)){
         LazyColumn(
@@ -105,7 +105,7 @@ fun AccountItemsScreen(
                     Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
                             Text(r.name,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                            r.categoryId?.let{id->categoryOptions.firstOrNull{it["id"]?.jsonPrimitive?.content==id}?.get("name")?.jsonPrimitive?.contentOrNull?.let{name->AssistChip({},label={Text(name)})}}
+                            r.categoryId?.let{id->categoryOptions.firstOrNull{it.id==id}?.name?.let{name->AssistChip({},label={Text(name)})}}
                         }
                         if(!r.code.isNullOrBlank())Text(r.code.orEmpty(),style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
@@ -135,9 +135,9 @@ fun AccountItemsScreen(
                 item{FilterRow("Products","PRODUCT" in draftTypes){checked->draftTypes=if(checked)draftTypes+"PRODUCT" else draftTypes-"PRODUCT"}}
                 item{FilterRow("Services","SERVICE" in draftTypes){checked->draftTypes=if(checked)draftTypes+"SERVICE" else draftTypes-"SERVICE"}}
                 item{Text("Categories",style=MaterialTheme.typography.headlineSmall,modifier=Modifier.padding(18.dp))}
-                items(categoryOptions,key={it["id"]?.jsonPrimitive?.content.orEmpty()}){cat->
-                    val id=cat["id"]?.jsonPrimitive?.content.orEmpty()
-                    val label=cat["name"]?.jsonPrimitive?.content.orEmpty()
+                items(categoryOptions,key={it.id}){cat->
+                    val id=cat.id
+                    val label=cat.name
                     FilterRow(label,id in draftCategories){checked->draftCategories=if(checked)draftCategories+id else draftCategories-id}
                 }
             }
