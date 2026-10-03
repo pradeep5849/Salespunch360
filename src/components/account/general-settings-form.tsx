@@ -2,6 +2,7 @@
 import Link from "next/link";
 import {useEffect,useRef,useState} from "react";
 import {updateGeneralSettingsAction} from "@/app/actions/account-settings";
+import {AccountSaveForm,AccountSubmitButton} from "./account-save-form";
 
 type Values={appLanguage:string;baseCurrency:string;displayDecimalPlaces:number;dateFormat:string;warnUnsavedChanges:boolean;appearance:string};
 type Info={title:string;what:string;how?:string;why?:string};
@@ -31,7 +32,7 @@ export function GeneralSettingsForm({values}:{values:Values}){
  const[dirty,setDirty]=useState(false),[decimals,setDecimals]=useState(Math.min(4,Math.max(0,values.displayDecimalPlaces))),[info,setInfo]=useState<Info|null>(null);
  useEffect(()=>{if(!dirty||!values.warnUnsavedChanges)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn)},[dirty,values.warnUnsavedChanges]);
  const row=(label:React.ReactNode,control:React.ReactNode)=><div className="general-settings-row"><span>{label}</span><div className="general-settings-control">{control}</div></div>;
- return <><form action={updateGeneralSettingsAction} className="general-settings-form" onChange={()=>setDirty(true)} onSubmit={()=>setDirty(false)}>
+ return <><AccountSaveForm action={updateGeneralSettingsAction} className="general-settings-form" onChange={()=>setDirty(true)} onSuccess={()=>setDirty(false)} successMessage="General settings saved successfully">
   <h2>APPLICATION</h2>
   {row("App Language",<select name="appLanguage" defaultValue={values.appLanguage} aria-label="App Language"><option value="en">English</option><option value="hi">Hindi</option></select>)}
   {row(<span>Business Currency <InfoButton topic="currency" onOpen={setInfo}/></span>,<select name="baseCurrency" defaultValue={values.baseCurrency} aria-label="Business Currency">{["INR","USD","EUR","GBP","AED"].map(x=><option key={x}>{x}</option>)}</select>)}
@@ -47,6 +48,6 @@ export function GeneralSettingsForm({values}:{values:Values}){
   <Link className="general-settings-row navigates" href="/workspace/account/settings/backup"><span>Backup Settings <InfoButton topic="backup" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
   <h2>MORE TRANSACTIONS</h2>
   {availableFeatures.map(([label,topic,supported])=>row(<span>{label} <InfoButton topic={topic} onOpen={setInfo}/></span>,<label className="settings-feature-state"><input type="checkbox" checked={supported} disabled aria-label={`${label} ${supported?"available":"not available"}`}/><span>{supported?"Available":"Not available"}</span></label>))}
-  <div className="general-settings-save"><button className="account-primary">Save General Settings</button>{dirty&&<small role="status">Unsaved changes</small>}</div>
- </form><InfoDialog info={info} onClose={()=>setInfo(null)}/></>;
+  <div className="general-settings-save"><AccountSubmitButton className="account-primary" savingText="Saving…">Save General Settings</AccountSubmitButton>{dirty&&<small role="status">Unsaved changes</small>}</div>
+ </AccountSaveForm><InfoDialog info={info} onClose={()=>setInfo(null)}/></>;
 }
