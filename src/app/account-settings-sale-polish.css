@@ -1,0 +1,353 @@
+/* Final Account settings / General / Sale polish.
+   Keeps visible controls compact while preserving accessible hit targets. */
+
+/* Settings index: compact full-width list, no cards/grid/search chrome. */
+.account-inner-shell .account-main:has(.account-settings-index){
+  width:min(100%,760px);
+  padding:0;
+  background:#fff;
+}
+.account-inner-shell .account-main:has(.account-settings-index)>.account-page-header{
+  min-height:64px;
+  margin:0;
+  padding:10px 18px;
+  align-items:center;
+  border-bottom:1px solid #e3e8ef;
+  background:#eef6ff;
+}
+.account-inner-shell .account-main:has(.account-settings-index)>.account-page-header>div:first-child{
+  display:flex;
+  align-items:center;
+  gap:18px;
+}
+.account-inner-shell .account-main:has(.account-settings-index) .account-page-back{
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  color:#244b5b;
+  text-decoration:none;
+  font-size:27px;
+  line-height:1;
+}
+.account-inner-shell .account-main:has(.account-settings-index) .account-page-header h1{
+  margin:0;
+  font-size:23px;
+  line-height:1.2;
+  letter-spacing:0;
+  font-weight:650;
+}
+.account-settings-index{width:100%;margin:0;padding:0;background:#fff}
+.account-settings-index .account-settings-search,
+.account-settings-index .account-settings-search-jump{display:none!important}
+.account-settings-index .account-settings-menu{
+  display:block!important;
+  width:100%;
+  margin:0;
+  padding:0;
+  background:#fff;
+}
+.account-settings-index .account-settings-menu>a{
+  min-height:62px;
+  padding:0 22px;
+  display:flex!important;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  border:0!important;
+  border-bottom:1px solid #e5e7eb!important;
+  border-radius:0!important;
+  background:#fff!important;
+  color:#334e5a!important;
+  text-decoration:none;
+  box-shadow:none!important;
+}
+.account-settings-index .account-settings-menu>a>span{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  min-width:0;
+}
+.account-settings-index .account-settings-menu>a i{
+  width:26px!important;
+  height:26px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:#72899a!important;
+}
+.account-settings-index .account-settings-menu>a i svg{width:23px!important;height:23px!important}
+.account-settings-index .account-settings-menu>a strong{
+  font-size:18px!important;
+  line-height:1.25;
+  font-weight:450!important;
+  letter-spacing:0!important;
+}
+.account-settings-index .account-settings-menu>a>b{
+  color:#9aa2a9!important;
+  font-size:27px!important;
+  line-height:1;
+  font-weight:400!important;
+}
+
+/* General: closer to reference density and type scale. */
+.account-inner-shell .account-main:has(.general-settings-form){
+  width:min(100%,760px);
+  padding:0;
+  background:#fff;
+}
+.account-inner-shell .account-main:has(.general-settings-form)>.account-page-header{
+  min-height:64px;
+  margin:0;
+  padding:10px 18px;
+  align-items:center;
+  border-bottom:1px solid #e3e8ef;
+  background:#eef6ff;
+}
+.account-inner-shell .account-main:has(.general-settings-form)>.account-page-header>div:first-child{
+  display:flex;
+  align-items:center;
+  gap:18px;
+}
+.account-inner-shell .account-main:has(.general-settings-form) .account-page-header h1{
+  margin:0;
+  font-size:23px;
+  line-height:1.2;
+  letter-spacing:0;
+  font-weight:650;
+}
+.account-inner-shell .account-main:has(.general-settings-form) .account-page-back{
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  color:#244b5b;
+  text-decoration:none;
+  font-size:27px;
+}
+.account-inner-shell .account-main:has(.general-settings-form) .account-page-action{
+  margin-left:auto;
+  color:#244b5b;
+  font-size:24px;
+  line-height:1;
+}
+.general-settings-form{padding:0 0 88px!important;background:#fff!important}
+.general-settings-form>h2{
+  margin:0!important;
+  padding:11px 22px!important;
+  min-height:50px;
+  display:flex;
+  align-items:center;
+  background:#eef6ff!important;
+  color:#385467!important;
+  font-size:14px!important;
+  line-height:1.2;
+  letter-spacing:.015em!important;
+  font-weight:750!important;
+}
+.general-settings-row{
+  min-height:60px!important;
+  margin:0!important;
+  padding:8px 22px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  border:0!important;
+  border-bottom:1px solid #e5e7eb!important;
+  border-radius:0!important;
+  background:#fff!important;
+  color:#1f2937!important;
+  box-shadow:none!important;
+  text-decoration:none;
+}
+.general-settings-row>span,
+.general-settings-row>span>span{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size:16px!important;
+  line-height:1.25;
+  font-weight:400!important;
+}
+.general-settings-control{margin-left:auto;display:flex;align-items:center;justify-content:flex-end}
+.general-settings-control select{
+  min-height:38px!important;
+  max-width:210px;
+  padding:4px 28px 4px 8px!important;
+  border:0!important;
+  background-color:#fff!important;
+  color:#5f6770!important;
+  font-size:15px!important;
+  font-weight:400!important;
+  box-shadow:none!important;
+}
+.general-settings-control small{color:#7b8791;font-size:14px!important;font-weight:400}
+.general-settings-row.navigates>b{color:#8b98a5!important;font-size:25px!important;font-weight:500!important}
+.general-settings-row.navigates>span{color:#2563c7!important;font-weight:600!important}
+
+/* Small visual info circle inside a comfortable 36px touch target. */
+.settings-info{
+  position:relative!important;
+  flex:0 0 36px!important;
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  min-height:36px!important;
+  margin:-8px -7px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  color:transparent!important;
+  font-size:0!important;
+  box-shadow:none!important;
+}
+.settings-info::before{
+  content:"i";
+  position:absolute;
+  left:50%;top:50%;
+  width:18px;height:18px;
+  display:grid;
+  place-items:center;
+  transform:translate(-50%,-50%);
+  border:1.25px solid #8d979f;
+  border-radius:50%;
+  color:#7d878f;
+  font-size:11px;
+  line-height:1;
+  font-weight:700;
+  font-family:Arial,sans-serif;
+}
+.settings-stepper{display:flex!important;align-items:center!important;gap:10px!important}
+.settings-stepper button{
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:#7a858d!important;
+  font-size:22px!important;
+  font-weight:400!important;
+  box-shadow:none!important;
+}
+.settings-stepper output{min-width:24px;text-align:center;color:#303740;font-size:17px;font-weight:500;border-bottom:1px solid #303740}
+.settings-feature-state{font-size:12px!important;color:#7b8791!important}
+
+/* Sale settings: visible gear and a true full-screen settings destination. */
+.sale-entry-header .sale-gear{
+  display:grid!important;
+  place-items:center!important;
+  width:40px!important;
+  height:40px!important;
+  min-width:40px!important;
+  min-height:40px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:#26364a!important;
+  opacity:1!important;
+  visibility:visible!important;
+  font-size:23px!important;
+  line-height:1!important;
+  overflow:visible!important;
+}
+.sale-overlay.drawer{
+  z-index:220!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  background:#fff!important;
+}
+.sale-overlay.drawer .sale-settings{
+  width:100%!important;
+  max-width:760px!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  margin:0 auto!important;
+  padding:0 18px 24px!important;
+  border-radius:0!important;
+  background:#fff!important;
+  overflow:auto!important;
+}
+.sale-overlay.drawer .sale-settings>header{
+  position:sticky;
+  z-index:2;
+  top:0;
+  min-height:62px;
+  margin:0 -18px;
+  padding:8px 18px;
+  display:grid!important;
+  grid-template-columns:42px 1fr;
+  align-items:center;
+  justify-content:initial!important;
+  gap:10px;
+  border-bottom:1px solid #e5e7eb;
+  background:#fff;
+}
+.sale-overlay.drawer .sale-settings>header h2{grid-column:2;margin:0;font-size:21px;font-weight:650}
+.sale-overlay.drawer .sale-settings>header button{
+  grid-column:1;
+  grid-row:1;
+  position:relative;
+  width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:transparent!important;
+  font-size:0!important;
+}
+.sale-overlay.drawer .sale-settings>header button::before{
+  content:"←";
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:#26364a;
+  font-size:25px;
+  font-weight:500;
+}
+.sale-overlay.drawer .sale-settings>label,
+.sale-overlay.drawer .sale-settings>a{min-height:58px!important}
+.sale-overlay.drawer .sale-settings .more-settings{
+  position:static!important;
+  margin:16px 0 0!important;
+  min-height:48px!important;
+  border-radius:10px;
+  background:#f4f7fb!important;
+}
+
+/* Shared save-result toast surface used by Account forms. */
+.account-save-toast{
+  position:fixed;
+  z-index:500;
+  left:50%;
+  bottom:calc(84px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  width:min(calc(100% - 28px),420px);
+  padding:11px 14px;
+  border-radius:10px;
+  box-shadow:0 8px 28px #0f172a30;
+  background:#166534;
+  color:#fff;
+  font-size:14px;
+  font-weight:650;
+  text-align:center;
+}
+.account-save-toast[data-status="error"]{background:#b42318}
+
+@media(max-width:520px){
+ .account-settings-index .account-settings-menu>a{min-height:58px;padding:0 20px}
+ .account-settings-index .account-settings-menu>a strong{font-size:17px!important}
+ .general-settings-row{min-height:58px!important;padding:7px 20px!important}
+ .general-settings-row>span,.general-settings-row>span>span{font-size:15px!important}
+ .general-settings-control select{font-size:14px!important;max-width:190px}
+}
