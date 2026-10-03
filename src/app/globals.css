@@ -693,3 +693,30 @@ body:has(.account-shell) > .workspace-header{display:none}
 .account-main .sale-settings-page>header button{width:42px;min-height:42px;padding:0;border:0;background:transparent;color:var(--account-text);font-size:22px}
 .sale-gear svg{display:block;width:23px;height:23px;color:var(--account-text)}
 @media(max-width:759px){.account-main:has(.sale-settings-page),.account-main:has(.settings-inner-page){padding:0}.settings-inner-page,.sale-settings-page{min-height:100dvh}}
+
+/* Compact reference sizing for Settings while preserving accessible row/control targets. */
+.account-settings-menu>a{min-height:52px;padding:0 14px;font-size:13px;font-weight:400}
+.account-settings-menu>a strong{font-weight:500}
+.account-settings-menu i{width:28px;height:28px}
+.account-settings-menu i svg{width:16px;height:16px}
+.account-settings-menu>a>b{font-size:17px;font-weight:400}
+.settings-inner-page>.account-page-header{min-height:52px;padding-block:5px}
+.settings-inner-page>.account-page-header h1{font-size:19px;letter-spacing:-.25px}
+.general-settings-form>h2{padding:7px 14px;font-size:10px;font-weight:700;line-height:1.3}
+.general-settings-row{min-height:50px;padding:6px 14px;gap:12px;font-size:13px;font-weight:400;line-height:1.3}
+.general-settings-row>span,.general-settings-row>span>strong{font-weight:500}
+.general-settings-row small{margin-top:2px;font-size:10.5px;line-height:1.3}
+.general-settings-control{color:var(--account-muted);font-size:12px}
+.account-main .general-settings-row select{min-height:40px;max-width:190px;padding:4px 24px 4px 6px;color:var(--account-muted);font-size:12px;font-weight:400}
+.general-settings-row.navigates b{font-size:17px;font-weight:400}
+.settings-info{position:relative;width:42px!important;height:42px!important;min-height:42px!important;margin:-12px -10px!important;padding:0!important;border:0!important;background:transparent!important;color:transparent!important;vertical-align:middle}
+.settings-info::before{content:"i";position:absolute;left:50%;top:50%;width:16px;height:16px;display:grid;place-items:center;transform:translate(-50%,-50%);border:1px solid #6682a0;border-radius:50%;color:#385b7b;font-size:10px;font-weight:700;line-height:1}
+.settings-stepper{gap:2px}
+.account-main .settings-stepper button{position:relative;width:40px;min-height:40px;padding:0;border:0;background:transparent;color:transparent;font-size:0}
+.account-main .settings-stepper button::before{position:absolute;left:50%;top:50%;width:22px;height:22px;display:grid;place-items:center;transform:translate(-50%,-50%);border:1px solid #c7d3e1;border-radius:5px;color:#38516c;font-size:15px;line-height:1}
+.account-main .settings-stepper button:first-child::before{content:"−"}.account-main .settings-stepper button:last-child::before{content:"+"}
+.account-main .settings-stepper button:disabled::before{opacity:.4}
+.settings-stepper output{min-width:20px;font-size:12px;font-weight:600;text-align:center}
+.settings-feature-state{font-size:10px!important}.settings-feature-state input{width:16px;height:16px}
+.account-save-feedback{position:fixed;z-index:220;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));width:max-content;max-width:calc(100% - 32px);margin:0;padding:10px 14px;transform:translateX(-50%);border-radius:9px;box-shadow:0 8px 28px #0f172a30;background:#176b42;color:#fff;font-size:13px;font-weight:600;text-align:center}
+.account-save-feedback.error{background:#b42318}

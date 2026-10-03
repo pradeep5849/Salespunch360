@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountAdministrationViewModel
+import com.salespunch360.mobile.ui.MutationFeedback
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -65,6 +66,7 @@ fun AccountAdministrationScreen(
             .padding(padding)
             .padding(16.dp)
     ) {
+        MutationFeedback(state.message,state.error,vm::consumeFeedback)
         Row {
             Text(
                 mode.replace('-', ' ').replaceFirstChar { it.uppercase() },
@@ -79,8 +81,6 @@ fun AccountAdministrationScreen(
         if (state.loading) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
         when (mode) {
             "users" -> UserView(state.data, vm)
