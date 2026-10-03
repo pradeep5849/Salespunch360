@@ -14,6 +14,6 @@ export function AccountSaveFeedback({feedback}:{feedback:SaveFeedbackState}){if(
 
 export function AccountSaveForm({action,className,children,successText="Saved successfully"}:{action:(data:FormData)=>Promise<unknown>;className?:string;children:ReactNode;successText?:string}){
  const{saving,feedback,run}=useAccountSaveFeedback();
- async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=event.currentTarget;const submitters=Array.from(form.querySelectorAll<HTMLButtonElement>('button[type="submit"],button:not([type])'));submitters.forEach(button=>button.disabled=true);await run(()=>action(new FormData(form)),successText);submitters.forEach(button=>button.disabled=false)}
+ async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=event.currentTarget;const submitters=Array.from(form.querySelectorAll<HTMLButtonElement>('button[type="submit"],button:not([type])'));const disabled=submitters.map(button=>button.disabled);submitters.forEach(button=>button.disabled=true);await run(()=>action(new FormData(form)),successText);submitters.forEach((button,index)=>button.disabled=disabled[index])}
  return <><form className={className} onSubmit={submit} aria-busy={saving}>{children}</form><AccountSaveFeedback feedback={feedback}/></>;
 }
