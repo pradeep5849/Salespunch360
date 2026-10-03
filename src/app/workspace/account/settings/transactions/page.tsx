@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AccountPageHeader } from "@/components/account/account-shell";
+import { AccountSaveForm } from "@/components/account/save-feedback";
 import { updateTransactionSettingsAction } from "@/app/actions/account-settings";
 import { db } from "@/lib/db";
 import { getTransactionSettingsData } from "@/lib/account/settings";
@@ -12,7 +13,7 @@ export default async function TransactionSettingsPage({searchParams}:{searchPara
   const preferences=normalizeTransactionPreferences(defaults.transactionPreferences??DEFAULT_TRANSACTION_PREFERENCES);
   const series=branch?await db.numberingSeries.findMany({where:{companyId,branchId:branch.id,seriesKey:{in:PREFIX_TYPES.map(([key])=>key)}}}):[];
   return <><AccountPageHeader title="Transaction Settings" subtitle="Transaction entry preferences and numbering" backHref="/workspace/account"/>
-    <form action={updateTransactionSettingsAction} className="transaction-settings-page">
+    <AccountSaveForm action={updateTransactionSettingsAction} className="transaction-settings-page">
       {branch&&<><label className="transaction-firm"><span>Firm / company branch</span><select name="branchId" defaultValue={branch.id}>{branches.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       {(["Transaction Header","Items Table","Taxes, Discount & Total"] as const).map(section=><SettingsSection key={section} title={section}>{TRANSACTION_TOGGLES[section].map(([key,label])=><Toggle key={key} name={key} label={label} checked={preferences[key] as boolean}/>)}{section==="Taxes, Discount & Total"&&<div className="rounding-config"><span>Rounding mode <strong>Nearest</strong></span><label>To <input name="roundingStep" type="number" min="0.01" max="100" step="0.01" defaultValue={preferences.roundingStep}/></label></div>}</SettingsSection>)}
       <SettingsSection title="More Transaction Features">
@@ -29,7 +30,7 @@ export default async function TransactionSettingsPage({searchParams}:{searchPara
       <SettingsSection title="Transaction Prefixes">{PREFIX_TYPES.map(([key,label])=><label className="prefix-row" key={key}><span>{label}</span><input name={`prefix_${key}`} maxLength={30} defaultValue={series.find(item=>item.seriesKey===key)?.prefix??""} aria-label={`${label} prefix`}/></label>)}</SettingsSection>
       <button className="account-primary transaction-settings-save" type="submit">Save Transaction Settings</button></>}
       {!branch&&<p>No active branch is available for transaction numbering.</p>}
-    </form></>;
+    </AccountSaveForm></>;
 }
 
 function SettingsSection({title,children}:{title:string;children:React.ReactNode}){return <section className="transaction-settings-section"><h2>{title}</h2><div>{children}</div></section>}
