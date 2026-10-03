@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const salesHeader = readFileSync(new URL("./workspace-header.tsx", import.meta.url), "utf8");
 const workspaceLayout = readFileSync(new URL("../../app/workspace/layout.tsx", import.meta.url), "utf8");
 const accountMenu = readFileSync(new URL("../../app/workspace/account/menu/page.tsx", import.meta.url), "utf8");
+const accountProfile = readFileSync(new URL("../account/account-profile-menu.tsx", import.meta.url), "utf8");
 
 describe("Sales and Account workspace shell separation", () => {
   it("does not render the Sales header on Account workspace routes", () => {
@@ -21,7 +22,8 @@ describe("Sales and Account workspace shell separation", () => {
   });
 
   it("keeps the Account workspace switch back to Sales", () => {
-    expect(accountMenu).toContain('name="workspace" value="SALES"');
-    expect(accountMenu).toContain("Switch to Sales");
+    expect(accountMenu).not.toContain("Switch to Sales");
+    expect(accountProfile).toContain('name="workspace" value="SALES"');
+    expect(accountProfile.indexOf("Switch to Sales")).toBeLessThan(accountProfile.indexOf("Profile &amp; password"));
   });
 });

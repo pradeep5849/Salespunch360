@@ -31,10 +31,9 @@ describe("D final UI contracts", () => {
     expect(read("src/app/workspace/account/menu/page.tsx")).toContain("accountNavSectionId(group.label)");
   });
   it("keeps authorized Sales workspace switching available on desktop and mobile", () => {
-    const header = read("src/components/workspace/workspace-header.tsx"), css = read("src/app/globals.css");
-    expect(header).toContain('canSwitchWorkspace&&<details className="workspace-desktop-workspace-menu"');
-    expect(header).toContain('canSwitchWorkspace&&<form action={switchWorkspace} onSubmit={closeDrawer}');
-    expect((header.match(/Switch to Accounts/g) ?? [])).toHaveLength(2);
-    expect(css).toContain("@media(max-width:760px){.workspace-desktop-workspace-menu{display:none}}");
+    const header = read("src/components/workspace/workspace-header.tsx"), profile=read("src/components/workspace/profile-menu.tsx");
+    expect(header).not.toContain("Switch to Accounts");
+    expect(profile).toContain('name="workspace" value="ACCOUNT"');
+    expect(profile.indexOf("Switch to Accounts")).toBeLessThan(profile.indexOf("Company Details"));
   });
 });

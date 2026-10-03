@@ -166,9 +166,9 @@ fun SalesDrawerAuthenticatedApp(
                             }
                         }
                         DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
+                            switchToAccount?.let { action -> DropdownMenuItem(text = { Text("Switch to Accounts") }, onClick = { profileMenu = false; action() }) }
                             DropdownMenuItem(text = { Text("Company Details") }, onClick = { profileMenu = false; navigate("Company Details") })
                             DropdownMenuItem(text = { Text("Change Password") }, onClick = { profileMenu = false; navigate("Change Password") })
-                            switchToAccount?.let { action -> DropdownMenuItem(text = { Text("Switch to Accounts") }, onClick = { profileMenu = false; action() }) }
                             HorizontalDivider()
                             DropdownMenuItem(text = { Text("Logout") }, onClick = { profileMenu = false; logout() })
                         }

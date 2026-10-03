@@ -29,7 +29,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 when (mode) {
                     "users" -> api.accountUsers()
-                    "settings", "general", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings" -> api.accountAdministration("settings")
+                    "settings", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings" -> api.accountAdministration("settings")
                     "notifications" -> api.accountAdministration("notifications")
                     "tax-settings" -> api.accountTax()
                     "tax-reports" -> api.accountTax(
@@ -56,12 +56,13 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun save(section: String, payload: JsonObject) {
+    // Administration settings can use either object or array JSON payloads.
+    fun save(section: String, payload: JsonElement) {
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             runCatching {
                 if (section.startsWith("tax")) {
-                    api.saveAccountTax(payload)
+                    api.saveAccountTax(payload.jsonObject)
                 } else {
                     api.saveAccountAdministration("settings", section, payload)
                 }

@@ -50,6 +50,7 @@ private suspend fun readSignatureBytes(context: Context, uri: Uri): ByteArray = 
 fun AccountAdministrationScreen(
     mode: String,
     padding: PaddingValues,
+    navigate:(String)->Unit={},
     vm: AccountAdministrationViewModel = viewModel()
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
@@ -85,6 +86,9 @@ fun AccountAdministrationScreen(
             "users" -> UserView(state.data, vm)
             "settings" -> SettingsForm(state.data, vm)
             "general" -> GeneralSettingsView(state.data, vm)
+            "party-settings" -> PartySettingsView(state.data,vm,navigate)
+            "party-additional-fields" -> PartyAdditionalFieldsView(state.data,vm)
+            "transaction-sms" -> TransactionSmsView()
             "transaction-settings" -> TransactionSettingsForm(state.data, vm)
             "custom-fields" -> CustomFieldView(state.data, vm)
             "modules" -> ModuleView(state.data, vm)
@@ -458,7 +462,7 @@ private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
 }
 
 private val accountSettingsDestinations=listOf(
-    "General" to "/workspace/account/settings/general","Transaction" to "/workspace/account/settings/transactions","Invoice Print" to "/workspace/account/settings/print-templates","Taxes & GST" to "/workspace/account/tax/settings","User Management" to "/workspace/employees","Transaction SMS" to "/workspace/account/settings/transactions","Reminders" to "/workspace/account/settings/transactions","Party" to "/workspace/account/settings/custom-fields","Item" to "/workspace/account/inventory/item-settings","Multi-Currency" to "/workspace/account/financial-years"
+    "General" to "/workspace/account/settings/general","Transaction" to "/workspace/account/settings/transactions","Invoice Print" to "/workspace/account/settings/print-templates","Taxes & GST" to "/workspace/account/tax/settings","Employees" to "/workspace/employees","Transaction SMS" to "/workspace/account/settings/transaction-sms","Reminders" to "/workspace/account/settings/transactions","Party" to "/workspace/account/settings/party","Item" to "/workspace/account/inventory/item-settings","Multi-Currency" to "/workspace/account/settings/multi-currency"
 )
 
 @Composable
@@ -472,6 +476,133 @@ fun AccountSettingsMenuScreen(padding:PaddingValues,navigate:(String)->Unit,back
     }
 }
 
+private data class PartyHelp(val title:String,val what:String,val why:String,val comingSoon:Boolean=false)
+private val partyHelp=mapOf(
+    "gstin" to PartyHelp("GSTIN Number","You can enter GSTIN/TIN/VATIN of a party while adding or editing the party. This number can be printed on invoices issued to that party.","Enable this when you want the party’s GSTIN/TIN/VATIN number to be stored and shown on supported invoices."),
+    "grouping" to PartyHelp("Party Grouping","Group similar types of parties together and assign parties to those groups.","Useful when you want groups such as Customers, Vendors, region-wise customers, or other business-specific groups and want reports or filtering based on those groups."),
+    "additional" to PartyHelp("Party Additional Fields","Add extra fields to save more information for parties.","Use this when you need to enter and track additional party-level information specific to your business."),
+    "shipping" to PartyHelp("Party Shipping Address","Enables you to add a separate shipping address for the party.","Useful when a party’s billing address is different from the shipping address so deliveries go to the correct location."),
+    "print" to PartyHelp("Print Shipping Address","Enables you to print the party’s shipping address on supported invoices and bills.","Useful when the billing and shipping addresses are different and the delivery document should clearly show the shipping destination."),
+    "loyalty" to PartyHelp("Loyalty Points","Loyalty Points will allow customers to earn points on eligible purchases and use them for discounts on later purchases.","A loyalty program can encourage repeat purchases and reward returning customers.",true)
+)
+@Composable private fun PartyInfoDialog(help:PartyHelp?,close:()->Unit){if(help!=null)AlertDialog(onDismissRequest=close,title={Text(help.title,fontWeight=FontWeight.Bold)},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){if(help.comingSoon)Text("Coming Soon",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("What is this?",fontWeight=FontWeight.Bold);Text(help.what);Text("Why to use?",fontWeight=FontWeight.Bold);Text(help.why)}},confirmButton={Button(onClick=close,modifier=Modifier.fillMaxWidth()){Text("OK")}})}
+@Composable private fun PartySettingRow(label:String,checked:Boolean,enabled:Boolean=true,help:PartyHelp,change:(Boolean)->Unit,open:(PartyHelp)->Unit){ListItem(headlineContent={Text(label)},supportingContent=if(!enabled){{Text("Coming Soon")}}else null,trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={open(help)}){Text("ⓘ")};Switch(checked,onCheckedChange=if(enabled)change else null,enabled=enabled)}});HorizontalDivider()}
+@Composable
+private fun PartySettingsView(
+    data: JsonElement,
+    vm: AccountAdministrationViewModel,
+    navigate: (String) -> Unit
+) {
+    val saved = data.jsonObject["settings"]
+        ?.jsonObject
+        ?.get("transactionDefaults")
+        ?.jsonObject
+        ?.get("partySettings")
+        ?.jsonObject
+
+    fun bool(key: String, default: Boolean) =
+        saved?.get(key)?.jsonPrimitive?.booleanOrNull ?: default
+
+    var gstin by remember(saved) { mutableStateOf(bool("gstinEnabled", true)) }
+    var grouping by remember(saved) { mutableStateOf(bool("groupingEnabled", false)) }
+    var shipping by remember(saved) { mutableStateOf(bool("shippingAddressEnabled", true)) }
+    var printShipping by remember(saved) { mutableStateOf(bool("printShippingAddress", false)) }
+    var help by remember { mutableStateOf<PartyHelp?>(null) }
+
+    LazyColumn {
+        item {
+            PartySettingRow(
+                "GSTIN Number",
+                gstin,
+                true,
+                partyHelp.getValue("gstin"),
+                { gstin = it },
+                { help = it }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Party Grouping",
+                grouping,
+                true,
+                partyHelp.getValue("grouping"),
+                { grouping = it },
+                { help = it }
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text("Party Additional Fields") },
+                modifier = Modifier.clickable {
+                    navigate("/workspace/account/settings/party/additional-fields")
+                },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { help = partyHelp.getValue("additional") }) {
+                            Text("ⓘ")
+                        }
+                        Text("›")
+                    }
+                }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Party Shipping Address",
+                shipping,
+                true,
+                partyHelp.getValue("shipping"),
+                { shipping = it },
+                { help = it }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Print Shipping Address",
+                printShipping,
+                shipping,
+                partyHelp.getValue("print"),
+                { printShipping = it },
+                { help = it }
+            )
+        }
+        item {
+            PartySettingRow(
+                "Loyalty Points",
+                false,
+                false,
+                partyHelp.getValue("loyalty"),
+                {},
+                { help = it }
+            )
+        }
+        item {
+            Button(
+                onClick = {
+                    vm.save(
+                        "party-settings",
+                        buildJsonObject {
+                            put("gstinEnabled", gstin)
+                            put("groupingEnabled", grouping)
+                            put("shippingAddressEnabled", shipping)
+                            put("printShippingAddress", printShipping)
+                        }
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+            ) {
+                Text("Save Party Settings")
+            }
+        }
+    }
+
+    PartyInfoDialog(help) { help = null }
+}
+@Composable private fun PartyAdditionalFieldsView(data:JsonElement,vm:AccountAdministrationViewModel){val existing=data.jsonObject["fields"]?.jsonArray.orEmpty().filter{it.jsonObject["entityType"]?.jsonPrimitive?.content=="CUSTOMER"}.associateBy{it.jsonObject["fieldKey"]?.jsonPrimitive?.content.orEmpty()};val keys=listOf("party_additional_1","party_additional_2","party_additional_3","party_date");var enabled by remember(existing){mutableStateOf(keys.map{existing[it]?.jsonObject?.get("isActive")?.jsonPrimitive?.booleanOrNull?:false})};var labels by remember(existing){mutableStateOf(keys.mapIndexed{i,key->existing[key]?.jsonObject?.get("label")?.jsonPrimitive?.content?:if(key=="party_date")"Date Field" else "Additional Field ${i+1}"})};var printing by remember(existing){mutableStateOf(keys.map{key->existing[key]?.jsonObject?.get("validation")?.jsonObject?.get("showInPrint")?.jsonPrimitive?.booleanOrNull?:false})};LazyColumn(contentPadding=PaddingValues(bottom=90.dp)){items(keys.size){i->Text(if(i==3)"Date Field" else "Additional Field ${i+1}",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=16.dp));SwitchRow("Enable",enabled[i]){value->enabled=enabled.mapIndexed{index,old->if(index==i)value else old}};OutlinedTextField(labels[i],{value->labels=labels.mapIndexed{index,old->if(index==i)value else old}},label={Text("Field Name")},enabled=enabled[i],modifier=Modifier.fillMaxWidth());if(i==3)OutlinedTextField("dd/MM/yyyy",{},readOnly=true,label={Text("Date Format")},enabled=enabled[i],modifier=Modifier.fillMaxWidth());SwitchRow("Show in print",printing[i],enabled[i]){value->printing=printing.mapIndexed{index,old->if(index==i)value else old}}};item{Button(onClick={vm.save("party-additional-fields",buildJsonArray{keys.forEachIndexed{i,key->add(buildJsonObject{put("key",key);put("enabled",enabled[i]);put("label",labels[i]);put("showInPrint",printing[i]);if(i==3)put("dateFormat","DD/MM/YYYY")})}})},modifier=Modifier.fillMaxWidth().padding(top=16.dp)){Text("Save")}}}}
+@Composable private fun TransactionSmsView(){Column{Text("Coming Soon",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(vertical=16.dp));listOf("Send to party","Send SMS Copy to Self","Automatically Share Invoices on SalesPunch360 Network").forEach{ListItem(headlineContent={Text(it)},supportingContent={Text("Coming Soon")},trailingContent={Switch(false,null,enabled=false)});HorizontalDivider()}}}
+
 @Composable
 private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){
     val context=LocalContext.current
@@ -481,15 +612,15 @@ private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewMod
     var decimals by remember(current){mutableStateOf(current["displayDecimalPlaces"]?.jsonPrimitive?.intOrNull?:2)}
     var dateFormat by remember(current){mutableStateOf(current["dateFormat"]?.jsonPrimitive?.content?:"DD/MM/YYYY")}
     var warning by remember(current){mutableStateOf(current["warnUnsavedChanges"]?.jsonPrimitive?.booleanOrNull?:true)}
-    var appearance by remember(current){mutableStateOf(current["appearance"]?.jsonPrimitive?.content?:"SYSTEM")}
+    val appearance="STANDARD"
     LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
         item{Text("Application",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
         item{ChoiceSetting("App Language",language,listOf("en" to "English","hi" to "Hindi")){language=it}}
         item{ChoiceSetting("Business Currency",currency,listOf("INR","USD","EUR","GBP","AED").map{it to it}){currency=it}}
-        item{ChoiceSetting("Decimal Places",decimals.toString(),(0..4).map{it.toString() to it.toString()}){decimals=it.toInt()};Text("General amount precision; item quantity decimals remain in Item Settings.",style=MaterialTheme.typography.bodySmall)}
+        item{ListItem(headlineContent={Text("Decimal Places")},supportingContent={Text("Display precision only; stored calculation precision is unchanged.")},trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={decimals=(decimals-1).coerceAtLeast(0)},enabled=decimals>0){Text("−")};Text(decimals.toString());IconButton(onClick={decimals=(decimals+1).coerceAtMost(4)},enabled=decimals<4){Text("+")}}})}
         item{ChoiceSetting("Date Format",dateFormat,listOf("DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD").map{it to it}){dateFormat=it}}
         item{SwitchRow("Show warning for unsaved changes",warning){warning=it}}
-        item{ChoiceSetting("Theme / Appearance",appearance,listOf("SYSTEM" to "Use device setting","LIGHT" to "Light","DARK" to "Dark")){appearance=it}}
+        item{ChoiceSetting("Theme",appearance,listOf("STANDARD" to "Standard","TRENDING_DISABLED" to "Trending — Coming Soon","MODERN_DISABLED" to "Modern — Coming Soon")){}}
         item{Text("Security",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);ListItem(headlineContent={Text("Passcode / Fingerprint")},supportingContent={Text("Managed by Android device security")},trailingContent={Text("›")},modifier=Modifier.clickable{context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))})}
         item{Button(onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance)})},modifier=Modifier.fillMaxWidth()){Text("Save General Settings")}}
     }

@@ -113,8 +113,16 @@ export async function mobileSaveSettings(
     });
   }
   if (section === "general") {
-    const v = z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.enum(["SYSTEM","LIGHT","DARK"])}).strict().parse(raw);
+    const v = z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.literal("STANDARD")}).strict().parse(raw);
     return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,...v},update:v});
+  }
+  if(section==="party-settings"){
+    const partySettings=z.object({gstinEnabled:z.boolean(),groupingEnabled:z.boolean(),shippingAddressEnabled:z.boolean(),printShippingAddress:z.boolean()}).strict().parse(raw),current=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true}}),transactionDefaults={...((current?.transactionDefaults as Record<string,unknown>|null)??{}),partySettings} as Prisma.InputJsonValue;
+    return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,transactionDefaults},update:{transactionDefaults}})
+  }
+  if(section==="party-additional-fields"){
+    const fields=z.array(z.object({key:z.enum(["party_additional_1","party_additional_2","party_additional_3","party_date"]),enabled:z.boolean(),label:z.string().trim().min(1).max(100),showInPrint:z.boolean(),dateFormat:z.literal("DD/MM/YYYY").optional()}).strict()).length(4).parse(raw);
+    return db.$transaction(fields.flatMap((field,position)=>(["CUSTOMER","VENDOR"] as const).map(entityType=>db.customFieldDefinition.upsert({where:{companyId_entityType_fieldKey:{companyId:a.companyId,entityType,fieldKey:field.key}},create:{companyId:a.companyId,entityType,fieldKey:field.key,label:field.label,dataType:field.key==="party_date"?"DATE":"TEXT",isActive:field.enabled,isRequired:false,position,validation:{showInPrint:field.showInPrint,...field.dateFormat?{dateFormat:field.dateFormat}:{}}},update:{label:field.label,dataType:field.key==="party_date"?"DATE":"TEXT",isActive:field.enabled,position,validation:{showInPrint:field.showInPrint,...field.dateFormat?{dateFormat:field.dateFormat}:{}}}}))))
   }
   if (section === "transaction-settings") {
     const v=z.object({preferences:transactionPreferencesSchema,branchId:z.string().uuid(),prefixes:z.record(z.string(),z.string().max(30))}).strict().parse(raw);

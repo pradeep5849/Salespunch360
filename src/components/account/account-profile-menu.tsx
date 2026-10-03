@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/actions/auth";
+import { switchWorkspace } from "@/app/actions/workspace-context";
 
 const roleLabels: Record<string, string> = {
   ACCOUNT_ADMIN: "Account Admin",
@@ -16,7 +17,7 @@ const roleLabels: Record<string, string> = {
   SALES: "Sales",
 };
 
-export function AccountProfileMenu({ userName, role, isPlusPrimaryAdmin=false }: { userName: string; role: string; isPlusPrimaryAdmin?: boolean }) {
+export function AccountProfileMenu({ userName, role, isPlusPrimaryAdmin=false, canSwitchWorkspace=false }: { userName: string; role: string; isPlusPrimaryAdmin?: boolean; canSwitchWorkspace?: boolean }) {
   const [openPath, setOpenPath] = useState<string | null>(null);
   const pathname = usePathname();
   const open = openPath === pathname;
@@ -40,6 +41,6 @@ export function AccountProfileMenu({ userName, role, isPlusPrimaryAdmin=false }:
 
   return <div className="account-profile" ref={root}>
     <button ref={trigger} type="button" aria-label="Open profile menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpenPath(value => value === pathname ? null : pathname)}><span>{userName.charAt(0).toUpperCase()}</span></button>
-    {open && <div role="menu" aria-label="Account and profile menu"><strong>{userName}</strong><small>{roleLabels[role] ?? role.replaceAll("_", " ").toLowerCase()}</small>{(role==="ACCOUNT_ADMIN"||isPlusPrimaryAdmin)&&<Link role="menuitem" href="/workspace/billing" onClick={() => close()}>{isPlusPrimaryAdmin?"Plus Subscription & Billing":"Account Subscription & Billing"}</Link>}<Link role="menuitem" href="/workspace/change-password" onClick={() => close()}>Profile &amp; password</Link>{role==="ACCOUNT_ADMIN"&&<Link role="menuitem" href="/workspace/account/settings/modules" onClick={() => close()}>Module Selection</Link>}<Link role="menuitem" href="/workspace/account/settings" onClick={() => close()}>Settings</Link><form action={signOut} onSubmit={() => close()}><button role="menuitem">Sign out</button></form></div>}
+    {open && <div role="menu" aria-label="Account and profile menu">{canSwitchWorkspace&&<form action={switchWorkspace} onSubmit={()=>close()}><input type="hidden" name="workspace" value="SALES"/><button role="menuitem">Switch to Sales</button></form>}<strong>{userName}</strong><small>{roleLabels[role] ?? role.replaceAll("_", " ").toLowerCase()}</small>{(role==="ACCOUNT_ADMIN"||isPlusPrimaryAdmin)&&<Link role="menuitem" href="/workspace/billing" onClick={() => close()}>{isPlusPrimaryAdmin?"Plus Subscription & Billing":"Account Subscription & Billing"}</Link>}<Link role="menuitem" href="/workspace/change-password" onClick={() => close()}>Profile &amp; password</Link>{role==="ACCOUNT_ADMIN"&&<Link role="menuitem" href="/workspace/account/settings/modules" onClick={() => close()}>Module Selection</Link>}<Link role="menuitem" href="/workspace/account/settings" onClick={() => close()}>Settings</Link><form action={signOut} onSubmit={() => close()}><button role="menuitem">Sign out</button></form></div>}
   </div>;
 }

@@ -11,7 +11,7 @@ export const BUSINESS_TYPES = [
   {key:"OTHER_MIXED",label:"Other / Mixed"},
 ] as const satisfies readonly {key:BusinessType;label:string}[];
 
-export type SetupModuleKey="BASIC_ACCOUNTING"|"PROJECTS"|"BARCODE"|"POS"|"SERVICE_JOB_WORK"|"MANUFACTURING"|"PAYROLL_HR"|"ONLINE_STORE";
+export type SetupModuleKey="BASIC_ACCOUNTING"|"PROJECTS"|"BARCODE"|"POS"|"SERVICE_JOB_WORK"|"MANUFACTURING"|"PAYROLL_HR"|"ONLINE_STORE"|"MULTI_CURRENCY"|"LOYALTY_POINTS"|"TRANSACTION_SMS";
 export const MODULE_SETUP_CATALOG = [
   {key:"BASIC_ACCOUNTING",label:"Basic Accounting",note:"Included",available:true},
   {key:"PROJECTS",label:"Projects",note:"Project costing, materials, purchases and reports",available:true},
@@ -21,6 +21,9 @@ export const MODULE_SETUP_CATALOG = [
   {key:"MANUFACTURING",label:"Manufacturing",note:"Coming Soon",available:false},
   {key:"PAYROLL_HR",label:"Payroll / HR",note:"Coming Soon",available:false},
   {key:"ONLINE_STORE",label:"Online Store",note:"Coming Soon",available:false},
+  {key:"MULTI_CURRENCY",label:"Multi-Currency",note:"Coming Soon",available:false},
+  {key:"LOYALTY_POINTS",label:"Loyalty Points",note:"Coming Soon",available:false},
+  {key:"TRANSACTION_SMS",label:"Transaction SMS",note:"Coming Soon",available:false},
 ] as const satisfies readonly {key:SetupModuleKey;label:string;note:string;available:boolean}[];
 export const OPTIONAL_SETUP_MODULES=["PROJECTS","BARCODE","POS"] as const satisfies readonly SetupModuleKey[];
 export type OptionalSetupModule=typeof OPTIONAL_SETUP_MODULES[number];
