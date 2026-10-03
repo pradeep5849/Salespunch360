@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.SecureSession
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -22,6 +23,22 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     private val api = ApiClient(SecureSession(app))
     private val _state = MutableStateFlow(AdministrationState())
     val state = _state.asStateFlow()
+
+    private fun success(message: String) {
+        _state.value = _state.value.copy(message = message, error = null)
+        viewModelScope.launch {
+            delay(2600)
+            if (_state.value.message == message) _state.value = _state.value.copy(message = null)
+        }
+    }
+
+    private fun failure(message: String) {
+        _state.value = _state.value.copy(error = message, message = null, loading = false)
+        viewModelScope.launch {
+            delay(6000)
+            if (_state.value.error == message) _state.value = _state.value.copy(error = null)
+        }
+    }
 
     fun load(mode: String) {
         _state.value = _state.value.copy(mode = mode, loading = true, error = null)
@@ -43,22 +60,28 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
             }.onSuccess {
                 _state.value = _state.value.copy(loading = false, data = it)
             }.onFailure {
-                _state.value = _state.value.copy(loading = false, error = it.message ?: "Unable to load")
+                failure(it.message ?: "Unable to load")
             }
         }
     }
 
     fun saveUser(payload: JsonObject) {
+        if (_state.value.loading) return
+        _state.value = _state.value.copy(loading = true, error = null, message = null)
         viewModelScope.launch {
             runCatching { api.saveAccountUser(payload.containsKey("userId"), payload) }
-                .onSuccess { load("users") }
-                .onFailure { _state.value = _state.value.copy(error = it.message) }
+                .onSuccess {
+                    success("Employee saved successfully")
+                    load("users")
+                }
+                .onFailure { failure(it.message ?: "Employee save failed") }
         }
     }
 
     // Administration settings can use either object or array JSON payloads.
     fun save(section: String, payload: JsonElement) {
-        _state.value = _state.value.copy(loading = true, error = null)
+        if (_state.value.loading) return
+        _state.value = _state.value.copy(loading = true, error = null, message = null)
         viewModelScope.launch {
             runCatching {
                 if (section.startsWith("tax")) {
@@ -67,31 +90,33 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
                     api.saveAccountAdministration("settings", section, payload)
                 }
             }.onSuccess {
-                _state.value = _state.value.copy(message = "Saved on server")
+                success("Saved successfully")
                 load(_state.value.mode)
             }.onFailure {
-                _state.value = _state.value.copy(loading = false, error = it.message ?: "Save failed")
+                failure(it.message ?: "Save failed")
             }
         }
     }
 
     fun uploadSignature(name: String, mime: String, bytes: ByteArray) {
+        if (_state.value.loading) return
         viewModelScope.launch {
             runCatching { api.uploadAccountSignature(name, mime, bytes) }
-                .onSuccess { _state.value = _state.value.copy(message = "Signature replaced", error = null) }
-                .onFailure { _state.value = _state.value.copy(error = it.message) }
+                .onSuccess { success("Signature replaced successfully") }
+                .onFailure { failure(it.message ?: "Signature upload failed") }
         }
     }
 
     fun fileError(message: String) {
-        _state.value = _state.value.copy(error = message, message = null)
+        failure(message)
     }
 
     fun removeSignature() {
+        if (_state.value.loading) return
         viewModelScope.launch {
             runCatching { api.removeAccountSignature() }
-                .onSuccess { _state.value = _state.value.copy(message = "Signature removed") }
-                .onFailure { _state.value = _state.value.copy(error = it.message) }
+                .onSuccess { success("Signature removed successfully") }
+                .onFailure { failure(it.message ?: "Signature removal failed") }
         }
     }
 }
