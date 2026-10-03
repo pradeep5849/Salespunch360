@@ -462,17 +462,14 @@ private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
 }
 
 private val accountSettingsDestinations=listOf(
-    "General" to "/workspace/account/settings/general","Transaction" to "/workspace/account/settings/transactions","Invoice Print" to "/workspace/account/settings/print-templates","Taxes & GST" to "/workspace/account/tax/settings","Employees" to "/workspace/employees","Transaction SMS" to "/workspace/account/settings/transaction-sms","Reminders" to "/workspace/account/settings/transactions","Party" to "/workspace/account/settings/party","Item" to "/workspace/account/inventory/item-settings","Multi-Currency" to "/workspace/account/settings/multi-currency"
+    Triple("General","/workspace/account/settings/general","⚙"),Triple("Transaction","/workspace/account/settings/transactions","▤"),Triple("Invoice Print","/workspace/account/settings/print-templates","⎙"),Triple("Taxes & GST","/workspace/account/tax/settings","%"),Triple("Employees","/workspace/employees","♥"),Triple("Transaction SMS","/workspace/account/settings/transaction-sms","✉"),Triple("Reminders","/workspace/account/settings/transactions#reminders","◷"),Triple("Party","/workspace/account/settings/party","☺"),Triple("Item","/workspace/account/inventory/item-settings","◇"),Triple("Multi-Currency","/workspace/account/settings/multi-currency","₹")
 )
 
 @Composable
 fun AccountSettingsMenuScreen(padding:PaddingValues,navigate:(String)->Unit,back:()->Boolean){
-    var query by remember{mutableStateOf("")}
-    val rows=accountSettingsDestinations.filter{it.first.contains(query,true)}
-    Column(Modifier.fillMaxSize().padding(padding).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){TextButton(onClick={back()}){Text("‹ Back")};Text("Settings",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
-        OutlinedTextField(query,{query=it},placeholder={Text("Search settings")},singleLine=true,modifier=Modifier.fillMaxWidth())
-        LazyColumn(Modifier.weight(1f)){items(rows){item->ListItem(headlineContent={Text(item.first)},leadingContent={Icon(Icons.Default.Settings,null)},trailingContent={Text("›")},modifier=Modifier.clickable{navigate(item.second)});HorizontalDivider()}}
+    Column(Modifier.fillMaxSize().padding(padding)){
+        Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={back()}){Text("←")};Text("Settings",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)}
+        LazyColumn(Modifier.fillMaxSize()){items(accountSettingsDestinations){item->ListItem(headlineContent={Text(item.first)},leadingContent={Text(item.third,style=MaterialTheme.typography.titleLarge)},trailingContent={Text("›")},modifier=Modifier.fillMaxWidth().clickable{navigate(item.second)});HorizontalDivider()}}
     }
 }
 
