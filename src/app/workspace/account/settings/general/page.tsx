@@ -4,5 +4,5 @@ import {getAccountSettings} from "@/lib/account/settings";
 
 export default async function Page(){
  const settings=await getAccountSettings();
- return <><AccountPageHeader title="General" backHref="/workspace/account/settings"/><GeneralSettingsForm values={{appLanguage:settings?.appLanguage??"en",baseCurrency:settings?.baseCurrency??"INR",displayDecimalPlaces:settings?.displayDecimalPlaces??2,dateFormat:settings?.dateFormat??"DD/MM/YYYY",warnUnsavedChanges:settings?.warnUnsavedChanges??true,appearance:"STANDARD"}}/></>;
+ return <><AccountPageHeader title="General" backHref="/workspace/account/settings" compact/><GeneralSettingsForm values={{appLanguage:settings?.appLanguage??"en",baseCurrency:settings?.baseCurrency??"INR",displayDecimalPlaces:settings?.displayDecimalPlaces??2,dateFormat:settings?.dateFormat??"DD/MM/YYYY",warnUnsavedChanges:settings?.warnUnsavedChanges??true,appearance:"STANDARD"}}/></>;
 }
