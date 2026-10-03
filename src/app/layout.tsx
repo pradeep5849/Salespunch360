@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./functional-polish.css";
 import "./pwa.css";
+import "./account-settings-sale-polish.css";
 import { PwaRegister } from "./pwa-register";
 import { PwaInstall } from "./pwa-install";
 
