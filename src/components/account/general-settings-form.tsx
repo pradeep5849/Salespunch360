@@ -5,6 +5,7 @@ import {updateGeneralSettingsAction} from "@/app/actions/account-settings";
 
 type Values={appLanguage:string;baseCurrency:string;displayDecimalPlaces:number;dateFormat:string;warnUnsavedChanges:boolean;appearance:string};
 type Info={title:string;what:string;how?:string;why?:string};
+type Feedback={kind:"success"|"error";text:string}|null;
 const INFO:Record<string,Info>={
  currency:{title:"Business Currency",what:"Selects the primary currency for this SalesPunch360 business.",how:"Its code and symbol are used on applicable Sales, Purchase, Expense, accounting and report screens.",why:"A consistent business currency keeps records and reports comparable."},
  decimals:{title:"Decimal Places",what:"Controls how many digits SalesPunch360 displays after the decimal point.",how:"Applicable on-screen and printed monetary and quantity values follow this display preference.",why:"It changes presentation only; stored accounting values and calculation precision are not reduced."},
@@ -22,31 +23,43 @@ const INFO:Record<string,Info>={
  returnChallan:{title:"Goods Return on Delivery Challan",what:"Records goods returned against a delivery movement.",how:"This separate option is not currently supported; use only existing validated return workflows.",why:"Avoiding unsupported shortcuts protects stock accuracy."},
  printChallan:{title:"Print Amount on Challan",what:"Would control whether monetary amounts appear on a delivery challan printout.",how:"A separate control is not currently supported by the print-template architecture.",why:"SalesPunch360 does not show a functional toggle until the print workflow supports it safely."},
 };
-function InfoButton({topic,onOpen}:{topic:keyof typeof INFO;onOpen:(info:Info)=>void}){return <button className="settings-info" type="button" aria-label={`About ${INFO[topic].title}`} onClick={event=>{event.preventDefault();event.stopPropagation();onOpen(INFO[topic])}}>i</button>}
+
+function InfoButton({topic,onOpen}:{topic:keyof typeof INFO;onOpen:(info:Info)=>void}){
+ return <button type="button" aria-label={`About ${INFO[topic].title}`} onClick={event=>{event.preventDefault();event.stopPropagation();onOpen(INFO[topic])}} style={{width:32,height:32,minHeight:32,padding:0,marginLeft:3,border:0,borderRadius:"50%",display:"inline-grid",placeItems:"center",background:"transparent",verticalAlign:"middle",cursor:"pointer"}}><span style={{width:18,height:18,display:"grid",placeItems:"center",border:"1px solid #8b98a6",borderRadius:"50%",color:"#758493",fontSize:12,fontWeight:700,lineHeight:1}}>i</span></button>;
+}
 function InfoDialog({info,onClose}:{info:Info|null;onClose:()=>void}){const ok=useRef<HTMLButtonElement>(null);useEffect(()=>{if(!info)return;ok.current?.focus();const key=(e:KeyboardEvent)=>{if(e.key==="Escape")onClose()};document.addEventListener("keydown",key);return()=>document.removeEventListener("keydown",key)},[info,onClose]);if(!info)return null;return <div className="settings-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><section className="settings-info-modal" role="dialog" aria-modal="true" aria-labelledby="settings-info-title"><h2 id="settings-info-title">{info.title}</h2><h3>What is this?</h3><p>{info.what}</p>{info.how&&<><h3>How it is used?</h3><p>{info.how}</p></>}{info.why&&<><h3>Why to use?</h3><p>{info.why}</p></>}<button ref={ok} type="button" className="account-primary" onClick={onClose}>OK</button></section></div>}
 const availableFeatures=[
  ["Estimate / Quotation","estimate",true],["Proforma Invoice","proforma",true],["Other Income","income",false],["Sale / Purchase Order","orders",true],["Fixed Assets","assets",true],["Delivery Challan","challan",true],["Goods Return on Delivery Challan","returnChallan",false],["Print Amount on Challan","printChallan",false],
 ] as const;
+
 export function GeneralSettingsForm({values}:{values:Values}){
- const[dirty,setDirty]=useState(false),[decimals,setDecimals]=useState(Math.min(4,Math.max(0,values.displayDecimalPlaces))),[info,setInfo]=useState<Info|null>(null);
- useEffect(()=>{if(!dirty||!values.warnUnsavedChanges)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn)},[dirty,values.warnUnsavedChanges]);
- const row=(label:React.ReactNode,control:React.ReactNode)=><div className="general-settings-row"><span>{label}</span><div className="general-settings-control">{control}</div></div>;
- return <><form action={updateGeneralSettingsAction} className="general-settings-form" onChange={()=>setDirty(true)} onSubmit={()=>setDirty(false)}>
-  <h2>APPLICATION</h2>
-  {row("App Language",<select name="appLanguage" defaultValue={values.appLanguage} aria-label="App Language"><option value="en">English</option><option value="hi">Hindi</option></select>)}
-  {row(<span>Business Currency <InfoButton topic="currency" onOpen={setInfo}/></span>,<select name="baseCurrency" defaultValue={values.baseCurrency} aria-label="Business Currency">{["INR","USD","EUR","GBP","AED"].map(x=><option key={x}>{x}</option>)}</select>)}
-  {row(<span>Decimal Places <InfoButton topic="decimals" onOpen={setInfo}/></span>,<div className="settings-stepper"><button type="button" aria-label="Decrease decimal places" disabled={decimals===0} onClick={()=>{setDecimals(x=>Math.max(0,x-1));setDirty(true)}}>−</button><output aria-live="polite">{decimals}</output><input type="hidden" name="displayDecimalPlaces" value={decimals}/><button type="button" aria-label="Increase decimal places" disabled={decimals===4} onClick={()=>{setDecimals(x=>Math.min(4,x+1));setDirty(true)}}>+</button></div>)}
-  {row("Date Format",<select name="dateFormat" defaultValue={values.dateFormat} aria-label="Date Format"><option value="DD/MM/YYYY">dd/MM/yyyy</option><option value="MM/DD/YYYY">MM/dd/yyyy</option><option value="YYYY-MM-DD">yyyy-MM-dd</option></select>)}
-  {row(<span>Theme <InfoButton topic="theme" onOpen={setInfo}/></span>,<select name="appearance" defaultValue="STANDARD" aria-label="Theme"><option value="STANDARD">Standard</option><option disabled>Trending — Coming Soon</option><option disabled>Modern — Coming Soon</option></select>)}
-  <input type="hidden" name="warnUnsavedChanges" value={values.warnUnsavedChanges?"on":""}/>
-  <h2>SECURITY</h2>
-  {row(<span>Passcode / Fingerprint <InfoButton topic="security" onOpen={setInfo}/></span>,<small>Not available on Web</small>)}
-  <h2>BUSINESS &amp; DATA</h2>
-  <Link className="general-settings-row navigates" href="/workspace/account/settings/multi-branch"><span>Multi-Branch Settings <InfoButton topic="branches" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
-  <Link className="general-settings-row navigates" href="/workspace/account/inventory/warehouses"><span>Godown / Warehouse &amp; Stock Transfer <InfoButton topic="warehouse" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
-  <Link className="general-settings-row navigates" href="/workspace/account/settings/backup"><span>Backup Settings <InfoButton topic="backup" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
-  <h2>MORE TRANSACTIONS</h2>
-  {availableFeatures.map(([label,topic,supported])=>row(<span>{label} <InfoButton topic={topic} onOpen={setInfo}/></span>,<label className="settings-feature-state"><input type="checkbox" checked={supported} disabled aria-label={`${label} ${supported?"available":"not available"}`}/><span>{supported?"Available":"Not available"}</span></label>))}
-  <div className="general-settings-save"><button className="account-primary">Save General Settings</button>{dirty&&<small role="status">Unsaved changes</small>}</div>
- </form><InfoDialog info={info} onClose={()=>setInfo(null)}/></>;
+ const[dirty,setDirty]=useState(false),[decimals,setDecimals]=useState(Math.min(4,Math.max(0,values.displayDecimalPlaces))),[warnUnsaved,setWarnUnsaved]=useState(values.warnUnsavedChanges),[info,setInfo]=useState<Info|null>(null),[saving,setSaving]=useState(false),[feedback,setFeedback]=useState<Feedback>(null);
+ useEffect(()=>{if(!feedback)return;const timer=window.setTimeout(()=>setFeedback(null),feedback.kind==="success"?2500:5000);return()=>window.clearTimeout(timer)},[feedback]);
+ useEffect(()=>{if(!dirty||!warnUnsaved)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn)},[dirty,warnUnsaved]);
+ const row=(label:React.ReactNode,control:React.ReactNode)=><div className="general-settings-row" style={{minHeight:56,padding:"8px 14px",gap:10,fontSize:16,fontWeight:400}}><span style={{display:"flex",alignItems:"center",minWidth:0}}>{label}</span><div className="general-settings-control" style={{fontSize:15,color:"#637083"}}>{control}</div></div>;
+ const sectionStyle={margin:0,padding:"9px 14px",background:"#eaf2fb",color:"#38516c",fontSize:13,fontWeight:700,letterSpacing:.2} as const;
+ const selectStyle={minHeight:34,border:0,background:"transparent",fontSize:15,fontWeight:400,color:"#606d7c",textAlign:"right" as const};
+ async function save(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(saving)return;setSaving(true);setFeedback(null);try{await updateGeneralSettingsAction(new FormData(event.currentTarget));setDirty(false);setFeedback({kind:"success",text:"Saved successfully"})}catch(error){setFeedback({kind:"error",text:error instanceof Error&&error.message?error.message:"Save failed. Please try again."})}finally{setSaving(false)}}
+ return <>
+  <form className="general-settings-form" onChange={()=>setDirty(true)} onSubmit={save}>
+   <h2 style={sectionStyle}>APPLICATION</h2>
+   {row("App Language",<select name="appLanguage" defaultValue={values.appLanguage} aria-label="App Language" style={selectStyle}><option value="en">English</option><option value="hi">Hindi</option></select>)}
+   {row(<span>Business Currency <InfoButton topic="currency" onOpen={setInfo}/></span>,<select name="baseCurrency" defaultValue={values.baseCurrency} aria-label="Business Currency" style={selectStyle}>{["INR","USD","EUR","GBP","AED"].map(x=><option key={x}>{x}</option>)}</select>)}
+   {row(<span>Decimal Places <InfoButton topic="decimals" onOpen={setInfo}/></span>,<div className="settings-stepper" style={{gap:5}}><button type="button" aria-label="Decrease decimal places" disabled={decimals===0} onClick={()=>{setDecimals(x=>Math.max(0,x-1));setDirty(true)}} style={{width:30,minHeight:30,padding:0,border:0,background:"transparent",fontSize:21,color:"#7d8792"}}>−</button><output aria-live="polite" style={{minWidth:24,fontSize:16,fontWeight:600,textAlign:"center",color:"#27384a"}}>{decimals}</output><input type="hidden" name="displayDecimalPlaces" value={decimals}/><button type="button" aria-label="Increase decimal places" disabled={decimals===4} onClick={()=>{setDecimals(x=>Math.min(4,x+1));setDirty(true)}} style={{width:30,minHeight:30,padding:0,border:0,background:"transparent",fontSize:21,color:"#7d8792"}}>+</button></div>)}
+   {row("Date Format",<select name="dateFormat" defaultValue={values.dateFormat} aria-label="Date Format" style={selectStyle}><option value="DD/MM/YYYY">dd/MM/yyyy</option><option value="MM/DD/YYYY">MM/dd/yyyy</option><option value="YYYY-MM-DD">yyyy-MM-dd</option></select>)}
+   {row("Show warning for unsaved changes",<input type="checkbox" name="warnUnsavedChanges" checked={warnUnsaved} onChange={e=>{setWarnUnsaved(e.target.checked);setDirty(true)}} aria-label="Show warning for unsaved changes" style={{width:20,height:20,accentColor:"#147be8"}}/>)}
+   {row(<span>Theme <InfoButton topic="theme" onOpen={setInfo}/></span>,<select name="appearance" defaultValue="STANDARD" aria-label="Theme" style={selectStyle}><option value="STANDARD">Standard</option><option disabled>Trending — Coming Soon</option><option disabled>Modern — Coming Soon</option></select>)}
+   <h2 style={sectionStyle}>SECURITY</h2>
+   {row(<span>Passcode / Fingerprint <InfoButton topic="security" onOpen={setInfo}/></span>,<small style={{fontSize:14,color:"#8a96a3"}}>Not available on Web</small>)}
+   <h2 style={sectionStyle}>BUSINESS &amp; DATA</h2>
+   <Link className="general-settings-row navigates" href="/workspace/account/settings/multi-branch" style={{minHeight:56,padding:"8px 14px",fontSize:16,fontWeight:400}}><span style={{display:"flex",alignItems:"center"}}>Multi-Branch Settings <InfoButton topic="branches" onOpen={setInfo}/></span><b aria-hidden style={{fontSize:20}}>›</b></Link>
+   <Link className="general-settings-row navigates" href="/workspace/account/inventory/warehouses" style={{minHeight:56,padding:"8px 14px",fontSize:16,fontWeight:400}}><span style={{display:"flex",alignItems:"center"}}>Godown / Warehouse &amp; Stock Transfer <InfoButton topic="warehouse" onOpen={setInfo}/></span><b aria-hidden style={{fontSize:20}}>›</b></Link>
+   <Link className="general-settings-row navigates" href="/workspace/account/settings/backup" style={{minHeight:56,padding:"8px 14px",fontSize:16,fontWeight:400}}><span style={{display:"flex",alignItems:"center"}}>Backup Settings <InfoButton topic="backup" onOpen={setInfo}/></span><b aria-hidden style={{fontSize:20}}>›</b></Link>
+   <h2 style={sectionStyle}>MORE TRANSACTIONS</h2>
+   {availableFeatures.map(([label,topic,supported])=>row(<span>{label} <InfoButton topic={topic} onOpen={setInfo}/></span>,<label className="settings-feature-state"><input type="checkbox" checked={supported} disabled aria-label={`${label} ${supported?"available":"not available"}`}/><span>{supported?"Available":"Not available"}</span></label>))}
+   <div className="general-settings-save"><button className="account-primary" disabled={saving}>{saving?"Saving…":"Save General Settings"}</button>{dirty&&!saving&&<small role="status">Unsaved changes</small>}</div>
+  </form>
+  {feedback&&<div role={feedback.kind==="error"?"alert":"status"} aria-live="polite" style={{position:"fixed",zIndex:150,left:"50%",bottom:24,transform:"translateX(-50%)",maxWidth:"calc(100% - 32px)",padding:"10px 16px",borderRadius:8,background:feedback.kind==="success"?"#166534":"#b91c1c",color:"#fff",fontSize:14,fontWeight:600,boxShadow:"0 8px 24px #0003"}}>{feedback.text}</div>}
+  <InfoDialog info={info} onClose={()=>setInfo(null)}/>
+ </>;
 }
