@@ -343,6 +343,7 @@
   text-align:center;
 }
 .account-save-toast[data-status="error"]{background:#b42318}
+form[data-saving="true"] button[type="submit"]{cursor:wait;opacity:.68}
 
 @media(max-width:520px){
  .account-settings-index .account-settings-menu>a{min-height:58px;padding:0 20px}
