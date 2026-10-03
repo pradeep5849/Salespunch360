@@ -67,13 +67,15 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
                     api.saveAccountAdministration("settings", section, payload)
                 }
             }.onSuccess {
-                _state.value = _state.value.copy(message = "Saved on server")
+                _state.value = _state.value.copy(message = "Saved successfully", error = null)
                 load(_state.value.mode)
             }.onFailure {
                 _state.value = _state.value.copy(loading = false, error = it.message ?: "Save failed")
             }
         }
     }
+
+    fun clearMessage() { _state.value = _state.value.copy(message = null) }
 
     fun uploadSignature(name: String, mime: String, bytes: ByteArray) {
         viewModelScope.launch {

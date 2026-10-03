@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -117,7 +119,6 @@ private fun DirectSaleInvoiceEditor(
     var partyHelp by remember{mutableStateOf<String?>(null)}
     var gstTypeOpen by remember{mutableStateOf(false)}
     var stateOpen by remember{mutableStateOf(false)}
-    var settings by remember{mutableStateOf(false)}
     var more by remember{mutableStateOf(false)}
     var invoiceDialog by remember{mutableStateOf(false)}
     var prefixDraft by remember{mutableStateOf("")}
@@ -224,7 +225,7 @@ private fun DirectSaleInvoiceEditor(
                 TopAppBar(
                     title={Text("Add Items to Sale")},
                     navigationIcon={IconButton(onClick={addItemPage=false}){Text("←")}},
-                    actions={IconButton(onClick={settings=true}){Text("⚙")}}
+                    actions={IconButton(onClick={navigate("/workspace/account/settings")}){Icon(Icons.Default.Settings,"Sale settings")}}
                 )
             },
             bottomBar={
@@ -432,7 +433,7 @@ private fun DirectSaleInvoiceEditor(
                             ){Text(label)}
                         }
                     }
-                    IconButton(onClick={settings=true}){Text("⚙")}
+                    IconButton(onClick={navigate("/workspace/account/settings")}){Icon(Icons.Default.Settings,"Sale settings")}
                 }
             )
         },
@@ -572,19 +573,6 @@ private fun DirectSaleInvoiceEditor(
         )
     }
 
-    if(settings)ModalBottomSheet(onDismissRequest={settings=false}){
-        Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-            Text("Sale Settings",style=MaterialTheme.typography.titleLarge)
-            TextButton(onClick={settings=false;invoiceDialog=true}){Text("Sale Prefix")}
-            Text("Transaction SMS · Not enabled")
-            Text("Additional Fields  ›")
-            Text("Additional Charges  ›")
-            Text("Billing Type",fontWeight=FontWeight.Bold)
-            Text("◉ Full Sale")
-            Text("○ Mobile POS — Coming Soon",color=MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick={settings=false;navigate("/workspace/account/settings/transactions")}){Text("⚙ More Settings")}
-        }
-    }
     if(more)ModalBottomSheet(onDismissRequest={more=false}){
         Column(Modifier.fillMaxWidth()){
             Row(Modifier.fillMaxWidth().padding(20.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -593,7 +581,8 @@ private fun DirectSaleInvoiceEditor(
             }
             ListItem(headlineContent={Text("Share")},leadingContent={Text("↗")},modifier=Modifier.clickable{Toast.makeText(context,"Save the sale before sharing.",Toast.LENGTH_SHORT).show()})
             ListItem(headlineContent={Text("Print")},leadingContent={Text("▣")},modifier=Modifier.clickable{Toast.makeText(context,"Save the sale before printing.",Toast.LENGTH_SHORT).show()})
-            ListItem(headlineContent={Text("Generate e-Invoice")},leadingContent={Text("▤")},modifier=Modifier.clickable{Toast.makeText(context,"Available after a posted eligible invoice is saved.",Toast.LENGTH_SHORT).show()})
+             ListItem(headlineContent={Text("Generate e-Invoice")},leadingContent={Text("▤")},modifier=Modifier.clickable{Toast.makeText(context,"Available after a posted eligible invoice is saved.",Toast.LENGTH_SHORT).show()})
+             ListItem(headlineContent={Text("Transaction Settings")},leadingContent={Icon(Icons.Default.Settings,null)},modifier=Modifier.clickable{more=false;navigate("/workspace/account/settings/transactions")})
             Spacer(Modifier.navigationBarsPadding())
         }
     }

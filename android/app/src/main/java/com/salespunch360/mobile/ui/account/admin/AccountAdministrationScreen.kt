@@ -25,6 +25,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 
@@ -58,6 +59,9 @@ fun AccountAdministrationScreen(
     LaunchedEffect(mode) {
         vm.load(mode)
     }
+    LaunchedEffect(state.message) {
+        if (state.message != null) { delay(2500); vm.clearMessage() }
+    }
 
     Column(
         Modifier
@@ -80,7 +84,7 @@ fun AccountAdministrationScreen(
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        state.message?.let { Snackbar(Modifier.fillMaxWidth()) { Text(it) } }
 
         when (mode) {
             "users" -> UserView(state.data, vm)
@@ -467,12 +471,9 @@ private val accountSettingsDestinations=listOf(
 
 @Composable
 fun AccountSettingsMenuScreen(padding:PaddingValues,navigate:(String)->Unit,back:()->Boolean){
-    var query by remember{mutableStateOf("")}
-    val rows=accountSettingsDestinations.filter{it.first.contains(query,true)}
-    Column(Modifier.fillMaxSize().padding(padding).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){TextButton(onClick={back()}){Text("‹ Back")};Text("Settings",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
-        OutlinedTextField(query,{query=it},placeholder={Text("Search settings")},singleLine=true,modifier=Modifier.fillMaxWidth())
-        LazyColumn(Modifier.weight(1f)){items(rows){item->ListItem(headlineContent={Text(item.first)},leadingContent={Icon(Icons.Default.Settings,null)},trailingContent={Text("›")},modifier=Modifier.clickable{navigate(item.second)});HorizontalDivider()}}
+    Column(Modifier.fillMaxSize().padding(padding)){
+        Row(Modifier.height(54.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically){TextButton(onClick={back()}){Text("←")};Text("Settings",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)}
+        LazyColumn(Modifier.weight(1f)){items(accountSettingsDestinations){item->ListItem(headlineContent={Text(item.first,style=MaterialTheme.typography.bodyMedium)},leadingContent={Icon(Icons.Default.Settings,null,Modifier.size(18.dp))},trailingContent={Text("›",style=MaterialTheme.typography.bodyMedium)},modifier=Modifier.heightIn(min=50.dp).clickable{navigate(item.second)});HorizontalDivider(thickness=0.5.dp)}}
     }
 }
 
@@ -486,7 +487,7 @@ private val partyHelp=mapOf(
     "loyalty" to PartyHelp("Loyalty Points","Loyalty Points will allow customers to earn points on eligible purchases and use them for discounts on later purchases.","A loyalty program can encourage repeat purchases and reward returning customers.",true)
 )
 @Composable private fun PartyInfoDialog(help:PartyHelp?,close:()->Unit){if(help!=null)AlertDialog(onDismissRequest=close,title={Text(help.title,fontWeight=FontWeight.Bold)},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){if(help.comingSoon)Text("Coming Soon",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("What is this?",fontWeight=FontWeight.Bold);Text(help.what);Text("Why to use?",fontWeight=FontWeight.Bold);Text(help.why)}},confirmButton={Button(onClick=close,modifier=Modifier.fillMaxWidth()){Text("OK")}})}
-@Composable private fun PartySettingRow(label:String,checked:Boolean,enabled:Boolean=true,help:PartyHelp,change:(Boolean)->Unit,open:(PartyHelp)->Unit){ListItem(headlineContent={Text(label)},supportingContent=if(!enabled){{Text("Coming Soon")}}else null,trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={open(help)}){Text("ⓘ")};Switch(checked,onCheckedChange=if(enabled)change else null,enabled=enabled)}});HorizontalDivider()}
+@Composable private fun PartySettingRow(label:String,checked:Boolean,enabled:Boolean=true,help:PartyHelp,change:(Boolean)->Unit,open:(PartyHelp)->Unit){ListItem(headlineContent={Text(label)},supportingContent=if(!enabled){{Text("Coming Soon")}}else null,trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={open(help)},modifier=Modifier.size(40.dp)){Text("i",style=MaterialTheme.typography.labelSmall)};Switch(checked,onCheckedChange=if(enabled)change else null,enabled=enabled)}});HorizontalDivider()}
 @Composable
 private fun PartySettingsView(
     data: JsonElement,
