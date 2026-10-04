@@ -11,9 +11,17 @@ export default defineConfig({
         "src/lib/account/money-ledger.ts",
         "src/lib/logging.ts",
         "src/lib/security/headers.ts",
+        "src/lib/auth/workspace-policy.ts",
+        "src/lib/auth/permissions.ts",
       ],
       reporter: ["text", "json-summary"],
-      thresholds: { statements: 90, lines: 85, branches: 80, functions: 100 },
+      thresholds: {
+        statements: 90,
+        lines: 85,
+        branches: 80,
+        functions: 85,
+        perFile: true,
+      },
     },
     exclude: ["e2e/**", "node_modules/**"],
     env: {

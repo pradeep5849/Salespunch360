@@ -3,7 +3,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 function isolated(value, suffix) {
-  const url = new URL(value ?? "");
+  let url;
+  try {
+    url = new URL(value ?? "");
+  } catch {
+    throw new Error(
+      "Recovery drill requires valid isolated local database URLs.",
+    );
+  }
   if (
     !["postgres:", "postgresql:"].includes(url.protocol) ||
     !["127.0.0.1", "localhost"].includes(url.hostname) ||

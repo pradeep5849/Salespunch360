@@ -77,7 +77,7 @@ test("real login opens Account and a revoked session returns to sign-in", async 
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/account/);
   await expect(
-    page.getByRole("link", { name: "Items", exact: true }),
+    page.getByRole("tab", { name: "Transaction Details", exact: true }),
   ).toBeVisible();
   await db.user.update({
     where: { id: userIds[0] },
