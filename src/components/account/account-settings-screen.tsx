@@ -17,7 +17,7 @@ export function AccountSettingsScreen(){
    <Link href="/workspace/account" aria-label="Back from Settings" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:42,height:42,textDecoration:"none",fontSize:30,lineHeight:1,color:"#315569"}}>←</Link>
    <h1 style={{margin:0,flex:1,fontSize:24,fontWeight:600,color:"#294c5d"}}>Settings</h1>
    <button type="button" aria-label={searchOpen?"Close settings search":"Search settings"} onClick={()=>{setSearchOpen(value=>!value);if(searchOpen)setQuery("")}} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:44,height:44,border:0,background:"transparent",padding:0,cursor:"pointer",color:"#294c5d"}}>
-    <span style={{width:29,height:29,display:"inline-flex"}}><AccountIcon name={searchOpen?"close":"search"}/></span>
+    {searchOpen?<span aria-hidden style={{fontSize:30,lineHeight:1}}>×</span>:<span style={{width:29,height:29,display:"inline-flex"}}><AccountIcon name="search"/></span>}
    </button>
   </header>
   {searchOpen&&<div style={{padding:"10px 16px",background:"#f7fbff",borderBottom:"1px solid #e0e6eb"}}><input autoFocus value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search settings" aria-label="Search settings" style={{width:"100%",height:44,border:"1px solid #cad5df",borderRadius:8,padding:"0 12px",fontSize:16,boxSizing:"border-box",outline:"none"}}/></div>}
