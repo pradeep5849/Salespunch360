@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
     steps:
       - name: Check out main
@@ -29,25 +30,25 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Validate production database secrets
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$DIRECT_URL" ]; then
+            echo "Required DATABASE_URL or DIRECT_URL repository secret is unavailable." >&2
+            exit 1
+          fi
+
       - name: Generate Prisma Client
         run: npm run prisma:generate
 
       - name: Validate Prisma schema
         run: npm run prisma:validate
 
-      - name: Validate production database secret
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "Required DATABASE_URL repository secret is unavailable." >&2
-            exit 1
-          fi
-
       - name: Check migration status before deployment
         continue-on-error: true
         run: npx --no-install prisma migrate status
 
       - name: Deploy pending migrations
-        run: npx --no-install prisma migrate deploy
+        run: npm run db:migrate:deploy
 
       - name: Verify migration status after deployment
         run: npx --no-install prisma migrate status
