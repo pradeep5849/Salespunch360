@@ -22,8 +22,9 @@
     "check:dependencies": "node scripts/check-dependency-risk.mjs",
     "env:check": "tsx scripts/validate-environment.ts",
     "test:recovery": "node scripts/recovery-drill.mjs",
-    "format:check": "prettier --check --ignore-unknown scripts/check-dependency-risk.mjs scripts/recovery-drill.mjs scripts/validate-environment.ts e2e src/lib/environment-schema.ts src/lib/env.ts src/lib/logging.ts src/lib/logging.test.ts src/lib/security/headers.ts src/lib/security/headers.test.ts src/lib/account/money-ledger.ts next.config.ts playwright.config.ts vitest.config.ts src/proxy.ts src/proxy.csp.test.ts src/instrumentation.ts scripts/recovery-drill.test.ts scripts/migration-upgrade-drill.mjs",
-    "test:migration-upgrade": "node scripts/migration-upgrade-drill.mjs"
+    "format:check": "prettier --check --ignore-unknown scripts/check-dependency-risk.mjs scripts/recovery-drill.mjs scripts/validate-environment.ts e2e src/lib/environment-schema.ts src/lib/env.ts src/lib/logging.ts src/lib/logging.test.ts src/lib/security/headers.ts src/lib/security/headers.test.ts src/lib/account/money-ledger.ts next.config.ts playwright.config.ts vitest.config.ts src/proxy.ts src/proxy.csp.test.ts src/instrumentation.ts scripts/recovery-drill.test.ts scripts/migration-upgrade-drill.mjs vitest.global-coverage.config.mts",
+    "test:migration-upgrade": "node scripts/migration-upgrade-drill.mjs",
+    "test:coverage:global": "vitest run --config vitest.global-coverage.config.mts --coverage"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
