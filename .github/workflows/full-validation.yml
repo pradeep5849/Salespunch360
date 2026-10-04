@@ -31,9 +31,18 @@ jobs:
     env:
       DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
       DIRECT_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
+      AUTH_SECRET: "ci-only-auth-secret-not-used-outside-github-actions"
+      APP_URL: "https://www.salespunch360.com"
+      HOSTINGER_STORAGE_PATH: "/tmp/salespunch360-ci-storage"
+      SMTP_HOST: "smtp.hostinger.com"
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_USER: "ci@salespunch360.com"
+      SMTP_PASSWORD: "ci-only-password-not-used-outside-github-actions"
+      MAIL_FROM: "ci@salespunch360.com"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -46,33 +55,52 @@ jobs:
           node scripts/migrate-deploy-safe.mjs || true
           node scripts/repair-a11-a14-runtime.mjs
           node scripts/migrate-deploy-safe.mjs
+      - name: Rehearse upgrade from previous Account preference schema
+        run: |
+          createdb --host=127.0.0.1 --username=salespunch360_ci salespunch360_upgrade_ci
+          npm run test:migration-upgrade
+        env:
+          PGPASSWORD: salespunch360_ci
+          DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_upgrade_ci
+          DIRECT_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_upgrade_ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm run build
+      - run: npm run test:coverage:global
+      - run: npm run test:coverage
+      - run: npm run format:check
+      - run: npm run check:dependencies
+      - name: Validate production environment contract
+        run: npm run env:check
         env:
-          SKIP_ENV_VALIDATION: "1"
-          AUTH_SECRET: "ci-only-auth-secret-not-used-outside-github-actions"
-          APP_URL: "https://www.salespunch360.com"
-          HOSTINGER_STORAGE_PATH: "/tmp/salespunch360-ci-storage"
-          SMTP_HOST: "smtp.hostinger.com"
-          SMTP_PORT: "465"
-          SMTP_SECURE: "true"
-          SMTP_USER: "ci@salespunch360.com"
-          SMTP_PASSWORD: "ci-only-password-not-used-outside-github-actions"
-          MAIL_FROM: "ci@salespunch360.com"
+          NODE_ENV: production
+      - run: npm run build
+      - name: Install browser dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Production browser, tenant, accessibility and performance gates
+        run: npm run test:e2e
+        env:
+          E2E_PRODUCTION: "1"
+      - name: Check isolated database backup and restoration
+        run: |
+          createdb --host=127.0.0.1 --username=salespunch360_ci salespunch360_restore_drill
+          npm run test:recovery
+          DATABASE_URL="$RESTORE_DRILL_DATABASE_URL" DIRECT_URL="$RESTORE_DRILL_DATABASE_URL" npx prisma migrate status
+        env:
+          PGPASSWORD: salespunch360_ci
+          RESTORE_DRILL_DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_restore_drill
 
   android:
     name: Android full regression
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
         with:
           packages: "platform-tools"
       - name: Install Android SDK packages
@@ -93,3 +121,4 @@ jobs:
             exit 1
           fi
           grep -Fq 'manifestPlaceholders["cleartextTraffic"]="false"' android/app/build.gradle.kts
+
