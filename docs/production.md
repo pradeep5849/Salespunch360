@@ -2,14 +2,20 @@
 
 ## Deployment
 
-Prerequisites: Node.js 20.9+, PostgreSQL 14+ (managed/pooler recommended for horizontally scaled or serverless deployments), HTTPS reverse proxy, durable log destination, encrypted backup storage, and monitoring.
+Prerequisites: Node.js 22.x, PostgreSQL 14+ (managed/pooler recommended for horizontally scaled or serverless deployments), HTTPS reverse proxy, durable log destination, encrypted backup storage, and monitoring.
 
 1. Provision a least-privilege PostgreSQL application identity and a separately controlled migration identity.
-2. Configure `DATABASE_URL`, a unique 48+ character `AUTH_SECRET`, `NODE_ENV=production`, canonical HTTPS `APP_URL`, `TRUST_PROXY` only behind a trusted proxy, and `PAYMENT_PROVIDER=UNCONFIGURED` until a reviewed live adapter exists.
+2. Configure `DATABASE_URL` for application traffic, `DIRECT_URL` for a direct unpooled migration connection, a unique 48+ character `AUTH_SECRET`, `NODE_ENV=production`, canonical HTTPS `APP_URL`, `TRUST_PROXY` only behind a trusted proxy, and `PAYMENT_PROVIDER=UNCONFIGURED` until a reviewed live adapter exists.
 3. Back up the database and record a restore point.
-4. Run `npm ci`, `npm run prisma:generate`, `npx prisma migrate deploy`, and `npx prisma migrate status`.
+4. Run `npm ci`, `npm run prisma:generate`, `npm run db:migrate:deploy`, and `npx prisma migrate status`.
 5. Run `npm run build`, deploy immutable artifacts, then `npm start` behind HTTPS.
 6. Verify `/api/health` returns ready, then perform role/tenant smoke tests. Authenticated responses are private/no-store.
+
+The build only generates Prisma Client and compiles the application; it does not migrate or repair the database. Run migrations explicitly after a backup and before switching application traffic. Stop deployment if migration validation or status fails.
+
+On Hostinger, select Node.js 22.x and set both database variables in the application environment. For the manual GitHub production migration workflow, configure repository secrets `DATABASE_URL` and `DIRECT_URL`. With no connection pooler, both URLs may use the same direct endpoint; prefer a separately controlled migration identity. Never substitute a pooled endpoint for `DIRECT_URL`.
+
+Legacy A10/A11–A14 repair scripts remain available only through `npm run db:repair:legacy`. Use this command only for the documented failed historical migration after inspecting its status and taking a backup; it can change migration history and database contents. It is excluded from builds and normal migration deployment.
 
 Production geolocation and Secure session cookies require HTTPS. Do not weaken cookies for HTTP. Next.js server actions provide action tokens; Stage 10 additionally rejects mismatched browser Origin values. Proxy-derived client addresses are trusted only with `TRUST_PROXY=true`. The PostgreSQL rate-limit table provides shared multi-instance limits; periodically delete expired buckets through controlled operations.
 

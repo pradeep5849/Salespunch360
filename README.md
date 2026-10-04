@@ -36,7 +36,7 @@ The manager relationship is self-referential for later assignments. A database t
 
 ## Local setup
 
-Requirements: Node.js 20.9+, npm, and PostgreSQL.
+Requirements: Node.js 22.x, npm, and PostgreSQL.
 
 ```bash
 cp .env.example .env
@@ -102,6 +102,7 @@ Customer and employee coordinates are sensitive: the application does not log co
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection URL, including database and optional schema. |
+| `DIRECT_URL` | Yes | Direct, unpooled PostgreSQL connection for Prisma migrations; may equal `DATABASE_URL` when no pooler is used. |
 | `AUTH_SECRET` | Yes | Private HMAC key of at least 32 random characters. Generate independently per environment. |
 | `NODE_ENV` | Usually automatic | `development`, `test`, or `production`; controls secure-cookie behavior. |
 
@@ -115,7 +116,7 @@ Create a PostgreSQL database and principal, grant the principal schema creation/
 npm run prisma:validate       # validate the schema
 npm run prisma:generate       # generate the typed client
 npx prisma migrate dev        # apply migrations in development
-npx prisma migrate deploy     # apply committed migrations in production
+npm run db:migrate:deploy     # apply committed migrations in production
 npx prisma migrate status     # inspect migration state
 ```
 
