@@ -2,6 +2,8 @@
 
 SalesPunch360 is a secure, multi-tenant sales operations platform. This repository contains the completed Stage 1–7 product through company registration, employees, attendance/GPS, customer field visits, leads, and historical reports.
 
+> **Repository health report:** See the [2026-10-04 codebase audit](docs/codebase-audit-2026-10-04.md) for verified checks, resolved release blockers, and the prioritized improvement backlog.
+
 ## Stack
 
 - Next.js App Router, React, and TypeScript
