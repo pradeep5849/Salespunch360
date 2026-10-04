@@ -74,6 +74,10 @@ fun AdminManagerAuthenticatedApp(
   nav.navigate(value)
   scope.launch{drawer.close()}
  }
+ fun openSalesSettings(){
+  nav.navigate("Settings")
+  scope.launch{drawer.close()}
+ }
 
  BackHandler(enabled=drawer.isOpen){scope.launch{drawer.close()}}
  BackHandler(enabled=!drawer.isOpen&&visitTask!=null){visitTask=null}
@@ -94,7 +98,7 @@ fun AdminManagerAuthenticatedApp(
        CompactRoleDrawerItem(
         label=item,
         selected=route==item,
-        onClick={navigate(item)}
+        onClick=if(item=="Settings")::openSalesSettings else {{navigate(item)}}
        )
       }
       SalesReportsDrawerSection(role,route,reportsOpen,{reportsOpen=it},::navigate)
@@ -118,6 +122,7 @@ fun AdminManagerAuthenticatedApp(
         }
        }
        DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){
+        switchToAccount?.let{action->DropdownMenuItem(text={Text("Switch to Account")},onClick={profileMenu=false;action()})}
         DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;navigate("Company Details")})
         DropdownMenuItem(text={Text("Follow-up Tasks")},onClick={profileMenu=false;navigate("Follow-ups")})
         if(data.capabilities.canAccessSalesBilling)DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;navigate("Billing & Subscription")})
