@@ -1,0 +1,5 @@
+# Review security, deployment and database changes with the repository owner.
+/src/lib/auth/ @pradeep5849
+/src/lib/security/ @pradeep5849
+/prisma/ @pradeep5849
+/.github/ @pradeep5849
