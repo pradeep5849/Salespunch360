@@ -119,6 +119,7 @@ private fun DirectSaleInvoiceEditor(
     var partyHelp by remember{mutableStateOf<String?>(null)}
     var gstTypeOpen by remember{mutableStateOf(false)}
     var stateOpen by remember{mutableStateOf(false)}
+    var saleSettings by remember{mutableStateOf(false)}
     var more by remember{mutableStateOf(false)}
     var invoiceDialog by remember{mutableStateOf(false)}
     var prefixDraft by remember{mutableStateOf("")}
@@ -433,7 +434,7 @@ private fun DirectSaleInvoiceEditor(
                             ){Text(label)}
                         }
                     }
-                    IconButton(onClick={{navigate("/workspace/account/settings")}}){Icon(Icons.Default.Settings,"Sale settings")}
+                    IconButton(onClick={saleSettings=true}){Icon(Icons.Default.Settings,"Sale settings")}
                 }
             )
         },
@@ -495,6 +496,24 @@ private fun DirectSaleInvoiceEditor(
                     Text("Server calculated",fontWeight=FontWeight.Bold)
                 }
             }
+        }
+    }
+
+    if(saleSettings)ModalBottomSheet(onDismissRequest={saleSettings=false}){
+        Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                Text("Settings",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+                IconButton(onClick={saleSettings=false}){Text("×")}
+            }
+            ListItem(headlineContent={Text("Sale Prefix")},supportingContent={Text("Uses the canonical Sales Invoice numbering series.")},modifier=Modifier.clickable{saleSettings=false;invoiceDialog=true})
+            ListItem(headlineContent={Text("Transaction SMS")},supportingContent={Text("Coming Soon")},trailingContent={Switch(false,null)},colors=ListItemDefaults.colors(headlineColor=MaterialTheme.colorScheme.onSurfaceVariant))
+            ListItem(headlineContent={Text("Additional Fields")},trailingContent={Text("›")},modifier=Modifier.clickable{saleSettings=false;navigate("/workspace/account/settings/custom-fields")})
+            ListItem(headlineContent={Text("Additional Charges")},trailingContent={Text("›")},modifier=Modifier.clickable{saleSettings=false;navigate("/workspace/account/settings/transactions")})
+            Text("Billing Type",fontWeight=FontWeight.Bold)
+            ListItem(headlineContent={Text("Full Sale")},leadingContent={RadioButton(true,null)})
+            ListItem(headlineContent={Text("Mobile POS")},supportingContent={Text("Coming Soon")},leadingContent={RadioButton(false,null)},colors=ListItemDefaults.colors(headlineColor=MaterialTheme.colorScheme.onSurfaceVariant))
+            TextButton(onClick={saleSettings=false;navigate("/workspace/account/settings/transactions")},modifier=Modifier.fillMaxWidth()){Text("⚙ More Settings")}
+            Spacer(Modifier.navigationBarsPadding())
         }
     }
 
