@@ -9,6 +9,7 @@ export default defineConfig({
       provider: "v8",
       include: [
         "src/lib/account/money-ledger.ts",
+        "src/lib/account/inventory-policy.ts",
         "src/lib/logging.ts",
         "src/lib/security/headers.ts",
         "src/lib/auth/workspace-policy.ts",

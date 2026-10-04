@@ -43,7 +43,7 @@ The restored [Cloud audit](codebase-audit-cloud-2026-10-04.md) is preserved from
 | 7 | Observability | Runtime log field allowlist, generated health response reference and unhandled web error instrumentation added. External alerts, retention and incident ownership still need hosting configuration. |
 | 8 | Independent security | Prepared scope/evidence checklist; an independent reviewer has not performed a penetration test. |
 | 9 | Environment contract | Extracted reusable environment schema; direct URL syntax validation and redacted CLI validator; CI validates full production contract. Specialized operational script schemas remain to be consolidated. |
-| 10 | Module size | Extracted and preserved money-ledger calculation exports; environment/security configuration separated. Broader projects/inventory/report/expense decomposition remains open. |
+| 10 | Module size | Extracted money-ledger and inventory valuation/pricing calculations and Project input schemas while preserving their existing public exports; environment/security configuration separated. Broader projects/inventory/report/expense decomposition remains open. |
 | 11 | Formatting | Added formatter and incremental CI check for audit-touched code. Historical formatting remains unchanged to avoid mass source-contract churn. |
 | 12 | Accessibility | Added serious/critical axe and keyboard-focus gate on sign-in; corrected the two low-contrast subtitle/copyright colors found by that gate. Authenticated pages, Android and screen-reader audits remain open. |
 | 13 | Performance | Added initial production sign-in DOM/script-size budgets. Representative large-tenant database queries, device traces and Android budgets remain open. |

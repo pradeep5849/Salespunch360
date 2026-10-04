@@ -28,7 +28,7 @@ Run `npm run env:check`, `npm run prisma:generate`, `npm run prisma:validate`, t
 ## Validation
 
 - `npm run lint`, `npm run typecheck`, `npm test`: static checks and full unit/contract regression.
-- `npm run test:coverage`: enforced budgets for the extracted money-ledger, CSP, logging and authorization/workspace-policy modules. `npm run test:coverage:global` enforces the measured initial web-source regression floor; broader posting-specific budgets remain open.
+- `npm run test:coverage`: enforced budgets for the extracted money-ledger, inventory-policy, CSP, logging and authorization/workspace-policy modules. `npm run test:coverage:global` enforces the measured initial web-source regression floor; broader posting-specific budgets remain open.
 - `npm run format:check`: incremental formatting enforcement for audit-touched surfaces; historic source formatting has not been mass-rewritten.
 - `npm run check:dependencies`: fail on new high/critical findings and production high findings; the documented tooling exception expires after 2026-11-04.
 - `E2E_PRODUCTION=1 npm run test:e2e`: production browser smoke, tenant-denial, accessibility and initial performance gates. Build first; use an isolated loopback database ending `_ci`. Install Chromium using `npx playwright install --with-deps chromium`.
