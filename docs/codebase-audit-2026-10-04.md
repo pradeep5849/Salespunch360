@@ -50,4 +50,19 @@ The restored [Cloud audit](codebase-audit-cloud-2026-10-04.md) is preserved from
 | 14 | CI governance | Pinned existing Actions to fetched v4 commit SHAs; added dependency updates and CODEOWNERS; retained read-only permissions. Main ruleset and independent reviewer configuration remain open. |
 | 15 | README | Replaced the stage-oriented entry page with current capabilities, setup, separate DB deployment, validation commands and clear limitations. Preserved the prior README as historical notes. |
 
-These changes implement a first concrete batch across the recommendations. They do not close all 15. The combined branch must pass production browser/recovery/Android CI and staging CSP checks before merging; external closure requirements must remain visible afterward. See [operational verification](audit-operational-verification.md).
+These changes implement a first concrete batch across the recommendations. They do not close all 15. PR #111 was merged at c5a40f74e9bd2b9e276e5e13994c65063b73def6 after latest-head Targeted and Full validation succeeded. Real Maps/staging and external closure requirements remain open. See [operational verification](audit-operational-verification.md).
+
+
+## Second follow-up: Account boundaries and production health
+
+- Master-data detail queries now filter by the requested ID before the 200-row list limit, preserving company and branch constraints. Large directories no longer prevent detail reads or successful edits of later records.
+- Mobile products and services share active company unit/category validation. Services reject inactive units and product-only categories with INVALID_INPUT instead of accepting incompatible metadata or reaching a database constraint failure.
+- The release browser suite seeds a directory with more than 200 parties, performs a customer create/read/edit, checks persisted company ownership, denies cross-tenant reads and edits, rejects invalid input/references, and verifies logout and deactivated-user token denial. Fixtures remain restricted to disposable loopback *_ci databases.
+- A dependency-free GitHub workflow checks https://www.salespunch360.com/api/health every 15 minutes with a 15-second request deadline and three bounded retries. It requires both application ready and database reachable, rejects redirects, and logs no response payloads. The live check passed during implementation on 2026-10-04. GitHub schedules may be delayed, and failure notifications depend on each recipient's GitHub notification settings. This is a basic readiness monitor, not a verified external incident/escalation service.
+- Fifteen new local unit tests passed. The browser and integration results must be checked on this follow-up's latest-head Full validation before merge. The local environment used Node 24; authoritative CI uses Node 22.
+
+### Verified blockers and remaining balance
+
+The npm registry still returns braces 3.0.3 as latest on 2026-10-04. No compatible patched chain was substituted; the five development findings remain risk-accepted only through the documented expiry. GitHub's ruleset endpoint returned 403 with “Upgrade to GitHub Pro or make this repository public to enable this feature.” Main remains unprotected. Do not expose this private repository as a workaround without the owner's explicit choice.
+
+Still required: provider database and object-storage restore evidence with owner-approved RPO/RTO; historical/interrupted migration rehearsals; independent security review; external 5xx/migration/backup alerts, retention and escalation; real Maps/worker/print/upload staging checks; posting/export/file E2E and posting coverage; broader service decomposition/environment-script consolidation; authenticated web and Android accessibility/performance plus real-device evidence; historical formatting migration; and GitHub plan/admin support for protection and an independent reviewer. These are not certified by the readiness monitor, the CI restore fixture, or the implementer's own tests. No Hostinger configuration, production database restoration, customer-data mutation, or third-party reviewer engagement was performed by this follow-up.
