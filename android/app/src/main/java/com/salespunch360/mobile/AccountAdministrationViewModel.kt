@@ -49,15 +49,18 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveUser(payload: JsonObject) {
+        if (_state.value.loading) return
+        _state.value = _state.value.copy(loading = true, error = null, message = null)
         viewModelScope.launch {
             runCatching { api.saveAccountUser(payload.containsKey("userId"), payload) }
-                .onSuccess { load("users") }
-                .onFailure { _state.value = _state.value.copy(error = it.message) }
+                .onSuccess { _state.value = _state.value.copy(loading = false, message = "Employee saved successfully"); load("users") }
+                .onFailure { _state.value = _state.value.copy(loading = false, error = it.message ?: "Employee could not be saved") }
         }
     }
 
     // Administration settings can use either object or array JSON payloads.
     fun save(section: String, payload: JsonElement) {
+        if (_state.value.loading) return
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             runCatching {
@@ -74,6 +77,8 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    fun consumeFeedback(){_state.value=_state.value.copy(error=null,message=null)}
 
     fun uploadSignature(name: String, mime: String, bytes: ByteArray) {
         viewModelScope.launch {
