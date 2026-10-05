@@ -11,13 +11,21 @@ import {
   setPaymentReminderStatus,
 } from "@/lib/account/commercial";
 const payload = (form: FormData) => JSON.parse(String(form.get("payload")));
+function normalizeClientCommercialInput(raw: unknown) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const input = { ...(raw as Record<string, unknown>) };
+  if (input.stateOfSupplyCode === "") input.stateOfSupplyCode = undefined;
+  if (input.projectId === "") input.projectId = undefined;
+  if (input.documentNumber === "") input.documentNumber = undefined;
+  return input;
+}
 export async function saveCommercialDocument(form: FormData) {
   const row = await createCommercialDocument(payload(form));
   redirect(`/workspace/account/transactions/${row.id}`);
 }
 /** Client sale entry uses the same authoritative creator without forcing a redirect. */
 export async function createCommercialDocumentAction(raw: unknown) {
-  const row = await createCommercialDocument(raw);
+  const row = await createCommercialDocument(normalizeClientCommercialInput(raw));
   return { id: row.id, documentNumber: row.documentNumber };
 }
 export async function finalizeCommercialAction(form: FormData) {
