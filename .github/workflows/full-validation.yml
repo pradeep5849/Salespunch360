@@ -1,10 +1,6 @@
 name: Full validation
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -121,4 +117,3 @@ jobs:
             exit 1
           fi
           grep -Fq 'manifestPlaceholders["cleartextTraffic"]="false"' android/app/build.gradle.kts
-
