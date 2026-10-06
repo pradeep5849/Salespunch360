@@ -414,10 +414,10 @@ private fun AddItemUnitScreen(
 ){
     var p by remember(primary){mutableStateOf(primary)}
     var s by remember(secondary){mutableStateOf(secondary)}
-    var addUnit by remember{mutableStateOf(false)}
-    var addUnitTarget by remember{mutableStateOf("PRIMARY")}
+    var addUnitTarget by remember{mutableStateOf<String?>(null)}
     var unitName by remember{mutableStateOf("")}
     var unitSymbol by remember{mutableStateOf("")}
+
     Scaffold(
         topBar={
             TopAppBar(
@@ -434,7 +434,7 @@ private fun AddItemUnitScreen(
             Row(Modifier.fillMaxWidth().navigationBarsPadding()){
                 TextButton(onClick=onBack,modifier=Modifier.weight(1f).height(64.dp)){Text("Cancel")}
                 Button(
-                    onClick={onSave(p,s)},
+                    onClick={ onSave(p,s) },
                     enabled=!p.isNullOrBlank(),
                     modifier=Modifier.weight(1f).height(64.dp),
                     shape=MaterialTheme.shapes.extraSmall
@@ -444,29 +444,30 @@ private fun AddItemUnitScreen(
     ){padding->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(horizontal=16.dp,vertical=32.dp),
-            verticalArrangement=Arrangement.spacedBy(28.dp)
+            verticalArrangement=Arrangement.spacedBy(20.dp)
         ){
             UnitDropdownField(
                 label="Primary Unit",
                 value=p,
                 units=units,
                 allowNone=false,
-                onAddUnit={addUnitTarget="PRIMARY";addUnit=true},
-                onSelect={p=it}
+                onSelect={p=it},
+                onAddUnit={addUnitTarget="PRIMARY"}
             )
             UnitDropdownField(
                 label="Secondary Unit",
                 value=s,
                 units=units,
                 allowNone=true,
-                onAddUnit={addUnitTarget="SECONDARY";addUnit=true},
-                onSelect={s=it}
+                onSelect={s=it},
+                onAddUnit={addUnitTarget="SECONDARY"}
             )
             Spacer(Modifier.weight(1f))
         }
     }
-    if(addUnit)AlertDialog(
-        onDismissRequest={addUnit=false},
+
+    if(addUnitTarget!=null)AlertDialog(
+        onDismissRequest={addUnitTarget=null},
         title={Text("Add Unit")},
         text={
             Column{
@@ -478,16 +479,17 @@ private fun AddItemUnitScreen(
             Button(
                 enabled=unitName.isNotBlank()&&unitSymbol.isNotBlank()&&!saving,
                 onClick={
+                    val target=addUnitTarget
                     onCreateUnit(unitName,unitSymbol){u->
-                        if(addUnitTarget=="PRIMARY")p=u.id else s=u.id
+                        if(target=="SECONDARY")s=u.id else p=u.id
                         unitName=""
                         unitSymbol=""
-                        addUnit=false
+                        addUnitTarget=null
                     }
                 }
             ){Text("Save")}
         },
-        dismissButton={TextButton(onClick={addUnit=false}){Text("Cancel")}}
+        dismissButton={TextButton(onClick={addUnitTarget=null}){Text("Cancel")}}
     )
 }
 
@@ -498,13 +500,13 @@ private fun UnitDropdownField(
     value:String?,
     units:List<AccountOption>,
     allowNone:Boolean,
-    onAddUnit:()->Unit,
-    onSelect:(String?)->Unit
+    onSelect:(String?)->Unit,
+    onAddUnit:()->Unit
 ){
-    var open by remember{mutableStateOf(false)}
+    var expanded by remember{mutableStateOf(false)}
     ExposedDropdownMenuBox(
-        expanded=open,
-        onExpandedChange={open=it},
+        expanded=expanded,
+        onExpandedChange={expanded=it},
         modifier=Modifier.fillMaxWidth()
     ){
         OutlinedTextField(
@@ -512,22 +514,31 @@ private fun UnitDropdownField(
             onValueChange={},
             readOnly=true,
             placeholder={Text(label)},
-            trailingIcon={ExposedDropdownMenuDefaults.TrailingIcon(expanded=open)},
-            modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            trailingIcon={ExposedDropdownMenuDefaults.TrailingIcon(expanded=expanded)},
+            modifier=Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+                .height(60.dp),
             singleLine=true
         )
-        ExposedDropdownMenu(expanded=open,onDismissRequest={open=false}){
+        ExposedDropdownMenu(
+            expanded=expanded,
+            onDismissRequest={expanded=false}
+        ){
             DropdownMenuItem(
-                text={Text("Add Unit",color=MaterialTheme.colorScheme.primary)},
-                onClick={open=false;onAddUnit()}
+                text={Text("Add Unit",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.SemiBold)},
+                onClick={expanded=false;onAddUnit()}
             )
             if(allowNone){
-                DropdownMenuItem(text={Text("None")},onClick={onSelect(null);open=false})
+                DropdownMenuItem(
+                    text={Text("None")},
+                    onClick={expanded=false;onSelect(null)}
+                )
             }
             units.forEach{u->
                 DropdownMenuItem(
                     text={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
-                    onClick={onSelect(u.id);open=false}
+                    onClick={expanded=false;onSelect(u.id)}
                 )
             }
         }
