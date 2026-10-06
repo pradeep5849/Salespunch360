@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -413,7 +414,7 @@ private fun AddItemUnitScreen(
 ){
     var p by remember(primary){mutableStateOf(primary)}
     var s by remember(secondary){mutableStateOf(secondary)}
-    var target by remember{mutableStateOf("PRIMARY")}
+    var target by remember{mutableStateOf<String?>(null)}
     var query by remember{mutableStateOf("")}
     var addUnit by remember{mutableStateOf(false)}
     var unitName by remember{mutableStateOf("")}
@@ -423,7 +424,12 @@ private fun AddItemUnitScreen(
         topBar={
             TopAppBar(
                 title={Text("Add Item Unit")},
-                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}}
+                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}},
+                colors=TopAppBarDefaults.topAppBarColors(
+                    containerColor=Color(0xFF1685AD),
+                    titleContentColor=Color.White,
+                    navigationIconContentColor=Color.White
+                )
             )
         },
         bottomBar={
@@ -439,36 +445,41 @@ private fun AddItemUnitScreen(
         }
     ){padding->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement=Arrangement.spacedBy(14.dp)
+            Modifier.fillMaxSize().padding(padding).padding(horizontal=16.dp,vertical=32.dp),
+            verticalArrangement=Arrangement.spacedBy(28.dp)
         ){
             UnitSelectorField("Primary Unit",p,units){target="PRIMARY";query=""}
             UnitSelectorField("Secondary Unit",s,units){target="SECONDARY";query=""}
-            OutlinedTextField(
-                query,
-                {query=it},
-                label={Text(if(target=="PRIMARY")"Primary Unit" else "Secondary Unit")},
-                modifier=Modifier.fillMaxWidth()
-            )
-            TextButton(onClick={addUnit=true}){Text("Add Unit")}
-            LazyColumn(Modifier.fillMaxWidth().weight(1f)){
-                if(target=="SECONDARY"){
-                    item{
+            if(target!=null){
+                OutlinedTextField(
+                    query,
+                    {query=it},
+                    label={Text(if(target=="PRIMARY")"Primary Unit" else "Secondary Unit")},
+                    modifier=Modifier.fillMaxWidth()
+                )
+                TextButton(onClick={addUnit=true}){Text("Add Unit")}
+                LazyColumn(Modifier.fillMaxWidth().weight(1f)){
+                    if(target=="SECONDARY"){
+                        item{
+                            ListItem(
+                                headlineContent={Text("None")},
+                                modifier=Modifier.clickable{s=null;query="";target=null}
+                            )
+                        }
+                    }
+                    items(filtered,key={it.id}){u->
                         ListItem(
-                            headlineContent={Text("None")},
-                            modifier=Modifier.clickable{s=null;query=""}
+                            headlineContent={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
+                            modifier=Modifier.clickable{
+                                if(target=="PRIMARY")p=u.id else s=u.id
+                                query=""
+                                target=null
+                            }
                         )
                     }
                 }
-                items(filtered,key={it.id}){u->
-                    ListItem(
-                        headlineContent={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
-                        modifier=Modifier.clickable{
-                            if(target=="PRIMARY")p=u.id else s=u.id
-                            query=""
-                        }
-                    )
-                }
+            }else{
+                Spacer(Modifier.weight(1f))
             }
         }
     }
@@ -488,6 +499,7 @@ private fun AddItemUnitScreen(
                     onCreateUnit(unitName,unitSymbol){u->
                         p=u.id
                         addUnit=false
+                        target=null
                     }
                 }
             ){Text("Save")}
@@ -502,13 +514,10 @@ private fun UnitSelectorField(label:String,value:String?,units:List<AccountOptio
         value=units.firstOrNull{it.id==value}?.name.orEmpty(),
         onValueChange={},
         readOnly=true,
-        label={Text(label)},
-        trailingIcon={
-            IconButton(onClick=open){
-                Icon(Icons.Default.ArrowDropDown,null)
-            }
-        },
-        modifier=Modifier.fillMaxWidth()
+        placeholder={Text(label)},
+        trailingIcon={Icon(Icons.Default.ArrowDropDown,"Select $label")},
+        modifier=Modifier.fillMaxWidth().height(72.dp).clickable(onClick=open),
+        singleLine=true
     )
 }
 
