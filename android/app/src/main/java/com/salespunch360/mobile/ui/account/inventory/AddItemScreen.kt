@@ -414,12 +414,10 @@ private fun AddItemUnitScreen(
 ){
     var p by remember(primary){mutableStateOf(primary)}
     var s by remember(secondary){mutableStateOf(secondary)}
-    var target by remember{mutableStateOf<String?>(null)}
-    var query by remember{mutableStateOf("")}
     var addUnit by remember{mutableStateOf(false)}
+    var addUnitTarget by remember{mutableStateOf("PRIMARY")}
     var unitName by remember{mutableStateOf("")}
     var unitSymbol by remember{mutableStateOf("")}
-    val filtered=units.filter{"${it.name} ${it.symbol.orEmpty()}".contains(query,true)}
     Scaffold(
         topBar={
             TopAppBar(
@@ -436,7 +434,7 @@ private fun AddItemUnitScreen(
             Row(Modifier.fillMaxWidth().navigationBarsPadding()){
                 TextButton(onClick=onBack,modifier=Modifier.weight(1f).height(64.dp)){Text("Cancel")}
                 Button(
-                    onClick={ onSave(p,s) },
+                    onClick={onSave(p,s)},
                     enabled=!p.isNullOrBlank(),
                     modifier=Modifier.weight(1f).height(64.dp),
                     shape=MaterialTheme.shapes.extraSmall
@@ -448,39 +446,23 @@ private fun AddItemUnitScreen(
             Modifier.fillMaxSize().padding(padding).padding(horizontal=16.dp,vertical=32.dp),
             verticalArrangement=Arrangement.spacedBy(28.dp)
         ){
-            UnitSelectorField("Primary Unit",p,units){target="PRIMARY";query=""}
-            UnitSelectorField("Secondary Unit",s,units){target="SECONDARY";query=""}
-            if(target!=null){
-                OutlinedTextField(
-                    query,
-                    {query=it},
-                    label={Text(if(target=="PRIMARY")"Primary Unit" else "Secondary Unit")},
-                    modifier=Modifier.fillMaxWidth()
-                )
-                TextButton(onClick={addUnit=true}){Text("Add Unit")}
-                LazyColumn(Modifier.fillMaxWidth().weight(1f)){
-                    if(target=="SECONDARY"){
-                        item{
-                            ListItem(
-                                headlineContent={Text("None")},
-                                modifier=Modifier.clickable{s=null;query="";target=null}
-                            )
-                        }
-                    }
-                    items(filtered,key={it.id}){u->
-                        ListItem(
-                            headlineContent={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
-                            modifier=Modifier.clickable{
-                                if(target=="PRIMARY")p=u.id else s=u.id
-                                query=""
-                                target=null
-                            }
-                        )
-                    }
-                }
-            }else{
-                Spacer(Modifier.weight(1f))
-            }
+            UnitDropdownField(
+                label="Primary Unit",
+                value=p,
+                units=units,
+                allowNone=false,
+                onAddUnit={addUnitTarget="PRIMARY";addUnit=true},
+                onSelect={p=it}
+            )
+            UnitDropdownField(
+                label="Secondary Unit",
+                value=s,
+                units=units,
+                allowNone=true,
+                onAddUnit={addUnitTarget="SECONDARY";addUnit=true},
+                onSelect={s=it}
+            )
+            Spacer(Modifier.weight(1f))
         }
     }
     if(addUnit)AlertDialog(
@@ -497,9 +479,10 @@ private fun AddItemUnitScreen(
                 enabled=unitName.isNotBlank()&&unitSymbol.isNotBlank()&&!saving,
                 onClick={
                     onCreateUnit(unitName,unitSymbol){u->
-                        p=u.id
+                        if(addUnitTarget=="PRIMARY")p=u.id else s=u.id
+                        unitName=""
+                        unitSymbol=""
                         addUnit=false
-                        target=null
                     }
                 }
             ){Text("Save")}
@@ -508,17 +491,47 @@ private fun AddItemUnitScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UnitSelectorField(label:String,value:String?,units:List<AccountOption>,open:()->Unit){
-    OutlinedTextField(
-        value=units.firstOrNull{it.id==value}?.name.orEmpty(),
-        onValueChange={},
-        readOnly=true,
-        placeholder={Text(label)},
-        trailingIcon={Icon(Icons.Default.ArrowDropDown,"Select $label")},
-        modifier=Modifier.fillMaxWidth().height(72.dp).clickable(onClick=open),
-        singleLine=true
-    )
+private fun UnitDropdownField(
+    label:String,
+    value:String?,
+    units:List<AccountOption>,
+    allowNone:Boolean,
+    onAddUnit:()->Unit,
+    onSelect:(String?)->Unit
+){
+    var open by remember{mutableStateOf(false)}
+    ExposedDropdownMenuBox(
+        expanded=open,
+        onExpandedChange={open=it},
+        modifier=Modifier.fillMaxWidth()
+    ){
+        OutlinedTextField(
+            value=units.firstOrNull{it.id==value}?.name.orEmpty(),
+            onValueChange={},
+            readOnly=true,
+            placeholder={Text(label)},
+            trailingIcon={ExposedDropdownMenuDefaults.TrailingIcon(expanded=open)},
+            modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            singleLine=true
+        )
+        ExposedDropdownMenu(expanded=open,onDismissRequest={open=false}){
+            DropdownMenuItem(
+                text={Text("Add Unit",color=MaterialTheme.colorScheme.primary)},
+                onClick={open=false;onAddUnit()}
+            )
+            if(allowNone){
+                DropdownMenuItem(text={Text("None")},onClick={onSelect(null);open=false})
+            }
+            units.forEach{u->
+                DropdownMenuItem(
+                    text={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
+                    onClick={onSelect(u.id);open=false}
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
