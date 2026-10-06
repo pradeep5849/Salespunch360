@@ -19,8 +19,8 @@
   /* Keep the unit pill fully inside the Item Name input border. */
   .add-item-page .add-item-unit-field {
     position: absolute !important;
-    top: 65px !important;
-    right: 32px !important;
+    top: 31px !important;
+    right: 14px !important;
     z-index: 3;
     width: auto !important;
     min-width: 124px !important;
