@@ -414,12 +414,10 @@ private fun AddItemUnitScreen(
 ){
     var p by remember(primary){mutableStateOf(primary)}
     var s by remember(secondary){mutableStateOf(secondary)}
-    var target by remember{mutableStateOf<String?>(null)}
-    var query by remember{mutableStateOf("")}
-    var addUnit by remember{mutableStateOf(false)}
+    var addUnitTarget by remember{mutableStateOf<String?>(null)}
     var unitName by remember{mutableStateOf("")}
     var unitSymbol by remember{mutableStateOf("")}
-    val filtered=units.filter{"${it.name} ${it.symbol.orEmpty()}".contains(query,true)}
+
     Scaffold(
         topBar={
             TopAppBar(
@@ -446,45 +444,30 @@ private fun AddItemUnitScreen(
     ){padding->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(horizontal=16.dp,vertical=32.dp),
-            verticalArrangement=Arrangement.spacedBy(28.dp)
+            verticalArrangement=Arrangement.spacedBy(20.dp)
         ){
-            UnitSelectorField("Primary Unit",p,units){target="PRIMARY";query=""}
-            UnitSelectorField("Secondary Unit",s,units){target="SECONDARY";query=""}
-            if(target!=null){
-                OutlinedTextField(
-                    query,
-                    {query=it},
-                    label={Text(if(target=="PRIMARY")"Primary Unit" else "Secondary Unit")},
-                    modifier=Modifier.fillMaxWidth()
-                )
-                TextButton(onClick={addUnit=true}){Text("Add Unit")}
-                LazyColumn(Modifier.fillMaxWidth().weight(1f)){
-                    if(target=="SECONDARY"){
-                        item{
-                            ListItem(
-                                headlineContent={Text("None")},
-                                modifier=Modifier.clickable{s=null;query="";target=null}
-                            )
-                        }
-                    }
-                    items(filtered,key={it.id}){u->
-                        ListItem(
-                            headlineContent={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
-                            modifier=Modifier.clickable{
-                                if(target=="PRIMARY")p=u.id else s=u.id
-                                query=""
-                                target=null
-                            }
-                        )
-                    }
-                }
-            }else{
-                Spacer(Modifier.weight(1f))
-            }
+            UnitDropdownField(
+                label="Primary Unit",
+                value=p,
+                units=units,
+                allowNone=false,
+                onSelect={p=it},
+                onAddUnit={addUnitTarget="PRIMARY"}
+            )
+            UnitDropdownField(
+                label="Secondary Unit",
+                value=s,
+                units=units,
+                allowNone=true,
+                onSelect={s=it},
+                onAddUnit={addUnitTarget="SECONDARY"}
+            )
+            Spacer(Modifier.weight(1f))
         }
     }
-    if(addUnit)AlertDialog(
-        onDismissRequest={addUnit=false},
+
+    if(addUnitTarget!=null)AlertDialog(
+        onDismissRequest={addUnitTarget=null},
         title={Text("Add Unit")},
         text={
             Column{
@@ -496,29 +479,70 @@ private fun AddItemUnitScreen(
             Button(
                 enabled=unitName.isNotBlank()&&unitSymbol.isNotBlank()&&!saving,
                 onClick={
+                    val target=addUnitTarget
                     onCreateUnit(unitName,unitSymbol){u->
-                        p=u.id
-                        addUnit=false
-                        target=null
+                        if(target=="SECONDARY")s=u.id else p=u.id
+                        unitName=""
+                        unitSymbol=""
+                        addUnitTarget=null
                     }
                 }
             ){Text("Save")}
         },
-        dismissButton={TextButton(onClick={addUnit=false}){Text("Cancel")}}
+        dismissButton={TextButton(onClick={addUnitTarget=null}){Text("Cancel")}}
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UnitSelectorField(label:String,value:String?,units:List<AccountOption>,open:()->Unit){
-    OutlinedTextField(
-        value=units.firstOrNull{it.id==value}?.name.orEmpty(),
-        onValueChange={},
-        readOnly=true,
-        placeholder={Text(label)},
-        trailingIcon={Icon(Icons.Default.ArrowDropDown,"Select $label")},
-        modifier=Modifier.fillMaxWidth().height(72.dp).clickable(onClick=open),
-        singleLine=true
-    )
+private fun UnitDropdownField(
+    label:String,
+    value:String?,
+    units:List<AccountOption>,
+    allowNone:Boolean,
+    onSelect:(String?)->Unit,
+    onAddUnit:()->Unit
+){
+    var expanded by remember{mutableStateOf(false)}
+    ExposedDropdownMenuBox(
+        expanded=expanded,
+        onExpandedChange={expanded=it},
+        modifier=Modifier.fillMaxWidth()
+    ){
+        OutlinedTextField(
+            value=units.firstOrNull{it.id==value}?.name.orEmpty(),
+            onValueChange={},
+            readOnly=true,
+            placeholder={Text(label)},
+            trailingIcon={ExposedDropdownMenuDefaults.TrailingIcon(expanded=expanded)},
+            modifier=Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+                .height(60.dp),
+            singleLine=true
+        )
+        ExposedDropdownMenu(
+            expanded=expanded,
+            onDismissRequest={expanded=false}
+        ){
+            DropdownMenuItem(
+                text={Text("Add Unit",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.SemiBold)},
+                onClick={expanded=false;onAddUnit()}
+            )
+            if(allowNone){
+                DropdownMenuItem(
+                    text={Text("None")},
+                    onClick={expanded=false;onSelect(null)}
+                )
+            }
+            units.forEach{u->
+                DropdownMenuItem(
+                    text={Text(u.name.uppercase()+" ( "+u.symbol.orEmpty()+" )")},
+                    onClick={expanded=false;onSelect(u.id)}
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
