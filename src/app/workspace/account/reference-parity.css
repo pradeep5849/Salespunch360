@@ -210,4 +210,53 @@
   .add-unit-full .sale-fullscreen-footer button:last-child:disabled {
     background: #91b8ef;
   }
+
+  /* Keep the existing Add Item page intact; only move Unit into the Item Name field like the supplied reference. */
+  .add-item-page .add-item-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .add-item-page .add-item-name-field {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 14px;
+  }
+  .add-item-page .add-item-name-field input {
+    padding-right: 152px;
+  }
+  .add-item-page .add-item-unit-field {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    z-index: 2;
+    width: auto;
+    min-width: 124px;
+    max-width: 146px;
+    min-height: 42px;
+    margin: 0 12px 22px 0;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: #eef7ff;
+    box-shadow: 0 3px 12px #0000001a;
+    color: #1185d4;
+  }
+  .add-item-page .add-item-unit-field small,
+  .add-item-page .add-item-unit-field b {
+    display: none;
+  }
+  .add-item-page .add-item-unit-field span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+    color: #1185d4;
+  }
+  .add-item-page .add-item-expanded {
+    grid-column: 1 / -1;
+  }
 }
