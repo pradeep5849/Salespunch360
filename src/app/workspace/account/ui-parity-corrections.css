@@ -1,0 +1,157 @@
+/* Focused parity corrections for mobile web reference screens. */
+@media (max-width: 700px) {
+  /* Add Item: keep Item Name and Select Unit in one stable grid cell.
+     This replaces the previous absolute-position workaround. */
+  .add-item-page .add-item-form {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    position: static !important;
+  }
+
+  .add-item-page .add-item-name-field {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    position: relative !important;
+    display: grid !important;
+    gap: 5px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 14px !important;
+    z-index: 1 !important;
+  }
+
+  .add-item-page .add-item-name-field input {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding-right: 156px !important;
+  }
+
+  .add-item-page .add-item-unit-field {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    align-self: end !important;
+    justify-self: end !important;
+    position: relative !important;
+    inset: auto !important;
+    z-index: 2 !important;
+    width: auto !important;
+    min-width: 122px !important;
+    max-width: 144px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    margin: 0 12px 20px 0 !important;
+    padding: 0 14px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #eef7ff !important;
+    box-shadow: 0 3px 12px #0000001a !important;
+    color: #1185d4 !important;
+  }
+
+  .add-item-page .add-item-unit-field small,
+  .add-item-page .add-item-unit-field b {
+    display: none !important;
+  }
+
+  .add-item-page .add-item-unit-field span {
+    display: block !important;
+    max-width: 116px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    line-height: 42px !important;
+    color: #1185d4 !important;
+  }
+
+  .add-item-page .add-item-expanded {
+    grid-column: 1 !important;
+  }
+
+  /* Sale: compact Billed Items section to match the supplied reference. */
+  .sale-fullscreen-panel + * { min-width: 0; }
+
+  [class*="billedHeader"] {
+    padding: 9px 12px !important;
+    min-height: 36px !important;
+    border-radius: 7px !important;
+    font-size: 14px !important;
+    line-height: 18px !important;
+  }
+
+  [class*="billedCard"] {
+    padding: 11px 12px !important;
+    margin-top: 8px !important;
+    border-radius: 7px !important;
+    background: #f7f7f7 !important;
+  }
+
+  [class*="billedTop"] {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  [class*="billedTop"] strong {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 15px !important;
+    line-height: 22px !important;
+  }
+
+  [class*="billedTop"] b {
+    white-space: nowrap !important;
+    font-size: 18px !important;
+    line-height: 22px !important;
+  }
+
+  [class*="billedMeta"] {
+    display: grid !important;
+    grid-template-columns: minmax(92px, auto) minmax(0, 1fr) !important;
+    column-gap: 10px !important;
+    row-gap: 5px !important;
+    margin-top: 8px !important;
+    font-size: 13px !important;
+    line-height: 18px !important;
+  }
+
+  [class*="billedMeta"] > span:nth-child(odd) {
+    white-space: nowrap !important;
+  }
+
+  [class*="billedMeta"] > span:nth-child(even) {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    text-align: right !important;
+  }
+
+  [class*="summary"] {
+    gap: 7px 12px !important;
+    padding: 11px 2px !important;
+    font-size: 13px !important;
+    line-height: 18px !important;
+  }
+
+  [class*="addItems"] {
+    min-height: 48px !important;
+    margin: 7px 0 14px !important;
+    padding: 10px 12px !important;
+    border: 1.5px solid #dce0e4 !important;
+    border-radius: 7px !important;
+    background: #fff !important;
+    color: #087dcc !important;
+    box-shadow: none !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+  }
+}
