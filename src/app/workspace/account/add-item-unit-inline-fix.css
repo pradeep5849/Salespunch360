@@ -53,7 +53,7 @@
     color: #1185d4 !important;
   }
 
-  /* Add Item Unit page: match the compact supplied reference instead of stretched cards. */
+  /* Add Item Unit page: compact fields and field-anchored dropdowns like the reference. */
   .add-unit-full > header {
     min-height: 72px !important;
     height: 72px !important;
@@ -68,8 +68,9 @@
   }
 
   .add-unit-full .sale-fullscreen-body {
+    position: relative !important;
     display: block !important;
-    padding: 72px 32px 96px !important;
+    padding: 56px 32px 96px !important;
     background: #fff !important;
   }
 
@@ -78,10 +79,10 @@
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    height: 86px !important;
-    min-height: 86px !important;
-    max-height: 86px !important;
-    margin: 0 0 74px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+    margin: 0 0 28px !important;
     padding: 0 14px !important;
     border: 1.5px solid #9aa0a6 !important;
     border-radius: 7px !important;
@@ -103,13 +104,53 @@
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    font-size: 18px !important;
+    font-size: 17px !important;
     font-weight: 400 !important;
     color: #666 !important;
   }
 
+  /* Existing selector markup is reused as a real dropdown anchored below the tapped field. */
   .add-unit-full .inline-selector-list {
-    margin-top: 16px !important;
+    position: absolute !important;
+    left: 32px !important;
+    right: 32px !important;
+    z-index: 30 !important;
+    max-height: 320px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+    border: 1px solid #d8dde3 !important;
+    border-radius: 7px !important;
+    background: #fff !important;
+    box-shadow: 0 8px 22px #00000024 !important;
+  }
+
+  .add-unit-full .inline-selector-list input {
+    display: none !important;
+  }
+
+  .add-unit-full .inline-selector-list > button {
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: 10px 14px !important;
+    border: 0 !important;
+    border-bottom: 1px solid #edf0f3 !important;
+    background: #fff !important;
+    text-align: left !important;
+    font-size: 15px !important;
+  }
+
+  .add-unit-full .inline-selector-list > button.link-button {
+    color: #1185d4 !important;
+    font-weight: 600 !important;
+  }
+
+  .add-unit-full .sale-fullscreen-body:has(.inline-selector-list input[placeholder="Search Primary Unit"]) .inline-selector-list {
+    top: 118px !important;
+  }
+
+  .add-unit-full .sale-fullscreen-body:has(.inline-selector-list input[placeholder="Search Secondary Unit"]) .inline-selector-list {
+    top: 206px !important;
   }
 
   .add-unit-full .sale-fullscreen-footer {
