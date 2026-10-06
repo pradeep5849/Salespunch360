@@ -1,0 +1,52 @@
+/* Ensure the Add Item unit selector visually sits inside the Item Name input on mobile web. */
+@media (max-width: 700px) {
+  .add-item-page .add-item-form {
+    position: relative !important;
+    display: block !important;
+  }
+
+  .add-item-page .add-item-name-field {
+    position: relative;
+    display: grid;
+    gap: 5px;
+    margin-bottom: 14px;
+  }
+
+  .add-item-page .add-item-name-field input {
+    padding-right: 154px !important;
+  }
+
+  .add-item-page .add-item-unit-field {
+    position: absolute !important;
+    top: 53px !important;
+    right: 32px !important;
+    z-index: 3;
+    width: auto !important;
+    min-width: 124px !important;
+    max-width: 146px !important;
+    min-height: 42px !important;
+    margin: 0 !important;
+    padding: 0 14px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #eef7ff !important;
+    box-shadow: 0 3px 12px #0000001a !important;
+    color: #1185d4 !important;
+  }
+
+  .add-item-page .add-item-unit-field small,
+  .add-item-page .add-item-unit-field b {
+    display: none !important;
+  }
+
+  .add-item-page .add-item-unit-field span {
+    display: block !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #1185d4 !important;
+  }
+}
