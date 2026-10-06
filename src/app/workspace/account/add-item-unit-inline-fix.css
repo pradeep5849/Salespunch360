@@ -162,3 +162,45 @@
     font-size: 18px !important;
   }
 }
+
+  /* Unit selectors open as anchored dropdowns directly below each compact field. */
+@media (max-width: 700px) {
+  .add-unit-full .sale-fullscreen-body {
+    overflow: visible !important;
+  }
+  .add-unit-full .unit-dropdown-wrap {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  .add-unit-full .unit-dropdown-wrap .selector-field {
+    margin-bottom: 0 !important;
+  }
+  .add-unit-full .unit-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    max-height: 330px;
+    overflow-y: auto;
+    border: 1px solid #d7dce1;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 8px 22px #00000024;
+  }
+  .add-unit-full .unit-dropdown-menu button {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 1px solid #edf0f2;
+    background: #fff;
+    text-align: left;
+    font-size: 15px;
+  }
+  .add-unit-full .unit-dropdown-menu .unit-add-option {
+    color: #1185d4;
+    font-weight: 600;
+  }
+}
