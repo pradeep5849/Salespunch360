@@ -39,15 +39,35 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
             }
         }
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp)) }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (!state.loading && state.rows.isEmpty()) item { Text("No sales documents found.", Modifier.padding(24.dp)) }
             items(state.rows, key = { it.id }) { row ->
+                val isSale=row.type=="SALES_INVOICE"
+                val paymentLabel=when(row.paymentStatus){"PAID"->"SALE : PAID";"PARTIALLY_PAID"->"SALE : PARTIAL";"UNPAID"->"SALE : UNPAID";else->row.status}
                 ElevatedCard(Modifier.fillMaxWidth().clickable { vm.open(row.id) }) {
-                    ListItem(
-                        headlineContent = { Text(row.number.ifBlank { "Draft" }, fontWeight = FontWeight.Bold) },
-                        supportingContent = { Text("${row.party} · ${row.date} · ${row.type.replace('_', ' ')}") },
-                        trailingContent = { Column { Text("₹${row.total}"); Text(row.status, style = MaterialTheme.typography.labelSmall) } }
-                    )
+                    Column {
+                        Row(Modifier.fillMaxWidth().padding(14.dp),horizontalArrangement=Arrangement.SpaceBetween){
+                            Column(Modifier.weight(1f)){
+                                Text(row.party,fontWeight=FontWeight.Bold)
+                                Text(if(isSale)paymentLabel else row.type.replace('_',' '),style=MaterialTheme.typography.labelSmall,color=if(row.paymentStatus=="PAID")MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Column{
+                                Text(row.number,fontWeight=FontWeight.Bold)
+                                Text(row.date,style=MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        HorizontalDivider()
+                        Row(Modifier.fillMaxWidth()){
+                            Column(Modifier.weight(1f).padding(14.dp)){Text("Total",style=MaterialTheme.typography.labelSmall);Text("₹${row.total}",fontWeight=FontWeight.Bold)}
+                            Column(Modifier.weight(1f).padding(14.dp)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text("₹${row.balance.ifBlank{row.total}}",fontWeight=FontWeight.Bold)}
+                        }
+                        HorizontalDivider()
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
+                            TextButton(onClick={vm.open(row.id)}){Text("▣  Print")}
+                            TextButton(onClick={vm.open(row.id)}){Text("↗  Share")}
+                            TextButton(onClick={vm.open(row.id)}){Text("⋮  More")}
+                        }
+                    }
                 }
             }
         }
