@@ -200,8 +200,8 @@ export async function postJournalInTx(
       postingPurpose: d.postingPurpose,
       createdById: a.id,
       lines: {
+        // The composite parent relation supplies companyId for every nested line.
         create: d.lines.map((l, i) => ({
-          companyId: a.companyId,
           lineNumber: i + 1,
           ledgerAccountId: l.ledgerAccountId,
           costCentreId: l.costCentreId,

@@ -10,6 +10,12 @@ import {
   schedulePaymentReminder,
   setPaymentReminderStatus,
 } from "@/lib/account/commercial";
+import { randomUUID } from "node:crypto";
+import {
+  commercialActionFailure,
+  type CommercialCreateResult,
+} from "@/lib/account/commercial-action-errors";
+import { logEvent } from "@/lib/logging";
 const payload = (form: FormData) => JSON.parse(String(form.get("payload")));
 function normalizeClientCommercialInput(raw: unknown) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
@@ -24,9 +30,26 @@ export async function saveCommercialDocument(form: FormData) {
   redirect(`/workspace/account/transactions/${row.id}`);
 }
 /** Client sale entry uses the same authoritative creator without forcing a redirect. */
-export async function createCommercialDocumentAction(raw: unknown) {
-  const row = await createCommercialDocument(normalizeClientCommercialInput(raw));
-  return { id: row.id, documentNumber: row.documentNumber };
+export async function createCommercialDocumentAction(
+  raw: unknown,
+): Promise<CommercialCreateResult> {
+  try {
+    const row = await createCommercialDocument(
+      normalizeClientCommercialInput(raw),
+    );
+    return { ok: true, id: row.id, documentNumber: row.documentNumber };
+  } catch (error) {
+    const result = commercialActionFailure(error);
+    const correlationId = randomUUID();
+    logEvent("error", {
+      category: "COMMERCIAL_DOCUMENT_CREATE",
+      code: result.errorCode,
+      correlationId,
+    });
+    // Preserve the original exception and stack on the server, never in the action response.
+    console.error("Commercial document create failed", correlationId, error);
+    return result;
+  }
 }
 export async function finalizeCommercialAction(form: FormData) {
   const id = String(form.get("id"));
