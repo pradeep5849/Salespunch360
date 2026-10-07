@@ -1,5 +1,6 @@
 import type { CommercialDocumentType, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { documentOutstandingsBatch } from "@/lib/account/commercial";
 import type { AccountBranchActor, AccountBranchContext } from "./branch-context";
 import { accountHomeScopes } from "./account-home";
 
@@ -26,10 +27,9 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
   const commercialTypes = types.filter((type): type is CommercialDocumentType => (accountHomeTransactionTypes as readonly string[]).includes(type));
   const documentFilters: Prisma.CommercialDocumentWhereInput[] = commercialTypes.map(type => ({ type }));
   if (types.includes("SALE_CANCELLED")) documentFilters.push({ type: "SALES_INVOICE", status: "CANCELLED" });
-  // The current home feed is commercial-document backed. Selecting a category owned by
-  // another ledger prevents unrelated documents from being shown until that feed is present.
   const documentWhere: Prisma.CommercialDocumentWhereInput = {
     ...scopes.document,
+    NOT: { type: "SALES_INVOICE", status: "DRAFT" },
     ...((types.length || q) ? { AND: [
       ...(types.length ? [{ OR: documentFilters.length ? documentFilters : [{ id: { equals: "__no_commercial_document__" } }] }] : []),
       ...(q ? [{ OR: [
@@ -52,10 +52,12 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
       where: documentWhere,
       orderBy: [{ issueDate: "desc" }, { updatedAt: "desc" }],
       take: 20,
-      select: { id: true, partyName: true, type: true, documentNumber: true, issueDate: true, status: true, grandTotal: true, balanceDue: true },
+      select: { id: true, partyName: true, type: true, documentNumber: true, issueDate: true, status: true, grandTotal: true, payableAmount: true, balanceDue: true },
     }),
     db.customer.findMany({ where: partyWhere, orderBy: { updatedAt: "desc" }, take: 20, select: { id: true, name: true, updatedAt: true } }),
   ]);
+  const postedSales = transactions.filter(row => row.type === "SALES_INVOICE" && row.status === "POSTED");
+  const saleOutstandings = postedSales.length ? await documentOutstandingsBatch(actor.companyId, postedSales) : new Map();
   const partyIds = parties.map(party => party.id);
   const balances = partyIds.length ? await db.commercialDocument.groupBy({
     by: ["customerId"],
@@ -66,7 +68,12 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
   const balanceByParty = new Map(balances.map(row => [row.customerId, row]));
   return {
     q, types,
-    transactions: transactions.map(row => ({ ...row, grandTotal: row.grandTotal.toString(), balanceDue: row.balanceDue.toString() })),
+    transactions: transactions.map(row => {
+      const outstanding = row.type === "SALES_INVOICE" && row.status === "POSTED" ? saleOutstandings.get(row.id) : undefined;
+      const base = row.payableAmount ?? row.grandTotal;
+      const paymentStatus = outstanding === undefined ? undefined : outstanding.isZero() ? "PAID" : outstanding.lt(base) ? "PARTIALLY_PAID" : "UNPAID";
+      return { ...row, grandTotal: row.grandTotal.toString(), balanceDue: (outstanding ?? row.balanceDue).toString(), paymentStatus };
+    }),
     parties: parties.map(party => ({ id: party.id, name: party.name, lastActivity: balanceByParty.get(party.id)?._max.issueDate ?? party.updatedAt, balance: balanceByParty.get(party.id)?._sum.balanceDue?.toString() ?? "0" })),
   };
 }
