@@ -10,6 +10,7 @@ import {
   schedulePaymentReminder,
   setPaymentReminderStatus,
 } from "@/lib/account/commercial";
+import { ensureOpenFinancialYearForDate } from "@/lib/account/financial-year";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
 import {
@@ -72,6 +73,7 @@ export async function submitSaleInvoiceAction(
     if (input.type !== "SALES_INVOICE") throw new Error("INVALID_INPUT");
     const row = await createCommercialDocument(input);
     createdId = row.id;
+    await ensureOpenFinancialYearForDate(row.companyId, new Date(String(input.issueDate)));
     await postCommercialDocument({ documentId: row.id });
 
     const received = Number(payment?.receivedAmount ?? 0);
