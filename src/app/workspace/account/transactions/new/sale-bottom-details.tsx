@@ -14,11 +14,12 @@ export function useSaleBottomDetails({subtotal,taxTotal,defaultStateCode}:{subto
  const total=useMemo(()=>subtotal+(roundOffEnabled?n(roundOff):0),[subtotal,roundOffEnabled,roundOff]);
  const receivedAmount=receivedEnabled?Math.max(0,Math.min(total,n(received))):0;
  const balanceDue=Math.max(0,total-receivedAmount);
+ function toggleReceived(enabled:boolean){setReceivedEnabled(enabled);setReceived(enabled?total.toFixed(2):"")}
  const node=<section className={styles.wrap}>
    <div className={styles.sectionTitle}>Charges</div>
    <div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={roundOffEnabled} onChange={e=>setRoundOffEnabled(e.target.checked)}/><span>Round Off</span></label><label className={styles.moneyInput}>₹<input type="number" step="0.01" min="-10" max="10" value={roundOff} disabled={!roundOffEnabled} onChange={e=>setRoundOff(e.target.value)}/></label></div>
    <div className={`${styles.row} ${styles.total}`}><strong>Total Amount</strong><strong>₹ {money.format(total)}</strong></div>
-   <div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={receivedEnabled} onChange={e=>setReceivedEnabled(e.target.checked)}/><span>Received</span></label><label className={styles.moneyInput}>₹<input type="number" step="0.01" min="0" max={Math.max(0,total)} value={received} disabled={!receivedEnabled} onChange={e=>setReceived(e.target.value)}/></label></div>
+   <div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={receivedEnabled} onChange={e=>toggleReceived(e.target.checked)}/><span>Received</span></label><label className={styles.moneyInput}>₹<input type="number" step="0.01" min="0" max={Math.max(0,total)} value={received} disabled={!receivedEnabled} onChange={e=>setReceived(e.target.value)}/></label></div>
    <div className={`${styles.row} ${styles.balance}`}><strong>Balance Due</strong><strong>₹ {money.format(balanceDue)}</strong></div>
    <div className={styles.payment}><span>Payment Type</span><select value={paymentType} onChange={e=>setPaymentType(e.target.value)}><option value="CASH">💵 Cash</option><option value="BANK">Bank</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></div>
    <button type="button" className={styles.addPayment}>＋ Add Payment Type</button>
