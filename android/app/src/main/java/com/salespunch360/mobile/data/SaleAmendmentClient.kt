@@ -6,7 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,7 +27,11 @@ class SaleAmendmentClient(private val session:SecureSession){
         when(method){"PATCH"->builder.patch(body);"DELETE"->builder.delete()}
         http.newCall(builder.build()).execute().use{response->
             val raw=response.body?.string()?:"{}"
-            if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(token);val code=runCatching{json.parseToJsonElement(raw).jsonObject["error"].toString()}.getOrNull();throw ApiException(response.code,code)}
+            if(!response.isSuccessful){
+                if(response.code==401)session.invalidateIfCurrent(token)
+                val code=runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.contentOrNull}.getOrNull()
+                throw ApiException(response.code,code)
+            }
             raw
         }
     }
