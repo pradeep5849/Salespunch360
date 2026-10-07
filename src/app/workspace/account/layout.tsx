@@ -1,6 +1,7 @@
 import "./reference-parity.css";
 import "./add-item-unit-inline-fix.css";
 import "./ui-parity-corrections.css";
+import "./home-transaction-reference.css";
 import { AccountShell } from "@/components/account/account-shell";
 import { requireAccountWorkspace } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
