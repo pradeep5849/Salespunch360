@@ -8,37 +8,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.salespunch360.mobile.AccountAdministrationViewModel
 import kotlinx.serialization.json.*
 
 @Composable
 private fun PrintSection(title:String){
     Surface(color=MaterialTheme.colorScheme.primaryContainer,modifier=Modifier.fillMaxWidth()){
-        Text(title,Modifier.padding(horizontal=16.dp,vertical=10.dp),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.onPrimaryContainer)
+        Text(title,Modifier.padding(horizontal=16.dp,vertical=8.dp),fontWeight=FontWeight.Bold,fontSize=16.sp,color=MaterialTheme.colorScheme.onPrimaryContainer)
     }
 }
 
 @Composable
 private fun PrintSwitch(label:String,value:Boolean,onChange:(Boolean)->Unit){
     ListItem(
-        headlineContent={Text(label)},
-        supportingContent={Text("ⓘ",color=MaterialTheme.colorScheme.onSurfaceVariant)},
-        trailingContent={Switch(checked=value,onCheckedChange=onChange)}
+        headlineContent={Text(label,fontSize=15.5.sp)},
+        trailingContent={Row(verticalAlignment=Alignment.CenterVertically){Text("ⓘ",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(8.dp));Switch(checked=value,onCheckedChange=onChange,modifier=Modifier.heightIn(max=32.dp))}}
     )
 }
 
 @Composable
 private fun PrintValue(label:String,value:String,onChange:(String)->Unit){
-    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
-        Text(label,Modifier.weight(1f))
-        OutlinedTextField(value,onChange,singleLine=true,modifier=Modifier.widthIn(min=145.dp,max=225.dp))
+    Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f),fontSize=15.5.sp)
+        OutlinedTextField(value,onChange,singleLine=true,textStyle=LocalTextStyle.current.copy(fontSize=14.5.sp),modifier=Modifier.widthIn(min=125.dp,max=205.dp))
     }
 }
 
 @Composable
 private fun PrintStepper(label:String,value:Int,onChange:(Int)->Unit){
-    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
-        Text(label,Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f),fontSize=15.5.sp)
         TextButton(onClick={onChange((value-1).coerceAtLeast(0))}){Text("−")}
         Text(value.toString(),style=MaterialTheme.typography.titleMedium)
         TextButton(onClick={onChange((value+1).coerceAtMost(50))}){Text("+")}

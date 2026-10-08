@@ -94,7 +94,12 @@ fun AccountAdministrationScreen(
             "modules" -> ModuleView(state.data, vm)
             "item-settings" -> ItemSettingsView(state.data,vm)
             "print-templates" -> InvoicePrintSettingsView(state.data, vm)
-            "tax-settings" -> TaxSettingsForm(state.data, vm)
+            "reminders" -> ReminderLandingView(navigate)
+            "payment-reminders" -> PaymentReminderView(state.data,vm,navigate)
+            "payment-reminder-message" -> PaymentReminderMessageView(state.data,vm)
+            "service-reminders" -> ServiceReminderView({ navigate("/workspace/account/settings/reminders") })
+            "tax-settings" -> TaxPreferencesView(state.data,vm,navigate)
+            "tax-list" -> TaxListView()
             else -> JsonRows(state.data)
         }
     }
@@ -462,7 +467,7 @@ private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
 }
 
 private val accountSettingsDestinations=listOf(
-    Triple("General","/workspace/account/settings/general","⚙"),Triple("Transaction","/workspace/account/settings/transactions","▤"),Triple("Invoice Print","/workspace/account/settings/print-templates","⎙"),Triple("Taxes & GST","/workspace/account/tax/settings","%"),Triple("Employees","/workspace/employees","♥"),Triple("Transaction SMS","/workspace/account/settings/transaction-sms","✉"),Triple("Reminders","/workspace/account/settings/transactions#reminders","◷"),Triple("Party","/workspace/account/settings/party","☺"),Triple("Item","/workspace/account/inventory/item-settings","◇"),Triple("Multi-Currency","/workspace/account/settings/multi-currency","₹")
+    Triple("General","/workspace/account/settings/general","⚙"),Triple("Transaction","/workspace/account/settings/transactions","▤"),Triple("Invoice Print","/workspace/account/settings/print-templates","⎙"),Triple("Taxes & GST","/workspace/account/tax/settings","%"),Triple("Employees","/workspace/employees","♥"),Triple("Transaction SMS","/workspace/account/settings/transaction-sms","✉"),Triple("Reminders","/workspace/account/settings/reminders","◷"),Triple("Party","/workspace/account/settings/party","☺"),Triple("Item","/workspace/account/inventory/item-settings","◇"),Triple("Multi-Currency","/workspace/account/settings/multi-currency","₹")
 )
 
 @Composable
