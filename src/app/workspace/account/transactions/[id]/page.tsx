@@ -11,6 +11,7 @@ import {
   commercialDocumentControls,
   getCommercialDocument,
 } from "@/lib/account/commercial";
+import { SaleInvoiceDetail } from "./sale-invoice-detail";
 export default async function Page({
   params,
 }: {
@@ -22,6 +23,11 @@ export default async function Page({
       commercialDocumentControls(id),
     ]),
     today = new Date().toISOString().slice(0, 10);
+  if (x.type === "SALES_INVOICE") {
+    const balance=x.financial?.outstanding.toString()??x.balanceDue.toString();
+    const received=Math.max(0,Number(x.grandTotal.toString())-Number(balance)).toFixed(2);
+    return <SaleInvoiceDetail id={x.id} documentNumber={x.documentNumber} issueDate={x.issueDate.toISOString()} firmName={x.branch.name} partyName={x.partyName} status={x.status} subtotal={x.subtotal.toString()} discountTotal={x.discountTotal.toString()} taxTotal={x.taxTotal.toString()} roundOffAmount={x.roundOffAmount.toString()} grandTotal={x.grandTotal.toString()} received={received} balance={balance} lines={x.lines.map(line=>({id:line.id,itemName:line.itemName,quantity:line.quantity.toString(),unitSymbol:line.unitSymbol,rate:line.rate.toString(),discountAmount:line.discountAmount.toString(),taxRate:line.taxRate.toString(),taxAmount:line.taxAmount.toString(),lineTotal:line.lineTotal.toString()}))}/>;
+  }
   return (
     <main>
       <h1>
