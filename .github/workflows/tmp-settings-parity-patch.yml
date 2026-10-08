@@ -1,0 +1,56 @@
+name: Temporary settings parity patch
+on:
+  push:
+    branches:
+      - feature/settings-reminders-tax-parity
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/settings-reminders-tax-parity
+      - name: Wire Android settings routes and views
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p=Path('android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt')
+          s=p.read_text()
+          s=s.replace('Triple("Reminders","/workspace/account/settings/transactions#reminders","◷")','Triple("Reminders","/workspace/account/settings/reminders","◷")')
+          s=s.replace('            "print-templates" -> InvoicePrintSettingsView(state.data, vm)\n            "tax-settings" -> TaxSettingsForm(state.data, vm)', '            "print-templates" -> InvoicePrintSettingsView(state.data, vm)\n            "reminders" -> ReminderLandingView(navigate)\n            "payment-reminders" -> PaymentReminderView(state.data,vm,navigate)\n            "payment-reminder-message" -> PaymentReminderMessageView(state.data,vm)\n            "service-reminders" -> ServiceReminderView({ navigate("/workspace/account/settings/reminders") })\n            "tax-settings" -> TaxPreferencesView(state.data,vm,navigate)\n            "tax-list" -> TaxListView()')
+          p.write_text(s)
+
+          p=Path('android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt')
+          s=p.read_text()
+          old='''    path.endsWith("/settings/print-templates")->"print-templates"\n    path=="/workspace/account/tax"||path.endsWith("/tax/reports")->"tax-reports"\n    path.endsWith("/tax/settings")->"tax-settings"'''
+          new='''    path.endsWith("/settings/print-templates")->"print-templates"\n    path.endsWith("/settings/reminders/payment/message")->"payment-reminder-message"\n    path.endsWith("/settings/reminders/payment")->"payment-reminders"\n    path.endsWith("/settings/reminders/service")->"service-reminders"\n    path.endsWith("/settings/reminders")->"reminders"\n    path.endsWith("/tax/list")->"tax-list"\n    path=="/workspace/account/tax"||path.endsWith("/tax/reports")->"tax-reports"\n    path.endsWith("/tax/settings")->"tax-settings"'''
+          if old not in s: raise SystemExit('adminMode anchor missing')
+          p.write_text(s.replace(old,new))
+
+          p=Path('android/app/src/main/java/com/salespunch360/mobile/AccountAdministrationViewModel.kt')
+          s=p.read_text()
+          s=s.replace('"settings", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings" -> api.accountAdministration("settings")', '"settings", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings", "reminders", "payment-reminders", "payment-reminder-message", "service-reminders", "tax-settings", "tax-list" -> api.accountAdministration("settings")')
+          s=s.replace('                    "tax-settings" -> api.accountTax()\n', '')
+          s=s.replace('                if (section.startsWith("tax")) {\n                    api.saveAccountTax(payload.jsonObject)\n                } else {\n                    api.saveAccountAdministration("settings", section, payload)\n                }', '                if (section == "tax-settings") api.saveAccountTax(payload.jsonObject)\n                else api.saveAccountAdministration("settings", section, payload)')
+          p.write_text(s)
+
+          p=Path('android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/InvoicePrintSettingsView.kt')
+          s=p.read_text()
+          s=s.replace('Text(title,Modifier.padding(horizontal=16.dp,vertical=10.dp),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.onPrimaryContainer)', 'Text(title,Modifier.padding(horizontal=16.dp,vertical=8.dp),fontWeight=FontWeight.Bold,fontSize=16.sp,color=MaterialTheme.colorScheme.onPrimaryContainer)')
+          s=s.replace('headlineContent={Text(label)},\n        supportingContent={Text("ⓘ",color=MaterialTheme.colorScheme.onSurfaceVariant)},\n        trailingContent={Switch(checked=value,onCheckedChange=onChange)}', 'headlineContent={Text(label,fontSize=15.5.sp)},\n        trailingContent={Row(verticalAlignment=Alignment.CenterVertically){Text("ⓘ",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(8.dp));Switch(checked=value,onCheckedChange=onChange,modifier=Modifier.heightIn(max=32.dp))}}')
+          s=s.replace('Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){\n        Text(label,Modifier.weight(1f))\n        OutlinedTextField(value,onChange,singleLine=true,modifier=Modifier.widthIn(min=145.dp,max=225.dp))', 'Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){\n        Text(label,Modifier.weight(1f),fontSize=15.5.sp)\n        OutlinedTextField(value,onChange,singleLine=true,textStyle=LocalTextStyle.current.copy(fontSize=14.5.sp),modifier=Modifier.widthIn(min=125.dp,max=205.dp))')
+          s=s.replace('Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){\n        Text(label,Modifier.weight(1f))', 'Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){\n        Text(label,Modifier.weight(1f),fontSize=15.5.sp)')
+          if 'import androidx.compose.ui.unit.sp' not in s:
+              s=s.replace('import androidx.compose.ui.unit.dp','import androidx.compose.ui.unit.dp\nimport androidx.compose.ui.unit.sp')
+          p.write_text(s)
+      - name: Commit native parity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt android/app/src/main/java/com/salespunch360/mobile/AccountAdministrationViewModel.kt android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/InvoicePrintSettingsView.kt
+          git commit -m "feat(android): wire settings reminder and tax parity"
+          git push origin HEAD:feature/settings-reminders-tax-parity
