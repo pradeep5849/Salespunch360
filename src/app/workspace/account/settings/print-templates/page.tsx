@@ -1,2 +1,30 @@
-import { revalidatePath } from "next/cache"; import { AccountCard, AccountEmptyState, AccountPageHeader } from "@/components/account/account-shell"; import { requirePermission } from "@/lib/auth/authorization"; import { db } from "@/lib/db"; import { createPrintTemplate } from "@/lib/account/settings";
-export default async function Page() { const actor = await requirePermission("ACCOUNT_SETTINGS"), templates = await db.printTemplate.findMany({ where: { companyId: actor.companyId! }, orderBy: [{ documentType: "asc" }, { version: "desc" }] }); async function create(fd: FormData) { "use server"; await createPrintTemplate({ documentType: String(fd.get("documentType")), name: String(fd.get("name")), paperSize: String(fd.get("paperSize")), isDefault: fd.get("isDefault") === "on", config: { accentColor: "#075985", showBank: true, showUpiQr: fd.get("showUpiQr") === "on", showSignature: true, footer: String(fd.get("footer") || "") } }); revalidatePath("/workspace/account/settings/print-templates"); } return <><AccountPageHeader title="Print templates" subtitle="One versioned template system for Invoice, Quotation, PO, Receipt and BOQ."/><AccountCard><form action={create} className="account-form"><label>Document<select name="documentType">{["INVOICE","QUOTATION","PURCHASE_ORDER","RECEIPT","BOQ"].map((x) => <option key={x}>{x}</option>)}</select></label><label>Name<input name="name" required/></label><label>Paper<select name="paperSize"><option>A4</option><option value="THERMAL_80MM">Thermal 80 mm</option></select></label><label>Footer<input name="footer"/></label><label className="account-check-label"><input name="isDefault" type="checkbox"/> Default</label><label className="account-check-label"><input name="showUpiQr" type="checkbox"/> Include UPI QR payload</label><button className="account-primary">Create new version</button></form></AccountCard><AccountCard><h2>Templates</h2>{templates.length ? <div className="account-list">{templates.map((x) => <div key={x.id}><span><strong>{x.name}</strong><small>{x.documentType} · {x.paperSize} · version {x.version}</small></span><i>{x.isDefault ? "DEFAULT" : "ACTIVE"}</i></div>)}</div> : <AccountEmptyState title="No templates" detail="Built-in print layout remains the deterministic fallback."/>}</AccountCard></>; }
+import {revalidatePath} from "next/cache";
+import {InvoicePrintSettingsForm,type InvoicePrintSettings} from "@/components/account/invoice-print-settings-form";
+import {AuthorizationError,requirePermission,requirePermissionForMutation} from "@/lib/auth/authorization";
+import {db} from "@/lib/db";
+
+const BOOLS=["regularDefault","repeatHeader","printCompanyName","companyLogo","address","email","phone","gstinOnSale","billOfSupply","originalDuplicate","expandTable","totalItemQuantity","amountDecimal","receivedAmount","balanceAmount","partyCurrentBalance","taxDetails","amountGrouping","youSaved","printDescription","termsEnabled","receivedBy","deliveredBy","signatureText","paymentMode","acknowledgement","pageNumbers"] as const;
+const STRINGS=["printer","theme","printTextSize","pageSize","orientation","companyNameTextSize","amountWordsFormat","termsText","customSignatureText","transactionName","itemTableColumns"] as const;
+
+export default async function Page(){
+ const actor=await requirePermission("ACCOUNT_SETTINGS");
+ const current=await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true}});
+ const defaults=(current?.transactionDefaults as Record<string,unknown>|null)??{};
+ const values=((defaults.invoicePrintSettings as InvoicePrintSettings|undefined)??{});
+ async function save(fd:FormData){
+  "use server";
+  const editor=await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  if(editor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+  const existing=await db.accountSettings.findUnique({where:{companyId:editor.companyId!},select:{transactionDefaults:true}});
+  const transactionDefaults=(existing?.transactionDefaults as Record<string,unknown>|null)??{};
+  const invoicePrintSettings:InvoicePrintSettings={};
+  for(const key of BOOLS)invoicePrintSettings[key]=fd.get(key)==="on";
+  for(const key of STRINGS)invoicePrintSettings[key]=String(fd.get(key)??"").slice(0,key==="termsText"?10000:500);
+  invoicePrintSettings.topSpace=Math.max(0,Math.min(20,Number(fd.get("topSpace")||0)));
+  invoicePrintSettings.minRows=Math.max(0,Math.min(50,Number(fd.get("minRows")||0)));
+  await db.accountSettings.upsert({where:{companyId:editor.companyId!},create:{companyId:editor.companyId!,transactionDefaults:{...transactionDefaults,invoicePrintSettings}},update:{transactionDefaults:{...transactionDefaults,invoicePrintSettings}}});
+  await db.accountingAuditEvent.create({data:{companyId:editor.companyId!,actorUserId:editor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:editor.companyId!,metadata:{sections:["INVOICE_PRINT"]}}});
+  revalidatePath("/workspace/account/settings/print-templates");
+ }
+ return <InvoicePrintSettingsForm values={values} action={save}/>;
+}
