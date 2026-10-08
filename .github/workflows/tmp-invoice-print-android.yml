@@ -1,0 +1,195 @@
+name: Temporary invoice print Android patch
+
+on:
+  push:
+    branches:
+      - feature/invoice-print-settings-reference
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/invoice-print-settings-reference
+      - name: Patch native Invoice Print settings
+        shell: python
+        run: |
+          from pathlib import Path
+          path=Path('android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt')
+          text=path.read_text()
+          old='''@Composable
+private fun TemplateView(data: JsonElement, vm: AccountAdministrationViewModel) {
+    val root = data as? JsonObject ?: return
+    var name by remember { mutableStateOf("") }
+    Column {
+        OutlinedTextField(name, { name = it }, label = { Text("Template name") })
+        Button(onClick = {
+            vm.save("print-templates", buildJsonObject {
+                put("documentType", "INVOICE")
+                put("name", name)
+                put("paperSize", "A4")
+                put("isDefault", false)
+                putJsonObject("config") {
+                    put("accentColor", "#075985")
+                    put("showBank", true)
+                    put("showUpiQr", false)
+                    put("showSignature", true)
+                    put("footer", "")
+                }
+            })
+        }) { Text("Create invoice template version") }
+        JsonRows(root["templates"] ?: JsonArray(emptyList()))
+    }
+}
+'''
+          new='''@Composable
+private fun InvoicePrintSectionTitle(title:String){
+    Surface(color=MaterialTheme.colorScheme.primaryContainer,modifier=Modifier.fillMaxWidth()){
+        Text(title,Modifier.padding(horizontal=16.dp,vertical=10.dp),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.onPrimaryContainer)
+    }
+}
+
+@Composable
+private fun InvoicePrintSwitchRow(label:String,value:Boolean,onChange:(Boolean)->Unit){
+    ListItem(headlineContent={Text(label)},supportingContent={Text("ⓘ",color=MaterialTheme.colorScheme.onSurfaceVariant)},trailingContent={Switch(value,onChange)})
+}
+
+@Composable
+private fun InvoicePrintValueRow(label:String,value:String,onChange:(String)->Unit){
+    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f))
+        OutlinedTextField(value,onChange,singleLine=true,modifier=Modifier.widthIn(min=150.dp,max=230.dp))
+    }
+}
+
+@Composable
+private fun InvoicePrintStepper(label:String,value:Int,onChange:(Int)->Unit){
+    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f))
+        IconButton(onClick={onChange((value-1).coerceAtLeast(0))}){Text("−")}
+        Text(value.toString(),style=MaterialTheme.typography.titleMedium)
+        IconButton(onClick={onChange((value+1).coerceAtMost(50))}){Text("+")}
+    }
+}
+
+@Composable
+private fun TemplateView(data: JsonElement, vm: AccountAdministrationViewModel) {
+    val root=data as? JsonObject?:return
+    val saved=root["settings"]?.jsonObject?.get("transactionDefaults")?.jsonObject?.get("invoicePrintSettings")?.jsonObject
+    fun bool(key:String,default:Boolean)=saved?.get(key)?.jsonPrimitive?.booleanOrNull?:default
+    fun str(key:String,default:String)=saved?.get(key)?.jsonPrimitive?.contentOrNull?:default
+    fun int(key:String,default:Int)=saved?.get(key)?.jsonPrimitive?.intOrNull?:default
+    var printer by remember(saved){mutableStateOf(str("printer","REGULAR"))}
+    var regularDefault by remember(saved){mutableStateOf(bool("regularDefault",true))}
+    var theme by remember(saved){mutableStateOf(str("theme","REGULAR"))}
+    var printTextSize by remember(saved){mutableStateOf(str("printTextSize","MEDIUM"))}
+    var pageSize by remember(saved){mutableStateOf(str("pageSize","A4"))}
+    var orientation by remember(saved){mutableStateOf(str("orientation","PORTRAIT"))}
+    var repeatHeader by remember(saved){mutableStateOf(bool("repeatHeader",true))}
+    var printCompanyName by remember(saved){mutableStateOf(bool("printCompanyName",true))}
+    var companyNameTextSize by remember(saved){mutableStateOf(str("companyNameTextSize","LARGE"))}
+    var companyLogo by remember(saved){mutableStateOf(bool("companyLogo",true))}
+    var address by remember(saved){mutableStateOf(bool("address",true))}
+    var email by remember(saved){mutableStateOf(bool("email",true))}
+    var phone by remember(saved){mutableStateOf(bool("phone",true))}
+    var gstinOnSale by remember(saved){mutableStateOf(bool("gstinOnSale",true))}
+    var billOfSupply by remember(saved){mutableStateOf(bool("billOfSupply",false))}
+    var topSpace by remember(saved){mutableStateOf(int("topSpace",0))}
+    var originalDuplicate by remember(saved){mutableStateOf(bool("originalDuplicate",false))}
+    var transactionName by remember(saved){mutableStateOf(str("transactionName","Sale Invoice"))}
+    var expandTable by remember(saved){mutableStateOf(bool("expandTable",true))}
+    var minRows by remember(saved){mutableStateOf(int("minRows",0))}
+    var itemTableColumns by remember(saved){mutableStateOf(str("itemTableColumns","ITEM,QTY,RATE,TAX,AMOUNT"))}
+    var totalItemQuantity by remember(saved){mutableStateOf(bool("totalItemQuantity",true))}
+    var amountDecimal by remember(saved){mutableStateOf(bool("amountDecimal",true))}
+    var receivedAmount by remember(saved){mutableStateOf(bool("receivedAmount",true))}
+    var balanceAmount by remember(saved){mutableStateOf(bool("balanceAmount",true))}
+    var partyCurrentBalance by remember(saved){mutableStateOf(bool("partyCurrentBalance",false))}
+    var taxDetails by remember(saved){mutableStateOf(bool("taxDetails",true))}
+    var amountGrouping by remember(saved){mutableStateOf(bool("amountGrouping",true))}
+    var amountWordsFormat by remember(saved){mutableStateOf(str("amountWordsFormat","INDIAN"))}
+    var youSaved by remember(saved){mutableStateOf(bool("youSaved",true))}
+    var printDescription by remember(saved){mutableStateOf(bool("printDescription",true))}
+    var termsEnabled by remember(saved){mutableStateOf(bool("termsEnabled",true))}
+    var termsText by remember(saved){mutableStateOf(str("termsText",""))}
+    var receivedBy by remember(saved){mutableStateOf(bool("receivedBy",true))}
+    var deliveredBy by remember(saved){mutableStateOf(bool("deliveredBy",true))}
+    var signatureText by remember(saved){mutableStateOf(bool("signatureText",true))}
+    var customSignatureText by remember(saved){mutableStateOf(str("customSignatureText",""))}
+    var paymentMode by remember(saved){mutableStateOf(bool("paymentMode",true))}
+    var acknowledgement by remember(saved){mutableStateOf(bool("acknowledgement",true))}
+    var pageNumbers by remember(saved){mutableStateOf(bool("pageNumbers",false))}
+
+    LazyColumn(contentPadding=PaddingValues(bottom=90.dp)){
+        item{
+            Row(Modifier.fillMaxWidth().padding(16.dp)){
+                Button(onClick={printer="REGULAR"},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=if(printer=="REGULAR")MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)){Text("Regular")}
+                OutlinedButton(onClick={printer="THERMAL"},modifier=Modifier.weight(1f)){Text("Thermal")}
+            }
+        }
+        item{InvoicePrintSwitchRow("Make Regular Printer Default",regularDefault){regularDefault=it}}
+        item{InvoicePrintSectionTitle("Themes")}
+        item{InvoicePrintValueRow("Change Theme and Colors",theme){theme=it}}
+        item{InvoicePrintValueRow("Print text size",printTextSize){printTextSize=it}}
+        item{InvoicePrintValueRow("Page size",pageSize){pageSize=it}}
+        item{InvoicePrintValueRow("Orientation",orientation){orientation=it}}
+        item{InvoicePrintSectionTitle("Print Company Info/Header")}
+        item{InvoicePrintSwitchRow("Print repeat header in all pages",repeatHeader){repeatHeader=it}}
+        item{InvoicePrintSwitchRow("Print Company Name",printCompanyName){printCompanyName=it}}
+        item{InvoicePrintValueRow("Company Name Text Size",companyNameTextSize){companyNameTextSize=it}}
+        item{InvoicePrintSwitchRow("Company logo",companyLogo){companyLogo=it}}
+        item{InvoicePrintSwitchRow("Address",address){address=it}}
+        item{InvoicePrintSwitchRow("Email",email){email=it}}
+        item{InvoicePrintSwitchRow("Phone number",phone){phone=it}}
+        item{InvoicePrintSwitchRow("GSTIN on Sale",gstinOnSale){gstinOnSale=it}}
+        item{InvoicePrintSwitchRow("Print Bill of Supply for non tax invoices",billOfSupply){billOfSupply=it}}
+        item{InvoicePrintStepper("Extra spaces on top of PDF",topSpace){topSpace=it}}
+        item{InvoicePrintSwitchRow("Print Original/Duplicate",originalDuplicate){originalDuplicate=it}}
+        item{InvoicePrintValueRow("Change Transaction Names",transactionName){transactionName=it}}
+        item{InvoicePrintSectionTitle("Totals & Taxes")}
+        item{InvoicePrintSwitchRow("Expand table to print on whole page",expandTable){expandTable=it}}
+        item{InvoicePrintStepper("Min. No. of rows in Item Table",minRows){minRows=it}}
+        item{InvoicePrintValueRow("Item Table Customization",itemTableColumns){itemTableColumns=it}}
+        item{InvoicePrintSwitchRow("Total Item Quantity",totalItemQuantity){totalItemQuantity=it}}
+        item{InvoicePrintSwitchRow("Amount with Decimal(eg 0.00)",amountDecimal){amountDecimal=it}}
+        item{InvoicePrintSwitchRow("Received amount",receivedAmount){receivedAmount=it}}
+        item{InvoicePrintSwitchRow("Balance amount",balanceAmount){balanceAmount=it}}
+        item{InvoicePrintSwitchRow("Print Current Balance of Party",partyCurrentBalance){partyCurrentBalance=it}}
+        item{InvoicePrintSwitchRow("Tax details",taxDetails){taxDetails=it}}
+        item{InvoicePrintSwitchRow("Amount Grouping",amountGrouping){amountGrouping=it}}
+        item{InvoicePrintValueRow("Amount in words format",amountWordsFormat){amountWordsFormat=it}}
+        item{InvoicePrintSwitchRow("You Saved",youSaved){youSaved=it}}
+        item{InvoicePrintSectionTitle("Footer")}
+        item{InvoicePrintSwitchRow("Print description",printDescription){printDescription=it}}
+        item{InvoicePrintSwitchRow("Terms & Conditions",termsEnabled){termsEnabled=it}}
+        item{InvoicePrintValueRow("Set Terms & Conditions",termsText){termsText=it}}
+        item{InvoicePrintSwitchRow("Print Received by details",receivedBy){receivedBy=it}}
+        item{InvoicePrintSwitchRow("Print Delivered by details",deliveredBy){deliveredBy=it}}
+        item{InvoicePrintSwitchRow("Print Signature Text",signatureText){signatureText=it}}
+        item{InvoicePrintValueRow("Set Custom Signature Text",customSignatureText){customSignatureText=it}}
+        item{InvoicePrintSwitchRow("Payment mode",paymentMode){paymentMode=it}}
+        item{InvoicePrintSwitchRow("Print Acknowledgement",acknowledgement){acknowledgement=it}}
+        item{InvoicePrintSwitchRow("Print Page Numbers",pageNumbers){pageNumbers=it}}
+        item{
+            Button(onClick={vm.save("invoice-print-settings",buildJsonObject{
+                put("printer",printer);put("regularDefault",regularDefault);put("theme",theme);put("printTextSize",printTextSize);put("pageSize",pageSize);put("orientation",orientation);put("repeatHeader",repeatHeader);put("printCompanyName",printCompanyName);put("companyNameTextSize",companyNameTextSize);put("companyLogo",companyLogo);put("address",address);put("email",email);put("phone",phone);put("gstinOnSale",gstinOnSale);put("billOfSupply",billOfSupply);put("topSpace",topSpace);put("originalDuplicate",originalDuplicate);put("transactionName",transactionName);put("expandTable",expandTable);put("minRows",minRows);put("itemTableColumns",itemTableColumns);put("totalItemQuantity",totalItemQuantity);put("amountDecimal",amountDecimal);put("receivedAmount",receivedAmount);put("balanceAmount",balanceAmount);put("partyCurrentBalance",partyCurrentBalance);put("taxDetails",taxDetails);put("amountGrouping",amountGrouping);put("amountWordsFormat",amountWordsFormat);put("youSaved",youSaved);put("printDescription",printDescription);put("termsEnabled",termsEnabled);put("termsText",termsText);put("receivedBy",receivedBy);put("deliveredBy",deliveredBy);put("signatureText",signatureText);put("customSignatureText",customSignatureText);put("paymentMode",paymentMode);put("acknowledgement",acknowledgement);put("pageNumbers",pageNumbers)
+            })},modifier=Modifier.fillMaxWidth().padding(16.dp)){Text("Save Invoice Print Settings")}
+        }
+    }
+}
+'''
+          if old not in text:
+              raise SystemExit('TemplateView block not found')
+          path.write_text(text.replace(old,new))
+      - name: Commit Android parity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt
+          git commit -m "feat(android): match Invoice Print settings reference"
+          git push origin HEAD:feature/invoice-print-settings-reference
