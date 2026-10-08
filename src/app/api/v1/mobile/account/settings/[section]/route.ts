@@ -1,5 +1,6 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
 import { mobileSaveSettings } from "@/lib/mobile/account-administration";
+import {mobileSaveInvoicePrintSettings} from "@/lib/mobile/invoice-print-settings";
 import {
   mobileAuthorizationFailure,
   mobileJson,
@@ -12,13 +13,9 @@ export async function POST(
 ) {
   try {
     const { section } = await params;
-    return mobileJson(
-      await mobileSaveSettings(
-        await authenticateMobileToken(r.headers.get("authorization")),
-        section,
-        await r.json(),
-      ),
-    );
+    const user=await authenticateMobileToken(r.headers.get("authorization"));
+    const raw=await r.json();
+    return mobileJson(section==="invoice-print-settings"?await mobileSaveInvoicePrintSettings(user,raw):await mobileSaveSettings(user,section,raw));
   } catch (e) {
     return (
       mobileUnauthorized(e) ??
