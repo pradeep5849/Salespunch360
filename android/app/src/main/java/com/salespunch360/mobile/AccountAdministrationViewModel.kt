@@ -29,9 +29,8 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 when (mode) {
                     "users" -> api.accountUsers()
-                    "settings", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings" -> api.accountAdministration("settings")
+                    "settings", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings", "reminders", "payment-reminders", "payment-reminder-message", "service-reminders", "tax-settings", "tax-list" -> api.accountAdministration("settings")
                     "notifications" -> api.accountAdministration("notifications")
-                    "tax-settings" -> api.accountTax()
                     "tax-reports" -> api.accountTax(
                         mapOf(
                             "from" to java.time.LocalDate.now().withDayOfYear(1).toString(),
@@ -64,11 +63,8 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             runCatching {
-                if (section.startsWith("tax")) {
-                    api.saveAccountTax(payload.jsonObject)
-                } else {
-                    api.saveAccountAdministration("settings", section, payload)
-                }
+                if (section == "tax-settings") api.saveAccountTax(payload.jsonObject)
+                else api.saveAccountAdministration("settings", section, payload)
             }.onSuccess {
                 _state.value = _state.value.copy(message = "Saved on server")
                 load(_state.value.mode)
