@@ -11,7 +11,7 @@ export function ServiceReminderPicker({items,selectedIds,action}:Props){
  const[selected,setSelected]=useState(()=>new Set(selectedIds));
  const filtered=useMemo(()=>items.filter(item=>(tab==="ALL"||item.type===tab)&&item.name.toLowerCase().includes(query.trim().toLowerCase())),[items,tab,query]);
  const allVisibleSelected=filtered.length>0&&filtered.every(item=>selected.has(item.id));
- const toggle=(id:string)=>setSelected(current=>{const next=new Set(current);next.has(id)?next.delete(id):next.add(id);return next});
+ const toggle=(id:string)=>setSelected(current=>{const next=new Set(current);if(next.has(id))next.delete(id);else next.add(id);return next});
  const toggleAll=()=>setSelected(current=>{const next=new Set(current);if(allVisibleSelected)filtered.forEach(item=>next.delete(item.id));else filtered.forEach(item=>next.add(item.id));return next});
  return <main className={styles.picker}>
   <header className={styles.header}><Link href="/workspace/account/settings/reminders" aria-label="Back">←</Link><h1>Select Items for Reminders</h1></header>
