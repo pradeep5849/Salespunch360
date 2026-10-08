@@ -93,7 +93,7 @@ fun AccountAdministrationScreen(
             "custom-fields" -> CustomFieldView(state.data, vm)
             "modules" -> ModuleView(state.data, vm)
             "item-settings" -> ItemSettingsView(state.data,vm)
-            "print-templates" -> TemplateView(state.data, vm)
+            "print-templates" -> InvoicePrintSettingsView(state.data, vm)
             "tax-settings" -> TaxSettingsForm(state.data, vm)
             else -> JsonRows(state.data)
         }
