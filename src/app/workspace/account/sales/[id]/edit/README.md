@@ -1,0 +1,1 @@
+This route edits a posted Sale by creating a replacement Sales Invoice and then fully reversing the original through a posted Credit Note. The original posted record is retained as CANCELLED for audit history. Edits are blocked when receipts, advances, or adjustments already exist against the Sale.
