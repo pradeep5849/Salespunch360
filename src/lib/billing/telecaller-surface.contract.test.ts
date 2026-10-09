@@ -44,7 +44,9 @@ describe("Unified Sales-team subscription surface", () => {
   it("includes legacy Telecaller payments in the normal Super Admin billing surfaces", () => {
     expect(adminDashboard).toContain('FROM "telecaller_billing_orders"');
     expect(adminDashboard).toContain("capturedRevenue:Number(capturedPayments._sum.amount??0)+Number(tele?.revenue??0)");
-    expect(adminOrders).toContain("listTelecallerBillingOrdersForAdmin");
+    expect(adminOrders).toContain("telecallerOrdersPage");
+    expect(adminOrders).toContain("pending: true");
+    expect(adminOrders).toContain("historyPage");
     expect(adminOrders).toContain("Payment History");
   });
 

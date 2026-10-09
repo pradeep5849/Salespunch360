@@ -1,6 +1,12 @@
 package com.salespunch360.mobile.ui
 
 import android.util.Patterns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.salespunch360.mobile.data.RegistrationLogo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -55,8 +61,10 @@ import kotlinx.coroutines.launch
 }
 
 @Composable fun NativeRegistrationScreen(onBack:()->Unit,onRegistered:()->Unit){
+ var logo by remember{mutableStateOf<RegistrationLogo?>(null)};var logoUri by remember{mutableStateOf<android.net.Uri?>(null)};var passwordVisible by remember{mutableStateOf(false)};var confirmationVisible by remember{mutableStateOf(false)}
  var product by remember{mutableStateOf("SALESPUNCH360")};var company by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var confirm by remember{mutableStateOf("")};var accepted by remember{mutableStateOf(false)};var attempted by remember{mutableStateOf(false)};var submitting by remember{mutableStateOf(false)};var message by remember{mutableStateOf<String?>(null)}
  val context=LocalContext.current;val uriHandler=LocalUriHandler.current;val scope=rememberCoroutineScope();val client=remember(context){RegistrationClient(SecureSession(context.applicationContext))}
+ val logoPicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->if(uri!=null)scope.launch{try{val selected=withContext(Dispatchers.IO){val mime=context.contentResolver.getType(uri).orEmpty();require(mime in listOf("image/jpeg","image/png","image/webp"));val bytes=context.contentResolver.openInputStream(uri)?.use{input->val output=java.io.ByteArrayOutputStream();val buffer=ByteArray(8192);var count:Int;while(input.read(buffer).also{count=it}!=-1){require(output.size()+count<=5*1024*1024);output.write(buffer,0,count)};output.toByteArray()}?:throw java.io.IOException("Image unavailable");require(bytes.isNotEmpty());RegistrationLogo(bytes,mime)};logo=selected;logoUri=uri;message=null}catch(_:Exception){message="Choose a JPEG, PNG or WebP image up to 5 MB."}}}
  val validCompany=company.trim().length>=2;val validName=name.trim().length>=2;val validEmail=Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches();val strongPassword=password.length>=12&&password.any(Char::isLowerCase)&&password.any(Char::isUpperCase)&&password.any(Char::isDigit);val passwordsMatch=password==confirm&&confirm.isNotEmpty();val fieldsEntered=company.isNotBlank()&&name.isNotBlank()&&email.isNotBlank()&&password.isNotBlank()&&confirm.isNotBlank()
  fun edit(){message=null}
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -65,10 +73,11 @@ import kotlinx.coroutines.launch
   Text("Choose product",style=MaterialTheme.typography.titleMedium)
   listOf("SALESPUNCH360" to "SalesPunch360","SALESPUNCH360_ACCOUNT" to "SalesPunch360 Account","SALESPUNCH360_PLUS" to "SalesPunch360 Plus").forEach{(value,label)->FilterChip(selected=product==value,onClick={product=value;edit()},label={Text(label)},enabled=!submitting)}
   OutlinedTextField(company,{company=it;edit()},Modifier.fillMaxWidth(),label={Text("Company name")},singleLine=true,enabled=!submitting,isError=attempted&&!validCompany,supportingText={if(attempted&&!validCompany)Text("Enter at least 2 characters")})
+  Text("Company logo (optional)");logoUri?.let{AsyncImage(model=it,contentDescription="Company logo preview",modifier=Modifier.size(96.dp))};Row{TextButton({logoPicker.launch("image/*")},enabled=!submitting){Text("Choose logo")};if(logo!=null)TextButton({logo=null;logoUri=null},enabled=!submitting){Text("Remove logo")}};Text("JPEG, PNG or WebP · maximum 5 MB",style=MaterialTheme.typography.bodySmall)
   OutlinedTextField(name,{name=it;edit()},Modifier.fillMaxWidth(),label={Text("Full name")},singleLine=true,enabled=!submitting,isError=attempted&&!validName,supportingText={if(attempted&&!validName)Text("Enter at least 2 characters")})
   OutlinedTextField(email,{email=it;edit()},Modifier.fillMaxWidth(),label={Text("Email address")},singleLine=true,enabled=!submitting,isError=attempted&&!validEmail,supportingText={if(attempted&&!validEmail)Text("Enter a valid email address")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email))
-  OutlinedTextField(password,{password=it;edit()},Modifier.fillMaxWidth(),label={Text("Password")},singleLine=true,enabled=!submitting,visualTransformation=PasswordVisualTransformation(),isError=attempted&&!strongPassword,supportingText={Text(if(attempted&&!strongPassword)"Use at least 12 characters with uppercase, lowercase and a number" else "At least 12 characters, with uppercase, lowercase and a number")})
-  OutlinedTextField(confirm,{confirm=it;edit()},Modifier.fillMaxWidth(),label={Text("Confirm password")},singleLine=true,enabled=!submitting,visualTransformation=PasswordVisualTransformation(),isError=attempted&&!passwordsMatch,supportingText={if(attempted&&!passwordsMatch)Text("Passwords do not match")})
+  OutlinedTextField(password,{password=it;edit()},Modifier.fillMaxWidth(),label={Text("Password")},singleLine=true,enabled=!submitting,visualTransformation=if(passwordVisible)VisualTransformation.None else PasswordVisualTransformation(),trailingIcon={IconButton({passwordVisible=!passwordVisible}){Icon(if(passwordVisible)Icons.Default.VisibilityOff else Icons.Default.Visibility,if(passwordVisible)"Hide password" else "Show password")}},isError=attempted&&!strongPassword,supportingText={Text(if(attempted&&!strongPassword)"Use at least 12 characters with uppercase, lowercase and a number" else "At least 12 characters, with uppercase, lowercase and a number")})
+  OutlinedTextField(confirm,{confirm=it;edit()},Modifier.fillMaxWidth(),label={Text("Confirm password")},singleLine=true,enabled=!submitting,visualTransformation=if(confirmationVisible)VisualTransformation.None else PasswordVisualTransformation(),trailingIcon={IconButton({confirmationVisible=!confirmationVisible}){Icon(if(confirmationVisible)Icons.Default.VisibilityOff else Icons.Default.Visibility,if(confirmationVisible)"Hide confirmed password" else "Show confirmed password")}},isError=attempted&&!passwordsMatch,supportingText={if(attempted&&!passwordsMatch)Text("Passwords do not match")})
   Row(verticalAlignment=Alignment.Top){
    Checkbox(accepted,{accepted=it;edit()},enabled=!submitting)
    Column(Modifier.padding(top=8.dp)){
@@ -84,7 +93,7 @@ import kotlinx.coroutines.launch
    if(!validCompany||!validName||!validEmail||!strongPassword||!passwordsMatch||!accepted)return@Button
    scope.launch{
     submitting=true;message=null
-    try{client.register(product,company,name,email,password,confirm);onRegistered()}
+    try{client.register(product,company,name,email,password,confirm,logo);onRegistered()}
     catch(error:Exception){message=registrationMessage(error)}
     finally{submitting=false}
    }
@@ -95,6 +104,7 @@ import kotlinx.coroutines.launch
 private fun registrationMessage(error:Exception)=when(error){
  is ApiException->when(error.code){
   "EMAIL_IN_USE"->"An account already exists with this email address."
+  "LOGO_INVALID"->"Choose a valid JPEG, PNG or WebP image up to 5 MB."
   "INVALID_INPUT"->"Please review the registration details and try again."
   "LEGAL_CONSENT_REQUIRED"->"Agree to the Terms of Service and acknowledge the Privacy Policy to continue."
   "RATE_LIMITED"->"Too many registration attempts. Please wait and try again."
