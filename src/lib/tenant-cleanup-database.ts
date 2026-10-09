@@ -139,6 +139,7 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
     inventory: companyId => tenantInventory(tx, companyId),
     hasSuperAdmin: companyId => hasSuperAdmin(tx, companyId),
     assertTransactionAlive: async () => { await runCleanupDatabaseStage("ASSERT_TRANSACTION_ALIVE", () => tx.$queryRaw`SELECT 1`); },
+    async queueStorageDeletions(companyId,keys){for(const objectKey of keys)await tx.pendingStorageDeletion.upsert({where:{objectKey},create:{companyId,objectKey},update:{}})},
     async deleteTenant() {
       const companyId = lockedCompanyId;
       selectedUserIds = (await tx.user.findMany({ where: { companyId }, select: { id: true } })).map(user => user.id);
@@ -162,7 +163,7 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
         await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$executeRaw(Prisma.sql`DELETE FROM ${Prisma.raw(`"${table}"`)} WHERE "companyId"=${id}`));
       }
       await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$queryRaw`SELECT set_config('app.account_cleanup_company_id', '', true)`);
-      const ordered = ["push_devices","sessions","mobile_sessions","email_verification_tokens","user_branch_accesses","follow_up_tasks","lead_activities","lead_deletion_audits","geofence_events","sales_targets","daily_travel_approvals","visit_photos","location_points","payment_transactions","company_subscriptions","billing_audit_events","customer_visits","leads","customers","attendances","billing_orders","pending_storage_deletions","branches"];
+      const ordered = ["push_devices","sessions","mobile_sessions","email_verification_tokens","user_branch_accesses","follow_up_tasks","lead_activities","lead_deletion_audits","geofence_events","sales_targets","daily_travel_approvals","visit_photos","location_points","payment_transactions","company_subscriptions","billing_audit_events","customer_visits","leads","customers","attendances","billing_orders","branches"];
       for (const table of ordered) {
         const predicate = userOwned.has(table) ? Prisma.sql`"userId" IN (SELECT "id" FROM "users" WHERE "companyId"=${id})` : Prisma.sql`"companyId"=${id}`;
         const purgeScopeStages = table === "lead_activities"
@@ -209,6 +210,8 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
 }
 
 export const tenantCleanupDatabase: CleanupDatabase = {
+  completeStorageDeletion:objectKey=>db.pendingStorageDeletion.deleteMany({where:{objectKey}}).then(()=>undefined),
+  recordStorageDeletionFailure:objectKey=>db.pendingStorageDeletion.updateMany({where:{objectKey},data:{attempts:{increment:1},lastAttemptAt:new Date(),lastError:"PHOTO_STORAGE_UNAVAILABLE"}}).then(()=>undefined),
   inventory: companyId => tenantInventory(db, companyId),
   hasSuperAdmin: companyId => hasSuperAdmin(db, companyId),
   withLockedTenant: (companyId, work) => db.$transaction(async tx => {

@@ -23,7 +23,7 @@ import {
 import { allocateDocumentNumberInTx } from "./numbering";
 import {
   postJournalInTx,
-  reverseJournalForActor,
+  reverseJournalInTx,
 } from "@/lib/accounting/service";
 import { privateStorage } from "@/lib/storage";
 import { calculateTax } from "./tax";
@@ -646,12 +646,15 @@ export async function reverseExpenseForActor(
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const row = await scopedExpense(a, id, "POSTED");
   if (!row?.journalEntryId) throw new Error("EXPENSE_NOT_REVERSIBLE");
-  const reversal = await reverseJournalForActor(a, {
-    journalEntryId: row.journalEntryId,
+  return db.$transaction(async (tx) => {
+  await tx.$queryRaw`SELECT "id" FROM "expense_transactions" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+  const current=await tx.expenseTransaction.findFirst({where:{id,companyId:a.companyId,status:"POSTED",reversalJournalId:null}});
+  if(!current?.journalEntryId)throw new Error("EXPENSE_NOT_REVERSIBLE");
+  const reversal = await reverseJournalInTx(tx,a, {
+    journalEntryId: current.journalEntryId,
     entryDate,
     reason,
   });
-  await db.$transaction(async (tx) => {
     const changed = await tx.expenseTransaction.updateMany({
       where: {
         id,
@@ -665,8 +668,8 @@ export async function reverseExpenseForActor(
     await audit(tx, a, "EXPENSE_REVERSED", "EXPENSE", id, {
       reversalJournalId: reversal.id,
     });
-  });
   return reversal;
+  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
 }
 export async function listExpensesForActor(a: Actor) {
   return db.expenseTransaction.findMany({

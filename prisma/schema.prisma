@@ -1190,8 +1190,8 @@ model VisitPhoto {
 
 model PendingStorageDeletion {
   id            String    @id @default(uuid()) @db.Uuid
-  companyId     String    @db.Uuid
-  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  companyId     String?   @db.Uuid
+  company       Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   objectKey     String    @unique @db.VarChar(500)
   attempts      Int       @default(0)
   lastAttemptAt DateTime?
@@ -1581,6 +1581,7 @@ model PaymentTransaction {
   order             BillingOrder  @relation(fields: [orderId], references: [id], onDelete: Restrict)
   provider          String        @db.VarChar(40)
   providerPaymentId String        @unique @db.VarChar(200)
+  manualReference   String?       @unique @db.VarChar(100)
   amount            Decimal       @db.Decimal(18, 2)
   currency          String        @db.Char(3)
   status            PaymentStatus
@@ -3199,6 +3200,8 @@ model Asset {
   companyId                       String             @db.Uuid
   branchId                        String             @db.Uuid
   assetNumber                     String             @db.VarChar(100)
+  creationRequestKey              String?             @db.Uuid
+  creationRequestHash             String?             @db.VarChar(64)
   name                            String             @db.VarChar(240)
   assetType                       AssetType
   category                        String?            @db.VarChar(120)
@@ -3227,6 +3230,7 @@ model Asset {
   updatedAt                       DateTime            @updatedAt
   @@unique([companyId, id])
   @@unique([companyId, assetNumber])
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, branchId, status])
   @@map("assets")
 }

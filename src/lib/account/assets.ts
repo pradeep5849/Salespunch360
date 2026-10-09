@@ -1,3 +1,5 @@
+import {retrySerializable} from "./transaction-retry";
+import {createHash} from "node:crypto";
 import {
   AssetStatus,
   AssetType,
@@ -41,7 +43,7 @@ const D = Prisma.Decimal,
       depreciationExpenseLedgerId: z.string().uuid().optional(),
     })
     .strict(),
-  createInput = base.extend({ branchId: z.string().uuid() });
+  createInput = base.extend({ branchId: z.string().uuid(), requestKey:z.string().uuid().optional() });
 export async function assertAssetAccess(a: ProjectActor) {
   if (!a.companyId || !["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(a.accountRole ?? "")) throw new AuthorizationError();
   await requireAccountModules(a, "ASSETS");
@@ -179,18 +181,38 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
     }))
   )
     throw new AuthorizationError();
-  return db.$transaction(
+  return retrySerializable(()=>db.$transaction(
     async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":asset-number"}))`;
+      const {requestKey,...values}=d;
+      const requestHash=createHash("sha256").update(JSON.stringify(values)).digest("hex");
+      if(requestKey){
+        const existing=await tx.asset.findUnique({where:{companyId_creationRequestKey:{companyId:a.companyId,creationRequestKey:requestKey}}});
+        if(existing){
+          if(existing.creationRequestHash!==requestHash)throw new Error("IDEMPOTENCY_KEY_REUSED");
+          return existing;
+        }
+      }
+      const numberingBranch=await tx.branch.findFirst({where:{companyId:a.companyId,isActive:true},orderBy:[{isPrimary:"desc"},{createdAt:"asc"}],select:{id:true}});
+      if(!numberingBranch)throw new Error("ACTIVE_BRANCH_REQUIRED");
       const purchaseValue = await validateLinks(tx, a, d.branchId, d),
-        assetNumber = await allocateDocumentNumberInTx(tx, {
+        firstNumber = await allocateDocumentNumberInTx(tx, {
           companyId: a.companyId!,
-          branchId: d.branchId,
+          branchId: numberingBranch.id,
           seriesKey: "ASSET",
           defaults: { prefix: "AST-", padding: 6 },
         }),
-        row = await tx.asset.create({
+        reservedNumber = firstNumber;
+      let assetNumber=reservedNumber;
+      // Old branch-local series may already have allocated this company number.
+      while(await tx.asset.findUnique({where:{companyId_assetNumber:{companyId:a.companyId,assetNumber}}})){
+        assetNumber=await allocateDocumentNumberInTx(tx,{companyId:a.companyId,branchId:numberingBranch.id,seriesKey:"ASSET",defaults:{prefix:"AST-",padding:6}});
+      }
+      const row = await tx.asset.create({
           data: {
-            ...d,
+            ...values,
+            creationRequestKey:requestKey,
+            creationRequestHash:requestKey?requestHash:undefined,
             companyId: a.companyId!,
             assetNumber,
             purchaseValue,
@@ -202,11 +224,11 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
       return row;
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+  ));
 }
-async function scoped(a: ProjectActor, id: string) {
+async function scoped(a: ProjectActor, id: string, client: Pick<Prisma.TransactionClient,"asset"> = db) {
   await assertAssetAccess(a);
-  const row = await db.asset.findFirst({
+  const row = await client.asset.findFirst({
     where: { id, companyId: a.companyId, ...branchWhere(a) },
   });
   if (!row) throw new AuthorizationError();
@@ -245,11 +267,11 @@ export async function assignAssetForActor(
   userId: string,
   notes?: string,
 ) {
-  const asset = await scoped(a, assetId);
-  if (!["ACTIVE", "ASSIGNED"].includes(asset.status))
-    throw new Error("ASSET_NOT_ASSIGNABLE");
+  await scoped(a, assetId);
   return db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${assetId}::uuid FOR UPDATE`;
+    await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${assetId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+    const asset=await scoped(a,assetId,tx);
+    if (!["ACTIVE", "ASSIGNED"].includes(asset.status)) throw new Error("ASSET_NOT_ASSIGNABLE");
     if (
       !(await tx.user.findFirst({
         where: {
@@ -292,16 +314,19 @@ export async function returnAssetForActor(
 ) {
   await scoped(a, assetId);
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${assetId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+    const asset=await scoped(a,assetId,tx);
+    if(asset.status!=="ASSIGNED"||!asset.assignedUserId)throw new Error("ASSET_NOT_ASSIGNED");
     const changed = await tx.assetAssignmentHistory.updateMany({
       where: { companyId: a.companyId, assetId, returnedAt: null },
-      data: { returnedAt: new Date(), ...(notes ? { notes } : {}) },
+      data: { returnedAt: new Date() },
     });
     if (changed.count !== 1) throw new Error("ASSET_NOT_ASSIGNED");
     await tx.asset.update({
       where: { id: assetId },
       data: { assignedUserId: null, status: "ACTIVE" },
     });
-    await audit(tx, a, "ASSET_RETURNED", assetId);
+    await audit(tx, a, "ASSET_RETURNED", assetId, {returnNotes:notes??"",returnedById:a.id});
   });
 }
 export async function setAssetStatusForActor(
@@ -309,24 +334,19 @@ export async function setAssetStatusForActor(
   assetId: string,
   status: AssetStatus,
 ) {
-  const asset = await scoped(a, assetId);
-  if (status === "ASSIGNED") throw new Error("USE_ASSIGNMENT_FLOW");
-  if (asset.assignedUserId) throw new Error("RETURN_ASSET_FIRST");
-  const row = await db.asset.update({
-    where: { id: assetId },
-    data: { status },
+  await scoped(a,assetId);
+  const target=z.nativeEnum(AssetStatus).parse(status);
+  if(target==="ASSIGNED")throw new Error("USE_ASSIGNMENT_FLOW");
+  return db.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${assetId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+    const asset=await scoped(a,assetId,tx);
+    if(asset.assignedUserId||asset.status==="ASSIGNED")throw new Error("RETURN_ASSET_FIRST");
+    if(asset.status==="DISPOSED"&&target!=="DISPOSED")throw new Error("ASSET_DISPOSED");
+    if(asset.status===target)return asset;
+    const row=await tx.asset.update({where:{id:assetId},data:{status:target}});
+    await audit(tx,a,"ASSET_STATUS_CHANGED",assetId,{fromStatus:asset.status,status:target});
+    return row;
   });
-  await db.accountOperationalAudit.create({
-    data: {
-      companyId: a.companyId!,
-      actorUserId: a.id,
-      eventType: "ASSET_STATUS_CHANGED",
-      entityType: "ASSET",
-      entityId: assetId,
-      metadata: { status },
-    },
-  });
-  return row;
 }
 export function depreciationPreview(
   value: Prisma.Decimal,

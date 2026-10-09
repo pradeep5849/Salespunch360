@@ -20,7 +20,7 @@ import {
 } from "./validation";
 import { allocateDocumentNumberInTx } from "./numbering";
 import {resolvePartySettings} from "./party-settings";
-import {saveCustomFieldValues} from "./settings";
+import {saveCustomFieldValuesInTx} from "./custom-field-values";
 
 const readActor = () => requirePermission("ACCOUNT_DASHBOARD");
 const writeActor = () => requirePermissionForMutation("ACCOUNT_ACCOUNTS");
@@ -85,7 +85,20 @@ export async function accountMasterOverview(master:string,raw:{q?:string;page?:s
   return{canCreate:!!a.accountRole&&ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(master==="financial-years"?"ACCOUNT_SETTINGS":"ACCOUNT_ACCOUNTS"),accountSettings,partySettings:resolvePartySettings(accountSettings?.transactionDefaults),partyCustomFields,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
 }
 
-export async function createPartyWithCustomValues(kind:"customers"|"vendors",raw:unknown,customValues:Record<string,unknown>){const row=kind==="customers"?await createAccountCustomer(raw):await createVendor(raw);await saveCustomFieldValues(kind==="customers"?"CUSTOMER":"VENDOR",row.id,customValues);return row}
+export async function createPartyWithCustomValues(kind:"customers"|"vendors",raw:unknown,customValues:Record<string,unknown>){
+ const a=await writeActor(),d=partySchema.parse(raw);
+ return db.$transaction(async tx=>{
+  const data={companyId:a.companyId!,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes};
+  let row:{id:string};
+  if(kind==="customers"){
+   const branch=await tx.branch.findFirst({where:{companyId:a.companyId!,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},orderBy:[{isPrimary:"desc"},{createdAt:"asc"}],select:{id:true}});
+   if(!branch)throw new AuthorizationError();
+   row=await tx.customer.create({data:{...data,branchId:branch.id,isAccountCustomer:true,billingAddress:d.address,shippingAddress:d.shippingAddress}});
+  }else row=await tx.vendor.create({data});
+  await saveCustomFieldValuesInTx(tx,a.companyId!,kind==="customers"?"CUSTOMER":"VENDOR",row.id,customValues);
+  return row;
+ });
+}
 export async function setCurrency(raw: unknown) {
   const a = await settingsActor();
   const d = currencySchema.parse(raw);

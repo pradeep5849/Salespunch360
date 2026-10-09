@@ -310,18 +310,10 @@ export async function setPeriodLockForActor(
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function reverseJournalForActor(
-  a: {
-    id: string;
-    companyId: string;
-    branchAccessScope?: string;
-    branchIds?: string[];
-  },
-  raw: unknown,
-) {
-  const d = reversalSchema.parse(raw);
-  return db.$transaction(
-    async (tx) => {
+export type ReversalActor={id:string;companyId:string;branchAccessScope?:string;branchIds?:string[]};
+/** Source lifecycle and its journal reversal can share one transaction. */
+export async function reverseJournalInTx(tx:Prisma.TransactionClient,a:ReversalActor,raw:unknown){
+ const d=reversalSchema.parse(raw);
       await lockCompany(tx, a.companyId);
       const original = await tx.journalEntry.findFirst({
         where: {
@@ -365,7 +357,6 @@ export async function reverseJournalForActor(
           createdById: a.id,
           lines: {
             create: original.lines.map((l) => ({
-              companyId: a.companyId,
               lineNumber: l.lineNumber,
               ledgerAccountId: l.ledgerAccountId,
               costCentreId: l.costCentreId,
@@ -396,10 +387,11 @@ export async function reverseJournalForActor(
         },
       });
       return reversal;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
 }
+export async function reverseJournalForActor(a:ReversalActor,raw:unknown){
+ return db.$transaction(tx=>reverseJournalInTx(tx,a,raw),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+}
+
 
 export async function reverseJournal(raw: unknown) {
   return reverseJournalForActor(await actor("ACCOUNT_JOURNAL_REVERSE"), raw);
