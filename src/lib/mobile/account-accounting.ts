@@ -13,6 +13,7 @@ import {
 import {
   assertAssetAccess,
   assetOptionsForActor,
+  listAssetsForActor,
   assignAssetForActor,
   createAssetForActor,
   getAssetForActor,
@@ -53,7 +54,7 @@ export async function mobileAccountingOverview(u: MobileAppPrincipal) {
     balance = new Map(
       totals.map((x) => [
         x.ledgerAccountId,
-      new Prisma.Decimal(x._sum.debit ?? 0).sub(x._sum.credit ?? 0),
+        new Prisma.Decimal(x._sum.debit ?? 0).sub(x._sum.credit ?? 0),
       ]),
     );
   return {
@@ -114,23 +115,15 @@ export async function mobileAssets(
   u: MobileAppPrincipal,
   q?: string | null,
   status?: string | null,
+  offset = 0,
+  limit = 50,
 ) {
-  const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await assertAssetAccess(a);
-  const rows = await db.asset.findMany({
-    where: {
-      companyId: a.companyId,
-      ...branchScope(a),
-      ...(status ? { status: status as AssetStatus } : {}),
-    },
-    orderBy: { createdAt: "desc" },
+  return listAssetsForActor(permit(u, "ACCOUNT_ACCOUNTS"), {
+    q: q ?? "",
+    ...(status ? { status } : {}),
+    offset,
+    limit,
   });
-  return rows.filter(
-    (x) =>
-      !q ||
-      x.name.toLowerCase().includes(q.toLowerCase()) ||
-      x.assetNumber.toLowerCase().includes(q.toLowerCase()),
-  );
 }
 export async function mobileAssetOptions(u: MobileAppPrincipal) {
   const a = permit(u, "ACCOUNT_ACCOUNTS");

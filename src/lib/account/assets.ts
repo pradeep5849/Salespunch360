@@ -98,11 +98,16 @@ async function validateLinks(
   a: ProjectActor,
   branchId: string,
   d: z.infer<typeof base>,
+  previousVendorId?: string | null,
 ) {
   if (
     d.vendorId &&
     !(await tx.vendor.findFirst({
-      where: { id: d.vendorId, companyId: a.companyId, isActive: true },
+      where: {
+        id: d.vendorId,
+        companyId: a.companyId,
+        ...(previousVendorId === d.vendorId ? {} : { isActive: true }),
+      },
     }))
   )
     throw new Error("INVALID_ASSET_VENDOR");
@@ -171,6 +176,42 @@ async function validateLinks(
     throw new Error("DEPRECIATION_CONFIGURATION_REQUIRED");
   if (new D(d.salvageValue).gt(value)) throw new Error("SALVAGE_EXCEEDS_VALUE");
   return value;
+}
+export async function listAssetsForActor(a: ProjectActor, raw: unknown = {}) {
+  await assertAssetAccess(a);
+  const input = z
+    .object({
+      q: z.string().trim().max(240).default(""),
+      status: z.nativeEnum(AssetStatus).optional(),
+      offset: z.coerce.number().int().min(0).default(0),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+    })
+    .strict()
+    .parse(raw);
+  const rows = await db.asset.findMany({
+    where: {
+      companyId: a.companyId,
+      ...branchWhere(a),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.q
+        ? {
+            OR: [
+              { name: { contains: input.q, mode: "insensitive" } },
+              { assetNumber: { contains: input.q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    skip: input.offset,
+    take: input.limit + 1,
+  });
+  return {
+    items: rows.slice(0, input.limit),
+    hasMore: rows.length > input.limit,
+    offset: input.offset,
+    limit: input.limit,
+  };
 }
 export async function assetOptionsForActor(a: ProjectActor) {
   await assertAssetAccess(a);
@@ -336,6 +377,14 @@ export async function getAssetForActor(a: ProjectActor, id: string) {
       where: { companyId: a.companyId, assetId: id },
       orderBy: { assignedAt: "desc" },
     }),
+    events: await db.accountOperationalAudit.findMany({
+      where: { companyId: a.companyId, entityType: "ASSET", entityId: id },
+      orderBy: { createdAt: "desc" },
+    }),
+    people: await db.user.findMany({
+      where: { companyId: a.companyId },
+      select: { id: true, name: true },
+    }),
   };
 }
 export async function updateAssetForActor(
@@ -358,7 +407,13 @@ export async function updateAssetForActor(
       ),
       ...(raw as Record<string, unknown>),
     });
-    const purchaseValue = await validateLinks(tx, a, current.branchId, d);
+    const purchaseValue = await validateLinks(
+      tx,
+      a,
+      current.branchId,
+      d,
+      current.vendorId,
+    );
     const row = await tx.asset.update({
       where: { id },
       data: { ...d, purchaseValue, salvageValue: new D(d.salvageValue) },
@@ -494,6 +549,9 @@ async function audit(
   });
 }
 
+export async function listAssets(raw: unknown = {}) {
+  return listAssetsForActor(await actor(), raw);
+}
 export async function assetOptions() {
   return assetOptionsForActor(await actor());
 }

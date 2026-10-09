@@ -23,6 +23,8 @@ import {
   returnAssetForActor,
   setAssetStatusForActor,
   updateAssetForActor,
+  listAssetsForActor,
+  getAssetForActor,
 } from "./assets";
 import {
   createExpenseForActor,
@@ -686,6 +688,49 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
         data: { openingQuantity: "1" },
       }),
     ).rejects.toThrow();
+  });
+  it("provides complete paginated asset search without crossing branch scope", async () => {
+    const rows = Array.from({ length: 205 }, (_, i) => ({
+      companyId,
+      branchId: branchA,
+      assetNumber: `PAGE-${i}`,
+      name: `Long fixture ${String(i).padStart(3, "0")}`,
+      assetType: "TOOL" as const,
+      purchaseDate: new Date("2026-10-09"),
+      purchaseValue: "5",
+      createdById: userId,
+    }));
+    await client.asset.createMany({ data: rows });
+    const first = await listAssetsForActor(actor, {
+      q: "Long fixture",
+      limit: 100,
+    });
+    expect(first.items).toHaveLength(100);
+    expect(first.hasMore).toBe(true);
+    const last = await listAssetsForActor(actor, {
+      q: "Long fixture",
+      offset: 200,
+      limit: 100,
+    });
+    expect(last.items).toHaveLength(5);
+    expect(last.hasMore).toBe(false);
+    const selected = {
+      ...actor,
+      branchAccessScope: "SELECTED_BRANCHES" as const,
+      branchIds: [branchB],
+    };
+    expect(
+      (await listAssetsForActor(selected, { q: "Long fixture" })).items,
+    ).toHaveLength(0);
+    expect(
+      (await listAssetsForActor(actor, { q: "Long fixture 204" })).items,
+    ).toHaveLength(1);
+    await expect(
+      listAssetsForActor(actor, { status: "FORGED" }),
+    ).rejects.toThrow();
+    const detail = await getAssetForActor(actor, first.items[0].id);
+    expect(detail.people.find((x) => x.id === userId)?.name).toBe("Test admin");
+    expect(detail.asset.assetNumber).toBe(first.items[0].assetNumber);
   });
   it("enforces module OFF without deleting historical assets", async () => {
     const before = await client.asset.count({ where: { companyId } });
