@@ -47,7 +47,7 @@ import {
   documentOutstandingsBatch,
 } from "./commercial";
 import { mobileProjectOptions } from "@/lib/mobile/account-projects";
-import { loadProjectCostingForActor } from "./project-costing";
+import { createChangeOrderForActor, updateChangeOrderForActor, transitionChangeOrderForActor, loadProjectCostingForActor } from "./project-costing";
 const companyId = randomUUID(),
   branchId = randomUUID(),
   otherBranch = randomUUID(),
@@ -283,6 +283,7 @@ describe.skipIf(!url)(
         await tx.journalLine.deleteMany({ where: { companyId } });
         await tx.journalEntry.deleteMany({ where: { companyId } });
       });
+      await client.projectChangeOrder.deleteMany({ where: { companyId } });
       await client.projectBudgetLine.deleteMany({ where: { companyId } });
       await client.projectMember.deleteMany({ where: { companyId } });
       await client.project.deleteMany({ where: { companyId } });
@@ -789,6 +790,46 @@ describe.skipIf(!url)(
           data: { ...data, branchId, projectBudgetLineId: budgetB },
         }),
       ).rejects.toThrow("PROJECT_MATERIAL_BUDGET_MISMATCH");
+    });
+    it("creates, edits, submits and independently approves extra work without duplicate effects", async () => {
+      const input = {projectId: a, title: "Extra work", description: "Approved site addition", valueDelta: "100.00", estimatedCostDelta: "20", idempotencyKey: key()};
+      const [first, again] = await Promise.all([createChangeOrderForActor(actor, input), createChangeOrderForActor(actor, input)]);
+      expect(first.id).toBe(again.id);
+      await expect(createChangeOrderForActor(actor, {...input, valueDelta: "200"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      await expect(createChangeOrderForActor(actor, {...input, idempotencyKey: key(), valueDelta: "NaN"})).rejects.toThrow();
+      const edit = {projectId: a, changeOrderId: first.id, title: "Revised extra work", description: "Actual approved requirement", valueDelta: "150", estimatedCostDelta: "25"};
+      await updateChangeOrderForActor(actor, edit);
+      await updateChangeOrderForActor(actor, edit);
+      expect(await client.projectAuditEvent.count({where: {companyId, projectId: a, eventType: "PROJECT_UPDATED", metadata: {path: ["changeOrderId"], equals: first.id}}})).toBe(1);
+      await transitionChangeOrderForActor(actor, a, first.id, "PENDING_APPROVAL");
+      await transitionChangeOrderForActor(actor, a, first.id, "PENDING_APPROVAL");
+      expect(await client.projectAuditEvent.count({where: {companyId, eventType: "CHANGE_ORDER_SUBMITTED", metadata: {path: ["changeOrderId"], equals: first.id}}})).toBe(1);
+      await expect(transitionChangeOrderForActor(actor, a, first.id, "APPROVED")).rejects.toThrow("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
+      const approverId = key();
+      await client.user.create({data: {id: approverId, companyId, name: "Independent approver", email: `${approverId}@example.test`, passwordHash: "fixture-only", role: "ACCOUNT_USER", accountRole: "ACCOUNT_ADMIN", accountAccessActive: true}});
+      const approver = {...actor, id: approverId};
+      const before = await loadProjectCostingForActor(actor, a);
+      await transitionChangeOrderForActor(approver, a, first.id, "APPROVED");
+      await transitionChangeOrderForActor(approver, a, first.id, "APPROVED");
+      const after = await loadProjectCostingForActor(actor, a);
+      expect(after.metrics.contractRevenueBase.sub(before.metrics.contractRevenueBase).toString()).toBe("150");
+      expect(after.metrics.revenue.toString()).toBe(before.metrics.revenue.toString());
+      expect(after.metrics.actualCost.toString()).toBe(before.metrics.actualCost.toString());
+      expect(await client.projectAuditEvent.count({where: {companyId, eventType: "CHANGE_ORDER_APPROVED", metadata: {path: ["changeOrderId"], equals: first.id}}})).toBe(1);
+      await expect(updateChangeOrderForActor(actor, edit)).rejects.toThrow("CHANGE_ORDER_NOT_EDITABLE");
+      await expect(transitionChangeOrderForActor(actor, a, first.id, "APPROVED")).rejects.toThrow("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
+      await expect(createChangeOrderForActor({...actor, accountRole: "ACCOUNTANT"}, {...input, idempotencyKey: key()})).rejects.toThrow("Not authorized");
+      const decrease = await createChangeOrderForActor(actor, {...input, idempotencyKey: key(), valueDelta: "-2000"});
+      await transitionChangeOrderForActor(actor, a, decrease.id, "PENDING_APPROVAL");
+      await expect(transitionChangeOrderForActor(approver, a, decrease.id, "APPROVED")).rejects.toThrow("INVALID_PROJECT_VALUE");
+      expect((await client.projectChangeOrder.findUniqueOrThrow({where: {id: decrease.id}})).status).toBe("PENDING_APPROVAL");
+      const costDecrease = await createChangeOrderForActor(actor, {...input, idempotencyKey: key(), estimatedCostDelta: "-2000"});
+      await transitionChangeOrderForActor(actor, a, costDecrease.id, "PENDING_APPROVAL");
+      await expect(transitionChangeOrderForActor(approver, a, costDecrease.id, "APPROVED")).rejects.toThrow("INVALID_PROJECT_ESTIMATED_COST");
+      await expect(createChangeOrderForActor(actor, {...input, projectId: key(), idempotencyKey: key()})).rejects.toThrow("Not authorized");
+      await client.project.update({where: {id: b}, data: {status: "CLOSED"}});
+      try { await expect(createChangeOrderForActor(actor, {...input, projectId: b, idempotencyKey: key()})).rejects.toThrow("PROJECT_FINAL"); }
+      finally { await client.project.update({where: {id: b}, data: {status: "ACTIVE"}}); }
     });
     it("keeps Project details available independently of the optional Costing module", async () => {
       const settings = await client.accountSettings.findUniqueOrThrow({where: {companyId}});

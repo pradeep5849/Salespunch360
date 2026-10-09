@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { retrySerializable } from "./transaction-retry";
 import { Prisma, ProjectChangeOrderStatus } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -8,6 +10,7 @@ import {
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "./modules";
 import {
+  authorizeProjectForCommercial,
   requireProjectFunction,
   authorizedProjectBranchIds,
   projectRecordScope,
@@ -528,132 +531,110 @@ export async function loadProjectCostingForActor(
 export async function loadProjectCosting(projectId: string) {
   return loadProjectCostingForActor(await costingActor(), projectId);
 }
-const changeInput = z
-  .object({
-    projectId: z.string().uuid(),
-    title: z.string().trim().min(1).max(240),
-    description: z.string().trim().max(5000).optional(),
-    valueDelta: z.string(),
-    estimatedCostDelta: z.string(),
-  })
-  .strict();
+const signedMoney = z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/);
+const changeInput = z.object({
+  projectId: z.string().uuid(), title: z.string().trim().min(1).max(240),
+  description: z.string().trim().max(5000).optional(),
+  valueDelta: signedMoney, estimatedCostDelta: signedMoney,
+  idempotencyKey: z.string().trim().min(1).max(120).optional(),
+}).strict();
+async function editableCostProject(actor: Actor, projectId: string) {
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_EDIT");
+  await requireAccountModules(actor, "PROJECTS", "PROJECT_COSTING");
+  const project = await scopedProject(actor, projectId);
+  if (["COMPLETED", "CLOSED", "CANCELLED"].includes(project.status)) throw new Error("PROJECT_FINAL");
+  return project;
+}
+export async function createChangeOrderForActor(actor: Actor, raw: unknown) {
+  const data = changeInput.parse(raw), project = await editableCostProject(actor, data.projectId);
+  const requestHash = createHash("sha256").update(JSON.stringify({projectId: data.projectId,
+    title: data.title, description: data.description ?? "", valueDelta: new D(data.valueDelta).toString(),
+    estimatedCostDelta: new D(data.estimatedCostDelta).toString()})).digest("hex");
+  return retrySerializable(() => db.$transaction(async tx => {
+    await authorizeProjectForCommercial(actor, project.id, project.branchId, undefined, tx);
+    if (data.idempotencyKey) {
+      const existing = await tx.projectChangeOrder.findUnique({where: {companyId_requestKey: {companyId: actor.companyId, requestKey: data.idempotencyKey}}});
+      if (existing) {
+        if (existing.requestHash !== requestHash) throw new Error("IDEMPOTENCY_KEY_REUSED");
+        return existing;
+      }
+    }
+    const changeOrderNumber = await allocateDocumentNumberInTx(tx, {companyId: actor.companyId,
+      branchId: project.branchId, seriesKey: "PROJECT_CHANGE_ORDER", defaults: {prefix: "CO-", padding: 6}});
+    const row = await tx.projectChangeOrder.create({data: {companyId: actor.companyId, projectId: project.id,
+      changeOrderNumber, title: data.title, description: data.description, valueDelta: new D(data.valueDelta),
+      estimatedCostDelta: new D(data.estimatedCostDelta), createdById: actor.id,
+      requestKey: data.idempotencyKey, requestHash: data.idempotencyKey ? requestHash : null}});
+    await tx.projectAuditEvent.create({data: {companyId: actor.companyId, projectId: project.id,
+      actorUserId: actor.id, eventType: "CHANGE_ORDER_CREATED", metadata: {changeOrderId: row.id}}});
+    return row;
+  }, {isolationLevel: Prisma.TransactionIsolationLevel.Serializable}));
+}
 export async function createChangeOrder(raw: unknown) {
-  const actor = await costingActor(true),
-    data = changeInput.parse(raw),
-    project = await scopedProject(actor, data.projectId);
-  return db.$transaction(
-    async (tx) => {
-      const changeOrderNumber = await allocateDocumentNumberInTx(tx, {
-          companyId: actor.companyId,
-          branchId: project.branchId,
-          seriesKey: "PROJECT_CHANGE_ORDER",
-          defaults: { prefix: "CO-", padding: 6 },
-        }),
-        row = await tx.projectChangeOrder.create({
-          data: {
-            companyId: actor.companyId,
-            projectId: project.id,
-            changeOrderNumber,
-            title: data.title,
-            description: data.description,
-            valueDelta: new D(data.valueDelta),
-            estimatedCostDelta: new D(data.estimatedCostDelta),
-            createdById: actor.id,
-          },
-        });
-      await tx.projectAuditEvent.create({
-        data: {
-          companyId: actor.companyId,
-          projectId: project.id,
-          actorUserId: actor.id,
-          eventType: "CHANGE_ORDER_CREATED",
-          metadata: { changeOrderId: row.id },
-        },
-      });
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+  return createChangeOrderForActor(await costingActor(true), raw);
+}
+export async function updateChangeOrderForActor(actor: Actor, raw: unknown) {
+  const data = changeInput.omit({idempotencyKey: true}).extend({changeOrderId: z.string().uuid()}).parse(raw);
+  const project = await editableCostProject(actor, data.projectId);
+  return retrySerializable(() => db.$transaction(async tx => {
+    await authorizeProjectForCommercial(actor, project.id, project.branchId, undefined, tx);
+    const previous = await tx.projectChangeOrder.findFirst({where: {id: data.changeOrderId, companyId: actor.companyId, projectId: project.id, status: "DRAFT"}});
+    if (!previous) throw new Error("CHANGE_ORDER_NOT_EDITABLE");
+    if (previous.title === data.title && (previous.description ?? "") === (data.description ?? "") &&
+        previous.valueDelta.eq(data.valueDelta) && previous.estimatedCostDelta.eq(data.estimatedCostDelta)) return previous;
+    const row = await tx.projectChangeOrder.update({where: {id: previous.id}, data: {
+      title: data.title, description: data.description, valueDelta: new D(data.valueDelta), estimatedCostDelta: new D(data.estimatedCostDelta)}});
+    await tx.projectAuditEvent.create({data: {companyId: actor.companyId, projectId: project.id, actorUserId: actor.id,
+      eventType: "PROJECT_UPDATED", metadata: {operation: "CHANGE_ORDER_EDIT", changeOrderId: row.id,
+        before: {title: previous.title, valueDelta: previous.valueDelta.toString(), estimatedCostDelta: previous.estimatedCostDelta.toString()},
+        after: {title: row.title, valueDelta: row.valueDelta.toString(), estimatedCostDelta: row.estimatedCostDelta.toString()}}}});
+    return row;
+  }, {isolationLevel: Prisma.TransactionIsolationLevel.Serializable}));
 }
 export async function updateChangeOrder(raw: unknown) {
-  const actor = await costingActor(true),
-    data = changeInput.extend({ changeOrderId: z.string().uuid() }).parse(raw);
-  await scopedProject(actor, data.projectId);
-  const changed = await db.projectChangeOrder.updateMany({
-    where: {
-      id: data.changeOrderId,
-      companyId: actor.companyId,
-      projectId: data.projectId,
-      status: "DRAFT",
-    },
-    data: {
-      title: data.title,
-      description: data.description,
-      valueDelta: new D(data.valueDelta),
-      estimatedCostDelta: new D(data.estimatedCostDelta),
-    },
-  });
-  if (changed.count !== 1) throw new Error("CHANGE_ORDER_NOT_EDITABLE");
+  return updateChangeOrderForActor(await costingActor(true), raw);
 }
-export async function transitionChangeOrder(
-  projectId: string,
-  changeOrderId: string,
-  to: ProjectChangeOrderStatus,
-) {
-  const actor = await costingActor(true);
-  await scopedProject(actor, projectId);
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "project_change_orders" WHERE "id"=${changeOrderId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
-      const row = await tx.projectChangeOrder.findFirst({
-        where: { id: changeOrderId, companyId: actor.companyId, projectId },
-      });
-      if (!row) throw new AuthorizationError();
-      const allowed: Record<
-        ProjectChangeOrderStatus,
-        ProjectChangeOrderStatus[]
-      > = {
-        DRAFT: ["PENDING_APPROVAL", "CANCELLED"],
-        PENDING_APPROVAL: ["APPROVED", "REJECTED", "CANCELLED"],
-        APPROVED: [],
-        REJECTED: [],
-        CANCELLED: [],
-      };
-      if (!allowed[row.status].includes(to))
-        throw new Error("INVALID_CHANGE_ORDER_TRANSITION");
-      if (["APPROVED", "REJECTED"].includes(to)) {
-        if (actor.accountRole !== "ACCOUNT_ADMIN")
-          throw new AuthorizationError();
-        if (row.createdById === actor.id)
-          throw new Error("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
-      }
-      const updated = await tx.projectChangeOrder.update({
-        where: { id: row.id },
-        data: {
-          status: to,
-          ...(to === "APPROVED"
-            ? { approvedAt: new Date(), approvedById: actor.id }
-            : {}),
-        },
-      });
-      await tx.projectAuditEvent.create({
-        data: {
-          companyId: actor.companyId,
-          projectId,
-          actorUserId: actor.id,
-          eventType: (
-            {
-              PENDING_APPROVAL: "CHANGE_ORDER_SUBMITTED",
-              APPROVED: "CHANGE_ORDER_APPROVED",
-              REJECTED: "CHANGE_ORDER_REJECTED",
-              CANCELLED: "CHANGE_ORDER_CANCELLED",
-            } as const
-          )[to as "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CANCELLED"],
-          metadata: { changeOrderId },
-        },
-      });
-      return updated;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+export async function transitionChangeOrderForActor(actor: Actor, projectId: string, changeOrderId: string, to: ProjectChangeOrderStatus) {
+  z.object({projectId: z.string().uuid(), changeOrderId: z.string().uuid(), to: z.nativeEnum(ProjectChangeOrderStatus)}).parse({projectId, changeOrderId, to});
+  const project = await editableCostProject(actor, projectId);
+  return retrySerializable(() => db.$transaction(async tx => {
+    await authorizeProjectForCommercial(actor, project.id, project.branchId, undefined, tx);
+    await tx.$queryRaw`SELECT "id" FROM "project_change_orders" WHERE "id"=${changeOrderId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+    const row = await tx.projectChangeOrder.findFirst({where: {id: changeOrderId, companyId: actor.companyId, projectId}});
+    if (!row) throw new AuthorizationError();
+    if (["APPROVED", "REJECTED"].includes(to)) {
+      if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+      if (row.createdById === actor.id) throw new Error("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
+    }
+    // Authorization precedes replay, and repeating status has no duplicate audit.
+    if (row.status === to) return row;
+    const allowed: Record<ProjectChangeOrderStatus, ProjectChangeOrderStatus[]> = {
+      DRAFT: ["PENDING_APPROVAL", "CANCELLED"], PENDING_APPROVAL: ["APPROVED", "REJECTED", "CANCELLED"], APPROVED: [], REJECTED: [], CANCELLED: [],
+    };
+    if (!allowed[row.status].includes(to)) throw new Error("INVALID_CHANGE_ORDER_TRANSITION");
+    if (to === "APPROVED") {
+      const [current, approved, budget] = await Promise.all([
+        tx.project.findUniqueOrThrow({where: {id: projectId}}),
+        tx.projectChangeOrder.aggregate({where: {companyId: actor.companyId, projectId, status: "APPROVED"}, _sum: {valueDelta: true, estimatedCostDelta: true}}),
+        tx.projectBudgetLine.aggregate({where: {companyId: actor.companyId, projectId}, _sum: {amount: true}}),
+      ]);
+      const quotation = current.sourceQuotationId ? await tx.quotationDocument.findFirst({
+        where: {id: current.sourceQuotationId, companyId: actor.companyId, status: "ACCEPTED"},
+        include: {revisions: {where: {status: "ACCEPTED"}, orderBy: {revisionNumber: "desc"}, take: 1}},
+      }) : null;
+      const contractBase = quotation?.revisions[0]?.taxableTotal ?? current.projectValue;
+      const estimatedCostBase = quotation?.revisions[0]?.internalCostTotal ?? new D(budget._sum.amount ?? 0);
+      if (contractBase.add(approved._sum.valueDelta ?? 0).add(row.valueDelta).lt(0)) throw new Error("INVALID_PROJECT_VALUE");
+      if (estimatedCostBase.add(approved._sum.estimatedCostDelta ?? 0).add(row.estimatedCostDelta).lt(0)) throw new Error("INVALID_PROJECT_ESTIMATED_COST");
+    }
+    const updated = await tx.projectChangeOrder.update({where: {id: row.id}, data: {status: to,
+      ...(to === "APPROVED" ? {approvedAt: new Date(), approvedById: actor.id} : {})}});
+    const eventType = {PENDING_APPROVAL: "CHANGE_ORDER_SUBMITTED", APPROVED: "CHANGE_ORDER_APPROVED", REJECTED: "CHANGE_ORDER_REJECTED", CANCELLED: "CHANGE_ORDER_CANCELLED"} as const;
+    await tx.projectAuditEvent.create({data: {companyId: actor.companyId, projectId, actorUserId: actor.id,
+      eventType: eventType[to as keyof typeof eventType], metadata: {changeOrderId, from: row.status, to}}});
+    return updated;
+  }, {isolationLevel: Prisma.TransactionIsolationLevel.Serializable}));
+}
+export async function transitionChangeOrder(projectId: string, changeOrderId: string, to: ProjectChangeOrderStatus) {
+  return transitionChangeOrderForActor(await costingActor(true), projectId, changeOrderId, to);
 }

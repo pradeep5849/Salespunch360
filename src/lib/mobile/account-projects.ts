@@ -14,7 +14,7 @@ import {
   completeSimpleProjectForActor,
   createSimpleProjectForActor,
 } from "@/lib/account/project-simple-workflow";
-import { loadProjectCostingForActor } from "@/lib/account/project-costing";
+import { createChangeOrderForActor, updateChangeOrderForActor, transitionChangeOrderForActor, loadProjectCostingForActor } from "@/lib/account/project-costing";
 import { enabledModulesForCompany, requireAccountModules } from "@/lib/account/modules";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
@@ -115,10 +115,12 @@ export async function mobileUpdateProject(u: MobileAppPrincipal, raw: unknown) {
 }
 
 export async function mobileProjectCosting(u: MobileAppPrincipal, id: string) {
-  return loadProjectCostingForActor(
-    await permit(u, "ACCOUNT_PROJECT_COST_VIEW"),
-    id,
-  );
+  const actor = await permit(u, "ACCOUNT_PROJECT_COST_VIEW");
+  const result = await loadProjectCostingForActor(actor, id);
+  return {...result, capabilities: {
+    edit: !["COMPLETED", "CLOSED", "CANCELLED"].includes(result.project.status) && canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_EDIT"),
+    approve: actor.accountRole === "ACCOUNT_ADMIN", actorId: actor.id,
+  }};
 }
 
 export async function mobileProjectAction(
@@ -145,4 +147,18 @@ export async function mobileProjectBudget(
   const d = raw as { lines?: unknown[] };
   await replaceBudgetForActor(actor, { projectId: id, lines: d.lines ?? [] });
   return getProjectForActor(actor, id);
+}
+
+export async function mobileProjectChangeOrder(u: MobileAppPrincipal, projectId: string, raw: unknown) {
+  await assertOperationalWrite(u.companyId);
+  const actor = await permit(u, "ACCOUNT_PROJECTS");
+  const request = z.discriminatedUnion("operation", [
+    z.object({operation: z.literal("CREATE"), payload: z.object({title: z.string(), description: z.string().optional(), valueDelta: z.string(), estimatedCostDelta: z.string(), idempotencyKey: z.string().min(1).max(120)}).strict()}).strict(),
+    z.object({operation: z.literal("EDIT"), payload: z.object({changeOrderId: z.string().uuid(), title: z.string(), description: z.string().optional(), valueDelta: z.string(), estimatedCostDelta: z.string()}).strict()}).strict(),
+    z.object({operation: z.enum(["PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED"]), changeOrderId: z.string().uuid()}).strict(),
+  ]).parse(raw);
+  if (request.operation === "CREATE") await createChangeOrderForActor(actor, {...request.payload, projectId});
+  else if (request.operation === "EDIT") await updateChangeOrderForActor(actor, {...request.payload, projectId});
+  else await transitionChangeOrderForActor(actor, projectId, request.changeOrderId, request.operation);
+  return mobileProjectCosting(u, projectId);
 }

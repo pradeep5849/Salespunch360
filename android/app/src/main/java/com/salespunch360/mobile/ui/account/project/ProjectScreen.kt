@@ -34,8 +34,11 @@ private fun workflowStatusLabel(status: String) = when (workflowStatus(status)) 
 fun ProjectScreen(
     padding: PaddingValues,
     navigate:(String)->Unit={},
+    initialProjectId:String?=null,
+    initialCreate:Boolean=false,
     vm: AccountProjectViewModel = viewModel(),
 ) {
+    LaunchedEffect(initialProjectId,initialCreate){vm.initialRoute(initialProjectId,initialCreate)}
     val s = vm.state.collectAsStateWithLifecycle().value
     Box(Modifier.fillMaxSize().padding(padding)) {
         LazyColumn(
@@ -111,8 +114,9 @@ fun ProjectScreen(
     }
     s.editing?.let { ProjectEditor(it, s.options, vm::close, vm::save) }
     s.detail?.let {
-        ProjectDetail(it,s.costing,s.options["capabilities"]?.jsonObject?.get("budgetEdit")?.jsonPrimitive?.booleanOrNull==true,vm::close,vm::edit,vm::action,vm::editBudget)
+        ProjectDetail(it,s.costing,s.options["capabilities"]?.jsonObject?.get("budgetEdit")?.jsonPrimitive?.booleanOrNull==true,s.saving,s.error,vm::close,vm::edit,vm::action,vm::editBudget,vm::editChange,vm::transitionChange)
     }
+    s.changeEditing?.let { ChangeOrderDialog(it,s.saving,s.error,vm::closeChange,vm::updateChange,vm::saveChange) }
     if (s.budgetEditing && s.detail != null) {
         BudgetDialog(s.detail!!, s.saving, s.error, { vm.editBudget(false) }, vm::saveBudget)
     }
@@ -211,10 +215,14 @@ private fun ProjectDetail(
     x: JsonObject,
     costing: JsonObject?,
     canBudget: Boolean,
+    saving: Boolean,
+    error: String?,
     close: () -> Unit,
     edit: () -> Unit,
     action: (String, String) -> Unit,
     budget: () -> Unit,
+    editChange: (JsonObject?) -> Unit,
+    transitionChange: (String, String) -> Unit,
 ) {
     val final = workflowStatus(x.str("status")) == "COMPLETED"
     AlertDialog(
@@ -222,6 +230,7 @@ private fun ProjectDetail(
         title = { Text(x.str("projectNumber")) },
         text = {
             LazyColumn {
+                error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
                 item { Text(x.str("name"), style = MaterialTheme.typography.titleLarge) }
                 item {
                     Text(
@@ -255,12 +264,12 @@ private fun ProjectDetail(
                 costing?.get("metrics")?.jsonObject?.let { metrics ->
                     item { Text("Project report / costing", style = MaterialTheme.typography.titleMedium) }
                     listOf(
-                        "estimatedCost",
-                        "actualCost",
-                        "committedCost",
-                        "revenue",
-                        "profit",
-                        "actualMarginPercent",
+                        "originalValue", "approvedChangeOrders", "contractRevenueBase", "estimatedCost",
+                        "actualCost", "committedCost", "remainingForecast", "forecastCost", "budgetVariance",
+                        "revenue", "profit", "expectedProfit", "forecastProfit", "finalProfit",
+                        "advanceReceived", "amountReceived", "accountingReceivable",
+                        "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned",
+                        "materialTransferredIn", "materialTransferredOut", "actualMarginPercent", "expectedMarginPercent", "forecastMarginPercent",
                     ).forEach { key ->
                         item {
                             ListItem(
@@ -269,6 +278,28 @@ private fun ProjectDetail(
                                 },
                                 trailingContent = { Text(metrics.str(key)) },
                             )
+                        }
+                    }
+                }
+                costing?.let { report ->
+                    val caps = report["capabilities"]?.jsonObject
+                    val canEdit = !final && caps?.get("edit")?.jsonPrimitive?.booleanOrNull == true
+                    val canApprove = caps?.get("approve")?.jsonPrimitive?.booleanOrNull == true
+                    val actorId = caps?.str("actorId")
+                    item { Text("Change Orders / Extra Work",style=MaterialTheme.typography.titleMedium) }
+                    if (canEdit) item { OutlinedButton(onClick={editChange(null)},enabled=!saving) { Text("Add extra work") } }
+                    items(report.array("changes"),key={it.jsonObject.str("id")}) { element ->
+                        val row = element.jsonObject
+                        Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                            Text("${row.str("changeOrderNumber")} · ${row.str("title")}")
+                            Text("${row.str("status")} · Value ${row.str("valueDelta")} · Estimated cost ${row.str("estimatedCostDelta")}")
+                            if (canEdit && row.str("status")=="DRAFT") {
+                                Row { TextButton(onClick={editChange(row)},enabled=!saving){Text("Edit draft")};TextButton(onClick={transitionChange(row.str("id"),"PENDING_APPROVAL")},enabled=!saving){Text("Submit")} }
+                            }
+                            if (canEdit && row.str("status")=="PENDING_APPROVAL" && canApprove && row.str("createdById")!=actorId) {
+                                Row { TextButton(onClick={transitionChange(row.str("id"),"APPROVED")},enabled=!saving){Text("Approve")};TextButton(onClick={transitionChange(row.str("id"),"REJECTED")},enabled=!saving){Text("Reject")} }
+                            }
+                            if (canEdit && row.str("status") in listOf("DRAFT","PENDING_APPROVAL")) TextButton(onClick={transitionChange(row.str("id"),"CANCELLED")},enabled=!saving){Text("Cancel change order")}
                         }
                     }
                 }
@@ -295,9 +326,9 @@ private fun ProjectDetail(
         confirmButton = {
             if (!final) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(edit) { Text("Edit") }
-                    if (canBudget) OutlinedButton(budget) { Text("Budget") }
-                    FilledTonalButton({ action(x.str("id"), "COMPLETE") }) {
+                    Button(edit,enabled=!saving) { Text("Edit") }
+                    if (canBudget) OutlinedButton(budget,enabled=!saving) { Text("Budget") }
+                    FilledTonalButton({ action(x.str("id"), "COMPLETE") },enabled=!saving) {
                         Text("Complete")
                     }
                 }
@@ -411,4 +442,18 @@ private fun BudgetDialog(
         },
         dismissButton = { TextButton(close, enabled = !saving) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun ChangeOrderDialog(row: ProjectChangeDraft, saving: Boolean, error: String?, close: () -> Unit,
+    update: ((ProjectChangeDraft) -> ProjectChangeDraft) -> Unit, save: () -> Unit) {
+    AlertDialog(onDismissRequest={if(!saving)close()}, title={Text(if(row.id==null)"Add extra work" else "Edit change order")},
+        text={LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
+            error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
+            item{OutlinedTextField(row.title,{value->update{it.copy(title=value)}},label={Text("Title")},enabled=!saving)}
+            item{OutlinedTextField(row.description,{value->update{it.copy(description=value)}},label={Text("Description")},enabled=!saving)}
+            item{OutlinedTextField(row.valueDelta,{value->update{it.copy(valueDelta=value)}},label={Text("Contract value change")},enabled=!saving)}
+            item{OutlinedTextField(row.estimatedCostDelta,{value->update{it.copy(estimatedCostDelta=value)}},label={Text("Estimated cost change")},enabled=!saving)}
+        }}, confirmButton={Button(save,enabled=!saving&&validProjectChange(row)){Text(if(saving)"Saving…" else "Save draft")}},
+        dismissButton={TextButton(close,enabled=!saving){Text("Cancel")}})
 }

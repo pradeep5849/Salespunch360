@@ -2851,6 +2851,8 @@ model ProjectAuditEvent {
 
 model ProjectChangeOrder {
   id                 String                   @id @default(uuid()) @db.Uuid
+  requestKey         String?                  @db.VarChar(120)
+  requestHash        String?                  @db.VarChar(64)
   companyId          String                   @db.Uuid
   projectId          String                   @db.Uuid
   changeOrderNumber  String                   @db.VarChar(100)
@@ -2868,6 +2870,7 @@ model ProjectChangeOrder {
   @@unique([companyId, id])
   @@unique([companyId, projectId, changeOrderNumber])
   @@index([companyId, projectId, status])
+  @@unique([companyId, requestKey])
   @@map("project_change_orders")
 }
 

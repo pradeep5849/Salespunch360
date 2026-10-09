@@ -34,7 +34,8 @@ describe("native project, category and money boundaries", () => {
     );
     for (const x of [
       "ExpenseCategoryScreen(padding)",
-      "ProjectScreen(padding)",
+      "ProjectScreen(padding,vm::select,initialProjectId=",
+      'getQueryParameter("projectId")',
       "MoneyScreen(",
       "AccountAdministrationScreen(",
     ])

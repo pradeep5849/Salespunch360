@@ -52,6 +52,8 @@ export function mobileUnexpected(category: string, error: unknown) {
         "IDEMPOTENCY_KEY_REUSED",
         "EXPENSE_CATEGORY_NAME_EXISTS",
         "INVALID_EXPENSE_TRANSITION",
+        "INVALID_CHANGE_ORDER_TRANSITION",
+        "CHANGE_ORDER_NOT_EDITABLE",
         "EXPENSE_NOT_EDITABLE",
         "CATEGORY_MAPPING_CHANGED_RESUBMIT",
         "RETURN_ASSET_FIRST",

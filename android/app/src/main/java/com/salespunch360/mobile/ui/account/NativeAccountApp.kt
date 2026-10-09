@@ -160,7 +160,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
             state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
             state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"))
-            state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select) // ProjectScreen(padding) with root navigation
+            state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId")?:android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(3)?.takeIf{it!="new"},initialCreate=android.net.Uri.parse(state.selectedPath).path?.endsWith("/projects/new")==true)
             moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
             state.selectedPath.startsWith("/workspace/account/accounting/cost-centres")->ChartOfAccountsScreen(padding,true)

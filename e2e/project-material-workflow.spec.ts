@@ -41,6 +41,7 @@ test.afterAll(async () => {
     await tx.journalLine.deleteMany({where: {companyId}});
     await tx.journalEntry.deleteMany({where: {companyId}});
   });
+  await db.projectChangeOrder.deleteMany({where: {companyId}});
   await db.projectBudgetLine.deleteMany({where: {companyId}});
   await db.project.deleteMany({where: {companyId}});
   await db.customer.deleteMany({where: {companyId}});
@@ -81,6 +82,17 @@ test("Project links, material forms and API enforce the same scope and module ru
   await page.getByRole("spinbutton", {name: "Quantity", exact: true}).fill("1");
   await page.getByRole("button", {name: "Post movement", exact: true}).click();
   await expect.poll(() => db.projectMaterialMovement.count({where: {companyId, movementType: "CONSUMPTION"}})).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  await page.goto(`/workspace/account/projects/${projectA}/costing`);
+  await page.getByRole("textbox", {name: "Title", exact: true}).fill("Browser extra work");
+  await page.getByRole("textbox", {name: "Contract value change", exact: true}).fill("100");
+  await page.getByRole("textbox", {name: "Estimated cost change", exact: true}).fill("20");
+  await page.getByRole("button", {name: "Create draft", exact: true}).click();
+  await expect.poll(() => db.projectChangeOrder.count({where: {companyId, projectId: projectA, title: "Browser extra work"}})).toBe(1);
+  await page.getByRole("button", {name: "Submit", exact: true}).click();
+  await expect.poll(async () => (await db.projectChangeOrder.findFirstOrThrow({where: {companyId, projectId: projectA}})).status).toBe("PENDING_APPROVAL");
+  await expect(page.getByRole("button", {name: "Approve", exact: true})).toHaveCount(0);
+  await expect(page.getByText("A different administrator must approve this change order.")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   const login = await page.request.post("/api/v1/mobile/auth/login", {data: {identifier: email, password, deviceId: randomUUID()}});
   expect(login.ok()).toBeTruthy();

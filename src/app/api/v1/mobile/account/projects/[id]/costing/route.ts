@@ -1,5 +1,5 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
-import { mobileProjectCosting } from "@/lib/mobile/account-projects";
+import { mobileProjectChangeOrder, mobileProjectCosting } from "@/lib/mobile/account-projects";
 import {
   mobileAuthorizationFailure,
   mobileJson,
@@ -20,5 +20,13 @@ export async function GET(r: Request, c: { params: Promise<{ id: string }> }) {
       mobileAuthorizationFailure(e) ??
       mobileUnexpected("MOBILE_PROJECT_COSTING", e)
     );
+  }
+}
+
+export async function POST(r: Request, c: {params: Promise<{id: string}>}) {
+  try {
+    return mobileJson(await mobileProjectChangeOrder(await authenticateMobileToken(r.headers.get("authorization")), (await c.params).id, await r.json()));
+  } catch (e) {
+    return mobileUnauthorized(e) ?? mobileAuthorizationFailure(e) ?? mobileUnexpected("MOBILE_PROJECT_CHANGE_ORDER", e);
   }
 }

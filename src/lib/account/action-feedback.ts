@@ -82,6 +82,12 @@ const messages: Record<string, string> = {
     "Choose an advance for the same customer, branch and Project as this invoice.",
   SOURCE_JOURNAL_MISSING:
     "The original accounting posting is missing. Ask your administrator to review it.",
+  PROJECT_FINAL: "This Project is closed and can only be viewed or reported on.",
+  INVALID_PROJECT_ESTIMATED_COST: "The resulting Project estimated cost cannot be negative.",
+  INVALID_PROJECT_VALUE: "The resulting Project contract value cannot be negative.",
+  CHANGE_ORDER_NOT_EDITABLE: "Only a draft change order can be edited.",
+  INVALID_CHANGE_ORDER_TRANSITION: "This action is not allowed for the current change-order status.",
+  CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN: "A different authorized administrator must approve or reject this change order.",
   PROJECT_REQUIRED: "Select an authorized project.",
   OTHER_INCOME_TAX_REQUIRES_A12:
     "Other Income currently supports non-taxable entries. Set GST and CESS to zero.",
