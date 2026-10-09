@@ -9,6 +9,7 @@ import {
   downloadExpenseAttachmentForActor,
   saveExpenseCategoryForActor,
   expenseOptionsForActor,
+  expenseCategoryOptionsForActor,
   getExpenseForActor,
   listExpensesForActor,
   postExpenseForActor,
@@ -136,28 +137,10 @@ export async function mobileExpenseCategories(
   u: MobileAppPrincipal,
   q?: string | null,
 ) {
-  const a = permit(u, "ACCOUNT_EXPENSE_VIEW");
-  await requireAccountModules(a, "EXPENSES");
-  const [categories, ledgers] = await Promise.all([
-    db.expenseCategory.findMany({
-      where: {
-        companyId: a.companyId,
-        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-      },
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    }),
-    db.ledgerAccount.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        allowPosting: true,
-        accountClass: { in: ["EXPENSE", "INCOME"] },
-      },
-      select: { id: true, name: true, code: true, accountClass: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-  return { categories, ledgers };
+  return expenseCategoryOptionsForActor(
+    permit(u, "ACCOUNT_EXPENSE_VIEW"),
+    q ?? "",
+  );
 }
 export async function mobileSaveExpenseCategory(
   u: MobileAppPrincipal,

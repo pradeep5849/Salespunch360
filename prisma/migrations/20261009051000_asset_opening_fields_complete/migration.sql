@@ -1,0 +1,1 @@
+ALTER TABLE "assets" ADD CONSTRAINT "assets_opening_fields_complete" CHECK (("openingQuantity" IS NULL AND "unitPrice" IS NULL) OR ("openingQuantity" IS NOT NULL AND "unitPrice" IS NOT NULL AND "effectiveDate" IS NOT NULL));

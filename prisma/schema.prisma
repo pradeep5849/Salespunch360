@@ -2869,6 +2869,7 @@ model ExpenseCategory {
   companyId              String               @db.Uuid
   name                   String               @db.VarChar(160)
   scope                  ExpenseCategoryScope
+  incomeLedgerAccountId  String?              @db.Uuid
   defaultLedgerAccountId String               @db.Uuid
   isActive               Boolean              @default(true)
   createdAt              DateTime             @default(now())
@@ -2903,6 +2904,13 @@ model ExpenseTransaction {
   totalAmount             Decimal                  @db.Decimal(18, 2)
   moneyAccountId          String?                  @db.Uuid
   occurrenceKey           String?                  @db.VarChar(160)
+  creationRequestKey      String?                  @db.Uuid
+  creationRequestHash     String?                  @db.VarChar(64)
+  categoryLedgerAccountId String?                  @db.Uuid
+  billedItems             Json?
+  additionalCharges       Decimal                  @default(0) @db.Decimal(18, 2)
+  roundOffEnabled         Boolean                  @default(false)
+  roundOffAmount          Decimal                  @default(0) @db.Decimal(18, 2)
   journalEntryId          String?                  @db.Uuid
   reversalJournalId       String?                  @db.Uuid
   employeeReimbursementId String?                  @db.Uuid
@@ -2915,6 +2923,7 @@ model ExpenseTransaction {
   updatedAt               DateTime                 @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, occurrenceKey])
   @@unique([companyId, journalEntryId])
   @@index([companyId, projectId, status])
@@ -3205,6 +3214,10 @@ model Asset {
   name                            String             @db.VarChar(240)
   assetType                       AssetType
   category                        String?            @db.VarChar(120)
+  hsnCode                         String?            @db.VarChar(8)
+  openingQuantity                 Decimal?           @db.Decimal(18, 4)
+  unitPrice                       Decimal?           @db.Decimal(18, 2)
+  effectiveDate                   DateTime?          @db.Date
   purchaseDate                    DateTime           @db.Date
   purchaseValue                   Decimal            @db.Decimal(18, 2)
   vendorId                        String?            @db.Uuid
