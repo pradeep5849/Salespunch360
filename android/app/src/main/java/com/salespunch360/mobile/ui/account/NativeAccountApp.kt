@@ -154,7 +154,7 @@ fun NativeAccountAuthenticatedApp(
         val purchase=purchaseType(state.selectedPath)
         when{
             state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
-            state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding)
+            state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding,vm::select)
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
@@ -170,7 +170,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding)
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
-            state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding)
+            state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding)
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select)
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
@@ -180,14 +180,14 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
-            state.selectedPath=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select)
+            state.selectedPath.substringBefore("?")=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             state.selectedPath=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select)
             state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
             state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)
             state.selectedPath=="/workspace/account/inventory/categories"->com.salespunch360.mobile.ui.account.inventory.CategoriesManagementScreen(vm::back,vm::select)
             state.selectedPath=="/workspace/account/inventory/units"->com.salespunch360.mobile.ui.account.inventory.UnitsManagementScreen(vm::back,vm::select)
             state.selectedPath.startsWith("/workspace/account/inventory/active")->com.salespunch360.mobile.ui.account.inventory.ActiveItemsManagementScreen(queryValue(state.selectedPath,"mode")=="activate",vm::back)
-            inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding)
+            inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
@@ -405,7 +405,8 @@ private fun AccountDashboardScreen(
     branch:String?,
     refreshing:Boolean,
     onRefresh:()->Unit,
-    padding:PaddingValues
+    padding:PaddingValues,
+    navigate:(String)->Unit
 ){
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -422,12 +423,28 @@ private fun AccountDashboardScreen(
             }
         }
         if(data?.projectOnly!=true){
-            item{DashboardMetricCard("SALE OVERVIEW · CURRENT MONTH",formatMetric(data?.currentMonthSales?:"0","MONEY"),data?.salesGrowthPercent?.let{"$it% from previous month"}?:"Comparison available after the first recorded month")}
-            item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){Box(Modifier.weight(1f)){DashboardMetricCard("EXPENSES",formatMetric(data?.currentMonthExpenses?:"0","MONEY"),"Posted this month")};Box(Modifier.weight(1f)){DashboardMetricCard("CASH & BANK",formatMetric(data?.metrics?.firstOrNull{it.key=="cashBank"}?.value?:"0","MONEY"),"Ledger-backed")}}}
-            item{DashboardMetricCard("INVENTORY",formatMetric(data?.metrics?.firstOrNull{it.key=="stockValue"}?.value?:"0","MONEY"),"${data?.itemCount?:0} items · ${data?.lowStockItems?:0} low stock")}
-            item{DashboardMetricCard("REPORTS","Business reports","Financial, sales, tax and inventory reports")}
-            item{Text("EXPENSE BREAKDOWN · CURRENT MONTH",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
-            items(data?.expenseBreakdown.orEmpty()){row->ListItem(headlineContent={Text(row.category)},trailingContent={Text(formatMetric(row.amount,"MONEY"),fontWeight=FontWeight.SemiBold)})}
+            if(data?.visibility?.sales==true){
+                item{DashboardMetricCard("SALE OVERVIEW · CURRENT MONTH",formatMetric(data.currentMonthSales,"MONEY"),data.salesGrowthPercent?.let{"$it% from previous month"}?:"Comparison available after the first recorded month")}
+                item{Text("Six month sales trend",style=MaterialTheme.typography.titleMedium)}
+                items(data.salesTrend){point->ListItem(headlineContent={Text(point.month)},trailingContent={Text(formatMetric(point.total,"MONEY"),color=if(point.total.toDoubleOrNull()?.let{it<0}==true)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)})}
+            }
+            if(data?.visibility?.expenses==true)item{DashboardMetricCard("EXPENSES",formatMetric(data.currentMonthExpenses,"MONEY"),"Posted this month")}
+            item{DashboardMetricCard("CASH & BANK",formatMetric(data?.metrics?.firstOrNull{it.key=="cashBank"}?.value?:"0","MONEY"),"Cash in hand ${formatMetric(data?.metrics?.firstOrNull{it.key=="cash"}?.value?:"0","MONEY")} · Bank ${formatMetric(data?.metrics?.firstOrNull{it.key=="bank"}?.value?:"0","MONEY")}")}
+            data?.links?.cashBank?.let{href->item{TextButton(onClick={navigate(href)}){Text("View cash and bank report")}}}
+            if(data?.visibility?.inventory==true){
+                item{DashboardMetricCard("INVENTORY",formatMetric(data.metrics.firstOrNull{it.key=="stockValue"}?.value?:"0","MONEY"),"${data.itemCount} tracked products · ${data.lowStockItems} low-stock warehouse positions with recorded movements")}
+                items(data.lowStockPreview){row->ListItem(headlineContent={Text(row.name)},supportingContent={Text(row.warehouse)},trailingContent={Text(row.quantity)})}
+                data.links.lowStock?.let{href->item{TextButton(onClick={navigate(href)}){Text("Low Stock")}}}
+                data.links.items?.let{href->item{TextButton(onClick={navigate(href)}){Text("See all items")}}}
+            }
+            data?.links?.reports?.let{href->item{TextButton(onClick={navigate(href)}){Text("See Reports")}}}
+            if(data?.visibility?.expenses==true){
+                item{Text("EXPENSE BREAKDOWN · CURRENT MONTH",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+                items(data.expenseBreakdown){row->ListItem(headlineContent={Text(row.category)},trailingContent={Text(formatMetric(row.amount,"MONEY"),fontWeight=FontWeight.SemiBold)})}
+                data.links.expenseReport?.let{href->item{TextButton(onClick={navigate(href)}){Text("See expense report")}}}
+            }
+            item{Text("Additional financial-year metrics",style=MaterialTheme.typography.titleMedium)}
+            items(data?.metrics.orEmpty().filter{it.key !in listOf("cashBank","cash","bank","stockValue")}){metric->DashboardMetricCard(metric.label,formatMetric(metric.value,metric.kind),"")}
         }else items(data?.metrics.orEmpty()){metric->DashboardMetricCard(metric.label,formatMetric(metric.value,metric.kind),"")}
         if(data?.branchComparison?.isNotEmpty()==true){
             item{Text("Branch comparison",style=MaterialTheme.typography.titleLarge)}
@@ -466,14 +483,14 @@ private fun purchaseType(path:String)=if(path.startsWith("/workspace/account/tra
 private fun queryValue(path:String,key:String)=Regex("(?:\\?|&)${Regex.escape(key)}=([^&#]+)").find(path)?.groupValues?.get(1)
 
 private fun inventoryMode(path:String)=when{
-    path.endsWith("/inventory/stock")||path.endsWith("/inventory/stock-summary")->"stock"
-    path.endsWith("/inventory/low-stock")->"low-stock"
-    path.endsWith("/inventory/opening")->"opening"
-    path.endsWith("/inventory/transfers")->"transfers"
-    path.endsWith("/inventory/adjustments")->"adjustments"
-    path.endsWith("/inventory/batches")->"batches"
-    path.endsWith("/inventory/serials")->"serials"
-    path.endsWith("/inventory/prices")->"prices"
+    path.substringBefore("?").endsWith("/inventory/stock")||path.substringBefore("?").endsWith("/inventory/stock-summary")->"stock"
+    path.substringBefore("?").endsWith("/inventory/low-stock")->"low-stock"
+    path.substringBefore("?").endsWith("/inventory/opening")->"opening"
+    path.substringBefore("?").endsWith("/inventory/transfers")->"transfers"
+    path.substringBefore("?").endsWith("/inventory/adjustments")->"adjustments"
+    path.substringBefore("?").endsWith("/inventory/batches")->"batches"
+    path.substringBefore("?").endsWith("/inventory/serials")->"serials"
+    path.substringBefore("?").endsWith("/inventory/prices")->"prices"
     else->null
 }
 
@@ -485,7 +502,7 @@ private fun moneyMode(path:String)=when{
     else->null
 }
 
-private fun reportName(path:String)=path.removePrefix("/workspace/account/reports/").takeIf{path!="/workspace/account/reports"&&it.isNotBlank()}
+private fun reportName(path:String)=path.substringBefore("?").removePrefix("/workspace/account/reports/").takeIf{path.substringBefore("?")!="/workspace/account/reports"&&it.isNotBlank()}
 
 private fun adminMode(path:String)=when{
     path=="/workspace/account/notifications"->"notifications"

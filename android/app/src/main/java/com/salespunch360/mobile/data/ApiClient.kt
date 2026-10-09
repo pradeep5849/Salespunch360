@@ -79,7 +79,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun saveExpenseCategory(id:String?,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/expense-categories${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())).jsonObject
  suspend fun disableExpenseCategory(id:String)=call("api/v1/mobile/account/expense-categories/${enc(id)}","DELETE")
  suspend fun inventoryOptions()=json.parseToJsonElement(call("api/v1/mobile/account/inventory/options")).jsonObject
- suspend fun inventoryStock(low:Boolean=false)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${if(low)"low-stock" else "stock"}")).jsonArray
+ suspend fun inventoryStock(low:Boolean=false,contextQuery:String="")=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${if(low)"low-stock" else "stock"}${if(contextQuery.isBlank())"" else "?$contextQuery"}")).jsonArray
  suspend fun inventoryCatalog(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${enc(kind)}")).jsonArray
  suspend fun inventoryHistory(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${enc(kind)}")).jsonArray
  suspend fun inventoryMutation(kind:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/inventory/${enc(kind)}","POST",payload.toString()))

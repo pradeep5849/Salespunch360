@@ -17,15 +17,22 @@ export type AccountBranchContext =
   | { mode: "BRANCH"; branchId: string; branchName: string };
 
 export function canUseCompanyConsolidation(actor: AccountBranchActor) {
-  return actor.accountRole === "ACCOUNT_ADMIN" && actor.branchAccessScope === "ALL_BRANCHES";
+  return (
+    actor.accountRole === "ACCOUNT_ADMIN" &&
+    actor.branchAccessScope === "ALL_BRANCHES"
+  );
 }
 
-export async function authorizedAccountBranches(actor: AccountBranchActor): Promise<AuthorizedBranch[]> {
+export async function authorizedAccountBranches(
+  actor: AccountBranchActor,
+): Promise<AuthorizedBranch[]> {
   return db.branch.findMany({
     where: {
       companyId: actor.companyId,
       isActive: true,
-      ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { id: { in: [...(actor.branchIds ?? [])] } } : {}),
+      ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+        ? { id: { in: [...(actor.branchIds ?? [])] } }
+        : {}),
     },
     select: { id: true, name: true, isPrimary: true },
     orderBy: [{ isPrimary: "desc" }, { name: "asc" }, { id: "asc" }],
@@ -36,27 +43,56 @@ export async function authorizedAccountBranches(actor: AccountBranchActor): Prom
 export async function resolveAccountBranchContext(
   actor: AccountBranchActor,
   requested?: { scope?: string | null; branchId?: string | null },
-): Promise<{ context: AccountBranchContext; branches: AuthorizedBranch[]; canConsolidate: boolean }> {
+): Promise<{
+  context: AccountBranchContext;
+  branches: AuthorizedBranch[];
+  canConsolidate: boolean;
+}> {
   const branches = await authorizedAccountBranches(actor);
-  const canConsolidate = branches.length > 1 && canUseCompanyConsolidation(actor);
+  const canConsolidate =
+    branches.length > 1 && canUseCompanyConsolidation(actor);
   if (requested?.scope === "all") {
     if (!canConsolidate) throw new AuthorizationError();
-    return { context: { mode: "COMPANY", branchId: null, branchName: null }, branches, canConsolidate };
+    return {
+      context: { mode: "COMPANY", branchId: null, branchName: null },
+      branches,
+      canConsolidate,
+    };
   }
   if (requested?.branchId) {
     const branch = branches.find(({ id }) => id === requested.branchId);
     if (!branch) throw new AuthorizationError();
-    return { context: { mode: "BRANCH", branchId: branch.id, branchName: branch.name }, branches, canConsolidate };
+    return {
+      context: { mode: "BRANCH", branchId: branch.id, branchName: branch.name },
+      branches,
+      canConsolidate,
+    };
   }
   const saved = (await cookies()).get(COOKIE)?.value;
   if (saved === "all" && canConsolidate)
-    return { context: { mode: "COMPANY", branchId: null, branchName: null }, branches, canConsolidate };
+    return {
+      context: { mode: "COMPANY", branchId: null, branchName: null },
+      branches,
+      canConsolidate,
+    };
   const savedBranch = branches.find(({ id }) => id === saved);
   if (savedBranch)
-    return { context: { mode: "BRANCH", branchId: savedBranch.id, branchName: savedBranch.name }, branches, canConsolidate };
-  const first = branches.find(branch => branch.isPrimary) ?? branches[0];
+    return {
+      context: {
+        mode: "BRANCH",
+        branchId: savedBranch.id,
+        branchName: savedBranch.name,
+      },
+      branches,
+      canConsolidate,
+    };
+  const first = branches.find((branch) => branch.isPrimary) ?? branches[0];
   if (!first) throw new AuthorizationError();
-  return { context: { mode: "BRANCH", branchId: first.id, branchName: first.name }, branches, canConsolidate };
+  return {
+    context: { mode: "BRANCH", branchId: first.id, branchName: first.name },
+    branches,
+    canConsolidate,
+  };
 }
 
 export async function rememberAccountBranchContext(value: "all" | string) {
@@ -71,3 +107,16 @@ export async function rememberAccountBranchContext(value: "all" | string) {
 
 export const branchWhere = (context: AccountBranchContext) =>
   context.mode === "BRANCH" ? { branchId: context.branchId } : {};
+
+/** Domain entry points also validate scope; a caller-created context cannot widen access. */
+export async function assertAccountBranchContext(
+  actor: AccountBranchActor,
+  context: AccountBranchContext,
+) {
+  const branches = await authorizedAccountBranches(actor);
+  if (context.mode === "COMPANY") {
+    if (!canUseCompanyConsolidation(actor) || branches.length < 2)
+      throw new AuthorizationError();
+  } else if (!branches.some((branch) => branch.id === context.branchId))
+    throw new AuthorizationError();
+}

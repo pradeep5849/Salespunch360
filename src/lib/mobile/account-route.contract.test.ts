@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 describe("native Account mobile API contract", () => {
   it("derives navigation and permissions on the server", () => {
     const source = readFileSync("src/lib/mobile/account.ts", "utf8");
-    expect(source).toContain("buildAccountNavigation(actor");
+    expect(source).toMatch(/buildAccountNavigation\(\s*actor/);
     expect(source).toContain("rolePermissionSummary(actor.accountRole)");
-    expect(source).toContain("resolveAccountBranchContext(actor");
+    expect(source).toMatch(/resolveAccountBranchContext\(\s*actor/);
   });
   it("keeps dashboard calculations in the shared server domain", () => {
     const source = readFileSync("src/lib/mobile/account.ts", "utf8");

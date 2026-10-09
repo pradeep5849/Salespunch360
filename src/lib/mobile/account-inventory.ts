@@ -1,3 +1,4 @@
+import { inventoryContext } from "@/lib/account/inventory-context";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
@@ -29,10 +30,18 @@ function permit(u: MobileAppPrincipal) {
 export async function mobileInventoryOptions(u: MobileAppPrincipal) {
   return inventoryOptionsForActor(permit(u));
 }
-export async function mobileStock(u: MobileAppPrincipal) {
-  const a = permit(u),
+export async function mobileStock(
+  u: MobileAppPrincipal,
+  query: {
+    branchId?: string | null;
+    scope?: string | null;
+    asOf?: string | null;
+  } = {},
+) {
+  const scoped = await inventoryContext(permit(u), query);
+  const a = scoped.actor,
     [snapshot, products, warehouses] = await Promise.all([
-      inventorySnapshotForActor(a),
+      inventorySnapshotForActor(a, scoped.asOf),
       listInventoryProductsForActor(a),
       listWarehousesForActor(a),
     ]),
@@ -44,8 +53,16 @@ export async function mobileStock(u: MobileAppPrincipal) {
     warehouse: w.get(x.warehouseId),
   }));
 }
-export async function mobileLowStock(u: MobileAppPrincipal) {
-  return lowStockSnapshotForActor(permit(u));
+export async function mobileLowStock(
+  u: MobileAppPrincipal,
+  query: {
+    branchId?: string | null;
+    scope?: string | null;
+    asOf?: string | null;
+  } = {},
+) {
+  const scoped = await inventoryContext(permit(u), query);
+  return lowStockSnapshotForActor(scoped.actor, scoped.asOf);
 }
 export async function mobileInventoryCatalog(
   u: MobileAppPrincipal,

@@ -24,10 +24,10 @@ import com.salespunch360.mobile.ui.account.accounting.Option
 import kotlinx.serialization.json.*
 
 @Composable
-fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountReportViewModel = viewModel()) {
+fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountReportViewModel = viewModel(), initialQuery:String="") {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
-    LaunchedEffect(initial) { if (initial != null) vm.choose(initial) }
+    LaunchedEffect(initial,initialQuery) { vm.context(initialQuery); vm.choose(initial) }
     LaunchedEffect(state.export) {
         state.export?.let { export ->
             val file = File(context.cacheDir, export.first)

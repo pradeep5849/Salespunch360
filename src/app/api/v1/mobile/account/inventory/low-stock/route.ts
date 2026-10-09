@@ -9,7 +9,14 @@ import { mobileLowStock } from "@/lib/mobile/account-inventory";
 export async function GET(r: Request) {
   try {
     const u = await authenticateMobileToken(r.headers.get("authorization"));
-    return mobileJson(await mobileLowStock(u));
+    const q = new URL(r.url).searchParams;
+    return mobileJson(
+      await mobileLowStock(u, {
+        branchId: q.get("branchId"),
+        scope: q.get("scope"),
+        asOf: q.get("asOf"),
+      }),
+    );
   } catch (e) {
     return (
       mobileUnauthorized(e) ??

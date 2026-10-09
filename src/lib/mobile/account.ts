@@ -1,9 +1,13 @@
+import { dashboardLinks } from "@/lib/account/dashboard-links";
 import type { AccountModule } from "@prisma/client";
 import { db } from "@/lib/db";
 import { accountBranchDashboard } from "@/lib/account/branch-dashboard";
 import { dashboardCardVisibility } from "@/lib/account/dashboard-policy";
 import { enabledModulesForCompany } from "@/lib/account/modules";
-import { buildAccountNavigation, rolePermissionSummary } from "@/lib/account/navigation";
+import {
+  buildAccountNavigation,
+  rolePermissionSummary,
+} from "@/lib/account/navigation";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { canUsePermission } from "@/lib/auth/permissions";
@@ -31,18 +35,36 @@ function accountActor(user: MobileAppPrincipal) {
 
 const decimalText = (value: { toString(): string }) => value.toString();
 
-export async function mobileAccountBootstrap(user: MobileAppPrincipal, requested?: { branchId?: string | null; scope?: string | null }) {
+export async function mobileAccountBootstrap(
+  user: MobileAppPrincipal,
+  requested?: { branchId?: string | null; scope?: string | null },
+) {
   const actor = accountActor(user);
   const [company, modules, branch, entitlement, settings] = await Promise.all([
-    db.company.findUniqueOrThrow({ where: { id: actor.companyId }, select: { name: true, productEdition: true } }),
+    db.company.findUniqueOrThrow({
+      where: { id: actor.companyId },
+      select: { name: true, productEdition: true },
+    }),
     enabledModulesForCompany(actor.companyId),
     resolveAccountBranchContext(actor, requested),
     effectiveEntitlement(actor.companyId),
-    db.accountSettings.findUnique({where:{companyId:actor.companyId},select:{itemSettings:true}}),
+    db.accountSettings.findUnique({
+      where: { companyId: actor.companyId },
+      select: { itemSettings: true },
+    }),
   ]);
-  const filter = branch.context.mode === "BRANCH" ? { branchId: branch.context.branchId } : {};
+  const filter =
+    branch.context.mode === "BRANCH"
+      ? { branchId: branch.context.branchId }
+      : {};
   const pendingExpenseApprovals = modules.includes("EXPENSES")
-    ? await db.expenseTransaction.count({ where: { companyId: actor.companyId, status: "PENDING_APPROVAL", ...filter } })
+    ? await db.expenseTransaction.count({
+        where: {
+          companyId: actor.companyId,
+          status: "PENDING_APPROVAL",
+          ...filter,
+        },
+      })
     : 0;
   return {
     user: { id: actor.id, name: actor.name, accountRole: actor.accountRole },
@@ -55,58 +77,174 @@ export async function mobileAccountBootstrap(user: MobileAppPrincipal, requested
     branch: branch.context,
     availableBranches: branch.branches,
     canConsolidate: branch.canConsolidate,
-    entitlement: { state: entitlement.state, operationalWritesAllowed: entitlement.operationalWritesAllowed },
+    entitlement: {
+      state: entitlement.state,
+      operationalWritesAllowed: entitlement.operationalWritesAllowed,
+    },
     notifications: { pendingExpenseApprovals },
-    navigation: buildAccountNavigation(actor, company.productEdition, modules).map(group => ({
+    navigation: buildAccountNavigation(
+      actor,
+      company.productEdition,
+      modules,
+    ).map((group) => ({
       label: group.label,
       items: group.items,
-      children: group.children?.map(child => ({ label: child.label, items: child.items })),
+      children: group.children?.map((child) => ({
+        label: child.label,
+        items: child.items,
+      })),
     })),
   };
 }
 
-export async function mobileAccountDashboard(user: MobileAppPrincipal, requested?: { branchId?: string | null; scope?: string | null }) {
+export async function mobileAccountDashboard(
+  user: MobileAppPrincipal,
+  requested?: { branchId?: string | null; scope?: string | null },
+) {
   const actor = accountActor(user);
-  if (!canUsePermission(actor, user.productEdition, "ACCOUNT_DASHBOARD")) throw new Error("MOBILE_FORBIDDEN");
+  if (!canUsePermission(actor, user.productEdition, "ACCOUNT_DASHBOARD"))
+    throw new Error("MOBILE_FORBIDDEN");
   const branch = await resolveAccountBranchContext(actor, requested);
   const now = new Date();
-  const year = await db.financialYear.findFirst({ where: { companyId: actor.companyId, status: "OPEN" }, orderBy: { startDate: "desc" }, select: { name: true, startDate: true } });
-  const from = year?.startDate ?? new Date(Date.UTC(now.getUTCFullYear(), 3, 1));
-  const [data, modules] = await Promise.all([accountBranchDashboard(actor, branch.context, from, now), enabledModulesForCompany(actor.companyId)]);
+  const year = await db.financialYear.findFirst({
+    where: { companyId: actor.companyId, status: "OPEN" },
+    orderBy: { startDate: "desc" },
+    select: { name: true, startDate: true },
+  });
+  const from =
+    year?.startDate ??
+    new Date(
+      Date.UTC(now.getUTCFullYear() - (now.getUTCMonth() < 3 ? 1 : 0), 3, 1),
+    );
+  const [data, modules] = await Promise.all([
+    accountBranchDashboard(actor, branch.context, from, now),
+    enabledModulesForCompany(actor.companyId),
+  ]);
   const visible = dashboardCardVisibility(modules as AccountModule[]);
-  if (data.projectOnly) return {
-    title: branch.context.mode === "COMPANY" ? "Company Consolidated Dashboard" : `${branch.context.branchName} Dashboard`,
-    period: year?.name ?? from.toISOString().slice(0, 10), projectOnly: true,
-    metrics: [{ key: "projects", label: "Assigned projects", value: String(data.projects), kind: "COUNT" }, { key: "projectValue", label: "Project value", value: decimalText(data.projectValue), kind: "MONEY" }],
-    branchComparison: [],
-  };
+  if (data.projectOnly)
+    return {
+      title:
+        branch.context.mode === "COMPANY"
+          ? "Company Consolidated Dashboard"
+          : `${branch.context.branchName} Dashboard`,
+      period: year?.name ?? from.toISOString().slice(0, 10),
+      projectOnly: true,
+      metrics: [
+        {
+          key: "projects",
+          label: "Assigned projects",
+          value: String(data.projects),
+          kind: "COUNT",
+        },
+        {
+          key: "projectValue",
+          label: "Project value",
+          value: decimalText(data.projectValue),
+          kind: "MONEY",
+        },
+      ],
+      branchComparison: [],
+    };
+  const settings = await db.accountSettings.findUnique({
+    where: { companyId: actor.companyId },
+    select: { itemSettings: true },
+  });
+  const links = dashboardLinks(
+    actor.accountRole,
+    modules,
+    (settings?.itemSettings as { enabled?: boolean } | null)?.enabled !== false,
+    branch.context,
+    from,
+    now,
+  );
   const metrics = [
-    ...(visible.sales ? [["sales", "Tax-exclusive Sales Revenue", data.sales, "MONEY"], ["receivables", "Receivables", data.receivables, "MONEY"]] : []),
-    ...(visible.purchases ? [["purchases", "Tax-exclusive Purchases", data.purchases, "MONEY"], ["payables", "Vendor Payables", data.payables, "MONEY"]] : []),
-    ["cashBank", "Cash / Bank", data.cashBank, "MONEY"], ["profit", "Profit (A14 ledger)", data.profit, "MONEY"],
-    ...(visible.expenses ? [["expenses", "Posted Expenses", data.expenses, "MONEY"]] : []),
-    ...(visible.projects ? [["projects", "Active Projects", data.projects, "COUNT"], ["projectValue", "Project Value", data.projectValue, "MONEY"]] : []),
-    ...(visible.inventory ? [["stockValue", "Inventory Value", data.stockValue, "MONEY"], ["warehouses", "Warehouses", data.warehouses, "COUNT"]] : []),
+    ...(visible.sales
+      ? [
+          ["sales", "Tax-exclusive Sales Revenue", data.sales, "MONEY"],
+          ["receivables", "Receivables", data.receivables, "MONEY"],
+        ]
+      : []),
+    ...(visible.purchases
+      ? [
+          ["purchases", "Tax-exclusive Purchases", data.purchases, "MONEY"],
+          ["payables", "Vendor Payables", data.payables, "MONEY"],
+        ]
+      : []),
+    ["cashBank", "Cash / Bank", data.cashBank, "MONEY"],
+    ["cash", "Cash in hand", data.cash, "MONEY"],
+    ["bank", "Bank", data.bank, "MONEY"],
+    ["profit", "Profit (A14 ledger)", data.profit, "MONEY"],
+    ...(visible.expenses
+      ? [["expenses", "Posted Expenses", data.expenses, "MONEY"]]
+      : []),
+    ...(visible.projects
+      ? [
+          ["projects", "Active Projects", data.projects, "COUNT"],
+          ["projectValue", "Project Value", data.projectValue, "MONEY"],
+        ]
+      : []),
+    ...(visible.inventory
+      ? [
+          ["stockValue", "Inventory Value", data.stockValue, "MONEY"],
+          ["warehouses", "Warehouses", data.warehouses, "COUNT"],
+        ]
+      : []),
   ] as const;
   return {
-    title: branch.context.mode === "COMPANY" ? "Company Consolidated Dashboard" : `${branch.context.branchName} Dashboard`,
-    period: year?.name ?? from.toISOString().slice(0, 10), projectOnly: false,
-    metrics: metrics.map(([key, label, value, kind]) => ({ key, label, value: typeof value === "number" ? String(value) : decimalText(value), kind })),
+    title:
+      branch.context.mode === "COMPANY"
+        ? "Company Consolidated Dashboard"
+        : `${branch.context.branchName} Dashboard`,
+    period: year?.name ?? from.toISOString().slice(0, 10),
+    projectOnly: false,
+    metrics: metrics.map(([key, label, value, kind]) => ({
+      key,
+      label,
+      value: typeof value === "number" ? String(value) : decimalText(value),
+      kind,
+    })),
+    visibility: visible,
+    links,
+    lowStockPreview: data.lowStockPreview.map((row) => ({
+      ...row,
+      quantity: row.quantity.toString(),
+    })),
     currentMonthSales: decimalText(data.currentMonthSales),
     previousMonthSales: decimalText(data.previousMonthSales),
     currentMonthExpenses: decimalText(data.currentMonthExpenses),
     salesGrowthPercent: data.salesGrowthPercent?.toString() ?? null,
-    salesTrend: data.salesTrend.map(point => ({ month: point.month, total: decimalText(point.total) })),
+    salesTrend: data.salesTrend.map((point) => ({
+      month: point.month,
+      total: decimalText(point.total),
+    })),
     itemCount: data.itemCount,
     lowStockItems: data.lowStockItems,
-    expenseBreakdown: data.expenseBreakdown.map(row => ({ category: row.category, amount: decimalText(row.amount) })),
-    branchComparison: data.branchComparison.map(row => ({ id: row.id, name: row.name, sales: decimalText(row.sales), expenses: decimalText(row.expenses), operatingContribution: decimalText(row.operatingContribution) })),
+    expenseBreakdown: data.expenseBreakdown.map((row) => ({
+      category: row.category,
+      amount: decimalText(row.amount),
+    })),
+    branchComparison: data.branchComparison.map((row) => ({
+      id: row.id,
+      name: row.name,
+      sales: decimalText(row.sales),
+      expenses: decimalText(row.expenses),
+      operatingContribution: decimalText(row.operatingContribution),
+    })),
   };
 }
 
-export async function mobileAccountHome(user: MobileAppPrincipal, input: { branchId?: string | null; scope?: string | null; q?: string; types?: string[] }) {
+export async function mobileAccountHome(
+  user: MobileAppPrincipal,
+  input: {
+    branchId?: string | null;
+    scope?: string | null;
+    q?: string;
+    types?: string[];
+  },
+) {
   const actor = accountActor(user);
-  if (!canUsePermission(actor, user.productEdition, "ACCOUNT_LEDGER_VIEW")) throw new Error("MOBILE_FORBIDDEN");
+  if (!canUsePermission(actor, user.productEdition, "ACCOUNT_LEDGER_VIEW"))
+    throw new Error("MOBILE_FORBIDDEN");
   const branch = await resolveAccountBranchContext(actor, input);
   return accountMobileHomeData(actor, branch.context, input);
 }
