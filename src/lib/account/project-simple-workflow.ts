@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { retrySerializable } from "./transaction-retry";
+import { projectInput } from "./project-schemas";
 import { db } from "@/lib/db";
 import {
   AuthorizationError,
@@ -8,6 +9,9 @@ import {
 import { requireAccountModules } from "@/lib/account/modules";
 import {
   createProjectInTx,
+  projectCreationHash,
+  authorizedProjectBranchIds,
+  projectRecordScope,
   closeProjectForActor,
   getProjectForActor,
   getProjectFormOptionsForActor,
@@ -15,6 +19,7 @@ import {
 } from "@/lib/account/projects";
 
 export type ManualProjectInput = {
+  idempotencyKey?: string;
   branchId?: string;
   name?: string;
   siteName?: string;
@@ -32,14 +37,11 @@ export async function createSimpleProjectForActor(
   actor: ProjectActor,
   raw: ManualProjectInput,
 ) {
-  const branchId = String(raw.branchId ?? "").trim();
-  const name = String(raw.name ?? "").trim();
-  const siteName = String(raw.siteName ?? "").trim() || undefined;
-  const siteAddress = String(raw.siteAddress ?? "").trim() || undefined;
-  const siteContactName = String(raw.siteContactName ?? "").trim() || undefined;
-  const siteContactPhone =
-    String(raw.siteContactPhone ?? "").trim() || undefined;
-  if (!branchId || !name) throw new Error("INVALID_PROJECT");
+  const normalized = projectInput.omit({customerId: true}).parse(raw);
+  const {idempotencyKey, ...fields} = normalized;
+  const {branchId, name, siteName, siteAddress, siteContactName, siteContactPhone} = fields;
+  const requestHash = idempotencyKey ? projectCreationHash("MANUAL_PROJECT", fields) : null;
+  const ids = await authorizedProjectBranchIds(actor);
 
   const options = await getProjectFormOptionsForActor(actor);
   if (!options.branches.some((branch) => branch.id === branchId))
@@ -51,6 +53,15 @@ export async function createSimpleProjectForActor(
   return retrySerializable(() =>
     db.$transaction(
       async (tx) => {
+        if (idempotencyKey) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
+          const existing = await tx.project.findUnique({where: {companyId_creationRequestKey: {companyId: actor.companyId, creationRequestKey: idempotencyKey}}});
+          if (existing) {
+            if (!(await tx.project.findFirst({where: {id: existing.id, ...projectRecordScope(actor, ids)}, select: {id: true}}))) throw new AuthorizationError();
+            if (existing.creationRequestHash !== requestHash) throw new Error("IDEMPOTENCY_KEY_REUSED");
+            return existing;
+          }
+        }
         const customer = await tx.customer.create({
           data: {
             companyId: actor.companyId,
@@ -63,23 +74,11 @@ export async function createSimpleProjectForActor(
           },
         });
 
-        const project = await createProjectInTx(tx, actor, {
-          branchId,
-          name,
-          customerId: customer.id,
-          siteName,
-          siteAddress,
-          siteContactName,
-          siteContactPhone,
-          projectManagerId:
-            String(raw.projectManagerId ?? "").trim() || undefined,
-          startDate: String(raw.startDate ?? "").trim() || undefined,
-          projectValue: String(raw.projectValue ?? "0").trim() || "0",
-        });
+        const project = await createProjectInTx(tx, actor, {...fields, customerId: customer.id});
 
         const updated = await tx.project.update({
           where: { id: project.id },
-          data: { status: "ACTIVE" },
+          data: { status: "ACTIVE", creationRequestKey: idempotencyKey, creationRequestHash: requestHash },
         });
         await tx.projectAuditEvent.create({
           data: {

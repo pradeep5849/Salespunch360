@@ -1,5 +1,5 @@
 import { retrySerializable } from "./transaction-retry";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
   ProjectAuditEventType,
@@ -287,14 +287,19 @@ async function validateTaskRelations(
     throw new Error("INVALID_TASK_ASSIGNEE");
 }
 
+export function projectCreationHash(kind: string, input: Record<string, unknown>) {
+  const fields = Object.fromEntries(Object.entries(input).filter(([key, value]) => key !== "idempotencyKey" && value !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => [key, value instanceof Date ? value.toISOString().slice(0, 10) : key === "projectValue" ? new Prisma.Decimal(String(value)).toString() : value]));
+  return createHash("sha256").update(JSON.stringify({kind, fields})).digest("hex");
+}
 export async function createProjectInTx(
   tx: Prisma.TransactionClient,
   actor: ProjectActor,
   raw: unknown,
 ) {
   await requireProjectFunction(actor);
-  const parsed = projectInput.parse(raw),
-    ids = await authorizedProjectBranchIds(actor);
+  const {idempotencyKey, ...parsed} = projectInput.parse(raw);
+  const ids = await authorizedProjectBranchIds(actor);
   if (!ids.includes(parsed.branchId)) throw new AuthorizationError();
   const data =
     actor.accountRole === "PROJECT_MANAGER"
@@ -320,6 +325,16 @@ export async function createProjectInTx(
   if (!branch) throw new Error("INVALID_BRANCH");
   if (!customer) throw new Error("INVALID_CUSTOMER");
   await validateManager(tx, actor, data.projectManagerId, data.branchId);
+  const requestHash = idempotencyKey ? projectCreationHash("PROJECT", data) : null;
+  if (idempotencyKey) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
+    const existing = await tx.project.findUnique({where: {companyId_creationRequestKey: {companyId: actor.companyId, creationRequestKey: idempotencyKey}}});
+    if (existing) {
+            if (!(await tx.project.findFirst({where: {id: existing.id, ...projectRecordScope(actor, ids)}, select: {id: true}}))) throw new AuthorizationError();
+      if (existing.creationRequestHash !== requestHash) throw new Error("IDEMPOTENCY_KEY_REUSED");
+      return existing;
+    }
+  }
   const projectNumber = await allocateDocumentNumberInTx(tx, {
     companyId: actor.companyId,
     branchId: data.branchId,
@@ -330,6 +345,8 @@ export async function createProjectInTx(
     data: {
       companyId: actor.companyId,
       projectNumber,
+      creationRequestKey: idempotencyKey,
+      creationRequestHash: requestHash,
       createdById: actor.id,
       ...data,
       projectValue: new Prisma.Decimal(data.projectValue),

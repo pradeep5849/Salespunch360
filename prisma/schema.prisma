@@ -2668,6 +2668,8 @@ model CommercialAuditEvent {
 
 model Project {
   id                   String               @id @default(uuid()) @db.Uuid
+  creationRequestKey   String?              @db.VarChar(120)
+  creationRequestHash  String?              @db.VarChar(64)
   companyId            String               @db.Uuid
   branchId             String               @db.Uuid
   projectNumber        String               @db.VarChar(100)
@@ -2719,6 +2721,7 @@ model Project {
   @@index([companyId, customerId])
   @@index([companyId, projectManagerId])
   @@index([companyId, branchId, createdAt])
+  @@unique([companyId, creationRequestKey])
   @@map("projects")
 }
 

@@ -21,6 +21,7 @@ data class ProjectState(
     val costing: JsonObject? = null, val editing: JsonObject? = null,
     val error: String? = null, val budgetEditing: Boolean = false,
     val changeEditing: ProjectChangeDraft? = null,
+    val creationRequestKey: String = UUID.randomUUID().toString(), val creationIntent: JsonObject? = null,
 )
 class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
     private val api = ApiClient(SecureSession(app))
@@ -52,7 +53,7 @@ class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun search(query: String) { _state.value = _state.value.copy(query = query); load() }
     fun filter(status: String?) { _state.value = _state.value.copy(status = status); load() }
-    fun create() { _state.value = _state.value.copy(editing = buildJsonObject {}, error = null) }
+    fun create() { _state.value = _state.value.copy(editing = buildJsonObject {}, error = null, creationRequestKey = UUID.randomUUID().toString(), creationIntent = null) }
     fun action(id: String, action: String) = viewModelScope.launch {
         if (_state.value.saving) return@launch
         _state.value = _state.value.copy(saving = true, error = null)
@@ -87,7 +88,9 @@ class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(saving = true, error = null)
         try {
             val edit = _state.value.editing?.containsKey("id") == true
-            val detail = api.saveProject(edit, payload)
+            val key = if (_state.value.creationIntent == null || _state.value.creationIntent == payload) _state.value.creationRequestKey else UUID.randomUUID().toString()
+            if (!edit) _state.value = _state.value.copy(creationIntent = payload, creationRequestKey = key)
+            val detail = api.saveProject(edit, if (edit) payload else projectCreationPayload(payload, key))
             _state.value = _state.value.copy(saving = false, editing = null, detail = detail, costing = optionalCosting(detail.str("id"), _state.value.options))
             load()
         } catch (e: Exception) { fail(e) }

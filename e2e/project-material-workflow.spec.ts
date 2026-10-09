@@ -63,6 +63,26 @@ test("Project links, material forms and API enforce the same scope and module ru
   await page.getByLabel("Password", {exact: true}).fill(password);
   await page.getByRole("button", {name: "Sign In", exact: true}).click();
   await expect(page).toHaveURL(/workspace\/account/);
+  await page.goto("/workspace/account/projects/new");
+  await page.getByRole("textbox", {name: "Project name", exact: true}).fill("Browser retry-safe Project");
+  await page.getByRole("textbox", {name: "Project value", exact: true}).fill("100");
+  const beforeCustomers = await db.customer.count({where: {companyId}});
+  const requestReference = await page.locator('input[name="idempotencyKey"]').inputValue();
+  // The server completes the first request, but the browser loses its response.
+  await page.route("**/workspace/account/projects/new", async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await page.getByRole("button", {name: "Create project", exact: true}).click();
+  await expect(page.getByRole("alert").filter({hasText: "Connection interrupted"})).toBeVisible();
+  await expect(page.getByRole("textbox", {name: "Project name", exact: true})).toHaveValue("Browser retry-safe Project");
+  expect(await page.locator('input[name="idempotencyKey"]').inputValue()).toBe(requestReference);
+  await page.unroute("**/workspace/account/projects/new");
+  await page.getByRole("button", {name: "Create project", exact: true}).click();
+  await expect(page).toHaveURL(/projects\/[0-9a-f-]{36}$/);
+  expect(await db.project.count({where: {companyId, name: "Browser retry-safe Project"}})).toBe(1);
+  expect(await db.customer.count({where: {companyId}})).toBe(beforeCustomers + 1);
   await page.goto(`/workspace/account/projects/material?projectId=${projectB}`);
   await expect(page.getByRole("combobox", {name: "Project", exact: true})).toHaveValue(projectB);
   await page.getByRole("combobox", {name: "Project", exact: true}).selectOption(projectA);

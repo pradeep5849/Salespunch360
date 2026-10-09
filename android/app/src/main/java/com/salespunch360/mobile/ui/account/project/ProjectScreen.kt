@@ -112,7 +112,7 @@ fun ProjectScreen(
             modifier=Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(16.dp)
         )
     }
-    s.editing?.let { ProjectEditor(it, s.options, vm::close, vm::save) }
+    s.editing?.let { ProjectEditor(it, s.options, s.saving, s.error, vm::close, vm::save) }
     s.detail?.let {
         ProjectDetail(it,s.costing,s.options["capabilities"]?.jsonObject?.get("budgetEdit")?.jsonPrimitive?.booleanOrNull==true,s.saving,s.error,vm::close,vm::edit,vm::action,vm::editBudget,vm::editChange,vm::transitionChange)
     }
@@ -137,10 +137,14 @@ private fun ProjectMetric(label:String,value:String,modifier:Modifier=Modifier){
 private fun ProjectEditor(
     x: JsonObject,
     options: JsonObject,
+    saving: Boolean,
+    error: String?,
     close: () -> Unit,
     save: (JsonObject) -> Unit,
 ) {
     val edit = x.containsKey("id")
+    val caps = options["capabilities"]?.jsonObject
+    val managerEditable = caps?.get("managerEditable")?.jsonPrimitive?.booleanOrNull == true
     var name by remember { mutableStateOf(x.str("name")) }
     var branch by remember { mutableStateOf(x.str("branchId")) }
     var manager by remember { mutableStateOf(x.str("projectManagerId")) }
@@ -153,27 +157,33 @@ private fun ProjectEditor(
     var status by remember { mutableStateOf(workflowStatus(x.str("status"))) }
 
     AlertDialog(
-        onDismissRequest = close,
+        onDismissRequest = {if(!saving)close()},
         title = { Text(if (edit) "Edit project" else "New project") },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { OutlinedTextField(name, { name = it }, label = { Text("Project name") }) }
+                error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
+                item { OutlinedTextField(name, { name = it }, label = { Text("Project name") },enabled=!saving) }
                 if (!edit) {
-                    item { Pick("Branch", branch, options.array("branches")) { branch = it } }
+                    item { Pick("Branch", branch, options.array("branches"),enabled=!saving) { branch = it; manager = "" } }
                 }
-                item { Pick("Project manager", manager, options.array("managers")) { manager = it } }
-                item { OutlinedTextField(value, { value = it }, label = { Text("Project value") }) }
-                item { OutlinedTextField(siteName, { siteName = it }, label = { Text("Site name") }) }
-                item { OutlinedTextField(siteAddress, { siteAddress = it }, label = { Text("Site address") }) }
-                item { OutlinedTextField(siteContactName, { siteContactName = it }, label = { Text("Site contact") }) }
-                item { OutlinedTextField(siteContactPhone, { siteContactPhone = it }, label = { Text("Mobile number") }) }
-                item { OutlinedTextField(start, { start = it }, label = { Text("Start date") }) }
+                if (managerEditable) item { Pick("Project manager", manager, options.array("managers").filter { element ->
+                    val row=element.jsonObject
+                    row.str("branchAccessScope")=="ALL_BRANCHES" || row.array("branchAccesses").any { it.jsonObject.str("branchId")==branch }
+                },enabled=!saving) { manager = it } }
+                else item { Text("Project manager: assigned to you") }
+                item { OutlinedTextField(value, { value = it }, label = { Text("Project value") },enabled=!saving) }
+                item { OutlinedTextField(siteName, { siteName = it }, label = { Text("Site name") },enabled=!saving) }
+                item { OutlinedTextField(siteAddress, { siteAddress = it }, label = { Text("Site address") },enabled=!saving) }
+                item { OutlinedTextField(siteContactName, { siteContactName = it }, label = { Text("Site contact") },enabled=!saving) }
+                item { OutlinedTextField(siteContactPhone, { siteContactPhone = it }, label = { Text("Mobile number") },enabled=!saving) }
+                item { OutlinedTextField(start, { start = it }, label = { Text("Start date") },enabled=!saving) }
                 if (edit) {
                     item {
                         PickText(
                             "Status",
                             status,
                             listOf("ACTIVE", "ON_HOLD"),
+                            enabled=!saving,
                         ) { status = it }
                     }
                 } else {
@@ -183,7 +193,10 @@ private fun ProjectEditor(
         },
         confirmButton = {
             Button(
-                enabled = name.isNotBlank() && (edit || branch.isNotBlank()),
+                enabled = !saving && name.trim().length in 1..240 && (edit || branch.isNotBlank()) &&
+                    Regex("^[0-9]{1,16}(\\.[0-9]{1,2})?$").matches(value) && siteName.length<=240 && siteAddress.length<=4000 &&
+                    siteContactName.length<=160 && siteContactPhone.length<=30 &&
+                    (start.isBlank() || runCatching { java.time.LocalDate.parse(start) }.isSuccess),
                 onClick = {
                     save(
                         buildJsonObject {
@@ -194,7 +207,7 @@ private fun ProjectEditor(
                                 put("branchId", branch)
                             }
                             put("name", name)
-                            manager.takeIf { it.isNotBlank() }?.let { put("projectManagerId", it) }
+                            (if(managerEditable)manager else caps?.str("actorId").orEmpty()).takeIf { it.isNotBlank() }?.let { put("projectManagerId", it) }
                             siteName.takeIf { it.isNotBlank() }?.let { put("siteName", it) }
                             siteAddress.takeIf { it.isNotBlank() }?.let { put("siteAddress", it) }
                             siteContactName.takeIf { it.isNotBlank() }?.let { put("siteContactName", it) }
@@ -204,9 +217,9 @@ private fun ProjectEditor(
                         },
                     )
                 },
-            ) { Text("Save") }
+            ) { Text(if(saving)"Saving…" else "Save") }
         },
-        dismissButton = { TextButton(close) { Text("Cancel") } },
+        dismissButton = { TextButton(close,enabled=!saving) { Text("Cancel") } },
     )
 }
 
@@ -344,19 +357,21 @@ private fun Pick(
     label: String,
     value: String,
     values: List<JsonElement>,
+    enabled: Boolean = true,
     set: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     val selected = values.map { it.jsonObject }.firstOrNull { it.str("id") == value }
-    ExposedDropdownMenuBox(open, { open = it }) {
+    ExposedDropdownMenuBox(open && enabled, { if(enabled)open = it }) {
         OutlinedTextField(
             selected?.str("name").orEmpty(),
             {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(label) },
             modifier = Modifier.menuAnchor(),
         )
-        ExposedDropdownMenu(open, { open = false }) {
+        ExposedDropdownMenu(open && enabled, { open = false }) {
             values.forEach { element ->
                 val row = element.jsonObject
                 DropdownMenuItem(
@@ -377,6 +392,7 @@ private fun PickText(
     label: String,
     value: String,
     values: List<String>,
+    enabled: Boolean = true,
     set: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
@@ -384,15 +400,16 @@ private fun PickText(
         "ON_HOLD" -> "Hold"
         else -> "Active"
     }
-    ExposedDropdownMenuBox(open, { open = it }) {
+    ExposedDropdownMenuBox(open && enabled, { if(enabled)open = it }) {
         OutlinedTextField(
             visible,
             {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(label) },
             modifier = Modifier.menuAnchor(),
         )
-        ExposedDropdownMenu(open, { open = false }) {
+        ExposedDropdownMenu(open && enabled, { open = false }) {
             values.forEach { option ->
                 DropdownMenuItem(
                     { Text(if (option == "ON_HOLD") "Hold" else "Active") },

@@ -326,6 +326,26 @@ describe.skipIf(!url)(
         }),
       ).toBe(2);
     });
+    it("deduplicates concurrent manual Project creation with exactly one customer and audit", async () => {
+      const customerCount = await client.customer.count({where: {companyId}});
+      const input = {branchId, name: "Retry-safe manual project", projectValue: "100.00", idempotencyKey: key()};
+      const [first, retry] = await Promise.all([createSimpleProjectForActor(actor, input), createSimpleProjectForActor(actor, input)]);
+      expect(first.id).toBe(retry.id);
+      expect(await client.customer.count({where: {companyId}})).toBe(customerCount+1);
+      expect(await client.projectAuditEvent.count({where: {companyId, projectId: first.id, eventType: "PROJECT_CREATED"}})).toBe(1);
+      expect((await createSimpleProjectForActor(actor, {...input, projectValue: "100"})).id).toBe(first.id);
+      await expect(createSimpleProjectForActor(actor, {...input, name: "Changed intent"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      const beforeFailure = await client.customer.count({where: {companyId}});
+      await expect(createSimpleProjectForActor(actor, {...input, name: "Invalid manager", idempotencyKey: key(), projectManagerId: key()})).rejects.toThrow("INVALID_PROJECT_MANAGER");
+      expect(await client.customer.count({where: {companyId}})).toBe(beforeFailure);
+      await expect(createSimpleProjectForActor({...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [otherBranch]}, input)).rejects.toThrow("Not authorized");
+    });
+    it("deduplicates standard Project creation for an existing customer", async () => {
+      const input = {branchId, customerId, name: "Retry-safe standard project", projectValue: "50", idempotencyKey: key()};
+      const [first, retry] = await Promise.all([createProjectForActor(actor, input), createProjectForActor(actor, input)]);
+      expect(first.id).toBe(retry.id);
+      await expect(createProjectForActor(actor, {...input, projectValue: "60"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    });
     it("issues inventory with original cost and replays only the identical authorized request", async () => {
       const input = {
         projectId: a,

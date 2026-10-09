@@ -1,11 +1,18 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { accountAction } from "@/lib/account/action-feedback";
 import { redirect } from "next/navigation";
 import { addMilestone, addProjectDocument, addProjectMember, addTask, linkBoq, replaceBudget, updateMilestone, updateProject, updateTask } from "@/lib/account/projects";
 import { assertProjectEditable, completeSimpleProject, createSimpleProject } from "@/lib/account/project-simple-workflow";
 const text = (form: FormData, key: string) => String(form.get(key) || "") || undefined;
 const projectPath = (id: string) => `/workspace/account/projects/${id}`;
-export async function createProjectAction(form: FormData) { const project = await createSimpleProject({ branchId: text(form, "branchId"), name: text(form, "name"), siteName: text(form, "siteName"), siteAddress: text(form, "siteAddress"), siteContactName: text(form, "siteContactName"), siteContactPhone: text(form, "siteContactPhone"), projectManagerId: text(form, "projectManagerId"), startDate: text(form, "startDate"), projectValue: text(form, "projectValue") || "0" }); redirect(projectPath(project.id)); }
+export async function createProjectAction(form: FormData) {
+  return accountAction(async () => {
+    const project = await createSimpleProject({idempotencyKey: text(form, "idempotencyKey"), branchId: text(form, "branchId"), name: text(form, "name"), siteName: text(form, "siteName"), siteAddress: text(form, "siteAddress"), siteContactName: text(form, "siteContactName"), siteContactPhone: text(form, "siteContactPhone"), projectManagerId: text(form, "projectManagerId"), startDate: text(form, "startDate"), projectValue: text(form, "projectValue") || "0"});
+    revalidatePath("/workspace/account/projects");
+    return projectPath(project.id);
+  }, "Project created");
+}
 export async function updateProjectAction(form: FormData) { const projectId = text(form, "projectId")!; await assertProjectEditable(projectId); await updateProject({ projectId, name: text(form, "name"), siteName: text(form, "siteName"), siteAddress: text(form, "siteAddress"), siteContactName: text(form, "siteContactName"), siteContactPhone: text(form, "siteContactPhone"), projectManagerId: text(form, "projectManagerId"), startDate: text(form, "startDate"), targetEndDate: undefined, projectValue: text(form, "projectValue") || "0", status: text(form, "status") }); redirect(projectPath(projectId)); }
 export async function addMilestoneAction(form: FormData) { const projectId = text(form, "projectId")!; await assertProjectEditable(projectId); await addMilestone({ projectId, title: text(form, "title"), description: text(form, "description"), startDate: text(form, "startDate"), dueDate: text(form, "dueDate"), status: text(form, "status") || "PENDING" }); revalidatePath(projectPath(projectId)); }
 export async function updateMilestoneAction(form: FormData) { const projectId = text(form, "projectId")!; await assertProjectEditable(projectId); await updateMilestone({ projectId, milestoneId: text(form, "milestoneId"), title: text(form, "title"), description: text(form, "description"), startDate: text(form, "startDate"), dueDate: text(form, "dueDate"), status: text(form, "status") }); revalidatePath(projectPath(projectId)); }

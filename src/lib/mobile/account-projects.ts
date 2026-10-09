@@ -23,6 +23,7 @@ const optionalText = (max: number) => z.string().trim().max(max).optional();
 const projectValue = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).default("0");
 const createInput = z
   .object({
+    idempotencyKey: z.string().trim().min(1).max(120).optional(),
     branchId: z.string().uuid(),
     name: z.string().trim().min(1).max(240),
     siteName: optionalText(240),
@@ -35,7 +36,7 @@ const createInput = z
   })
   .strict();
 const updateInput = createInput
-  .omit({ branchId: true })
+  .omit({ branchId: true, idempotencyKey: true })
   .extend({
     projectId: z.string().uuid(),
     status: z.enum(["ACTIVE", "ON_HOLD"]),
@@ -93,6 +94,7 @@ export async function mobileProjectOptions(u: MobileAppPrincipal, id?: string) {
   return { ...options, capabilities: {
     costView: modules.includes("PROJECT_COSTING") && canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_VIEW"),
     budgetEdit: canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_EDIT"),
+    managerEditable: actor.accountRole === "ACCOUNT_ADMIN", actorId: actor.id,
   } };
 }
 
