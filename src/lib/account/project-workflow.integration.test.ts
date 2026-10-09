@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const url = process.env.ACCOUNT_INTEGRATION_DATABASE_URL;
 if (
@@ -41,6 +41,7 @@ import { projectMaterialBalance } from "./project-material";
 import { inventorySnapshotForActor } from "./inventory";
 import {
   createCommercialDocumentForActor,
+  getCommercialDocumentForActor,
   postCommercialDocumentForActor,
   createSettlementForActor,
   applyAdvanceForActor,
@@ -126,6 +127,7 @@ describe.skipIf(!url)(
             "INVENTORY",
             "PURCHASES",
             "PURCHASE_BILLS",
+            "DEBIT_NOTE",
             "SALES",
             "CUSTOMER_ADVANCES",
             "CUSTOMER_RECEIPTS",
@@ -1375,6 +1377,500 @@ describe.skipIf(!url)(
         }
       }
     });
+    it("posts supplier returns atomically against Project availability, original cost, GST and payable", async () => {
+      for (const treatment of ["ELIGIBLE", "BLOCKED"] as const) {
+        const project = await createProjectForActor(actor, {
+          branchId,
+          customerId,
+          name: `Supplier return ${treatment}`,
+          projectValue: "1000",
+        });
+        const budget = await client.projectBudgetLine.create({
+          data: {
+            companyId,
+            projectId: project.id,
+            position: 0,
+            category: "Materials",
+            title: "Return budget",
+            amount: 500,
+          },
+        });
+        const beforeStock = await stock();
+        const purchase = await createCommercialDocumentForActor(actor, {
+          type: "PURCHASE_BILL",
+          branchId,
+          partyId: vendorId,
+          projectId: project.id,
+          projectBudgetLineId: budget.id,
+          purchasePurpose: "PROJECT",
+          materialTreatment: "DIRECT_TO_PROJECT",
+          vendorInvoiceNumber: key(),
+          vendorInvoiceDate: date,
+          issueDate: date,
+          taxCreditTreatment: treatment,
+          stateOfSupplyCode: "29",
+          lines: [
+            {
+              lineType: "MATERIAL",
+              sourceId: productId,
+              warehouseId,
+              quantity: "5",
+              rate: "10",
+              taxRate: "18",
+            },
+          ],
+        });
+        expect(
+          (await getCommercialDocumentForActor(actor, purchase.id)).financial,
+        ).toBeNull();
+        await postCommercialDocumentForActor(actor, {
+          documentId: purchase.id,
+        });
+        expect(
+          (
+            await getCommercialDocumentForActor(actor, purchase.id)
+          ).financial?.outstanding.eq(purchase.payableAmount!),
+        ).toBe(true);
+        expect((await stock()).stockValue.eq(beforeStock.stockValue)).toBe(
+          true,
+        );
+        const sourceLine = await client.commercialDocumentLine.findFirstOrThrow(
+          { where: { companyId, documentId: purchase.id } },
+        );
+        const input = {
+          type: "DEBIT_NOTE",
+          branchId,
+          partyId: vendorId,
+          purchasePurpose: "PROJECT",
+          sourceDocumentId: purchase.id,
+          issueDate: date,
+          lines: [
+            {
+              lineType: "MATERIAL",
+              sourceId: productId,
+              warehouseId,
+              sourceCommercialLineId: sourceLine.id,
+              stockReturnQuantity: "2",
+              quantity: "2",
+              rate: "10",
+            },
+          ],
+        };
+        const correction = await createCommercialDocumentForActor(actor, input);
+        const [journal, concurrentReplay] = await Promise.all([
+          postCommercialDocumentForActor(actor, { documentId: correction.id }),
+          postCommercialDocumentForActor(actor, { documentId: correction.id }),
+        ]);
+        expect(concurrentReplay.id).toBe(journal.id);
+        expect(
+          (
+            await postCommercialDocumentForActor(actor, {
+              documentId: correction.id,
+            })
+          ).id,
+        ).toBe(journal.id);
+        const movement = await client.projectMaterialMovement.findFirstOrThrow({
+          where: { companyId, correctionDocumentId: correction.id },
+        });
+        const original = await client.projectMaterialMovement.findFirstOrThrow({
+          where: {
+            companyId,
+            projectId: project.id,
+            purchaseDocumentId: purchase.id,
+            movementType: "INVENTORY_ISSUE_TO_PROJECT",
+          },
+        });
+        expect(movement.movementType).toBe("RETURN_TO_VENDOR");
+        expect(movement.sourceMovementId).toBe(original.id);
+        expect(movement.originalUnitCost.eq(original.originalUnitCost)).toBe(
+          true,
+        );
+        expect(movement.quantity.toString()).toBe("2");
+        expect((await balance(project.id)).available.toString()).toBe("3");
+        expect((await stock()).quantity.eq(beforeStock.quantity)).toBe(true);
+        expect(
+          await client.stockMovement.count({
+            where: { companyId, sourceId: correction.id },
+          }),
+        ).toBe(0);
+        const originalCost = treatment === "ELIGIBLE" ? "50" : "59";
+        const returnedCost = treatment === "ELIGIBLE" ? "20" : "23.6";
+        const costing = await loadProjectCostingForActor(actor, project.id);
+        expect(costing.metrics.actualCost.toString()).toBe(
+          new Prisma.Decimal(originalCost).sub(returnedCost).toString(),
+        );
+        expect(costing.metrics.materialReturnedToVendor.toString()).toBe(
+          returnedCost,
+        );
+        const lines = await client.journalLine.findMany({
+          where: { companyId, journalEntryId: journal.id },
+          include: { ledgerAccount: true },
+        });
+        expect(
+          lines
+            .find((x) => x.ledgerAccount.systemKey === "PROJECT_MATERIAL_WIP")
+            ?.credit.toString(),
+        ).toBe(returnedCost);
+        expect(
+          lines
+            .find((x) => x.ledgerAccount.systemKey === "ACCOUNTS_PAYABLE")
+            ?.debit.toString(),
+        ).toBe("23.6");
+        expect(
+          lines.some((x) => x.ledgerAccount.systemKey === "INVENTORY_ASSET"),
+        ).toBe(false);
+        expect(
+          await client.projectAuditEvent.count({
+            where: {
+              companyId,
+              projectId: project.id,
+              metadata: { path: ["movementId"], equals: movement.id },
+            },
+          }),
+        ).toBe(1);
+        await expect(reverse(movement.id)).rejects.toThrow(
+          "REVERSE_PROJECT_PURCHASE_DOCUMENT",
+        );
+        const tooMuch = await createCommercialDocumentForActor(actor, {
+          ...input,
+          lines: [
+            {
+              ...input.lines[0],
+              stockReturnQuantity: "4",
+              quantity: "4",
+              rate: "1",
+            },
+          ],
+        });
+        await expect(
+          postCommercialDocumentForActor(actor, { documentId: tooMuch.id }),
+        ).rejects.toThrow("ADJUSTMENT_STOCK_EXCEEDS_SOURCE");
+        expect(
+          await client.projectMaterialMovement.count({
+            where: { companyId, correctionDocumentId: tooMuch.id },
+          }),
+        ).toBe(0);
+        expect(
+          (
+            await client.commercialDocument.findUniqueOrThrow({
+              where: { id: tooMuch.id },
+            })
+          ).status,
+        ).toBe("DRAFT");
+        const consumed = await consumeProjectMaterialForActor(actor, {
+          projectId: project.id,
+          sourceMovementId: original.id,
+          quantity: "2",
+          movementDate: date,
+          idempotencyKey: key(),
+        });
+        const unavailable = await createCommercialDocumentForActor(actor, {
+          ...input,
+          lines: [
+            {
+              ...input.lines[0],
+              stockReturnQuantity: "2",
+              quantity: "2",
+              rate: "1",
+            },
+          ],
+        });
+        await expect(
+          postCommercialDocumentForActor(actor, { documentId: unavailable.id }),
+        ).rejects.toThrow("INSUFFICIENT_PROJECT_MATERIAL");
+        expect(
+          await client.projectMaterialMovement.count({
+            where: { companyId, correctionDocumentId: unavailable.id },
+          }),
+        ).toBe(0);
+        await reverse(consumed.id);
+        const priceOnly = await createCommercialDocumentForActor(actor, {
+          ...input,
+          lines: [
+            {
+              ...input.lines[0],
+              stockReturnQuantity: "0",
+              quantity: "1",
+              rate: "1",
+            },
+          ],
+        });
+        await postCommercialDocumentForActor(actor, {
+          documentId: priceOnly.id,
+        });
+        expect((await balance(project.id)).available.toString()).toBe("3");
+        expect(
+          await client.projectMaterialMovement.count({
+            where: { companyId, correctionDocumentId: priceOnly.id },
+          }),
+        ).toBe(0);
+        expect(
+          (
+            await loadProjectCostingForActor(actor, project.id)
+          ).metrics.actualCost.toString(),
+        ).toBe(treatment === "ELIGIBLE" ? "29" : "34.22");
+      }
+    }, 30000);
+    it("splits a mixed inventory/Project purchase return without deducting normal stock twice", async () => {
+      const project = await createProjectForActor(actor, {
+        branchId,
+        customerId,
+        name: "Mixed supplier return",
+        projectValue: "1000",
+      });
+      const budget = await client.projectBudgetLine.create({
+        data: {
+          companyId,
+          projectId: project.id,
+          position: 0,
+          category: "Materials",
+          title: "Mixed budget",
+          amount: 500,
+        },
+      });
+      const purchase = await createCommercialDocumentForActor(actor, {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        purchasePurpose: "MIXED",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: productId,
+            warehouseId,
+            quantity: "10",
+            rate: "10",
+            taxRate: "0",
+            purchaseAllocations: [
+              {
+                allocationType: "PROJECT",
+                projectId: project.id,
+                projectBudgetLineId: budget.id,
+                quantity: "4",
+                materialTreatment: "DIRECT_TO_PROJECT",
+                warehouseId,
+              },
+              { allocationType: "INVENTORY", quantity: "6", warehouseId },
+            ],
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: purchase.id });
+      const beforeStock = await stock();
+      const correction = await createCommercialDocumentForActor(actor, {
+        type: "DEBIT_NOTE",
+        branchId,
+        partyId: vendorId,
+        purchasePurpose: "INVENTORY_SALES",
+        sourceDocumentId: purchase.id,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: productId,
+            warehouseId,
+            sourceCommercialLineId: (
+              await client.commercialDocumentLine.findFirstOrThrow({
+                where: { companyId, documentId: purchase.id },
+              })
+            ).id,
+            stockReturnQuantity: "5",
+            quantity: "5",
+            rate: "10",
+          },
+        ],
+      });
+      const journal = await postCommercialDocumentForActor(actor, {
+        documentId: correction.id,
+      });
+      expect((await stock()).quantity.toString()).toBe(
+        beforeStock.quantity.sub(3).toString(),
+      );
+      expect((await balance(project.id)).available.toString()).toBe("2");
+      expect(
+        (
+          await loadProjectCostingForActor(actor, project.id)
+        ).metrics.actualCost.toString(),
+      ).toBe("20");
+      const settings = await client.accountSettings.findUniqueOrThrow({
+        where: { companyId },
+      });
+      await client.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: settings.enabledModules!.filter(
+            (x) => x !== "PROJECTS",
+          ),
+        },
+      });
+      try {
+        await expect(
+          postCommercialDocumentForActor(actor, { documentId: correction.id }),
+        ).rejects.toThrow("MODULE_DISABLED:PROJECTS");
+      } finally {
+        await client.accountSettings.update({
+          where: { companyId },
+          data: { enabledModules: settings.enabledModules! },
+        });
+      }
+      const lines = await client.journalLine.findMany({
+        where: { companyId, journalEntryId: journal.id },
+        include: { ledgerAccount: true },
+      });
+      expect(
+        lines
+          .find((x) => x.ledgerAccount.systemKey === "INVENTORY_ASSET")
+          ?.credit.toString(),
+      ).toBe("30");
+      expect(
+        lines
+          .find((x) => x.ledgerAccount.systemKey === "PROJECT_MATERIAL_WIP")
+          ?.credit.toString(),
+      ).toBe("20");
+    });
+    it("receives a Project-linked inventory purchase into stock and costs it only when issued", async () => {
+      const project = await createProjectForActor(actor, {
+        branchId,
+        customerId,
+        name: "Receive then issue",
+        projectValue: "1000",
+      });
+      const budget = await client.projectBudgetLine.create({
+        data: {
+          companyId,
+          projectId: project.id,
+          position: 0,
+          category: "Materials",
+          title: "Inventory budget",
+          amount: 500,
+        },
+      });
+      const beforeStock = await stock();
+      const purchase = await createCommercialDocumentForActor(actor, {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        projectId: project.id,
+        projectBudgetLineId: budget.id,
+        purchasePurpose: "PROJECT",
+        materialTreatment: "RECEIVE_IN_INVENTORY",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: productId,
+            warehouseId,
+            quantity: "2",
+            rate: "10",
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: purchase.id });
+      expect((await stock()).quantity.eq(beforeStock.quantity.add(2))).toBe(
+        true,
+      );
+      expect(
+        await client.projectMaterialMovement.count({
+          where: { companyId, purchaseDocumentId: purchase.id },
+        }),
+      ).toBe(0);
+      expect(
+        (
+          await loadProjectCostingForActor(actor, project.id)
+        ).metrics.actualCost.toString(),
+      ).toBe("0");
+      const issued = await issueInventoryToProjectForActor(actor, {
+        projectId: project.id,
+        projectBudgetLineId: budget.id,
+        productId,
+        warehouseId,
+        quantity: "2",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      expect(issued.totalCost.toString()).toBe("20");
+      expect(
+        (
+          await loadProjectCostingForActor(actor, project.id)
+        ).metrics.actualCost.toString(),
+      ).toBe("20");
+      expect((await stock()).quantity.eq(beforeStock.quantity)).toBe(true);
+    });
+    it("preserves six fractional quantity digits between Project and inventory movements", async () => {
+      const beforeStock = await stock();
+      const issued = await issueInventoryToProjectForActor(actor, {
+        projectId: a,
+        projectBudgetLineId: budgetA,
+        productId,
+        warehouseId,
+        quantity: "0.000001",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      const inventory = await client.stockMovement.findFirstOrThrow({
+        where: { companyId, sourceId: issued.id },
+      });
+      expect(inventory.quantity.eq(issued.quantity)).toBe(true);
+      expect(
+        (await stock()).quantity.eq(beforeStock.quantity.sub("0.000001")),
+      ).toBe(true);
+      await reverse(issued.id);
+      expect((await stock()).quantity.eq(beforeStock.quantity)).toBe(true);
+    });
+    it("enforces purchase permission in the service while keeping ordinary accountant/data-entry drafts independent", async () => {
+      const input = {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        purchasePurpose: "INVENTORY_SALES",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: productId,
+            warehouseId,
+            quantity: "1",
+            rate: "10",
+            taxRate: "0",
+          },
+        ],
+      };
+      await expect(
+        createCommercialDocumentForActor(
+          { ...actor, accountRole: "PROJECT_MANAGER" },
+          input,
+        ),
+      ).rejects.toThrow("Not authorized");
+      for (const denied of [
+        { ...actor, isActive: false },
+        { ...actor, accountAccessActive: false },
+      ])
+        await expect(
+          createCommercialDocumentForActor(denied, input),
+        ).rejects.toThrow("Not authorized");
+      for (const accountRole of ["ACCOUNTANT", "DATA_ENTRY"] as const) {
+        const draft = await createCommercialDocumentForActor(
+          { ...actor, accountRole },
+          { ...input, vendorInvoiceNumber: key() },
+        );
+        expect(draft.status).toBe("DRAFT");
+        if (accountRole === "DATA_ENTRY")
+          await expect(
+            postCommercialDocumentForActor(
+              { ...actor, accountRole },
+              { documentId: draft.id },
+            ),
+          ).rejects.toThrow("Not authorized");
+      }
+    });
     it("blocks direct domain reads and every material action when Projects is OFF", async () => {
       await client.accountSettings.update({
         where: { companyId },
@@ -1441,6 +1937,7 @@ describe.skipIf(!url)(
               "INVENTORY",
               "PURCHASES",
               "PURCHASE_BILLS",
+              "DEBIT_NOTE",
               "SALES",
               "CUSTOMER_ADVANCES",
               "CUSTOMER_RECEIPTS",

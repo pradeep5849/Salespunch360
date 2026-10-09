@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  ADJUSTMENT_STOCK_EXCEEDS_SOURCE:
+    "The cumulative returned quantity exceeds the original purchase quantity.",
+  INVALID_SOURCE_STOCK_IDENTITY:
+    "Use the original purchase product, batch and serial number for a supplier return.",
+  PROJECT_PURCHASE_MATERIAL_SOURCE_REQUIRED:
+    "The original Project material receipt is missing. Review the purchase history before returning it.",
   ITEMS_DISABLED: "Items are disabled in General settings.",
   PRODUCTS_DISABLED: "Product items are disabled in General settings.",
   STOCK_FIELDS_DISABLED: "Stock maintenance is disabled in General settings.",

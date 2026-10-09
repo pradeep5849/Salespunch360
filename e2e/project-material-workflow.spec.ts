@@ -14,6 +14,7 @@ const productId = randomUUID(),
   projectA = randomUUID(),
   projectB = randomUUID(),
   budgetA = randomUUID();
+const vendorId = randomUUID();
 const batchProductId = randomUUID(),
   batchId = randomUUID();
 const password = "Project-browser-fixture-934!",
@@ -40,7 +41,14 @@ test.beforeAll(async () => {
   await db.accountSettings.create({
     data: {
       companyId,
-      enabledModules: ["PROJECTS", "PROJECT_COSTING", "INVENTORY"],
+      enabledModules: [
+        "PROJECTS",
+        "PROJECT_COSTING",
+        "INVENTORY",
+        "PURCHASES",
+        "PURCHASE_BILLS",
+        "DEBIT_NOTE",
+      ],
       negativeStockAllowed: false,
     },
   });
@@ -74,6 +82,9 @@ test.beforeAll(async () => {
       name: "Project customer",
       isAccountCustomer: true,
     },
+  });
+  await db.vendor.create({
+    data: { id: vendorId, companyId, name: "Project supplier" },
   });
   await db.project.createMany({
     data: [
@@ -206,6 +217,10 @@ test.afterAll(async () => {
   await db.stockMovement.deleteMany({ where: { companyId } });
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+    await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+    await tx.purchaseLineAllocation.deleteMany({ where: { companyId } });
+    await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
+    await tx.commercialDocument.deleteMany({ where: { companyId } });
     await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
     await tx.journalLine.deleteMany({ where: { companyId } });
     await tx.journalEntry.deleteMany({ where: { companyId } });
@@ -213,6 +228,7 @@ test.afterAll(async () => {
   await db.projectChangeOrder.deleteMany({ where: { companyId } });
   await db.projectBudgetLine.deleteMany({ where: { companyId } });
   await db.project.deleteMany({ where: { companyId } });
+  await db.vendor.deleteMany({ where: { companyId } });
   await db.customer.deleteMany({ where: { companyId } });
   await db.warehouse.deleteMany({ where: { companyId } });
   await db.inventoryBatch.deleteMany({ where: { companyId } });
@@ -437,9 +453,119 @@ test("Project links, material forms and API enforce the same scope and module ru
   expect(context.status()).toBe(200);
   const body = await context.json();
   expect(body.sources[0].availableQuantity).toBe("1");
+  const purchaseResponse = await page.request.post(
+    "/api/v1/mobile/account/purchases",
+    {
+      headers,
+      data: {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        projectId: projectA,
+        projectBudgetLineId: budgetA,
+        purchasePurpose: "PROJECT",
+        materialTreatment: "DIRECT_TO_PROJECT",
+        vendorInvoiceNumber: randomUUID(),
+        vendorInvoiceDate: "2026-10-09",
+        issueDate: "2026-10-09",
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: productId,
+            warehouseId,
+            quantity: "5",
+            rate: "10",
+            taxRate: "0",
+          },
+        ],
+      },
+    },
+  );
+  expect(purchaseResponse.status()).toBe(201);
+  const purchase = await purchaseResponse.json();
+  expect(
+    (
+      await page.request.post(
+        `/api/v1/mobile/account/purchases/${purchase.id}/post`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(200);
+  const sourceLine = await db.commercialDocumentLine.findFirstOrThrow({
+    where: { companyId, documentId: purchase.id },
+  });
+  const correctionInput = {
+    type: "DEBIT_NOTE",
+    branchId,
+    partyId: vendorId,
+    purchasePurpose: "PROJECT",
+    sourceDocumentId: purchase.id,
+    issueDate: "2026-10-09",
+    lines: [
+      {
+        lineType: "MATERIAL",
+        sourceId: productId,
+        warehouseId,
+        sourceCommercialLineId: sourceLine.id,
+        stockReturnQuantity: "1",
+        quantity: "1",
+        rate: "10",
+      },
+    ],
+  };
+  const correctionResponse = await page.request.post(
+    "/api/v1/mobile/account/purchases",
+    { headers, data: correctionInput },
+  );
+  expect(correctionResponse.status()).toBe(201);
+  const correction = await correctionResponse.json();
+  expect(
+    (
+      await page.request.post(
+        `/api/v1/mobile/account/purchases/${correction.id}/post`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(200);
+  expect(
+    (
+      await page.request.post(
+        `/api/v1/mobile/account/purchases/${correction.id}/post`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(200);
+  expect(
+    await db.projectMaterialMovement.count({
+      where: {
+        companyId,
+        correctionDocumentId: correction.id,
+        movementType: "RETURN_TO_VENDOR",
+      },
+    }),
+  ).toBe(1);
+  const afterReturn = await (
+    await page.request.get(
+      `/api/v1/mobile/account/project-material?projectId=${projectA}`,
+      { headers },
+    )
+  ).json();
+  expect(
+    afterReturn.sources.find(
+      (x: { purchaseDocumentId?: string }) =>
+        x.purchaseDocumentId === purchase.id,
+    ).availableQuantity,
+  ).toBe("4");
   await db.accountSettings.update({
     where: { companyId },
-    data: { enabledModules: ["INVENTORY"] },
+    data: {
+      enabledModules: [
+        "INVENTORY",
+        "PURCHASES",
+        "PURCHASE_BILLS",
+        "DEBIT_NOTE",
+      ],
+    },
   });
   expect(
     (
@@ -454,6 +580,22 @@ test("Project links, material forms and API enforce the same scope and module ru
       await page.request.post("/api/v1/mobile/account/project-material", {
         headers,
         data: { action: "ISSUE", payload: { projectId: projectA } },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await page.request.post(
+        `/api/v1/mobile/account/purchases/${correction.id}/post`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await page.request.post("/api/v1/mobile/account/purchases", {
+        headers,
+        data: correctionInput,
       })
     ).status(),
   ).toBe(403);

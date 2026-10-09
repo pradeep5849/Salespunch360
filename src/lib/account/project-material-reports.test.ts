@@ -1,1 +1,28 @@
-import{readFileSync}from"node:fs";import{describe,expect,it}from"vitest";describe("Account purchase and Project material reports",()=>{const s=readFileSync("src/lib/account/reports/service.ts","utf8");it("includes authoritative Purchase allocation and outstanding",()=>{for(const x of["purchase-register","vendorInvoiceNumber","purchaseAllocations","documentOutstandingsBatch"])expect(s).toContain(x)});it.each(["project-material-balance","material-consumption","project-transfer"])("implements %s",name=>expect(s).toContain(name));it("does not derive GST from internal material movements",()=>expect(s).toContain("never create GST"))});
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+describe("Account purchase and Project material reports", () => {
+  const s = readFileSync("src/lib/account/reports/service.ts", "utf8");
+  it("includes authoritative Purchase allocation and outstanding", () => {
+    for (const x of [
+      "purchase-register",
+      "vendorInvoiceNumber",
+      "purchaseAllocations",
+      "documentOutstandingsBatch",
+    ])
+      expect(s).toContain(x);
+  });
+  it.each([
+    "project-material-balance",
+    "material-consumption",
+    "project-transfer",
+  ])("implements %s", (name) => expect(s).toContain(name));
+  it("does not derive GST from internal material movements", () => {
+    expect(s).toContain(
+      "Internal Project movements preserve original cost and create no GST",
+    );
+    expect(s).toContain(
+      "Supplier-return GST is recorded once by the linked debit note",
+    );
+    expect(s).toContain("x.correctionDocumentId");
+  });
+});

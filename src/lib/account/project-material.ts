@@ -1,9 +1,138 @@
-import{Prisma,ProjectMaterialMovementType}from"@prisma/client";
-const D=Prisma.Decimal;
-export type MaterialMovement={movementType:ProjectMaterialMovementType;quantity:Prisma.Decimal;originalUnitCost:Prisma.Decimal;totalCost:Prisma.Decimal;reversalOfId?:string|null;id?:string};
-const receipt=new Set<ProjectMaterialMovementType>(["DIRECT_PROJECT_RECEIPT","INVENTORY_ISSUE_TO_PROJECT","TRANSFER_IN"]),deduction=new Set<ProjectMaterialMovementType>(["CONSUMPTION","RETURN_TO_INVENTORY","TRANSFER_OUT"]);
-export function projectMaterialBalance(rows:MaterialMovement[]){const reversed=new Set(rows.filter(x=>x.movementType==="REVERSAL"&&x.reversalOfId).map(x=>x.reversalOfId!));let received=new D(0),transferIn=new D(0),consumed=new D(0),returned=new D(0),transferOut=new D(0),value=new D(0);for(const row of rows){if(row.movementType==="REVERSAL"||row.id&&reversed.has(row.id))continue;if(row.movementType==="DIRECT_PROJECT_RECEIPT"||row.movementType==="INVENTORY_ISSUE_TO_PROJECT")received=received.add(row.quantity);if(row.movementType==="TRANSFER_IN")transferIn=transferIn.add(row.quantity);if(row.movementType==="CONSUMPTION")consumed=consumed.add(row.quantity);if(row.movementType==="RETURN_TO_INVENTORY")returned=returned.add(row.quantity);if(row.movementType==="TRANSFER_OUT")transferOut=transferOut.add(row.quantity);const signed=receipt.has(row.movementType)?1:deduction.has(row.movementType)?-1:0;value=value.add(row.totalCost.mul(signed))}return{received,transferIn,consumed,returned,transferOut,available:received.add(transferIn).sub(consumed).sub(returned).sub(transferOut),availableValue:value}}
-export function assertMaterialAvailability(rows:MaterialMovement[],quantity:Prisma.Decimal){if(quantity.lte(0))throw new Error("INVALID_MATERIAL_QUANTITY");const balance=projectMaterialBalance(rows);if(quantity.gt(balance.available))throw new Error("INSUFFICIENT_PROJECT_MATERIAL");return balance}
-export function projectRetainedMaterialValue(rows:MaterialMovement[]){const reversed=new Set(rows.filter(x=>x.movementType==="REVERSAL"&&x.reversalOfId).map(x=>x.reversalOfId!));return rows.reduce((total,row)=>{if(row.movementType==="REVERSAL"||row.id&&reversed.has(row.id))return total;if(receipt.has(row.movementType))return total.add(row.totalCost);if(row.movementType==="RETURN_TO_INVENTORY"||row.movementType==="TRANSFER_OUT")return total.sub(row.totalCost);return total},new D(0))}
-export function materialValueReconciliation(input:{projectA:MaterialMovement[];projectB?:MaterialMovement[];inventoryValue:Prisma.Decimal;vendorPayable:Prisma.Decimal;gst:Prisma.Decimal}){const a=projectRetainedMaterialValue(input.projectA),b=projectRetainedMaterialValue(input.projectB??[]);return{projectA:a,projectB:b,inventory:input.inventoryValue,companyMaterialValue:a.add(b).add(input.inventoryValue),vendorPayable:input.vendorPayable,gst:input.gst}}
-export function projectMaterialCostBreakdown(rows:MaterialMovement[]){const reversed=new Set(rows.filter(x=>x.movementType==="REVERSAL"&&x.reversalOfId).map(x=>x.reversalOfId!)),sumType=(type:ProjectMaterialMovementType)=>rows.filter(x=>x.movementType===type&&!(x.id&&reversed.has(x.id))).reduce((n,x)=>n.add(x.totalCost),new D(0));return{directPurchases:sumType("DIRECT_PROJECT_RECEIPT"),inventoryIssued:sumType("INVENTORY_ISSUE_TO_PROJECT"),consumed:sumType("CONSUMPTION"),returned:sumType("RETURN_TO_INVENTORY"),transferIn:sumType("TRANSFER_IN"),transferOut:sumType("TRANSFER_OUT"),unused:projectMaterialBalance(rows).availableValue}}
+import { Prisma, ProjectMaterialMovementType } from "@prisma/client";
+const D = Prisma.Decimal;
+export type MaterialMovement = {
+  movementType: ProjectMaterialMovementType;
+  quantity: Prisma.Decimal;
+  originalUnitCost: Prisma.Decimal;
+  totalCost: Prisma.Decimal;
+  reversalOfId?: string | null;
+  id?: string;
+};
+const receipt = new Set<ProjectMaterialMovementType>([
+    "DIRECT_PROJECT_RECEIPT",
+    "INVENTORY_ISSUE_TO_PROJECT",
+    "TRANSFER_IN",
+  ]),
+  deduction = new Set<ProjectMaterialMovementType>([
+    "CONSUMPTION",
+    "RETURN_TO_INVENTORY",
+    "RETURN_TO_VENDOR",
+    "TRANSFER_OUT",
+  ]);
+export function projectMaterialBalance(rows: MaterialMovement[]) {
+  const reversed = new Set(
+    rows
+      .filter((x) => x.movementType === "REVERSAL" && x.reversalOfId)
+      .map((x) => x.reversalOfId!),
+  );
+  let received = new D(0),
+    transferIn = new D(0),
+    consumed = new D(0),
+    returned = new D(0),
+    transferOut = new D(0),
+    value = new D(0);
+  for (const row of rows) {
+    if (row.movementType === "REVERSAL" || (row.id && reversed.has(row.id)))
+      continue;
+    if (
+      row.movementType === "DIRECT_PROJECT_RECEIPT" ||
+      row.movementType === "INVENTORY_ISSUE_TO_PROJECT"
+    )
+      received = received.add(row.quantity);
+    if (row.movementType === "TRANSFER_IN")
+      transferIn = transferIn.add(row.quantity);
+    if (row.movementType === "CONSUMPTION")
+      consumed = consumed.add(row.quantity);
+    if (["RETURN_TO_INVENTORY", "RETURN_TO_VENDOR"].includes(row.movementType))
+      returned = returned.add(row.quantity);
+    if (row.movementType === "TRANSFER_OUT")
+      transferOut = transferOut.add(row.quantity);
+    const signed = receipt.has(row.movementType)
+      ? 1
+      : deduction.has(row.movementType)
+        ? -1
+        : 0;
+    value = value.add(row.totalCost.mul(signed));
+  }
+  return {
+    received,
+    transferIn,
+    consumed,
+    returned,
+    transferOut,
+    available: received
+      .add(transferIn)
+      .sub(consumed)
+      .sub(returned)
+      .sub(transferOut),
+    availableValue: value,
+  };
+}
+export function assertMaterialAvailability(
+  rows: MaterialMovement[],
+  quantity: Prisma.Decimal,
+) {
+  if (quantity.lte(0)) throw new Error("INVALID_MATERIAL_QUANTITY");
+  const balance = projectMaterialBalance(rows);
+  if (quantity.gt(balance.available))
+    throw new Error("INSUFFICIENT_PROJECT_MATERIAL");
+  return balance;
+}
+export function projectRetainedMaterialValue(rows: MaterialMovement[]) {
+  const reversed = new Set(
+    rows
+      .filter((x) => x.movementType === "REVERSAL" && x.reversalOfId)
+      .map((x) => x.reversalOfId!),
+  );
+  return rows.reduce((total, row) => {
+    if (row.movementType === "REVERSAL" || (row.id && reversed.has(row.id)))
+      return total;
+    if (receipt.has(row.movementType)) return total.add(row.totalCost);
+    if (
+      row.movementType === "RETURN_TO_INVENTORY" ||
+      row.movementType === "RETURN_TO_VENDOR" ||
+      row.movementType === "TRANSFER_OUT"
+    )
+      return total.sub(row.totalCost);
+    return total;
+  }, new D(0));
+}
+export function materialValueReconciliation(input: {
+  projectA: MaterialMovement[];
+  projectB?: MaterialMovement[];
+  inventoryValue: Prisma.Decimal;
+  vendorPayable: Prisma.Decimal;
+  gst: Prisma.Decimal;
+}) {
+  const a = projectRetainedMaterialValue(input.projectA),
+    b = projectRetainedMaterialValue(input.projectB ?? []);
+  return {
+    projectA: a,
+    projectB: b,
+    inventory: input.inventoryValue,
+    companyMaterialValue: a.add(b).add(input.inventoryValue),
+    vendorPayable: input.vendorPayable,
+    gst: input.gst,
+  };
+}
+export function projectMaterialCostBreakdown(rows: MaterialMovement[]) {
+  const reversed = new Set(
+      rows
+        .filter((x) => x.movementType === "REVERSAL" && x.reversalOfId)
+        .map((x) => x.reversalOfId!),
+    ),
+    sumType = (type: ProjectMaterialMovementType) =>
+      rows
+        .filter((x) => x.movementType === type && !(x.id && reversed.has(x.id)))
+        .reduce((n, x) => n.add(x.totalCost), new D(0));
+  return {
+    directPurchases: sumType("DIRECT_PROJECT_RECEIPT"),
+    inventoryIssued: sumType("INVENTORY_ISSUE_TO_PROJECT"),
+    consumed: sumType("CONSUMPTION"),
+    returned: sumType("RETURN_TO_INVENTORY"),
+    returnedToVendor: sumType("RETURN_TO_VENDOR"),
+    transferIn: sumType("TRANSFER_IN"),
+    transferOut: sumType("TRANSFER_OUT"),
+    unused: projectMaterialBalance(rows).availableValue,
+  };
+}

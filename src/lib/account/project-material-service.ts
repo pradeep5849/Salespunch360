@@ -1053,7 +1053,11 @@ export async function reverseProjectMaterialForActor(
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:${source.id}:reverse`}))`;
         if (source.movementType === "TRANSFER_IN")
           throw new Error("REVERSE_TRANSFER_FROM_SOURCE_PROJECT");
-        if (source.movementType === "DIRECT_PROJECT_RECEIPT")
+        if (
+          ["DIRECT_PROJECT_RECEIPT", "RETURN_TO_VENDOR"].includes(
+            source.movementType,
+          )
+        )
           throw new Error("REVERSE_PROJECT_PURCHASE_DOCUMENT");
         if (source.movementType === "INVENTORY_ISSUE_TO_PROJECT") {
           const rows = await tx.projectMaterialMovement.findMany({
@@ -1492,7 +1496,7 @@ export async function projectMaterialContextForActor(
       ELSE root."quantity" - COALESCE((
         SELECT SUM(child."quantity") FROM "project_material_movements" child
         WHERE child."companyId"=root."companyId" AND child."projectId"=root."projectId" AND child."sourceMovementId"=root."id"
-          AND child."movementType" IN ('CONSUMPTION','RETURN_TO_INVENTORY','TRANSFER_OUT')
+          AND child."movementType" IN ('CONSUMPTION','RETURN_TO_INVENTORY','RETURN_TO_VENDOR','TRANSFER_OUT')
           AND NOT EXISTS (SELECT 1 FROM "project_material_movements" r WHERE r."companyId"=child."companyId" AND r."reversalOfId"=child."id")
       ),0) END AS "availableQuantity",
       EXISTS (SELECT 1 FROM "project_material_movements" r WHERE r."companyId"=root."companyId" AND r."reversalOfId"=root."id") AS "isReversed"

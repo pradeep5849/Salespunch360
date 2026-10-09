@@ -281,7 +281,7 @@ private fun ProjectDetail(
                         "actualCost", "committedCost", "remainingForecast", "forecastCost", "budgetVariance",
                         "revenue", "profit", "expectedProfit", "forecastProfit", "finalProfit",
                         "advanceReceived", "amountReceived", "accountingReceivable",
-                        "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned",
+                        "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned", "materialReturnedToInventory", "materialReturnedToVendor",
                         "materialTransferredIn", "materialTransferredOut", "actualMarginPercent", "expectedMarginPercent", "forecastMarginPercent",
                     ).forEach { key ->
                         item {

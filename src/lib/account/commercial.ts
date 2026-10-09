@@ -1,4 +1,5 @@
 import { retrySerializable } from "./transaction-retry";
+import { projectPurchaseReturnsInTx } from "./project-purchase-returns";
 import {
   CommercialAuditEventType,
   CommercialDocumentType,
@@ -368,13 +369,22 @@ export const commercialDocumentInput = z
         message: "Vendor invoice number and date are required",
         path: ["vendorInvoiceNumber"],
       });
-    if (v.purchasePurpose === "PROJECT" && !v.projectId && !v.projectReference)
+    if (
+      v.type !== "DEBIT_NOTE" &&
+      v.purchasePurpose === "PROJECT" &&
+      !v.projectId &&
+      !v.projectReference
+    )
       c.addIssue({
         code: "custom",
         message: "Project is required",
         path: ["projectId"],
       });
-    if (v.purchasePurpose === "PROJECT" && !v.projectBudgetLineId)
+    if (
+      v.type !== "DEBIT_NOTE" &&
+      v.purchasePurpose === "PROJECT" &&
+      !v.projectBudgetLineId
+    )
       c.addIssue({
         code: "custom",
         message: "Project budget line is required",
@@ -772,7 +782,9 @@ export async function createCommercialDocumentForActor(
       select: { productEdition: true },
     }),
   ]);
-  if (p.party === "vendor")
+  if (!canUsePermission(actor, companyPolicy.productEdition, p.permission))
+    throw new AuthorizationError();
+  if (p.party === "vendor" && d.type !== "DEBIT_NOTE")
     assertPurchaseProjectSelection(
       d,
       purchaseProjectCapability(
@@ -784,529 +796,572 @@ export async function createCommercialDocumentForActor(
         ),
       ),
     );
-  return db.$transaction(
-    async (tx) => {
-      const [branch, settings] = await Promise.all([
-        tx.branch.findFirst({
-          where: { companyId: actor.companyId, id: d.branchId, isActive: true },
-        }),
-        tx.accountSettings.findUnique({
-          where: { companyId: actor.companyId! },
-        }),
-      ]);
-      if (!branch) throw new Error("INVALID_BRANCH");
-      const party =
-        p.party === "customer"
-          ? await tx.customer.findFirst({
-              where: {
-                companyId: actor.companyId,
-                id: d.partyId,
-                branchId: d.branchId,
-                isActive: true,
-                isAccountCustomer: true,
-              },
-              select: {
-                id: true,
-                name: true,
-                gstin: true,
-                stateCode: true,
-                address: true,
-              },
-            })
-          : await tx.vendor.findFirst({
-              where: {
-                companyId: actor.companyId,
-                id: d.partyId,
-                isActive: true,
-              },
-              select: {
-                id: true,
-                name: true,
-                gstin: true,
-                stateCode: true,
-                address: true,
-              },
-            });
-      if (!party) throw new Error(`INVALID_${p.party.toUpperCase()}`);
-      const postingDate = d.postingDate ?? d.issueDate,
-        purchaseFy =
-          p.party === "vendor"
-            ? await tx.financialYear.findFirst({
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        const [branch, settings] = await Promise.all([
+          tx.branch.findFirst({
+            where: {
+              companyId: actor.companyId,
+              id: d.branchId,
+              isActive: true,
+            },
+          }),
+          tx.accountSettings.findUnique({
+            where: { companyId: actor.companyId! },
+          }),
+        ]);
+        if (!branch) throw new Error("INVALID_BRANCH");
+        const party =
+          p.party === "customer"
+            ? await tx.customer.findFirst({
                 where: {
                   companyId: actor.companyId,
-                  isActive: true,
-                  startDate: { lte: postingDate },
-                  endDate: { gte: postingDate },
-                },
-                orderBy: { startDate: "desc" },
-              })
-            : null,
-        vendorInvoiceNormalized = d.vendorInvoiceNumber
-          ? normalizeVendorInvoiceNumber(d.vendorInvoiceNumber)
-          : null;
-      if (d.vendorInvoiceNumber && !vendorInvoiceNormalized)
-        throw new Error("INVALID_VENDOR_INVOICE_NUMBER");
-      if (d.type === "PURCHASE_BILL" && !purchaseFy)
-        throw new Error("INVALID_FINANCIAL_YEAR");
-      if (
-        vendorInvoiceNormalized &&
-        purchaseFy &&
-        (await tx.commercialDocument.findFirst({
-          where: {
-            companyId: actor.companyId,
-            vendorId: d.partyId,
-            purchaseFinancialYearId: purchaseFy.id,
-            vendorInvoiceNumberNormalized: vendorInvoiceNormalized,
-            status: { not: "CANCELLED" },
-          },
-        }))
-      )
-        throw new Error("DUPLICATE_VENDOR_INVOICE");
-      const authorizedProject = d.projectId
-        ? await authorizeProjectForCommercial(
-            actor,
-            d.projectId,
-            d.branchId,
-            p.party === "customer" ? d.partyId : undefined,
-            tx,
-          )
-        : null;
-      if (
-        d.projectBudgetLineId &&
-        !(await tx.projectBudgetLine.findFirst({
-          where: {
-            id: d.projectBudgetLineId,
-            companyId: actor.companyId,
-            projectId: authorizedProject?.id,
-          },
-        }))
-      )
-        throw new AuthorizationError();
-      let source: null | {
-        id: string;
-        branchId: string;
-        partyId: string;
-        status: string;
-        type: CommercialDocumentType;
-        grandTotal: Prisma.Decimal;
-        taxableTotal: Prisma.Decimal;
-        taxTotal: Prisma.Decimal;
-        purchasePurpose: PurchasePurpose | null;
-        purchaseClassification: PurchaseClassification | null;
-        materialTreatment: MaterialTreatment | null;
-        projectBudgetLineId: string | null;
-        projectReference: string | null;
-        projectId: string | null;
-        taxMode: "EXCLUSIVE" | "INCLUSIVE";
-        reverseCharge: boolean;
-        taxCreditTreatment: "ELIGIBLE" | "INELIGIBLE" | "BLOCKED";
-        sellerGstin: string | null;
-        partyGstin: string | null;
-        stateOfSupplyCode: string | null;
-        tdsAmount: Prisma.Decimal;
-        tcsAmount: Prisma.Decimal;
-      } = null;
-      if (d.sourceDocumentId) {
-        await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${d.sourceDocumentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
-        source = await tx.commercialDocument.findFirst({
-          where: { id: d.sourceDocumentId, companyId: actor.companyId },
-        });
-        if (
-          !source ||
-          source.status !== "POSTED" ||
-          source.branchId !== d.branchId ||
-          source.partyId !== d.partyId ||
-          (d.type === "CREDIT_NOTE" && source.type !== "SALES_INVOICE") ||
-          (d.type === "DEBIT_NOTE" && source.type !== "PURCHASE_BILL")
-        )
-          throw new Error("INVALID_SOURCE_DOCUMENT");
-        const used = await tx.commercialDocument.aggregate({
-          where: {
-            companyId: actor.companyId,
-            sourceDocumentId: source.id,
-            status: "POSTED",
-          },
-          _sum: { grandTotal: true },
-        });
-        if (new D(used._sum.grandTotal ?? 0).gte(source.grandTotal))
-          throw new Error("SOURCE_FULLY_ADJUSTED");
-      }
-      if (["CREDIT_NOTE", "DEBIT_NOTE"].includes(d.type) && !source)
-        throw new Error("SOURCE_DOCUMENT_REQUIRED");
-      if (d.sourcePurchaseOrderId) {
-        if (d.type !== "PURCHASE_BILL")
-          throw new Error("PURCHASE_ORDER_SOURCE_ONLY_FOR_BILL");
-        const po = await tx.commercialDocument.findFirst({
-          where: {
-            id: d.sourcePurchaseOrderId,
-            companyId: actor.companyId,
-            type: "PURCHASE_ORDER",
-            status: "POSTED",
-          },
-        });
-        if (
-          !po ||
-          po.branchId !== d.branchId ||
-          po.vendorId !== d.partyId ||
-          po.projectId !== (d.projectId ?? null)
-        )
-          throw new Error("INVALID_SOURCE_PURCHASE_ORDER");
-      }
-      const rawLines = await Promise.all(
-          d.lines.map((x, i) =>
-            snapshotLine(
-              tx,
-              actor,
-              d.type,
-              x,
-              i,
-              d.branchId,
-              d.sourceDocumentId,
-              source?.taxMode,
-              resolveItemSettings(settings?.itemSettings),
-              p.party !== "vendor" ||
-                d.purchasePurpose === "INVENTORY_SALES" ||
-                d.purchasePurpose === "PROJECT",
-            ),
-          ),
-        ),
-        calculatedLines = rawLines.map((line) => {
-          const tax = line.sourceCommercialLineId
-            ? {
-                taxable: line.taxableAmount,
-                cgst: line.cgstAmount ?? new D(0),
-                sgst: line.sgstAmount ?? new D(0),
-                igst: line.igstAmount ?? new D(0),
-                cess: line.cessAmount ?? new D(0),
-                totalTax: (line.cgstAmount ?? new D(0))
-                  .add(line.sgstAmount ?? 0)
-                  .add(line.igstAmount ?? 0)
-                  .add(line.cessAmount ?? 0),
-                grandTotal: line.taxableAmount
-                  .add(line.cgstAmount ?? 0)
-                  .add(line.sgstAmount ?? 0)
-                  .add(line.igstAmount ?? 0)
-                  .add(line.cessAmount ?? 0),
-              }
-            : calculateTax({
-                amount: line.taxableAmount,
-                taxRate: line.taxRate,
-                cessRate: line.cessRate,
-                taxMode: d.taxMode,
-                sellerStateCode: branch.gstStateCode ?? null,
-                stateOfSupplyCode: d.stateOfSupplyCode ?? party.stateCode,
-                reverseCharge: d.reverseCharge,
-                composition: settings?.compositionEnabled ?? false,
-                itcEligible: d.taxCreditTreatment === "ELIGIBLE",
-              });
-          return {
-            ...line,
-            taxableAmount: tax.taxable,
-            taxAmount: tax.totalTax,
-            lineTotal: tax.grandTotal,
-            cgstAmount: tax.cgst,
-            sgstAmount: tax.sgst,
-            igstAmount: tax.igst,
-            cessAmount: tax.cess,
-          };
-        }),
-        lines = calculatedLines.map((line, i) => {
-          if (p.party !== "vendor" || d.type === "DEBIT_NOTE") return line;
-          const allocations = buildPurchaseAllocations({
-            purpose: d.purchasePurpose!,
-            treatment: d.materialTreatment,
-            quantity: line.quantity,
-            money: {
-              baseAmount: line.baseAmount,
-              discountAmount: line.discountAmount,
-              taxableAmount: line.taxableAmount,
-              taxAmount: line.taxAmount,
-              cessAmount: line.cessAmount,
-              lineTotal: line.lineTotal,
-            },
-            requests: d.lines[i].purchaseAllocations as
-              PurchaseAllocationRequest[] | undefined,
-            documentProjectId: d.projectId,
-            documentBudgetLineId: d.projectBudgetLineId,
-            warehouseId: line.warehouseId,
-          });
-          return {
-            ...line,
-            purchaseAllocations: {
-              create: allocations,
-            },
-          };
-        }),
-        subtotal = lines.reduce((n, x) => n.add(x.baseAmount), new D(0)),
-        discountTotal = lines.reduce(
-          (n, x) => n.add(x.discountAmount),
-          new D(0),
-        ),
-        taxableTotal = lines.reduce((n, x) => n.add(x.taxableAmount), new D(0)),
-        cgstTotal = lines.reduce((n, x) => n.add(x.cgstAmount), new D(0)),
-        sgstTotal = lines.reduce((n, x) => n.add(x.sgstAmount), new D(0)),
-        igstTotal = lines.reduce((n, x) => n.add(x.igstAmount), new D(0)),
-        cessTotal = lines.reduce((n, x) => n.add(x.cessAmount), new D(0)),
-        freightAmount = new D(d.freightAmount ?? 0).toDecimalPlaces(2),
-        otherChargesAmount = new D(d.otherChargesAmount ?? 0).toDecimalPlaces(
-          2,
-        ),
-        roundOffAmount = new D(d.roundOffAmount ?? 0).toDecimalPlaces(2);
-      if (
-        freightAmount.lt(0) ||
-        otherChargesAmount.lt(0) ||
-        roundOffAmount.abs().gt(10)
-      )
-        throw new Error("INVALID_PURCHASE_CHARGES");
-      const taxTotal = cgstTotal.add(sgstTotal).add(igstTotal).add(cessTotal),
-        tdsAmount = source
-          ? proportionalTaxReversal(
-              source.tdsAmount,
-              source.taxableTotal,
-              taxableTotal,
-            )
-          : taxableTotal
-              .mul(d.tdsRate ?? 0)
-              .div(100)
-              .toDecimalPlaces(2),
-        tcsAmount = source
-          ? proportionalTaxReversal(
-              source.tcsAmount,
-              source.taxableTotal,
-              taxableTotal,
-            )
-          : taxableTotal
-              .mul(d.tcsRate ?? 0)
-              .div(100)
-              .toDecimalPlaces(2),
-        grandTotal = taxableTotal
-          .add(taxTotal)
-          .add(tcsAmount)
-          .add(freightAmount)
-          .add(otherChargesAmount)
-          .add(roundOffAmount);
-      for (const line of lines) {
-        const rows =
-          (
-            line as typeof line & {
-              purchaseAllocations?: {
-                create: Array<{
-                  allocationType: string;
-                  projectId?: string;
-                  projectBudgetLineId?: string;
-                  warehouseId?: string;
-                }>;
-              };
-            }
-          ).purchaseAllocations?.create ?? [];
-        for (const allocation of rows) {
-          if (allocation.allocationType === "INVENTORY") {
-            if (!line.productId)
-              throw new Error("SERVICE_INVENTORY_ALLOCATION_NOT_ALLOWED");
-            if (
-              !(await tx.warehouse.findFirst({
-                where: {
-                  id: allocation.warehouseId,
-                  companyId: actor.companyId,
+                  id: d.partyId,
                   branchId: d.branchId,
                   isActive: true,
+                  isAccountCustomer: true,
                 },
-              }))
+                select: {
+                  id: true,
+                  name: true,
+                  gstin: true,
+                  stateCode: true,
+                  address: true,
+                },
+              })
+            : await tx.vendor.findFirst({
+                where: {
+                  companyId: actor.companyId,
+                  id: d.partyId,
+                  isActive: true,
+                },
+                select: {
+                  id: true,
+                  name: true,
+                  gstin: true,
+                  stateCode: true,
+                  address: true,
+                },
+              });
+        if (!party) throw new Error(`INVALID_${p.party.toUpperCase()}`);
+        const postingDate = d.postingDate ?? d.issueDate,
+          purchaseFy =
+            p.party === "vendor"
+              ? await tx.financialYear.findFirst({
+                  where: {
+                    companyId: actor.companyId,
+                    isActive: true,
+                    startDate: { lte: postingDate },
+                    endDate: { gte: postingDate },
+                  },
+                  orderBy: { startDate: "desc" },
+                })
+              : null,
+          vendorInvoiceNormalized = d.vendorInvoiceNumber
+            ? normalizeVendorInvoiceNumber(d.vendorInvoiceNumber)
+            : null;
+        if (d.vendorInvoiceNumber && !vendorInvoiceNormalized)
+          throw new Error("INVALID_VENDOR_INVOICE_NUMBER");
+        if (d.type === "PURCHASE_BILL" && !purchaseFy)
+          throw new Error("INVALID_FINANCIAL_YEAR");
+        if (
+          vendorInvoiceNormalized &&
+          purchaseFy &&
+          (await tx.commercialDocument.findFirst({
+            where: {
+              companyId: actor.companyId,
+              vendorId: d.partyId,
+              purchaseFinancialYearId: purchaseFy.id,
+              vendorInvoiceNumberNormalized: vendorInvoiceNormalized,
+              status: { not: "CANCELLED" },
+            },
+          }))
+        )
+          throw new Error("DUPLICATE_VENDOR_INVOICE");
+        const authorizedProject = d.projectId
+          ? await authorizeProjectForCommercial(
+              actor,
+              d.projectId,
+              d.branchId,
+              p.party === "customer" ? d.partyId : undefined,
+              tx,
             )
-              throw new AuthorizationError();
-          }
-          if (allocation.allocationType === "PROJECT") {
-            if (
-              !purchaseProjectCapability(
-                enabled,
-                canUsePermission(
-                  actor,
-                  companyPolicy.productEdition,
-                  "ACCOUNT_PROJECTS",
-                ),
-              )
-            )
-              throw new AuthorizationError();
+          : null;
+        if (
+          d.projectBudgetLineId &&
+          !(await tx.projectBudgetLine.findFirst({
+            where: {
+              id: d.projectBudgetLineId,
+              companyId: actor.companyId,
+              projectId: authorizedProject?.id,
+            },
+          }))
+        )
+          throw new AuthorizationError();
+        let source: null | {
+          id: string;
+          branchId: string;
+          partyId: string;
+          status: string;
+          type: CommercialDocumentType;
+          grandTotal: Prisma.Decimal;
+          taxableTotal: Prisma.Decimal;
+          taxTotal: Prisma.Decimal;
+          purchasePurpose: PurchasePurpose | null;
+          purchaseClassification: PurchaseClassification | null;
+          materialTreatment: MaterialTreatment | null;
+          projectBudgetLineId: string | null;
+          projectReference: string | null;
+          projectId: string | null;
+          taxMode: "EXCLUSIVE" | "INCLUSIVE";
+          reverseCharge: boolean;
+          taxCreditTreatment: "ELIGIBLE" | "INELIGIBLE" | "BLOCKED";
+          sellerGstin: string | null;
+          partyGstin: string | null;
+          stateOfSupplyCode: string | null;
+          tdsAmount: Prisma.Decimal;
+          tcsAmount: Prisma.Decimal;
+        } = null;
+        if (d.sourceDocumentId) {
+          await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${d.sourceDocumentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+          source = await tx.commercialDocument.findFirst({
+            where: { id: d.sourceDocumentId, companyId: actor.companyId },
+          });
+          if (
+            !source ||
+            source.status !== "POSTED" ||
+            source.branchId !== d.branchId ||
+            source.partyId !== d.partyId ||
+            (d.type === "CREDIT_NOTE" && source.type !== "SALES_INVOICE") ||
+            (d.type === "DEBIT_NOTE" && source.type !== "PURCHASE_BILL")
+          )
+            throw new Error("INVALID_SOURCE_DOCUMENT");
+          const used = await tx.commercialDocument.aggregate({
+            where: {
+              companyId: actor.companyId,
+              sourceDocumentId: source.id,
+              status: "POSTED",
+            },
+            _sum: { grandTotal: true },
+          });
+          if (new D(used._sum.grandTotal ?? 0).gte(source.grandTotal))
+            throw new Error("SOURCE_FULLY_ADJUSTED");
+        }
+        if (["CREDIT_NOTE", "DEBIT_NOTE"].includes(d.type) && !source)
+          throw new Error("SOURCE_DOCUMENT_REQUIRED");
+        if (source?.projectId)
+          await authorizeProjectForCommercial(
+            actor,
+            source.projectId,
+            d.branchId,
+            undefined,
+            tx,
+          );
+        if (d.type === "DEBIT_NOTE" && source) {
+          const allocations = await tx.purchaseLineAllocation.findMany({
+            where: {
+              companyId: actor.companyId,
+              projectId: { not: null },
+              documentLine: { documentId: source.id },
+            },
+            select: { projectId: true },
+          });
+          for (const projectId of new Set(
+            allocations.map((row) => row.projectId!),
+          ))
             await authorizeProjectForCommercial(
               actor,
-              allocation.projectId!,
+              projectId,
               d.branchId,
               undefined,
               tx,
             );
-            if (
-              !(await tx.projectBudgetLine.findFirst({
-                where: {
-                  id: allocation.projectBudgetLineId,
-                  companyId: actor.companyId,
-                  projectId: allocation.projectId,
-                },
-              }))
-            )
-              throw new AuthorizationError();
+        }
+        if (d.sourcePurchaseOrderId) {
+          if (d.type !== "PURCHASE_BILL")
+            throw new Error("PURCHASE_ORDER_SOURCE_ONLY_FOR_BILL");
+          const po = await tx.commercialDocument.findFirst({
+            where: {
+              id: d.sourcePurchaseOrderId,
+              companyId: actor.companyId,
+              type: "PURCHASE_ORDER",
+              status: "POSTED",
+            },
+          });
+          if (
+            !po ||
+            po.branchId !== d.branchId ||
+            po.vendorId !== d.partyId ||
+            po.projectId !== (d.projectId ?? null)
+          )
+            throw new Error("INVALID_SOURCE_PURCHASE_ORDER");
+        }
+        const rawLines = await Promise.all(
+            d.lines.map((x, i) =>
+              snapshotLine(
+                tx,
+                actor,
+                d.type,
+                x,
+                i,
+                d.branchId,
+                d.sourceDocumentId,
+                source?.taxMode,
+                resolveItemSettings(settings?.itemSettings),
+                p.party !== "vendor" ||
+                  d.purchasePurpose === "INVENTORY_SALES" ||
+                  d.purchasePurpose === "PROJECT" ||
+                  (d.purchasePurpose === "MIXED" &&
+                    !!x.purchaseAllocations?.some(
+                      (row) =>
+                        row.allocationType === "INVENTORY" ||
+                        row.allocationType === "PROJECT",
+                    )),
+              ),
+            ),
+          ),
+          calculatedLines = rawLines.map((line) => {
+            const tax = line.sourceCommercialLineId
+              ? {
+                  taxable: line.taxableAmount,
+                  cgst: line.cgstAmount ?? new D(0),
+                  sgst: line.sgstAmount ?? new D(0),
+                  igst: line.igstAmount ?? new D(0),
+                  cess: line.cessAmount ?? new D(0),
+                  totalTax: (line.cgstAmount ?? new D(0))
+                    .add(line.sgstAmount ?? 0)
+                    .add(line.igstAmount ?? 0)
+                    .add(line.cessAmount ?? 0),
+                  grandTotal: line.taxableAmount
+                    .add(line.cgstAmount ?? 0)
+                    .add(line.sgstAmount ?? 0)
+                    .add(line.igstAmount ?? 0)
+                    .add(line.cessAmount ?? 0),
+                }
+              : calculateTax({
+                  amount: line.taxableAmount,
+                  taxRate: line.taxRate,
+                  cessRate: line.cessRate,
+                  taxMode: d.taxMode,
+                  sellerStateCode: branch.gstStateCode ?? null,
+                  stateOfSupplyCode: d.stateOfSupplyCode ?? party.stateCode,
+                  reverseCharge: d.reverseCharge,
+                  composition: settings?.compositionEnabled ?? false,
+                  itcEligible: d.taxCreditTreatment === "ELIGIBLE",
+                });
+            return {
+              ...line,
+              taxableAmount: tax.taxable,
+              taxAmount: tax.totalTax,
+              lineTotal: tax.grandTotal,
+              cgstAmount: tax.cgst,
+              sgstAmount: tax.sgst,
+              igstAmount: tax.igst,
+              cessAmount: tax.cess,
+            };
+          }),
+          lines = calculatedLines.map((line, i) => {
+            if (p.party !== "vendor" || d.type === "DEBIT_NOTE") return line;
+            const allocations = buildPurchaseAllocations({
+              purpose: d.purchasePurpose!,
+              treatment: d.materialTreatment,
+              quantity: line.quantity,
+              money: {
+                baseAmount: line.baseAmount,
+                discountAmount: line.discountAmount,
+                taxableAmount: line.taxableAmount,
+                taxAmount: line.taxAmount,
+                cessAmount: line.cessAmount,
+                lineTotal: line.lineTotal,
+              },
+              requests: d.lines[i].purchaseAllocations as
+                PurchaseAllocationRequest[] | undefined,
+              documentProjectId: d.projectId,
+              documentBudgetLineId: d.projectBudgetLineId,
+              warehouseId: line.warehouseId,
+            });
+            return {
+              ...line,
+              purchaseAllocations: {
+                create: allocations,
+              },
+            };
+          }),
+          subtotal = lines.reduce((n, x) => n.add(x.baseAmount), new D(0)),
+          discountTotal = lines.reduce(
+            (n, x) => n.add(x.discountAmount),
+            new D(0),
+          ),
+          taxableTotal = lines.reduce(
+            (n, x) => n.add(x.taxableAmount),
+            new D(0),
+          ),
+          cgstTotal = lines.reduce((n, x) => n.add(x.cgstAmount), new D(0)),
+          sgstTotal = lines.reduce((n, x) => n.add(x.sgstAmount), new D(0)),
+          igstTotal = lines.reduce((n, x) => n.add(x.igstAmount), new D(0)),
+          cessTotal = lines.reduce((n, x) => n.add(x.cessAmount), new D(0)),
+          freightAmount = new D(d.freightAmount ?? 0).toDecimalPlaces(2),
+          otherChargesAmount = new D(d.otherChargesAmount ?? 0).toDecimalPlaces(
+            2,
+          ),
+          roundOffAmount = new D(d.roundOffAmount ?? 0).toDecimalPlaces(2);
+        if (
+          freightAmount.lt(0) ||
+          otherChargesAmount.lt(0) ||
+          roundOffAmount.abs().gt(10)
+        )
+          throw new Error("INVALID_PURCHASE_CHARGES");
+        const taxTotal = cgstTotal.add(sgstTotal).add(igstTotal).add(cessTotal),
+          tdsAmount = source
+            ? proportionalTaxReversal(
+                source.tdsAmount,
+                source.taxableTotal,
+                taxableTotal,
+              )
+            : taxableTotal
+                .mul(d.tdsRate ?? 0)
+                .div(100)
+                .toDecimalPlaces(2),
+          tcsAmount = source
+            ? proportionalTaxReversal(
+                source.tcsAmount,
+                source.taxableTotal,
+                taxableTotal,
+              )
+            : taxableTotal
+                .mul(d.tcsRate ?? 0)
+                .div(100)
+                .toDecimalPlaces(2),
+          grandTotal = taxableTotal
+            .add(taxTotal)
+            .add(tcsAmount)
+            .add(freightAmount)
+            .add(otherChargesAmount)
+            .add(roundOffAmount);
+        for (const line of lines) {
+          const rows =
+            (
+              line as typeof line & {
+                purchaseAllocations?: {
+                  create: Array<{
+                    allocationType: string;
+                    projectId?: string;
+                    projectBudgetLineId?: string;
+                    warehouseId?: string;
+                  }>;
+                };
+              }
+            ).purchaseAllocations?.create ?? [];
+          for (const allocation of rows) {
+            if (allocation.allocationType === "INVENTORY") {
+              if (!line.productId)
+                throw new Error("SERVICE_INVENTORY_ALLOCATION_NOT_ALLOWED");
+              if (
+                !(await tx.warehouse.findFirst({
+                  where: {
+                    id: allocation.warehouseId,
+                    companyId: actor.companyId,
+                    branchId: d.branchId,
+                    isActive: true,
+                  },
+                }))
+              )
+                throw new AuthorizationError();
+            }
+            if (allocation.allocationType === "PROJECT") {
+              if (
+                !purchaseProjectCapability(
+                  enabled,
+                  canUsePermission(
+                    actor,
+                    companyPolicy.productEdition,
+                    "ACCOUNT_PROJECTS",
+                  ),
+                )
+              )
+                throw new AuthorizationError();
+              await authorizeProjectForCommercial(
+                actor,
+                allocation.projectId!,
+                d.branchId,
+                undefined,
+                tx,
+              );
+              if (
+                !(await tx.projectBudgetLine.findFirst({
+                  where: {
+                    id: allocation.projectBudgetLineId,
+                    companyId: actor.companyId,
+                    projectId: allocation.projectId,
+                  },
+                }))
+              )
+                throw new AuthorizationError();
+            }
           }
         }
-      }
-      if (d.sourcePurchaseOrderId) {
-        const po = await tx.commercialDocument.findFirst({
-          where: {
-            id: d.sourcePurchaseOrderId,
-            companyId: actor.companyId,
-            type: "PURCHASE_ORDER",
-            status: "POSTED",
-          },
-        });
-        if (!po) throw new Error("INVALID_SOURCE_PURCHASE_ORDER");
-        const used = await tx.commercialDocument.aggregate({
-          where: {
-            companyId: actor.companyId,
-            sourcePurchaseOrderId: po.id,
-            type: "PURCHASE_BILL",
-            status: { not: "CANCELLED" },
-          },
-          _sum: { taxableTotal: true },
-        });
-        if (
-          new D(used._sum.taxableTotal ?? 0)
-            .add(taxableTotal)
-            .gt(po.taxableTotal)
-        )
-          throw new Error("PURCHASE_ORDER_OVERBILLED");
-      }
-      if (source) {
-        const used = await tx.commercialDocument.aggregate({
-          where: {
-            companyId: actor.companyId,
-            sourceDocumentId: source.id,
-            status: "POSTED",
-          },
-          _sum: { grandTotal: true },
-        });
-        if (grandTotal.add(used._sum.grandTotal ?? 0).gt(source.grandTotal))
-          throw new Error("ADJUSTMENT_EXCEEDS_SOURCE");
-      }
-      if (
-        d.documentNumber &&
-        (await tx.commercialDocument.findFirst({
-          where: {
-            companyId: actor.companyId,
-            branchId: d.branchId,
-            type: d.type,
-            documentNumber: d.documentNumber,
-          },
-        }))
-      )
-        throw new Error("DUPLICATE_DOCUMENT_NUMBER");
-      const documentNumber =
-          d.documentNumber ??
-          (await allocateDocumentNumberInTx(tx, {
-            companyId: actor.companyId,
-            branchId: d.branchId,
-            seriesKey: d.type,
-            defaults:
-              d.type === "SALES_INVOICE"
-                ? SALES_INVOICE_NUMBERING_DEFAULTS
-                : { prefix: p.prefix, padding: 6 },
-          })),
-        document = await tx.commercialDocument.create({
-          data: {
-            companyId: actor.companyId,
-            branchId: d.branchId,
-            type: d.type,
-            documentNumber,
-            customerId: p.party === "customer" ? party.id : null,
-            vendorId: p.party === "vendor" ? party.id : null,
-            partyId: party.id,
-            partyName: party.name,
-            sourceDocumentId: d.sourceDocumentId,
-            sourcePurchaseOrderId: d.sourcePurchaseOrderId,
-            purchasePurpose:
-              d.type === "DEBIT_NOTE"
-                ? source?.purchasePurpose
-                : d.purchasePurpose,
-            purchaseClassification:
-              d.type === "DEBIT_NOTE"
-                ? source?.purchaseClassification
-                : d.purchaseClassification,
-            materialTreatment:
-              d.type === "DEBIT_NOTE"
-                ? source?.materialTreatment
-                : d.materialTreatment,
-            projectBudgetLineId:
-              d.type === "DEBIT_NOTE"
-                ? source?.projectBudgetLineId
-                : d.projectBudgetLineId,
-            projectId: ["CREDIT_NOTE", "DEBIT_NOTE"].includes(d.type)
-              ? source?.projectId
-              : d.projectId,
-            projectReference: ["CREDIT_NOTE", "DEBIT_NOTE"].includes(d.type)
-              ? source?.projectReference
-              : authorizedProject
-                ? `${authorizedProject.projectNumber} - ${authorizedProject.name}`
-                : d.projectReference,
-            vendorInvoiceNumber: d.vendorInvoiceNumber,
-            vendorInvoiceNumberNormalized: vendorInvoiceNormalized,
-            vendorInvoiceDate: d.vendorInvoiceDate,
-            postingDate,
-            paymentTerms: d.paymentTerms,
-            partyAddress: party.address,
-            grnReference: d.grnReference,
-            purchaseLocation: d.purchaseLocation,
-            purchaseFinancialYearId: purchaseFy?.id,
-            freightAmount,
-            otherChargesAmount,
-            roundOffAmount,
-            issueDate: d.issueDate,
-            dueDate: d.dueDate,
-            notes: d.notes,
-            sellerGstin: source?.sellerGstin ?? branch.gstin,
-            partyGstin: source?.partyGstin ?? party.gstin,
-            stateOfSupplyCode:
-              source?.stateOfSupplyCode ??
-              d.stateOfSupplyCode ??
-              party.stateCode,
-            taxMode: source?.taxMode ?? d.taxMode,
-            reverseCharge: source?.reverseCharge ?? d.reverseCharge,
-            taxCreditTreatment:
-              source?.taxCreditTreatment ?? d.taxCreditTreatment,
-            cgstTotal,
-            sgstTotal,
-            igstTotal,
-            cessTotal,
-            tdsAmount,
-            tcsAmount,
-            subtotal,
-            discountTotal,
-            taxableTotal,
-            taxTotal,
-            grandTotal,
-            payableAmount: (p.party === "vendor" &&
-            (source?.reverseCharge ?? d.reverseCharge)
-              ? grandTotal.sub(taxTotal)
-              : grandTotal
-            ).sub(tdsAmount),
-            balanceDue: (p.party === "vendor" &&
-            (source?.reverseCharge ?? d.reverseCharge)
-              ? grandTotal.sub(taxTotal)
-              : grandTotal
-            ).sub(tdsAmount),
-            createdById: actor.id,
-            lines: {
-              create: lines.map(nestedSalesInvoiceLine),
+        if (d.sourcePurchaseOrderId) {
+          const po = await tx.commercialDocument.findFirst({
+            where: {
+              id: d.sourcePurchaseOrderId,
+              companyId: actor.companyId,
+              type: "PURCHASE_ORDER",
+              status: "POSTED",
             },
-          },
-        });
-      await audit(
-        tx,
-        actor,
-        "DOCUMENT_CREATED",
-        "COMMERCIAL_DOCUMENT",
-        document.id,
-        { type: d.type },
-      );
-      return document;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+          });
+          if (!po) throw new Error("INVALID_SOURCE_PURCHASE_ORDER");
+          const used = await tx.commercialDocument.aggregate({
+            where: {
+              companyId: actor.companyId,
+              sourcePurchaseOrderId: po.id,
+              type: "PURCHASE_BILL",
+              status: { not: "CANCELLED" },
+            },
+            _sum: { taxableTotal: true },
+          });
+          if (
+            new D(used._sum.taxableTotal ?? 0)
+              .add(taxableTotal)
+              .gt(po.taxableTotal)
+          )
+            throw new Error("PURCHASE_ORDER_OVERBILLED");
+        }
+        if (source) {
+          const used = await tx.commercialDocument.aggregate({
+            where: {
+              companyId: actor.companyId,
+              sourceDocumentId: source.id,
+              status: "POSTED",
+            },
+            _sum: { grandTotal: true },
+          });
+          if (grandTotal.add(used._sum.grandTotal ?? 0).gt(source.grandTotal))
+            throw new Error("ADJUSTMENT_EXCEEDS_SOURCE");
+        }
+        if (
+          d.documentNumber &&
+          (await tx.commercialDocument.findFirst({
+            where: {
+              companyId: actor.companyId,
+              branchId: d.branchId,
+              type: d.type,
+              documentNumber: d.documentNumber,
+            },
+          }))
+        )
+          throw new Error("DUPLICATE_DOCUMENT_NUMBER");
+        const documentNumber =
+            d.documentNumber ??
+            (await allocateDocumentNumberInTx(tx, {
+              companyId: actor.companyId,
+              branchId: d.branchId,
+              seriesKey: d.type,
+              defaults:
+                d.type === "SALES_INVOICE"
+                  ? SALES_INVOICE_NUMBERING_DEFAULTS
+                  : { prefix: p.prefix, padding: 6 },
+            })),
+          document = await tx.commercialDocument.create({
+            data: {
+              companyId: actor.companyId,
+              branchId: d.branchId,
+              type: d.type,
+              documentNumber,
+              customerId: p.party === "customer" ? party.id : null,
+              vendorId: p.party === "vendor" ? party.id : null,
+              partyId: party.id,
+              partyName: party.name,
+              sourceDocumentId: d.sourceDocumentId,
+              sourcePurchaseOrderId: d.sourcePurchaseOrderId,
+              purchasePurpose:
+                d.type === "DEBIT_NOTE"
+                  ? source?.purchasePurpose
+                  : d.purchasePurpose,
+              purchaseClassification:
+                d.type === "DEBIT_NOTE"
+                  ? source?.purchaseClassification
+                  : d.purchaseClassification,
+              materialTreatment:
+                d.type === "DEBIT_NOTE"
+                  ? source?.materialTreatment
+                  : d.materialTreatment,
+              projectBudgetLineId:
+                d.type === "DEBIT_NOTE"
+                  ? source?.projectBudgetLineId
+                  : d.projectBudgetLineId,
+              projectId: ["CREDIT_NOTE", "DEBIT_NOTE"].includes(d.type)
+                ? source?.projectId
+                : d.projectId,
+              projectReference: ["CREDIT_NOTE", "DEBIT_NOTE"].includes(d.type)
+                ? source?.projectReference
+                : authorizedProject
+                  ? `${authorizedProject.projectNumber} - ${authorizedProject.name}`
+                  : d.projectReference,
+              vendorInvoiceNumber: d.vendorInvoiceNumber,
+              vendorInvoiceNumberNormalized: vendorInvoiceNormalized,
+              vendorInvoiceDate: d.vendorInvoiceDate,
+              postingDate,
+              paymentTerms: d.paymentTerms,
+              partyAddress: party.address,
+              grnReference: d.grnReference,
+              purchaseLocation: d.purchaseLocation,
+              purchaseFinancialYearId: purchaseFy?.id,
+              freightAmount,
+              otherChargesAmount,
+              roundOffAmount,
+              issueDate: d.issueDate,
+              dueDate: d.dueDate,
+              notes: d.notes,
+              sellerGstin: source?.sellerGstin ?? branch.gstin,
+              partyGstin: source?.partyGstin ?? party.gstin,
+              stateOfSupplyCode:
+                source?.stateOfSupplyCode ??
+                d.stateOfSupplyCode ??
+                party.stateCode,
+              taxMode: source?.taxMode ?? d.taxMode,
+              reverseCharge: source?.reverseCharge ?? d.reverseCharge,
+              taxCreditTreatment:
+                source?.taxCreditTreatment ?? d.taxCreditTreatment,
+              cgstTotal,
+              sgstTotal,
+              igstTotal,
+              cessTotal,
+              tdsAmount,
+              tcsAmount,
+              subtotal,
+              discountTotal,
+              taxableTotal,
+              taxTotal,
+              grandTotal,
+              payableAmount: (p.party === "vendor" &&
+              (source?.reverseCharge ?? d.reverseCharge)
+                ? grandTotal.sub(taxTotal)
+                : grandTotal
+              ).sub(tdsAmount),
+              balanceDue: (p.party === "vendor" &&
+              (source?.reverseCharge ?? d.reverseCharge)
+                ? grandTotal.sub(taxTotal)
+                : grandTotal
+              ).sub(tdsAmount),
+              createdById: actor.id,
+              lines: {
+                create: lines.map(nestedSalesInvoiceLine),
+              },
+            },
+          });
+        await audit(
+          tx,
+          actor,
+          "DOCUMENT_CREATED",
+          "COMMERCIAL_DOCUMENT",
+          document.id,
+          { type: d.type },
+        );
+        return document;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
 }
 export async function finalizeNonFinancialDocument(raw: unknown) {
@@ -1438,7 +1493,7 @@ async function purchaseInventoryFromAllocationsInTx(
           totalCost,
           sourceType: doc.type,
           sourceId: doc.id,
-          sourceLineId: line.id,
+          sourceLineId: allocation.id,
           batchId: line.batchId,
           serialNumberId: line.serialNumberId,
           movementDate: doc.issueDate,
@@ -1656,7 +1711,10 @@ export async function postProjectPurchaseMaterialsInTx(
   actor: Actor,
   doc: ProjectPurchasePostingDocument,
 ) {
-  if (doc.type !== "PURCHASE_BILL" || doc.purchasePurpose !== "PROJECT")
+  if (
+    doc.type !== "PURCHASE_BILL" ||
+    !["PROJECT", "MIXED"].includes(doc.purchasePurpose ?? "")
+  )
     return [];
   const created = [];
   for (const line of doc.lines) {
@@ -1673,11 +1731,11 @@ export async function postProjectPurchaseMaterialsInTx(
     for (const allocation of line.purchaseAllocations) {
       if (allocation.allocationType !== "PROJECT" || !allocation.projectId)
         continue;
-      if (!line.warehouseId)
+      if (!(allocation.warehouseId ?? line.warehouseId))
         throw new Error("PROJECT_PURCHASE_WAREHOUSE_REQUIRED");
       const warehouse = await tx.warehouse.findFirst({
         where: {
-          id: line.warehouseId,
+          id: allocation.warehouseId ?? line.warehouseId!,
           companyId: actor.companyId,
           branchId: doc.branchId,
           isActive: true,
@@ -1736,7 +1794,7 @@ export async function postProjectPurchaseMaterialsInTx(
           totalCost,
           sourceType: "PURCHASE_BILL",
           sourceId: doc.id,
-          sourceLineId: line.id,
+          sourceLineId: allocation.id,
           batchId: line.batchId,
           serialNumberId: line.serialNumberId,
           movementDate: doc.issueDate,
@@ -1777,7 +1835,7 @@ export async function postProjectPurchaseMaterialsInTx(
           totalCost,
           sourceType: "PROJECT_MATERIAL_ISSUE",
           sourceId: movement.id,
-          sourceLineId: line.id,
+          sourceLineId: allocation.id,
           batchId: line.batchId,
           serialNumberId: line.serialNumberId,
           movementDate: doc.issueDate,
@@ -1786,11 +1844,18 @@ export async function postProjectPurchaseMaterialsInTx(
       });
       await tx.projectAuditEvent.create({
         data: {
-          companyId: actor.companyId!, projectId: allocation.projectId,
-          actorUserId: actor.id, eventType: "PROJECT_MATERIAL_POSTED",
-          metadata: { movementId: movement.id, movementType: movement.movementType,
-            purchaseDocumentId: doc.id, purchaseAllocationId: allocation.id,
-            quantity: allocation.quantity.toString(), totalCost: totalCost.toString() },
+          companyId: actor.companyId!,
+          projectId: allocation.projectId,
+          actorUserId: actor.id,
+          eventType: "PROJECT_MATERIAL_POSTED",
+          metadata: {
+            movementId: movement.id,
+            movementType: movement.movementType,
+            purchaseDocumentId: doc.id,
+            purchaseAllocationId: allocation.id,
+            quantity: allocation.quantity.toString(),
+            totalCost: totalCost.toString(),
+          },
         },
       });
       created.push(movement);
@@ -1807,274 +1872,335 @@ export async function postCommercialDocumentForActor(
     .strict()
     .parse(raw);
   financialRole(actor);
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
-      const doc = await tx.commercialDocument.findFirst({
-        where: { id: documentId, companyId: actor.companyId },
-        include: { lines: { include: { purchaseAllocations: true } } },
-      });
-      if (!doc) throw new Error("NOT_FOUND");
-      assertBranch(actor, doc.branchId);
-      const p = policies[doc.type];
-      await requireAccountModules(actor, ...p.modules);
-      if (doc.projectId)
-        await authorizeProjectForCommercial(
-          actor,
-          doc.projectId,
-          doc.branchId,
-          doc.customerId ?? undefined,
-          tx,
-        );
-      for (const allocation of doc.lines.flatMap(
-        (line) => line.purchaseAllocations,
-      ))
-        if (allocation.projectId)
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+        const doc = await tx.commercialDocument.findFirst({
+          where: { id: documentId, companyId: actor.companyId },
+          include: { lines: { include: { purchaseAllocations: true } } },
+        });
+        if (!doc) throw new Error("NOT_FOUND");
+        assertBranch(actor, doc.branchId);
+        const p = policies[doc.type];
+        await requireAccountModules(actor, ...p.modules);
+        if (doc.projectId)
           await authorizeProjectForCommercial(
             actor,
-            allocation.projectId,
+            doc.projectId,
             doc.branchId,
-            undefined,
+            doc.customerId ?? undefined,
             tx,
           );
-      if (doc.status === "POSTED" && doc.journalEntryId)
-        return tx.journalEntry.findFirstOrThrow({
-          where: { id: doc.journalEntryId, companyId: actor.companyId },
-        });
-      if (doc.status !== "DRAFT" || !p.financial)
-        throw new Error("DOCUMENT_NOT_POSTABLE");
-      let source: Prisma.CommercialDocumentGetPayload<{
-          include: { lines: true };
-        }> | null = null,
-        debitSourceClassification: PurchaseClassification | null = null;
-      if (doc.type === "CREDIT_NOTE" || doc.type === "DEBIT_NOTE") {
-        if (!doc.sourceDocumentId) throw new Error("SOURCE_DOCUMENT_REQUIRED");
-        await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${doc.sourceDocumentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
-        source = await tx.commercialDocument.findFirst({
-          where: {
-            id: doc.sourceDocumentId,
-            companyId: actor.companyId,
-            type:
-              doc.type === "CREDIT_NOTE" ? "SALES_INVOICE" : "PURCHASE_BILL",
-            status: "POSTED",
-          },
-          include: { lines: true },
-        });
-        if (
-          !source ||
-          source.branchId !== doc.branchId ||
-          source.customerId !== doc.customerId ||
-          source.vendorId !== doc.vendorId
-        )
-          throw new Error("INVALID_SOURCE_DOCUMENT");
-        const used = await tx.commercialDocument.aggregate({
+        for (const allocation of doc.lines.flatMap(
+          (line) => line.purchaseAllocations,
+        ))
+          if (allocation.projectId)
+            await authorizeProjectForCommercial(
+              actor,
+              allocation.projectId,
+              doc.branchId,
+              undefined,
+              tx,
+            );
+        if (doc.type === "DEBIT_NOTE" && doc.sourceDocumentId) {
+          // A mixed purchase can have Project allocations without a header Project.
+          // Entitlement/scoping also applies to already-posted request replays.
+          const allocations = await tx.purchaseLineAllocation.findMany({
             where: {
               companyId: actor.companyId,
-              sourceDocumentId: source.id,
-              status: "POSTED",
-              type: doc.type,
-              id: { not: doc.id },
+              projectId: { not: null },
+              documentLine: { documentId: doc.sourceDocumentId },
             },
-            _sum: { taxableTotal: true, taxTotal: true, grandTotal: true },
-          }),
-          outstanding = await documentOutstandingInTx(
-            tx,
-            actor.companyId!,
-            source.id,
-          );
-        assertAdjustmentWithinSource(
-          doc,
-          source,
-          {
-            taxableTotal: new D(used._sum.taxableTotal ?? 0),
-            taxTotal: new D(used._sum.taxTotal ?? 0),
-            grandTotal: new D(used._sum.grandTotal ?? 0),
-          },
-          outstanding.outstanding,
-        );
-        debitSourceClassification = source.purchaseClassification;
-      }
-      const inventory = await commercialInventoryInTx(tx, actor, doc),
-        sale = doc.type === "SALES_INVOICE" || doc.type === "CREDIT_NOTE",
-        classification = purchaseClassificationForPosting(
-          doc.type,
-          doc.purchaseClassification,
-          debitSourceClassification,
-        ),
-        purchaseCounter =
-          classification === "GENERAL_EXPENSES"
-            ? "GENERAL_EXPENSES"
-            : classification === "FIXED_ASSET"
-              ? "FIXED_ASSETS"
-              : "PURCHASE_COST",
-        purchaseRows =
-          doc.type === "PURCHASE_BILL"
-            ? doc.lines.flatMap((line) =>
-                line.purchaseAllocations.map((a) => ({
-                  allocationType: a.allocationType,
-                  taxableAmount: a.taxableAmount,
-                  taxAmount: a.taxAmount,
-                })),
-              )
-            : [],
-        purchaseBuckets = purchasePostingBuckets(
-          purchaseRows,
-          doc.taxCreditTreatment === "ELIGIBLE",
-        ),
-        keys = [
-          sale ? "ACCOUNTS_RECEIVABLE" : "ACCOUNTS_PAYABLE",
-          sale ? "SALES_INCOME" : purchaseCounter,
-          "CGST_PAYABLE",
-          "SGST_PAYABLE",
-          "IGST_PAYABLE",
-          "CESS_PAYABLE",
-          "CGST_ITC",
-          "SGST_ITC",
-          "IGST_ITC",
-          "CESS_ITC",
-          "TDS_PAYABLE",
-          "TCS_PAYABLE",
-          "INVENTORY_ASSET",
-          "COGS",
-          ...(doc.type === "PURCHASE_BILL"
-            ? ["GENERAL_EXPENSES", "FIXED_ASSETS", "PROJECT_MATERIAL_WIP"]
-            : []),
-        ],
-        ctx = await systemContext(tx, actor, doc.issueDate, keys),
-        creditSide = doc.type === "SALES_INVOICE" || doc.type === "DEBIT_NOTE",
-        counterDebit =
-          doc.type === "PURCHASE_BILL" || doc.type === "CREDIT_NOTE",
-        m = (x: Prisma.Decimal) => x.toFixed(2),
-        lines: Array<{
-          ledgerAccountId: string;
-          debit: string;
-          credit: string;
-          description: string;
-        }> = [];
-      const push = (key: string, amount: Prisma.Decimal, debit: boolean) => {
-        if (amount.gt(0))
-          lines.push({
-            ledgerAccountId: ctx.account(key),
-            debit: debit ? m(amount) : "0",
-            credit: debit ? "0" : m(amount),
-            description: doc.documentNumber,
+            select: { projectId: true },
           });
-      };
-      const partyAmount =
-        doc.payableAmount ??
-        (doc.reverseCharge
-          ? doc.grandTotal.sub(doc.taxTotal)
-          : doc.grandTotal.sub(doc.tdsAmount));
-      push(keys[0], partyAmount, creditSide);
-      if (doc.type === "PURCHASE_BILL") {
-        push("INVENTORY_ASSET", purchaseBuckets.inventory, counterDebit);
-        push(
-          "GENERAL_EXPENSES",
-          purchaseBuckets.generalExpense
-            .add(doc.freightAmount)
-            .add(doc.otherChargesAmount)
-            .add(doc.roundOffAmount),
-          counterDebit,
-        );
-        push("FIXED_ASSETS", purchaseBuckets.fixedAsset, counterDebit);
-        push("PROJECT_MATERIAL_WIP", purchaseBuckets.projectWip, counterDebit);
-      } else {
-        push(
-          keys[1],
-          sale
-            ? doc.taxableTotal
-            : doc.type === "DEBIT_NOTE"
-              ? Prisma.Decimal.max(
-                  0,
-                  doc.taxableTotal.sub(inventory.returnCost),
-                )
-              : inventory.nonInventoryPurchase,
-          counterDebit,
-        );
-        if (inventory.inventoryPurchase.gt(0))
-          push("INVENTORY_ASSET", inventory.inventoryPurchase, counterDebit);
-      }
-      const components = [
-        ["CGST", doc.cgstTotal],
-        ["SGST", doc.sgstTotal],
-        ["IGST", doc.igstTotal],
-        ["CESS", doc.cessTotal],
-      ] as const;
-      for (const [name, amount] of components) {
-        if (amount.lte(0)) continue;
-        if (sale) push(`${name}_PAYABLE`, amount, !creditSide);
-        else if (doc.reverseCharge) {
-          push(`${name}_PAYABLE`, amount, !counterDebit);
-          if (doc.taxCreditTreatment === "ELIGIBLE")
-            push(`${name}_ITC`, amount, counterDebit);
-        } else if (doc.taxCreditTreatment === "ELIGIBLE")
-          push(`${name}_ITC`, amount, counterDebit);
-        else {
-          /* non-creditable tax is already included exactly once in the inventory/non-inventory cost buckets */
+          for (const projectId of new Set(
+            allocations.map((row) => row.projectId!),
+          ))
+            await authorizeProjectForCommercial(
+              actor,
+              projectId,
+              doc.branchId,
+              undefined,
+              tx,
+            );
         }
-      }
-      push("TDS_PAYABLE", doc.tdsAmount, !counterDebit);
-      push("TCS_PAYABLE", doc.tcsAmount, !creditSide);
-      if (doc.type === "SALES_INVOICE" && inventory.cogs.gt(0)) {
-        push("COGS", inventory.cogs, true);
-        push("INVENTORY_ASSET", inventory.cogs, false);
-      }
-      if (doc.type === "CREDIT_NOTE" && inventory.returnCost.gt(0)) {
-        push("INVENTORY_ASSET", inventory.returnCost, true);
-        push("COGS", inventory.returnCost, false);
-      }
-      if (doc.type === "DEBIT_NOTE" && inventory.returnCost.gt(0)) {
-        push("INVENTORY_ASSET", inventory.returnCost, false);
-      }
-      const journal = await postJournalInTx(tx, actor, {
-        financialYearId: ctx.fy.id,
-        branchId: doc.branchId,
-        entryDate: doc.issueDate,
-        sourceType: doc.type,
-        sourceId: doc.id,
-        postingPurpose: "PRIMARY",
-        lines,
-      });
-      await postProjectPurchaseMaterialsInTx(tx, actor, doc);
-      const signature = await tx.authorizedSignatureVersion.findFirst({
-          where: { companyId: actor.companyId, isCurrent: true },
-          orderBy: { createdAt: "desc" },
-        }),
-        changed = await tx.commercialDocument.updateMany({
-          where: {
-            id: doc.id,
-            companyId: actor.companyId,
-            status: "DRAFT",
-            journalEntryId: null,
-          },
-          data: {
-            status: "POSTED",
-            journalEntryId: journal.id,
-            signatureVersionId: signature?.id,
-          },
+        if (doc.status === "POSTED" && doc.journalEntryId)
+          return tx.journalEntry.findFirstOrThrow({
+            where: { id: doc.journalEntryId, companyId: actor.companyId },
+          });
+        if (doc.status !== "DRAFT" || !p.financial)
+          throw new Error("DOCUMENT_NOT_POSTABLE");
+        let source: Prisma.CommercialDocumentGetPayload<{
+            include: { lines: { include: { purchaseAllocations: true } } };
+          }> | null = null,
+          debitSourceClassification: PurchaseClassification | null = null;
+        if (doc.type === "CREDIT_NOTE" || doc.type === "DEBIT_NOTE") {
+          if (!doc.sourceDocumentId)
+            throw new Error("SOURCE_DOCUMENT_REQUIRED");
+          await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${doc.sourceDocumentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+          source = await tx.commercialDocument.findFirst({
+            where: {
+              id: doc.sourceDocumentId,
+              companyId: actor.companyId,
+              type:
+                doc.type === "CREDIT_NOTE" ? "SALES_INVOICE" : "PURCHASE_BILL",
+              status: "POSTED",
+            },
+            include: { lines: { include: { purchaseAllocations: true } } },
+          });
+          if (
+            !source ||
+            source.branchId !== doc.branchId ||
+            source.customerId !== doc.customerId ||
+            source.vendorId !== doc.vendorId
+          )
+            throw new Error("INVALID_SOURCE_DOCUMENT");
+          const used = await tx.commercialDocument.aggregate({
+              where: {
+                companyId: actor.companyId,
+                sourceDocumentId: source.id,
+                status: "POSTED",
+                type: doc.type,
+                id: { not: doc.id },
+              },
+              _sum: { taxableTotal: true, taxTotal: true, grandTotal: true },
+            }),
+            outstanding = await documentOutstandingInTx(
+              tx,
+              actor.companyId!,
+              source.id,
+            );
+          assertAdjustmentWithinSource(
+            doc,
+            source,
+            {
+              taxableTotal: new D(used._sum.taxableTotal ?? 0),
+              taxTotal: new D(used._sum.taxTotal ?? 0),
+              grandTotal: new D(used._sum.grandTotal ?? 0),
+            },
+            outstanding.outstanding,
+          );
+          debitSourceClassification = source.purchaseClassification;
+        }
+        const projectReturns =
+          doc.type === "DEBIT_NOTE" && source
+            ? await projectPurchaseReturnsInTx(tx, actor, doc, source)
+            : {
+                projectReturnCost: new D(0),
+                projectReturnQuantities: new Map<string, Prisma.Decimal>(),
+              };
+        const inventoryDocument = projectReturns.projectReturnQuantities.size
+          ? {
+              ...doc,
+              lines: doc.lines.map((line) => ({
+                ...line,
+                stockReturnQuantity: line.stockReturnQuantity.sub(
+                  projectReturns.projectReturnQuantities.get(line.id) ?? 0,
+                ),
+              })),
+            }
+          : doc;
+        const inventory = await commercialInventoryInTx(
+            tx,
+            actor,
+            inventoryDocument,
+          ),
+          sale = doc.type === "SALES_INVOICE" || doc.type === "CREDIT_NOTE",
+          classification = purchaseClassificationForPosting(
+            doc.type,
+            doc.purchaseClassification,
+            debitSourceClassification,
+          ),
+          purchaseCounter =
+            classification === "GENERAL_EXPENSES"
+              ? "GENERAL_EXPENSES"
+              : classification === "FIXED_ASSET"
+                ? "FIXED_ASSETS"
+                : "PURCHASE_COST",
+          purchaseRows =
+            doc.type === "PURCHASE_BILL"
+              ? doc.lines.flatMap((line) =>
+                  line.purchaseAllocations.map((a) => ({
+                    allocationType: a.allocationType,
+                    taxableAmount: a.taxableAmount,
+                    taxAmount: a.taxAmount,
+                  })),
+                )
+              : [],
+          purchaseBuckets = purchasePostingBuckets(
+            purchaseRows,
+            doc.taxCreditTreatment === "ELIGIBLE",
+          ),
+          keys = [
+            sale ? "ACCOUNTS_RECEIVABLE" : "ACCOUNTS_PAYABLE",
+            sale ? "SALES_INCOME" : purchaseCounter,
+            "CGST_PAYABLE",
+            "SGST_PAYABLE",
+            "IGST_PAYABLE",
+            "CESS_PAYABLE",
+            "CGST_ITC",
+            "SGST_ITC",
+            "IGST_ITC",
+            "CESS_ITC",
+            "TDS_PAYABLE",
+            "TCS_PAYABLE",
+            "INVENTORY_ASSET",
+            "COGS",
+            ...(doc.type === "PURCHASE_BILL"
+              ? ["GENERAL_EXPENSES", "FIXED_ASSETS", "PROJECT_MATERIAL_WIP"]
+              : projectReturns.projectReturnCost.gt(0)
+                ? ["PROJECT_MATERIAL_WIP"]
+                : []),
+          ],
+          ctx = await systemContext(tx, actor, doc.issueDate, keys),
+          creditSide =
+            doc.type === "SALES_INVOICE" || doc.type === "DEBIT_NOTE",
+          counterDebit =
+            doc.type === "PURCHASE_BILL" || doc.type === "CREDIT_NOTE",
+          m = (x: Prisma.Decimal) => x.toFixed(2),
+          lines: Array<{
+            ledgerAccountId: string;
+            debit: string;
+            credit: string;
+            description: string;
+          }> = [];
+        const push = (key: string, amount: Prisma.Decimal, debit: boolean) => {
+          if (amount.gt(0))
+            lines.push({
+              ledgerAccountId: ctx.account(key),
+              debit: debit ? m(amount) : "0",
+              credit: debit ? "0" : m(amount),
+              description: doc.documentNumber,
+            });
+        };
+        const partyAmount =
+          doc.payableAmount ??
+          (doc.reverseCharge
+            ? doc.grandTotal.sub(doc.taxTotal)
+            : doc.grandTotal.sub(doc.tdsAmount));
+        push(keys[0], partyAmount, creditSide);
+        if (doc.type === "PURCHASE_BILL") {
+          push("INVENTORY_ASSET", purchaseBuckets.inventory, counterDebit);
+          push(
+            "GENERAL_EXPENSES",
+            purchaseBuckets.generalExpense
+              .add(doc.freightAmount)
+              .add(doc.otherChargesAmount)
+              .add(doc.roundOffAmount),
+            counterDebit,
+          );
+          push("FIXED_ASSETS", purchaseBuckets.fixedAsset, counterDebit);
+          push(
+            "PROJECT_MATERIAL_WIP",
+            purchaseBuckets.projectWip,
+            counterDebit,
+          );
+        } else {
+          if (doc.type === "DEBIT_NOTE") {
+            // Source material retains its original valuation. Differences between
+            // the supplier credit and returned stock are signed purchase variance.
+            const costCorrection = doc.taxableTotal
+              .add(doc.taxCreditTreatment === "ELIGIBLE" ? 0 : doc.taxTotal)
+              .sub(inventory.returnCost)
+              .sub(projectReturns.projectReturnCost);
+            push(keys[1], costCorrection.abs(), costCorrection.lt(0));
+            push(
+              "PROJECT_MATERIAL_WIP",
+              projectReturns.projectReturnCost,
+              false,
+            );
+          } else
+            push(
+              keys[1],
+              sale ? doc.taxableTotal : inventory.nonInventoryPurchase,
+              counterDebit,
+            );
+          if (inventory.inventoryPurchase.gt(0))
+            push("INVENTORY_ASSET", inventory.inventoryPurchase, counterDebit);
+        }
+        const components = [
+          ["CGST", doc.cgstTotal],
+          ["SGST", doc.sgstTotal],
+          ["IGST", doc.igstTotal],
+          ["CESS", doc.cessTotal],
+        ] as const;
+        for (const [name, amount] of components) {
+          if (amount.lte(0)) continue;
+          if (sale) push(`${name}_PAYABLE`, amount, !creditSide);
+          else if (doc.reverseCharge) {
+            push(`${name}_PAYABLE`, amount, !counterDebit);
+            if (doc.taxCreditTreatment === "ELIGIBLE")
+              push(`${name}_ITC`, amount, counterDebit);
+          } else if (doc.taxCreditTreatment === "ELIGIBLE")
+            push(`${name}_ITC`, amount, counterDebit);
+          else {
+            /* non-creditable tax is already included exactly once in the inventory/non-inventory cost buckets */
+          }
+        }
+        push("TDS_PAYABLE", doc.tdsAmount, !counterDebit);
+        push("TCS_PAYABLE", doc.tcsAmount, !creditSide);
+        if (doc.type === "SALES_INVOICE" && inventory.cogs.gt(0)) {
+          push("COGS", inventory.cogs, true);
+          push("INVENTORY_ASSET", inventory.cogs, false);
+        }
+        if (doc.type === "CREDIT_NOTE" && inventory.returnCost.gt(0)) {
+          push("INVENTORY_ASSET", inventory.returnCost, true);
+          push("COGS", inventory.returnCost, false);
+        }
+        if (doc.type === "DEBIT_NOTE" && inventory.returnCost.gt(0)) {
+          push("INVENTORY_ASSET", inventory.returnCost, false);
+        }
+        const journal = await postJournalInTx(tx, actor, {
+          financialYearId: ctx.fy.id,
+          branchId: doc.branchId,
+          entryDate: doc.issueDate,
+          sourceType: doc.type,
+          sourceId: doc.id,
+          postingPurpose: "PRIMARY",
+          lines,
         });
-      if (changed.count !== 1) throw new Error("STALE");
-      await audit(
-        tx,
-        actor,
-        (
-          {
-            SALES_INVOICE: "INVOICE_POSTED",
-            CREDIT_NOTE: "CREDIT_NOTE_POSTED",
-            PURCHASE_BILL: "PURCHASE_BILL_POSTED",
-            DEBIT_NOTE: "DEBIT_NOTE_POSTED",
-          } as const
-        )[
-          doc.type as
-            "SALES_INVOICE" | "CREDIT_NOTE" | "PURCHASE_BILL" | "DEBIT_NOTE"
-        ],
-        "COMMERCIAL_DOCUMENT",
-        doc.id,
-        { journalEntryId: journal.id },
-      );
-      return journal;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        await postProjectPurchaseMaterialsInTx(tx, actor, doc);
+        const signature = await tx.authorizedSignatureVersion.findFirst({
+            where: { companyId: actor.companyId, isCurrent: true },
+            orderBy: { createdAt: "desc" },
+          }),
+          changed = await tx.commercialDocument.updateMany({
+            where: {
+              id: doc.id,
+              companyId: actor.companyId,
+              status: "DRAFT",
+              journalEntryId: null,
+            },
+            data: {
+              status: "POSTED",
+              journalEntryId: journal.id,
+              signatureVersionId: signature?.id,
+            },
+          });
+        if (changed.count !== 1) throw new Error("STALE");
+        await audit(
+          tx,
+          actor,
+          (
+            {
+              SALES_INVOICE: "INVOICE_POSTED",
+              CREDIT_NOTE: "CREDIT_NOTE_POSTED",
+              PURCHASE_BILL: "PURCHASE_BILL_POSTED",
+              DEBIT_NOTE: "DEBIT_NOTE_POSTED",
+            } as const
+          )[
+            doc.type as
+              "SALES_INVOICE" | "CREDIT_NOTE" | "PURCHASE_BILL" | "DEBIT_NOTE"
+          ],
+          "COMMERCIAL_DOCUMENT",
+          doc.id,
+          { journalEntryId: journal.id },
+        );
+        return journal;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
 }
 export async function documentOutstandingInTx(
@@ -2843,11 +2969,13 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string) {
       orderBy: { createdAt: "asc" },
     }),
   ]);
-  const financial = ["SALES_INVOICE", "PURCHASE_BILL"].includes(row.type)
-    ? await db.$transaction((tx) =>
-        documentOutstandingInTx(tx, actor.companyId, row.id),
-      )
-    : null;
+  const financial =
+    row.status === "POSTED" &&
+    ["SALES_INVOICE", "PURCHASE_BILL"].includes(row.type)
+      ? await db.$transaction((tx) =>
+          documentOutstandingInTx(tx, actor.companyId, row.id),
+        )
+      : null;
   return { ...row, financial, stockMovements, projectMaterialMovements };
 }
 async function safeSalesInvoiceNumberingSeriesOptions(companyId: string) {

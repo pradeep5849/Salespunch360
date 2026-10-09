@@ -9,7 +9,7 @@ vi.mock("@/lib/db", () => ({
     company: {
       findUniqueOrThrow: vi
         .fn()
-        .mockResolvedValue({ productEdition: "ACCOUNT" }),
+        .mockResolvedValue({ productEdition: "SALESPUNCH360_ACCOUNT" }),
     },
     $transaction: (fn: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
       fn(m.tx as unknown as Prisma.TransactionClient),
@@ -34,6 +34,11 @@ const id = (n: number) =>
 const actor = {
   id: id(1),
   companyId: id(2),
+  role: "ACCOUNT_USER",
+  isActive: true,
+  accountAccessActive: true,
+  salesAccessActive: false,
+  salesRole: null,
   accountRole: "ACCOUNT_ADMIN",
   branchAccessScope: "ALL_BRANCHES",
   branchIds: [],

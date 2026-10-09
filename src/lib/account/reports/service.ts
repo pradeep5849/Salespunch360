@@ -856,6 +856,9 @@ async function projectMaterialReport(
       "Value",
       "Source",
       "Destination",
+      "Purchase document",
+      "Correction document",
+      "Original receipt",
     ],
     rows: rows.map((x) => [
       x.movementDate.toISOString().slice(0, 10),
@@ -867,8 +870,11 @@ async function projectMaterialReport(
       n(x.totalCost),
       x.sourceProjectId ?? "",
       x.destinationProjectId ?? "",
+      x.purchaseDocumentId ?? "",
+      x.correctionDocumentId ?? "",
+      x.sourceMovementId ?? "",
     ]),
-    note: "Internal Project movements preserve original cost and never create GST.",
+    note: "Internal Project movements preserve original cost and create no GST. Supplier-return GST is recorded once by the linked debit note.",
   };
 }
 

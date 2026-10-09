@@ -218,6 +218,7 @@ enum ProjectMaterialMovementType {
   INVENTORY_ISSUE_TO_PROJECT
   CONSUMPTION
   RETURN_TO_INVENTORY
+  RETURN_TO_VENDOR
   TRANSFER_OUT
   TRANSFER_IN
   REVERSAL
@@ -232,6 +233,8 @@ model ProjectMaterialMovement {
   purchaseDocumentId    String?                     @db.Uuid
   purchaseLineId        String?                     @db.Uuid
   purchaseAllocationId  String?                     @db.Uuid
+  correctionDocumentId  String?                     @db.Uuid
+  correctionLineId      String?                     @db.Uuid
   productId             String                      @db.Uuid
   warehouseId           String?                     @db.Uuid
   projectLocation       String?
@@ -260,6 +263,7 @@ model ProjectMaterialMovement {
   @@index([companyId, projectId, sourceMovementId])
   @@index([companyId, branchId, projectId, productId, movementDate])
   @@index([companyId, purchaseAllocationId, projectId])
+  @@index([companyId, correctionDocumentId, correctionLineId])
   @@map("project_material_movements")
 }
 
@@ -3182,7 +3186,7 @@ model StockMovement {
   warehouseId    String            @db.Uuid
   productId      String            @db.Uuid
   movementType   StockMovementType
-  quantity       Decimal           @db.Decimal(18, 4)
+  quantity       Decimal           @db.Decimal(20, 6)
   unitCost       Decimal           @db.Decimal(18, 4)
   totalCost      Decimal           @db.Decimal(18, 2)
   sourceType     String            @db.VarChar(80)

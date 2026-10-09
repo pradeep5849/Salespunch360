@@ -20,6 +20,7 @@ export function stockOutgoingUnitCost(
 ) {
   if (
     row.sourceType === "PROJECT_TRANSFER_ISSUE" ||
+    row.sourceType === "PROJECT_MATERIAL_ISSUE" ||
     row.sourceType === "PROJECT_MATERIAL_REVERSAL"
   )
     return row.unitCost;

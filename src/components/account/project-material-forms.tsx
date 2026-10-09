@@ -372,6 +372,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
                           "REVERSAL",
                           "TRANSFER_IN",
                           "DIRECT_PROJECT_RECEIPT",
+                          "RETURN_TO_VENDOR",
                         ].includes(x.movementType),
                     )
                     .map((x) => (

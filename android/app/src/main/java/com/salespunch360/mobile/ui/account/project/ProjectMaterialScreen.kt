@@ -25,7 +25,7 @@ import com.salespunch360.mobile.ui.account.sales.SelectField
  if(s.allowedActions.isEmpty()&&!s.loading)item{Text("Read-only Project material access")}
  else if(s.allowedActions.isNotEmpty()){
  item{SelectField("Action",s.action,s.allowedActions.map{it to labels.getValue(it)}){v->vm.update{it.copy(action=v)}}}
- if(s.action=="REVERSE")item{SelectField("Movement to reverse",s.movementId,s.movements.filter{it.str("isReversed")!="true"&&it.str("movementType") !in listOf("REVERSAL","TRANSFER_IN","DIRECT_PROJECT_RECEIPT")}.map{it.str("id") to "${it.str("movementType").replace('_',' ')} · ${it.str("quantity")} · ${it.str("movementDate").take(10)}"}){v->vm.update{it.copy(movementId=v)}}}
+ if(s.action=="REVERSE")item{SelectField("Movement to reverse",s.movementId,s.movements.filter{it.str("isReversed")!="true"&&it.str("movementType") !in listOf("REVERSAL","TRANSFER_IN","DIRECT_PROJECT_RECEIPT","RETURN_TO_VENDOR")}.map{it.str("id") to "${it.str("movementType").replace('_',' ')} · ${it.str("quantity")} · ${it.str("movementDate").take(10)}"}){v->vm.update{it.copy(movementId=v)}}}
  else{
  item{SelectField(if(s.action=="TRANSFER")"Source Project" else "Project",s.projectId,s.projects.map{it.str("id") to "${it.str("projectNumber")} · ${it.str("name")}"}){v->vm.selectProject(v)}}
  if(s.action=="TRANSFER")item{SelectField("Destination Project",s.destinationProjectId,s.projects.filter{it.str("id")!=s.projectId&&it.str("branchId")==branch}.map{it.str("id") to it.str("name")}){v->vm.update{it.copy(destinationProjectId=v)}}}
