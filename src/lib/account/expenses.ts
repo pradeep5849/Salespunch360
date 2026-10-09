@@ -1,3 +1,4 @@
+import {attachmentDisplayName} from "./attachment-name";
 import { randomUUID } from "node:crypto";
 import {
   ExpenseCategoryScope,
@@ -886,7 +887,7 @@ export async function addExpenseAttachmentForActor(
           companyId: a.companyId,
           expenseId,
           storageKey: key,
-          displayName: file.name.slice(0, 240),
+          displayName: attachmentDisplayName(file.name),
           mimeType: file.type,
           sizeBytes: file.size,
           uploadedById: a.id,
@@ -912,7 +913,7 @@ export async function downloadExpenseAttachmentForActor(a: Actor, id: string) {
   await scopedExpense(a, row.expenseId);
   return {
     data: await privateStorage().get(row.storageKey),
-    name: row.displayName,
+    name: attachmentDisplayName(row.displayName),
     mimeType: row.mimeType,
   };
 }

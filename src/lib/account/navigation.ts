@@ -2,7 +2,7 @@ import type { AccountModule, AccountRole, ProductEdition } from "@prisma/client"
 import { ACCOUNT_ROLE_PERMISSIONS, canUsePermission, type Permission } from "@/lib/auth/permissions";
 import type { WorkspacePrincipal } from "@/lib/auth/workspace-policy";
 
-export type AccountNavItem = { label: string; href: string; requiredModules?: readonly AccountModule[]; permission?: Permission };
+export type AccountNavItem = { label: string; href: string; requiredModules?: readonly AccountModule[]; permission?: Permission; roles?: readonly AccountRole[] };
 export type AccountNavGroup = { label: string; expandable?: boolean; items: AccountNavItem[]; children?: AccountNavGroup[] };
 
 const sales: AccountNavGroup = { label: "Sales", expandable: true, items: [
@@ -27,8 +27,8 @@ const groups: AccountNavGroup[] = [
   { label: "My Business", items: [{ label: "Expenses", href: "/workspace/account/expenses", requiredModules: ["EXPENSES"], permission: "ACCOUNT_EXPENSE_VIEW" }], children: [sales, purchase] },
   { label: "Inventory", items: [{ label: "Items & stock", href: "/workspace/account/inventory", requiredModules: ["INVENTORY"], permission: "ACCOUNT_STOCK" }, { label: "Warehouses", href: "/workspace/account/inventory/warehouses", requiredModules: ["INVENTORY"], permission: "ACCOUNT_STOCK" }, { label: "Opening stock", href: "/workspace/account/inventory/opening", requiredModules: ["INVENTORY"], permission: "ACCOUNT_STOCK" }, { label: "Transfers & adjustments", href: "/workspace/account/inventory/transfers", requiredModules: ["INVENTORY"], permission: "ACCOUNT_STOCK" }] },
   { label: "Projects", items: [{ label: "Projects", href: "/workspace/account/projects", requiredModules: ["PROJECTS"], permission: "ACCOUNT_PROJECTS" }, { label: "Project costing", href: "/workspace/account/projects", requiredModules: ["PROJECT_COSTING"], permission: "ACCOUNT_PROJECT_COST_VIEW" }] },
-  { label: "Cash & Bank", items: [{ label: "Cash & bank accounts", href: "/workspace/account/money/accounts", permission: "ACCOUNT_MONEY_VIEW" }, { label: "Transfers", href: "/workspace/account/money/transfers", permission: "ACCOUNT_MONEY_VIEW" }, { label: "Capital & drawings", href: "/workspace/account/money/capital", permission: "ACCOUNT_MONEY_VIEW" }, { label: "Loans", href: "/workspace/account/money/loans", permission: "ACCOUNT_LOAN_ADMIN" }] },
-  { label: "Accounting", items: [{ label: "Chart of Accounts", href: "/workspace/account/accounting/accounts", permission: "ACCOUNT_LEDGER_VIEW" }, { label: "Journals", href: "/workspace/account/accounting/journals", permission: "ACCOUNT_LEDGER_VIEW" }, { label: "Assets", href: "/workspace/account/assets", requiredModules: ["ASSETS"], permission: "ACCOUNT_ACCOUNTS" }, { label: "Financial Years", href: "/workspace/account/utilities/financial-year", permission: "ACCOUNT_PERIOD_LOCK" }, { label: "Period Locks", href: "/workspace/account/utilities/period-locks", permission: "ACCOUNT_PERIOD_LOCK" }] },
+  { label: "Cash & Bank", items: [{ label: "Assets", href: "/workspace/account/assets", requiredModules: ["ASSETS"], permission: "ACCOUNT_ACCOUNTS", roles: ["ACCOUNT_ADMIN", "ACCOUNTANT"] }, { label: "Cash & bank accounts", href: "/workspace/account/money/accounts", permission: "ACCOUNT_MONEY_VIEW" }, { label: "Transfers", href: "/workspace/account/money/transfers", permission: "ACCOUNT_MONEY_VIEW" }, { label: "Capital & drawings", href: "/workspace/account/money/capital", permission: "ACCOUNT_MONEY_VIEW" }, { label: "Loans", href: "/workspace/account/money/loans", permission: "ACCOUNT_LOAN_ADMIN" }] },
+  { label: "Accounting", items: [{ label: "Chart of Accounts", href: "/workspace/account/accounting/accounts", permission: "ACCOUNT_LEDGER_VIEW" }, { label: "Journals", href: "/workspace/account/accounting/journals", permission: "ACCOUNT_LEDGER_VIEW" }, { label: "Financial Years", href: "/workspace/account/utilities/financial-year", permission: "ACCOUNT_PERIOD_LOCK" }, { label: "Period Locks", href: "/workspace/account/utilities/period-locks", permission: "ACCOUNT_PERIOD_LOCK" }] },
   { label: "Reports", items: [{ label: "Reports hub", href: "/workspace/account/reports", permission: "ACCOUNT_REPORTS" }, { label: "Profit & Loss", href: "/workspace/account/reports/profit-loss", permission: "ACCOUNT_REPORTS" }, { label: "Balance Sheet", href: "/workspace/account/reports/balance-sheet", permission: "ACCOUNT_REPORTS" }, { label: "Trial Balance", href: "/workspace/account/reports/trial-balance", permission: "ACCOUNT_REPORTS" }] },
   { label: "Utilities", items: [{ label: "Import, export & backup", href: "/workspace/account/utilities", permission: "ACCOUNT_REPORTS" }] },
   { label: "Company / Branch", items: [{ label: "Company details", href: "/workspace/company-profile", permission: "COMPANY_VIEW" }] },
@@ -41,7 +41,7 @@ export function accountNavSectionId(label: string) { return label.toLowerCase().
 export function buildAccountNavigation(actor: WorkspacePrincipal, edition: ProductEdition, enabled: readonly AccountModule[]) {
   const set = new Set(enabled);
   const filter = (group: AccountNavGroup): AccountNavGroup | null => {
-    const items = group.items.filter(item => (item.requiredModules ?? []).every(module => set.has(module)) && (!item.permission || canUsePermission(actor, edition, item.permission)));
+    const items = group.items.filter(item => (item.requiredModules ?? []).every(module => set.has(module)) && (!item.permission || canUsePermission(actor, edition, item.permission)) && (!item.roles || !!actor.accountRole && item.roles.includes(actor.accountRole)));
     const children = group.children?.map(filter).filter((child): child is AccountNavGroup => child !== null);
     return items.length || children?.length ? { ...group, items, children } : null;
   };

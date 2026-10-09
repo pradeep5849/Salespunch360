@@ -11,6 +11,7 @@ import {
   setPeriodLockForActor,
 } from "@/lib/accounting/service";
 import {
+  assertAssetAccess,
   assetOptionsForActor,
   assignAssetForActor,
   createAssetForActor,
@@ -21,7 +22,6 @@ import {
 } from "@/lib/account/assets";
 import { createFinancialYearForActor } from "@/lib/account/service";
 import { closeFinancialYearForActor } from "@/lib/account/utilities";
-import { requireAccountModules } from "@/lib/account/modules";
 import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
@@ -116,7 +116,7 @@ export async function mobileAssets(
   status?: string | null,
 ) {
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   const rows = await db.asset.findMany({
     where: {
       companyId: a.companyId,
@@ -134,12 +134,12 @@ export async function mobileAssets(
 }
 export async function mobileAssetOptions(u: MobileAppPrincipal) {
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   return assetOptionsForActor(a);
 }
 export async function mobileAssetDetail(u: MobileAppPrincipal, id: string) {
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   return getAssetForActor(a, id);
 }
 export async function mobileSaveAsset(
@@ -149,7 +149,7 @@ export async function mobileSaveAsset(
 ) {
   await write(u);
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   return id ? updateAssetForActor(a, id, raw) : createAssetForActor(a, raw);
 }
 export async function mobileAssetAction(
@@ -159,7 +159,7 @@ export async function mobileAssetAction(
 ) {
   await write(u);
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   const d = raw as {
     action?: string;
     userId?: string;

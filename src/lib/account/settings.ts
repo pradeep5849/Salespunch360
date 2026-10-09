@@ -2,6 +2,8 @@ import { Prisma, CustomFieldDataType, CustomFieldEntity, PrintPaperSize } from "
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { AuthorizationError, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import {LEGACY_DEFAULT_ACCOUNT_MODULES} from "./modules";
+import type {ProjectActor} from "./projects";
 import {assertItemSettings,resolveItemSettings} from "./item-settings-policy";
 import { normalizeTransactionPreferences, PREFIX_TYPES, transactionPreferencesSchema } from "./transaction-settings";
 
@@ -63,5 +65,19 @@ export async function createPrintTemplate(raw: unknown) { const actor = await re
 export async function resolvePrintTemplate(companyId: string, branchId: string, documentType: string, paperSize: PrintPaperSize) { return db.printTemplate.findFirst({ where: { companyId, documentType, paperSize, isActive: true, OR: [{ branchId }, { branchId: null }] }, orderBy: [{ branchId: "desc" }, { isDefault: "desc" }, { version: "desc" }] }); }
 export function buildUpiUri(profile: { upiId?: string; upiPayeeName?: string }, amount?: Prisma.Decimal, reference?: string) { if (!profile.upiId) return null; const params = new URLSearchParams({ pa: profile.upiId, pn: profile.upiPayeeName ?? "" }); if (amount) params.set("am", amount.toFixed(2)); if (reference) params.set("tn", reference.slice(0, 80)); params.set("cu", "INR"); return `upi://pay?${params.toString()}`; }
 
-export const generalSettingsSchema=z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.coerce.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.literal("STANDARD")}).strict();
-export async function updateGeneralSettings(raw:unknown){const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const input=generalSettingsSchema.parse(raw);const row=await db.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,...input},update:input});await db.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["GENERAL"]}}});return row}
+export const generalSettingsSchema=z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.coerce.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.literal("STANDARD"),fixedAssetsEnabled:z.boolean().optional()}).strict();
+export async function updateGeneralSettingsForActor(actor:ProjectActor,raw:unknown){
+ if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+ const {fixedAssetsEnabled,...input}=generalSettingsSchema.parse(raw);
+ return db.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId! + ":account-settings"}))`;
+  const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{enabledModules:true}});
+  const stored=current?.enabledModules??[...LEGACY_DEFAULT_ACCOUNT_MODULES];
+  const enabledModules=fixedAssetsEnabled===undefined?undefined:fixedAssetsEnabled?[...new Set([...stored,"ASSETS" as const])]:stored.filter(x=>x!=="ASSETS");
+  const data={...input,...(enabledModules?{enabledModules}:{})};
+  const row=await tx.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,...data},update:data});
+  await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["GENERAL"],...(fixedAssetsEnabled!==undefined?{fixedAssetsEnabled}:{})}}});
+  return row;
+ });
+}
+export async function updateGeneralSettings(raw:unknown){return updateGeneralSettingsForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS") as ProjectActor,raw)}

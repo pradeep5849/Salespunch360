@@ -59,12 +59,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (session.token() == null) _state.value = AppState(AppStatus.SIGNED_OUT) else validateSession()
     }
 
-    fun login(email: String, password: String) {
+    fun login(email: String, password: String, rememberMe: Boolean) {
         if (_state.value.submitting) return
         viewModelScope.launch {
             _state.value = AppState(AppStatus.SIGNED_OUT, submitting = true)
             try {
-                val bootstrap = auth.login(email.trim(), password)
+                val bootstrap = auth.login(email.trim(), password, rememberMe)
                 if (applyBootstrap(bootstrap)) PushNotifications.register(getApplication())
             } catch (error: CancellationException) {
                 throw error

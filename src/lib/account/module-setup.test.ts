@@ -10,7 +10,7 @@ describe("two-step Account module setup",()=>{
     ]);
     expect(BUSINESS_TYPES.every(type=>!type.label.includes("_"))).toBe(true);
   });
-  it("defines the simplified module list with requested future modules",()=>expect(MODULE_SETUP_CATALOG.map(({key})=>key)).toEqual(["BASIC_ACCOUNTING","PROJECTS","BARCODE","POS","SERVICE_JOB_WORK","MANUFACTURING","PAYROLL_HR","ONLINE_STORE","MULTI_CURRENCY","LOYALTY_POINTS","TRANSACTION_SMS"]));
+  it("defines the simplified module list with requested future modules",()=>expect(MODULE_SETUP_CATALOG.map(({key})=>key)).toEqual(["BASIC_ACCOUNTING","ASSETS","PROJECTS","BARCODE","POS","SERVICE_JOB_WORK","MANUFACTURING","PAYROLL_HR","ONLINE_STORE","MULTI_CURRENCY","LOYALTY_POINTS","TRANSACTION_SMS"]));
   it("marks every Coming Soon module unavailable",()=>expect(MODULE_SETUP_CATALOG.filter(x=>!x.available).map(x=>x.key)).toEqual(["SERVICE_JOB_WORK","MANUFACTURING","PAYROLL_HR","ONLINE_STORE","MULTI_CURRENCY","LOYALTY_POINTS","TRANSACTION_SMS"]));
   it("rejects Coming Soon and unknown activation requests",()=>expect(()=>expandSetupModules(["MANUFACTURING"])).toThrow("MODULE_NOT_AVAILABLE:MANUFACTURING"));
   it("keeps Sales, Purchases and Inventory inside Basic Accounting",()=>expect(BASIC_ACCOUNTING_MODULES).toEqual(expect.arrayContaining(["SALES","PURCHASES","INVENTORY"])));

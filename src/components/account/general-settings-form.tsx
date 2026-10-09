@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from "react";
 import {updateGeneralSettingsAction} from "@/app/actions/account-settings";
 import {SaveFeedbackForm,SaveSubmitButton} from "./save-feedback";
 
-type Values={appLanguage:string;baseCurrency:string;displayDecimalPlaces:number;dateFormat:string;warnUnsavedChanges:boolean;appearance:string};
+type Values={appLanguage:string;baseCurrency:string;displayDecimalPlaces:number;dateFormat:string;warnUnsavedChanges:boolean;appearance:string;fixedAssetsEnabled:boolean};
 type Info={title:string;what:string;how?:string;why?:string};
 const INFO:Record<string,Info>={
  currency:{title:"Business Currency",what:"Selects the primary currency for this SalesPunch360 business.",how:"Its code and symbol are used on applicable Sales, Purchase, Expense, accounting and report screens.",why:"A consistent business currency keeps records and reports comparable."},
@@ -29,6 +29,7 @@ const availableFeatures=[
  ["Estimate / Quotation","estimate",true],["Proforma Invoice","proforma",true],["Other Income","income",false],["Sale / Purchase Order","orders",true],["Fixed Assets","assets",true],["Delivery Challan","challan",true],["Goods Return on Delivery Challan","returnChallan",false],["Print Amount on Challan","printChallan",false],
 ] as const;
 export function GeneralSettingsForm({values}:{values:Values}){
+ const[assetsEnabled,setAssetsEnabled]=useState(values.fixedAssetsEnabled);
  const[dirty,setDirty]=useState(false),[decimals,setDecimals]=useState(Math.min(4,Math.max(0,values.displayDecimalPlaces))),[info,setInfo]=useState<Info|null>(null);
  useEffect(()=>{if(!dirty||!values.warnUnsavedChanges)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn)},[dirty,values.warnUnsavedChanges]);
  const row=(label:React.ReactNode,control:React.ReactNode)=><div className="general-settings-row"><span>{label}</span><div className="general-settings-control">{control}</div></div>;
@@ -47,7 +48,7 @@ export function GeneralSettingsForm({values}:{values:Values}){
   <Link className="general-settings-row navigates" href="/workspace/account/inventory/warehouses"><span>Godown / Warehouse &amp; Stock Transfer <InfoButton topic="warehouse" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
   <Link className="general-settings-row navigates" href="/workspace/account/settings/backup"><span>Backup Settings <InfoButton topic="backup" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
   <h2>MORE TRANSACTIONS</h2>
-  {availableFeatures.map(([label,topic,supported])=>row(<span>{label} <InfoButton topic={topic} onOpen={setInfo}/></span>,<label className="settings-feature-state"><input type="checkbox" checked={supported} disabled aria-label={`${label} ${supported?"available":"not available"}`}/><span>{supported?"Available":"Not available"}</span></label>))}
+  {availableFeatures.map(([label,topic,supported])=>row(<span>{label} <InfoButton topic={topic} onOpen={setInfo}/></span>,<label className="settings-feature-state"><input type="checkbox" name={topic==="assets"?"fixedAssetsEnabled":undefined} checked={topic==="assets"?assetsEnabled:supported} disabled={topic!=="assets"} onChange={e=>{setAssetsEnabled(e.target.checked);setDirty(true)}} aria-label={label}/><span>{topic==="assets"?(assetsEnabled?"On":"Off"):supported?"Available":"Not available"}</span></label>))}
   <div className="general-settings-save"><SaveSubmitButton className="account-primary">Save General Settings</SaveSubmitButton>{dirty&&<small role="status">Unsaved changes</small>}</div>
  </SaveFeedbackForm><InfoDialog info={info} onClose={()=>setInfo(null)}/></>;
 }

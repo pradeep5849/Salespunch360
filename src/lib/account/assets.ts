@@ -42,6 +42,10 @@ const D = Prisma.Decimal,
     })
     .strict(),
   createInput = base.extend({ branchId: z.string().uuid() });
+export async function assertAssetAccess(a: ProjectActor) {
+  if (!a.companyId || !["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(a.accountRole ?? "")) throw new AuthorizationError();
+  await requireAccountModules(a, "ASSETS");
+}
 async function actor(write = false) {
   const a = (
     write
@@ -117,6 +121,7 @@ async function validateLinks(
   return value;
 }
 export async function assetOptionsForActor(a: ProjectActor) {
+  await assertAssetAccess(a);
   const branches = await db.branch.findMany({
     where: {
       companyId: a.companyId,
@@ -160,16 +165,16 @@ export async function assetOptionsForActor(a: ProjectActor) {
   };
 }
 export async function createAssetForActor(a: ProjectActor, raw: unknown) {
+  await assertAssetAccess(a);
   const d = createInput.parse(raw);
+  if (a.branchAccessScope === "SELECTED_BRANCHES" && !a.branchIds?.includes(d.branchId)) throw new AuthorizationError();
   if (
     !(await db.branch.findFirst({
       where: {
         id: d.branchId,
         companyId: a.companyId,
         isActive: true,
-        ...(a.branchAccessScope === "SELECTED_BRANCHES"
-          ? { id: { in: a.branchIds ?? [] } }
-          : {}),
+
       },
     }))
   )
@@ -200,6 +205,7 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
   );
 }
 async function scoped(a: ProjectActor, id: string) {
+  await assertAssetAccess(a);
   const row = await db.asset.findFirst({
     where: { id, companyId: a.companyId, ...branchWhere(a) },
   });

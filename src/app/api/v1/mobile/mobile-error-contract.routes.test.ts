@@ -69,6 +69,18 @@ describe("final mobile route error contract",()=>{
     for(const principal of [{salesRole:"SALES",managerType:null},{salesRole:"MANAGER",managerType:"FIELD_MANAGER"}]){mocks.auth.mockResolvedValue(principal);mocks.fieldEnabled.mockReturnValue(true);const response=await attendanceGet(get());expect(response.status).toBe(200);expect(await response.json()).toMatchObject({id:"attendance-1"})}
   });
 
+  it("A001-F02 accepts supported long credentials and rejects invalid bounds without creating sessions",async()=>{
+    for(const size of[128,129,200]){
+      mocks.createSession.mockResolvedValue({token:"token",expiresAt:new Date(),user:{}});mocks.bootstrap.mockResolvedValue({});
+      const password="Aa1"+"x".repeat(size-3);
+      expect((await loginPost(post({identifier:"sales@example.com",password,deviceId:"11111111-1111-4111-8111-111111111111"}))).status).toBe(200);
+      expect(mocks.createSession).toHaveBeenLastCalledWith("sales@example.com",password,undefined,expect.any(Object));
+    }
+    mocks.createSession.mockClear();
+    for(const password of["","x".repeat(201)])expect((await loginPost(post({identifier:"sales@example.com",password,deviceId:"11111111-1111-4111-8111-111111111111"}))).status).toBe(401);
+    expect(mocks.createSession).not.toHaveBeenCalled();
+  });
+
   it("keeps expected login credential failure opaque but classifies infrastructure failure as 500",async()=>{
     mocks.createSession.mockRejectedValueOnce(new Error("INVALID_MOBILE_CREDENTIALS"));const invalid=await loginPost(validLogin());expect(invalid.status).toBe(401);expect(await invalid.json()).toEqual({error:"Unable to complete request."});
     mocks.rateLimit.mockResolvedValueOnce(false);const limited=await loginPost(validLogin());expect(limited.status).toBe(429);expect(await limited.json()).toEqual({error:"Too many attempts. Try again later."});

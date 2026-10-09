@@ -609,6 +609,7 @@ private fun PartySettingsView(
 private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){
     val context=LocalContext.current
     val current=data.jsonObject["settings"]?.jsonObject?:JsonObject(emptyMap())
+    var assetsEnabled by remember(data){mutableStateOf(data.jsonObject["modules"]?.jsonArray?.any{it.jsonPrimitive.content=="ASSETS"}?:true)}
     var language by remember(current){mutableStateOf(current["appLanguage"]?.jsonPrimitive?.content?:"en")}
     var currency by remember(current){mutableStateOf(current["baseCurrency"]?.jsonPrimitive?.content?:"INR")}
     var decimals by remember(current){mutableStateOf(current["displayDecimalPlaces"]?.jsonPrimitive?.intOrNull?:2)}
@@ -623,8 +624,9 @@ private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewMod
         item{ChoiceSetting("Date Format",dateFormat,listOf("DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD").map{it to it}){dateFormat=it}}
         item{SwitchRow("Show warning for unsaved changes",warning){warning=it}}
         item{ChoiceSetting("Theme",appearance,listOf("STANDARD" to "Standard","TRENDING_DISABLED" to "Trending — Coming Soon","MODERN_DISABLED" to "Modern — Coming Soon")){}}
+        item{SwitchRow("Fixed Assets",assetsEnabled){assetsEnabled=it}}
         item{Text("Security",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);ListItem(headlineContent={Text("Passcode / Fingerprint")},supportingContent={Text("Managed by Android device security")},trailingContent={Text("›")},modifier=Modifier.clickable{context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))})}
-        item{Button(onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance)})},modifier=Modifier.fillMaxWidth()){Text("Save General Settings")}}
+        item{Button(onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance);put("fixedAssetsEnabled",assetsEnabled)})},modifier=Modifier.fillMaxWidth()){Text("Save General Settings")}}
     }
 }
 
