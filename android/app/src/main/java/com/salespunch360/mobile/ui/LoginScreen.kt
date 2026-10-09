@@ -70,7 +70,6 @@ import kotlinx.coroutines.launch
     Text("Privacy Policy.",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.SemiBold,modifier=Modifier.clickable{runCatching{uriHandler.openUri("https://www.salespunch360.com/privacy")}})
    }
   }
-  Row(verticalAlignment=Alignment.CenterVertically){Checkbox(rememberMe,{rememberMe=it;onEdit()},enabled=!submitting);Text("Remember me")}
   message?.let{MessageBanner(it){message=null}}
   Button(onClick={
    attempted=true
