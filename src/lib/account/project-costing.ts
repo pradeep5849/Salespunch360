@@ -8,12 +8,14 @@ import {
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "./modules";
 import {
+  requireProjectFunction,
   authorizedProjectBranchIds,
   projectRecordScope,
   type ProjectActor,
 } from "./projects";
 import { allocateDocumentNumberInTx } from "./numbering";
 import { projectMaterialCostBreakdown } from "./project-material";
+import { documentOutstandingsBatch } from "./commercial";
 const D = Prisma.Decimal,
   Z = new D(0),
   sum = (xs: Prisma.Decimal[]) => xs.reduce((a, b) => a.add(b), Z);
@@ -24,6 +26,15 @@ export type CostDocument = {
   taxableTotal: Prisma.Decimal;
   sourcePurchaseOrderId?: string | null;
 };
+// Purchase-linked issues are already included in allocated purchase cost.
+// Keep the full movement set for availability, consumption and transfer reporting.
+export function inventoryIssueCostNotPurchased(rows: Array<{
+  id: string; movementType: string; reversalOfId: string | null;
+  purchaseAllocationId: string | null; totalCost: Prisma.Decimal;
+}>) {
+  const reversed = new Set(rows.filter(x => x.movementType === "REVERSAL").map(x => x.reversalOfId));
+  return sum(rows.filter(x => x.movementType === "INVENTORY_ISSUE_TO_PROJECT" && !x.purchaseAllocationId && !reversed.has(x.id)).map(x => x.totalCost));
+}
 export function projectCosting(input: {
   originalValue: Prisma.Decimal;
   contractRevenueBase?: Prisma.Decimal;
@@ -32,7 +43,14 @@ export function projectCosting(input: {
   documents: CostDocument[];
   allocatedPurchaseCost?: Prisma.Decimal;
   committedAllocatedCost?: Prisma.Decimal;
-  materialAdjustments?: {inventoryIssued: Prisma.Decimal; transferIn: Prisma.Decimal; returned: Prisma.Decimal; transferOut: Prisma.Decimal; consumed: Prisma.Decimal; unused: Prisma.Decimal};
+  materialAdjustments?: {
+    inventoryIssued: Prisma.Decimal;
+    transferIn: Prisma.Decimal;
+    returned: Prisma.Decimal;
+    transferOut: Prisma.Decimal;
+    consumed: Prisma.Decimal;
+    unused: Prisma.Decimal;
+  };
   advanceReceived?: Prisma.Decimal;
   amountReceived?: Prisma.Decimal;
   accountingReceivable?: Prisma.Decimal;
@@ -64,8 +82,15 @@ export function projectCosting(input: {
     ),
     actualPurchases = input.allocatedPurchaseCost ?? documentPurchases,
     material = input.materialAdjustments,
-    materialNet = material ? material.inventoryIssued.add(material.transferIn).sub(material.returned).sub(material.transferOut) : Z,
-    actualCost = actualPurchases.add(materialNet).add(sum(input.expenses ?? [])),
+    materialNet = material
+      ? material.inventoryIssued
+          .add(material.transferIn)
+          .sub(material.returned)
+          .sub(material.transferOut)
+      : Z,
+    actualCost = actualPurchases
+      .add(materialNet)
+      .add(sum(input.expenses ?? [])),
     billed = new Map<string, Prisma.Decimal>();
   for (const bill of input.documents.filter(
     (x) =>
@@ -77,16 +102,18 @@ export function projectCosting(input: {
       bill.sourcePurchaseOrderId!,
       (billed.get(bill.sourcePurchaseOrderId!) ?? Z).add(bill.taxableTotal),
     );
-  const committed = input.committedAllocatedCost ?? sum(
-      input.documents
-        .filter((x) => x.status === "POSTED" && x.type === "PURCHASE_ORDER")
-        .map((po) =>
-          Prisma.Decimal.max(
-            Z,
-            po.taxableTotal.sub(billed.get(po.id ?? "") ?? Z),
+  const committed =
+      input.committedAllocatedCost ??
+      sum(
+        input.documents
+          .filter((x) => x.status === "POSTED" && x.type === "PURCHASE_ORDER")
+          .map((po) =>
+            Prisma.Decimal.max(
+              Z,
+              po.taxableTotal.sub(billed.get(po.id ?? "") ?? Z),
+            ),
           ),
-        ),
-    ),
+      ),
     revenue = sum(
       input.documents
         .filter((x) => x.status === "POSTED" && x.type === "SALES_INVOICE")
@@ -139,7 +166,28 @@ export function projectCosting(input: {
     actualMarginPercent: margin(profit, revenue),
   };
 }
-export function projectAdvancePosition(input:{contractValue:Prisma.Decimal;advanceReceived:Prisma.Decimal;advanceApplied:Prisma.Decimal;invoiced:Prisma.Decimal;cashReceipts?:Prisma.Decimal}){if(input.advanceApplied.gt(input.advanceReceived)||input.advanceApplied.gt(input.invoiced))throw new Error("ADVANCE_APPLICATION_EXCEEDS_BALANCE");return{contractBalance:input.contractValue.sub(input.advanceReceived),accountingReceivable:input.invoiced.sub(input.advanceApplied).sub(input.cashReceipts??Z),advanceLiability:input.advanceReceived.sub(input.advanceApplied),revenue:input.invoiced,amountReceived:input.advanceApplied.add(input.cashReceipts??Z)}}
+export function projectAdvancePosition(input: {
+  contractValue: Prisma.Decimal;
+  advanceReceived: Prisma.Decimal;
+  advanceApplied: Prisma.Decimal;
+  invoiced: Prisma.Decimal;
+  cashReceipts?: Prisma.Decimal;
+}) {
+  if (
+    input.advanceApplied.gt(input.advanceReceived) ||
+    input.advanceApplied.gt(input.invoiced)
+  )
+    throw new Error("ADVANCE_APPLICATION_EXCEEDS_BALANCE");
+  return {
+    contractBalance: input.contractValue.sub(input.advanceReceived),
+    accountingReceivable: input.invoiced
+      .sub(input.advanceApplied)
+      .sub(input.cashReceipts ?? Z),
+    advanceLiability: input.advanceReceived.sub(input.advanceApplied),
+    revenue: input.invoiced,
+    amountReceived: input.advanceApplied.add(input.cashReceipts ?? Z),
+  };
+}
 type Actor = ProjectActor;
 async function costingActor(edit = false) {
   const actor = (
@@ -156,7 +204,14 @@ async function scopedProject(actor: Actor, id: string) {
       where: { id, ...projectRecordScope(actor, branches) },
       include: {
         budgetLines: true,
-        commercialDocuments: { include: { lines: true, allocations:true, advanceApplications:true, adjustments:{where:{status:"POSTED"}} } },
+        commercialDocuments: {
+          include: {
+            lines: true,
+            allocations: true,
+            advanceApplications: true,
+            adjustments: { where: { status: "POSTED" } },
+          },
+        },
         customer: true,
       },
     });
@@ -248,10 +303,78 @@ export function packageProfitability(
     };
   });
 }
+type AllocatedCostRow = {
+  documentLineId: string;
+  taxableAmount: Prisma.Decimal;
+  taxAmount: Prisma.Decimal;
+  quantity: Prisma.Decimal;
+  documentLine: {
+    taxableAmount: Prisma.Decimal;
+    quantity: Prisma.Decimal;
+    document: {
+      id: string;
+      type: string;
+      status: string;
+      sourcePurchaseOrderId: string | null;
+      taxCreditTreatment: string;
+    };
+  };
+};
+export function projectAllocatedPurchaseMetrics(
+  rows: AllocatedCostRow[],
+  adjustments: Array<{
+    sourceCommercialLineId: string | null;
+    taxableAmount: Prisma.Decimal;
+    taxAmount: Prisma.Decimal;
+    quantity: Prisma.Decimal;
+  }>,
+) {
+  let actual = new D(0);
+  const ordered = new Map<string, Prisma.Decimal>(),
+    billed = new Map<string, Prisma.Decimal>();
+  for (const row of rows) {
+    const doc = row.documentLine.document;
+    if (doc.status !== "POSTED") continue;
+    const cost = row.taxableAmount.add(
+      doc.taxCreditTreatment === "ELIGIBLE" ? 0 : row.taxAmount,
+    );
+    if (doc.type === "PURCHASE_ORDER")
+      ordered.set(doc.id, (ordered.get(doc.id) ?? Z).add(cost));
+    if (doc.type !== "PURCHASE_BILL") continue;
+    actual = actual.add(cost);
+    if (doc.sourcePurchaseOrderId)
+      billed.set(
+        doc.sourcePurchaseOrderId,
+        (billed.get(doc.sourcePurchaseOrderId) ?? Z).add(cost),
+      );
+    for (const correction of adjustments.filter(
+      (x) => x.sourceCommercialLineId === row.documentLineId,
+    )) {
+      const ratio = row.documentLine.taxableAmount.gt(0)
+        ? row.taxableAmount.div(row.documentLine.taxableAmount)
+        : row.quantity.div(row.documentLine.quantity);
+      actual = actual.sub(
+        correction.taxableAmount
+          .add(doc.taxCreditTreatment === "ELIGIBLE" ? 0 : correction.taxAmount)
+          .mul(ratio),
+      );
+    }
+  }
+  return {
+    actual: actual.toDecimalPlaces(2),
+    committed: sum(
+      [...ordered].map(([id, amount]) =>
+        Prisma.Decimal.max(Z, amount.sub(billed.get(id) ?? Z)),
+      ),
+    ).toDecimalPlaces(2),
+  };
+}
 export async function loadProjectCostingForActor(
   actor: Actor,
   projectId: string,
 ) {
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_VIEW");
+  await requireAccountModules(actor, "PROJECTS", "PROJECT_COSTING");
   const project = await scopedProject(actor, projectId),
     quotation = project.sourceQuotationId
       ? await db.quotationDocument.findFirst({
@@ -282,15 +405,71 @@ export async function loadProjectCostingForActor(
         type: { in: ["PROJECT_EXPENSE", "REIMBURSEMENT"] },
       },
     }),
-    purchaseAllocations = await db.purchaseLineAllocation.findMany({where:{companyId:actor.companyId,projectId},include:{documentLine:{include:{document:true}}}}),
-    materialRows = await db.projectMaterialMovement.findMany({where:{companyId:actor.companyId,projectId}}),
-    projectSettlements = await db.accountSettlement.findMany({where:{companyId:actor.companyId,projectId},include:{applications:true}}),
+    purchaseAllocations = await db.purchaseLineAllocation.findMany({
+      where: { companyId: actor.companyId, projectId },
+      include: { documentLine: { include: { document: true } } },
+    }),
+    materialRows = await db.projectMaterialMovement.findMany({
+      where: { companyId: actor.companyId, projectId },
+    }),
+    projectSettlements = await db.accountSettlement.findMany({
+      where: { companyId: actor.companyId, projectId },
+      include: { applications: true },
+    }),
     material = projectMaterialCostBreakdown(materialRows),
-    allocatedPurchaseCost = sum(purchaseAllocations.filter(x=>x.documentLine.document.status==="POSTED"&&x.documentLine.document.type==="PURCHASE_BILL").map(x=>x.taxableAmount.add(x.documentLine.document.taxCreditTreatment==="ELIGIBLE"?0:x.taxAmount))),
-    advanceReceived = sum(projectSettlements.filter(x=>x.type==="CUSTOMER_ADVANCE").map(x=>x.amount)),
-    amountReceived = sum(projectSettlements.filter(x=>x.type==="CUSTOMER_RECEIPT").map(x=>x.amount)).add(sum(projectSettlements.flatMap(x=>x.applications).map(x=>x.amount))),
-    accountingReceivable = sum(project.commercialDocuments.filter(x=>x.type==="SALES_INVOICE"&&x.status==="POSTED").map(x=>x.grandTotal.sub(sum(x.allocations.map(a=>a.amount))).sub(sum(x.advanceApplications.map(a=>a.amount))).sub(sum(x.adjustments.map(a=>a.grandTotal))))),
-    committedAllocatedCost = sum(purchaseAllocations.filter(x=>x.documentLine.document.status==="POSTED"&&x.documentLine.document.type==="PURCHASE_ORDER").map(x=>x.taxableAmount)),
+    purchaseAdjustments = await db.commercialDocumentLine.findMany({
+      where: {
+        companyId: actor.companyId,
+        sourceCommercialLineId: {
+          in: purchaseAllocations.map((x) => x.documentLineId),
+        },
+        document: {
+          companyId: actor.companyId,
+          type: "DEBIT_NOTE",
+          status: "POSTED",
+        },
+      },
+      select: {
+        sourceCommercialLineId: true,
+        taxableAmount: true,
+        taxAmount: true,
+        quantity: true,
+      },
+    }),
+    purchaseMetrics = projectAllocatedPurchaseMetrics(
+      purchaseAllocations,
+      purchaseAdjustments,
+    ),
+    // A reversed automatic issue leaves the purchase payable intact and puts
+    // its material back into company inventory. Its allocation is no longer a
+    // retained Project cost; PO fulfilment still uses all posted purchases.
+    reversedMaterialIds = new Set(materialRows.filter(x => x.movementType === "REVERSAL").map(x => x.reversalOfId)),
+    returnedPurchaseAllocationIds = new Set(materialRows.filter(x => x.movementType === "INVENTORY_ISSUE_TO_PROJECT" && reversedMaterialIds.has(x.id)).map(x => x.purchaseAllocationId)),
+    allocatedPurchaseCost = projectAllocatedPurchaseMetrics(
+      purchaseAllocations.filter(x => !returnedPurchaseAllocationIds.has(x.id)),
+      purchaseAdjustments,
+    ).actual,
+    advanceReceived = sum(
+      projectSettlements
+        .filter((x) => x.type === "CUSTOMER_ADVANCE")
+        .map((x) => x.amount),
+    ),
+    amountReceived = sum(
+      project.commercialDocuments
+        .filter((x) => x.type === "SALES_INVOICE" && x.status === "POSTED")
+        .flatMap((x) => [
+          ...x.allocations.map((a) => a.amount),
+          ...x.advanceApplications.map((a) => a.amount),
+        ]),
+    ),
+    invoiceOutstandings = await documentOutstandingsBatch(
+      actor.companyId,
+      project.commercialDocuments.filter(
+        (x) => x.type === "SALES_INVOICE" && x.status === "POSTED",
+      ),
+    ),
+    accountingReceivable = sum([...invoiceOutstandings.values()]),
+    committedAllocatedCost = purchaseMetrics.committed,
     budget = sum(project.budgetLines.map((x) => x.amount)),
     estimate = quotation?.revisions[0]?.internalCostTotal ?? budget,
     metrics = projectCosting({
@@ -302,9 +481,22 @@ export async function loadProjectCostingForActor(
       documents: project.commercialDocuments,
       allocatedPurchaseCost,
       committedAllocatedCost,
-      advanceReceived,amountReceived,accountingReceivable,
-      materialAdjustments:{inventoryIssued:material.inventoryIssued,transferIn:material.transferIn,returned:material.returned,transferOut:material.transferOut,consumed:material.consumed,unused:material.unused},
-      expenses: expenses.map((x) => x.taxableAmount),
+      advanceReceived,
+      amountReceived,
+      accountingReceivable,
+      materialAdjustments: {
+        inventoryIssued: inventoryIssueCostNotPurchased(materialRows),
+        transferIn: material.transferIn,
+        returned: material.returned,
+        transferOut: material.transferOut,
+        consumed: material.consumed,
+        unused: material.unused,
+      },
+      expenses: expenses.map((x) =>
+        x.totalAmount.sub(
+          x.taxCreditTreatment === "ELIGIBLE" ? x.taxAmount : 0,
+        ),
+      ),
       approvedChanges: changes.filter((x) => x.status === "APPROVED"),
       closed: project.status === "CLOSED",
     }),

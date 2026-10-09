@@ -15,7 +15,7 @@ import {
   createSimpleProjectForActor,
 } from "@/lib/account/project-simple-workflow";
 import { loadProjectCostingForActor } from "@/lib/account/project-costing";
-import { requireAccountModules } from "@/lib/account/modules";
+import { enabledModulesForCompany, requireAccountModules } from "@/lib/account/modules";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 
@@ -86,7 +86,14 @@ export async function mobileProjectDetail(u: MobileAppPrincipal, id: string) {
 }
 
 export async function mobileProjectOptions(u: MobileAppPrincipal, id?: string) {
-  return getProjectFormOptionsForActor(await permit(u, "ACCOUNT_PROJECTS"), id);
+  const actor = await permit(u, "ACCOUNT_PROJECTS");
+  const [options, modules] = await Promise.all([
+    getProjectFormOptionsForActor(actor, id), enabledModulesForCompany(actor.companyId),
+  ]);
+  return { ...options, capabilities: {
+    costView: modules.includes("PROJECT_COSTING") && canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_VIEW"),
+    budgetEdit: canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_EDIT"),
+  } };
 }
 
 export async function mobileCreateProject(u: MobileAppPrincipal, raw: unknown) {

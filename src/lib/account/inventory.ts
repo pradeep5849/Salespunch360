@@ -19,6 +19,7 @@ export {
   itemProfitability,
 } from "./inventory-policy";
 import {
+  stockOutgoingUnitCost,
   stockValuation,
   signedQuantity,
   isInboundStockMovement,
@@ -315,6 +316,7 @@ export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
             movementType: true,
             quantity: true,
             unitCost: true,
+            sourceType: true,
           },
           orderBy: [
             { movementDate: "asc" },
@@ -335,9 +337,7 @@ export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
           const q = signedQuantity(row.movementType, row.quantity);
           const cost = q.gte(0)
             ? row.unitCost
-            : state.quantity.gt(0)
-              ? state.value.div(state.quantity)
-              : row.unitCost;
+            : stockOutgoingUnitCost(state.quantity, state.value, row);
           state.quantity = state.quantity.add(q);
           state.value = state.value.add(q.mul(cost));
           grouped.set(key, state);

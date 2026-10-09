@@ -30,7 +30,7 @@ describe("Won lead project handoff contract", () => {
   });
 
   it("creates an Account customer automatically for manual Web and Android projects", () => {
-    expect(simpleProject).toContain("db.customer.create");
+    expect(simpleProject).toContain("tx.customer.create");
     expect(simpleProject).toContain("isAccountCustomer: true");
     expect(simpleProject).toContain("name: siteName || name");
     expect(simpleProject).toContain("customerId: customer.id");

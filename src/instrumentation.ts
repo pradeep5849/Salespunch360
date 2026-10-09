@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { logEvent } from "./lib/logging";
 export function onRequestError(error: unknown) {
   const code =
@@ -11,7 +10,7 @@ export function onRequestError(error: unknown) {
       : undefined;
   logEvent("error", {
     category: "WEB_REQUEST",
-    correlationId: randomUUID(),
+    correlationId: globalThis.crypto.randomUUID(),
     code,
   });
 }

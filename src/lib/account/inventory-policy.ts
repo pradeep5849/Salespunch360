@@ -12,9 +12,23 @@ export const signedQuantity = (
   type: StockMovementType,
   quantity: Prisma.Decimal,
 ) => (isInboundStockMovement(type) ? quantity : quantity.neg());
+/** Project transfer bridges and material reversals carry an authoritative original value. */
+export function stockOutgoingUnitCost(
+  quantity: Prisma.Decimal,
+  value: Prisma.Decimal,
+  row: { sourceType?: string; unitCost: Prisma.Decimal },
+) {
+  if (
+    row.sourceType === "PROJECT_TRANSFER_ISSUE" ||
+    row.sourceType === "PROJECT_MATERIAL_REVERSAL"
+  )
+    return row.unitCost;
+  return quantity.gt(0) ? value.div(quantity) : row.unitCost;
+}
 export function stockValuation(
   rows: Array<{
     movementType: StockMovementType;
+    sourceType?: string;
     quantity: Prisma.Decimal;
     unitCost: Prisma.Decimal;
   }>,
@@ -27,7 +41,7 @@ export function stockValuation(
       quantity = quantity.add(q);
       value = value.add(q.mul(row.unitCost));
     } else {
-      const average = quantity.gt(0) ? value.div(quantity) : row.unitCost;
+      const average = stockOutgoingUnitCost(quantity, value, row);
       quantity = quantity.add(q);
       value = value.add(q.mul(average));
     }

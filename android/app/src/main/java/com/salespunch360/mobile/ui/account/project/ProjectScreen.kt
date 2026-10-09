@@ -111,10 +111,10 @@ fun ProjectScreen(
     }
     s.editing?.let { ProjectEditor(it, s.options, vm::close, vm::save) }
     s.detail?.let {
-        ProjectDetail(it,s.costing,vm::close,vm::edit,vm::action,vm::editBudget)
+        ProjectDetail(it,s.costing,s.options["capabilities"]?.jsonObject?.get("budgetEdit")?.jsonPrimitive?.booleanOrNull==true,vm::close,vm::edit,vm::action,vm::editBudget)
     }
     if (s.budgetEditing && s.detail != null) {
-        BudgetDialog(s.detail!!, { vm.editBudget(false) }, vm::saveBudget)
+        BudgetDialog(s.detail!!, s.saving, s.error, { vm.editBudget(false) }, vm::saveBudget)
     }
 }
 
@@ -210,6 +210,7 @@ private fun ProjectEditor(
 private fun ProjectDetail(
     x: JsonObject,
     costing: JsonObject?,
+    canBudget: Boolean,
     close: () -> Unit,
     edit: () -> Unit,
     action: (String, String) -> Unit,
@@ -295,7 +296,7 @@ private fun ProjectDetail(
             if (!final) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(edit) { Text("Edit") }
-                    OutlinedButton(budget) { Text("Budget") }
+                    if (canBudget) OutlinedButton(budget) { Text("Budget") }
                     FilledTonalButton({ action(x.str("id"), "COMPLETE") }) {
                         Text("Complete")
                     }
@@ -377,26 +378,37 @@ private fun PickText(
 @Composable
 private fun BudgetDialog(
     project: JsonObject,
+    saving: Boolean,
+    error: String?,
     close: () -> Unit,
-    save: (String, String) -> Unit,
+    save: (String, List<ProjectBudgetLineDraft>) -> Unit,
 ) {
-    var amount by remember { mutableStateOf(project.str("budgetTotal")) }
+    var lines by remember(project.str("id")) { mutableStateOf(projectBudgetLines(project)) }
     AlertDialog(
-        onDismissRequest = close,
+        onDismissRequest = { if (!saving) close() },
         title = { Text("Project budget") },
         text = {
-            OutlinedTextField(
-                amount,
-                { amount = it },
-                label = { Text("Budget amount") },
-            )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                error?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
+                itemsIndexed(lines) { index, row ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Budget line ${index + 1}", fontWeight = FontWeight.Bold)
+                        OutlinedTextField(row.category, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(category = value) else x } }, label = { Text("Category") }, enabled = !saving)
+                        OutlinedTextField(row.title, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(title = value) else x } }, label = { Text("Title") }, enabled = !saving)
+                        OutlinedTextField(row.description, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(description = value) else x } }, label = { Text("Description") }, enabled = !saving)
+                        OutlinedTextField(row.amount, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(amount = value) else x } }, label = { Text("Amount") }, enabled = !saving)
+                        TextButton(onClick = { lines = lines.filterIndexed { i, _ -> i != index } }, enabled = !saving) { Text("Remove line") }
+                        HorizontalDivider()
+                    }
+                }
+                item { TextButton(onClick = { lines = lines + ProjectBudgetLineDraft() }, enabled = !saving && lines.size < 250) { Text("Add budget line") } }
+            }
         },
         confirmButton = {
-            Button(
-                enabled = amount.isNotBlank(),
-                onClick = { save(project.str("id"), amount) },
-            ) { Text("Save authoritative budget") }
+            Button(enabled = !saving && validProjectBudget(lines), onClick = { save(project.str("id"), lines) }) {
+                Text(if (saving) "Saving…" else "Save budget")
+            }
         },
-        dismissButton = { TextButton(close) { Text("Cancel") } },
+        dismissButton = { TextButton(close, enabled = !saving) { Text("Cancel") } },
     )
 }

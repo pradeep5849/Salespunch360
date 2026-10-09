@@ -55,6 +55,33 @@ const messages: Record<string, string> = {
     "Select an active cash or bank account for this branch.",
   MONEY_ACCOUNT_REQUIRED: "Select a cash or bank account.",
   INVALID_BRANCH: "Select an active branch you can access.",
+  INSUFFICIENT_PROJECT_MATERIAL:
+    "Quantity exceeds the material currently available to this Project.",
+  INSUFFICIENT_STOCK:
+    "Stock is insufficient and negative stock is disabled in General settings.",
+  PROJECT_BUDGET_IN_USE:
+    "A budget line linked to material or purchases cannot be removed. Edit its existing amount or add a new line.",
+  INVALID_PROJECT_BUDGET_LINE:
+    "Select a budget line belonging to the selected Project.",
+  INVALID_PROJECT_MATERIAL_CONTEXT:
+    "Select this Project's warehouse, product and budget line.",
+  INVALID_MATERIAL_LINEAGE:
+    "Select an original material receipt from this Project.",
+  MOVEMENT_ALREADY_REVERSED: "This movement has already been reversed.",
+  REVERSE_TRANSFER_FROM_SOURCE_PROJECT:
+    "Reverse the transfer from its source Project to reverse both sides together.",
+  REVERSE_PROJECT_PURCHASE_DOCUMENT:
+    "Correct this receipt through its purchase document.",
+  CROSS_BRANCH_PROJECT_TRANSFER_NOT_ALLOWED:
+    "Select a destination Project in the same branch.",
+  INVALID_SOURCE_MOVEMENT: "Select a material movement from this company.",
+  INVALID_DESTINATION_PROJECT: "Select an accessible destination Project.",
+  ADVANCE_APPLICATION_EXCEEDS_BALANCE:
+    "Amount exceeds the unused advance or invoice balance.",
+  INVALID_ADVANCE_APPLICATION:
+    "Choose an advance for the same customer, branch and Project as this invoice.",
+  SOURCE_JOURNAL_MISSING:
+    "The original accounting posting is missing. Ask your administrator to review it.",
   PROJECT_REQUIRED: "Select an authorized project.",
   OTHER_INCOME_TAX_REQUIRES_A12:
     "Other Income currently supports non-taxable entries. Set GST and CESS to zero.",

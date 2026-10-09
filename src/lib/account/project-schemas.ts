@@ -45,6 +45,7 @@ export const budgetInput = z
       .array(
         z
           .object({
+            id: z.string().uuid().optional(),
             category: z.string().trim().min(1).max(120),
             title: z.string().trim().min(1).max(240),
             description: optionalText(2000),

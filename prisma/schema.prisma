@@ -251,9 +251,13 @@ model ProjectMaterialMovement {
   sourceMovementId      String?                     @db.Uuid
   reversalOfId          String?                     @unique @db.Uuid
   idempotencyKey        String
+  requestHash           String?                     @db.VarChar(64)
   createdAt             DateTime                    @default(now())
 
+  @@unique([companyId, id])
   @@unique([companyId, idempotencyKey])
+  @@index([companyId, projectId, movementDate, createdAt, id])
+  @@index([companyId, projectId, sourceMovementId])
   @@index([companyId, branchId, projectId, productId, movementDate])
   @@index([companyId, purchaseAllocationId, projectId])
   @@map("project_material_movements")
@@ -682,6 +686,8 @@ enum LoanStatus {
 }
 
 enum ProjectAuditEventType {
+  PROJECT_MATERIAL_POSTED
+  PROJECT_MATERIAL_REVERSED
   PROJECT_CREATED
   PROJECT_UPDATED
   PROJECT_MANAGER_CHANGED
@@ -2747,6 +2753,7 @@ model ProjectBudgetLine {
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   project     Project  @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  @@unique([companyId, id])
   @@unique([projectId, position])
   @@index([companyId, projectId])
   @@map("project_budget_lines")

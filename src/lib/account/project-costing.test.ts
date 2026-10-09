@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { Prisma } from "@prisma/client";
-import { packageProfitability, projectCosting } from "./project-costing";
+import {
+  packageProfitability,
+  projectCosting,
+  projectAllocatedPurchaseMetrics,
+  inventoryIssueCostNotPurchased,
+} from "./project-costing";
 const d = (x: number | string) => new Prisma.Decimal(x);
 describe("A8 tax-exclusive costing", () => {
   it("excludes GST and cash movements from project P&L", () => {
@@ -123,5 +128,82 @@ describe("A8 tax-exclusive costing", () => {
     );
     expect(rows.find((x) => x.id === "work")?.profit.toString()).toBe("40");
     expect(rows.find((x) => x.id === null)?.name).toBe("Other / Unassigned");
+  });
+});
+
+describe("Project allocated purchase cost and commitments", () => {
+  const row = (
+    id: string,
+    type: string,
+    value: number,
+    po: string | null = null,
+    eligible = true,
+  ) => ({
+    documentLineId: `${id}-line`,
+    taxableAmount: d(value),
+    taxAmount: d(value * 0.18),
+    quantity: d(value / 10),
+    documentLine: {
+      taxableAmount: d(value * 2),
+      quantity: d(value / 5),
+      document: {
+        id,
+        type,
+        status: "POSTED",
+        sourcePurchaseOrderId: po,
+        taxCreditTreatment: eligible ? "ELIGIBLE" : "BLOCKED",
+      },
+    },
+  });
+  it("nets project allocated bills from POs rather than committing both", () => {
+    const result = projectAllocatedPurchaseMetrics(
+      [
+        row("po", "PURCHASE_ORDER", 100),
+        row("bill", "PURCHASE_BILL", 40, "po"),
+      ],
+      [],
+    );
+    expect(result.actual.toString()).toBe("40");
+    expect(result.committed.toString()).toBe("60");
+  });
+  it("apportions posted debit notes to this project without restoring fulfilled commitments", () => {
+    const result = projectAllocatedPurchaseMetrics(
+      [
+        row("po", "PURCHASE_ORDER", 100),
+        row("bill", "PURCHASE_BILL", 100, "po"),
+      ],
+      [
+        {
+          sourceCommercialLineId: "bill-line",
+          taxableAmount: d(40),
+          taxAmount: d(7.2),
+          quantity: d(4),
+        },
+      ],
+    );
+    expect(result.actual.toString()).toBe("80");
+    expect(result.committed.toString()).toBe("0");
+  });
+  it("includes non-recoverable GST in original and adjusted project cost", () => {
+    const result = projectAllocatedPurchaseMetrics(
+      [row("bill", "PURCHASE_BILL", 100, null, false)],
+      [
+        {
+          sourceCommercialLineId: "bill-line",
+          taxableAmount: d(40),
+          taxAmount: d(7.2),
+          quantity: d(4),
+        },
+      ],
+    );
+    expect(result.actual.toString()).toBe("94.4");
+  });
+});
+
+describe("Project purchase material costing", () => {
+  it("counts purchase allocation cost once while retaining independent inventory issues", () => {
+    const row = (id: string, purchaseAllocationId: string | null, cost: number) => ({id, purchaseAllocationId, totalCost: d(cost), movementType: "INVENTORY_ISSUE_TO_PROJECT", reversalOfId: null});
+    expect(inventoryIssueCostNotPurchased([row("purchase", "allocation", 50), row("inventory", null, 20)]).toString()).toBe("20");
+    expect(inventoryIssueCostNotPurchased([row("inventory", null, 20), {...row("reversal", null, 20), movementType: "REVERSAL", reversalOfId: "inventory"}]).toString()).toBe("0");
   });
 });

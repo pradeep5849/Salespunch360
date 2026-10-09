@@ -195,6 +195,7 @@ export default async function Page({
           <BudgetEditor
             projectId={id}
             initial={project.budgetLines.map((line) => ({
+              id:line.id,
               category: line.category,
               title: line.title,
               description: line.description ?? "",

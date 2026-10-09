@@ -66,3 +66,59 @@ it("values an allowed negative opening adjustment using its recorded cost", () =
   expect(result.stockValue.toString()).toBe("-20");
   expect(result.averageUnitCost.isZero()).toBe(true);
 });
+it("keeps Project transfer bridges neutral at a different original Project cost", () => {
+  const rows = [
+    {
+      movementType: "OPENING" as const,
+      quantity: decimal(10),
+      unitCost: decimal(10),
+    },
+    {
+      movementType: "TRANSFER_IN" as const,
+      sourceType: "PROJECT_TRANSFER_RETURN",
+      quantity: decimal(5),
+      unitCost: decimal(5),
+    },
+    {
+      movementType: "TRANSFER_OUT" as const,
+      sourceType: "PROJECT_TRANSFER_ISSUE",
+      quantity: decimal(5),
+      unitCost: decimal(5),
+    },
+  ];
+  const result = stockValuation(rows);
+  expect(result.quantity.toString()).toBe("10");
+  expect(result.stockValue.toString()).toBe("100");
+  expect(result.averageUnitCost.toString()).toBe("10");
+});
+it("reverses a Project return at its original value while preserving normal outbound weighted cost", () => {
+  const before = [
+    {
+      movementType: "OPENING" as const,
+      quantity: decimal(10),
+      unitCost: decimal(10),
+    },
+    {
+      movementType: "TRANSFER_IN" as const,
+      quantity: decimal(5),
+      unitCost: decimal(5),
+    },
+  ];
+  expect(
+    stockValuation([
+      ...before,
+      {
+        movementType: "TRANSFER_OUT",
+        sourceType: "PROJECT_MATERIAL_REVERSAL",
+        quantity: decimal(5),
+        unitCost: decimal(5),
+      },
+    ]).stockValue.toString(),
+  ).toBe("100");
+  expect(
+    stockValuation([
+      ...before,
+      { movementType: "SALE", quantity: decimal(5), unitCost: decimal(5) },
+    ]).stockValue.toString(),
+  ).toBe("83.33");
+});

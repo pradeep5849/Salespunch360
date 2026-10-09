@@ -159,7 +159,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
             state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
-            state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"))
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select) // ProjectScreen(padding) with root navigation
             moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
@@ -191,7 +191,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
-            state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_RECEIPT")->CustomerReceiptScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))
             sales!=null->AccountSalesScreen(sales,padding,vm::select)
             masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding)
             else->NativeDestinationNotice(Modifier.padding(padding),titleFor(state.selectedPath,navigation))
