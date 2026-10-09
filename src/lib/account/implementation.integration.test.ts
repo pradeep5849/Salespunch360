@@ -33,6 +33,8 @@ import {
   reverseExpenseForActor,
   saveExpenseCategoryForActor,
   transitionExpenseForActor,
+  updateExpenseForActor,
+  getExpenseForActor,
 } from "./expenses";
 import { runFinancialReportForActor } from "./reports/service";
 import { postJournalInTx } from "@/lib/accounting/service";
@@ -731,6 +733,125 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     const detail = await getAssetForActor(actor, first.items[0].id);
     expect(detail.people.find((x) => x.id === userId)?.name).toBe("Test admin");
     expect(detail.asset.assetNumber).toBe(first.items[0].assetNumber);
+  });
+  it("retains rejection reason and actor/time and denies non-admin approval", async () => {
+    await client.accountSettings.update({
+      where: { companyId },
+      data: { expenseApprovalRequired: true, expenseApprovalThreshold: "0" },
+    });
+    const request = {
+      branchId: branchA,
+      categoryId,
+      moneyAccountId: moneyId,
+      type: "OFFICE_EXPENSE",
+      transactionDate: "2026-10-09",
+      taxableAmount: "25",
+    };
+    const row = await createExpenseForActor(actor, request);
+    await transitionExpenseForActor(actor, row.id, "PENDING_APPROVAL");
+    await expect(
+      transitionExpenseForActor(
+        { ...actor, accountRole: "ACCOUNTANT" },
+        row.id,
+        "REJECTED",
+        "Denied",
+      ),
+    ).rejects.toThrow();
+    await expect(
+      transitionExpenseForActor(actor, row.id, "REJECTED", " "),
+    ).rejects.toThrow();
+    expect(
+      (
+        await client.expenseTransaction.findUniqueOrThrow({
+          where: { id: row.id },
+        })
+      ).status,
+    ).toBe("PENDING_APPROVAL");
+    await transitionExpenseForActor(
+      actor,
+      row.id,
+      "REJECTED",
+      "Receipt does not match claim",
+    );
+    const detail = await getExpenseForActor(actor, row.id),
+      event = detail.history.find((h) => h.eventType === "EXPENSE_REJECTED");
+    expect(event).toMatchObject({
+      actorUserId: userId,
+      metadata: { reason: "Receipt does not match claim" },
+    });
+    expect(event?.createdAt).toBeInstanceOf(Date);
+    expect(detail.category?.name).toBeTruthy();
+    expect(detail.capabilities.edit).toBe(false);
+    await client.accountSettings.update({
+      where: { companyId },
+      data: { expenseApprovalRequired: false },
+    });
+  });
+  it("edits creator drafts atomically with audit and rejects terminal and foreign edits", async () => {
+    const request = {
+      branchId: branchA,
+      categoryId,
+      moneyAccountId: moneyId,
+      type: "OFFICE_EXPENSE",
+      transactionDate: "2026-10-09",
+      taxableAmount: "25",
+    };
+    const row = await createExpenseForActor(actor, request);
+    await rejectAudit("EXPENSE_DRAFT_UPDATED", async () => {
+      await expect(
+        updateExpenseForActor(actor, row.id, {
+          ...request,
+          taxableAmount: "30",
+        }),
+      ).rejects.toThrow();
+    });
+    expect(
+      (
+        await client.expenseTransaction.findUniqueOrThrow({
+          where: { id: row.id },
+        })
+      ).totalAmount.toFixed(2),
+    ).toBe("25.00");
+    await updateExpenseForActor(actor, row.id, {
+      ...request,
+      taxableAmount: "30",
+    });
+    expect(
+      (await getExpenseForActor(actor, row.id)).history.some(
+        (h) => h.eventType === "EXPENSE_DRAFT_UPDATED",
+      ),
+    ).toBe(true);
+    await expect(
+      updateExpenseForActor({ ...actor, id: randomUUID() }, row.id, request),
+    ).rejects.toThrow("EXPENSE_NOT_EDITABLE");
+    await transitionExpenseForActor(actor, row.id, "CANCELLED");
+    await expect(
+      updateExpenseForActor(actor, row.id, request),
+    ).rejects.toThrow();
+  });
+  it("rejects duplicate categories without changing existing mappings or audit history", async () => {
+    const input = {
+      name: "Duplicate category",
+      scope: "EXPENSE",
+      defaultLedgerAccountId: expenseId,
+    };
+    const row = await saveExpenseCategoryForActor(actor, input);
+    const auditCount = await client.accountOperationalAudit.count({
+      where: { companyId, entityId: row!.id },
+    });
+    await expect(saveExpenseCategoryForActor(actor, input)).rejects.toThrow(
+      "EXPENSE_CATEGORY_NAME_EXISTS",
+    );
+    expect(
+      await client.expenseCategory.count({
+        where: { companyId, name: input.name },
+      }),
+    ).toBe(1);
+    expect(
+      await client.accountOperationalAudit.count({
+        where: { companyId, entityId: row!.id },
+      }),
+    ).toBe(auditCount);
   });
   it("enforces module OFF without deleting historical assets", async () => {
     const before = await client.asset.count({ where: { companyId } });

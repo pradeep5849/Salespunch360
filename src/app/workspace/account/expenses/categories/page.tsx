@@ -1,12 +1,10 @@
+import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
 import { categoryAction } from "@/app/actions/expenses";
 import { expenseCategoryOptionsForActor } from "@/lib/account/expenses";
 import { requirePermission } from "@/lib/auth/authorization";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { ExpenseCategoryForm } from "@/components/account/expense-category-form";
-import {
-  SaveFeedbackForm,
-  SaveSubmitButton,
-} from "@/components/account/save-feedback";
+import { SaveSubmitButton } from "@/components/account/save-feedback";
 export default async function Page({
   searchParams,
 }: {
@@ -19,7 +17,7 @@ export default async function Page({
       q,
     );
   return (
-    <main className="employees-shell">
+    <div className="employees-shell">
       <section className="employees-content">
         <WorkspacePageHeader
           title="Expense / Income Categories"
@@ -59,17 +57,17 @@ export default async function Page({
                   <ExpenseCategoryForm ledgers={o.ledgers} category={x} />
                 </details>
                 {x.isActive && (
-                  <SaveFeedbackForm action={categoryAction}>
+                  <ActionFeedbackForm action={categoryAction}>
                     <input type="hidden" name="id" value={x.id} />
                     <input type="hidden" name="operation" value="deactivate" />
                     <SaveSubmitButton>Deactivate {x.name}</SaveSubmitButton>
-                  </SaveFeedbackForm>
+                  </ActionFeedbackForm>
                 )}
               </>
             )}
           </article>
         ))}
       </section>
-    </main>
+    </div>
   );
 }

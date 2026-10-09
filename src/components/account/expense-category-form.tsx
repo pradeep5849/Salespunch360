@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { categoryAction } from "@/app/actions/expenses";
-import { SaveFeedbackForm, SaveSubmitButton } from "./save-feedback";
+import { SaveSubmitButton } from "./save-feedback";
+import { ActionFeedbackForm } from "./action-feedback-form";
 type Ledger = { id: string; code: string; name: string; accountClass: string };
 type Category = {
   id: string;
@@ -14,9 +15,11 @@ type Category = {
 export function ExpenseCategoryForm({
   ledgers,
   category,
+  onSaved,
 }: {
   ledgers: Ledger[];
   category?: Category;
+  onSaved?: (name: string) => void;
 }) {
   const router = useRouter();
   const [name, setName] = useState(category?.name ?? ""),
@@ -35,6 +38,7 @@ export function ExpenseCategoryForm({
       {label}
       <select
         name={field}
+        aria-label={label}
         required
         value={value}
         onChange={(e) => set(e.target.value)}
@@ -51,10 +55,13 @@ export function ExpenseCategoryForm({
     </label>
   );
   return (
-    <SaveFeedbackForm
+    <ActionFeedbackForm
       action={categoryAction}
       className="stack"
-      onSuccess={() => router.refresh()}
+      onSuccess={() => {
+        router.refresh();
+        onSaved?.(name.trim());
+      }}
     >
       {category && <input type="hidden" name="id" value={category.id} />}
       <label>
@@ -71,6 +78,7 @@ export function ExpenseCategoryForm({
         Scope
         <select
           name="scope"
+          aria-label="Scope"
           value={scope}
           onChange={(e) => {
             setScope(e.target.value);
@@ -101,6 +109,6 @@ export function ExpenseCategoryForm({
       <SaveSubmitButton>
         {category ? "Save category" : "Create category"}
       </SaveSubmitButton>
-    </SaveFeedbackForm>
+    </ActionFeedbackForm>
   );
 }

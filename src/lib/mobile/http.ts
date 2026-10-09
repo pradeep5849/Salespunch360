@@ -50,6 +50,7 @@ export function mobileUnexpected(category: string, error: unknown) {
       { error: error.message, message: accountErrorMessage(error) },
       [
         "IDEMPOTENCY_KEY_REUSED",
+        "EXPENSE_CATEGORY_NAME_EXISTS",
         "INVALID_EXPENSE_TRANSITION",
         "EXPENSE_NOT_EDITABLE",
         "CATEGORY_MAPPING_CHANGED_RESUBMIT",

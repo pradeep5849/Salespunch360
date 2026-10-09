@@ -51,7 +51,7 @@ fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryEditor(x: JsonObject, ledgers: List<JsonObject>, saving: Boolean, error: String?, close: () -> Unit, save: (JsonObject) -> Unit) {
+internal fun CategoryEditor(x: JsonObject, ledgers: List<JsonObject>, saving: Boolean, error: String?, close: () -> Unit, save: (JsonObject) -> Unit) {
     var name by remember(x) { mutableStateOf(x.str("name")) }
     var scope by remember(x) { mutableStateOf(x.str("scope").ifBlank { "EXPENSE" }) }
     var ledger by remember(x) { mutableStateOf(x.str("defaultLedgerAccountId")) }

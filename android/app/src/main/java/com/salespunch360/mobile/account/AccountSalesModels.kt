@@ -15,4 +15,4 @@ fun applyCreatedSaleCustomer(state:AccountSalesState,customer:SalesOption)=state
 internal fun JsonObject.str(key:String)=this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
 internal fun JsonObject.bool(key:String)=this[key]?.jsonPrimitive?.booleanOrNull?:false
 internal fun JsonObject.option(rateKey:String="salePrice")=SalesOption(str("id"),str("name"),str("branchId").ifBlank{null},str("code").ifBlank{null},str("phone").ifBlank{null},str(rateKey).ifBlank{null},str("taxRate").ifBlank{null},bool("trackInventory"),str("trackingMode").ifBlank{"NONE"},str("symbol").ifBlank{null})
-internal fun JsonObject.array(key:String)=this[key]?.jsonArray?.mapNotNull{it as? JsonObject}.orEmpty()
+internal fun JsonObject.array(key:String)=(this[key] as? JsonArray)?.mapNotNull{it as? JsonObject}.orEmpty()

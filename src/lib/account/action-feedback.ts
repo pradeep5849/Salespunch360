@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  EXPENSE_CATEGORY_NAME_EXISTS:
+    "A category with this name already exists. Select it or choose another name.",
+  INVALID_INPUT: "Choose a supported action and complete its required fields.",
+  INVALID_EXPENSE_ATTACHMENT:
+    "Upload a non-empty PDF, JPEG, or PNG no larger than 10 MB.",
+  INVALID_REIMBURSEMENT: "Select an approved reimbursement for this branch.",
   INVALID_ASSET_LEDGER:
     "Select an active posting ledger of the required class.",
   INVALID_ASSET_VENDOR: "Select an active vendor from this company.",
