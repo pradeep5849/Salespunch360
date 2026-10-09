@@ -1,1 +1,42 @@
-import{readFileSync}from"node:fs";import{describe,expect,it}from"vitest";describe("native Purchase and Project parity",()=>{const model=readFileSync("android/app/src/main/java/com/salespunch360/mobile/account/AccountPurchaseModels.kt","utf8"),editor=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt","utf8"),vm=readFileSync("android/app/src/main/java/com/salespunch360/mobile/AccountPurchaseViewModel.kt","utf8");it.each(["INVENTORY_SALES","PROJECT","GENERAL_OFFICE","FIXED_ASSET","MIXED"])("offers %s",x=>expect(editor).toContain(x));it("captures Project budget, treatment and vendor invoice",()=>{for(const x of["projectBudgetLineId","materialTreatment","vendorInvoiceNumber","vendorInvoiceDate"])expect(model+vm).toContain(x)});it("serializes authoritative mixed allocations",()=>{expect(vm).toContain('putJsonArray("purchaseAllocations")');expect(editor).toContain("Add allocation")})});
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+describe("native Purchase and Project parity", () => {
+  const model = readFileSync(
+      "android/app/src/main/java/com/salespunch360/mobile/account/AccountPurchaseModels.kt",
+      "utf8",
+    ),
+    editor = readFileSync(
+      "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt",
+      "utf8",
+    ),
+    vm = readFileSync(
+      "android/app/src/main/java/com/salespunch360/mobile/AccountPurchaseViewModel.kt",
+      "utf8",
+    );
+  it.each([
+    "INVENTORY_SALES",
+    "PROJECT",
+    "GENERAL_OFFICE",
+    "FIXED_ASSET",
+    "MIXED",
+  ])("offers %s", (x) => expect(editor).toContain(x));
+  it("captures Project budget, treatment and vendor invoice", () => {
+    for (const x of [
+      "projectBudgetLineId",
+      "materialTreatment",
+      "vendorInvoiceNumber",
+      "vendorInvoiceDate",
+    ])
+      expect(model + vm).toContain(x);
+  });
+  it("serializes authoritative mixed allocations", () => {
+    expect(vm).toContain("purchasePayload(draft)");
+    expect(
+      readFileSync(
+        "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseRequest.kt",
+        "utf8",
+      ),
+    ).toContain('putJsonArray("purchaseAllocations")');
+    expect(editor).toContain("Add allocation");
+  });
+});

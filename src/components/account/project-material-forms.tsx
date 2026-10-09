@@ -77,6 +77,20 @@ function Submit() {
     <button disabled={pending}>{pending ? "Posting…" : "Post movement"}</button>
   );
 }
+function MaterialFields({
+  hydrated,
+  children,
+}: {
+  hydrated: boolean;
+  children: React.ReactNode;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <fieldset disabled={!hydrated || pending} className="stack">
+      {children}
+    </fieldset>
+  );
+}
 const subscribeHydration = () => () => {};
 export function ProjectMaterialForms({ context: c }: { context: Context }) {
   const hydrated = useSyncExternalStore(
@@ -133,7 +147,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
             router.refresh();
           }}
         >
-          <fieldset disabled={!hydrated} className="stack">
+          <MaterialFields hydrated={hydrated}>
             <label>
               Action
               <select
@@ -412,7 +426,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
               </label>
             )}
             <Submit />
-          </fieldset>
+          </MaterialFields>
         </ActionFeedbackForm>
       ) : (
         <p>You have read-only access to Project material.</p>

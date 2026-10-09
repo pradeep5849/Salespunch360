@@ -21,7 +21,13 @@ import com.salespunch360.mobile.AccountPurchaseViewModel
 fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
-    LaunchedEffect(initialType,initialProjectId,state.loading) { if(initialType!=null&&!state.loading&&state.draft==null)vm.create(initialType,initialProjectId) }
+    var initialEditorOpened by remember(initialType, initialProjectId) { mutableStateOf(false) }
+    LaunchedEffect(initialType, initialProjectId, state.loading) {
+        if (!initialEditorOpened && initialType != null && !state.loading && state.types.isNotEmpty()) {
+            initialEditorOpened = true
+            vm.create(initialType, initialProjectId)
+        }
+    }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
         Row {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or vendor") }, modifier = Modifier.weight(1f))
@@ -32,6 +38,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
             item { FilterChip(state.type == null, { vm.filter(null) }, { Text("All") }) }
             items(state.types) { type -> FilterChip(state.type == type, { vm.filter(type) }, { Text(type.replace('_', ' ')) }) }
         }
+        state.message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.error?.let { error ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
@@ -56,8 +63,8 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
             onDismissRequest = vm::cancelPost,
             title = { Text("Post purchase document?") },
             text = { Text("The server will validate the financial year, period lock, tax, stock, and ledger posting.") },
-            confirmButton = { Button(onClick = vm::post) { Text("Post") } },
-            dismissButton = { TextButton(onClick = vm::cancelPost) { Text("Cancel") } }
+            confirmButton = { Button(enabled = !state.saving, onClick = vm::post) { Text("Post") } },
+            dismissButton = { TextButton(enabled = !state.saving, onClick = vm::cancelPost) { Text("Cancel") } }
         )
     }
 }

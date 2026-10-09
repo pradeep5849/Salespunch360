@@ -328,6 +328,9 @@ test("Project links, material forms and API enforce the same scope and module ru
       }),
     )
     .toBe(1);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Material movement saved" }),
+  ).toBeVisible();
   await page
     .getByRole("combobox", { name: "Action", exact: true })
     .selectOption("CONSUME");
@@ -493,6 +496,56 @@ test("Project links, material forms and API enforce the same scope and module ru
   ).toBe(200);
   const sourceLine = await db.commercialDocumentLine.findFirstOrThrow({
     where: { companyId, documentId: purchase.id },
+  });
+  const trackedPurchaseResponse = await page.request.post(
+    "/api/v1/mobile/account/purchases",
+    {
+      headers,
+      data: {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        purchasePurpose: "INVENTORY_SALES",
+        vendorInvoiceNumber: randomUUID(),
+        vendorInvoiceDate: "2026-10-09",
+        issueDate: "2026-10-09",
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: batchProductId,
+            warehouseId,
+            batchId,
+            quantity: "1",
+            rate: "10",
+            taxRate: "0",
+          },
+        ],
+      },
+    },
+  );
+  expect(trackedPurchaseResponse.status()).toBe(201);
+  const trackedPurchase = await trackedPurchaseResponse.json();
+  expect(
+    (
+      await page.request.post(
+        `/api/v1/mobile/account/purchases/${trackedPurchase.id}/post`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(200);
+  const purchaseOptionsResponse = await page.request.get(
+    "/api/v1/mobile/account/purchases/options",
+    { headers },
+  );
+  expect(purchaseOptionsResponse.status()).toBe(200);
+  const purchaseOptions = await purchaseOptionsResponse.json();
+  const trackedSource = purchaseOptions.sourceDocuments.find(
+    (source: { id: string }) => source.id === trackedPurchase.id,
+  );
+  expect(trackedSource.lines[0]).toMatchObject({
+    warehouseId,
+    batchId,
+    serialNumberId: null,
   });
   const correctionInput = {
     type: "DEBIT_NOTE",
