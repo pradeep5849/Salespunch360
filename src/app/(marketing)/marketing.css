@@ -150,3 +150,8 @@
  .reference-footer .footer-grid{grid-template-columns:1fr 1fr!important}
  .reference-footer .footer-brand,.reference-footer .footer-app{grid-column:1/-1!important}
 }
+
+/* Public content remains readable instead of being clipped at narrow widths. */
+.marketing .public-blog-post,.marketing .blog-body{min-width:0;max-width:100%;overflow-wrap:anywhere;}
+.marketing .table-wrap:focus-visible,.marketing .testimonial-grid:focus-visible{outline:3px solid #0863c9;outline-offset:3px;}
+.marketing .reference-hero .hero-trust,.marketing .reference-testimonials .demo-person small,.marketing .reference-testimonials .section-heading>p:last-child{color:#526078;}

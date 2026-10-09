@@ -139,6 +139,8 @@ fun NativeAccountAuthenticatedApp(
                             if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
                             DropdownMenuItem(text={Text("Settings")},onClick={profileMenu=false;vm.select("/workspace/account/settings")})
                             HorizontalDivider()
+                            DropdownMenuItem(text={Text("About & public pages")},onClick={profileMenu=false;com.salespunch360.mobile.ui.openPublicPage(context,"/")})
+                            DropdownMenuItem(text={Text("Help & support")},onClick={profileMenu=false;com.salespunch360.mobile.ui.openPublicPage(context,"/help")})
                             DropdownMenuItem(text={Text("Sign out")},onClick={profileMenu=false;onLogout()})
                         }
                     }
