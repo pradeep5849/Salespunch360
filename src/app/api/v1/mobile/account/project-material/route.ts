@@ -25,6 +25,7 @@ export async function GET(r: Request) {
         ),
         {
           projectId: new URL(r.url).searchParams.get("projectId") ?? undefined,
+          productId: new URL(r.url).searchParams.get("productId") ?? undefined,
           sourcePage: Number(
             new URL(r.url).searchParams.get("sourcePage") ?? 1,
           ),

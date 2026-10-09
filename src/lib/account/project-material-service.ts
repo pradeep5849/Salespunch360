@@ -14,7 +14,8 @@ import {
 } from "./projects";
 import { reverseJournalInTx, postJournalInTx } from "@/lib/accounting/service";
 import { signedQuantity, stockValuation } from "./inventory";
-import { requireAccountModules } from "./modules";
+import { enabledModulesForCompany, requireAccountModules } from "./modules";
+import { resolveItemSettings } from "./item-settings-policy";
 const D = Prisma.Decimal,
   decimal = z
     .union([z.string(), z.number().finite()])
@@ -278,29 +279,47 @@ export async function issueInventoryToProjectForActor(
         const settings = await tx.accountSettings.findUnique({
           where: { companyId: actor.companyId },
         });
-        if (!settings?.negativeStockAllowed && valuation.quantity.lt(quantity))
-          throw new Error("INSUFFICIENT_STOCK");
+        const items = resolveItemSettings(settings?.itemSettings);
+        if (!items.enabled) throw new Error("ITEMS_DISABLED");
+        if (items.itemType === "SERVICES") throw new Error("PRODUCTS_DISABLED");
+        if (!items.stockMaintenance) throw new Error("STOCK_FIELDS_DISABLED");
+        if (product.trackingMode === "BATCH" && !d.batchId)
+          throw new Error("BATCH_REQUIRED");
         if (
-          d.batchId &&
-          !(await tx.inventoryBatch.findFirst({
+          product.trackingMode === "SERIAL" &&
+          (!d.serialNumberId || !quantity.eq(1))
+        )
+          throw new Error("SERIAL_QUANTITY_MISMATCH");
+        if (
+          (d.batchId && product.trackingMode !== "BATCH") ||
+          (d.serialNumberId && product.trackingMode !== "SERIAL")
+        )
+          throw new Error("INVALID_INVENTORY_TRACKING");
+        if (d.batchId) {
+          const batch = await tx.inventoryBatch.findFirst({
             where: {
               id: d.batchId,
               companyId: actor.companyId,
               productId: product.id,
             },
-          }))
-        )
-          throw new Error("INVALID_INVENTORY_BATCH");
+          });
+          if (!batch) throw new Error("INVALID_INVENTORY_BATCH");
+          if (batch.expiryDate && batch.expiryDate < d.movementDate)
+            throw new Error("EXPIRED_STOCK");
+        }
         if (d.serialNumberId) {
+          const serial = await tx.inventorySerialNumber.findFirst({
+            where: {
+              id: d.serialNumberId,
+              companyId: actor.companyId,
+              productId: product.id,
+            },
+          });
+          if (serial?.expiryDate && serial.expiryDate < d.movementDate)
+            throw new Error("EXPIRED_STOCK");
           if (
             !quantity.eq(1) ||
-            !(await tx.inventorySerialNumber.findFirst({
-              where: {
-                id: d.serialNumberId,
-                companyId: actor.companyId,
-                productId: product.id,
-              },
-            })) ||
+            !serial ||
             !prior
               .reduce(
                 (n, x) => n.add(signedQuantity(x.movementType, x.quantity)),
@@ -310,6 +329,8 @@ export async function issueInventoryToProjectForActor(
           )
             throw new Error("SERIAL_NOT_AVAILABLE");
         }
+        if (!settings?.negativeStockAllowed && valuation.quantity.lt(quantity))
+          throw new Error("INSUFFICIENT_STOCK");
         const unitCost = valuation.quantity.gt(0)
             ? valuation.averageUnitCost
             : valuation.quantity.lt(0)
@@ -1227,8 +1248,10 @@ export async function reverseProjectMaterialForActor(
         });
         // Automatic issues on a Project purchase share the supplier bill's
         // journal. Reverse only the material allocation, not that entire bill.
-        const purchaseIssue = source.movementType === "INVENTORY_ISSUE_TO_PROJECT" &&
-          !!source.purchaseAllocationId && !!source.purchaseDocumentId;
+        const purchaseIssue =
+          source.movementType === "INVENTORY_ISSUE_TO_PROJECT" &&
+          !!source.purchaseAllocationId &&
+          !!source.purchaseDocumentId;
         if (!sourceJournal && !source.totalCost.isZero() && !purchaseIssue)
           throw new Error("SOURCE_JOURNAL_MISSING");
         let journalReversal = sourceJournal
@@ -1240,22 +1263,47 @@ export async function reverseProjectMaterialForActor(
           : null;
         if (!sourceJournal && purchaseIssue && !source.totalCost.isZero()) {
           const allocation = await tx.purchaseLineAllocation.findFirst({
-            where: { id: source.purchaseAllocationId!, companyId: actor.companyId,
-              projectId: source.projectId, documentLineId: source.purchaseLineId! },
+            where: {
+              id: source.purchaseAllocationId!,
+              companyId: actor.companyId,
+              projectId: source.projectId,
+              documentLineId: source.purchaseLineId!,
+            },
             include: { documentLine: { include: { document: true } } },
           });
-          if (!allocation || allocation.documentLine.document.id !== source.purchaseDocumentId ||
-              allocation.documentLine.document.status !== "POSTED")
+          if (
+            !allocation ||
+            allocation.documentLine.document.id !== source.purchaseDocumentId ||
+            allocation.documentLine.document.status !== "POSTED"
+          )
             throw new Error("INVALID_SOURCE_MOVEMENT");
-          const ctx = await postingContext(tx, actor, source.branchId, d.movementDate,
-            ["INVENTORY_ASSET", "PROJECT_MATERIAL_WIP"]);
+          const ctx = await postingContext(
+            tx,
+            actor,
+            source.branchId,
+            d.movementDate,
+            ["INVENTORY_ASSET", "PROJECT_MATERIAL_WIP"],
+          );
           journalReversal = await postMaterialJournalInTx(tx, actor, {
-            financialYearId: ctx.fy.id, branchId: source.branchId,
-            entryDate: d.movementDate, sourceType: "PROJECT_MATERIAL_REVERSAL",
-            sourceId: reversal.id, postingPurpose: "PRIMARY",
+            financialYearId: ctx.fy.id,
+            branchId: source.branchId,
+            entryDate: d.movementDate,
+            sourceType: "PROJECT_MATERIAL_REVERSAL",
+            sourceId: reversal.id,
+            postingPurpose: "PRIMARY",
             lines: [
-              { ledgerAccountId: ctx.account("INVENTORY_ASSET"), debit: source.totalCost.toString(), credit: "0", description: d.reason },
-              { ledgerAccountId: ctx.account("PROJECT_MATERIAL_WIP"), debit: "0", credit: source.totalCost.toString(), description: d.reason },
+              {
+                ledgerAccountId: ctx.account("INVENTORY_ASSET"),
+                debit: source.totalCost.toString(),
+                credit: "0",
+                description: d.reason,
+              },
+              {
+                ledgerAccountId: ctx.account("PROJECT_MATERIAL_WIP"),
+                debit: "0",
+                credit: source.totalCost.toString(),
+                description: d.reason,
+              },
             ],
           });
         }
@@ -1283,7 +1331,12 @@ export async function reverseProjectMaterial(raw: unknown) {
 }
 export async function projectMaterialContextForActor(
   actor: ProjectActor,
-  input: { projectId?: string; sourcePage?: number; historyPage?: number } = {},
+  input: {
+    projectId?: string;
+    productId?: string;
+    sourcePage?: number;
+    historyPage?: number;
+  } = {},
 ) {
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_MATERIAL_VIEW");
   const ids = await authorizedProjectBranchIds(actor),
@@ -1291,6 +1344,7 @@ export async function projectMaterialContextForActor(
     paging = z
       .object({
         projectId: z.string().uuid().optional(),
+        productId: z.string().uuid().optional(),
         sourcePage: z.number().int().min(1).max(100000).default(1),
         historyPage: z.number().int().min(1).max(100000).default(1),
       })
@@ -1343,7 +1397,7 @@ export async function projectMaterialContextForActor(
           isActive: true,
           trackInventory: true,
         },
-        select: { id: true, name: true, code: true },
+        select: { id: true, name: true, code: true, trackingMode: true },
       }),
       db.projectBudgetLine.findMany({
         where: {
@@ -1367,6 +1421,46 @@ export async function projectMaterialContextForActor(
         take: 50,
       }),
     ]);
+  const selectedProduct = products.find((row) => row.id === paging.productId);
+  if (paging.productId && !selectedProduct)
+    throw new Error("INVALID_INVENTORY_PRODUCT");
+  const [batches, serialNumbers, settings, modules] = await Promise.all([
+    selectedProduct?.trackingMode === "BATCH"
+      ? db.inventoryBatch.findMany({
+          where: { companyId: actor.companyId, productId: selectedProduct.id },
+          select: {
+            id: true,
+            productId: true,
+            batchNumber: true,
+            expiryDate: true,
+          },
+          orderBy: { batchNumber: "asc" },
+        })
+      : [],
+    selectedProduct?.trackingMode === "SERIAL"
+      ? db.inventorySerialNumber.findMany({
+          where: { companyId: actor.companyId, productId: selectedProduct.id },
+          select: {
+            id: true,
+            productId: true,
+            serialNumber: true,
+            expiryDate: true,
+          },
+          orderBy: { serialNumber: "asc" },
+        })
+      : [],
+    db.accountSettings.findUnique({
+      where: { companyId: actor.companyId },
+      select: { itemSettings: true },
+    }),
+    enabledModulesForCompany(actor.companyId),
+  ]);
+  const items = resolveItemSettings(settings?.itemSettings);
+  const issueEnabled =
+    modules.includes("INVENTORY") &&
+    items.enabled &&
+    items.itemType !== "SERVICES" &&
+    items.stockMaintenance;
   const [sources, sourceCount, historyCount, company] = await Promise.all([
     db.projectMaterialMovement.findMany({
       where: sourceWhere,
@@ -1421,6 +1515,8 @@ export async function projectMaterialContextForActor(
     projects,
     warehouses,
     products,
+    batches,
+    serialNumbers,
     budgetLines,
     movements: movements.map((row) => ({
       ...row,
@@ -1439,11 +1535,13 @@ export async function projectMaterialContextForActor(
     historyPage: paging.historyPage,
     historyPages: Math.max(1, Math.ceil(historyCount / 50)),
     capabilities: {
-      ISSUE: canUsePermission(
-        actor,
-        company.productEdition,
-        "ACCOUNT_PROJECT_COST_EDIT",
-      ),
+      ISSUE:
+        issueEnabled &&
+        canUsePermission(
+          actor,
+          company.productEdition,
+          "ACCOUNT_PROJECT_COST_EDIT",
+        ),
       CONSUME: canUsePermission(
         actor,
         company.productEdition,

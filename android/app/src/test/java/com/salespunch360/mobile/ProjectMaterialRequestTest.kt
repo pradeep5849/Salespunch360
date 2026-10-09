@@ -9,4 +9,20 @@ class ProjectMaterialRequestTest {
  @Test fun permissionAndQuantityBoundsAreChecked(){assertNotNull(projectMaterialValidation(state().copy(allowedActions=emptyList())));assertNotNull(projectMaterialValidation(state().copy(quantity="NaN")));assertNotNull(projectMaterialValidation(state().copy(quantity="0")));assertNotNull(projectMaterialValidation(state().copy(quantity="1.0000001")));assertNull(projectMaterialValidation(state()))}
  @Test fun consumesOnlyAvailableMaterialFromSelectedProject(){val source=buildJsonObject{put("id","source");put("projectId","a");put("availableQuantity","1")};val s=state().copy(action="CONSUME",sourceMovementId="source",sources=listOf(source));assertNotNull(projectMaterialValidation(s));assertNull(projectMaterialValidation(s.copy(quantity="1")));assertNotNull(projectMaterialValidation(s.copy(projectId="b",quantity="1")))}
  @Test fun transfersNeedDifferentProjectAndReason(){val source=buildJsonObject{put("id","source");put("projectId","a");put("availableQuantity","3")};val s=state().copy(action="TRANSFER",sourceMovementId="source",sources=listOf(source),destinationProjectId="a",reason="Move");assertNotNull(projectMaterialValidation(s));assertNull(projectMaterialValidation(s.copy(destinationProjectId="b")));assertNotNull(projectMaterialValidation(s.copy(destinationProjectId="b",reason="")))}
+ @Test fun trackedIssuesIncludeIdentityAndRequireOnePhysicalSerial(){
+  val product=buildJsonObject{put("id","product");put("trackingMode","SERIAL")}
+  val s=state().copy(products=listOf(product))
+  assertNotNull(projectMaterialValidation(s))
+  assertNotNull(projectMaterialValidation(s.copy(serialNumberId="serial")))
+  val valid=s.copy(serialNumberId="serial",quantity="1")
+  assertNull(projectMaterialValidation(valid))
+  assertEquals("serial",projectMaterialPayload(valid)["serialNumberId"]?.jsonPrimitive?.content)
+ }
+ @Test fun batchIssuesNeedBatchAndCarryItToServer(){
+  val product=buildJsonObject{put("id","product");put("trackingMode","BATCH")}
+  val s=state().copy(products=listOf(product))
+  assertNotNull(projectMaterialValidation(s))
+  assertNull(projectMaterialValidation(s.copy(batchId="batch")))
+  assertEquals("batch",projectMaterialPayload(s.copy(batchId="batch"))["batchId"]?.jsonPrimitive?.content)
+ }
 }

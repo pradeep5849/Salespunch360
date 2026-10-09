@@ -47,7 +47,12 @@ import {
   documentOutstandingsBatch,
 } from "./commercial";
 import { mobileProjectOptions } from "@/lib/mobile/account-projects";
-import { createChangeOrderForActor, updateChangeOrderForActor, transitionChangeOrderForActor, loadProjectCostingForActor } from "./project-costing";
+import {
+  createChangeOrderForActor,
+  updateChangeOrderForActor,
+  transitionChangeOrderForActor,
+  loadProjectCostingForActor,
+} from "./project-costing";
 const companyId = randomUUID(),
   branchId = randomUUID(),
   otherBranch = randomUUID(),
@@ -291,6 +296,8 @@ describe.skipIf(!url)(
       await client.vendor.deleteMany({ where: { companyId } });
       await client.accountService.deleteMany({ where: { companyId } });
       await client.warehouse.deleteMany({ where: { companyId } });
+      await client.inventoryBatch.deleteMany({ where: { companyId } });
+      await client.inventorySerialNumber.deleteMany({ where: { companyId } });
       await client.accountProduct.deleteMany({ where: { companyId } });
       await client.ledgerAccount.deleteMany({ where: { companyId } });
       await client.financialYear.deleteMany({ where: { companyId } });
@@ -327,24 +334,87 @@ describe.skipIf(!url)(
       ).toBe(2);
     });
     it("deduplicates concurrent manual Project creation with exactly one customer and audit", async () => {
-      const customerCount = await client.customer.count({where: {companyId}});
-      const input = {branchId, name: "Retry-safe manual project", projectValue: "100.00", idempotencyKey: key()};
-      const [first, retry] = await Promise.all([createSimpleProjectForActor(actor, input), createSimpleProjectForActor(actor, input)]);
+      const customerCount = await client.customer.count({
+        where: { companyId },
+      });
+      const input = {
+        branchId,
+        name: "Retry-safe manual project",
+        projectValue: "100.00",
+        idempotencyKey: key(),
+      };
+      const [first, retry] = await Promise.all([
+        createSimpleProjectForActor(actor, input),
+        createSimpleProjectForActor(actor, input),
+      ]);
       expect(first.id).toBe(retry.id);
-      expect(await client.customer.count({where: {companyId}})).toBe(customerCount+1);
-      expect(await client.projectAuditEvent.count({where: {companyId, projectId: first.id, eventType: "PROJECT_CREATED"}})).toBe(1);
-      expect((await createSimpleProjectForActor(actor, {...input, projectValue: "100"})).id).toBe(first.id);
-      await expect(createSimpleProjectForActor(actor, {...input, name: "Changed intent"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
-      const beforeFailure = await client.customer.count({where: {companyId}});
-      await expect(createSimpleProjectForActor(actor, {...input, name: "Invalid manager", idempotencyKey: key(), projectManagerId: key()})).rejects.toThrow("INVALID_PROJECT_MANAGER");
-      expect(await client.customer.count({where: {companyId}})).toBe(beforeFailure);
-      await expect(createSimpleProjectForActor({...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [otherBranch]}, input)).rejects.toThrow("Not authorized");
+      expect(await client.customer.count({ where: { companyId } })).toBe(
+        customerCount + 1,
+      );
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            projectId: first.id,
+            eventType: "PROJECT_CREATED",
+          },
+        }),
+      ).toBe(1);
+      expect(
+        (
+          await createSimpleProjectForActor(actor, {
+            ...input,
+            projectValue: "100",
+          })
+        ).id,
+      ).toBe(first.id);
+      await expect(
+        createSimpleProjectForActor(actor, {
+          ...input,
+          name: "Changed intent",
+        }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      const beforeFailure = await client.customer.count({
+        where: { companyId },
+      });
+      await expect(
+        createSimpleProjectForActor(actor, {
+          ...input,
+          name: "Invalid manager",
+          idempotencyKey: key(),
+          projectManagerId: key(),
+        }),
+      ).rejects.toThrow("INVALID_PROJECT_MANAGER");
+      expect(await client.customer.count({ where: { companyId } })).toBe(
+        beforeFailure,
+      );
+      await expect(
+        createSimpleProjectForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          input,
+        ),
+      ).rejects.toThrow("Not authorized");
     });
     it("deduplicates standard Project creation for an existing customer", async () => {
-      const input = {branchId, customerId, name: "Retry-safe standard project", projectValue: "50", idempotencyKey: key()};
-      const [first, retry] = await Promise.all([createProjectForActor(actor, input), createProjectForActor(actor, input)]);
+      const input = {
+        branchId,
+        customerId,
+        name: "Retry-safe standard project",
+        projectValue: "50",
+        idempotencyKey: key(),
+      };
+      const [first, retry] = await Promise.all([
+        createProjectForActor(actor, input),
+        createProjectForActor(actor, input),
+      ]);
       expect(first.id).toBe(retry.id);
-      await expect(createProjectForActor(actor, {...input, projectValue: "60"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      await expect(
+        createProjectForActor(actor, { ...input, projectValue: "60" }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
     });
     it("issues inventory with original cost and replays only the identical authorized request", async () => {
       const input = {
@@ -512,15 +582,64 @@ describe.skipIf(!url)(
     });
     it("keeps zero-value material movements and reversals free of fabricated accounting amounts", async () => {
       const freeProductId = key();
-      await client.accountProduct.create({data: {id: freeProductId, companyId, name: "Free supplied material", code: "FREE", trackInventory: true, costPrice: 0}});
-      await client.stockMovement.create({data: {companyId, branchId, productId: freeProductId, warehouseId, movementType: "OPENING", quantity: 2, unitCost: 0, totalCost: 0, sourceType: "FIXTURE", sourceId: key(), movementDate: date, createdById: userId}});
-      const issued = await issueInventoryToProjectForActor(actor, {projectId: a, warehouseId, productId: freeProductId, projectBudgetLineId: budgetA, quantity: "2", movementDate: date, idempotencyKey: key()});
+      await client.accountProduct.create({
+        data: {
+          id: freeProductId,
+          companyId,
+          name: "Free supplied material",
+          code: "FREE",
+          trackInventory: true,
+          costPrice: 0,
+        },
+      });
+      await client.stockMovement.create({
+        data: {
+          companyId,
+          branchId,
+          productId: freeProductId,
+          warehouseId,
+          movementType: "OPENING",
+          quantity: 2,
+          unitCost: 0,
+          totalCost: 0,
+          sourceType: "FIXTURE",
+          sourceId: key(),
+          movementDate: date,
+          createdById: userId,
+        },
+      });
+      const issued = await issueInventoryToProjectForActor(actor, {
+        projectId: a,
+        warehouseId,
+        productId: freeProductId,
+        projectBudgetLineId: budgetA,
+        quantity: "2",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
       expect(issued.totalCost.toString()).toBe("0");
-      expect(await client.journalEntry.count({where: {companyId, sourceId: issued.id}})).toBe(0);
-      const reversal = await reverseProjectMaterialForActor(actor, {movementId: issued.id, movementDate: date, reason: "Return unused free material", idempotencyKey: key()});
+      expect(
+        await client.journalEntry.count({
+          where: { companyId, sourceId: issued.id },
+        }),
+      ).toBe(0);
+      const reversal = await reverseProjectMaterialForActor(actor, {
+        movementId: issued.id,
+        movementDate: date,
+        reason: "Return unused free material",
+        idempotencyKey: key(),
+      });
       expect(reversal.totalCost.toString()).toBe("0");
-      expect(await client.journalEntry.count({where: {companyId, sourceId: reversal.id}})).toBe(0);
-      expect((await client.projectMaterialMovement.count({where: {companyId, productId: freeProductId}}))).toBe(2);
+      expect(
+        await client.journalEntry.count({
+          where: { companyId, sourceId: reversal.id },
+        }),
+      ).toBe(0);
+      expect(
+        await client.projectMaterialMovement.count({
+          where: { companyId, productId: freeProductId },
+        }),
+      ).toBe(2);
     });
     it("denies mutation roles, non-member Project managers, revoked branches and cross-company references", async () => {
       const input = {
@@ -722,19 +841,65 @@ describe.skipIf(!url)(
       const costing = await loadProjectCostingForActor(actor, a);
       expect(costing.metrics.actualCost.toString()).toBe("50");
       expect(costing.metrics.profit.toString()).toBe("950");
-      expect(await client.projectAuditEvent.count({ where: { companyId, projectId: a, eventType: "PROJECT_MATERIAL_POSTED", metadata: { path: ["movementId"], equals: movement.id } } })).toBe(1);
-      const reversalInput = {movementId: movement.id, movementDate: date, reason: "Move purchased material back to company inventory", idempotencyKey: key()};
-      const reversal = await reverseProjectMaterialForActor(actor, reversalInput);
-      expect((await reverseProjectMaterialForActor(actor, reversalInput)).id).toBe(reversal.id);
-      expect((await stock()).quantity.toString()).toBe(before.quantity.add(5).toString());
-      expect((await stock()).stockValue.toString()).toBe(before.stockValue.add(50).toString());
-      expect((await loadProjectCostingForActor(actor, a)).metrics.actualCost.toString()).toBe("0");
-      const bill = await client.commercialDocument.findUniqueOrThrow({where: {id: doc.id}});
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            projectId: a,
+            eventType: "PROJECT_MATERIAL_POSTED",
+            metadata: { path: ["movementId"], equals: movement.id },
+          },
+        }),
+      ).toBe(1);
+      const reversalInput = {
+        movementId: movement.id,
+        movementDate: date,
+        reason: "Move purchased material back to company inventory",
+        idempotencyKey: key(),
+      };
+      const reversal = await reverseProjectMaterialForActor(
+        actor,
+        reversalInput,
+      );
+      expect(
+        (await reverseProjectMaterialForActor(actor, reversalInput)).id,
+      ).toBe(reversal.id);
+      expect((await stock()).quantity.toString()).toBe(
+        before.quantity.add(5).toString(),
+      );
+      expect((await stock()).stockValue.toString()).toBe(
+        before.stockValue.add(50).toString(),
+      );
+      expect(
+        (
+          await loadProjectCostingForActor(actor, a)
+        ).metrics.actualCost.toString(),
+      ).toBe("0");
+      const bill = await client.commercialDocument.findUniqueOrThrow({
+        where: { id: doc.id },
+      });
       expect(bill.status).toBe("POSTED");
-      expect((await client.journalEntry.findUniqueOrThrow({where: {id: bill.journalEntryId!}})).status).toBe("POSTED");
-      const reversalJournal = await client.journalEntry.findFirstOrThrow({where: {companyId, sourceId: reversal.id}, include: {lines: {include: {ledgerAccount: true}}}});
-      expect(reversalJournal.lines.find(x => x.ledgerAccount.systemKey === "INVENTORY_ASSET")?.debit.toString()).toBe("50");
-      expect(reversalJournal.lines.find(x => x.ledgerAccount.systemKey === "PROJECT_MATERIAL_WIP")?.credit.toString()).toBe("50");
+      expect(
+        (
+          await client.journalEntry.findUniqueOrThrow({
+            where: { id: bill.journalEntryId! },
+          })
+        ).status,
+      ).toBe("POSTED");
+      const reversalJournal = await client.journalEntry.findFirstOrThrow({
+        where: { companyId, sourceId: reversal.id },
+        include: { lines: { include: { ledgerAccount: true } } },
+      });
+      expect(
+        reversalJournal.lines
+          .find((x) => x.ledgerAccount.systemKey === "INVENTORY_ASSET")
+          ?.debit.toString(),
+      ).toBe("50");
+      expect(
+        reversalJournal.lines
+          .find((x) => x.ledgerAccount.systemKey === "PROJECT_MATERIAL_WIP")
+          ?.credit.toString(),
+      ).toBe("50");
     });
     it("concurrent identical issue requests post only one movement and journal", async () => {
       const input = {
@@ -812,56 +977,402 @@ describe.skipIf(!url)(
       ).rejects.toThrow("PROJECT_MATERIAL_BUDGET_MISMATCH");
     });
     it("creates, edits, submits and independently approves extra work without duplicate effects", async () => {
-      const input = {projectId: a, title: "Extra work", description: "Approved site addition", valueDelta: "100.00", estimatedCostDelta: "20", idempotencyKey: key()};
-      const [first, again] = await Promise.all([createChangeOrderForActor(actor, input), createChangeOrderForActor(actor, input)]);
+      const input = {
+        projectId: a,
+        title: "Extra work",
+        description: "Approved site addition",
+        valueDelta: "100.00",
+        estimatedCostDelta: "20",
+        idempotencyKey: key(),
+      };
+      const [first, again] = await Promise.all([
+        createChangeOrderForActor(actor, input),
+        createChangeOrderForActor(actor, input),
+      ]);
       expect(first.id).toBe(again.id);
-      await expect(createChangeOrderForActor(actor, {...input, valueDelta: "200"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
-      await expect(createChangeOrderForActor(actor, {...input, idempotencyKey: key(), valueDelta: "NaN"})).rejects.toThrow();
-      const edit = {projectId: a, changeOrderId: first.id, title: "Revised extra work", description: "Actual approved requirement", valueDelta: "150", estimatedCostDelta: "25"};
+      await expect(
+        createChangeOrderForActor(actor, { ...input, valueDelta: "200" }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      await expect(
+        createChangeOrderForActor(actor, {
+          ...input,
+          idempotencyKey: key(),
+          valueDelta: "NaN",
+        }),
+      ).rejects.toThrow();
+      const edit = {
+        projectId: a,
+        changeOrderId: first.id,
+        title: "Revised extra work",
+        description: "Actual approved requirement",
+        valueDelta: "150",
+        estimatedCostDelta: "25",
+      };
       await updateChangeOrderForActor(actor, edit);
       await updateChangeOrderForActor(actor, edit);
-      expect(await client.projectAuditEvent.count({where: {companyId, projectId: a, eventType: "PROJECT_UPDATED", metadata: {path: ["changeOrderId"], equals: first.id}}})).toBe(1);
-      await transitionChangeOrderForActor(actor, a, first.id, "PENDING_APPROVAL");
-      await transitionChangeOrderForActor(actor, a, first.id, "PENDING_APPROVAL");
-      expect(await client.projectAuditEvent.count({where: {companyId, eventType: "CHANGE_ORDER_SUBMITTED", metadata: {path: ["changeOrderId"], equals: first.id}}})).toBe(1);
-      await expect(transitionChangeOrderForActor(actor, a, first.id, "APPROVED")).rejects.toThrow("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            projectId: a,
+            eventType: "PROJECT_UPDATED",
+            metadata: { path: ["changeOrderId"], equals: first.id },
+          },
+        }),
+      ).toBe(1);
+      await transitionChangeOrderForActor(
+        actor,
+        a,
+        first.id,
+        "PENDING_APPROVAL",
+      );
+      await transitionChangeOrderForActor(
+        actor,
+        a,
+        first.id,
+        "PENDING_APPROVAL",
+      );
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            eventType: "CHANGE_ORDER_SUBMITTED",
+            metadata: { path: ["changeOrderId"], equals: first.id },
+          },
+        }),
+      ).toBe(1);
+      await expect(
+        transitionChangeOrderForActor(actor, a, first.id, "APPROVED"),
+      ).rejects.toThrow("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
       const approverId = key();
-      await client.user.create({data: {id: approverId, companyId, name: "Independent approver", email: `${approverId}@example.test`, passwordHash: "fixture-only", role: "ACCOUNT_USER", accountRole: "ACCOUNT_ADMIN", accountAccessActive: true}});
-      const approver = {...actor, id: approverId};
+      await client.user.create({
+        data: {
+          id: approverId,
+          companyId,
+          name: "Independent approver",
+          email: `${approverId}@example.test`,
+          passwordHash: "fixture-only",
+          role: "ACCOUNT_USER",
+          accountRole: "ACCOUNT_ADMIN",
+          accountAccessActive: true,
+        },
+      });
+      const approver = { ...actor, id: approverId };
       const before = await loadProjectCostingForActor(actor, a);
       await transitionChangeOrderForActor(approver, a, first.id, "APPROVED");
       await transitionChangeOrderForActor(approver, a, first.id, "APPROVED");
       const after = await loadProjectCostingForActor(actor, a);
-      expect(after.metrics.contractRevenueBase.sub(before.metrics.contractRevenueBase).toString()).toBe("150");
-      expect(after.metrics.revenue.toString()).toBe(before.metrics.revenue.toString());
-      expect(after.metrics.actualCost.toString()).toBe(before.metrics.actualCost.toString());
-      expect(await client.projectAuditEvent.count({where: {companyId, eventType: "CHANGE_ORDER_APPROVED", metadata: {path: ["changeOrderId"], equals: first.id}}})).toBe(1);
-      await expect(updateChangeOrderForActor(actor, edit)).rejects.toThrow("CHANGE_ORDER_NOT_EDITABLE");
-      await expect(transitionChangeOrderForActor(actor, a, first.id, "APPROVED")).rejects.toThrow("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
-      await expect(createChangeOrderForActor({...actor, accountRole: "ACCOUNTANT"}, {...input, idempotencyKey: key()})).rejects.toThrow("Not authorized");
-      const decrease = await createChangeOrderForActor(actor, {...input, idempotencyKey: key(), valueDelta: "-2000"});
-      await transitionChangeOrderForActor(actor, a, decrease.id, "PENDING_APPROVAL");
-      await expect(transitionChangeOrderForActor(approver, a, decrease.id, "APPROVED")).rejects.toThrow("INVALID_PROJECT_VALUE");
-      expect((await client.projectChangeOrder.findUniqueOrThrow({where: {id: decrease.id}})).status).toBe("PENDING_APPROVAL");
-      const costDecrease = await createChangeOrderForActor(actor, {...input, idempotencyKey: key(), estimatedCostDelta: "-2000"});
-      await transitionChangeOrderForActor(actor, a, costDecrease.id, "PENDING_APPROVAL");
-      await expect(transitionChangeOrderForActor(approver, a, costDecrease.id, "APPROVED")).rejects.toThrow("INVALID_PROJECT_ESTIMATED_COST");
-      await expect(createChangeOrderForActor(actor, {...input, projectId: key(), idempotencyKey: key()})).rejects.toThrow("Not authorized");
-      await client.project.update({where: {id: b}, data: {status: "CLOSED"}});
-      try { await expect(createChangeOrderForActor(actor, {...input, projectId: b, idempotencyKey: key()})).rejects.toThrow("PROJECT_FINAL"); }
-      finally { await client.project.update({where: {id: b}, data: {status: "ACTIVE"}}); }
+      expect(
+        after.metrics.contractRevenueBase
+          .sub(before.metrics.contractRevenueBase)
+          .toString(),
+      ).toBe("150");
+      expect(after.metrics.revenue.toString()).toBe(
+        before.metrics.revenue.toString(),
+      );
+      expect(after.metrics.actualCost.toString()).toBe(
+        before.metrics.actualCost.toString(),
+      );
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            eventType: "CHANGE_ORDER_APPROVED",
+            metadata: { path: ["changeOrderId"], equals: first.id },
+          },
+        }),
+      ).toBe(1);
+      await expect(updateChangeOrderForActor(actor, edit)).rejects.toThrow(
+        "CHANGE_ORDER_NOT_EDITABLE",
+      );
+      await expect(
+        transitionChangeOrderForActor(actor, a, first.id, "APPROVED"),
+      ).rejects.toThrow("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
+      await expect(
+        createChangeOrderForActor(
+          { ...actor, accountRole: "ACCOUNTANT" },
+          { ...input, idempotencyKey: key() },
+        ),
+      ).rejects.toThrow("Not authorized");
+      const decrease = await createChangeOrderForActor(actor, {
+        ...input,
+        idempotencyKey: key(),
+        valueDelta: "-2000",
+      });
+      await transitionChangeOrderForActor(
+        actor,
+        a,
+        decrease.id,
+        "PENDING_APPROVAL",
+      );
+      await expect(
+        transitionChangeOrderForActor(approver, a, decrease.id, "APPROVED"),
+      ).rejects.toThrow("INVALID_PROJECT_VALUE");
+      expect(
+        (
+          await client.projectChangeOrder.findUniqueOrThrow({
+            where: { id: decrease.id },
+          })
+        ).status,
+      ).toBe("PENDING_APPROVAL");
+      const costDecrease = await createChangeOrderForActor(actor, {
+        ...input,
+        idempotencyKey: key(),
+        estimatedCostDelta: "-2000",
+      });
+      await transitionChangeOrderForActor(
+        actor,
+        a,
+        costDecrease.id,
+        "PENDING_APPROVAL",
+      );
+      await expect(
+        transitionChangeOrderForActor(approver, a, costDecrease.id, "APPROVED"),
+      ).rejects.toThrow("INVALID_PROJECT_ESTIMATED_COST");
+      await expect(
+        createChangeOrderForActor(actor, {
+          ...input,
+          projectId: key(),
+          idempotencyKey: key(),
+        }),
+      ).rejects.toThrow("Not authorized");
+      await client.project.update({
+        where: { id: b },
+        data: { status: "CLOSED" },
+      });
+      try {
+        await expect(
+          createChangeOrderForActor(actor, {
+            ...input,
+            projectId: b,
+            idempotencyKey: key(),
+          }),
+        ).rejects.toThrow("PROJECT_FINAL");
+      } finally {
+        await client.project.update({
+          where: { id: b },
+          data: { status: "ACTIVE" },
+        });
+      }
     });
     it("keeps Project details available independently of the optional Costing module", async () => {
-      const settings = await client.accountSettings.findUniqueOrThrow({where: {companyId}});
+      const settings = await client.accountSettings.findUniqueOrThrow({
+        where: { companyId },
+      });
       try {
-        await client.accountSettings.update({where: {companyId}, data: {enabledModules: settings.enabledModules!.filter(x => x !== "PROJECT_COSTING")}});
+        await client.accountSettings.update({
+          where: { companyId },
+          data: {
+            enabledModules: settings.enabledModules!.filter(
+              (x) => x !== "PROJECT_COSTING",
+            ),
+          },
+        });
         expect((await getProjectForActor(actor, a)).id).toBe(a);
-        const options = await mobileProjectOptions({...actor, name: "Admin", email: "admin@example.test", productEdition: "SALESPUNCH360_ACCOUNT", authorizedWorkspaces: ["ACCOUNT"]});
+        const options = await mobileProjectOptions({
+          ...actor,
+          name: "Admin",
+          email: "admin@example.test",
+          productEdition: "SALESPUNCH360_ACCOUNT",
+          authorizedWorkspaces: ["ACCOUNT"],
+        });
         expect(options.capabilities.costView).toBe(false);
         expect(options.capabilities.budgetEdit).toBe(true);
-        await expect(loadProjectCostingForActor(actor, a)).rejects.toThrow("MODULE_DISABLED:PROJECT_COSTING");
+        await expect(loadProjectCostingForActor(actor, a)).rejects.toThrow(
+          "MODULE_DISABLED:PROJECT_COSTING",
+        );
       } finally {
-        await client.accountSettings.update({where: {companyId}, data: {enabledModules: settings.enabledModules!}});
+        await client.accountSettings.update({
+          where: { companyId },
+          data: { enabledModules: settings.enabledModules! },
+        });
+      }
+    });
+    it("requires scoped tracking identities, rejects expiry and preserves physical serial availability", async () => {
+      const batchProduct = await client.accountProduct.create({
+        data: {
+          companyId,
+          name: "Batch material",
+          code: key(),
+          trackInventory: true,
+          trackingMode: "BATCH",
+          costPrice: 10,
+        },
+      });
+      const serialProduct = await client.accountProduct.create({
+        data: {
+          companyId,
+          name: "Serial material",
+          code: key(),
+          trackInventory: true,
+          trackingMode: "SERIAL",
+          costPrice: 10,
+        },
+      });
+      const batch = await client.inventoryBatch.create({
+        data: {
+          companyId,
+          productId: batchProduct.id,
+          batchNumber: "CURRENT",
+          expiryDate: new Date("2027-01-01"),
+        },
+      });
+      const expired = await client.inventoryBatch.create({
+        data: {
+          companyId,
+          productId: batchProduct.id,
+          batchNumber: "EXPIRED",
+          expiryDate: new Date("2026-01-01"),
+        },
+      });
+      const serial = await client.inventorySerialNumber.create({
+        data: {
+          companyId,
+          productId: serialProduct.id,
+          serialNumber: "ONE",
+          expiryDate: new Date("2027-01-01"),
+        },
+      });
+      for (const row of [
+        { productId: batchProduct.id, batchId: batch.id, quantity: 2 },
+        { productId: batchProduct.id, batchId: expired.id, quantity: 2 },
+        { productId: serialProduct.id, serialNumberId: serial.id, quantity: 1 },
+      ])
+        await client.stockMovement.create({
+          data: {
+            ...row,
+            companyId,
+            branchId,
+            warehouseId,
+            movementType: "OPENING",
+            unitCost: 10,
+            totalCost: row.quantity * 10,
+            sourceType: "FIXTURE",
+            sourceId: key(),
+            movementDate: date,
+            createdById: userId,
+          },
+        });
+      const input = {
+        projectId: a,
+        warehouseId,
+        productId: batchProduct.id,
+        projectBudgetLineId: budgetA,
+        quantity: "1",
+        movementDate: date,
+        idempotencyKey: key(),
+      };
+      await expect(
+        issueInventoryToProjectForActor(actor, input),
+      ).rejects.toThrow("BATCH_REQUIRED");
+      await expect(
+        issueInventoryToProjectForActor(actor, {
+          ...input,
+          batchId: expired.id,
+        }),
+      ).rejects.toThrow("EXPIRED_STOCK");
+      await expect(
+        issueInventoryToProjectForActor(actor, {
+          ...input,
+          batchId: randomUUID(),
+        }),
+      ).rejects.toThrow("INVALID_INVENTORY_BATCH");
+      const context = await projectMaterialContextForActor(actor, {
+        projectId: a,
+        productId: batchProduct.id,
+      });
+      expect(
+        context.products.find((x) => x.id === batchProduct.id)?.trackingMode,
+      ).toBe("BATCH");
+      expect(context.batches.map((x) => x.id).sort()).toEqual(
+        [batch.id, expired.id].sort(),
+      );
+      expect(context.serialNumbers).toHaveLength(0);
+      const issuedBatch = await issueInventoryToProjectForActor(actor, {
+        ...input,
+        batchId: batch.id,
+      });
+      const serialInput = {
+        ...input,
+        productId: serialProduct.id,
+        idempotencyKey: key(),
+      };
+      await expect(
+        issueInventoryToProjectForActor(actor, serialInput),
+      ).rejects.toThrow("SERIAL_QUANTITY_MISMATCH");
+      await expect(
+        issueInventoryToProjectForActor(actor, {
+          ...serialInput,
+          serialNumberId: serial.id,
+          quantity: "2",
+        }),
+      ).rejects.toThrow("SERIAL_QUANTITY_MISMATCH");
+      await expect(
+        issueInventoryToProjectForActor(actor, {
+          ...serialInput,
+          batchId: batch.id,
+          serialNumberId: serial.id,
+        }),
+      ).rejects.toThrow("INVALID_INVENTORY_TRACKING");
+      const issuedSerial = await issueInventoryToProjectForActor(actor, {
+        ...serialInput,
+        serialNumberId: serial.id,
+      });
+      await client.accountSettings.update({
+        where: { companyId },
+        data: { negativeStockAllowed: true },
+      });
+      try {
+        await expect(
+          issueInventoryToProjectForActor(actor, {
+            ...serialInput,
+            serialNumberId: serial.id,
+            idempotencyKey: key(),
+          }),
+        ).rejects.toThrow("SERIAL_NOT_AVAILABLE");
+      } finally {
+        await client.accountSettings.update({
+          where: { companyId },
+          data: { negativeStockAllowed: false },
+        });
+      }
+      await reverse(issuedBatch.id);
+      await reverse(issuedSerial.id);
+    });
+    it("blocks inventory issue when item/stock settings are disabled and keeps material history readable", async () => {
+      const input = {
+        projectId: a,
+        warehouseId,
+        productId,
+        projectBudgetLineId: budgetA,
+        quantity: "1",
+        movementDate: date,
+        idempotencyKey: key(),
+      };
+      for (const [itemSettings, error] of [
+        [{ enabled: false }, "ITEMS_DISABLED"],
+        [{ itemType: "SERVICES" }, "PRODUCTS_DISABLED"],
+        [{ stockMaintenance: false }, "STOCK_FIELDS_DISABLED"],
+      ] as const) {
+        await client.accountSettings.update({
+          where: { companyId },
+          data: { itemSettings },
+        });
+        try {
+          await expect(
+            issueInventoryToProjectForActor(actor, input),
+          ).rejects.toThrow(error);
+          const context = await projectMaterialContextForActor(actor, {
+            projectId: a,
+          });
+          expect(context.capabilities.ISSUE).toBe(false);
+          expect(context.movements.length).toBeGreaterThan(0);
+        } finally {
+          await client.accountSettings.update({
+            where: { companyId },
+            data: { itemSettings: {} },
+          });
+        }
       }
     });
     it("blocks direct domain reads and every material action when Projects is OFF", async () => {

@@ -7,6 +7,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{
     projectId?: string;
+    productId?: string;
     sourcePage?: string;
     historyPage?: string;
   }>;
@@ -22,6 +23,7 @@ export default async function Page({
     );
   const context = await projectMaterialContextForActor(actor, {
     projectId: query.projectId,
+    productId: query.productId,
     sourcePage: page(query.sourcePage),
     historyPage: page(query.historyPage),
   });

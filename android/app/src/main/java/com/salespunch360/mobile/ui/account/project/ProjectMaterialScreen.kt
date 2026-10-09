@@ -30,7 +30,9 @@ import com.salespunch360.mobile.ui.account.sales.SelectField
  item{SelectField(if(s.action=="TRANSFER")"Source Project" else "Project",s.projectId,s.projects.map{it.str("id") to "${it.str("projectNumber")} · ${it.str("name")}"}){v->vm.selectProject(v)}}
  if(s.action=="TRANSFER")item{SelectField("Destination Project",s.destinationProjectId,s.projects.filter{it.str("id")!=s.projectId&&it.str("branchId")==branch}.map{it.str("id") to it.str("name")}){v->vm.update{it.copy(destinationProjectId=v)}}}
  if(s.action=="ISSUE"){
- item{SelectField("Product",s.productId,s.products.map{it.str("id") to it.str("name")}){v->vm.update{it.copy(productId=v)}}}
+ item{SelectField("Product",s.productId,s.products.map{it.str("id") to it.str("name")}){v->vm.selectProduct(v)}}
+ if(s.products.find{it.str("id")==s.productId}?.str("trackingMode")=="BATCH")item{SelectField("Batch",s.batchId,s.batches.map{it.str("id") to "${it.str("batchNumber")} ${it.str("expiryDate").take(10)}"}){v->vm.update{it.copy(batchId=v)}}}
+ if(s.products.find{it.str("id")==s.productId}?.str("trackingMode")=="SERIAL")item{SelectField("Serial number",s.serialNumberId,s.serialNumbers.map{it.str("id") to "${it.str("serialNumber")} ${it.str("expiryDate").take(10)}"}){v->vm.update{it.copy(serialNumberId=v)}}}
  item{SelectField("Budget line",s.budgetLineId,s.budgetLines.filter{it.str("projectId")==s.projectId}.map{it.str("id") to it.str("title")}){v->vm.update{it.copy(budgetLineId=v)}}}
  }else item{SelectField("Available receipt",s.sourceMovementId,s.sources.filter{it.str("projectId")==s.projectId&&it.str("isReversed")!="true"&&(it.str("availableQuantity").toBigDecimalOrNull()?.signum()?:0)>0}.map{it.str("id") to "${it.str("productName")} · available ${it.str("availableQuantity")} · ₹${it.str("originalUnitCost")}/unit"}){v->vm.update{it.copy(sourceMovementId=v)}}}
  if(s.action in listOf("ISSUE","RETURN"))item{SelectField("Warehouse",s.warehouseId,s.warehouses.filter{it.str("branchId")==branch}.map{it.str("id") to it.str("name")}){v->vm.update{it.copy(warehouseId=v)}}}

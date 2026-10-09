@@ -8,6 +8,22 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  ITEMS_DISABLED: "Items are disabled in General settings.",
+  PRODUCTS_DISABLED: "Product items are disabled in General settings.",
+  STOCK_FIELDS_DISABLED: "Stock maintenance is disabled in General settings.",
+  BATCH_REQUIRED: "Select a batch for this product.",
+  SERIAL_QUANTITY_MISMATCH:
+    "Select a serial number and issue exactly one unit.",
+  INVALID_INVENTORY_TRACKING:
+    "The tracking selection does not match this product.",
+  INVALID_INVENTORY_BATCH: "Select a batch belonging to this product.",
+  EXPIRED_STOCK:
+    "This batch or serial number has expired for the effective date.",
+  SERIAL_NOT_AVAILABLE:
+    "This serial-numbered unit is not available in the selected warehouse.",
+  INVALID_INVENTORY_PRODUCT:
+    "Select an active inventory product from this company.",
+
   UNBALANCED_JOURNAL: "Total debits must equal total credits.",
   INVALID_LEDGER_ACCOUNT: "Select an active posting ledger from this company.",
   INVALID_COST_CENTRE: "Select an active cost centre from this company.",
@@ -82,12 +98,17 @@ const messages: Record<string, string> = {
     "Choose an advance for the same customer, branch and Project as this invoice.",
   SOURCE_JOURNAL_MISSING:
     "The original accounting posting is missing. Ask your administrator to review it.",
-  PROJECT_FINAL: "This Project is closed and can only be viewed or reported on.",
-  INVALID_PROJECT_ESTIMATED_COST: "The resulting Project estimated cost cannot be negative.",
-  INVALID_PROJECT_VALUE: "The resulting Project contract value cannot be negative.",
+  PROJECT_FINAL:
+    "This Project is closed and can only be viewed or reported on.",
+  INVALID_PROJECT_ESTIMATED_COST:
+    "The resulting Project estimated cost cannot be negative.",
+  INVALID_PROJECT_VALUE:
+    "The resulting Project contract value cannot be negative.",
   CHANGE_ORDER_NOT_EDITABLE: "Only a draft change order can be edited.",
-  INVALID_CHANGE_ORDER_TRANSITION: "This action is not allowed for the current change-order status.",
-  CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN: "A different authorized administrator must approve or reject this change order.",
+  INVALID_CHANGE_ORDER_TRANSITION:
+    "This action is not allowed for the current change-order status.",
+  CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN:
+    "A different authorized administrator must approve or reject this change order.",
   PROJECT_REQUIRED: "Select an authorized project.",
   OTHER_INCOME_TAX_REQUIRES_A12:
     "Other Income currently supports non-taxable entries. Set GST and CESS to zero.",
