@@ -37,7 +37,12 @@ import {
   getExpenseForActor,
 } from "./expenses";
 import { runFinancialReportForActor } from "./reports/service";
-import { postJournalInTx } from "@/lib/accounting/service";
+import {
+  postJournalInTx,
+  postJournalForActor,
+  journalHistoryForActor,
+  setPeriodLockForActor,
+} from "@/lib/accounting/service";
 import { saveCustomFieldValuesInTx } from "./custom-field-values";
 import type { ProjectActor } from "./projects";
 const companyId = randomUUID(),
@@ -182,6 +187,7 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     });
     await client.moneyAccount.deleteMany({ where: { companyId } });
     await client.ledgerAccount.deleteMany({ where: { companyId } });
+    await client.accountingPeriodLock.deleteMany({ where: { companyId } });
     await client.financialYear.deleteMany({ where: { companyId } });
     await client.assetAssignmentHistory.deleteMany({ where: { companyId } });
     await client.asset.deleteMany({ where: { companyId } });
@@ -853,6 +859,110 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
       }),
     ).toBe(auditCount);
   });
+  it("posts multi-line journals once across repeated responses and refuses altered retry content", async () => {
+    const request = {
+      financialYearId: fyId,
+      branchId: branchA,
+      entryDate: "2026-10-09",
+      sourceType: "MANUAL_JOURNAL",
+      sourceId: randomUUID(),
+      postingPurpose: "PRIMARY",
+      lines: [
+        { ledgerAccountId: cashId, debit: "100", credit: "0" },
+        { ledgerAccountId: incomeId, debit: "0", credit: "60" },
+        { ledgerAccountId: expenseId, debit: "0", credit: "40" },
+      ],
+    };
+    const [a, b] = await Promise.all([
+      postJournalForActor(actor, request),
+      postJournalForActor(actor, request),
+    ]);
+    expect(a.id).toBe(b.id);
+    expect(
+      await client.journalEntry.count({
+        where: { companyId, sourceId: request.sourceId },
+      }),
+    ).toBe(1);
+    await expect(
+      postJournalForActor(actor, { ...request, reference: "changed" }),
+    ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    await expect(
+      postJournalForActor(
+        {
+          ...actor,
+          branchAccessScope: "SELECTED_BRANCHES",
+          branchIds: [branchB],
+        },
+        request,
+      ),
+    ).rejects.toThrow("INVALID_BRANCH");
+    await setPeriodLockForActor(actor, {
+      financialYearId: fyId,
+      lockedThrough: "2026-10-09",
+      reason: "Approved close",
+    });
+    expect((await postJournalForActor(actor, request)).id).toBe(a.id);
+    await expect(
+      setPeriodLockForActor(actor, {
+        financialYearId: fyId,
+        lockedThrough: null,
+        reason: "Clear attempt",
+      }),
+    ).rejects.toThrow("PERIOD_UNLOCK_NOT_SUPPORTED");
+    await expect(
+      setPeriodLockForActor(actor, {
+        financialYearId: fyId,
+        lockedThrough: "2026-10-08",
+        reason: "Backdate attempt",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      postJournalForActor(actor, { ...request, sourceId: randomUUID() }),
+    ).rejects.toThrow("PERIOD_LOCKED");
+  });
+  it("discovers older journals beyond 100 with stable scoped history pages", async () => {
+    for (let i = 0; i < 105; i++)
+      await postJournalForActor(actor, {
+        financialYearId: fyId,
+        branchId: branchA,
+        entryDate: "2026-10-10",
+        sourceType: "MANUAL_JOURNAL",
+        sourceId: randomUUID(),
+        reference: "history-fixture",
+        lines: [
+          { ledgerAccountId: cashId, debit: "1", credit: "0" },
+          { ledgerAccountId: incomeId, debit: "0", credit: "1" },
+        ],
+      });
+    const pages = await Promise.all(
+      [1, 2, 3].map((page) =>
+        journalHistoryForActor(actor, { q: "history-fixture", page }),
+      ),
+    );
+    expect(pages.map((p) => p.items.length)).toEqual([50, 50, 5]);
+    expect(pages[2].hasMore).toBe(false);
+    expect(new Set(pages.flatMap((p) => p.items.map((x) => x.id))).size).toBe(
+      105,
+    );
+    expect(
+      (
+        await journalHistoryForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [branchB],
+          },
+          { q: "history-fixture" },
+        )
+      ).items,
+    ).toHaveLength(0);
+    await expect(
+      journalHistoryForActor(actor, { branchId: randomUUID() }),
+    ).rejects.toThrow("INVALID_BRANCH");
+    await expect(
+      journalHistoryForActor(actor, { from: "2026-10-10", to: "2026-10-09" }),
+    ).rejects.toThrow("INVALID_DATE_RANGE");
+  }, 30000);
   it("enforces module OFF without deleting historical assets", async () => {
     const before = await client.asset.count({ where: { companyId } });
     await client.accountSettings.update({

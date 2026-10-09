@@ -1,8 +1,10 @@
+import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { Prisma, type AssetStatus } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
   accountingOverviewForActor,
+  journalHistoryForActor,
   createCostCentreForActor,
   createLedgerAccountForActor,
   postJournalForActor,
@@ -47,7 +49,10 @@ export async function mobileAccountingOverview(u: MobileAppPrincipal) {
       by: ["ledgerAccountId"],
       where: {
         companyId: a.companyId,
-        journalEntry: { status: "POSTED", ...branchScope(a) },
+        journalEntry: {
+          status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
+          ...branchScope(a),
+        },
       },
       _sum: { debit: true, credit: true },
     }),
@@ -183,4 +188,11 @@ export async function mobileFinancialYearClose(
     permit(u, "ACCOUNT_PERIOD_LOCK"),
     raw as { financialYearId: string; earlyCloseReason?: string },
   );
+}
+
+export async function mobileJournalHistory(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  return journalHistoryForActor(permit(u, "ACCOUNT_LEDGER_VIEW"), raw);
 }

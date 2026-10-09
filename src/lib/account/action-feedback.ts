@@ -8,6 +8,13 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  UNBALANCED_JOURNAL: "Total debits must equal total credits.",
+  INVALID_LEDGER_ACCOUNT: "Select an active posting ledger from this company.",
+  INVALID_COST_CENTRE: "Select an active cost centre from this company.",
+  PERIOD_UNLOCK_NOT_SUPPORTED:
+    "Period locks cannot be cleared or moved backward.",
+  INVALID_LOCK_DATE: "Choose a lock date within the financial year.",
+  INVALID_DATE_RANGE: "The end date must be on or after the start date.",
   EXPENSE_CATEGORY_NAME_EXISTS:
     "A category with this name already exists. Select it or choose another name.",
   INVALID_INPUT: "Choose a supported action and complete its required fields.",

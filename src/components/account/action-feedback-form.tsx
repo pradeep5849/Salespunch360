@@ -59,7 +59,11 @@ export function ActionFeedbackForm({
   }, [state, router]);
   return (
     <FeedbackContext.Provider value={state}>
-      <form action={formAction} className={className}>
+      <form
+        action={formAction}
+        className={className}
+        onReset={(event) => event.preventDefault()}
+      >
         {state.message && (
           <p
             role={state.kind === "error" ? "alert" : "status"}

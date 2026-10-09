@@ -1,3 +1,6 @@
+import { journalMatchesInput } from "./journal-replay";
+import { retrySerializable } from "@/lib/account/transaction-retry";
+import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -161,6 +164,31 @@ export async function postJournalInTx(
   const d = postingSchema.parse(raw);
   assertBalanced(d.lines);
   await lockCompany(tx, a.companyId);
+  if (
+    a.branchAccessScope === "SELECTED_BRANCHES" &&
+    !a.branchIds?.includes(d.branchId)
+  )
+    throw new Error("INVALID_BRANCH");
+  // Revalidate an ambiguous manual/opening response before attempting another posting.
+  if (["MANUAL_JOURNAL", "OPENING_BALANCE"].includes(d.sourceType)) {
+    const existing = await tx.journalEntry.findFirst({
+      where: {
+        companyId: a.companyId,
+        sourceType: d.sourceType,
+        sourceId: d.sourceId,
+        postingPurpose: d.postingPurpose,
+      },
+      include: { lines: { orderBy: { lineNumber: "asc" } } },
+    });
+    if (existing) {
+      if (
+        !["POSTED", "REVERSED"].includes(existing.status) ||
+        !journalMatchesInput(existing, d)
+      )
+        throw new Error("IDEMPOTENCY_KEY_REUSED");
+      return existing;
+    }
+  }
   await validateContext(tx, a, d);
   const accountIds = [...new Set(d.lines.map((x) => x.ledgerAccountId))],
     costIds = [
@@ -231,22 +259,26 @@ export async function postJournalForActor(
   a: Awaited<ReturnType<typeof actor>>,
   raw: unknown,
 ) {
-  return db.$transaction((tx) => postJournalInTx(tx, a, raw), {
-    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-  });
+  return retrySerializable(() =>
+    db.$transaction((tx) => postJournalInTx(tx, a, raw), {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }),
+  );
 }
 export async function postOpeningBalancesForActor(
   a: Awaited<ReturnType<typeof actor>>,
   raw: unknown,
 ) {
-  return db.$transaction(
-    async (tx) => {
-      const input = postingSchema.parse(raw);
-      if (input.sourceType !== "OPENING_BALANCE")
-        throw new Error("INVALID_SOURCE");
-      return postJournalInTx(tx, a, input, "OPENING_BALANCE_POSTED");
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        const input = postingSchema.parse(raw);
+        if (input.sourceType !== "OPENING_BALANCE")
+          throw new Error("INVALID_SOURCE");
+        return postJournalInTx(tx, a, input, "OPENING_BALANCE_POSTED");
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
 }
 export async function setPeriodLockForActor(
@@ -310,88 +342,98 @@ export async function setPeriodLockForActor(
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export type ReversalActor={id:string;companyId:string;branchAccessScope?:string;branchIds?:string[]};
+export type ReversalActor = {
+  id: string;
+  companyId: string;
+  branchAccessScope?: string;
+  branchIds?: string[];
+};
 /** Source lifecycle and its journal reversal can share one transaction. */
-export async function reverseJournalInTx(tx:Prisma.TransactionClient,a:ReversalActor,raw:unknown){
- const d=reversalSchema.parse(raw);
-      await lockCompany(tx, a.companyId);
-      const original = await tx.journalEntry.findFirst({
-        where: {
-          id: d.journalEntryId,
-          companyId: a.companyId,
-          status: "POSTED",
-          reversedBy: null,
-        },
-        include: { lines: true },
-      });
-      if (!original) throw new Error("JOURNAL_NOT_REVERSIBLE");
-      const reversalYear = await tx.financialYear.findFirst({
-        where: {
-          companyId: a.companyId,
-          isActive: true,
-          startDate: { lte: d.entryDate },
-          endDate: { gte: d.entryDate },
-        },
-      });
-      if (!reversalYear) throw new Error("INVALID_FINANCIAL_YEAR");
-      await validateContext(tx, a, {
-        financialYearId: reversalYear.id,
-        branchId: original.branchId,
-        entryDate: d.entryDate,
-      });
-      const journalNumber = await number(tx, a.companyId, original.branchId);
-      const draft = await tx.journalEntry.create({
-        data: {
-          companyId: a.companyId,
-          financialYearId: reversalYear.id,
-          branchId: original.branchId,
-          journalNumber,
-          entryDate: d.entryDate,
-          status: "DRAFT",
-          sourceType: "REVERSAL",
-          sourceId: original.id,
-          postingPurpose: "REVERSAL",
-          reversalOfId: original.id,
-          reversalReason: d.reason,
-          narration: `Reversal: ${d.reason}`,
-          createdById: a.id,
-          lines: {
-            create: original.lines.map((l) => ({
-              lineNumber: l.lineNumber,
-              ledgerAccountId: l.ledgerAccountId,
-              costCentreId: l.costCentreId,
-              debit: l.credit,
-              credit: l.debit,
-              description: l.description,
-            })),
-          },
-        },
-      });
-      const reversal = await tx.journalEntry.update({
-        where: { id: draft.id },
-        data: { status: "POSTED", postedById: a.id, postedAt: new Date() },
-      });
-      await tx.journalEntry.update({
-        where: { id: original.id },
-        data: { status: "REVERSED" },
-      });
-      await tx.accountingAuditEvent.create({
-        data: {
-          companyId: a.companyId,
-          actorUserId: a.id,
-          eventType: "JOURNAL_REVERSED",
-          entityType: "JOURNAL_ENTRY",
-          entityId: original.id,
-          reason: d.reason,
-          metadata: { reversalId: reversal.id },
-        },
-      });
-      return reversal;
+export async function reverseJournalInTx(
+  tx: Prisma.TransactionClient,
+  a: ReversalActor,
+  raw: unknown,
+) {
+  const d = reversalSchema.parse(raw);
+  await lockCompany(tx, a.companyId);
+  const original = await tx.journalEntry.findFirst({
+    where: {
+      id: d.journalEntryId,
+      companyId: a.companyId,
+      status: "POSTED",
+      reversedBy: null,
+    },
+    include: { lines: true },
+  });
+  if (!original) throw new Error("JOURNAL_NOT_REVERSIBLE");
+  const reversalYear = await tx.financialYear.findFirst({
+    where: {
+      companyId: a.companyId,
+      isActive: true,
+      startDate: { lte: d.entryDate },
+      endDate: { gte: d.entryDate },
+    },
+  });
+  if (!reversalYear) throw new Error("INVALID_FINANCIAL_YEAR");
+  await validateContext(tx, a, {
+    financialYearId: reversalYear.id,
+    branchId: original.branchId,
+    entryDate: d.entryDate,
+  });
+  const journalNumber = await number(tx, a.companyId, original.branchId);
+  const draft = await tx.journalEntry.create({
+    data: {
+      companyId: a.companyId,
+      financialYearId: reversalYear.id,
+      branchId: original.branchId,
+      journalNumber,
+      entryDate: d.entryDate,
+      status: "DRAFT",
+      sourceType: "REVERSAL",
+      sourceId: original.id,
+      postingPurpose: "REVERSAL",
+      reversalOfId: original.id,
+      reversalReason: d.reason,
+      narration: `Reversal: ${d.reason}`,
+      createdById: a.id,
+      lines: {
+        create: original.lines.map((l) => ({
+          lineNumber: l.lineNumber,
+          ledgerAccountId: l.ledgerAccountId,
+          costCentreId: l.costCentreId,
+          debit: l.credit,
+          credit: l.debit,
+          description: l.description,
+        })),
+      },
+    },
+  });
+  const reversal = await tx.journalEntry.update({
+    where: { id: draft.id },
+    data: { status: "POSTED", postedById: a.id, postedAt: new Date() },
+  });
+  await tx.journalEntry.update({
+    where: { id: original.id },
+    data: { status: "REVERSED" },
+  });
+  await tx.accountingAuditEvent.create({
+    data: {
+      companyId: a.companyId,
+      actorUserId: a.id,
+      eventType: "JOURNAL_REVERSED",
+      entityType: "JOURNAL_ENTRY",
+      entityId: original.id,
+      reason: d.reason,
+      metadata: { reversalId: reversal.id },
+    },
+  });
+  return reversal;
 }
-export async function reverseJournalForActor(a:ReversalActor,raw:unknown){
- return db.$transaction(tx=>reverseJournalInTx(tx,a,raw),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+export async function reverseJournalForActor(a: ReversalActor, raw: unknown) {
+  return db.$transaction((tx) => reverseJournalInTx(tx, a, raw), {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
 }
-
 
 export async function reverseJournal(raw: unknown) {
   return reverseJournalForActor(await actor("ACCOUNT_JOURNAL_REVERSE"), raw);
@@ -418,4 +460,61 @@ export async function postOpeningBalances(raw: unknown) {
     await actor("ACCOUNT_OPENING_BALANCE"),
     raw,
   );
+}
+
+const journalHistoryQuery = z.object({
+  q: z.string().trim().max(160).optional(),
+  page: z.coerce.number().int().min(1).max(1000000).default(1),
+  branchId: z.string().uuid().optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+});
+export async function journalHistoryForActor(
+  a: Awaited<ReturnType<typeof actor>>,
+  raw: unknown,
+) {
+  const d = journalHistoryQuery.parse(raw);
+  if (d.from && d.to && d.to < d.from) throw new Error("INVALID_DATE_RANGE");
+  if (
+    d.branchId &&
+    a.branchAccessScope === "SELECTED_BRANCHES" &&
+    !a.branchIds?.includes(d.branchId)
+  )
+    throw new Error("INVALID_BRANCH");
+  if (
+    d.branchId &&
+    !(await db.branch.findFirst({
+      where: { id: d.branchId, companyId: a.companyId, isActive: true },
+      select: { id: true },
+    }))
+  )
+    throw new Error("INVALID_BRANCH");
+  const where: Prisma.JournalEntryWhereInput = {
+    companyId: a.companyId,
+    ...(d.branchId
+      ? { branchId: d.branchId }
+      : a.branchAccessScope === "SELECTED_BRANCHES"
+        ? { branchId: { in: a.branchIds ?? [] } }
+        : {}),
+    ...(d.from || d.to ? { entryDate: { gte: d.from, lte: d.to } } : {}),
+    ...(d.q
+      ? {
+          OR: [
+            { journalNumber: { contains: d.q, mode: "insensitive" } },
+            { reference: { contains: d.q, mode: "insensitive" } },
+            { narration: { contains: d.q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+  const rows = await db.journalEntry.findMany({
+    where,
+    orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    skip: (d.page - 1) * 50,
+    take: 51,
+  });
+  return { items: rows.slice(0, 50), hasMore: rows.length > 50, page: d.page };
+}
+export async function journalHistory(raw: unknown) {
+  return journalHistoryForActor(await actor("ACCOUNT_LEDGER_VIEW", false), raw);
 }
