@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { googlePlayDestination } from "@/lib/public-site/android-url";
 import Image from "next/image";
 import Link from "next/link";
@@ -5,6 +6,8 @@ import QRCode from "qrcode";
 import { BrandLogo } from "@/components/brand-logo";
 import { db } from "@/lib/db";
 export async function PublicFooter() {
+  // Public settings and destinations must reflect the current server configuration.
+  await connection();
   const settings = await db.publicSiteSettings.findUnique({
     where: { id: "default" },
   });

@@ -30,6 +30,6 @@ export async function updatePublicSiteSettingsAction(fd: FormData) {
     create: { id: "default", ...data },
     update: data,
   });
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   revalidatePath("/admin/public-site");
 }
