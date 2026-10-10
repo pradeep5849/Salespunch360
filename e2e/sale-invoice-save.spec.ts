@@ -108,6 +108,12 @@ test("real PostgreSQL sales save and post with GST and negative inventory", asyn
     id: user.id,
     companyId: company.id,
     accountRole: "ACCOUNT_ADMIN",
+    role: "ACCOUNT_USER",
+    isActive: true,
+    accountAccessActive: true,
+    salesAccessActive: false,
+    salesRole: null,
+    managerType: null,
     branchAccessScope: "ALL_BRANCHES",
     branchIds: [],
   } as never;

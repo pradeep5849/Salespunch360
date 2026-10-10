@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
@@ -250,11 +251,13 @@ test("expense inline category, Save & New, draft edit, rejection reason and deta
     exact: true,
   });
   await expect(attachment).toBeVisible();
-  const download = await page.request.get(
-    (await attachment.getAttribute("href"))!,
-  );
-  expect(download.status()).toBe(200);
-  expect(await download.body()).toEqual(receipt);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    attachment.click(),
+  ]);
+  const downloadedFile = await download.path();
+  expect(downloadedFile).not.toBeNull();
+  expect(await readFile(downloadedFile!)).toEqual(receipt);
   await page.getByRole("link", { name: "Edit draft", exact: true }).click();
   await page.getByLabel("Notes", { exact: true }).fill("Updated draft notes");
   await page.getByRole("button", { name: "Save draft", exact: true }).click();

@@ -247,5 +247,4 @@ test("asset pagination, search, and module OFF use authoritative server scope", 
   await expect(
     page.getByRole("link", { name: "Assets", exact: true }),
   ).toHaveCount(0);
-
 });
