@@ -1,3 +1,4 @@
+import {saveCustomFieldValuesInTx} from "@/lib/account/custom-field-values";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -55,17 +56,19 @@ export async function saveMobileAccountMaster(user: MobileAppPrincipal, kind: Ma
   actor(user, kind, true); await assertOperationalWrite(user.companyId); if (id && !z.string().uuid().safeParse(id).success) throw new Error("INVALID_INPUT");
   if (kind === "customers" || kind === "vendors") {
     const parsed=partySchema.extend({branchId:z.string().uuid().optional(),isActive:z.boolean().optional(),customFields:z.record(z.string(),z.string()).optional()}).parse(raw),{customFields={},...input}=parsed;
+    const entityId=await db.$transaction(async tx=>{
     let entityId=id;
     if(kind==="customers"){
-      const branchId=input.branchId;if(!branchId||user.branchAccessScope==="SELECTED_BRANCHES"&&!(user.branchIds??[]).includes(branchId)||!await db.branch.findFirst({where:{id:branchId,companyId:user.companyId,isActive:true}}))throw new Error("MOBILE_FORBIDDEN");
+      const branchId=input.branchId;if(!branchId||user.branchAccessScope==="SELECTED_BRANCHES"&&!(user.branchIds??[]).includes(branchId)||!await tx.branch.findFirst({where:{id:branchId,companyId:user.companyId,isActive:true}}))throw new Error("MOBILE_FORBIDDEN");
       const data={name:input.name,contactPerson:input.contactPerson,phone:input.phone,email:input.email,address:input.address,billingAddress:input.address,shippingAddress:input.shippingAddress,gstin:input.gstin,stateCode:input.stateCode,gstRegistrationType:input.gstRegistrationType,pan:input.pan,notes:input.notes,...(input.isActive===undefined?{}:{isActive:input.isActive})};
-      if(!entityId)entityId=(await db.customer.create({data:{...data,branchId,companyId:user.companyId,isAccountCustomer:true}})).id;else if((await db.customer.updateMany({where:{id:entityId,companyId:user.companyId,isAccountCustomer:true,...branchFilter(user)},data})).count!==1)throw new Error("MOBILE_FORBIDDEN");
+      if(!entityId)entityId=(await tx.customer.create({data:{...data,branchId,companyId:user.companyId,isAccountCustomer:true}})).id;else if((await tx.customer.updateMany({where:{id:entityId,companyId:user.companyId,isAccountCustomer:true,...branchFilter(user)},data})).count!==1)throw new Error("MOBILE_FORBIDDEN");
     }else{
       const data={name:input.name,contactPerson:input.contactPerson,phone:input.phone,email:input.email,address:input.address,gstin:input.gstin,stateCode:input.stateCode,gstRegistrationType:input.gstRegistrationType,pan:input.pan,notes:input.notes,...(input.isActive===undefined?{}:{isActive:input.isActive})};
-      if(!entityId)entityId=(await db.vendor.create({data:{...data,companyId:user.companyId}})).id;else if((await db.vendor.updateMany({where:{id:entityId,companyId:user.companyId},data})).count!==1)throw new Error("MOBILE_FORBIDDEN");
+      if(!entityId)entityId=(await tx.vendor.create({data:{...data,companyId:user.companyId}})).id;else if((await tx.vendor.updateMany({where:{id:entityId,companyId:user.companyId},data})).count!==1)throw new Error("MOBILE_FORBIDDEN");
     }
-    const entityType=kind==="customers"?"CUSTOMER":"VENDOR",definitions=await db.customFieldDefinition.findMany({where:{companyId:user.companyId,entityType,isActive:true,fieldKey:{in:Object.keys(customFields)}}});
-    await db.$transaction(definitions.map(definition=>db.customFieldValue.upsert({where:{companyId_definitionId_entityId:{companyId:user.companyId,definitionId:definition.id,entityId:entityId!}},create:{companyId:user.companyId,definitionId:definition.id,entityType,entityId:entityId!,value:customFields[definition.fieldKey]},update:{value:customFields[definition.fieldKey]}})));
+    await saveCustomFieldValuesInTx(tx,user.companyId,kind==="customers"?"CUSTOMER":"VENDOR",entityId!,customFields,!!id);
+    return entityId!;
+    });
     return getMobileAccountMaster(user,kind,entityId!);
   }
   await requireInventory(user);
@@ -76,7 +79,75 @@ export async function saveMobileAccountMaster(user: MobileAppPrincipal, kind: Ma
   const input = warehouseSchema.parse(raw); if (!(user.branchIds ?? []).includes(input.branchId) || !await db.branch.findFirst({ where: { id: input.branchId, companyId: user.companyId, isActive: true } })) throw new Error("MOBILE_FORBIDDEN"); return db.$transaction(async tx => { if (input.isDefault) await tx.warehouse.updateMany({ where: { companyId: user.companyId, branchId: input.branchId, isDefault: true, ...(id ? { id: { not: id } } : {}) }, data: { isDefault: false } }); if (!id) return tx.warehouse.create({ data: { ...input, companyId: user.companyId } }); const changed = await tx.warehouse.updateMany({ where: { id, companyId: user.companyId, ...branchFilter(user) }, data: input }); if (changed.count !== 1) throw new Error("MOBILE_FORBIDDEN"); return tx.warehouse.findUniqueOrThrow({ where: { id } }); });
 }
 
-export async function mobileMasterOptions(user: MobileAppPrincipal) { actor(user, "customers"); const [branches, units, categories,settings,partyCustomFields] = await Promise.all([db.branch.findMany({ where: { companyId: user.companyId, isActive: true, ...(user.branchAccessScope === "SELECTED_BRANCHES" ? { id: { in: user.branchIds ?? [] } } : {}) }, select: { id: true, name: true }, orderBy: { name: "asc" } }), db.accountUnit.findMany({ where: { companyId: user.companyId, isActive: true }, select: { id: true, name: true, symbol: true }, orderBy: { name: "asc" } }), db.accountCategory.findMany({ where: { companyId: user.companyId, isActive: true, scope: { in: ["PRODUCT", "BOTH"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),db.accountSettings.findUnique({where:{companyId:user.companyId},select:{transactionDefaults:true}}),db.customFieldDefinition.findMany({where:{companyId:user.companyId,entityType:"CUSTOMER",isActive:true},select:{fieldKey:true,label:true,dataType:true},orderBy:{position:"asc"}})]); return { branches, units, categories,partySettings:resolvePartySettings(settings?.transactionDefaults),partyCustomFields }; }
+export async function mobileMasterOptions(
+  user: MobileAppPrincipal,
+  kind: MasterKind = "customers",
+) {
+  actor(user, kind);
+  if (["warehouses", "items", "services", "units", "categories"].includes(kind))
+    await requireInventory(user);
+  const [branches, units, categories, settings, partyCustomFields] =
+    await Promise.all([
+      db.branch.findMany({
+        where: {
+          companyId: user.companyId,
+          isActive: true,
+          ...(user.branchAccessScope === "SELECTED_BRANCHES"
+            ? { id: { in: user.branchIds ?? [] } }
+            : {}),
+        },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      db.accountUnit.findMany({
+        where: { companyId: user.companyId, isActive: true },
+        select: { id: true, name: true, symbol: true },
+        orderBy: { name: "asc" },
+      }),
+      db.accountCategory.findMany({
+        where: {
+          companyId: user.companyId,
+          isActive: true,
+          scope: { in: ["PRODUCT", "BOTH"] },
+        },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      db.accountSettings.findUnique({
+        where: { companyId: user.companyId },
+        select: { transactionDefaults: true },
+      }),
+      db.customFieldDefinition.findMany({
+        where: {
+          companyId: user.companyId,
+          entityType: kind === "vendors" ? "VENDOR" : "CUSTOMER",
+          isActive: true,
+        },
+        select: {
+          fieldKey: true,
+          label: true,
+          dataType: true,
+          isRequired: true,
+          options: true,
+        },
+        orderBy: { position: "asc" },
+      }),
+    ]);
+  return {
+    branches,
+    units,
+    categories,
+    partySettings: resolvePartySettings(settings?.transactionDefaults),
+    partyCustomFields: ["customers", "vendors"].includes(kind)
+      ? partyCustomFields.map((field) => ({
+          ...field,
+          options: Array.isArray(field.options)
+            ? field.options.filter((v): v is string => typeof v === "string")
+            : [],
+        }))
+      : [],
+  };
+}
 async function requireInventory(user: MobileAppPrincipal) { if (!(await enabledModulesForCompany(user.companyId)).includes("INVENTORY")) throw new Error("MOBILE_FORBIDDEN"); }
 export const MOBILE_MASTER_KINDS = new Set<MasterKind>(["customers", "vendors", "items", "services", "warehouses", "units", "categories"]);
 

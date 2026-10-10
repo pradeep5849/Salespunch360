@@ -1,8 +1,72 @@
 import { z } from "zod";
-const uuid=z.string().uuid(),amount=z.union([z.string(),z.number()]).transform(String).refine(v=>/^\d+(\.\d{1,2})?$/.test(v),"Non-negative amount with at most two decimals required").transform(v=>/^0+(\.0{1,2})?$/.test(v)?"0":v);
-export const journalLineSchema=z.object({ledgerAccountId:uuid,costCentreId:uuid.optional(),debit:amount.default("0"),credit:amount.default("0"),description:z.string().trim().max(1000).optional()}).superRefine((v,c)=>{const d=v.debit!=="0",cr=v.credit!=="0";if(d===cr)c.addIssue({code:"custom",message:"Exactly one debit or credit is required"});});
-export const postingSchema=z.object({financialYearId:uuid,branchId:uuid,entryDate:z.coerce.date(),reference:z.string().trim().max(160).optional(),narration:z.string().trim().max(5000).optional(),sourceType:z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,59}$/),sourceId:z.string().trim().min(1).max(100),postingPurpose:z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,59}$/).default("PRIMARY"),lines:z.array(journalLineSchema).min(2).max(500)});
-export const ledgerAccountSchema=z.object({code:z.string().trim().toUpperCase().min(1).max(30),name:z.string().trim().min(1).max(160),accountClass:z.enum(["ASSET","LIABILITY","EQUITY","INCOME","EXPENSE"]),normalBalance:z.enum(["DEBIT","CREDIT"]),parentId:uuid.optional(),allowPosting:z.coerce.boolean().default(true)});
-export const costCentreSchema=z.object({code:z.string().trim().toUpperCase().min(1).max(30),name:z.string().trim().min(1).max(120),description:z.string().trim().max(2000).optional()});
-export const periodLockSchema=z.object({financialYearId:uuid,lockedThrough:z.coerce.date().nullable(),reason:z.string().trim().min(3).max(1000)});
-export const reversalSchema=z.object({journalEntryId:uuid,reason:z.string().trim().min(3).max(1000),entryDate:z.coerce.date()});
+const optionalValue = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === null ? undefined : v), schema.optional());
+const uuid = z.string().uuid(),
+  amount = z
+    .union([z.string(), z.number()])
+    .transform(String)
+    .refine(
+      (v) => /^\d+(\.\d{1,2})?$/.test(v),
+      "Non-negative amount with at most two decimals required",
+    )
+    .transform((v) => (/^0+(\.0{1,2})?$/.test(v) ? "0" : v));
+export const journalLineSchema = z
+  .object({
+    ledgerAccountId: uuid,
+    costCentreId: optionalValue(uuid),
+    debit: amount.default("0"),
+    credit: amount.default("0"),
+    description: optionalValue(z.string().trim().max(1000)),
+  })
+  .superRefine((v, c) => {
+    const d = v.debit !== "0",
+      cr = v.credit !== "0";
+    if (d === cr)
+      c.addIssue({
+        code: "custom",
+        message: "Exactly one debit or credit is required",
+      });
+  });
+export const postingSchema = z.object({
+  financialYearId: uuid,
+  branchId: uuid,
+  entryDate: z.coerce.date(),
+  reference: optionalValue(z.string().trim().max(160)),
+  narration: optionalValue(z.string().trim().max(5000)),
+  sourceType: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z][A-Z0-9_]{1,59}$/),
+  sourceId: z.string().trim().min(1).max(100),
+  postingPurpose: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z][A-Z0-9_]{1,59}$/)
+    .default("PRIMARY"),
+  lines: z.array(journalLineSchema).min(2).max(500),
+});
+export const ledgerAccountSchema = z.object({
+  code: z.string().trim().toUpperCase().min(1).max(30),
+  name: z.string().trim().min(1).max(160),
+  accountClass: z.enum(["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"]),
+  normalBalance: z.enum(["DEBIT", "CREDIT"]),
+  parentId: uuid.optional(),
+  allowPosting: z.coerce.boolean().default(true),
+});
+export const costCentreSchema = z.object({
+  code: z.string().trim().toUpperCase().min(1).max(30),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(2000).optional(),
+});
+export const periodLockSchema = z.object({
+  financialYearId: uuid,
+  lockedThrough: z.coerce.date().nullable(),
+  reason: z.string().trim().min(3).max(1000),
+});
+export const reversalSchema = z.object({
+  journalEntryId: uuid,
+  reason: z.string().trim().min(3).max(1000),
+  entryDate: z.coerce.date(),
+});

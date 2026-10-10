@@ -1,3 +1,47 @@
-import type {Metadata} from "next";import Image from "next/image";import {notFound} from "next/navigation";import {db} from "@/lib/db";
-type Props={params:Promise<{slug:string}>};export async function generateMetadata({params}:Props):Promise<Metadata>{const {slug}=await params;const p=await db.publicBlogPost.findFirst({where:{slug,isPublished:true,publishedAt:{lte:new Date()}}});if(!p)return {};return {title:p.seoTitle||p.title,description:p.seoDescription||p.summary,alternates:{canonical:`/blog/${p.slug}`}}}
-export default async function BlogPostPage({params}:Props){const {slug}=await params;const p=await db.publicBlogPost.findFirst({where:{slug,isPublished:true,publishedAt:{lte:new Date()}}});if(!p)notFound();return <main className="public-blog-post"><article>{p.featuredImage?<Image src={p.featuredImage} alt="" width={960} height={540} unoptimized/>:null}<p className="eyebrow">SALESPUNCH360 BLOG</p><h1>{p.title}</h1><p className="muted">{p.publishedAt?.toLocaleDateString("en-IN")}</p><div className="blog-body">{p.content.split(/\n\n+/).map((x,i)=><p key={i}>{x}</p>)}</div></article></main>}
+import type { Metadata } from "next";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
+type Props = { params: Promise<{ slug: string }> };
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const p = await db.publicBlogPost.findFirst({
+    where: { slug, isPublished: true, publishedAt: { lte: new Date() } },
+  });
+  if (!p) return {};
+  return {
+    title: p.seoTitle || p.title,
+    description: p.seoDescription || p.summary,
+    alternates: { canonical: `/blog/${p.slug}` },
+  };
+}
+export default async function BlogPostPage({ params }: Props) {
+  const { slug } = await params;
+  const p = await db.publicBlogPost.findFirst({
+    where: { slug, isPublished: true, publishedAt: { lte: new Date() } },
+  });
+  if (!p) notFound();
+  return (
+    <div className="public-blog-post">
+      <article>
+        {p.featuredImage ? (
+          <Image
+            src={p.featuredImage}
+            alt=""
+            width={960}
+            height={540}
+            unoptimized
+          />
+        ) : null}
+        <p className="eyebrow">SALESPUNCH360 BLOG</p>
+        <h1>{p.title}</h1>
+        <p className="muted">{p.publishedAt?.toLocaleDateString("en-IN")}</p>
+        <div className="blog-body">
+          {p.content.split(/\n\n+/).map((x, i) => (
+            <p key={i}>{x}</p>
+          ))}
+        </div>
+      </article>
+    </div>
+  );
+}

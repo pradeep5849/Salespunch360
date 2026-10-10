@@ -1,4 +1,5 @@
 "use server";
+import { accountAction } from "@/lib/account/action-feedback";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
@@ -30,6 +31,12 @@ function normalizeClientCommercialInput(raw: unknown) {
 export async function saveCommercialDocument(form: FormData) {
   const row = await createCommercialDocument(payload(form));
   redirect(`/workspace/account/transactions/${row.id}`);
+}
+export async function saveCommercialDocumentWithFeedback(form: FormData) {
+  return accountAction(async () => {
+    const row = await createCommercialDocument(payload(form));
+    return `/workspace/account/transactions/${row.id}`;
+  }, "Document saved");
 }
 /** Client sale entry uses the same authoritative creator without forcing a redirect. */
 export async function createCommercialDocumentAction(
@@ -64,16 +71,27 @@ export async function submitSaleInvoiceAction(
   payment?: { receivedAmount?: number; paymentType?: string },
 ): Promise<CommercialCreateResult> {
   let createdId = "";
+  let durableRequest = false;
   try {
     const normalized = normalizeClientCommercialInput(raw);
-    if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
+    if (
+      !normalized ||
+      typeof normalized !== "object" ||
+      Array.isArray(normalized)
+    ) {
       throw new Error("INVALID_INPUT");
     }
     const input = normalized as Record<string, unknown>;
     if (input.type !== "SALES_INVOICE") throw new Error("INVALID_INPUT");
+    durableRequest =
+      typeof input.idempotencyKey === "string" &&
+      input.idempotencyKey.length > 0;
     const row = await createCommercialDocument(input);
     createdId = row.id;
-    await ensureOpenFinancialYearForDate(row.companyId, new Date(String(input.issueDate)));
+    await ensureOpenFinancialYearForDate(
+      row.companyId,
+      new Date(String(input.issueDate)),
+    );
     await postCommercialDocument({ documentId: row.id });
 
     const received = Number(payment?.receivedAmount ?? 0);
@@ -95,9 +113,11 @@ export async function submitSaleInvoiceAction(
     revalidatePath(`/workspace/account/transactions/${row.id}`);
     return { ok: true, id: row.id, documentNumber: row.documentNumber };
   } catch (error) {
-    if (createdId) {
+    if (createdId && !durableRequest) {
       try {
-        await db.commercialDocument.deleteMany({ where: { id: createdId, status: "DRAFT" } });
+        await db.commercialDocument.deleteMany({
+          where: { id: createdId, status: "DRAFT" },
+        });
       } catch (cleanupError) {
         console.error("Sale draft cleanup failed", createdId, cleanupError);
       }

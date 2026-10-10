@@ -1,5 +1,8 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
-import { mobileJournal } from "@/lib/mobile/account-accounting";
+import {
+  mobileJournal,
+  mobileJournalHistory,
+} from "@/lib/mobile/account-accounting";
 import {
   mobileAuthorizationFailure,
   mobileJson,
@@ -20,6 +23,23 @@ export async function POST(r: Request) {
       mobileUnauthorized(e) ??
       mobileAuthorizationFailure(e) ??
       mobileUnexpected("MOBILE_ACCOUNTING_WRITE", e)
+    );
+  }
+}
+
+export async function GET(r: Request) {
+  try {
+    return mobileJson(
+      await mobileJournalHistory(
+        await authenticateMobileToken(r.headers.get("authorization")),
+        Object.fromEntries(new URL(r.url).searchParams),
+      ),
+    );
+  } catch (e) {
+    return (
+      mobileUnauthorized(e) ??
+      mobileAuthorizationFailure(e) ??
+      mobileUnexpected("MOBILE_ACCOUNTING_READ", e)
     );
   }
 }

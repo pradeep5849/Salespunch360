@@ -1,7 +1,8 @@
+import {adminOrderQuery,ADMIN_ORDER_PAGE_SIZE} from "./admin-order-query";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { requireGlobalSuperAdminForMutation, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import { requireGlobalSuperAdmin, requireGlobalSuperAdminForMutation, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { TELECALLER_PRICE_SCHEDULE_INR, type TelecallerBillingPeriod } from "./sales-pricing";
 
 export const TELECALLER_ORDER_PROVIDER = "TELECALLER_PACKAGE" as const;
@@ -198,3 +199,5 @@ export async function confirmTelecallerManualPayment(orderId: string, paymentRef
     return { ...order, status: "PAID" as const, paymentReference: reference, paidAt: now, coTermEndsAt:salesTerm.endsAt };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
+
+export async function telecallerOrdersPage(raw:unknown){await requireGlobalSuperAdmin();const d=adminOrderQuery.parse(raw);const search=d.q?'%'+d.q.replace(/[\\%_]/g,'\\$&')+'%':null;const rows=await db.$queryRaw<TelecallerBillingOrderRow[]>(Prisma.sql`SELECT o.*,c.name AS "companyName",u.name AS "createdByName" FROM telecaller_billing_orders o JOIN companies c ON c.id=o."companyId" JOIN users u ON u.id=o."createdByUserId" WHERE ${d.pending?Prisma.sql`o.status='PENDING'`:Prisma.sql`o.status<>'PENDING'`} ${search?Prisma.sql`AND (c.name ILIKE ${search} OR o.id::text ILIKE ${search} OR o."paymentReference" ILIKE ${search})`:Prisma.empty} ORDER BY o."createdAt" DESC,o.id DESC LIMIT ${ADMIN_ORDER_PAGE_SIZE+1} OFFSET ${(d.page-1)*ADMIN_ORDER_PAGE_SIZE}`);return {items:rows.slice(0,ADMIN_ORDER_PAGE_SIZE),hasMore:rows.length>ADMIN_ORDER_PAGE_SIZE,page:d.page};}

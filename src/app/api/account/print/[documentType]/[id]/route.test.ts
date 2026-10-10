@@ -1,6 +1,7 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
 const mocks=vi.hoisted(()=>({load:vi.fn(),html:vi.fn(),pdf:vi.fn()}));
 vi.mock("@/lib/account/print",()=>({loadPrintDocument:mocks.load,renderAccountPrintHtml:mocks.html,renderAccountPrintPdf:mocks.pdf}));
+vi.mock("@/lib/account/invoice-print-preferences",()=>({loadInvoicePrintPreferences:vi.fn().mockResolvedValue(null),applyInvoicePrintPreferences:(_type:string,document:unknown,paper:string)=>({document,paper})}));
 import {GET} from "./route";
 const params=(documentType:string)=>({params:Promise.resolve({documentType,id:"id"})});
 beforeEach(()=>{vi.clearAllMocks();mocks.load.mockResolvedValue({paper:"A4",document:{number:"INV-1"}});mocks.html.mockReturnValue("<html>invoice</html>");mocks.pdf.mockResolvedValue(Buffer.from("%PDF"))});

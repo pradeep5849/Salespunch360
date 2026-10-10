@@ -22,9 +22,16 @@ import com.salespunch360.mobile.AccountSalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, vm: AccountSalesViewModel = viewModel()) {
+fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(initialType) { if (initialType != null) { vm.filter(initialType); if (initialType == "SALES_INVOICE") vm.newDocument(initialType) } }
+    LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
+    var initialEditorOpened by remember(initialType, initialProjectId, projectMode) { mutableStateOf(false) }
+    LaunchedEffect(initialType, initialProjectId, projectMode, state.loading) {
+        if (!initialEditorOpened && initialType == "SALES_INVOICE" && !state.loading && state.options.types.isNotEmpty()) {
+            initialEditorOpened = true
+            vm.newDocument(initialType, initialProjectId, projectMode)
+        }
+    }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or customer") }, singleLine = true, modifier = Modifier.weight(1f))

@@ -1,3 +1,6 @@
+import { Prisma } from "@prisma/client";
+import { retrySerializable } from "./transaction-retry";
+import { projectInput } from "./project-schemas";
 import { db } from "@/lib/db";
 import {
   AuthorizationError,
@@ -5,13 +8,18 @@ import {
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "@/lib/account/modules";
 import {
-  createProjectForActor,
+  createProjectInTx,
+  projectCreationHash,
+  authorizedProjectBranchIds,
+  projectRecordScope,
   getProjectForActor,
   getProjectFormOptionsForActor,
   type ProjectActor,
 } from "@/lib/account/projects";
+import { closeAndBillProjectForActor } from "./project-close";
 
 export type ManualProjectInput = {
+  idempotencyKey?: string;
   branchId?: string;
   name?: string;
   siteName?: string;
@@ -29,13 +37,20 @@ export async function createSimpleProjectForActor(
   actor: ProjectActor,
   raw: ManualProjectInput,
 ) {
-  const branchId = String(raw.branchId ?? "").trim();
-  const name = String(raw.name ?? "").trim();
-  const siteName = String(raw.siteName ?? "").trim() || undefined;
-  const siteAddress = String(raw.siteAddress ?? "").trim() || undefined;
-  const siteContactName = String(raw.siteContactName ?? "").trim() || undefined;
-  const siteContactPhone = String(raw.siteContactPhone ?? "").trim() || undefined;
-  if (!branchId || !name) throw new Error("INVALID_PROJECT");
+  const normalized = projectInput.omit({ customerId: true }).parse(raw);
+  const { idempotencyKey, ...fields } = normalized;
+  const {
+    branchId,
+    name,
+    siteName,
+    siteAddress,
+    siteContactName,
+    siteContactPhone,
+  } = fields;
+  const requestHash = idempotencyKey
+    ? projectCreationHash("MANUAL_PROJECT", fields)
+    : null;
+  const ids = await authorizedProjectBranchIds(actor);
 
   const options = await getProjectFormOptionsForActor(actor);
   if (!options.branches.some((branch) => branch.id === branchId))
@@ -44,54 +59,75 @@ export async function createSimpleProjectForActor(
   // Every manually-created project gets its own Account customer immediately.
   // Use the site/project name as the customer identity and keep the person's
   // name in contactPerson so the customer is easy to find in transaction forms.
-  const customer = await db.customer.create({
-    data: {
-      companyId: actor.companyId,
-      branchId,
-      name: siteName || name,
-      contactPerson: siteContactName,
-      phone: siteContactPhone,
-      address: siteAddress,
-      isAccountCustomer: true,
-    },
-  });
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        if (idempotencyKey) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
+          const existing = await tx.project.findUnique({
+            where: {
+              companyId_creationRequestKey: {
+                companyId: actor.companyId,
+                creationRequestKey: idempotencyKey,
+              },
+            },
+          });
+          if (existing) {
+            if (
+              !(await tx.project.findFirst({
+                where: { id: existing.id, ...projectRecordScope(actor, ids) },
+                select: { id: true },
+              }))
+            )
+              throw new AuthorizationError();
+            if (existing.creationRequestHash !== requestHash)
+              throw new Error("IDEMPOTENCY_KEY_REUSED");
+            return existing;
+          }
+        }
+        const customer = await tx.customer.create({
+          data: {
+            companyId: actor.companyId,
+            branchId,
+            name: siteName || name,
+            contactPerson: siteContactName,
+            phone: siteContactPhone,
+            address: siteAddress,
+            isAccountCustomer: true,
+          },
+        });
 
-  try {
-    const project = await createProjectForActor(actor, {
-      branchId,
-      name,
-      customerId: customer.id,
-      siteName,
-      siteAddress,
-      siteContactName,
-      siteContactPhone,
-      projectManagerId: String(raw.projectManagerId ?? "").trim() || undefined,
-      startDate: String(raw.startDate ?? "").trim() || undefined,
-      projectValue: String(raw.projectValue ?? "0").trim() || "0",
-    });
+        const project = await createProjectInTx(tx, actor, {
+          ...fields,
+          customerId: customer.id,
+        });
 
-    await db.$transaction([
-      db.project.update({
-        where: { id: project.id },
-        data: { status: "ACTIVE" },
-      }),
-      db.projectAuditEvent.create({
-        data: {
-          companyId: actor.companyId,
-          projectId: project.id,
-          actorUserId: actor.id,
-          eventType: "PROJECT_STATUS_CHANGED",
-          metadata: { from: "PLANNING", to: "ACTIVE", source: "MANUAL_CREATE" },
-        },
-      }),
-    ]);
-    return project;
-  } catch (error) {
-    await db.customer
-      .deleteMany({ where: { id: customer.id, companyId: actor.companyId } })
-      .catch(() => undefined);
-    throw error;
-  }
+        const updated = await tx.project.update({
+          where: { id: project.id },
+          data: {
+            status: "ACTIVE",
+            creationRequestKey: idempotencyKey,
+            creationRequestHash: requestHash,
+          },
+        });
+        await tx.projectAuditEvent.create({
+          data: {
+            companyId: actor.companyId,
+            projectId: project.id,
+            actorUserId: actor.id,
+            eventType: "PROJECT_STATUS_CHANGED",
+            metadata: {
+              from: "PLANNING",
+              to: "ACTIVE",
+              source: "MANUAL_CREATE",
+            },
+          },
+        });
+        return updated;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
 }
 
 export async function createSimpleProject(raw: ManualProjectInput) {
@@ -120,48 +156,17 @@ export async function assertProjectEditable(projectId: string) {
 export async function completeSimpleProjectForActor(
   actor: ProjectActor,
   projectId: string,
+  raw: unknown = {},
 ) {
-  const project = await getProjectForActor(actor, projectId);
-  if (!["PLANNING", "ACTIVE", "ON_HOLD"].includes(project.status))
-    throw new Error("PROJECT_FINAL");
-
-  const now = new Date();
-  return db.$transaction(async (tx) => {
-    const updated = await tx.project.updateMany({
-      where: {
-        id: project.id,
-        companyId: actor.companyId,
-        status: project.status,
-      },
-      data: {
-        // CLOSED is the existing backend's immutable/final state. The UI presents
-        // it as Completed so all existing accounting/project guards stay active.
-        status: "CLOSED",
-        actualEndDate: now,
-        closedById: actor.id,
-        closedAt: now,
-      },
-    });
-    if (updated.count !== 1) throw new Error("PROJECT_CHANGED");
-    await tx.projectAuditEvent.create({
-      data: {
-        companyId: actor.companyId,
-        projectId: project.id,
-        actorUserId: actor.id,
-        eventType: "PROJECT_STATUS_CHANGED",
-        metadata: {
-          from: project.status,
-          to: "COMPLETED",
-          storedStatus: "CLOSED",
-        },
-      },
-    });
-  });
+  return closeAndBillProjectForActor(actor, projectId, raw);
 }
 
-export async function completeSimpleProject(projectId: string) {
+export async function completeSimpleProject(
+  projectId: string,
+  raw: unknown = {},
+) {
   const actor = await requirePermissionForMutation("ACCOUNT_PROJECTS");
   if (!actor.companyId) throw new AuthorizationError();
   await requireAccountModules(actor, "PROJECTS");
-  return completeSimpleProjectForActor(actor as ProjectActor, projectId);
+  return completeSimpleProjectForActor(actor as ProjectActor, projectId, raw);
 }

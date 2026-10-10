@@ -11,8 +11,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+
+data class RegistrationLogo(val bytes:ByteArray,val mimeType:String)
 
 class RegistrationClient(private val session: SecureSession) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -30,6 +33,7 @@ class RegistrationClient(private val session: SecureSession) {
         adminEmail: String,
         adminPassword: String,
         confirmPassword: String,
+        logo:RegistrationLogo?=null,
     ): Bootstrap = withContext(Dispatchers.IO) {
         val payload = buildJsonObject {
             put("productEdition", productEdition)
@@ -43,7 +47,7 @@ class RegistrationClient(private val session: SecureSession) {
         val request = Request.Builder()
             .url(BuildConfig.API_BASE_URL + "api/v1/mobile/auth/register")
             .header("Accept", "application/json")
-            .post(payload.toString().toRequestBody(media))
+            .post(if(logo==null)payload.toString().toRequestBody(media)else MultipartBody.Builder().setType(MultipartBody.FORM).apply{payload.forEach{(key,value)->addFormDataPart(key,value.jsonPrimitive.content)};addFormDataPart("companyLogo","company-logo",logo.bytes.toRequestBody(logo.mimeType.toMediaType()))}.build())
             .build()
 
         http.newCall(request).execute().use { response ->

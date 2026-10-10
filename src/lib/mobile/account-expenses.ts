@@ -9,6 +9,7 @@ import {
   downloadExpenseAttachmentForActor,
   saveExpenseCategoryForActor,
   expenseOptionsForActor,
+  expenseCategoryOptionsForActor,
   getExpenseForActor,
   listExpensesForActor,
   postExpenseForActor,
@@ -16,7 +17,6 @@ import {
   transitionExpenseForActor,
   updateExpenseForActor,
 } from "@/lib/account/expenses";
-import { db } from "@/lib/db";
 import { requireAccountModules } from "@/lib/account/modules";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
@@ -44,19 +44,7 @@ export async function mobileExpenseList(
   );
 }
 export async function mobileExpenseDetail(u: MobileAppPrincipal, id: string) {
-  const a = permit(u, "ACCOUNT_EXPENSE_VIEW"),
-    expense = await getExpenseForActor(a, id),
-    [attachments, history] = await Promise.all([
-      db.expenseAttachment.findMany({
-        where: { companyId: a.companyId, expenseId: id },
-        orderBy: { createdAt: "desc" },
-      }),
-      db.accountOperationalAudit.findMany({
-        where: { companyId: a.companyId, entityType: "EXPENSE", entityId: id },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
-  return { ...expense, attachments, history };
+  return getExpenseForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"), id);
 }
 export async function mobileExpenseOptions(u: MobileAppPrincipal) {
   return expenseOptionsForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"));
@@ -91,7 +79,7 @@ export async function mobileExpenseAction(
     const p = ["APPROVED", "REJECTED"].includes(d.status)
       ? "ACCOUNT_EXPENSE_APPROVE"
       : "ACCOUNT_EXPENSE_ENTRY";
-    return transitionExpenseForActor(permit(u, p), id, d.status);
+    return transitionExpenseForActor(permit(u, p), id, d.status, d.reason);
   }
   if (d.action === "POST")
     return postExpenseForActor(permit(u, "ACCOUNT_EXPENSE_ENTRY"), id);
@@ -136,28 +124,10 @@ export async function mobileExpenseCategories(
   u: MobileAppPrincipal,
   q?: string | null,
 ) {
-  const a = permit(u, "ACCOUNT_EXPENSE_VIEW");
-  await requireAccountModules(a, "EXPENSES");
-  const [categories, ledgers] = await Promise.all([
-    db.expenseCategory.findMany({
-      where: {
-        companyId: a.companyId,
-        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-      },
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    }),
-    db.ledgerAccount.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        allowPosting: true,
-        accountClass: { in: ["EXPENSE", "INCOME"] },
-      },
-      select: { id: true, name: true, code: true, accountClass: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-  return { categories, ledgers };
+  return expenseCategoryOptionsForActor(
+    permit(u, "ACCOUNT_EXPENSE_VIEW"),
+    q ?? "",
+  );
 }
 export async function mobileSaveExpenseCategory(
   u: MobileAppPrincipal,

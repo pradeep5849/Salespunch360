@@ -1,15 +1,16 @@
 import Link from "next/link";
+import { projectWorkflowCapabilities } from "@/lib/account/project-workflow-capabilities";
 import {
   addMilestoneAction,
   addProjectDocumentAction,
   addProjectMemberAction,
   addTaskAction,
-  completeProjectAction,
   linkBoqAction,
   updateMilestoneAction,
   updateTaskAction,
 } from "@/app/actions/projects";
 import { BudgetEditor } from "./budget-editor";
+import {ProjectCloseForm} from "@/components/account/project-close-form";
 import {
   getProject,
   getProjectFormOptions,
@@ -77,6 +78,7 @@ export default async function Page({
     project.status,
   );
 
+  const workflow = projectWorkflowCapabilities(actor, company.productEdition, modules);
   return (
     <main className="employees-shell">
       <section className="employees-content">
@@ -109,20 +111,21 @@ export default async function Page({
             <b>Project value</b>
             <p>{project.projectValue.toString()}</p>
           </article>
-          <article>
-            <b>Budget</b>
-            <p>{project.budgetTotal.toString()}</p>
-          </article>
+
           <article>
             <b>Status</b>
             <p>{statusLabel(project.status)}</p>
           </article>
-          <article>
-            <b>Open tasks</b>
-            <p>{project.openTasks}</p>
-          </article>
+
         </div>
 
+        {mutable && <section className="account-quick-grid" aria-label="Project workflow">
+          {workflow.paymentIn && <Link className="account-card" href={`/workspace/account/transactions/money?type=CUSTOMER_ADVANCE&projectId=${id}`}>Record advance / installment</Link>}
+          {workflow.purchase && <Link className="account-card" href={`/workspace/account/transactions/new?type=PURCHASE_BILL&purchaseFor=PROJECT&projectId=${id}`}>Purchase Project materials</Link>}
+          {workflow.expense && <Link className="account-card" href={`/workspace/account/expenses/new?context=project&projectId=${id}`}>Record labour / other expense</Link>}
+          {workflow.material && <Link className="account-card" href={`/workspace/account/projects/material?projectId=${id}`}>Move leftover materials</Link>}
+          {workflow.extraJob && <Link className="account-card" href={`/workspace/account/projects/${id}/costing`}>Add extra job</Link>}
+        </section>}
         <h2>Customer & site</h2>
         <p>
           {project.customer.name} · {project.siteName ?? "No site name"}
@@ -158,6 +161,7 @@ export default async function Page({
           </form>
         )}
 
+        <details className="account-card"><summary>Additional / historical work records</summary>
         <h2>BOQ history</h2>
         <ul>
           {project.quotationDocuments.map((boq) => (
@@ -195,6 +199,7 @@ export default async function Page({
           <BudgetEditor
             projectId={id}
             initial={project.budgetLines.map((line) => ({
+              id:line.id,
               category: line.category,
               title: line.title,
               description: line.description ?? "",
@@ -361,6 +366,7 @@ export default async function Page({
           totalPages={project.history.pages.tasks}
         />
 
+        </details>
         <h2>Documents</h2>
         <ul>
           {project.documents.map((document) => (
@@ -413,21 +419,20 @@ export default async function Page({
 
         <h2>{mutable ? "Complete project" : "Final project report"}</h2>
         {mutable ? (
-          <form action={completeProjectAction}>
-            <input type="hidden" name="projectId" value={id} />
+          <div>
             <p>
               Completing this project will make it report-only. It cannot be
               reopened.
             </p>
-            <button>Complete project</button>
-          </form>
+            <ProjectCloseForm projectId={id} services={options.billingServices.map(x => ({...x, taxRate: x.taxRate?.toString() ?? null}))} />
+          </div>
         ) : (
           <>
             <p>
               Completed: {project.actualEndDate?.toLocaleDateString() ?? project.closedAt?.toLocaleDateString() ?? "—"}
             </p>
             <p>
-              Project value, budget, work history, expenses, purchases, invoices,
+              Project value, expenses, purchases, invoices,
               payments and audit history above form the final project report.
             </p>
           </>

@@ -1,3 +1,4 @@
+import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { listOpeningOutstandings } from "../opening-balances";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -119,7 +120,7 @@ async function ledgerData(raw: unknown, actor?: ProjectActor) {
   const c = await context(raw, false, actor);
   const [accounts, openingGrouped, periodGrouped] = await Promise.all([
     db.ledgerAccount.findMany({
-      where: { companyId: c.actor.companyId, isActive: true },
+      where: { companyId: c.actor.companyId },
       orderBy: { code: "asc" },
     }),
     db.journalLine.groupBy({
@@ -127,7 +128,7 @@ async function ledgerData(raw: unknown, actor?: ProjectActor) {
       where: {
         companyId: c.actor.companyId,
         journalEntry: {
-          status: "POSTED",
+          status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
           entryDate: { lt: c.from },
           ...c.branch,
         },
@@ -139,7 +140,7 @@ async function ledgerData(raw: unknown, actor?: ProjectActor) {
       where: {
         companyId: c.actor.companyId,
         journalEntry: {
-          status: "POSTED",
+          status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
           entryDate: { gte: c.from, lte: c.to },
           ...c.branch,
         },
@@ -303,7 +304,7 @@ export async function runFinancialReportForActor(
           companyId: c.actor.companyId,
           ledgerAccountId: c.f.ledgerId,
           journalEntry: {
-            status: "POSTED",
+            status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
             entryDate: { lt: c.from },
             ...c.branch,
           },
@@ -315,7 +316,7 @@ export async function runFinancialReportForActor(
           companyId: c.actor.companyId,
           ledgerAccountId: c.f.ledgerId,
           journalEntry: {
-            status: "POSTED",
+            status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
             entryDate: { gte: c.from, lte: c.to },
             ...c.branch,
           },
@@ -352,15 +353,38 @@ export async function runFinancialReportForActor(
   }
 
   if (name === "cash-flow") {
+    const moneyAccounts = await db.moneyAccount.findMany({
+      where: {
+        companyId: c.actor.companyId,
+        ...(c.f.branchId
+          ? { OR: [{ branchId: null }, { branchId: c.f.branchId }] }
+          : c.actor.branchAccessScope === "SELECTED_BRANCHES"
+            ? {
+                OR: [
+                  { branchId: null },
+                  { branchId: { in: c.actor.branchIds ?? [] } },
+                ],
+              }
+            : {}),
+      },
+      select: { ledgerAccountId: true },
+    });
     const rows = await db.journalLine.findMany({
       where: {
         companyId: c.actor.companyId,
         journalEntry: {
-          status: "POSTED",
+          status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
           entryDate: { gte: c.from, lte: c.to },
           ...c.branch,
         },
-        ledgerAccount: { systemKey: { in: ["CASH", "BANK"] } },
+        OR: [
+          { ledgerAccount: { systemKey: { in: ["CASH", "BANK"] } } },
+          {
+            ledgerAccountId: {
+              in: moneyAccounts.map((x) => x.ledgerAccountId),
+            },
+          },
+        ],
       },
       include: { journalEntry: true },
     });
@@ -586,10 +610,16 @@ export async function runFinancialReportForActor(
     const accounts = await db.moneyAccount.findMany({
       where: {
         companyId: c.actor.companyId,
-        isActive: true,
         ...(c.f.branchId
           ? { OR: [{ branchId: null }, { branchId: c.f.branchId }] }
-          : {}),
+          : c.actor.branchAccessScope === "SELECTED_BRANCHES"
+            ? {
+                OR: [
+                  { branchId: null },
+                  { branchId: { in: c.actor.branchIds ?? [] } },
+                ],
+              }
+            : {}),
       },
     });
     const ledgerIds = accounts.map((x) => x.ledgerAccountId);
@@ -600,7 +630,7 @@ export async function runFinancialReportForActor(
           companyId: c.actor.companyId,
           ledgerAccountId: { in: ledgerIds },
           journalEntry: {
-            status: "POSTED",
+            status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
             entryDate: { lt: c.from },
             ...c.branch,
           },
@@ -613,7 +643,7 @@ export async function runFinancialReportForActor(
           companyId: c.actor.companyId,
           ledgerAccountId: { in: ledgerIds },
           journalEntry: {
-            status: "POSTED",
+            status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
             entryDate: { gte: c.from, lte: c.to },
             ...c.branch,
           },
@@ -666,7 +696,7 @@ export async function runFinancialReportForActor(
             ]),
           },
           journalEntry: {
-            status: "POSTED",
+            status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
             entryDate: { lte: c.to },
             ...c.branch,
           },
@@ -826,6 +856,9 @@ async function projectMaterialReport(
       "Value",
       "Source",
       "Destination",
+      "Purchase document",
+      "Correction document",
+      "Original receipt",
     ],
     rows: rows.map((x) => [
       x.movementDate.toISOString().slice(0, 10),
@@ -837,8 +870,11 @@ async function projectMaterialReport(
       n(x.totalCost),
       x.sourceProjectId ?? "",
       x.destinationProjectId ?? "",
+      x.purchaseDocumentId ?? "",
+      x.correctionDocumentId ?? "",
+      x.sourceMovementId ?? "",
     ]),
-    note: "Internal Project movements preserve original cost and never create GST.",
+    note: "Internal Project movements preserve original cost and create no GST. Supplier-return GST is recorded once by the linked debit note.",
   };
 }
 

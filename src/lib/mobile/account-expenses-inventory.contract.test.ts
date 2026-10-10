@@ -13,7 +13,8 @@ describe("native expense and inventory boundaries", () => {
       "addExpenseAttachmentForActor",
     ])
       expect(mobile).toContain(operation);
-    expect(domain).toContain("calculateTax");
+    expect(domain).toContain("expenseTotals");
+    expect(read("src/lib/account/expense-totals.ts")).toContain("calculateTax");
     expect(domain).toContain("postJournalInTx");
   });
   it("keeps stock validation and valuation on the server", () => {

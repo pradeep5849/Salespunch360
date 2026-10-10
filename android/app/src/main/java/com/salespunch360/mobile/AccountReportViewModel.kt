@@ -50,6 +50,10 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun context(query:String) {
+        val q=android.net.Uri.parse("https://internal.invalid/?$query")
+        _state.value=_state.value.copy(branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
+    }
     fun choose(report: String?) {
         requestGeneration++
         reportJob?.cancel()

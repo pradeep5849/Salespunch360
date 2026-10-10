@@ -1,0 +1,10 @@
+BEGIN;
+ALTER TABLE "assets" ADD COLUMN "hsnCode" VARCHAR(8), ADD COLUMN "openingQuantity" DECIMAL(18,4), ADD COLUMN "unitPrice" DECIMAL(18,2), ADD COLUMN "effectiveDate" DATE;
+ALTER TABLE "expense_categories" ADD COLUMN "incomeLedgerAccountId" UUID;
+ALTER TABLE "expense_transactions" ADD COLUMN "creationRequestKey" UUID, ADD COLUMN "creationRequestHash" VARCHAR(64), ADD COLUMN "categoryLedgerAccountId" UUID, ADD COLUMN "billedItems" JSONB, ADD COLUMN "additionalCharges" DECIMAL(18,2) NOT NULL DEFAULT 0, ADD COLUMN "roundOffEnabled" BOOLEAN NOT NULL DEFAULT FALSE, ADD COLUMN "roundOffAmount" DECIMAL(18,2) NOT NULL DEFAULT 0;
+CREATE UNIQUE INDEX "expense_transactions_companyId_creationRequestKey_key" ON "expense_transactions"("companyId","creationRequestKey");
+ALTER TABLE "assets" ADD CONSTRAINT "assets_opening_valuation_valid" CHECK (("openingQuantity" IS NULL AND "unitPrice" IS NULL) OR ("openingQuantity" > 0 AND "unitPrice" >= 0 AND "effectiveDate" IS NOT NULL));
+ALTER TABLE "expense_transactions" ADD CONSTRAINT "expense_reference_amounts_valid" CHECK ("additionalCharges" >= 0 AND ABS("roundOffAmount") <= 0.5);
+ALTER TABLE "expense_categories" ADD CONSTRAINT "expense_categories_income_ledger_company_fkey" FOREIGN KEY ("companyId","incomeLedgerAccountId") REFERENCES "ledger_accounts"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "expense_transactions" ADD CONSTRAINT "expense_category_snapshot_ledger_company_fkey" FOREIGN KEY ("companyId","categoryLedgerAccountId") REFERENCES "ledger_accounts"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+COMMIT;

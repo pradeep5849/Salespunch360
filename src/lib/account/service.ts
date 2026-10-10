@@ -1,3 +1,4 @@
+import {ACCOUNT_ROLE_PERMISSIONS} from "@/lib/auth/permissions";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -19,7 +20,7 @@ import {
 } from "./validation";
 import { allocateDocumentNumberInTx } from "./numbering";
 import {resolvePartySettings} from "./party-settings";
-import {saveCustomFieldValues} from "./settings";
+import {saveCustomFieldValuesInTx} from "./custom-field-values";
 
 const readActor = () => requirePermission("ACCOUNT_DASHBOARD");
 const writeActor = () => requirePermissionForMutation("ACCOUNT_ACCOUNTS");
@@ -49,7 +50,7 @@ export async function accountOverview() {
         include: { unit: true, workCategory: true },
       },
       customers: {
-        where: { isAccountCustomer: true },
+        where: { isAccountCustomer: true, ...(a.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: a.branchIds ?? [] } } : {}) },
         orderBy: { name: "asc" },
       },
       customFieldDefinitions: {
@@ -76,15 +77,28 @@ export async function accountMasterOverview(master:string,raw:{q?:string;page?:s
     master==="services"?db.accountService.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,category:true},...paged}):Promise.resolve([]),
     master==="work-categories"?db.workCategory.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(master==="work-packages"?db.workCategory.findMany({where:{companyId,isActive:true},select:{id:true,name:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
     master==="work-packages"?db.workPackage.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,workCategory:true},...paged}):Promise.resolve([]),
-    master==="customers"?db.customer.findMany({where:{companyId,isAccountCustomer:true,...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
+    master==="customers"?db.customer.findMany({where:{companyId,isAccountCustomer:true,...(a.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: a.branchIds ?? [] } } : {}),...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
     master==="customers"||master==="vendors"?db.customFieldDefinition.findMany({where:{companyId,entityType:master==="customers"?"CUSTOMER":"VENDOR",isActive:true},orderBy:{position:"asc"}}):Promise.resolve([]),
   ]);
   const primary=master==="customers"?customers:master==="vendors"?vendors:master==="units"?accountUnits:master==="categories"?accountCategories:master==="products"?accountProducts:master==="services"?accountServices:master==="work-categories"?workCategories:master==="work-packages"?workPackages:financialYears;
   const hasMore=primary.length>MASTER_PAGE_SIZE;
-  return{accountSettings,partySettings:resolvePartySettings(accountSettings?.transactionDefaults),partyCustomFields,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
+  return{canCreate:!!a.accountRole&&ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(master==="financial-years"?"ACCOUNT_SETTINGS":"ACCOUNT_ACCOUNTS"),accountSettings,partySettings:resolvePartySettings(accountSettings?.transactionDefaults),partyCustomFields,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
 }
 
-export async function createPartyWithCustomValues(kind:"customers"|"vendors",raw:unknown,customValues:Record<string,unknown>){const row=kind==="customers"?await createAccountCustomer(raw):await createVendor(raw);await saveCustomFieldValues(kind==="customers"?"CUSTOMER":"VENDOR",row.id,customValues);return row}
+export async function createPartyWithCustomValues(kind:"customers"|"vendors",raw:unknown,customValues:Record<string,unknown>){
+ const a=await writeActor(),d=partySchema.parse(raw);
+ return db.$transaction(async tx=>{
+  const data={companyId:a.companyId!,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes};
+  let row:{id:string};
+  if(kind==="customers"){
+   const branch=await tx.branch.findFirst({where:{companyId:a.companyId!,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},orderBy:[{isPrimary:"desc"},{createdAt:"asc"}],select:{id:true}});
+   if(!branch)throw new AuthorizationError();
+   row=await tx.customer.create({data:{...data,branchId:branch.id,isAccountCustomer:true,billingAddress:d.address,shippingAddress:d.shippingAddress}});
+  }else row=await tx.vendor.create({data});
+  await saveCustomFieldValuesInTx(tx,a.companyId!,kind==="customers"?"CUSTOMER":"VENDOR",row.id,customValues);
+  return row;
+ });
+}
 export async function setCurrency(raw: unknown) {
   const a = await settingsActor();
   const d = currencySchema.parse(raw);
@@ -185,7 +199,8 @@ export async function createAccountCustomer(raw: unknown) {
   const a = await writeActor();
   const d = partySchema.parse(raw);
   const branch = await db.branch.findFirst({
-    where: { companyId: a.companyId!, isPrimary: true, isActive: true },
+    where: { companyId: a.companyId!, isActive: true, ...(a.branchAccessScope === "SELECTED_BRANCHES" ? { id: { in: a.branchIds ?? [] } } : {}) },
+    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     select: { id: true },
   });
   if (!branch) throw new Error("PRIMARY_BRANCH_REQUIRED");
@@ -210,7 +225,9 @@ export async function createAccountCustomer(raw: unknown) {
   });
 }
 export async function createAccountCustomerForBranch(branchId:string,raw:unknown){
-  const a=await writeActor(),d=partySchema.parse(raw),branch=await db.branch.findFirst({where:{id:branchId,companyId:a.companyId!,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},select:{id:true}});
+  const a=await writeActor(),d=partySchema.parse(raw);
+  if(a.branchAccessScope === "SELECTED_BRANCHES" && !a.branchIds?.includes(branchId)) throw new AuthorizationError();
+  const branch=await db.branch.findFirst({where:{id:branchId,companyId:a.companyId!,isActive:true},select:{id:true}});
   if(!branch)throw new AuthorizationError();
   return db.customer.create({data:{companyId:a.companyId!,branchId:branch.id,isAccountCustomer:true,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,billingAddress:d.address,shippingAddress:d.shippingAddress,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes}});
 }

@@ -23,16 +23,18 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
         onDismissRequest = vm::closeDraft,
         title = { Text("New ${draft.type.replace('_', ' ')}") },
         confirmButton = {
-            Button(enabled = !state.saving && draft.vendorId.isNotBlank() && draft.lines.isNotEmpty() && (draft.purpose != "PROJECT" || draft.projectId.isNotBlank() && draft.projectBudgetLineId.isNotBlank()), onClick = vm::save) { Text("Create draft") }
+            Button(enabled = !state.saving, onClick = vm::save) { Text(if (state.saving) "Saving…" else "Create draft") }
         },
-        dismissButton = { TextButton(onClick = vm::closeDraft) { Text("Cancel") } },
+        dismissButton = { TextButton(enabled = !state.saving, onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { SelectField("Type", draft.type, state.types.map { it to it.replace('_', ' ') }) { vm.edit(draft.copy(type = it)) } }
-                item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { vm.edit(draft.copy(branchId = it, vendorId = "")) } }
-                item { SelectField("Vendor", draft.vendorId, state.vendors.map { it.id to it.name }) { vm.edit(draft.copy(vendorId = it)) } }
+                state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
+                if (state.saving) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                item { SelectField("Type", draft.type, state.types.map { it to it.replace('_', ' ') }) { vm.edit(draft.copy(type = it, sourceDocumentId = "", sourcePurchaseOrderId = "", projectId = "", projectBudgetLineId = "", materialTreatment = "", purpose = "INVENTORY_SALES", lines = listOf(SalesLineDraft(lineType = "MATERIAL")))) } }
+                item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { vm.edit(draft.copy(branchId = it, vendorId = "", projectId = "", projectBudgetLineId = "", sourceDocumentId = "", sourcePurchaseOrderId = "", lines = draft.lines.map { line -> line.copy(warehouseId = "", sourceCommercialLineId = "", purchaseAllocations = emptyList()) })) } }
+                item { SelectField("Vendor", draft.vendorId, state.vendors.map { it.id to it.name }) { vm.edit(draft.copy(vendorId = it, sourceDocumentId = "", sourcePurchaseOrderId = "", lines = draft.lines.map { line -> line.copy(sourceCommercialLineId = "") })) } }
                 if (draft.type == "DEBIT_NOTE") item {
-                    SelectField("Source purchase bill", draft.sourceDocumentId, sources.map { it.str("id") to it.str("documentNumber") }) { vm.edit(draft.copy(sourceDocumentId = it)) }
+                    SelectField("Source purchase bill", draft.sourceDocumentId, sources.map { it.str("id") to it.str("documentNumber") }) { vm.edit(draft.copy(sourceDocumentId = it, projectId = "", projectBudgetLineId = "", materialTreatment = "", lines = listOf(SalesLineDraft(lineType = "MATERIAL")))) }
                 }
                 if (draft.type == "PURCHASE_BILL") item {
                     SelectField(
@@ -48,13 +50,20 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
                 item { OutlinedTextField(draft.grnReference, { vm.edit(draft.copy(grnReference = it)) }, label = { Text("GRN / challan reference") }) }
                 item { OutlinedTextField(draft.dueDate, { vm.edit(draft.copy(dueDate = it)) }, label = { Text("Due date") }) }
                 if(draft.type=="PURCHASE_BILL"&&state.projects.isNotEmpty())item{Column{Text("Purchase For");SingleChoiceSegmentedButtonRow{SegmentedButton(selected=draft.purpose!="PROJECT",onClick={vm.edit(draft.copy(purpose="INVENTORY_SALES",projectId="",projectBudgetLineId="",materialTreatment=""))},shape=SegmentedButtonDefaults.itemShape(0,2)){Text("Regular")};SegmentedButton(selected=draft.purpose=="PROJECT",onClick={vm.edit(draft.copy(purpose="PROJECT",materialTreatment=""))},shape=SegmentedButtonDefaults.itemShape(1,2)){Text("Project")}}}}
-                if (draft.purpose == "PROJECT") { item { SelectField("Project", draft.projectId, state.projects.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it,projectBudgetLineId="")) } }; item { SelectField("Budget line",draft.projectBudgetLineId,state.projectBudgetLines.filter{it.str("projectId")==draft.projectId}.map{it.str("id") to it.str("title")}){vm.edit(draft.copy(projectBudgetLineId=it))} } } else item { SelectField("Advanced purchase purpose",draft.purpose,listOf("INVENTORY_SALES" to "Inventory / Sales","GENERAL_OFFICE" to "General / Office","FIXED_ASSET" to "Fixed Asset","MIXED" to "Mixed Allocation")){vm.edit(draft.copy(purpose=it))} }
+                if (draft.type != "DEBIT_NOTE") {
+                    if (draft.purpose == "PROJECT") {
+                        item { SelectField("Project", draft.projectId, state.projects.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it, projectBudgetLineId = "")) } }
+                        item { SelectField("Budget line (optional)", draft.projectBudgetLineId, state.projectBudgetLines.filter { it.str("projectId") == draft.projectId }.map { it.str("id") to it.str("title") }) { vm.edit(draft.copy(projectBudgetLineId = it)) } }
+                        item { SelectField("Material treatment", draft.materialTreatment, listOf("" to "Direct to Project (default)", "RECEIVE_IN_INVENTORY" to "Receive in inventory", "DIRECT_TO_PROJECT" to "Direct to Project")) { vm.edit(draft.copy(materialTreatment = it)) } }
+                    } else item { SelectField("Advanced purchase purpose", draft.purpose, listOf("INVENTORY_SALES" to "Inventory / Sales", "GENERAL_OFFICE" to "General / Office", "FIXED_ASSET" to "Fixed Asset", "MIXED" to "Mixed Allocation")) { vm.edit(draft.copy(purpose = it, projectId = "", projectBudgetLineId = "", materialTreatment = "")) } }
+                }
+
                 item {
                     SelectField("Classification", draft.classification, listOf("PURCHASE_COST" to "Purchase cost", "GENERAL_EXPENSES" to "General expenses", "FIXED_ASSET" to "Fixed asset")) { vm.edit(draft.copy(classification = it)) }
                 }
                 item { SelectField("Tax mode", draft.taxMode, listOf("EXCLUSIVE" to "Exclusive", "INCLUSIVE" to "Inclusive")) { vm.edit(draft.copy(taxMode = it)) } }
                 itemsIndexed(draft.lines) { index, line -> PurchaseLine(index, line, draft, state, sourceLines, vm) }
-                item { OutlinedButton(onClick = vm::addLine) { Text("Add line") } }
+                item { OutlinedButton(enabled = !state.saving, onClick = vm::addLine) { Text("Add line") } }
                 item { OutlinedTextField(draft.notes, { vm.edit(draft.copy(notes = it)) }, label = { Text("Notes") }) }
                 item { Text("Totals, GST, stock valuation, and postings are authoritative only after the server response.", style = MaterialTheme.typography.bodySmall) }
             }
@@ -72,28 +81,38 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
     }
     ElevatedCard {
         Column(Modifier.padding(10.dp)) {
-            if (draft.purpose == "MIXED") { Text("Line allocations",style=MaterialTheme.typography.titleSmall); line.purchaseAllocations.forEachIndexed { ai,a -> SelectField("Allocation ${ai+1}",a.allocationType,listOf("INVENTORY" to "Inventory","PROJECT" to "Project","GENERAL_EXPENSE" to "General expense","FIXED_ASSET" to "Fixed asset")){v->vm.line(index,line.copy(purchaseAllocations=line.purchaseAllocations.mapIndexed{i,x->if(i==ai)x.copy(allocationType=v) else x}))}; OutlinedTextField(a.quantity,{v->vm.line(index,line.copy(purchaseAllocations=line.purchaseAllocations.mapIndexed{i,x->if(i==ai)x.copy(quantity=v) else x}))},label={Text("Allocated quantity")}) }; OutlinedButton(onClick={vm.line(index,line.copy(purchaseAllocations=line.purchaseAllocations+PurchaseAllocationDraft(quantity=line.quantity,warehouseId=line.warehouseId)))}){Text("Add allocation")} }
+            if (draft.purpose == "MIXED" && draft.type != "DEBIT_NOTE") {
+                Text("Line allocations", style = MaterialTheme.typography.titleSmall)
+                line.purchaseAllocations.forEachIndexed { ai, allocation ->
+                    fun change(value: PurchaseAllocationDraft) = vm.line(index, line.copy(purchaseAllocations = line.purchaseAllocations.mapIndexed { i, current -> if (i == ai) value else current }))
+                    SelectField("Allocation ${ai + 1}", allocation.allocationType, listOf("INVENTORY" to "Inventory", "GENERAL_EXPENSE" to "General expense", "FIXED_ASSET" to "Fixed asset") + if (state.projects.isNotEmpty()) listOf("PROJECT" to "Project") else emptyList()) { change(allocation.copy(allocationType = it, projectId = "", projectBudgetLineId = "", warehouseId = "")) }
+                    OutlinedTextField(allocation.quantity, { change(allocation.copy(quantity = it)) }, label = { Text("Allocated quantity") })
+                    if (allocation.allocationType == "PROJECT") {
+                        SelectField("Allocated Project", allocation.projectId, state.projects.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { change(allocation.copy(projectId = it, projectBudgetLineId = "")) }
+                        SelectField("Allocated budget line (optional)", allocation.projectBudgetLineId, state.projectBudgetLines.filter { it.str("projectId") == allocation.projectId }.map { it.str("id") to it.str("title") }) { change(allocation.copy(projectBudgetLineId = it)) }
+                        SelectField("Allocated material treatment", allocation.materialTreatment, listOf("DIRECT_TO_PROJECT" to "Direct to Project", "RECEIVE_IN_INVENTORY" to "Receive in inventory")) { change(allocation.copy(materialTreatment = it)) }
+                    }
+                    if (allocation.allocationType in listOf("INVENTORY", "PROJECT") && masters.firstOrNull { it.id == line.sourceId }?.trackInventory == true) {
+                        SelectField("Allocation warehouse", allocation.warehouseId, state.warehouses.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { change(allocation.copy(warehouseId = it)) }
+                    }
+                    TextButton(enabled = !state.saving, onClick = { vm.line(index, line.copy(purchaseAllocations = line.purchaseAllocations.filterIndexed { i, _ -> i != ai })) }) { Text("Remove allocation") }
+                }
+                OutlinedButton(enabled = !state.saving, onClick = { vm.line(index, line.copy(purchaseAllocations = line.purchaseAllocations + PurchaseAllocationDraft(quantity = line.quantity, warehouseId = line.warehouseId))) }) { Text("Add allocation") }
+            }
+
             if (draft.type == "DEBIT_NOTE") {
                 SelectField("Original line", line.sourceCommercialLineId, sourceLines.map { it.str("id") to "${it.str("itemName")} · ${it.str("quantity")}" }) { id ->
                     val source = sourceLines.first { it.str("id") == id }
-                    vm.line(index, line.copy(
-                        sourceCommercialLineId = id,
-                        lineType = source.str("lineType"),
-                        sourceId = source.str("productId").ifBlank { source.str("serviceId").ifBlank { source.str("workPackageId") } },
-                        itemName = source.str("itemName"),
-                        quantity = source.str("quantity"),
-                        rate = source.str("rate"),
-                        taxRate = source.str("taxRate")
-                    ))
+                    vm.line(index, purchaseSourceLine(source))
                 }
             }
-            SelectField("Line type", line.lineType, listOf("MATERIAL" to "Material", "SERVICE" to "Service", "SUBCONTRACT" to "Subcontract", "CUSTOM" to "Custom")) { vm.line(index, line.copy(lineType = it, sourceId = "")) }
+            SelectField("Line type", line.lineType, listOf("MATERIAL" to "Material", "SERVICE" to "Service", "SUBCONTRACT" to "Subcontract", "CUSTOM" to "Custom")) { vm.line(index, SalesLineDraft(lineType = it)) }
             if (line.lineType == "CUSTOM") {
                 OutlinedTextField(line.itemName, { vm.line(index, line.copy(itemName = it)) }, label = { Text("Name") })
             } else {
                 SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id ->
                     val master = masters.first { it.id == id }
-                    vm.line(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty()))
+                    vm.line(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty(), batchId = "", serialNumberId = "", sourceCommercialLineId = "", purchaseAllocations = emptyList()))
                 }
             }
             Row {
@@ -103,6 +122,9 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
             OutlinedTextField(line.taxRate, { vm.line(index, line.copy(taxRate = it)) }, label = { Text("GST %") })
             if (line.sourceId.isNotBlank() && masters.firstOrNull { it.id == line.sourceId }?.trackInventory == true) {
                 SelectField("Warehouse", line.warehouseId, state.warehouses.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { vm.line(index, line.copy(warehouseId = it)) }
+                val mode = masters.first { it.id == line.sourceId }.trackingMode
+                if (mode == "BATCH") SelectField("Batch", line.batchId, state.batches.filter { it.str("productId") == line.sourceId }.map { it.str("id") to it.str("batchNumber") }) { vm.line(index, line.copy(batchId = it, serialNumberId = "")) }
+                if (mode == "SERIAL") SelectField("Serial number", line.serialNumberId, state.serials.filter { it.str("productId") == line.sourceId }.map { it.str("id") to it.str("serialNumber") }) { vm.line(index, line.copy(serialNumberId = it, batchId = "", quantity = "1")) }
             }
             if (draft.type == "DEBIT_NOTE") OutlinedTextField(line.stockReturnQuantity, { vm.line(index, line.copy(stockReturnQuantity = it)) }, label = { Text("Physical return quantity") })
             if (draft.lines.size > 1) TextButton(onClick = { vm.remove(index) }) { Text("Remove") }

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { retrySerializable } from "./transaction-retry";
 import { Prisma, ProjectChangeOrderStatus } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -8,12 +10,15 @@ import {
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "./modules";
 import {
+  authorizeProjectForCommercial,
+  requireProjectFunction,
   authorizedProjectBranchIds,
   projectRecordScope,
   type ProjectActor,
 } from "./projects";
 import { allocateDocumentNumberInTx } from "./numbering";
 import { projectMaterialCostBreakdown } from "./project-material";
+import { documentOutstandingsBatch } from "./commercial";
 const D = Prisma.Decimal,
   Z = new D(0),
   sum = (xs: Prisma.Decimal[]) => xs.reduce((a, b) => a.add(b), Z);
@@ -24,6 +29,33 @@ export type CostDocument = {
   taxableTotal: Prisma.Decimal;
   sourcePurchaseOrderId?: string | null;
 };
+// Purchase-linked issues are already included in allocated purchase cost.
+// Keep the full movement set for availability, consumption and transfer reporting.
+export function inventoryIssueCostNotPurchased(
+  rows: Array<{
+    id: string;
+    movementType: string;
+    reversalOfId: string | null;
+    purchaseAllocationId: string | null;
+    totalCost: Prisma.Decimal;
+  }>,
+) {
+  const reversed = new Set(
+    rows
+      .filter((x) => x.movementType === "REVERSAL")
+      .map((x) => x.reversalOfId),
+  );
+  return sum(
+    rows
+      .filter(
+        (x) =>
+          x.movementType === "INVENTORY_ISSUE_TO_PROJECT" &&
+          !x.purchaseAllocationId &&
+          !reversed.has(x.id),
+      )
+      .map((x) => x.totalCost),
+  );
+}
 export function projectCosting(input: {
   originalValue: Prisma.Decimal;
   contractRevenueBase?: Prisma.Decimal;
@@ -32,7 +64,15 @@ export function projectCosting(input: {
   documents: CostDocument[];
   allocatedPurchaseCost?: Prisma.Decimal;
   committedAllocatedCost?: Prisma.Decimal;
-  materialAdjustments?: {inventoryIssued: Prisma.Decimal; transferIn: Prisma.Decimal; returned: Prisma.Decimal; transferOut: Prisma.Decimal; consumed: Prisma.Decimal; unused: Prisma.Decimal};
+  materialAdjustments?: {
+    inventoryIssued: Prisma.Decimal;
+    transferIn: Prisma.Decimal;
+    returned: Prisma.Decimal;
+    returnedToVendor?: Prisma.Decimal;
+    transferOut: Prisma.Decimal;
+    consumed: Prisma.Decimal;
+    unused: Prisma.Decimal;
+  };
   advanceReceived?: Prisma.Decimal;
   amountReceived?: Prisma.Decimal;
   accountingReceivable?: Prisma.Decimal;
@@ -64,8 +104,15 @@ export function projectCosting(input: {
     ),
     actualPurchases = input.allocatedPurchaseCost ?? documentPurchases,
     material = input.materialAdjustments,
-    materialNet = material ? material.inventoryIssued.add(material.transferIn).sub(material.returned).sub(material.transferOut) : Z,
-    actualCost = actualPurchases.add(materialNet).add(sum(input.expenses ?? [])),
+    materialNet = material
+      ? material.inventoryIssued
+          .add(material.transferIn)
+          .sub(material.returned)
+          .sub(material.transferOut)
+      : Z,
+    actualCost = actualPurchases
+      .add(materialNet)
+      .add(sum(input.expenses ?? [])),
     billed = new Map<string, Prisma.Decimal>();
   for (const bill of input.documents.filter(
     (x) =>
@@ -77,16 +124,18 @@ export function projectCosting(input: {
       bill.sourcePurchaseOrderId!,
       (billed.get(bill.sourcePurchaseOrderId!) ?? Z).add(bill.taxableTotal),
     );
-  const committed = input.committedAllocatedCost ?? sum(
-      input.documents
-        .filter((x) => x.status === "POSTED" && x.type === "PURCHASE_ORDER")
-        .map((po) =>
-          Prisma.Decimal.max(
-            Z,
-            po.taxableTotal.sub(billed.get(po.id ?? "") ?? Z),
+  const committed =
+      input.committedAllocatedCost ??
+      sum(
+        input.documents
+          .filter((x) => x.status === "POSTED" && x.type === "PURCHASE_ORDER")
+          .map((po) =>
+            Prisma.Decimal.max(
+              Z,
+              po.taxableTotal.sub(billed.get(po.id ?? "") ?? Z),
+            ),
           ),
-        ),
-    ),
+      ),
     revenue = sum(
       input.documents
         .filter((x) => x.status === "POSTED" && x.type === "SALES_INVOICE")
@@ -114,11 +163,21 @@ export function projectCosting(input: {
     contractRevenueBase,
     estimatedCost: estimated,
     actualCost,
+    expenseCost: sum(input.expenses ?? []),
+    contractProfit: contractRevenueBase.sub(actualCost),
+    unbilledContractRevenue: Prisma.Decimal.max(
+      Z,
+      contractRevenueBase.sub(revenue),
+    ),
     directProjectPurchases: actualPurchases,
     inventoryMaterialIssued: material?.inventoryIssued ?? Z,
     materialConsumed: material?.consumed ?? Z,
     materialUnused: material?.unused ?? Z,
-    materialReturned: material?.returned ?? Z,
+    materialReturned: (material?.returned ?? Z).add(
+      material?.returnedToVendor ?? Z,
+    ),
+    materialReturnedToInventory: material?.returned ?? Z,
+    materialReturnedToVendor: material?.returnedToVendor ?? Z,
     materialTransferredIn: material?.transferIn ?? Z,
     materialTransferredOut: material?.transferOut ?? Z,
     committedCost: committed,
@@ -139,7 +198,28 @@ export function projectCosting(input: {
     actualMarginPercent: margin(profit, revenue),
   };
 }
-export function projectAdvancePosition(input:{contractValue:Prisma.Decimal;advanceReceived:Prisma.Decimal;advanceApplied:Prisma.Decimal;invoiced:Prisma.Decimal;cashReceipts?:Prisma.Decimal}){if(input.advanceApplied.gt(input.advanceReceived)||input.advanceApplied.gt(input.invoiced))throw new Error("ADVANCE_APPLICATION_EXCEEDS_BALANCE");return{contractBalance:input.contractValue.sub(input.advanceReceived),accountingReceivable:input.invoiced.sub(input.advanceApplied).sub(input.cashReceipts??Z),advanceLiability:input.advanceReceived.sub(input.advanceApplied),revenue:input.invoiced,amountReceived:input.advanceApplied.add(input.cashReceipts??Z)}}
+export function projectAdvancePosition(input: {
+  contractValue: Prisma.Decimal;
+  advanceReceived: Prisma.Decimal;
+  advanceApplied: Prisma.Decimal;
+  invoiced: Prisma.Decimal;
+  cashReceipts?: Prisma.Decimal;
+}) {
+  if (
+    input.advanceApplied.gt(input.advanceReceived) ||
+    input.advanceApplied.gt(input.invoiced)
+  )
+    throw new Error("ADVANCE_APPLICATION_EXCEEDS_BALANCE");
+  return {
+    contractBalance: input.contractValue.sub(input.advanceReceived),
+    accountingReceivable: input.invoiced
+      .sub(input.advanceApplied)
+      .sub(input.cashReceipts ?? Z),
+    advanceLiability: input.advanceReceived.sub(input.advanceApplied),
+    revenue: input.invoiced,
+    amountReceived: input.advanceApplied.add(input.cashReceipts ?? Z),
+  };
+}
 type Actor = ProjectActor;
 async function costingActor(edit = false) {
   const actor = (
@@ -156,7 +236,14 @@ async function scopedProject(actor: Actor, id: string) {
       where: { id, ...projectRecordScope(actor, branches) },
       include: {
         budgetLines: true,
-        commercialDocuments: { include: { lines: true, allocations:true, advanceApplications:true, adjustments:{where:{status:"POSTED"}} } },
+        commercialDocuments: {
+          include: {
+            lines: true,
+            allocations: true,
+            advanceApplications: true,
+            adjustments: { where: { status: "POSTED" } },
+          },
+        },
         customer: true,
       },
     });
@@ -248,10 +335,78 @@ export function packageProfitability(
     };
   });
 }
+type AllocatedCostRow = {
+  documentLineId: string;
+  taxableAmount: Prisma.Decimal;
+  taxAmount: Prisma.Decimal;
+  quantity: Prisma.Decimal;
+  documentLine: {
+    taxableAmount: Prisma.Decimal;
+    quantity: Prisma.Decimal;
+    document: {
+      id: string;
+      type: string;
+      status: string;
+      sourcePurchaseOrderId: string | null;
+      taxCreditTreatment: string;
+    };
+  };
+};
+export function projectAllocatedPurchaseMetrics(
+  rows: AllocatedCostRow[],
+  adjustments: Array<{
+    sourceCommercialLineId: string | null;
+    taxableAmount: Prisma.Decimal;
+    taxAmount: Prisma.Decimal;
+    quantity: Prisma.Decimal;
+  }>,
+) {
+  let actual = new D(0);
+  const ordered = new Map<string, Prisma.Decimal>(),
+    billed = new Map<string, Prisma.Decimal>();
+  for (const row of rows) {
+    const doc = row.documentLine.document;
+    if (doc.status !== "POSTED") continue;
+    const cost = row.taxableAmount.add(
+      doc.taxCreditTreatment === "ELIGIBLE" ? 0 : row.taxAmount,
+    );
+    if (doc.type === "PURCHASE_ORDER")
+      ordered.set(doc.id, (ordered.get(doc.id) ?? Z).add(cost));
+    if (doc.type !== "PURCHASE_BILL") continue;
+    actual = actual.add(cost);
+    if (doc.sourcePurchaseOrderId)
+      billed.set(
+        doc.sourcePurchaseOrderId,
+        (billed.get(doc.sourcePurchaseOrderId) ?? Z).add(cost),
+      );
+    for (const correction of adjustments.filter(
+      (x) => x.sourceCommercialLineId === row.documentLineId,
+    )) {
+      const ratio = row.documentLine.taxableAmount.gt(0)
+        ? row.taxableAmount.div(row.documentLine.taxableAmount)
+        : row.quantity.div(row.documentLine.quantity);
+      actual = actual.sub(
+        correction.taxableAmount
+          .add(doc.taxCreditTreatment === "ELIGIBLE" ? 0 : correction.taxAmount)
+          .mul(ratio),
+      );
+    }
+  }
+  return {
+    actual: actual.toDecimalPlaces(2),
+    committed: sum(
+      [...ordered].map(([id, amount]) =>
+        Prisma.Decimal.max(Z, amount.sub(billed.get(id) ?? Z)),
+      ),
+    ).toDecimalPlaces(2),
+  };
+}
 export async function loadProjectCostingForActor(
   actor: Actor,
   projectId: string,
 ) {
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_VIEW");
+  await requireAccountModules(actor, "PROJECTS", "PROJECT_COSTING");
   const project = await scopedProject(actor, projectId),
     quotation = project.sourceQuotationId
       ? await db.quotationDocument.findFirst({
@@ -281,16 +436,90 @@ export async function loadProjectCostingForActor(
         status: "POSTED",
         type: { in: ["PROJECT_EXPENSE", "REIMBURSEMENT"] },
       },
+      orderBy: [{ transactionDate: "asc" }, { id: "asc" }],
     }),
-    purchaseAllocations = await db.purchaseLineAllocation.findMany({where:{companyId:actor.companyId,projectId},include:{documentLine:{include:{document:true}}}}),
-    materialRows = await db.projectMaterialMovement.findMany({where:{companyId:actor.companyId,projectId}}),
-    projectSettlements = await db.accountSettlement.findMany({where:{companyId:actor.companyId,projectId},include:{applications:true}}),
+    purchaseAllocations = await db.purchaseLineAllocation.findMany({
+      where: { companyId: actor.companyId, projectId },
+      include: { documentLine: { include: { document: true } } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    }),
+    materialRows = await db.projectMaterialMovement.findMany({
+      where: { companyId: actor.companyId, projectId },
+      orderBy: [{ movementDate: "asc" }, { id: "asc" }],
+    }),
+    projectSettlements = await db.accountSettlement.findMany({
+      where: { companyId: actor.companyId, projectId },
+      include: { applications: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    }),
     material = projectMaterialCostBreakdown(materialRows),
-    allocatedPurchaseCost = sum(purchaseAllocations.filter(x=>x.documentLine.document.status==="POSTED"&&x.documentLine.document.type==="PURCHASE_BILL").map(x=>x.taxableAmount.add(x.documentLine.document.taxCreditTreatment==="ELIGIBLE"?0:x.taxAmount))),
-    advanceReceived = sum(projectSettlements.filter(x=>x.type==="CUSTOMER_ADVANCE").map(x=>x.amount)),
-    amountReceived = sum(projectSettlements.filter(x=>x.type==="CUSTOMER_RECEIPT").map(x=>x.amount)).add(sum(projectSettlements.flatMap(x=>x.applications).map(x=>x.amount))),
-    accountingReceivable = sum(project.commercialDocuments.filter(x=>x.type==="SALES_INVOICE"&&x.status==="POSTED").map(x=>x.grandTotal.sub(sum(x.allocations.map(a=>a.amount))).sub(sum(x.advanceApplications.map(a=>a.amount))).sub(sum(x.adjustments.map(a=>a.grandTotal))))),
-    committedAllocatedCost = sum(purchaseAllocations.filter(x=>x.documentLine.document.status==="POSTED"&&x.documentLine.document.type==="PURCHASE_ORDER").map(x=>x.taxableAmount)),
+    purchaseAdjustments = await db.commercialDocumentLine.findMany({
+      where: {
+        companyId: actor.companyId,
+        sourceCommercialLineId: {
+          in: purchaseAllocations.map((x) => x.documentLineId),
+        },
+        document: {
+          companyId: actor.companyId,
+          type: "DEBIT_NOTE",
+          status: "POSTED",
+        },
+      },
+      select: {
+        sourceCommercialLineId: true,
+        taxableAmount: true,
+        taxAmount: true,
+        quantity: true,
+      },
+    }),
+    purchaseMetrics = projectAllocatedPurchaseMetrics(
+      purchaseAllocations,
+      purchaseAdjustments,
+    ),
+    // A reversed automatic issue leaves the purchase payable intact and puts
+    // its material back into company inventory. Its allocation is no longer a
+    // retained Project cost; PO fulfilment still uses all posted purchases.
+    reversedMaterialIds = new Set(
+      materialRows
+        .filter((x) => x.movementType === "REVERSAL")
+        .map((x) => x.reversalOfId),
+    ),
+    returnedPurchaseAllocationIds = new Set(
+      materialRows
+        .filter(
+          (x) =>
+            x.movementType === "INVENTORY_ISSUE_TO_PROJECT" &&
+            reversedMaterialIds.has(x.id),
+        )
+        .map((x) => x.purchaseAllocationId),
+    ),
+    allocatedPurchaseCost = projectAllocatedPurchaseMetrics(
+      purchaseAllocations.filter(
+        (x) => !returnedPurchaseAllocationIds.has(x.id),
+      ),
+      purchaseAdjustments,
+    ).actual,
+    advanceReceived = sum(
+      projectSettlements
+        .filter((x) => x.type === "CUSTOMER_ADVANCE")
+        .map((x) => x.amount),
+    ),
+    amountReceived = sum(
+      project.commercialDocuments
+        .filter((x) => x.type === "SALES_INVOICE" && x.status === "POSTED")
+        .flatMap((x) => [
+          ...x.allocations.map((a) => a.amount),
+          ...x.advanceApplications.map((a) => a.amount),
+        ]),
+    ),
+    invoiceOutstandings = await documentOutstandingsBatch(
+      actor.companyId,
+      project.commercialDocuments.filter(
+        (x) => x.type === "SALES_INVOICE" && x.status === "POSTED",
+      ),
+    ),
+    accountingReceivable = sum([...invoiceOutstandings.values()]),
+    committedAllocatedCost = purchaseMetrics.committed,
     budget = sum(project.budgetLines.map((x) => x.amount)),
     estimate = quotation?.revisions[0]?.internalCostTotal ?? budget,
     metrics = projectCosting({
@@ -302,9 +531,23 @@ export async function loadProjectCostingForActor(
       documents: project.commercialDocuments,
       allocatedPurchaseCost,
       committedAllocatedCost,
-      advanceReceived,amountReceived,accountingReceivable,
-      materialAdjustments:{inventoryIssued:material.inventoryIssued,transferIn:material.transferIn,returned:material.returned,transferOut:material.transferOut,consumed:material.consumed,unused:material.unused},
-      expenses: expenses.map((x) => x.taxableAmount),
+      advanceReceived,
+      amountReceived,
+      accountingReceivable,
+      materialAdjustments: {
+        inventoryIssued: inventoryIssueCostNotPurchased(materialRows),
+        transferIn: material.transferIn,
+        returned: material.returned,
+        returnedToVendor: material.returnedToVendor,
+        transferOut: material.transferOut,
+        consumed: material.consumed,
+        unused: material.unused,
+      },
+      expenses: expenses.map((x) =>
+        x.totalAmount.sub(
+          x.taxCreditTreatment === "ELIGIBLE" ? x.taxAmount : 0,
+        ),
+      ),
       approvedChanges: changes.filter((x) => x.status === "APPROVED"),
       closed: project.status === "CLOSED",
     }),
@@ -320,11 +563,114 @@ export async function loadProjectCostingForActor(
     ] as string[],
     works = await db.workPackage.findMany({
       where: { companyId: actor.companyId, id: { in: workIds } },
-    });
+    }),
+    categories = await db.expenseCategory.findMany({
+      where: {
+        companyId: actor.companyId,
+        id: { in: [...new Set(expenses.map((x) => x.categoryId))] },
+      },
+      select: { id: true, name: true },
+    }),
+    categoryNames = new Map(categories.map((x) => [x.id, x.name])),
+    products = await db.accountProduct.findMany({
+      where: {
+        companyId: actor.companyId,
+        id: { in: [...new Set(materialRows.map((x) => x.productId))] },
+      },
+      select: { id: true, name: true },
+    }),
+    productNames = new Map(products.map((x) => [x.id, x.name]));
+  // These are supporting records, not additional costs to add to metrics.
+  // Retain supplier corrections, material reversals and payment applications
+  // so the user can reconcile the P&L without counting movements twice.
+  const details = {
+    expenseCategories: [...new Set(expenses.map((x) => x.categoryId))].map(
+      (categoryId) => ({
+        id: categoryId,
+        category: categoryNames.get(categoryId) ?? "Historical category",
+        amount: sum(
+          expenses
+            .filter((x) => x.categoryId === categoryId)
+            .map((x) => x.totalAmount),
+        ).toFixed(2),
+        cost: sum(
+          expenses
+            .filter((x) => x.categoryId === categoryId)
+            .map((x) =>
+              x.totalAmount.sub(
+                x.taxCreditTreatment === "ELIGIBLE" ? x.taxAmount : 0,
+              ),
+            ),
+        ).toFixed(2),
+      }),
+    ),
+    purchases: purchaseAllocations.map((x) => ({
+      id: x.id,
+      documentId: x.documentLine.documentId,
+      number: x.documentLine.document.documentNumber,
+      date: x.documentLine.document.issueDate.toISOString().slice(0, 10),
+      status: x.documentLine.document.status,
+      item: x.documentLine.itemName,
+      quantity: x.quantity.toString(),
+      taxableAmount: x.taxableAmount.toFixed(2),
+      taxAmount: x.taxAmount.toFixed(2),
+      totalAmount: x.totalAmount.toFixed(2),
+    })),
+    expenses: expenses.map((x) => ({
+      id: x.id,
+      number: x.transactionNumber,
+      date: x.transactionDate.toISOString().slice(0, 10),
+      category: categoryNames.get(x.categoryId) ?? "Historical category",
+      reference: x.reference,
+      notes: x.notes,
+      amount: x.totalAmount.toFixed(2),
+      cost: x.totalAmount
+        .sub(x.taxCreditTreatment === "ELIGIBLE" ? x.taxAmount : 0)
+        .toFixed(2),
+    })),
+    materialMovements: materialRows.map((x) => ({
+      id: x.id,
+      type: x.movementType,
+      date: x.movementDate.toISOString().slice(0, 10),
+      productId: x.productId,
+      item: productNames.get(x.productId) ?? "Historical item",
+      quantity: x.quantity.toString(),
+      cost: x.totalCost.toFixed(2),
+      sourceProjectId: x.sourceProjectId,
+      destinationProjectId: x.destinationProjectId,
+      reversalOfId: x.reversalOfId,
+      reason: x.reason,
+    })),
+    payments: projectSettlements.map((x) => ({
+      id: x.id,
+      number: x.settlementNumber,
+      type: x.type,
+      status: x.status,
+      date: x.transactionDate.toISOString().slice(0, 10),
+      reference: x.reference,
+      paymentMode: x.paymentMode,
+      amount: x.amount.toFixed(2),
+      remainingAmount: x.remainingAmount.toFixed(2),
+    })),
+    invoices: project.commercialDocuments
+      .filter((x) => ["SALES_INVOICE", "CREDIT_NOTE"].includes(x.type))
+      .map((x) => ({
+        id: x.id,
+        number: x.documentNumber,
+        type: x.type,
+        status: x.status,
+        date: x.issueDate.toISOString().slice(0, 10),
+        revenue: x.taxableTotal.toFixed(2),
+        tax: x.taxTotal.toFixed(2),
+        total: x.grandTotal.toFixed(2),
+        outstanding: invoiceOutstandings.get(x.id)?.toFixed(2) ?? null,
+      })),
+  };
   return {
     project,
     changes,
     metrics,
+    details,
     packages: packageProfitability(
       project.commercialDocuments,
       quotation?.revisions[0]?.lines ?? [],
@@ -336,28 +682,71 @@ export async function loadProjectCostingForActor(
 export async function loadProjectCosting(projectId: string) {
   return loadProjectCostingForActor(await costingActor(), projectId);
 }
+const signedMoney = z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/);
 const changeInput = z
   .object({
     projectId: z.string().uuid(),
     title: z.string().trim().min(1).max(240),
     description: z.string().trim().max(5000).optional(),
-    valueDelta: z.string(),
-    estimatedCostDelta: z.string(),
+    valueDelta: signedMoney,
+    estimatedCostDelta: signedMoney,
+    idempotencyKey: z.string().trim().min(1).max(120).optional(),
   })
   .strict();
-export async function createChangeOrder(raw: unknown) {
-  const actor = await costingActor(true),
-    data = changeInput.parse(raw),
-    project = await scopedProject(actor, data.projectId);
-  return db.$transaction(
-    async (tx) => {
-      const changeOrderNumber = await allocateDocumentNumberInTx(tx, {
+async function editableCostProject(actor: Actor, projectId: string) {
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_EDIT");
+  await requireAccountModules(actor, "PROJECTS", "PROJECT_COSTING");
+  const project = await scopedProject(actor, projectId);
+  if (["COMPLETED", "CLOSED", "CANCELLED"].includes(project.status))
+    throw new Error("PROJECT_FINAL");
+  return project;
+}
+export async function createChangeOrderForActor(actor: Actor, raw: unknown) {
+  const data = changeInput.parse(raw),
+    project = await editableCostProject(actor, data.projectId);
+  const requestHash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        projectId: data.projectId,
+        title: data.title,
+        description: data.description ?? "",
+        valueDelta: new D(data.valueDelta).toString(),
+        estimatedCostDelta: new D(data.estimatedCostDelta).toString(),
+      }),
+    )
+    .digest("hex");
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await authorizeProjectForCommercial(
+          actor,
+          project.id,
+          project.branchId,
+          undefined,
+          tx,
+        );
+        if (data.idempotencyKey) {
+          const existing = await tx.projectChangeOrder.findUnique({
+            where: {
+              companyId_requestKey: {
+                companyId: actor.companyId,
+                requestKey: data.idempotencyKey,
+              },
+            },
+          });
+          if (existing) {
+            if (existing.requestHash !== requestHash)
+              throw new Error("IDEMPOTENCY_KEY_REUSED");
+            return existing;
+          }
+        }
+        const changeOrderNumber = await allocateDocumentNumberInTx(tx, {
           companyId: actor.companyId,
           branchId: project.branchId,
           seriesKey: "PROJECT_CHANGE_ORDER",
           defaults: { prefix: "CO-", padding: 6 },
-        }),
-        row = await tx.projectChangeOrder.create({
+        });
+        const row = await tx.projectChangeOrder.create({
           data: {
             companyId: actor.companyId,
             projectId: project.id,
@@ -367,101 +756,238 @@ export async function createChangeOrder(raw: unknown) {
             valueDelta: new D(data.valueDelta),
             estimatedCostDelta: new D(data.estimatedCostDelta),
             createdById: actor.id,
+            requestKey: data.idempotencyKey,
+            requestHash: data.idempotencyKey ? requestHash : null,
           },
         });
-      await tx.projectAuditEvent.create({
-        data: {
-          companyId: actor.companyId,
-          projectId: project.id,
-          actorUserId: actor.id,
-          eventType: "CHANGE_ORDER_CREATED",
-          metadata: { changeOrderId: row.id },
-        },
-      });
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        await tx.projectAuditEvent.create({
+          data: {
+            companyId: actor.companyId,
+            projectId: project.id,
+            actorUserId: actor.id,
+            eventType: "CHANGE_ORDER_CREATED",
+            metadata: { changeOrderId: row.id },
+          },
+        });
+        return row;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
+}
+export async function createChangeOrder(raw: unknown) {
+  return createChangeOrderForActor(await costingActor(true), raw);
+}
+export async function updateChangeOrderForActor(actor: Actor, raw: unknown) {
+  const data = changeInput
+    .omit({ idempotencyKey: true })
+    .extend({ changeOrderId: z.string().uuid() })
+    .parse(raw);
+  const project = await editableCostProject(actor, data.projectId);
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await authorizeProjectForCommercial(
+          actor,
+          project.id,
+          project.branchId,
+          undefined,
+          tx,
+        );
+        const previous = await tx.projectChangeOrder.findFirst({
+          where: {
+            id: data.changeOrderId,
+            companyId: actor.companyId,
+            projectId: project.id,
+            status: "DRAFT",
+          },
+        });
+        if (!previous) throw new Error("CHANGE_ORDER_NOT_EDITABLE");
+        if (
+          previous.title === data.title &&
+          (previous.description ?? "") === (data.description ?? "") &&
+          previous.valueDelta.eq(data.valueDelta) &&
+          previous.estimatedCostDelta.eq(data.estimatedCostDelta)
+        )
+          return previous;
+        const row = await tx.projectChangeOrder.update({
+          where: { id: previous.id },
+          data: {
+            title: data.title,
+            description: data.description,
+            valueDelta: new D(data.valueDelta),
+            estimatedCostDelta: new D(data.estimatedCostDelta),
+          },
+        });
+        await tx.projectAuditEvent.create({
+          data: {
+            companyId: actor.companyId,
+            projectId: project.id,
+            actorUserId: actor.id,
+            eventType: "PROJECT_UPDATED",
+            metadata: {
+              operation: "CHANGE_ORDER_EDIT",
+              changeOrderId: row.id,
+              before: {
+                title: previous.title,
+                valueDelta: previous.valueDelta.toString(),
+                estimatedCostDelta: previous.estimatedCostDelta.toString(),
+              },
+              after: {
+                title: row.title,
+                valueDelta: row.valueDelta.toString(),
+                estimatedCostDelta: row.estimatedCostDelta.toString(),
+              },
+            },
+          },
+        });
+        return row;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
 }
 export async function updateChangeOrder(raw: unknown) {
-  const actor = await costingActor(true),
-    data = changeInput.extend({ changeOrderId: z.string().uuid() }).parse(raw);
-  await scopedProject(actor, data.projectId);
-  const changed = await db.projectChangeOrder.updateMany({
-    where: {
-      id: data.changeOrderId,
-      companyId: actor.companyId,
-      projectId: data.projectId,
-      status: "DRAFT",
-    },
-    data: {
-      title: data.title,
-      description: data.description,
-      valueDelta: new D(data.valueDelta),
-      estimatedCostDelta: new D(data.estimatedCostDelta),
-    },
-  });
-  if (changed.count !== 1) throw new Error("CHANGE_ORDER_NOT_EDITABLE");
+  return updateChangeOrderForActor(await costingActor(true), raw);
+}
+export async function transitionChangeOrderForActor(
+  actor: Actor,
+  projectId: string,
+  changeOrderId: string,
+  to: ProjectChangeOrderStatus,
+) {
+  z.object({
+    projectId: z.string().uuid(),
+    changeOrderId: z.string().uuid(),
+    to: z.nativeEnum(ProjectChangeOrderStatus),
+  }).parse({ projectId, changeOrderId, to });
+  const project = await editableCostProject(actor, projectId);
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await authorizeProjectForCommercial(
+          actor,
+          project.id,
+          project.branchId,
+          undefined,
+          tx,
+        );
+        await tx.$queryRaw`SELECT "id" FROM "project_change_orders" WHERE "id"=${changeOrderId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+        const row = await tx.projectChangeOrder.findFirst({
+          where: { id: changeOrderId, companyId: actor.companyId, projectId },
+        });
+        if (!row) throw new AuthorizationError();
+        if (["APPROVED", "REJECTED"].includes(to)) {
+          if (actor.accountRole !== "ACCOUNT_ADMIN")
+            throw new AuthorizationError();
+          if (row.createdById === actor.id)
+            throw new Error("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
+        }
+        // Authorization precedes replay, and repeating status has no duplicate audit.
+        if (row.status === to) return row;
+        const allowed: Record<
+          ProjectChangeOrderStatus,
+          ProjectChangeOrderStatus[]
+        > = {
+          DRAFT: ["PENDING_APPROVAL", "CANCELLED"],
+          PENDING_APPROVAL: ["APPROVED", "REJECTED", "CANCELLED"],
+          APPROVED: [],
+          REJECTED: [],
+          CANCELLED: [],
+        };
+        if (!allowed[row.status].includes(to))
+          throw new Error("INVALID_CHANGE_ORDER_TRANSITION");
+        if (to === "APPROVED") {
+          const [current, approved, budget] = await Promise.all([
+            tx.project.findUniqueOrThrow({ where: { id: projectId } }),
+            tx.projectChangeOrder.aggregate({
+              where: {
+                companyId: actor.companyId,
+                projectId,
+                status: "APPROVED",
+              },
+              _sum: { valueDelta: true, estimatedCostDelta: true },
+            }),
+            tx.projectBudgetLine.aggregate({
+              where: { companyId: actor.companyId, projectId },
+              _sum: { amount: true },
+            }),
+          ]);
+          const quotation = current.sourceQuotationId
+            ? await tx.quotationDocument.findFirst({
+                where: {
+                  id: current.sourceQuotationId,
+                  companyId: actor.companyId,
+                  status: "ACCEPTED",
+                },
+                include: {
+                  revisions: {
+                    where: { status: "ACCEPTED" },
+                    orderBy: { revisionNumber: "desc" },
+                    take: 1,
+                  },
+                },
+              })
+            : null;
+          const contractBase =
+            quotation?.revisions[0]?.taxableTotal ?? current.projectValue;
+          const estimatedCostBase =
+            quotation?.revisions[0]?.internalCostTotal ??
+            new D(budget._sum.amount ?? 0);
+          if (
+            contractBase
+              .add(approved._sum.valueDelta ?? 0)
+              .add(row.valueDelta)
+              .lt(0)
+          )
+            throw new Error("INVALID_PROJECT_VALUE");
+          if (
+            estimatedCostBase
+              .add(approved._sum.estimatedCostDelta ?? 0)
+              .add(row.estimatedCostDelta)
+              .lt(0)
+          )
+            throw new Error("INVALID_PROJECT_ESTIMATED_COST");
+        }
+        const updated = await tx.projectChangeOrder.update({
+          where: { id: row.id },
+          data: {
+            status: to,
+            ...(to === "APPROVED"
+              ? { approvedAt: new Date(), approvedById: actor.id }
+              : {}),
+          },
+        });
+        const eventType = {
+          PENDING_APPROVAL: "CHANGE_ORDER_SUBMITTED",
+          APPROVED: "CHANGE_ORDER_APPROVED",
+          REJECTED: "CHANGE_ORDER_REJECTED",
+          CANCELLED: "CHANGE_ORDER_CANCELLED",
+        } as const;
+        await tx.projectAuditEvent.create({
+          data: {
+            companyId: actor.companyId,
+            projectId,
+            actorUserId: actor.id,
+            eventType: eventType[to as keyof typeof eventType],
+            metadata: { changeOrderId, from: row.status, to },
+          },
+        });
+        return updated;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
 }
 export async function transitionChangeOrder(
   projectId: string,
   changeOrderId: string,
   to: ProjectChangeOrderStatus,
 ) {
-  const actor = await costingActor(true);
-  await scopedProject(actor, projectId);
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "project_change_orders" WHERE "id"=${changeOrderId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
-      const row = await tx.projectChangeOrder.findFirst({
-        where: { id: changeOrderId, companyId: actor.companyId, projectId },
-      });
-      if (!row) throw new AuthorizationError();
-      const allowed: Record<
-        ProjectChangeOrderStatus,
-        ProjectChangeOrderStatus[]
-      > = {
-        DRAFT: ["PENDING_APPROVAL", "CANCELLED"],
-        PENDING_APPROVAL: ["APPROVED", "REJECTED", "CANCELLED"],
-        APPROVED: [],
-        REJECTED: [],
-        CANCELLED: [],
-      };
-      if (!allowed[row.status].includes(to))
-        throw new Error("INVALID_CHANGE_ORDER_TRANSITION");
-      if (["APPROVED", "REJECTED"].includes(to)) {
-        if (actor.accountRole !== "ACCOUNT_ADMIN")
-          throw new AuthorizationError();
-        if (row.createdById === actor.id)
-          throw new Error("CHANGE_ORDER_SELF_APPROVAL_FORBIDDEN");
-      }
-      const updated = await tx.projectChangeOrder.update({
-        where: { id: row.id },
-        data: {
-          status: to,
-          ...(to === "APPROVED"
-            ? { approvedAt: new Date(), approvedById: actor.id }
-            : {}),
-        },
-      });
-      await tx.projectAuditEvent.create({
-        data: {
-          companyId: actor.companyId,
-          projectId,
-          actorUserId: actor.id,
-          eventType: (
-            {
-              PENDING_APPROVAL: "CHANGE_ORDER_SUBMITTED",
-              APPROVED: "CHANGE_ORDER_APPROVED",
-              REJECTED: "CHANGE_ORDER_REJECTED",
-              CANCELLED: "CHANGE_ORDER_CANCELLED",
-            } as const
-          )[to as "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CANCELLED"],
-          metadata: { changeOrderId },
-        },
-      });
-      return updated;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  return transitionChangeOrderForActor(
+    await costingActor(true),
+    projectId,
+    changeOrderId,
+    to,
   );
 }

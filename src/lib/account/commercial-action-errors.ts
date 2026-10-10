@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 
 const messages: Record<string, string> = {
+  IDEMPOTENCY_KEY_REUSED: "This request reference was used for different document details. Review the saved document before continuing.",
   WAREHOUSE_REQUIRED_FOR_INVENTORY:
     "Select Warehouse for this inventory item. If none is available, add an active warehouse for this branch.",
   INVALID_INVENTORY_WAREHOUSE:

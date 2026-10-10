@@ -34,8 +34,11 @@ private fun workflowStatusLabel(status: String) = when (workflowStatus(status)) 
 fun ProjectScreen(
     padding: PaddingValues,
     navigate:(String)->Unit={},
+    initialProjectId:String?=null,
+    initialCreate:Boolean=false,
     vm: AccountProjectViewModel = viewModel(),
 ) {
+    LaunchedEffect(initialProjectId,initialCreate){vm.initialRoute(initialProjectId,initialCreate)}
     val s = vm.state.collectAsStateWithLifecycle().value
     Box(Modifier.fillMaxSize().padding(padding)) {
         LazyColumn(
@@ -67,7 +70,14 @@ fun ProjectScreen(
                                 Triple("Move / Return Stock",Icons.Default.Inventory2,"/workspace/account/projects/material"),
                                 Triple("Project Settings",Icons.Default.Settings,"/workspace/account/settings/modules"),
                                 Triple("View All",Icons.Default.Apps,"/workspace/account/projects/actions")
-                            ).forEach{(label,icon,path)->
+                            ).filter { (label, _, _) ->
+                                val caps = s.options["capabilities"]?.jsonObject
+                                when (label) {
+                                    "Project Invoice" -> caps?.get("invoiceCreate")?.jsonPrimitive?.booleanOrNull == true
+                                    "Project Settings" -> caps?.get("managerEditable")?.jsonPrimitive?.booleanOrNull == true
+                                    else -> true
+                                }
+                            }.forEach{(label,icon,path)->
                                 Column(
                                     Modifier.weight(1f).clickable{navigate(path)}.padding(vertical=8.dp,horizontal=2.dp),
                                     horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,
@@ -109,12 +119,13 @@ fun ProjectScreen(
             modifier=Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(16.dp)
         )
     }
-    s.editing?.let { ProjectEditor(it, s.options, vm::close, vm::save) }
+    s.editing?.let { ProjectEditor(it, s.options, s.saving, s.error, vm::close, vm::save) }
     s.detail?.let {
-        ProjectDetail(it,s.costing,vm::close,vm::edit,vm::action,vm::editBudget)
+        ProjectDetail(it,s.costing,s.options.array("billingServices"),s.saving,s.error,vm::close,vm::edit,vm::action,vm::editBudget,vm::editChange,vm::transitionChange)
     }
+    s.changeEditing?.let { ChangeOrderDialog(it,s.saving,s.error,vm::closeChange,vm::updateChange,vm::saveChange) }
     if (s.budgetEditing && s.detail != null) {
-        BudgetDialog(s.detail!!, { vm.editBudget(false) }, vm::saveBudget)
+        BudgetDialog(s.detail!!, s.saving, s.error, { vm.editBudget(false) }, vm::saveBudget)
     }
 }
 
@@ -133,10 +144,14 @@ private fun ProjectMetric(label:String,value:String,modifier:Modifier=Modifier){
 private fun ProjectEditor(
     x: JsonObject,
     options: JsonObject,
+    saving: Boolean,
+    error: String?,
     close: () -> Unit,
     save: (JsonObject) -> Unit,
 ) {
     val edit = x.containsKey("id")
+    val caps = options["capabilities"]?.jsonObject
+    val managerEditable = caps?.get("managerEditable")?.jsonPrimitive?.booleanOrNull == true
     var name by remember { mutableStateOf(x.str("name")) }
     var branch by remember { mutableStateOf(x.str("branchId")) }
     var manager by remember { mutableStateOf(x.str("projectManagerId")) }
@@ -149,27 +164,33 @@ private fun ProjectEditor(
     var status by remember { mutableStateOf(workflowStatus(x.str("status"))) }
 
     AlertDialog(
-        onDismissRequest = close,
+        onDismissRequest = {if(!saving)close()},
         title = { Text(if (edit) "Edit project" else "New project") },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { OutlinedTextField(name, { name = it }, label = { Text("Project name") }) }
+                error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
+                item { OutlinedTextField(name, { name = it }, label = { Text("Project name") },enabled=!saving) }
                 if (!edit) {
-                    item { Pick("Branch", branch, options.array("branches")) { branch = it } }
+                    item { Pick("Branch", branch, options.array("branches"),enabled=!saving) { branch = it; manager = "" } }
                 }
-                item { Pick("Project manager", manager, options.array("managers")) { manager = it } }
-                item { OutlinedTextField(value, { value = it }, label = { Text("Project value") }) }
-                item { OutlinedTextField(siteName, { siteName = it }, label = { Text("Site name") }) }
-                item { OutlinedTextField(siteAddress, { siteAddress = it }, label = { Text("Site address") }) }
-                item { OutlinedTextField(siteContactName, { siteContactName = it }, label = { Text("Site contact") }) }
-                item { OutlinedTextField(siteContactPhone, { siteContactPhone = it }, label = { Text("Mobile number") }) }
-                item { OutlinedTextField(start, { start = it }, label = { Text("Start date") }) }
+                if (managerEditable) item { Pick("Project manager", manager, options.array("managers").filter { element ->
+                    val row=element.jsonObject
+                    row.str("branchAccessScope")=="ALL_BRANCHES" || row.array("branchAccesses").any { it.jsonObject.str("branchId")==branch }
+                },enabled=!saving) { manager = it } }
+                else item { Text("Project manager: assigned to you") }
+                item { OutlinedTextField(value, { value = it }, label = { Text("Project value") },enabled=!saving) }
+                item { OutlinedTextField(siteName, { siteName = it }, label = { Text("Site name") },enabled=!saving) }
+                item { OutlinedTextField(siteAddress, { siteAddress = it }, label = { Text("Site address") },enabled=!saving) }
+                item { OutlinedTextField(siteContactName, { siteContactName = it }, label = { Text("Site contact") },enabled=!saving) }
+                item { OutlinedTextField(siteContactPhone, { siteContactPhone = it }, label = { Text("Mobile number") },enabled=!saving) }
+                item { OutlinedTextField(start, { start = it }, label = { Text("Start date") },enabled=!saving) }
                 if (edit) {
                     item {
                         PickText(
                             "Status",
                             status,
                             listOf("ACTIVE", "ON_HOLD"),
+                            enabled=!saving,
                         ) { status = it }
                     }
                 } else {
@@ -179,7 +200,10 @@ private fun ProjectEditor(
         },
         confirmButton = {
             Button(
-                enabled = name.isNotBlank() && (edit || branch.isNotBlank()),
+                enabled = !saving && name.trim().length in 1..240 && (edit || branch.isNotBlank()) &&
+                    Regex("^[0-9]{1,16}(\\.[0-9]{1,2})?$").matches(value) && siteName.length<=240 && siteAddress.length<=4000 &&
+                    siteContactName.length<=160 && siteContactPhone.length<=30 &&
+                    (start.isBlank() || runCatching { java.time.LocalDate.parse(start) }.isSuccess),
                 onClick = {
                     save(
                         buildJsonObject {
@@ -190,7 +214,7 @@ private fun ProjectEditor(
                                 put("branchId", branch)
                             }
                             put("name", name)
-                            manager.takeIf { it.isNotBlank() }?.let { put("projectManagerId", it) }
+                            (if(managerEditable)manager else caps?.str("actorId").orEmpty()).takeIf { it.isNotBlank() }?.let { put("projectManagerId", it) }
                             siteName.takeIf { it.isNotBlank() }?.let { put("siteName", it) }
                             siteAddress.takeIf { it.isNotBlank() }?.let { put("siteAddress", it) }
                             siteContactName.takeIf { it.isNotBlank() }?.let { put("siteContactName", it) }
@@ -200,9 +224,9 @@ private fun ProjectEditor(
                         },
                     )
                 },
-            ) { Text("Save") }
+            ) { Text(if(saving)"Saving…" else "Save") }
         },
-        dismissButton = { TextButton(close) { Text("Cancel") } },
+        dismissButton = { TextButton(close,enabled=!saving) { Text("Cancel") } },
     )
 }
 
@@ -210,17 +234,24 @@ private fun ProjectEditor(
 private fun ProjectDetail(
     x: JsonObject,
     costing: JsonObject?,
+    billingServices: List<JsonElement>,
+    saving: Boolean,
+    error: String?,
     close: () -> Unit,
     edit: () -> Unit,
-    action: (String, String) -> Unit,
+    action: (String, String, String?) -> Unit,
     budget: () -> Unit,
+    editChange: (JsonObject?) -> Unit,
+    transitionChange: (String, String) -> Unit,
 ) {
     val final = workflowStatus(x.str("status")) == "COMPLETED"
+    var billingServiceId by remember(x.str("id")) { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = close,
         title = { Text(x.str("projectNumber")) },
         text = {
             LazyColumn {
+                error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
                 item { Text(x.str("name"), style = MaterialTheme.typography.titleLarge) }
                 item {
                     Text(
@@ -247,19 +278,17 @@ private fun ProjectDetail(
                         "Customer received ₹${x.str("customerPayments")} · Vendor paid ₹${x.str("vendorPayments")}",
                     )
                 }
-                item { Text("Open tasks ${x.str("openTasks")}") }
                 x.str("sourceQuotationId").takeIf { it.isNotBlank() }?.let { quotation ->
                     item { Text("Created from accepted quotation · $quotation") }
                 }
                 costing?.get("metrics")?.jsonObject?.let { metrics ->
                     item { Text("Project report / costing", style = MaterialTheme.typography.titleMedium) }
                     listOf(
-                        "estimatedCost",
-                        "actualCost",
-                        "committedCost",
-                        "revenue",
-                        "profit",
-                        "actualMarginPercent",
+                        "originalValue", "approvedChangeOrders", "contractRevenueBase",
+                        "actualCost", "expenseCost", "contractProfit", "unbilledContractRevenue", "revenue", "profit", "finalProfit",
+                        "advanceReceived", "amountReceived", "accountingReceivable",
+                        "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned", "materialReturnedToInventory", "materialReturnedToVendor",
+                        "materialTransferredIn", "materialTransferredOut", "actualMarginPercent",
                     ).forEach { key ->
                         item {
                             ListItem(
@@ -268,6 +297,50 @@ private fun ProjectDetail(
                                 },
                                 trailingContent = { Text(metrics.str(key)) },
                             )
+                        }
+                    }
+                }
+                costing?.let { report ->
+                    val caps = report["capabilities"]?.jsonObject
+                    val canEdit = !final && caps?.get("edit")?.jsonPrimitive?.booleanOrNull == true
+                    val canApprove = caps?.get("approve")?.jsonPrimitive?.booleanOrNull == true
+                    val actorId = caps?.str("actorId")
+                    item { Text("Change Orders / Extra Work",style=MaterialTheme.typography.titleMedium) }
+                    if (canEdit) item { OutlinedButton(onClick={editChange(null)},enabled=!saving) { Text("Add extra work") } }
+                    items(report.array("changes"),key={it.jsonObject.str("id")}) { element ->
+                        val row = element.jsonObject
+                        Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                            Text("${row.str("changeOrderNumber")} · ${row.str("title")}")
+                            Text("${row.str("status")} · Value ${row.str("valueDelta")} · Estimated cost ${row.str("estimatedCostDelta")}")
+                            if (canEdit && row.str("status")=="DRAFT") {
+                                Row { TextButton(onClick={editChange(row)},enabled=!saving){Text("Edit draft")};TextButton(onClick={transitionChange(row.str("id"),"PENDING_APPROVAL")},enabled=!saving){Text("Submit")} }
+                            }
+                            if (canEdit && row.str("status")=="PENDING_APPROVAL" && canApprove && row.str("createdById")!=actorId) {
+                                Row { TextButton(onClick={transitionChange(row.str("id"),"APPROVED")},enabled=!saving){Text("Approve")};TextButton(onClick={transitionChange(row.str("id"),"REJECTED")},enabled=!saving){Text("Reject")} }
+                            }
+                            if (canEdit && row.str("status") in listOf("DRAFT","PENDING_APPROVAL")) TextButton(onClick={transitionChange(row.str("id"),"CANCELLED")},enabled=!saving){Text("Cancel change order")}
+                        }
+                    }
+                }
+                costing?.get("details")?.jsonObject?.let { details ->
+                    listOf(
+                        "expenseCategories" to "Labour and expense category totals",
+                        "purchases" to "Purchases",
+                        "expenses" to "Labour and other expenses",
+                        "materialMovements" to "Material movement and cost adjustments",
+                        "payments" to "Advances, installments and payments",
+                        "invoices" to "Invoices and customer balance",
+                    ).forEach { (key, title) ->
+                        item { Text(title, style = MaterialTheme.typography.titleMedium) }
+                        val records = details.array(key)
+                        if (records.isEmpty()) item { Text("No entries recorded.") }
+                        items(records, key = { "$key:${it.jsonObject.str("id")}" }) { element ->
+                            val record = element.jsonObject
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                record.entries.filter { it.key != "id" && it.value != JsonNull }.forEach { (field, value) ->
+                                    Text("${field.replace(Regex("([A-Z])"), " $1")}: ${value.jsonPrimitive.content}")
+                                }
+                            }
                         }
                     }
                 }
@@ -284,6 +357,14 @@ private fun ProjectDetail(
                         )
                     }
                 }
+                if (!final) item {
+                    Text("Closing bills only the remaining contract balance and applies available advances. Earlier invoices are retained.")
+                    Pick("Final invoice service / SAC", billingServiceId, billingServices.map { element ->
+                        val row = element.jsonObject
+                        buildJsonObject { put("id",row.str("id"));put("name","${row.str("name")} · SAC ${row.str("sacCode")} · GST ${row.str("taxRate")}%") }
+                    }, enabled = !saving) { billingServiceId = it }
+                    TextButton({ billingServiceId = "" },enabled = !saving) { Text("Reuse existing invoice service") }
+                }
                 item { Text("Related documents", style = MaterialTheme.typography.titleMedium) }
                 items(x.array("commercialDocuments")) { document ->
                     val row = document.jsonObject
@@ -294,10 +375,10 @@ private fun ProjectDetail(
         confirmButton = {
             if (!final) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(edit) { Text("Edit") }
-                    OutlinedButton(budget) { Text("Budget") }
-                    FilledTonalButton({ action(x.str("id"), "COMPLETE") }) {
-                        Text("Complete")
+                    Button(edit,enabled=!saving) { Text("Edit") }
+
+                    FilledTonalButton({ action(x.str("id"), "COMPLETE", billingServiceId.takeIf { it.isNotBlank() }) },enabled=!saving) {
+                        Text("Close Project")
                     }
                 }
             }
@@ -312,19 +393,21 @@ private fun Pick(
     label: String,
     value: String,
     values: List<JsonElement>,
+    enabled: Boolean = true,
     set: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     val selected = values.map { it.jsonObject }.firstOrNull { it.str("id") == value }
-    ExposedDropdownMenuBox(open, { open = it }) {
+    ExposedDropdownMenuBox(open && enabled, { if(enabled)open = it }) {
         OutlinedTextField(
             selected?.str("name").orEmpty(),
             {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(label) },
             modifier = Modifier.menuAnchor(),
         )
-        ExposedDropdownMenu(open, { open = false }) {
+        ExposedDropdownMenu(open && enabled, { open = false }) {
             values.forEach { element ->
                 val row = element.jsonObject
                 DropdownMenuItem(
@@ -345,6 +428,7 @@ private fun PickText(
     label: String,
     value: String,
     values: List<String>,
+    enabled: Boolean = true,
     set: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
@@ -352,15 +436,16 @@ private fun PickText(
         "ON_HOLD" -> "Hold"
         else -> "Active"
     }
-    ExposedDropdownMenuBox(open, { open = it }) {
+    ExposedDropdownMenuBox(open && enabled, { if(enabled)open = it }) {
         OutlinedTextField(
             visible,
             {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(label) },
             modifier = Modifier.menuAnchor(),
         )
-        ExposedDropdownMenu(open, { open = false }) {
+        ExposedDropdownMenu(open && enabled, { open = false }) {
             values.forEach { option ->
                 DropdownMenuItem(
                     { Text(if (option == "ON_HOLD") "Hold" else "Active") },
@@ -377,26 +462,51 @@ private fun PickText(
 @Composable
 private fun BudgetDialog(
     project: JsonObject,
+    saving: Boolean,
+    error: String?,
     close: () -> Unit,
-    save: (String, String) -> Unit,
+    save: (String, List<ProjectBudgetLineDraft>) -> Unit,
 ) {
-    var amount by remember { mutableStateOf(project.str("budgetTotal")) }
+    var lines by remember(project.str("id")) { mutableStateOf(projectBudgetLines(project)) }
     AlertDialog(
-        onDismissRequest = close,
+        onDismissRequest = { if (!saving) close() },
         title = { Text("Project budget") },
         text = {
-            OutlinedTextField(
-                amount,
-                { amount = it },
-                label = { Text("Budget amount") },
-            )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                error?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
+                itemsIndexed(lines) { index, row ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Budget line ${index + 1}", fontWeight = FontWeight.Bold)
+                        OutlinedTextField(row.category, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(category = value) else x } }, label = { Text("Category") }, enabled = !saving)
+                        OutlinedTextField(row.title, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(title = value) else x } }, label = { Text("Title") }, enabled = !saving)
+                        OutlinedTextField(row.description, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(description = value) else x } }, label = { Text("Description") }, enabled = !saving)
+                        OutlinedTextField(row.amount, { value -> lines = lines.mapIndexed { i, x -> if (i == index) x.copy(amount = value) else x } }, label = { Text("Amount") }, enabled = !saving)
+                        TextButton(onClick = { lines = lines.filterIndexed { i, _ -> i != index } }, enabled = !saving) { Text("Remove line") }
+                        HorizontalDivider()
+                    }
+                }
+                item { TextButton(onClick = { lines = lines + ProjectBudgetLineDraft() }, enabled = !saving && lines.size < 250) { Text("Add budget line") } }
+            }
         },
         confirmButton = {
-            Button(
-                enabled = amount.isNotBlank(),
-                onClick = { save(project.str("id"), amount) },
-            ) { Text("Save authoritative budget") }
+            Button(enabled = !saving && validProjectBudget(lines), onClick = { save(project.str("id"), lines) }) {
+                Text(if (saving) "Saving…" else "Save budget")
+            }
         },
-        dismissButton = { TextButton(close) { Text("Cancel") } },
+        dismissButton = { TextButton(close, enabled = !saving) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun ChangeOrderDialog(row: ProjectChangeDraft, saving: Boolean, error: String?, close: () -> Unit,
+    update: ((ProjectChangeDraft) -> ProjectChangeDraft) -> Unit, save: () -> Unit) {
+    AlertDialog(onDismissRequest={if(!saving)close()}, title={Text(if(row.id==null)"Add extra work" else "Edit change order")},
+        text={LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
+            error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
+            item{OutlinedTextField(row.title,{value->update{it.copy(title=value)}},label={Text("Title")},enabled=!saving)}
+            item{OutlinedTextField(row.description,{value->update{it.copy(description=value)}},label={Text("Description")},enabled=!saving)}
+            item{OutlinedTextField(row.valueDelta,{value->update{it.copy(valueDelta=value)}},label={Text("Contract value change")},enabled=!saving)}
+            item{OutlinedTextField(row.estimatedCostDelta,{value->update{it.copy(estimatedCostDelta=value)}},label={Text("Estimated cost change")},enabled=!saving)}
+        }}, confirmButton={Button(save,enabled=!saving&&validProjectChange(row)){Text(if(saving)"Saving…" else "Save draft")}},
+        dismissButton={TextButton(close,enabled=!saving){Text("Cancel")}})
 }

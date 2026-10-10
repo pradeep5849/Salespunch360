@@ -11,9 +11,10 @@ export const BUSINESS_TYPES = [
   {key:"OTHER_MIXED",label:"Other / Mixed"},
 ] as const satisfies readonly {key:BusinessType;label:string}[];
 
-export type SetupModuleKey="BASIC_ACCOUNTING"|"PROJECTS"|"BARCODE"|"POS"|"SERVICE_JOB_WORK"|"MANUFACTURING"|"PAYROLL_HR"|"ONLINE_STORE"|"MULTI_CURRENCY"|"LOYALTY_POINTS"|"TRANSACTION_SMS";
+export type SetupModuleKey="BASIC_ACCOUNTING"|"ASSETS"|"PROJECTS"|"BARCODE"|"POS"|"SERVICE_JOB_WORK"|"MANUFACTURING"|"PAYROLL_HR"|"ONLINE_STORE"|"MULTI_CURRENCY"|"LOYALTY_POINTS"|"TRANSACTION_SMS";
 export const MODULE_SETUP_CATALOG = [
   {key:"BASIC_ACCOUNTING",label:"Basic Accounting",note:"Included",available:true},
+  {key:"ASSETS",label:"Fixed Assets",note:"Asset lifecycle, depreciation and assignment",available:true},
   {key:"PROJECTS",label:"Projects",note:"Project costing, materials, purchases and reports",available:true},
   {key:"BARCODE",label:"Barcode",note:"Requires Inventory",available:true},
   {key:"POS",label:"POS",note:"Point of sale",available:true},
@@ -25,10 +26,10 @@ export const MODULE_SETUP_CATALOG = [
   {key:"LOYALTY_POINTS",label:"Loyalty Points",note:"Coming Soon",available:false},
   {key:"TRANSACTION_SMS",label:"Transaction SMS",note:"Coming Soon",available:false},
 ] as const satisfies readonly {key:SetupModuleKey;label:string;note:string;available:boolean}[];
-export const OPTIONAL_SETUP_MODULES=["PROJECTS","BARCODE","POS"] as const satisfies readonly SetupModuleKey[];
+export const OPTIONAL_SETUP_MODULES=["ASSETS","PROJECTS","BARCODE","POS"] as const satisfies readonly SetupModuleKey[];
 export type OptionalSetupModule=typeof OPTIONAL_SETUP_MODULES[number];
 
-export const BASIC_ACCOUNTING_MODULES=["QUOTATIONS_BOQ","SALES","SALES_ORDER","PROFORMA_INVOICE","DELIVERY_CHALLAN","CREDIT_NOTE","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES","PAYMENT_REMINDERS","PURCHASES","PURCHASE_ORDER","PURCHASE_BILLS","DEBIT_NOTE","VENDOR_PAYMENTS","VENDOR_ADVANCES","SUBCONTRACTORS","EXPENSES","INVENTORY","ASSETS","GST_ADVANCED"] as const satisfies readonly AccountModule[];
+export const BASIC_ACCOUNTING_MODULES=["QUOTATIONS_BOQ","SALES","SALES_ORDER","PROFORMA_INVOICE","DELIVERY_CHALLAN","CREDIT_NOTE","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES","PAYMENT_REMINDERS","PURCHASES","PURCHASE_ORDER","PURCHASE_BILLS","DEBIT_NOTE","VENDOR_PAYMENTS","VENDOR_ADVANCES","SUBCONTRACTORS","EXPENSES","INVENTORY","GST_ADVANCED"] as const satisfies readonly AccountModule[];
 
 const recommendations:Record<BusinessType,readonly OptionalSetupModule[]>={
   INTERIOR_CONSTRUCTION:["PROJECTS"], RETAIL_TRADING:["BARCODE","POS"], SERVICE_BUSINESS:[], MANUFACTURING:[],
@@ -41,6 +42,7 @@ export function expandSetupModules(selected:readonly string[]):AccountModule[]{
   if(invalid)throw new Error(`MODULE_NOT_AVAILABLE:${invalid}`);
   const unique=new Set(selected);
   const expanded:AccountModule[]=[...BASIC_ACCOUNTING_MODULES];
+  if(unique.has("ASSETS"))expanded.push("ASSETS");
   if(unique.has("PROJECTS"))expanded.push("PROJECTS","PROJECT_COSTING");
   if(unique.has("BARCODE")){if(!expanded.includes("INVENTORY"))throw new Error("MODULE_DEPENDENCY_REQUIRED:BARCODE:INVENTORY");expanded.push("BARCODE")}
   if(unique.has("POS"))expanded.push("POS");

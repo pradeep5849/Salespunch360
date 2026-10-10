@@ -12,12 +12,12 @@ const operationalStatuses = [
   "PLANNING",
   "ACTIVE",
   "ON_HOLD",
-  "COMPLETED",
   "CANCELLED",
 ] as const;
 
 export const projectInput = z
   .object({
+    idempotencyKey: z.string().trim().min(1).max(120).optional(),
     branchId: z.string().uuid(),
     name: z.string().trim().min(1).max(240),
     customerId: z.string().uuid(),
@@ -32,7 +32,7 @@ export const projectInput = z
   })
   .strict();
 export const projectUpdateInput = projectInput
-  .omit({ branchId: true, customerId: true })
+  .omit({ branchId: true, customerId: true, idempotencyKey: true })
   .extend({ projectId: z.string().uuid(), status: z.enum(operationalStatuses) })
   .strict();
 export const projectStatusInput = z
@@ -45,6 +45,7 @@ export const budgetInput = z
       .array(
         z
           .object({
+            id: z.string().uuid().optional(),
             category: z.string().trim().min(1).max(120),
             title: z.string().trim().min(1).max(240),
             description: optionalText(2000),

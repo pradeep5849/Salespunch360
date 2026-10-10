@@ -1,8 +1,10 @@
+import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { Prisma, type AssetStatus } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
   accountingOverviewForActor,
+  journalHistoryForActor,
   createCostCentreForActor,
   createLedgerAccountForActor,
   postJournalForActor,
@@ -11,7 +13,9 @@ import {
   setPeriodLockForActor,
 } from "@/lib/accounting/service";
 import {
+  assertAssetAccess,
   assetOptionsForActor,
+  listAssetsForActor,
   assignAssetForActor,
   createAssetForActor,
   getAssetForActor,
@@ -21,7 +25,6 @@ import {
 } from "@/lib/account/assets";
 import { createFinancialYearForActor } from "@/lib/account/service";
 import { closeFinancialYearForActor } from "@/lib/account/utilities";
-import { requireAccountModules } from "@/lib/account/modules";
 import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
@@ -46,14 +49,17 @@ export async function mobileAccountingOverview(u: MobileAppPrincipal) {
       by: ["ledgerAccountId"],
       where: {
         companyId: a.companyId,
-        journalEntry: { status: "POSTED", ...branchScope(a) },
+        journalEntry: {
+          status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
+          ...branchScope(a),
+        },
       },
       _sum: { debit: true, credit: true },
     }),
     balance = new Map(
       totals.map((x) => [
         x.ledgerAccountId,
-      new Prisma.Decimal(x._sum.debit ?? 0).sub(x._sum.credit ?? 0),
+        new Prisma.Decimal(x._sum.debit ?? 0).sub(x._sum.credit ?? 0),
       ]),
     );
   return {
@@ -114,32 +120,24 @@ export async function mobileAssets(
   u: MobileAppPrincipal,
   q?: string | null,
   status?: string | null,
+  offset = 0,
+  limit = 50,
 ) {
-  const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
-  const rows = await db.asset.findMany({
-    where: {
-      companyId: a.companyId,
-      ...branchScope(a),
-      ...(status ? { status: status as AssetStatus } : {}),
-    },
-    orderBy: { createdAt: "desc" },
+  return listAssetsForActor(permit(u, "ACCOUNT_ACCOUNTS"), {
+    q: q ?? "",
+    ...(status ? { status } : {}),
+    offset,
+    limit,
   });
-  return rows.filter(
-    (x) =>
-      !q ||
-      x.name.toLowerCase().includes(q.toLowerCase()) ||
-      x.assetNumber.toLowerCase().includes(q.toLowerCase()),
-  );
 }
 export async function mobileAssetOptions(u: MobileAppPrincipal) {
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   return assetOptionsForActor(a);
 }
 export async function mobileAssetDetail(u: MobileAppPrincipal, id: string) {
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   return getAssetForActor(a, id);
 }
 export async function mobileSaveAsset(
@@ -149,7 +147,7 @@ export async function mobileSaveAsset(
 ) {
   await write(u);
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   return id ? updateAssetForActor(a, id, raw) : createAssetForActor(a, raw);
 }
 export async function mobileAssetAction(
@@ -159,7 +157,7 @@ export async function mobileAssetAction(
 ) {
   await write(u);
   const a = permit(u, "ACCOUNT_ACCOUNTS");
-  await requireAccountModules(a, "ASSETS");
+  await assertAssetAccess(a);
   const d = raw as {
     action?: string;
     userId?: string;
@@ -190,4 +188,11 @@ export async function mobileFinancialYearClose(
     permit(u, "ACCOUNT_PERIOD_LOCK"),
     raw as { financialYearId: string; earlyCloseReason?: string },
   );
+}
+
+export async function mobileJournalHistory(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  return journalHistoryForActor(permit(u, "ACCOUNT_LEDGER_VIEW"), raw);
 }

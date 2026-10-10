@@ -6,6 +6,8 @@ import com.salespunch360.mobile.data.*
 import java.io.IOException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
 data class InventoryState(
@@ -27,27 +29,33 @@ class AccountInventoryViewModel(app:Application):AndroidViewModel(app){
  private val api=ApiClient(SecureSession(app))
  private val _state=MutableStateFlow(InventoryState())
  val state:StateFlow<InventoryState> = _state
+ private var loadJob:Job?=null
+ private var generation=0L
  init{load()}
+ private var contextQuery:String=""
+ fun context(query:String){contextQuery=query}
  fun show(mode:String){_state.value=_state.value.copy(mode=mode,editing=null);load()}
  fun search(q:String){_state.value=_state.value.copy(query=q)}
  fun create(kind:String){_state.value=_state.value.copy(editing=kind)}
  fun dismiss(){_state.value=_state.value.copy(editing=null)}
- fun load()=viewModelScope.launch{
+ fun load(){
+ loadJob?.cancel();val request=++generation;val mode=_state.value.mode;val query=contextQuery
+ loadJob=viewModelScope.launch{
   _state.value=_state.value.copy(loading=true,error=null)
   try{
    val o=api.inventoryOptions()
-   val r=when(_state.value.mode){
-    "stock"->api.inventoryStock()
-    "low-stock"->api.inventoryStock(true)
-    "batches","serials","prices"->api.inventoryCatalog(_state.value.mode)
-    else->api.inventoryHistory(_state.value.mode)
+   val r=when(mode){
+    "stock"->api.inventoryStock(contextQuery=query)
+    "low-stock"->api.inventoryStock(true,query)
+    "batches","serials","prices"->api.inventoryCatalog(mode)
+    else->api.inventoryHistory(mode)
    }.map{it.jsonObject}
    val items=runCatching{api.accountMasterList("items","", "true")}.getOrDefault(emptyList())
    val services=runCatching{api.accountMasterList("services","", "true")}.getOrDefault(emptyList())
    val masterOptions=runCatching{api.accountMasterOptions()}.getOrDefault(AccountMasterOptions())
-   _state.value=_state.value.copy(loading=false,options=o,rows=r,itemRecords=items,serviceRecords=services,categories=masterOptions.categories)
-  }catch(e:Exception){fail(e)}
- }
+   if(request==generation)_state.value=_state.value.copy(loading=false,options=o,rows=r,itemRecords=items,serviceRecords=services,categories=masterOptions.categories)
+  }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)fail(e)}
+ }}
  fun save(kind:String,payload:JsonObject)=viewModelScope.launch{
   _state.value=_state.value.copy(saving=true,error=null)
   try{

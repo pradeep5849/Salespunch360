@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
+ <cache-path name="expense_attachments" path="expense-attachments/" />
  <external-files-path name="downloads" path="Download/" />
  <files-path name="internal" path="." />
 </paths>

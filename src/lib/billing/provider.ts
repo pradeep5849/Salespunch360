@@ -1,4 +1,4 @@
-export type VerifiedPayment={provider:string;providerPaymentId:string;orderId:string;amount:string;currency:'INR';capturedAt:Date};
+export type VerifiedPayment={provider:string;providerPaymentId:string;orderId:string;amount:string;currency:'INR';capturedAt:Date;manualReference?:string};
 export const PAYMENT_PROVIDER_STATUS = 'UNCONFIGURED' as const;
 export interface PaymentProvider{createOrder(input:{orderId:string;amount:string;currency:'INR'}):Promise<{providerOrderId:string}>;verifyPayment(input:unknown):Promise<VerifiedPayment>}
 export class UnconfiguredPaymentProvider implements PaymentProvider{async createOrder():Promise<never>{throw new Error('PAYMENT_PROVIDER_UNAVAILABLE')}async verifyPayment():Promise<never>{throw new Error('PAYMENT_PROVIDER_UNAVAILABLE')}}

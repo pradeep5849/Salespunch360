@@ -1,4 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { inAccountTransaction } from "./transaction-scope";
+import { FINAL_PROJECT_STATUSES, isFinalProjectStatus } from "./project-state";
+import { retrySerializable } from "./transaction-retry";
+import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
   ProjectAuditEventType,
@@ -16,8 +19,25 @@ import { enabledModulesForCompany, requireAccountModules } from "./modules";
 import { allocateDocumentNumberInTx } from "./numbering";
 import { privateStorage } from "@/lib/storage";
 
-export { projectInput, projectUpdateInput, projectStatusInput, budgetInput, milestoneInput, milestoneUpdateInput, taskInput, taskUpdateInput } from "./project-schemas";
-import { projectInput, projectUpdateInput, budgetInput, milestoneInput, milestoneUpdateInput, taskInput, taskUpdateInput } from "./project-schemas";
+export {
+  projectInput,
+  projectUpdateInput,
+  projectStatusInput,
+  budgetInput,
+  milestoneInput,
+  milestoneUpdateInput,
+  taskInput,
+  taskUpdateInput,
+} from "./project-schemas";
+import {
+  projectInput,
+  projectUpdateInput,
+  budgetInput,
+  milestoneInput,
+  milestoneUpdateInput,
+  taskInput,
+  taskUpdateInput,
+} from "./project-schemas";
 
 export type ProjectActor = Awaited<
   ReturnType<typeof requirePermissionForMutation>
@@ -81,18 +101,19 @@ export function projectRecordScope(
       : {}),
   };
 }
-async function assertProjectCapability(actor: ProjectAccessActor) {
+export async function requireProjectFunction(
+  actor: ProjectAccessActor,
+  permission: import("@/lib/auth/permissions").Permission = "ACCOUNT_PROJECTS",
+) {
   const company = await db.company.findUnique({
     where: { id: actor.companyId },
     select: { productEdition: true },
   });
-  if (
-    !company ||
-    !canUsePermission(actor, company.productEdition, "ACCOUNT_PROJECTS")
-  )
+  if (!company || !canUsePermission(actor, company.productEdition, permission))
     throw new AuthorizationError();
   await requireAccountModules(actor, "PROJECTS");
 }
+const assertProjectCapability = requireProjectFunction;
 export function nextCompletionAt(
   status: "COMPLETED" | string,
   current: Date | null,
@@ -136,7 +157,7 @@ export async function listOpenProjectOptionsForActor(
   return db.project.findMany({
     where: {
       ...projectRecordScope(actor, ids),
-      status: { notIn: ["CLOSED", "CANCELLED"] },
+      status: { notIn: [...FINAL_PROJECT_STATUSES] },
     },
     select: {
       id: true,
@@ -166,7 +187,7 @@ export async function authorizeProjectForCommercial(
       id: projectId,
       branchId,
       ...projectRecordScope(actor, ids),
-      status: { notIn: ["CLOSED", "CANCELLED"] },
+      status: { notIn: [...FINAL_PROJECT_STATUSES] },
       ...(customerId ? { customerId } : {}),
     },
     select: {
@@ -209,7 +230,7 @@ async function mutable(
     where: { id, ...projectRecordScope(actor, branchIds) },
   });
   if (!project) throw new AuthorizationError();
-  if (["CLOSED", "CANCELLED"].includes(project.status))
+  if (isFinalProjectStatus(project.status))
     throw new Error("PROJECT_CLOSED");
   return project;
 }
@@ -268,65 +289,123 @@ async function validateTaskRelations(
     throw new Error("INVALID_TASK_ASSIGNEE");
 }
 
-export async function createProjectForActor(actor: ProjectActor, raw: unknown) {
-  const parsed = projectInput.parse(raw),
-    ids = await authorizedProjectBranchIds(actor);
+export function projectCreationHash(
+  kind: string,
+  input: Record<string, unknown>,
+) {
+  const fields = Object.fromEntries(
+    Object.entries(input)
+      .filter(([key, value]) => key !== "idempotencyKey" && value !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => [
+        key,
+        value instanceof Date
+          ? value.toISOString().slice(0, 10)
+          : key === "projectValue"
+            ? new Prisma.Decimal(String(value)).toString()
+            : value,
+      ]),
+  );
+  return createHash("sha256")
+    .update(JSON.stringify({ kind, fields }))
+    .digest("hex");
+}
+export async function createProjectInTx(
+  tx: Prisma.TransactionClient,
+  actor: ProjectActor,
+  raw: unknown,
+) {
+  await requireProjectFunction(actor);
+  const { idempotencyKey, ...parsed } = projectInput.parse(raw);
+  const ids = await authorizedProjectBranchIds(actor);
   if (!ids.includes(parsed.branchId)) throw new AuthorizationError();
   const data =
     actor.accountRole === "PROJECT_MANAGER"
       ? { ...parsed, projectManagerId: actor.id }
       : parsed;
-  return db.$transaction(
-    async (tx) => {
-      const [branch, customer] = await Promise.all([
-        tx.branch.findFirst({
-          where: {
-            id: data.branchId,
-            companyId: actor.companyId,
-            isActive: true,
-          },
-        }),
-        tx.customer.findFirst({
-          where: projectCustomerWhere(
-            actor.companyId,
-            data.branchId,
-            data.customerId,
-          ),
-        }),
-      ]);
-      if (!branch) throw new Error("INVALID_BRANCH");
-      if (!customer) throw new Error("INVALID_CUSTOMER");
-      await validateManager(tx, actor, data.projectManagerId, data.branchId);
-      const projectNumber = await allocateDocumentNumberInTx(tx, {
+
+  const [branch, customer] = await Promise.all([
+    tx.branch.findFirst({
+      where: {
+        id: data.branchId,
         companyId: actor.companyId,
-        branchId: data.branchId,
-        seriesKey: "PROJECT",
-        defaults: { prefix: "PRJ-", padding: 6 },
-      });
-      const project = await tx.project.create({
-        data: {
+        isActive: true,
+      },
+    }),
+    tx.customer.findFirst({
+      where: projectCustomerWhere(
+        actor.companyId,
+        data.branchId,
+        data.customerId,
+      ),
+    }),
+  ]);
+  if (!branch) throw new Error("INVALID_BRANCH");
+  if (!customer) throw new Error("INVALID_CUSTOMER");
+  await validateManager(tx, actor, data.projectManagerId, data.branchId);
+  const requestHash = idempotencyKey
+    ? projectCreationHash("PROJECT", data)
+    : null;
+  if (idempotencyKey) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
+    const existing = await tx.project.findUnique({
+      where: {
+        companyId_creationRequestKey: {
           companyId: actor.companyId,
-          projectNumber,
-          createdById: actor.id,
-          ...data,
-          projectValue: new Prisma.Decimal(data.projectValue),
-          members: data.projectManagerId
-            ? {
-                create: {
-                  userId: data.projectManagerId,
-                  role: "PROJECT_MANAGER",
-                },
-              }
-            : undefined,
+          creationRequestKey: idempotencyKey,
         },
-      });
-      await audit(tx, actor, project.id, "PROJECT_CREATED");
-      return project;
+      },
+    });
+    if (existing) {
+      if (
+        !(await tx.project.findFirst({
+          where: { id: existing.id, ...projectRecordScope(actor, ids) },
+          select: { id: true },
+        }))
+      )
+        throw new AuthorizationError();
+      if (existing.creationRequestHash !== requestHash)
+        throw new Error("IDEMPOTENCY_KEY_REUSED");
+      return existing;
+    }
+  }
+  const projectNumber = await allocateDocumentNumberInTx(tx, {
+    companyId: actor.companyId,
+    branchId: data.branchId,
+    seriesKey: "PROJECT",
+    defaults: { prefix: "PRJ-", padding: 6 },
+  });
+  const project = await tx.project.create({
+    data: {
+      companyId: actor.companyId,
+      projectNumber,
+      creationRequestKey: idempotencyKey,
+      creationRequestHash: requestHash,
+      createdById: actor.id,
+      ...data,
+      projectValue: new Prisma.Decimal(data.projectValue),
+      members: data.projectManagerId
+        ? {
+            create: {
+              userId: data.projectManagerId,
+              role: "PROJECT_MANAGER",
+            },
+          }
+        : undefined,
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  });
+  await audit(tx, actor, project.id, "PROJECT_CREATED");
+  return project;
+}
+export async function createProjectForActor(actor: ProjectActor, raw: unknown) {
+  return retrySerializable(() =>
+    db.$transaction((tx) => createProjectInTx(tx, actor, raw), {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }),
   );
 }
 export async function updateProjectForActor(actor: ProjectActor, raw: unknown) {
+  await requireProjectFunction(actor);
   const data = projectUpdateInput.parse(raw),
     ids = await authorizedProjectBranchIds(actor);
   return db.$transaction(
@@ -343,6 +422,16 @@ export async function updateProjectForActor(actor: ProjectActor, raw: unknown) {
       const value = new Prisma.Decimal(data.projectValue),
         managerChanged =
           (data.projectManagerId ?? null) !== project.projectManagerId;
+      const approvedChanges = await tx.projectChangeOrder.aggregate({
+        where: {
+          companyId: actor.companyId,
+          projectId: project.id,
+          status: "APPROVED",
+        },
+        _sum: { valueDelta: true },
+      });
+      if (value.add(approvedChanges._sum.valueDelta ?? 0).lt(0))
+        throw new Error("INVALID_PROJECT_VALUE");
       await tx.project.update({
         where: { id: project.id },
         data: {
@@ -414,9 +503,9 @@ export function assertNormalProjectTransition(
 ) {
   const allowed: Record<ProjectStatus, ProjectStatus[]> = {
     PLANNING: ["ACTIVE", "CANCELLED"],
-    ACTIVE: ["ON_HOLD", "COMPLETED", "CANCELLED"],
+    ACTIVE: ["ON_HOLD", "CANCELLED"],
     ON_HOLD: ["ACTIVE", "CANCELLED"],
-    COMPLETED: ["ACTIVE", "CANCELLED"],
+    COMPLETED: [],
     CLOSED: [],
     CANCELLED: [],
   };
@@ -446,6 +535,7 @@ export async function listProjectsForActor(
   actor: ProjectActor,
   raw: { page?: string; pageSize?: string } = {},
 ) {
+  await requireProjectFunction(actor);
   const ids = await authorizedProjectBranchIds(actor),
     paging = projectPageInput(raw),
     where = projectRecordScope(actor, ids);
@@ -477,14 +567,117 @@ export async function listProjectsForActor(
     totalPages: Math.max(1, Math.ceil(total / paging.pageSize)),
   };
 }
-export async function projectDashboard(){return projectDashboardForActor(await projectActor(false))}
-export function summarizeProjectDashboardRows(rows:Array<{status:string;finalProjectValue:Prisma.Decimal;received:Prisma.Decimal;outstanding:Prisma.Decimal}>){const zero=()=>new Prisma.Decimal(0),sum=(values:Prisma.Decimal[])=>values.reduce((n,x)=>n.add(x),zero());return{activeProjects:rows.filter(x=>!["CLOSED","CANCELLED"].includes(x.status)).length,projectsClosed:rows.filter(x=>x.status==="CLOSED").length,totalProjectValue:sum(rows.map(x=>x.finalProjectValue)),received:sum(rows.map(x=>x.received)),outstanding:sum(rows.map(x=>x.outstanding))}}
-export async function projectDashboardForActor(actor:ProjectActor){
-  await assertProjectCapability(actor);const branchIds=await authorizedProjectBranchIds(actor),where=projectRecordScope(actor,branchIds);
-  const projects=await db.project.findMany({where,select:{id:true,name:true,projectNumber:true,status:true,projectValue:true,customer:{select:{name:true}},commercialDocuments:{where:{type:"SALES_INVOICE",status:"POSTED"},select:{grandTotal:true,allocations:{select:{amount:true}},advanceApplications:{select:{amount:true}},adjustments:{where:{status:"POSTED"},select:{grandTotal:true}}}}},orderBy:[{createdAt:"desc"},{id:"desc"}]}),projectIds=projects.map(x=>x.id),[changes,settlements]=await Promise.all([db.projectChangeOrder.findMany({where:{companyId:actor.companyId,status:"APPROVED",projectId:{in:projectIds}},select:{projectId:true,valueDelta:true}}),db.accountSettlement.findMany({where:{companyId:actor.companyId,projectId:{in:projectIds},type:{in:["CUSTOMER_RECEIPT","CUSTOMER_ADVANCE"]}},select:{projectId:true,amount:true}})]);
-  const z=()=>new Prisma.Decimal(0),sum=(xs:Prisma.Decimal[])=>xs.reduce((n,x)=>n.add(x),z());
-  const rows=projects.map(project=>{const approvedVariations=sum(changes.filter(x=>x.projectId===project.id).map(x=>x.valueDelta)),finalProjectValue=project.projectValue.add(approvedVariations),invoiced=sum(project.commercialDocuments.map(x=>x.grandTotal)),received=sum(settlements.filter(x=>x.projectId===project.id).map(x=>x.amount)),outstanding=sum(project.commercialDocuments.map(x=>x.grandTotal.sub(sum(x.allocations.map(a=>a.amount))).sub(sum(x.advanceApplications.map(a=>a.amount))).sub(sum(x.adjustments.map(a=>a.grandTotal)))));return{id:project.id,name:project.name,projectNumber:project.projectNumber,customer:project.customer,status:project.status,originalProjectValue:project.projectValue,approvedVariations,finalProjectValue,invoiced,received,outstanding}});
-  return{metrics:summarizeProjectDashboardRows(rows),rows};
+export async function projectDashboard() {
+  return projectDashboardForActor(await projectActor(false));
+}
+export function summarizeProjectDashboardRows(
+  rows: Array<{
+    status: string;
+    finalProjectValue: Prisma.Decimal;
+    received: Prisma.Decimal;
+    outstanding: Prisma.Decimal;
+  }>,
+) {
+  const zero = () => new Prisma.Decimal(0),
+    sum = (values: Prisma.Decimal[]) =>
+      values.reduce((n, x) => n.add(x), zero());
+  return {
+    activeProjects: rows.filter(
+      (x) => !isFinalProjectStatus(x.status),
+    ).length,
+    projectsClosed: rows.filter((x) => ["CLOSED", "COMPLETED"].includes(x.status)).length,
+    totalProjectValue: sum(rows.map((x) => x.finalProjectValue)),
+    received: sum(rows.map((x) => x.received)),
+    outstanding: sum(rows.map((x) => x.outstanding)),
+  };
+}
+export async function projectDashboardForActor(actor: ProjectActor) {
+  await assertProjectCapability(actor);
+  const branchIds = await authorizedProjectBranchIds(actor),
+    where = projectRecordScope(actor, branchIds);
+  const projects = await db.project.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        projectNumber: true,
+        status: true,
+        projectValue: true,
+        customer: { select: { name: true } },
+        commercialDocuments: {
+          where: { type: "SALES_INVOICE", status: "POSTED" },
+          select: {
+            grandTotal: true,
+            payableAmount: true,
+            allocations: { select: { amount: true } },
+            advanceApplications: { select: { amount: true } },
+            adjustments: {
+              where: { status: "POSTED" },
+              select: { grandTotal: true, payableAmount: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    }),
+    projectIds = projects.map((x) => x.id),
+    [changes, settlements] = await Promise.all([
+      db.projectChangeOrder.findMany({
+        where: {
+          companyId: actor.companyId,
+          status: "APPROVED",
+          projectId: { in: projectIds },
+        },
+        select: { projectId: true, valueDelta: true },
+      }),
+      db.accountSettlement.findMany({
+        where: {
+          companyId: actor.companyId,
+          projectId: { in: projectIds },
+          type: { in: ["CUSTOMER_RECEIPT", "CUSTOMER_ADVANCE"] },
+          status: "POSTED",
+        },
+        select: { projectId: true, amount: true },
+      }),
+    ]);
+  const z = () => new Prisma.Decimal(0),
+    sum = (xs: Prisma.Decimal[]) => xs.reduce((n, x) => n.add(x), z());
+  const rows = projects.map((project) => {
+    const approvedVariations = sum(
+        changes
+          .filter((x) => x.projectId === project.id)
+          .map((x) => x.valueDelta),
+      ),
+      finalProjectValue = project.projectValue.add(approvedVariations),
+      invoiced = sum(project.commercialDocuments.map((x) => x.grandTotal)),
+      received = sum(
+        settlements
+          .filter((x) => x.projectId === project.id)
+          .map((x) => x.amount),
+      ),
+      outstanding = sum(
+        project.commercialDocuments.map((x) =>
+          (x.payableAmount ?? x.grandTotal)
+            .sub(sum(x.allocations.map((a) => a.amount)))
+            .sub(sum(x.advanceApplications.map((a) => a.amount)))
+            .sub(sum(x.adjustments.map((a) => a.payableAmount ?? a.grandTotal))),
+        ),
+      );
+    return {
+      id: project.id,
+      name: project.name,
+      projectNumber: project.projectNumber,
+      customer: project.customer,
+      status: project.status,
+      originalProjectValue: project.projectValue,
+      approvedVariations,
+      finalProjectValue,
+      invoiced,
+      received,
+      outstanding,
+    };
+  });
+  return { metrics: summarizeProjectDashboardRows(rows), rows };
 }
 export function deriveProjectPaymentTotal(
   documents: Array<{
@@ -540,6 +733,7 @@ export async function getProjectForActor(
   id: string,
   raw: ProjectHistoryParams = {},
 ) {
+  await requireProjectFunction(actor);
   const ids = await authorizedProjectBranchIds(actor);
   const paging = projectHistoryInput(raw),
     skip = (page: number) => (page - 1) * paging.pageSize;
@@ -548,8 +742,8 @@ export async function getProjectForActor(
     include: {
       customer: true,
       branch: true,
-      projectManager: true,
-      members: { include: { user: true } },
+      projectManager: { select: { id: true, name: true } },
+      members: { include: { user: { select: { id: true, name: true } } } },
       budgetLines: { orderBy: { position: "asc" } },
       milestones: { orderBy: { position: "asc" } },
       tasks: {
@@ -667,6 +861,7 @@ export async function getProjectFormOptionsForActor(
   actor: ProjectActor,
   projectId?: string,
 ) {
+  await requireProjectFunction(actor);
   await requireAccountModules(actor, "PROJECTS");
   const ids = await authorizedProjectBranchIds(actor);
   const project = projectId
@@ -718,34 +913,99 @@ export async function getProjectFormOptionsForActor(
         orderBy: { documentNumber: "asc" },
       })
     : [];
-  return { branches, managers, memberCandidates, boqCandidates };
+  const billingServices = await db.accountService.findMany({where: {companyId: actor.companyId, isActive: true}, select: {id: true, name: true, sacCode: true, taxRate: true}, orderBy: [{name: "asc"}, {id: "asc"}]});
+  return { branches, managers, memberCandidates, boqCandidates, billingServices };
 }
 export async function replaceBudgetForActor(actor: ProjectActor, raw: unknown) {
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_EDIT");
   const data = budgetInput.parse(raw),
     ids = await authorizedProjectBranchIds(actor);
-  return db.$transaction(
-    async (tx) => {
-      await mutable(tx, actor, data.projectId, ids);
-      await tx.projectBudgetLine.deleteMany({
-        where: { companyId: actor.companyId, projectId: data.projectId },
-      });
-      if (data.lines.length)
-        await tx.projectBudgetLine.createMany({
-          data: data.lines.map((line, position) => ({
-            ...line,
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await mutable(tx, actor, data.projectId, ids);
+        const existing = await tx.projectBudgetLine.findMany({
+          where: { companyId: actor.companyId, projectId: data.projectId },
+          orderBy: { position: "asc" },
+        });
+        const claimed = new Set<string>();
+        const rows = data.lines.map((line, position) => {
+          const current = line.id
+            ? existing.find((x) => x.id === line.id)
+            : existing.find(
+                (x) => x.position === position && !claimed.has(x.id),
+              );
+          if ((line.id && !current) || (current && claimed.has(current.id)))
+            throw new Error("INVALID_PROJECT_BUDGET_LINE");
+          if (current) claimed.add(current.id);
+          return { current, line, position };
+        });
+        const removed = existing
+          .filter((x) => !claimed.has(x.id))
+          .map((x) => x.id);
+        if (
+          removed.length &&
+          ((await tx.projectMaterialMovement.count({
+            where: {
+              companyId: actor.companyId,
+              projectBudgetLineId: { in: removed },
+            },
+          })) ||
+            (await tx.purchaseLineAllocation.count({
+              where: {
+                companyId: actor.companyId,
+                projectBudgetLineId: { in: removed },
+              },
+            })))
+        )
+          throw new Error("PROJECT_BUDGET_IN_USE");
+        if (removed.length)
+          await tx.projectBudgetLine.deleteMany({
+            where: {
+              companyId: actor.companyId,
+              projectId: data.projectId,
+              id: { in: removed },
+            },
+          });
+        // Move retained positions out of the way before reordering unique slots.
+        const offset =
+          Math.max(0, ...existing.map((x) => x.position)) +
+          data.lines.length +
+          1;
+        await tx.projectBudgetLine.updateMany({
+          where: { companyId: actor.companyId, projectId: data.projectId },
+          data: { position: { increment: offset } },
+        });
+        for (const { current, line, position } of rows) {
+          const { id: ignoredId, ...fields } = line;
+          void ignoredId;
+          const values = {
+            ...fields,
             amount: new Prisma.Decimal(line.amount),
             position,
-            companyId: actor.companyId,
-            projectId: data.projectId,
-          })),
+          };
+          if (current)
+            await tx.projectBudgetLine.update({
+              where: { id: current.id },
+              data: values,
+            });
+          else
+            await tx.projectBudgetLine.create({
+              data: {
+                ...values,
+                companyId: actor.companyId,
+                projectId: data.projectId,
+              },
+            });
+        }
+        await audit(tx, actor, data.projectId, "PROJECT_BUDGET_CHANGED", {
+          total: data.lines
+            .reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0))
+            .toString(),
         });
-      await audit(tx, actor, data.projectId, "PROJECT_BUDGET_CHANGED", {
-        total: data.lines
-          .reduce((sum, line) => sum.add(line.amount), new Prisma.Decimal(0))
-          .toString(),
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
 }
 export async function addMilestone(raw: unknown) {
@@ -950,38 +1210,43 @@ export async function linkBoq(projectId: string, boqId: string) {
 export async function closeProjectForActor(
   actor: ProjectActor,
   projectId: string,
-  raw: { handoverDate?: Date; handoverNote?: string; closureNote?: string },
+  raw: {
+    handoverDate?: Date;
+    handoverNote?: string;
+    closureNote?: string;
+    billingSummary?: Prisma.InputJsonObject;
+  },
+  transaction?: Prisma.TransactionClient,
 ) {
+  await requireProjectFunction(actor);
   const ids = await authorizedProjectBranchIds(actor);
-  return db.$transaction(
-    async (tx) => {
-      const project = await mutable(tx, actor, projectId, ids),
-        now = new Date();
-      await tx.project.updateMany({
-        where: {
-          id: project.id,
-          companyId: actor.companyId,
-          status: project.status,
-        },
-        data: {
-          status: "CLOSED",
-          actualEndDate: now,
-          handoverDate: raw.handoverDate,
-          handoverNote: raw.handoverNote,
-          closureNote: raw.closureNote,
-          closedById: actor.id,
-          closedAt: now,
-        },
-      });
-      await audit(tx, actor, project.id, "PROJECT_CLOSED");
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+  return inAccountTransaction(transaction, async (tx) => {
+    const project = await mutable(tx, actor, projectId, ids),
+      now = new Date();
+    await tx.project.updateMany({
+      where: {
+        id: project.id,
+        companyId: actor.companyId,
+        status: project.status,
+      },
+      data: {
+        status: "CLOSED",
+        actualEndDate: now,
+        handoverDate: raw.handoverDate,
+        handoverNote: raw.handoverNote,
+        closureNote: raw.closureNote,
+        closedById: actor.id,
+        closedAt: now,
+      },
+    });
+    await audit(tx, actor, project.id, "PROJECT_CLOSED", raw.billingSummary);
+  });
 }
 export async function reopenProjectForActor(
   actor: ProjectActor,
   projectId: string,
 ) {
+  await requireProjectFunction(actor);
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const ids = await authorizedProjectBranchIds(actor);
   return db.$transaction(

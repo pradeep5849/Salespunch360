@@ -7,6 +7,7 @@ import {
   enabledModulesForCompany,
 } from "@/lib/account/modules";
 import {BUSINESS_TYPES,MODULE_SETUP_CATALOG,expandSetupModules,optionalModulesFromStored,recommendedSetupModules} from "@/lib/account/module-setup";
+import {updateGeneralSettingsForActor} from "@/lib/account/settings";
 import { taxProfileInput } from "@/lib/account/tax";
 import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
@@ -113,8 +114,7 @@ export async function mobileSaveSettings(
     });
   }
   if (section === "general") {
-    const v = z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.literal("STANDARD")}).strict().parse(raw);
-    return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,...v},update:v});
+    return updateGeneralSettingsForActor(a,raw);
   }
   if(section==="party-settings"){
     const partySettings=z.object({gstinEnabled:z.boolean(),groupingEnabled:z.boolean(),shippingAddressEnabled:z.boolean(),printShippingAddress:z.boolean()}).strict().parse(raw),current=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true}}),transactionDefaults={...((current?.transactionDefaults as Record<string,unknown>|null)??{}),partySettings} as Prisma.InputJsonValue;
@@ -133,7 +133,7 @@ export async function mobileSaveSettings(
   if (section === "modules") {
     const v = z.object({
       businessType: z.enum(BUSINESS_TYPES.map(type => type.key) as [typeof BUSINESS_TYPES[number]["key"], ...typeof BUSINESS_TYPES[number]["key"][]]),
-      enabledModules: z.array(z.enum(["PROJECTS", "BARCODE", "POS"])),
+      enabledModules: z.array(z.enum(["ASSETS", "PROJECTS", "BARCODE", "POS"])),
     }).strict().parse(raw);
     const enabledModules = expandSetupModules(v.enabledModules);
     return db.accountSettings.upsert({

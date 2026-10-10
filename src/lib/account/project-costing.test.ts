@@ -1,8 +1,42 @@
 import { describe, it, expect } from "vitest";
 import { Prisma } from "@prisma/client";
-import { packageProfitability, projectCosting } from "./project-costing";
+import {
+  packageProfitability,
+  projectCosting,
+  projectAllocatedPurchaseMetrics,
+  inventoryIssueCostNotPurchased,
+} from "./project-costing";
 const d = (x: number | string) => new Prisma.Decimal(x);
 describe("A8 tax-exclusive costing", () => {
+  it("reconciles the user's contract, extra job, invoices, labour and leftover transfer without adding advances to profit", () => {
+    const result = projectCosting({
+      originalValue: d(100000),
+      estimatedCost: d(0),
+      budget: d(0),
+      approvedChanges: [{ valueDelta: d(10000), estimatedCostDelta: d(0) }],
+      documents: [
+        { type: "SALES_INVOICE", status: "POSTED", taxableTotal: d(50000) },
+        { type: "SALES_INVOICE", status: "POSTED", taxableTotal: d(50000) },
+      ],
+      allocatedPurchaseCost: d(30000),
+      expenses: [d(20000), d(5000)],
+      advanceReceived: d(20000),
+      materialAdjustments: {
+        inventoryIssued: d(0),
+        transferIn: d(0),
+        returned: d(0),
+        transferOut: d(5000),
+        consumed: d(25000),
+        unused: d(0),
+      },
+    });
+    expect(result.contractRevenueBase.toString()).toBe("110000");
+    expect(result.actualCost.toString()).toBe("50000");
+    expect(result.expenseCost.toString()).toBe("25000");
+    expect(result.contractProfit.toString()).toBe("60000");
+    expect(result.profit.toString()).toBe("50000");
+    expect(result.unbilledContractRevenue.toString()).toBe("10000");
+  });
   it("excludes GST and cash movements from project P&L", () => {
     const r = projectCosting({
       originalValue: d(118),
@@ -123,5 +157,106 @@ describe("A8 tax-exclusive costing", () => {
     );
     expect(rows.find((x) => x.id === "work")?.profit.toString()).toBe("40");
     expect(rows.find((x) => x.id === null)?.name).toBe("Other / Unassigned");
+  });
+});
+
+describe("Project allocated purchase cost and commitments", () => {
+  const row = (
+    id: string,
+    type: string,
+    value: number,
+    po: string | null = null,
+    eligible = true,
+  ) => ({
+    documentLineId: `${id}-line`,
+    taxableAmount: d(value),
+    taxAmount: d(value * 0.18),
+    quantity: d(value / 10),
+    documentLine: {
+      taxableAmount: d(value * 2),
+      quantity: d(value / 5),
+      document: {
+        id,
+        type,
+        status: "POSTED",
+        sourcePurchaseOrderId: po,
+        taxCreditTreatment: eligible ? "ELIGIBLE" : "BLOCKED",
+      },
+    },
+  });
+  it("nets project allocated bills from POs rather than committing both", () => {
+    const result = projectAllocatedPurchaseMetrics(
+      [
+        row("po", "PURCHASE_ORDER", 100),
+        row("bill", "PURCHASE_BILL", 40, "po"),
+      ],
+      [],
+    );
+    expect(result.actual.toString()).toBe("40");
+    expect(result.committed.toString()).toBe("60");
+  });
+  it("apportions posted debit notes to this project without restoring fulfilled commitments", () => {
+    const result = projectAllocatedPurchaseMetrics(
+      [
+        row("po", "PURCHASE_ORDER", 100),
+        row("bill", "PURCHASE_BILL", 100, "po"),
+      ],
+      [
+        {
+          sourceCommercialLineId: "bill-line",
+          taxableAmount: d(40),
+          taxAmount: d(7.2),
+          quantity: d(4),
+        },
+      ],
+    );
+    expect(result.actual.toString()).toBe("80");
+    expect(result.committed.toString()).toBe("0");
+  });
+  it("includes non-recoverable GST in original and adjusted project cost", () => {
+    const result = projectAllocatedPurchaseMetrics(
+      [row("bill", "PURCHASE_BILL", 100, null, false)],
+      [
+        {
+          sourceCommercialLineId: "bill-line",
+          taxableAmount: d(40),
+          taxAmount: d(7.2),
+          quantity: d(4),
+        },
+      ],
+    );
+    expect(result.actual.toString()).toBe("94.4");
+  });
+});
+
+describe("Project purchase material costing", () => {
+  it("counts purchase allocation cost once while retaining independent inventory issues", () => {
+    const row = (
+      id: string,
+      purchaseAllocationId: string | null,
+      cost: number,
+    ) => ({
+      id,
+      purchaseAllocationId,
+      totalCost: d(cost),
+      movementType: "INVENTORY_ISSUE_TO_PROJECT",
+      reversalOfId: null,
+    });
+    expect(
+      inventoryIssueCostNotPurchased([
+        row("purchase", "allocation", 50),
+        row("inventory", null, 20),
+      ]).toString(),
+    ).toBe("20");
+    expect(
+      inventoryIssueCostNotPurchased([
+        row("inventory", null, 20),
+        {
+          ...row("reversal", null, 20),
+          movementType: "REVERSAL",
+          reversalOfId: "inventory",
+        },
+      ]).toString(),
+    ).toBe("0");
   });
 });

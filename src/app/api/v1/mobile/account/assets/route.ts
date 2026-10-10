@@ -9,13 +9,18 @@ import {
 export async function GET(r: Request) {
   try {
     const x = new URL(r.url);
-    return mobileJson(
-      await mobileAssets(
-        await authenticateMobileToken(r.headers.get("authorization")),
-        x.searchParams.get("q"),
-        x.searchParams.get("status"),
-      ),
+    const page = await mobileAssets(
+      await authenticateMobileToken(r.headers.get("authorization")),
+      x.searchParams.get("q"),
+      x.searchParams.get("status"),
+      Number(x.searchParams.get("offset") ?? 0),
+      Number(x.searchParams.get("limit") ?? 50),
     );
+    const response = mobileJson(
+      x.searchParams.get("paged") === "1" ? page : page.items,
+    );
+    response.headers.set("X-Has-More", String(page.hasMore));
+    return response;
   } catch (e) {
     return (
       mobileUnauthorized(e) ??

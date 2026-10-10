@@ -30,7 +30,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable data class SalesNotificationsContext(val items:List<SalesNotification> = emptyList(),val unreadCount:Int=0)
 @Serializable data class AccountNavigationGroup(val label:String,val items:List<AccountNavigationItem> = emptyList(),val children:List<AccountNavigationGroup> = emptyList())
 @Serializable data class AccountNavigationItem(val label:String,val href:String)
-@Serializable data class AccountDashboard(val title:String,val period:String,val projectOnly:Boolean=false,val metrics:List<AccountDashboardMetric> = emptyList(),val currentMonthSales:String="0",val previousMonthSales:String="0",val currentMonthExpenses:String="0",val salesGrowthPercent:String?=null,val salesTrend:List<AccountSalesTrend> = emptyList(),val itemCount:Int=0,val lowStockItems:Int=0,val expenseBreakdown:List<AccountExpenseBreakdown> = emptyList(),val branchComparison:List<AccountBranchComparison> = emptyList())
+@Serializable data class AccountDashboard(val title:String,val period:String,val projectOnly:Boolean=false,val metrics:List<AccountDashboardMetric> = emptyList(),val currentMonthSales:String="0",val previousMonthSales:String="0",val currentMonthExpenses:String="0",val salesGrowthPercent:String?=null,val salesTrend:List<AccountSalesTrend> = emptyList(),val itemCount:Int=0,val lowStockItems:Int=0,val expenseBreakdown:List<AccountExpenseBreakdown> = emptyList(),val branchComparison:List<AccountBranchComparison> = emptyList(),val visibility:AccountDashboardVisibility=AccountDashboardVisibility(),val links:AccountDashboardLinks=AccountDashboardLinks(),val lowStockPreview:List<AccountLowStockPreview> = emptyList())
 @Serializable data class AccountDashboardMetric(val key:String,val label:String,val value:String,val kind:String)
 @Serializable data class AccountSalesTrend(val month:String,val total:String)
 @Serializable data class AccountExpenseBreakdown(val category:String,val amount:String)
@@ -40,7 +40,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable data class AccountBranchComparison(val id:String,val name:String,val sales:String,val expenses:String,val operatingContribution:String)
 @Serializable data class AccountMasterRecord(val id:String,val branchId:String?=null,val name:String,val code:String?=null,val symbol:String?=null,val scope:String?=null,val contactPerson:String?=null,val phone:String?=null,val email:String?=null,val address:String?=null,val billingAddress:String?=null,val shippingAddress:String?=null,val gstin:String?=null,val stateCode:String?=null,val gstRegistrationType:String?=null,val pan:String?=null,val notes:String?=null,val description:String?=null,val categoryId:String?=null,val unitId:String?=null,val salePrice:String?=null,val costPrice:String?=null,val taxRate:String?=null,val barcode:String?=null,val hsnCode:String?=null,val trackInventory:Boolean=false,val trackingMode:String="NONE",val lowStockThreshold:String?=null,val isDefault:Boolean=false,val isActive:Boolean=true,val customValues:Map<String,String> = emptyMap())
 @Serializable data class AccountPartySettings(val gstinEnabled:Boolean=true,val groupingEnabled:Boolean=false,val shippingAddressEnabled:Boolean=true,val printShippingAddress:Boolean=false)
-@Serializable data class AccountCustomField(val fieldKey:String,val label:String,val dataType:String)
+@Serializable data class AccountCustomField(val fieldKey:String,val label:String,val dataType:String,val isRequired:Boolean=false,val options:List<String> = emptyList())
 @Serializable data class AccountMasterOptions(val branches:List<AccountOption> = emptyList(),val units:List<AccountOption> = emptyList(),val categories:List<AccountOption> = emptyList(),val partySettings:AccountPartySettings=AccountPartySettings(),val partyCustomFields:List<AccountCustomField> = emptyList())
 @Serializable data class AccountOption(val id:String,val name:String,val symbol:String?=null)
 @Serializable data class AccountPartyDetail(val record:AccountMasterRecord,val documents:List<AccountPartyDocument> = emptyList(),val settlements:List<AccountPartySettlement> = emptyList())
@@ -136,3 +136,7 @@ internal fun visiblePricingRoles(structure:TeamStructure)=if(structure==TeamStru
 @Serializable data class AttendanceResponse(val attendance:Attendance)
 
 @Serializable data class LeadsPage(val leads:List<LeadSummary> = emptyList(),val page:Int=1,val hasMore:Boolean=false)
+
+@Serializable data class AccountDashboardVisibility(val sales:Boolean=false,val purchases:Boolean=false,val expenses:Boolean=false,val projects:Boolean=false,val inventory:Boolean=false)
+@Serializable data class AccountDashboardLinks(val reports:String?=null,val expenseReport:String?=null,val cashBank:String?=null,val items:String?=null,val lowStock:String?=null)
+@Serializable data class AccountLowStockPreview(val productId:String,val name:String,val warehouse:String,val quantity:String)

@@ -22,7 +22,7 @@ export const DELETE_ORDER = [
   "CostCentre", "LedgerAccount", "CustomFieldDefinition", "WorkPackage", "WorkCategory",
   "AccountProduct", "AccountService", "AccountCategory", "AccountUnit", "Vendor",
   "FinancialYear", "NumberingSeries", "AccountSettings",
-  "BillingOrder", "PendingStorageDeletion", "Branch", "User", "Company",
+  "BillingOrder", "Branch", "User", "Company",
 ] as const;
 
 export const PRESERVED_MODELS = ["BillingPrice", "RateLimitBucket", "_prisma_migrations"] as const;
@@ -43,12 +43,15 @@ export interface LockedCleanupDatabase {
   inventory(companyId: string): Promise<Inventory | null>;
   hasSuperAdmin(companyId: string): Promise<boolean>;
   assertTransactionAlive(): Promise<void>;
+  queueStorageDeletions(companyId:string,keys:string[]):Promise<void>;
   deleteTenant(companyId: string): Promise<void>;
   verifyTenantAbsent(companyId: string): Promise<boolean>;
 }
 export interface CleanupDatabase {
   inventory(companyId: string): Promise<Inventory | null>;
   hasSuperAdmin(companyId: string): Promise<boolean>;
+  completeStorageDeletion(key:string):Promise<void>;
+  recordStorageDeletionFailure(key:string):Promise<void>;
   withLockedTenant<T>(companyId: string, work: (locked: LockedCleanupDatabase) => Promise<T>): Promise<T>;
 }
 export interface CleanupStorage { delete(key: string): Promise<void> }
@@ -115,25 +118,24 @@ export async function cleanupTenants(db: CleanupDatabase, storage: CleanupStorag
 
 /** The single destructive tenant-purge engine used by both the CLI and platform UI. */
 export async function purgeTenant(db: CleanupDatabase, storage: CleanupStorage, companyId: string, guard?: LockedInventoryGuard) {
-  return db.withLockedTenant(companyId, async locked => {
-    // withLockedTenant has already acquired Company FOR UPDATE in its Serializable transaction.
+  const inventory=await db.withLockedTenant(companyId, async locked => {
     if (await locked.hasSuperAdmin(companyId)) throw new Error(`SUPER_ADMIN_TENANT_CORRUPTION:${companyId}`);
     const inventory = await locked.inventory(companyId);
     if (!inventory) throw new Error(`TENANT_NOT_FOUND_OR_ALREADY_CLEANED:${companyId}`);
     await guard?.(inventory);
     validateStorageOwnership(inventory);
-    const storageResults: Array<{ companyId: string; key: string; status: "DELETED_OR_MISSING" }> = [];
     await locked.assertTransactionAlive();
-    for (const { key } of inventory.storage) {
-      await locked.assertTransactionAlive();
-      try { await storage.delete(key); }
-      catch { throw new Error(`STORAGE_DELETE_FAILED:${key}`); }
-      await locked.assertTransactionAlive();
-      storageResults.push({ companyId, key, status: "DELETED_OR_MISSING" });
-    }
+    await locked.queueStorageDeletions(companyId,[...new Set(inventory.storage.map(row=>row.key))]);
     await locked.assertTransactionAlive();
     await locked.deleteTenant(companyId);
     if (!(await locked.verifyTenantAbsent(companyId))) throw new Error(`RESIDUE_DETECTED:${companyId}`);
-    return { mode: "EXECUTE" as const, inventories: [inventory], storageResults };
+    return inventory;
   });
+  // No irreversible file operation occurs until the database transaction commits.
+  const storageResults:Array<{companyId:string;key:string;status:"DELETED_OR_MISSING"|"QUEUED_FOR_RETRY"}>=[];
+  for(const key of new Set(inventory.storage.map(row=>row.key))){
+    try {await storage.delete(key);await db.completeStorageDeletion(key);storageResults.push({companyId,key,status:"DELETED_OR_MISSING"})}
+    catch {await db.recordStorageDeletionFailure(key);storageResults.push({companyId,key,status:"QUEUED_FOR_RETRY"})}
+  }
+  return {mode:"EXECUTE" as const,inventories:[inventory],storageResults};
 }

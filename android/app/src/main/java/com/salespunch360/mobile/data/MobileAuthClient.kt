@@ -23,6 +23,7 @@ private data class DeviceLoginRequest(
     val password:String,
     val deviceId:String,
     val deviceName:String,
+    val rememberMe:Boolean,
 )
 
 class MobileAuthClient(context:Context,private val session:SecureSession){
@@ -36,8 +37,8 @@ class MobileAuthClient(context:Context,private val session:SecureSession){
         .retryOnConnectionFailure(true)
         .build()
 
-    suspend fun login(identifier:String,password:String):Bootstrap=withContext(Dispatchers.IO){
-        val payload=DeviceLoginRequest(identifier,password,identity.id,identity.name)
+    suspend fun login(identifier:String,password:String,rememberMe:Boolean):Bootstrap=withContext(Dispatchers.IO){
+        val payload=DeviceLoginRequest(identifier,password,identity.id,identity.name,rememberMe)
         val request=Request.Builder()
             .url(BuildConfig.API_BASE_URL+"api/v1/mobile/auth/login")
             .header("Accept","application/json")
@@ -50,7 +51,7 @@ class MobileAuthClient(context:Context,private val session:SecureSession){
                 throw MobileLoginFailure(response.code,code)
             }
             val login=json.decodeFromString<LoginResponse>(raw)
-            session.save(login.accessToken,login.bootstrap.user.id)
+            session.save(login.accessToken,login.bootstrap.user.id,rememberMe)
             login.bootstrap
         }
     }

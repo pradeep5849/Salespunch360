@@ -57,8 +57,10 @@ describe("P1 simple project workflow contract", () => {
     expect(detailPage).toContain("Final project report");
     expect(actions).toContain("completeSimpleProject");
     expect(actions).not.toContain("reopenProject");
-    expect(simpleWorkflow).toContain('status: "CLOSED"');
-    expect(simpleWorkflow).toContain('to: "COMPLETED"');
+    expect(simpleWorkflow).toContain("return closeAndBillProjectForActor(actor, projectId");
+    const lockedLifecycle = readFileSync("src/lib/account/projects.ts", "utf8");
+    expect(lockedLifecycle).toContain('status: "CLOSED"');
+    expect(lockedLifecycle).toContain("FOR UPDATE");
   });
 
   it("creates Won Lead projects as Active with lead/site contact details", () => {
@@ -75,7 +77,7 @@ describe("P1 simple project workflow contract", () => {
     expect(androidProjectScreen).toContain('listOf<String?>(null, "ACTIVE", "ON_HOLD", "COMPLETED")');
     expect(androidProjectScreen).toContain('listOf("ACTIVE", "ON_HOLD")');
     expect(androidProjectScreen).toContain('Text("Status: Active")');
-    expect(androidProjectScreen).toContain('Text("Complete")');
+    expect(androidProjectScreen).toContain('Text("Close Project")');
     expect(androidProjectScreen).toContain("Completed project · report only");
     expect(androidProjectScreen).not.toContain('Pick("Customer"');
     expect(androidProjectScreen).not.toContain("Target end date");

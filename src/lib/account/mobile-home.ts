@@ -72,7 +72,7 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
       const outstanding = row.type === "SALES_INVOICE" && row.status === "POSTED" ? saleOutstandings.get(row.id) : undefined;
       const base = row.payableAmount ?? row.grandTotal;
       const paymentStatus = outstanding === undefined ? undefined : outstanding.isZero() ? "PAID" : outstanding.lt(base) ? "PARTIALLY_PAID" : "UNPAID";
-      return { ...row, grandTotal: row.grandTotal.toString(), balanceDue: (outstanding ?? row.balanceDue).toString(), paymentStatus };
+      return { ...row, grandTotal: row.grandTotal.toString(), payableAmount: row.payableAmount?.toString() ?? null, balanceDue: (outstanding ?? row.balanceDue).toString(), paymentStatus };
     }),
     parties: parties.map(party => ({ id: party.id, name: party.name, lastActivity: balanceByParty.get(party.id)?._max.issueDate ?? party.updatedAt, balance: balanceByParty.get(party.id)?._sum.balanceDue?.toString() ?? "0" })),
   };

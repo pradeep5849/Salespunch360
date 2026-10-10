@@ -12,8 +12,18 @@ const D = Prisma.Decimal,
   Z = new D(0),
   qty = z.string().regex(/^\d{1,14}(\.\d{1,4})?$/),
   money = z.string().regex(/^\d{1,16}(\.\d{1,4})?$/);
-export {signedQuantity, stockValuation, chooseProductRate, itemProfitability} from "./inventory-policy";
-import {signedQuantity,stockValuation,isInboundStockMovement} from "./inventory-policy";
+export {
+  signedQuantity,
+  stockValuation,
+  chooseProductRate,
+  itemProfitability,
+} from "./inventory-policy";
+import {
+  stockMovementValue,
+  stockValuation,
+  signedQuantity,
+  isInboundStockMovement,
+} from "./inventory-policy";
 async function actor(write = false) {
   const a = (
     write
@@ -94,7 +104,7 @@ export async function createStockMovementForActor(
   const d = movement.parse(raw);
   return db.$transaction(
     async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.warehouseId}:${d.productId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.warehouseId}:${d.productId}`}))`;
       const [w, p, settings] = await Promise.all([
         warehouse(tx, a, d.warehouseId),
         product(tx, a, d.productId),
@@ -197,7 +207,7 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
     throw new Error("SAME_WAREHOUSE");
   return db.$transaction(
     async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.productId}:${[d.sourceWarehouseId, d.destinationWarehouseId].sort().join(":")}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.productId}:${[d.sourceWarehouseId, d.destinationWarehouseId].sort().join(":")}`}))`;
       const [source, destination, p, settings] = await Promise.all([
           warehouse(tx, a, d.sourceWarehouseId),
           warehouse(tx, a, d.destinationWarehouseId),
@@ -212,7 +222,11 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
             ...(d.batchId ? { batchId: d.batchId } : {}),
             ...(d.serialNumberId ? { serialNumberId: d.serialNumberId } : {}),
           },
-          orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
+          orderBy: [
+            { movementDate: "asc" },
+            { createdAt: "asc" },
+            { id: "asc" },
+          ],
         }),
         valuation = stockValuation(sourceRows),
         q = new D(d.quantity);
@@ -224,7 +238,9 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
       if (d.serialNumberId && (!q.equals(1) || !valuation.quantity.equals(1)))
         throw new Error("SERIAL_NOT_AVAILABLE");
       const transferId = crypto.randomUUID(),
-        unitCost = valuation.averageUnitCost,
+        unitCost = valuation.quantity.gt(0)
+          ? valuation.stockValue.div(valuation.quantity)
+          : valuation.averageUnitCost,
         totalCost = q.mul(unitCost).toDecimalPlaces(2),
         base = {
           companyId: a.companyId!,
@@ -275,24 +291,77 @@ export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
         : {}),
     },
   });
-  const rows = await db.stockMovement.findMany({
-    where: {
-      companyId: a.companyId,
-      warehouseId: { in: warehouses.map((w) => w.id) },
-      ...(asOf ? { movementDate: { lte: asOf } } : {}),
+  // Repeatable read keeps paginated history coherent while another request posts stock.
+  return db.$transaction(
+    async (tx) => {
+      const grouped = new Map<
+        string,
+        {
+          warehouseId: string;
+          productId: string;
+          quantity: Prisma.Decimal;
+          value: Prisma.Decimal;
+        }
+      >();
+      let cursor: string | undefined;
+      for (;;) {
+        const rows = await tx.stockMovement.findMany({
+          where: {
+            companyId: a.companyId,
+            warehouseId: { in: warehouses.map((w) => w.id) },
+            ...(asOf ? { movementDate: { lte: asOf } } : {}),
+          },
+          select: {
+            id: true,
+            warehouseId: true,
+            productId: true,
+            movementType: true,
+            quantity: true,
+            unitCost: true,
+            totalCost: true,
+            sourceType: true,
+          },
+          orderBy: [
+            { movementDate: "asc" },
+            { createdAt: "asc" },
+            { id: "asc" },
+          ],
+          take: 1000,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        });
+        for (const row of rows) {
+          const key = `${row.warehouseId}:${row.productId}`,
+            state = grouped.get(key) ?? {
+              warehouseId: row.warehouseId,
+              productId: row.productId,
+              quantity: Z,
+              value: Z,
+            };
+          const q = signedQuantity(row.movementType, row.quantity);
+          state.value = state.value.add(
+            stockMovementValue(state.quantity, state.value, row),
+          );
+          state.quantity = state.quantity.add(q);
+          grouped.set(key, state);
+        }
+        if (rows.length < 1000) break;
+        cursor = rows[rows.length - 1].id;
+      }
+      return [...grouped.values()].map((row) => ({
+        warehouseId: row.warehouseId,
+        productId: row.productId,
+        quantity: row.quantity,
+        averageUnitCost: row.quantity.gt(0)
+          ? row.value.div(row.quantity).toDecimalPlaces(4)
+          : Z,
+        stockValue: row.value.toDecimalPlaces(2),
+      }));
     },
-    orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
-  });
-  const grouped = new Map<string, typeof rows>();
-  for (const row of rows) {
-    const key = `${row.warehouseId}:${row.productId}`;
-    grouped.set(key, [...(grouped.get(key) ?? []), row]);
-  }
-  return [...grouped].map(([key, movements]) => ({
-    warehouseId: key.split(":")[0],
-    productId: key.split(":")[1],
-    ...stockValuation(movements),
-  }));
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      timeout: 30000,
+    },
+  );
 }
 const warehouseInput = z
   .object({
@@ -514,7 +583,7 @@ export async function listSerialNumbersForActor(
         companyId: a.companyId,
         serialNumberId: { in: rows.map((x) => x.id) },
       },
-      orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
   return rows.map((row) => ({
     ...row,
@@ -665,9 +734,15 @@ export async function inventoryOptionsForActor(a: ProjectActor) {
 export async function inventoryOptions() {
   return inventoryOptionsForActor(await actor());
 }
-export async function lowStockSnapshotForActor(a: ProjectActor) {
+export async function lowStockSnapshotForActor(
+  a: ProjectActor,
+  asOf?: Date,
+  existingSnapshot?: Awaited<ReturnType<typeof inventorySnapshotForActor>>,
+) {
   const [snapshot, products, warehouses] = await Promise.all([
-      inventorySnapshotForActor(a),
+      existingSnapshot
+        ? Promise.resolve(existingSnapshot)
+        : inventorySnapshotForActor(a, asOf),
       listInventoryProductsForActor(a),
       listWarehousesForActor(a),
     ]),

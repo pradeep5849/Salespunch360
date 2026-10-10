@@ -218,6 +218,7 @@ enum ProjectMaterialMovementType {
   INVENTORY_ISSUE_TO_PROJECT
   CONSUMPTION
   RETURN_TO_INVENTORY
+  RETURN_TO_VENDOR
   TRANSFER_OUT
   TRANSFER_IN
   REVERSAL
@@ -232,6 +233,8 @@ model ProjectMaterialMovement {
   purchaseDocumentId    String?                     @db.Uuid
   purchaseLineId        String?                     @db.Uuid
   purchaseAllocationId  String?                     @db.Uuid
+  correctionDocumentId  String?                     @db.Uuid
+  correctionLineId      String?                     @db.Uuid
   productId             String                      @db.Uuid
   warehouseId           String?                     @db.Uuid
   projectLocation       String?
@@ -251,11 +254,16 @@ model ProjectMaterialMovement {
   sourceMovementId      String?                     @db.Uuid
   reversalOfId          String?                     @unique @db.Uuid
   idempotencyKey        String
+  requestHash           String?                     @db.VarChar(64)
   createdAt             DateTime                    @default(now())
 
+  @@unique([companyId, id])
   @@unique([companyId, idempotencyKey])
+  @@index([companyId, projectId, movementDate, createdAt, id])
+  @@index([companyId, projectId, sourceMovementId])
   @@index([companyId, branchId, projectId, productId, movementDate])
   @@index([companyId, purchaseAllocationId, projectId])
+  @@index([companyId, correctionDocumentId, correctionLineId])
   @@map("project_material_movements")
 }
 
@@ -682,6 +690,8 @@ enum LoanStatus {
 }
 
 enum ProjectAuditEventType {
+  PROJECT_MATERIAL_POSTED
+  PROJECT_MATERIAL_REVERSED
   PROJECT_CREATED
   PROJECT_UPDATED
   PROJECT_MANAGER_CHANGED
@@ -1190,8 +1200,8 @@ model VisitPhoto {
 
 model PendingStorageDeletion {
   id            String    @id @default(uuid()) @db.Uuid
-  companyId     String    @db.Uuid
-  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  companyId     String?   @db.Uuid
+  company       Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   objectKey     String    @unique @db.VarChar(500)
   attempts      Int       @default(0)
   lastAttemptAt DateTime?
@@ -1581,6 +1591,7 @@ model PaymentTransaction {
   order             BillingOrder  @relation(fields: [orderId], references: [id], onDelete: Restrict)
   provider          String        @db.VarChar(40)
   providerPaymentId String        @unique @db.VarChar(200)
+  manualReference   String?       @unique @db.VarChar(100)
   amount            Decimal       @db.Decimal(18, 2)
   currency          String        @db.Char(3)
   status            PaymentStatus
@@ -2344,6 +2355,8 @@ model QuotationAuditEvent {
 
 model CommercialDocument {
   id                     String                   @id @default(uuid()) @db.Uuid
+  creationRequestKey     String?                  @db.VarChar(120)
+  creationRequestHash    String?                  @db.VarChar(64)
   companyId              String                   @db.Uuid
   branchId               String                   @db.Uuid
   type                   CommercialDocumentType
@@ -2419,6 +2432,7 @@ model CommercialDocument {
   advanceApplications    AdvanceApplication[]
 
   @@unique([companyId, id])
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, branchId, type, documentNumber])
   @@unique([companyId, vendorId, purchaseFinancialYearId, vendorInvoiceNumberNormalized])
   @@index([companyId, type, issueDate])
@@ -2661,6 +2675,8 @@ model CommercialAuditEvent {
 
 model Project {
   id                   String               @id @default(uuid()) @db.Uuid
+  creationRequestKey   String?              @db.VarChar(120)
+  creationRequestHash  String?              @db.VarChar(64)
   companyId            String               @db.Uuid
   branchId             String               @db.Uuid
   projectNumber        String               @db.VarChar(100)
@@ -2712,6 +2728,7 @@ model Project {
   @@index([companyId, customerId])
   @@index([companyId, projectManagerId])
   @@index([companyId, branchId, createdAt])
+  @@unique([companyId, creationRequestKey])
   @@map("projects")
 }
 
@@ -2746,6 +2763,7 @@ model ProjectBudgetLine {
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   project     Project  @relation(fields: [companyId, projectId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  @@unique([companyId, id])
   @@unique([projectId, position])
   @@index([companyId, projectId])
   @@map("project_budget_lines")
@@ -2843,6 +2861,8 @@ model ProjectAuditEvent {
 
 model ProjectChangeOrder {
   id                 String                   @id @default(uuid()) @db.Uuid
+  requestKey         String?                  @db.VarChar(120)
+  requestHash        String?                  @db.VarChar(64)
   companyId          String                   @db.Uuid
   projectId          String                   @db.Uuid
   changeOrderNumber  String                   @db.VarChar(100)
@@ -2860,6 +2880,7 @@ model ProjectChangeOrder {
   @@unique([companyId, id])
   @@unique([companyId, projectId, changeOrderNumber])
   @@index([companyId, projectId, status])
+  @@unique([companyId, requestKey])
   @@map("project_change_orders")
 }
 
@@ -2868,6 +2889,7 @@ model ExpenseCategory {
   companyId              String               @db.Uuid
   name                   String               @db.VarChar(160)
   scope                  ExpenseCategoryScope
+  incomeLedgerAccountId  String?              @db.Uuid
   defaultLedgerAccountId String               @db.Uuid
   isActive               Boolean              @default(true)
   createdAt              DateTime             @default(now())
@@ -2902,6 +2924,13 @@ model ExpenseTransaction {
   totalAmount             Decimal                  @db.Decimal(18, 2)
   moneyAccountId          String?                  @db.Uuid
   occurrenceKey           String?                  @db.VarChar(160)
+  creationRequestKey      String?                  @db.Uuid
+  creationRequestHash     String?                  @db.VarChar(64)
+  categoryLedgerAccountId String?                  @db.Uuid
+  billedItems             Json?
+  additionalCharges       Decimal                  @default(0) @db.Decimal(18, 2)
+  roundOffEnabled         Boolean                  @default(false)
+  roundOffAmount          Decimal                  @default(0) @db.Decimal(18, 2)
   journalEntryId          String?                  @db.Uuid
   reversalJournalId       String?                  @db.Uuid
   employeeReimbursementId String?                  @db.Uuid
@@ -2914,6 +2943,7 @@ model ExpenseTransaction {
   updatedAt               DateTime                 @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, occurrenceKey])
   @@unique([companyId, journalEntryId])
   @@index([companyId, projectId, status])
@@ -3159,7 +3189,7 @@ model StockMovement {
   warehouseId    String            @db.Uuid
   productId      String            @db.Uuid
   movementType   StockMovementType
-  quantity       Decimal           @db.Decimal(18, 4)
+  quantity       Decimal           @db.Decimal(20, 6)
   unitCost       Decimal           @db.Decimal(18, 4)
   totalCost      Decimal           @db.Decimal(18, 2)
   sourceType     String            @db.VarChar(80)
@@ -3199,9 +3229,15 @@ model Asset {
   companyId                       String             @db.Uuid
   branchId                        String             @db.Uuid
   assetNumber                     String             @db.VarChar(100)
+  creationRequestKey              String?             @db.Uuid
+  creationRequestHash             String?             @db.VarChar(64)
   name                            String             @db.VarChar(240)
   assetType                       AssetType
   category                        String?            @db.VarChar(120)
+  hsnCode                         String?            @db.VarChar(8)
+  openingQuantity                 Decimal?           @db.Decimal(18, 4)
+  unitPrice                       Decimal?           @db.Decimal(18, 2)
+  effectiveDate                   DateTime?          @db.Date
   purchaseDate                    DateTime           @db.Date
   purchaseValue                   Decimal            @db.Decimal(18, 2)
   vendorId                        String?            @db.Uuid
@@ -3227,6 +3263,7 @@ model Asset {
   updatedAt                       DateTime            @updatedAt
   @@unique([companyId, id])
   @@unique([companyId, assetNumber])
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, branchId, status])
   @@map("assets")
 }

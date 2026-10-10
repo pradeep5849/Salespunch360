@@ -721,3 +721,5 @@ body:has(.account-shell) > .workspace-header{display:none}
 .settings-feature-state{font-size:10px!important}.settings-feature-state input{width:16px;height:16px}
 .account-save-feedback{position:fixed;z-index:220;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));width:max-content;max-width:calc(100% - 32px);margin:0;padding:10px 14px;transform:translateX(-50%);border-radius:9px;box-shadow:0 8px 28px #0f172a30;background:#176b42;color:#fff;font-size:13px;font-weight:600;text-align:center}
 .account-save-feedback.error{background:#b42318}
+
+.asset-form p, .asset-form small { color: #526078; }

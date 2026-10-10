@@ -28,7 +28,8 @@ fun AccountItemsScreen(
     padding:PaddingValues,
     canSettings:Boolean,
     navigate:(String)->Unit,
-    vm:AccountInventoryViewModel=viewModel()
+    vm:AccountInventoryViewModel=viewModel(),
+    initialQuery:String=""
 ){
     val state=vm.state.collectAsStateWithLifecycle().value
     var query by remember{mutableStateOf("")}
@@ -38,13 +39,12 @@ fun AccountItemsScreen(
     var categories by remember{mutableStateOf(setOf<String>())}
     var draftTypes by remember{mutableStateOf(setOf<String>())}
     var draftCategories by remember{mutableStateOf(setOf<String>())}
-    LaunchedEffect(Unit){vm.show("stock")}
+    LaunchedEffect(initialQuery){vm.context(initialQuery);vm.show("stock")}
 
     val stockById=remember(state.rows){
-        state.rows.associate{row->
-            val product=row["product"]?.jsonObject
-            product?.get("id")?.jsonPrimitive?.content.orEmpty() to (row["quantity"]?.jsonPrimitive?.content?.toDoubleOrNull()?:0.0)
-        }
+        state.rows.groupBy{row->row["product"]?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty()}.mapValues{(_,rows)->rows.sumOf{row->
+                        (row["quantity"]?.jsonPrimitive?.content?.toDoubleOrNull()?:0.0)
+        }}
     }
     val allItems=remember(state.itemRecords,state.serviceRecords,state.rows){
         buildList{
