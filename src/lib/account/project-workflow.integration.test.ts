@@ -25,8 +25,15 @@ import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import { createSimpleProjectForActor } from "./project-simple-workflow";
 import { closeAndBillProjectForActor } from "./project-close";
 import {
+  createExpenseForActor,
+  postExpenseForActor,
+  saveExpenseCategoryForActor,
+  transitionExpenseForActor,
+} from "./expenses";
+import {
   createProjectForActor,
   getProjectForActor,
+  updateProjectForActor,
   replaceBudgetForActor,
   type ProjectActor,
 } from "./projects";
@@ -149,6 +156,8 @@ describe.skipIf(!url)(
           name: "Admin",
           email: `${userId}@example.test`,
           passwordHash: "fixture",
+          accountAccessActive: true,
+          branchAccessScope: "ALL_BRANCHES",
           role: "ACCOUNT_USER",
           accountRole: "ACCOUNT_ADMIN",
         },
@@ -281,6 +290,7 @@ describe.skipIf(!url)(
       await client.stockMovement.deleteMany({ where: { companyId } });
       await client.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+        await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
         await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
         await tx.advanceApplication.deleteMany({ where: { companyId } });
         await tx.settlementAllocation.deleteMany({ where: { companyId } });
@@ -304,6 +314,7 @@ describe.skipIf(!url)(
       await client.inventoryBatch.deleteMany({ where: { companyId } });
       await client.inventorySerialNumber.deleteMany({ where: { companyId } });
       await client.accountProduct.deleteMany({ where: { companyId } });
+      await client.moneyAccount.deleteMany({ where: { companyId } });
       await client.ledgerAccount.deleteMany({ where: { companyId } });
       await client.financialYear.deleteMany({ where: { companyId } });
       await client.userBranchAccess.deleteMany({ where: { userId } });
@@ -337,6 +348,210 @@ describe.skipIf(!url)(
           where: { companyId, projectId: project.id },
         }),
       ).toBe(2);
+    });
+
+    it("assigns active scoped admins/managers, protects assignment edits and excludes credential fields", async () => {
+      const managerId = key(),
+        wrongRoleId = key(),
+        wrongBranchId = key();
+      await client.user.createMany({
+        data: [
+          {
+            id: managerId,
+            companyId,
+            name: "Responsible manager",
+            email: `${managerId}@example.test`,
+            passwordHash: "private-test-hash",
+            accountAccessActive: true,
+            role: "ACCOUNT_USER",
+            accountRole: "PROJECT_MANAGER",
+            branchAccessScope: "ALL_BRANCHES",
+          },
+          {
+            id: wrongRoleId,
+            companyId,
+            name: "Data entry",
+            email: `${wrongRoleId}@example.test`,
+            passwordHash: "private-test-hash",
+            accountAccessActive: true,
+            role: "ACCOUNT_USER",
+            accountRole: "DATA_ENTRY",
+            branchAccessScope: "ALL_BRANCHES",
+          },
+          {
+            id: wrongBranchId,
+            companyId,
+            name: "Wrong branch manager",
+            email: `${wrongBranchId}@example.test`,
+            passwordHash: "private-test-hash",
+            accountAccessActive: true,
+            role: "ACCOUNT_USER",
+            accountRole: "PROJECT_MANAGER",
+            branchAccessScope: "SELECTED_BRANCHES",
+          },
+        ],
+      });
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Assigned job",
+        projectValue: "100",
+        projectManagerId: userId,
+      });
+      const input = {
+        projectId: project.id,
+        name: project.name,
+        projectValue: "100",
+        status: "ACTIVE",
+        projectManagerId: managerId,
+      };
+      await updateProjectForActor(actor, input);
+      const detail = await getProjectForActor(actor, project.id);
+      expect(detail.projectManager).toEqual({
+        id: managerId,
+        name: "Responsible manager",
+      });
+      expect(
+        detail.members.every(
+          (member) => Object.keys(member.user).sort().join(",") === "id,name",
+        ),
+      ).toBe(true);
+      const manager = {
+        ...actor,
+        id: managerId,
+        accountRole: "PROJECT_MANAGER",
+      } as ProjectActor;
+      await updateProjectForActor(manager, { ...input, status: "ON_HOLD" });
+      await expect(
+        updateProjectForActor(manager, { ...input, projectManagerId: userId }),
+      ).rejects.toThrow("Not authorized");
+      for (const id of [wrongRoleId, wrongBranchId]) {
+        await expect(
+          updateProjectForActor(actor, { ...input, projectManagerId: id }),
+        ).rejects.toThrow("INVALID_PROJECT_MANAGER");
+      }
+      expect(
+        (await client.project.findUniqueOrThrow({ where: { id: project.id } }))
+          .projectManagerId,
+      ).toBe(managerId);
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            projectId: project.id,
+            eventType: "PROJECT_MANAGER_CHANGED",
+          },
+        }),
+      ).toBe(1);
+    });
+    it("prevents ordinary status edits from bypassing final billing and keeps legacy completed Projects read-only", async () => {
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Final status protection",
+        projectValue: "100",
+      });
+      const input = {
+        projectId: project.id,
+        name: project.name,
+        projectValue: "100",
+        status: "COMPLETED",
+      };
+      await expect(updateProjectForActor(actor, input)).rejects.toThrow();
+      expect(
+        (await client.project.findUniqueOrThrow({ where: { id: project.id } }))
+          .status,
+      ).toBe("ACTIVE");
+      await client.project.update({
+        where: { id: project.id },
+        data: { status: "COMPLETED" },
+      });
+      await expect(
+        updateProjectForActor(actor, { ...input, status: "ACTIVE" }),
+      ).rejects.toThrow("PROJECT_CLOSED");
+      await expect(
+        createCommercialDocumentForActor(actor, {
+          type: "SALES_INVOICE",
+          branchId,
+          projectId: project.id,
+          partyId: project.customerId,
+          issueDate: date,
+          lines: [
+            {
+              lineType: "SERVICE",
+              sourceId: serviceId,
+              quantity: "1",
+              rate: "100",
+            },
+          ],
+        }),
+      ).rejects.toThrow("Not authorized");
+      expect((await getProjectForActor(actor, project.id)).status).toBe(
+        "COMPLETED",
+      );
+    });
+
+    it("issues inventory to a Project without any budget and costs consumption/return once", async () => {
+      const product = await client.accountProduct.create({
+        data: {
+          companyId,
+          name: "Budgetless job materials",
+          code: key(),
+          trackInventory: true,
+          costPrice: 10,
+        },
+      });
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Budgetless material job",
+        projectValue: "100",
+      });
+      const purchase = await createCommercialDocumentForActor(actor, {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        purchasePurpose: "INVENTORY_SALES",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: product.id,
+            warehouseId,
+            quantity: "2",
+            rate: "10",
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: purchase.id });
+      const movement = await issueInventoryToProjectForActor(actor, {
+        projectId: project.id,
+        productId: product.id,
+        warehouseId,
+        quantity: "2",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      expect(movement.projectBudgetLineId).toBeNull();
+      await consumeProjectMaterialForActor(actor, {
+        projectId: project.id,
+        sourceMovementId: movement.id,
+        quantity: "1",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      await returnProjectMaterialForActor(actor, {
+        projectId: project.id,
+        sourceMovementId: movement.id,
+        warehouseId,
+        quantity: "1",
+        movementDate: date,
+        reason: "Unused material",
+        idempotencyKey: key(),
+      });
+      const report = await loadProjectCostingForActor(actor, project.id);
+      expect(report.metrics.actualCost.toString()).toBe("10");
+      expect((await balance(project.id)).available.toString()).toBe("0");
     });
     it("deduplicates concurrent manual Project creation with exactly one customer and audit", async () => {
       const customerCount = await client.customer.count({
@@ -2196,6 +2411,91 @@ describe.skipIf(!url)(
         });
         await postCommercialDocumentForActor(actor, { documentId: doc.id });
       }
+      const purchase = await createCommercialDocumentForActor(actor, {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        projectId: project.id,
+        purchasePurpose: "PROJECT",
+        materialTreatment: "DIRECT_TO_PROJECT",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: productId,
+            warehouseId,
+            quantity: "10",
+            rate: "2000",
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: purchase.id });
+      const receipt = await client.projectMaterialMovement.findFirstOrThrow({
+        where: {
+          companyId,
+          projectId: project.id,
+          purchaseDocumentId: purchase.id,
+        },
+      });
+      const companyStock = await stock();
+      await transferProjectMaterialForActor(actor, {
+        sourceProjectId: project.id,
+        sourceMovementId: receipt.id,
+        destinationProjectId: b,
+        quantity: "2",
+        movementDate: date,
+        reason: "Leftover material for next job",
+        idempotencyKey: key(),
+      });
+      expect((await stock()).quantity.toString()).toBe(
+        companyStock.quantity.toString(),
+      );
+      expect((await stock()).stockValue.toString()).toBe(
+        companyStock.stockValue.toString(),
+      );
+      await consumeProjectMaterialForActor(actor, {
+        projectId: project.id,
+        sourceMovementId: receipt.id,
+        quantity: "8",
+        movementDate: date,
+        notes: "Materials used to finish job",
+        idempotencyKey: key(),
+      });
+      const cash = await client.ledgerAccount.findFirstOrThrow({
+        where: { companyId, systemKey: "CASH" },
+      });
+      const ledger = await client.ledgerAccount.findFirstOrThrow({
+        where: { companyId, systemKey: "GENERAL_EXPENSES" },
+      });
+      const money = await client.moneyAccount.create({
+        data: {
+          companyId,
+          branchId,
+          name: "Project cash",
+          type: "CASH",
+          ledgerAccountId: cash.id,
+        },
+      });
+      const category = await saveExpenseCategoryForActor(actor, {
+        name: "Labour for final job",
+        scope: "EXPENSE",
+        defaultLedgerAccountId: ledger.id,
+      });
+      const expense = await createExpenseForActor(actor, {
+        branchId,
+        projectId: project.id,
+        categoryId: category!.id,
+        type: "PROJECT_EXPENSE",
+        transactionDate: date,
+        taxableAmount: "10000",
+        moneyAccountId: money.id,
+        requestKey: key(),
+      });
+      await transitionExpenseForActor(actor, expense.id, "PENDING_APPROVAL");
+      await postExpenseForActor(actor, expense.id);
       await Promise.all([
         closeAndBillProjectForActor(actor, project.id, { postingDate: date }),
         closeAndBillProjectForActor(actor, project.id, { postingDate: date }),
@@ -2230,7 +2530,11 @@ describe.skipIf(!url)(
       const report = await loadProjectCostingForActor(actor, project.id);
       expect(report.project.status).toBe("CLOSED");
       expect(report.metrics.revenue.toString()).toBe("110000");
-      expect(report.metrics.finalProfit?.toString()).toBe("110000");
+      expect(report.metrics.actualCost.toString()).toBe("26000");
+      expect(report.metrics.finalProfit?.toString()).toBe("84000");
+      expect(
+        report.details.expenses.find((x) => x.id === expense.id)?.category,
+      ).toBe("Labour for final job");
       expect(report.metrics.accountingReceivable.toString()).toBe("109800");
     });
     it("creates no closing invoice for a fully billed contract and denies an unbilled close without a valid service", async () => {
@@ -2283,24 +2587,100 @@ describe.skipIf(!url)(
       ).toBe(0);
     });
     it("rolls back final invoice creation, numbering, posting and closure when the accounting period is locked", async () => {
-      const project = await createSimpleProjectForActor(actor, {branchId, name: "Atomic failed closing", projectValue: "100"});
-      const year = await client.financialYear.findFirstOrThrow({where: {companyId, isActive: true}});
-      const lock = await client.accountingPeriodLock.create({data: {companyId, financialYearId: year.id, lockedThrough: date, updatedById: userId}});
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Atomic failed closing",
+        projectValue: "100",
+      });
+      const year = await client.financialYear.findFirstOrThrow({
+        where: { companyId, isActive: true },
+      });
+      const lock = await client.accountingPeriodLock.create({
+        data: {
+          companyId,
+          financialYearId: year.id,
+          lockedThrough: date,
+          updatedById: userId,
+        },
+      });
       try {
-        await expect(closeAndBillProjectForActor(actor, project.id, {billingServiceId: serviceId, postingDate: date})).rejects.toThrow("PERIOD_LOCKED");
-        expect((await client.project.findUniqueOrThrow({where: {id: project.id}})).status).toBe("ACTIVE");
-        expect(await client.commercialDocument.count({where: {companyId, projectId: project.id}})).toBe(0);
-        expect(await client.projectAuditEvent.count({where: {companyId, projectId: project.id, eventType: "PROJECT_CLOSED"}})).toBe(0);
-      } finally {await client.accountingPeriodLock.delete({where: {id: lock.id}});}
+        await expect(
+          closeAndBillProjectForActor(actor, project.id, {
+            billingServiceId: serviceId,
+            postingDate: date,
+          }),
+        ).rejects.toThrow("PERIOD_LOCKED");
+        expect(
+          (
+            await client.project.findUniqueOrThrow({
+              where: { id: project.id },
+            })
+          ).status,
+        ).toBe("ACTIVE");
+        expect(
+          await client.commercialDocument.count({
+            where: { companyId, projectId: project.id },
+          }),
+        ).toBe(0);
+        expect(
+          await client.projectAuditEvent.count({
+            where: {
+              companyId,
+              projectId: project.id,
+              eventType: "PROJECT_CLOSED",
+            },
+          }),
+        ).toBe(0);
+      } finally {
+        await client.accountingPeriodLock.delete({ where: { id: lock.id } });
+      }
     });
     it("rejects unauthorized branch and financial roles and requires pending extra jobs to be resolved", async () => {
-      const project = await createSimpleProjectForActor(actor, {branchId, name: "Guarded closing", projectValue: "100"});
-      await expect(closeAndBillProjectForActor({...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [otherBranch]}, project.id, {billingServiceId: serviceId})).rejects.toThrow();
-      await expect(closeAndBillProjectForActor({...actor, accountRole: "ACCOUNTANT"}, project.id, {billingServiceId: serviceId})).rejects.toThrow();
-      const job = await createChangeOrderForActor(actor, {projectId: project.id, title: "Pending extra job", valueDelta: "10", estimatedCostDelta: "0", idempotencyKey: key()});
-      await expect(closeAndBillProjectForActor(actor, project.id, {billingServiceId: serviceId})).rejects.toThrow("PROJECT_EXTRA_JOBS_PENDING");
-      await transitionChangeOrderForActor(actor, project.id, job.id, "CANCELLED");
-      expect((await client.project.findUniqueOrThrow({where: {id: project.id}})).status).toBe("ACTIVE");
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Guarded closing",
+        projectValue: "100",
+      });
+      await expect(
+        closeAndBillProjectForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          project.id,
+          { billingServiceId: serviceId },
+        ),
+      ).rejects.toThrow();
+      await expect(
+        closeAndBillProjectForActor(
+          { ...actor, accountRole: "ACCOUNTANT" },
+          project.id,
+          { billingServiceId: serviceId },
+        ),
+      ).rejects.toThrow();
+      const job = await createChangeOrderForActor(actor, {
+        projectId: project.id,
+        title: "Pending extra job",
+        valueDelta: "10",
+        estimatedCostDelta: "0",
+        idempotencyKey: key(),
+      });
+      await expect(
+        closeAndBillProjectForActor(actor, project.id, {
+          billingServiceId: serviceId,
+        }),
+      ).rejects.toThrow("PROJECT_EXTRA_JOBS_PENDING");
+      await transitionChangeOrderForActor(
+        actor,
+        project.id,
+        job.id,
+        "CANCELLED",
+      );
+      expect(
+        (await client.project.findUniqueOrThrow({ where: { id: project.id } }))
+          .status,
+      ).toBe("ACTIVE");
     });
     it("lists posted labour and expenses by category while excluding drafts, reversals and another Project", async () => {
       const project = await createSimpleProjectForActor(actor, {
@@ -2331,7 +2711,7 @@ describe.skipIf(!url)(
             companyId,
             branchId,
             projectId,
-            categoryId: category.id,
+            categoryId: category!.id,
             type: "PROJECT_EXPENSE",
             status,
             transactionNumber: key(),

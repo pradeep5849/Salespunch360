@@ -56,4 +56,18 @@ class PurchaseRequestTest {
         assertEquals("serial", purchasePayload(draft).array("lines").single().str("serialNumberId"))
         assertNotNull(purchaseValidation(draft.copy(lines = draft.lines.map { it.copy(quantity = "2") }), state))
     }
+    @Test fun projectPurchaseWorksWithoutBudgetAndStillScopesOptionalBudget() {
+        val draft = draft().copy(purpose = "PROJECT", projectId = "project", materialTreatment = "DIRECT_TO_PROJECT")
+        assertNull(purchaseValidation(draft, state()))
+        assertFalse(purchasePayload(draft).containsKey("projectBudgetLineId"))
+        assertNotNull(purchaseValidation(draft.copy(projectBudgetLineId = "unknown"), state()))
+        assertNotNull(purchaseValidation(draft, state().copy(projects = listOf(project.copy(branchId = "denied")))))
+    }
+    @Test fun mixedProjectAllocationWorksWithoutBudget() {
+        val allocation = PurchaseAllocationDraft("PROJECT", "1", "project", "", "warehouse", "DIRECT_TO_PROJECT")
+        val draft = draft().copy(purpose = "MIXED", lines = draft().lines.map { it.copy(purchaseAllocations = listOf(allocation)) })
+        assertNull(purchaseValidation(draft, state()))
+        assertFalse(purchasePayload(draft).array("lines").single().array("purchaseAllocations").single().containsKey("projectBudgetLineId"))
+    }
+
 }

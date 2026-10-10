@@ -53,7 +53,7 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
                 if (draft.type != "DEBIT_NOTE") {
                     if (draft.purpose == "PROJECT") {
                         item { SelectField("Project", draft.projectId, state.projects.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { vm.edit(draft.copy(projectId = it, projectBudgetLineId = "")) } }
-                        item { SelectField("Budget line", draft.projectBudgetLineId, state.projectBudgetLines.filter { it.str("projectId") == draft.projectId }.map { it.str("id") to it.str("title") }) { vm.edit(draft.copy(projectBudgetLineId = it)) } }
+                        item { SelectField("Budget line (optional)", draft.projectBudgetLineId, state.projectBudgetLines.filter { it.str("projectId") == draft.projectId }.map { it.str("id") to it.str("title") }) { vm.edit(draft.copy(projectBudgetLineId = it)) } }
                         item { SelectField("Material treatment", draft.materialTreatment, listOf("" to "Direct to Project (default)", "RECEIVE_IN_INVENTORY" to "Receive in inventory", "DIRECT_TO_PROJECT" to "Direct to Project")) { vm.edit(draft.copy(materialTreatment = it)) } }
                     } else item { SelectField("Advanced purchase purpose", draft.purpose, listOf("INVENTORY_SALES" to "Inventory / Sales", "GENERAL_OFFICE" to "General / Office", "FIXED_ASSET" to "Fixed Asset", "MIXED" to "Mixed Allocation")) { vm.edit(draft.copy(purpose = it, projectId = "", projectBudgetLineId = "", materialTreatment = "")) } }
                 }
@@ -89,7 +89,7 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
                     OutlinedTextField(allocation.quantity, { change(allocation.copy(quantity = it)) }, label = { Text("Allocated quantity") })
                     if (allocation.allocationType == "PROJECT") {
                         SelectField("Allocated Project", allocation.projectId, state.projects.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { change(allocation.copy(projectId = it, projectBudgetLineId = "")) }
-                        SelectField("Allocated budget line", allocation.projectBudgetLineId, state.projectBudgetLines.filter { it.str("projectId") == allocation.projectId }.map { it.str("id") to it.str("title") }) { change(allocation.copy(projectBudgetLineId = it)) }
+                        SelectField("Allocated budget line (optional)", allocation.projectBudgetLineId, state.projectBudgetLines.filter { it.str("projectId") == allocation.projectId }.map { it.str("id") to it.str("title") }) { change(allocation.copy(projectBudgetLineId = it)) }
                         SelectField("Allocated material treatment", allocation.materialTreatment, listOf("DIRECT_TO_PROJECT" to "Direct to Project", "RECEIVE_IN_INVENTORY" to "Receive in inventory")) { change(allocation.copy(materialTreatment = it)) }
                     }
                     if (allocation.allocationType in listOf("INVENTORY", "PROJECT") && masters.firstOrNull { it.id == line.sourceId }?.trackInventory == true) {

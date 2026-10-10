@@ -1,4 +1,5 @@
 import { inAccountTransaction } from "./transaction-scope";
+import { FINAL_PROJECT_STATUSES, isFinalProjectStatus } from "./project-state";
 import { retrySerializable } from "./transaction-retry";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -156,7 +157,7 @@ export async function listOpenProjectOptionsForActor(
   return db.project.findMany({
     where: {
       ...projectRecordScope(actor, ids),
-      status: { notIn: ["CLOSED", "CANCELLED"] },
+      status: { notIn: [...FINAL_PROJECT_STATUSES] },
     },
     select: {
       id: true,
@@ -186,7 +187,7 @@ export async function authorizeProjectForCommercial(
       id: projectId,
       branchId,
       ...projectRecordScope(actor, ids),
-      status: { notIn: ["CLOSED", "CANCELLED"] },
+      status: { notIn: [...FINAL_PROJECT_STATUSES] },
       ...(customerId ? { customerId } : {}),
     },
     select: {
@@ -229,7 +230,7 @@ async function mutable(
     where: { id, ...projectRecordScope(actor, branchIds) },
   });
   if (!project) throw new AuthorizationError();
-  if (["CLOSED", "CANCELLED"].includes(project.status))
+  if (isFinalProjectStatus(project.status))
     throw new Error("PROJECT_CLOSED");
   return project;
 }
@@ -502,9 +503,9 @@ export function assertNormalProjectTransition(
 ) {
   const allowed: Record<ProjectStatus, ProjectStatus[]> = {
     PLANNING: ["ACTIVE", "CANCELLED"],
-    ACTIVE: ["ON_HOLD", "COMPLETED", "CANCELLED"],
+    ACTIVE: ["ON_HOLD", "CANCELLED"],
     ON_HOLD: ["ACTIVE", "CANCELLED"],
-    COMPLETED: ["ACTIVE", "CANCELLED"],
+    COMPLETED: [],
     CLOSED: [],
     CANCELLED: [],
   };
@@ -582,9 +583,9 @@ export function summarizeProjectDashboardRows(
       values.reduce((n, x) => n.add(x), zero());
   return {
     activeProjects: rows.filter(
-      (x) => !["CLOSED", "CANCELLED"].includes(x.status),
+      (x) => !isFinalProjectStatus(x.status),
     ).length,
-    projectsClosed: rows.filter((x) => x.status === "CLOSED").length,
+    projectsClosed: rows.filter((x) => ["CLOSED", "COMPLETED"].includes(x.status)).length,
     totalProjectValue: sum(rows.map((x) => x.finalProjectValue)),
     received: sum(rows.map((x) => x.received)),
     outstanding: sum(rows.map((x) => x.outstanding)),
@@ -607,11 +608,12 @@ export async function projectDashboardForActor(actor: ProjectActor) {
           where: { type: "SALES_INVOICE", status: "POSTED" },
           select: {
             grandTotal: true,
+            payableAmount: true,
             allocations: { select: { amount: true } },
             advanceApplications: { select: { amount: true } },
             adjustments: {
               where: { status: "POSTED" },
-              select: { grandTotal: true },
+              select: { grandTotal: true, payableAmount: true },
             },
           },
         },
@@ -633,6 +635,7 @@ export async function projectDashboardForActor(actor: ProjectActor) {
           companyId: actor.companyId,
           projectId: { in: projectIds },
           type: { in: ["CUSTOMER_RECEIPT", "CUSTOMER_ADVANCE"] },
+          status: "POSTED",
         },
         select: { projectId: true, amount: true },
       }),
@@ -654,10 +657,10 @@ export async function projectDashboardForActor(actor: ProjectActor) {
       ),
       outstanding = sum(
         project.commercialDocuments.map((x) =>
-          x.grandTotal
+          (x.payableAmount ?? x.grandTotal)
             .sub(sum(x.allocations.map((a) => a.amount)))
             .sub(sum(x.advanceApplications.map((a) => a.amount)))
-            .sub(sum(x.adjustments.map((a) => a.grandTotal))),
+            .sub(sum(x.adjustments.map((a) => a.payableAmount ?? a.grandTotal))),
         ),
       );
     return {

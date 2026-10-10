@@ -321,8 +321,8 @@ test("Project links, material forms and API enforce the same scope and module ru
     .getByRole("combobox", { name: "Product", exact: true })
     .selectOption(productId);
   await page
-    .getByRole("combobox", { name: "Budget line", exact: true })
-    .selectOption(budgetA);
+    .getByRole("combobox", { name: "Budget line (optional)", exact: true })
+    .selectOption("");
   await page
     .getByRole("combobox", { name: "Warehouse", exact: true })
     .selectOption(warehouseId);
@@ -400,7 +400,7 @@ test("Project links, material forms and API enforce the same scope and module ru
     .getByRole("combobox", { name: "Batch", exact: true })
     .selectOption(batchId);
   await page
-    .getByRole("combobox", { name: "Budget line", exact: true })
+    .getByRole("combobox", { name: "Budget line (optional)", exact: true })
     .selectOption(budgetA);
   await page
     .getByRole("combobox", { name: "Warehouse", exact: true })
@@ -888,39 +888,86 @@ test("Project invoice entry links customer and retries GST revenue exactly once"
   expect(normalSale?.status()).toBe(200);
 });
 
-test("Project closure bills the remaining contract once after a lost response and the native API returns the same closed result", async ({page}) => {
+test("Project closure bills the remaining contract once after a lost response and the native API returns the same closed result", async ({
+  page,
+}) => {
   test.setTimeout(60_000);
-  await db.accountSettings.update({where: {companyId}, data: {enabledModules: ["PROJECTS", "PROJECT_COSTING", "SALES", "INVENTORY"]}});
-  const project = await db.project.create({data: {companyId, branchId, customerId, projectNumber: `CLOSE-${randomUUID()}`, name: "Browser final balance", projectValue: 100, status: "ACTIVE", createdById: userId}});
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      enabledModules: ["PROJECTS", "PROJECT_COSTING", "SALES", "INVENTORY"],
+    },
+  });
+  const project = await db.project.create({
+    data: {
+      companyId,
+      branchId,
+      customerId,
+      projectNumber: `CLOSE-${randomUUID()}`,
+      name: "Browser final balance",
+      projectValue: 100,
+      status: "ACTIVE",
+      createdById: userId,
+    },
+  });
   await page.goto("/sign-in");
-  await page.getByLabel("Email", {exact: true}).fill(email);
-  await page.getByLabel("Password", {exact: true}).fill(password);
-  await page.getByRole("button", {name: "Sign In", exact: true}).click();
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/workspace\/account/);
   const path = `/workspace/account/projects/${project.id}`;
   await page.goto(path);
-  await page.getByRole("combobox", {name: "Final invoice service / SAC", exact: true}).selectOption(serviceId);
-  await page.route(`**${path}`, async route => {
+  await page
+    .getByRole("combobox", { name: "Final invoice service / SAC", exact: true })
+    .selectOption(serviceId);
+  await page.route(`**${path}`, async (route) => {
     if (route.request().method() !== "POST") return route.continue();
     await route.fetch();
     await route.abort("failed");
   });
-  await page.getByRole("button", {name: "Complete project", exact: true}).click();
-  await expect(page.getByRole("alert").filter({hasText: "Connection interrupted"})).toBeVisible();
-  await expect(page.getByRole("combobox", {name: "Final invoice service / SAC", exact: true})).toHaveValue(serviceId);
+  await page
+    .getByRole("button", { name: "Complete project", exact: true })
+    .click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Connection interrupted" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", {
+      name: "Final invoice service / SAC",
+      exact: true,
+    }),
+  ).toHaveValue(serviceId);
   await page.unroute(`**${path}`);
-  await page.getByRole("button", {name: "Complete project", exact: true}).click();
-  await expect(page.getByRole("heading", {name: "Final project report", exact: true})).toBeVisible();
-  const docs = await db.commercialDocument.findMany({where: {companyId, projectId: project.id}});
+  await page
+    .getByRole("button", { name: "Complete project", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Final project report", exact: true }),
+  ).toBeVisible();
+  const docs = await db.commercialDocument.findMany({
+    where: { companyId, projectId: project.id },
+  });
   expect(docs).toHaveLength(1);
   expect(docs[0].status).toBe("POSTED");
   expect(docs[0].taxableTotal.toString()).toBe("100");
   expect(docs[0].grandTotal.toString()).toBe("118");
-  const login = await page.request.post("/api/v1/mobile/auth/login", {data: {identifier: email, password, deviceId: randomUUID()}});
+  const login = await page.request.post("/api/v1/mobile/auth/login", {
+    data: { identifier: email, password, deviceId: randomUUID() },
+  });
   expect(login.ok()).toBeTruthy();
   const session = await login.json();
-  const result = await page.request.post(`/api/v1/mobile/account/projects/${project.id}/action`, {headers: {authorization: `Bearer ${session.accessToken}`}, data: {action: "COMPLETE", billingServiceId: serviceId}});
+  const result = await page.request.post(
+    `/api/v1/mobile/account/projects/${project.id}/action`,
+    {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+      data: { action: "COMPLETE", billingServiceId: serviceId },
+    },
+  );
   expect(result.ok()).toBeTruthy();
   expect((await result.json()).status).toBe("CLOSED");
-  expect(await db.commercialDocument.count({where: {companyId, projectId: project.id}})).toBe(1);
+  expect(
+    await db.commercialDocument.count({
+      where: { companyId, projectId: project.id },
+    }),
+  ).toBe(1);
 });

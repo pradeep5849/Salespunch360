@@ -1,3 +1,4 @@
+import {FINAL_PROJECT_STATUSES} from "./project-state";
 import { createHash } from "node:crypto";
 import { retrySerializable } from "./transaction-retry";
 import { Prisma } from "@prisma/client";
@@ -128,7 +129,7 @@ export const inventoryIssueInput = z
     batchId: z.string().uuid().optional(),
     serialNumberId: z.string().uuid().optional(),
     quantity: decimal,
-    projectBudgetLineId: z.string().uuid(),
+    projectBudgetLineId: z.string().uuid().optional(),
     movementDate: z.coerce.date(),
     notes: z.string().max(5000).optional(),
     attachmentKey: z.string().max(500).optional(),
@@ -253,15 +254,15 @@ export async function issueInventoryToProjectForActor(
                 trackInventory: true,
               },
             }),
-            tx.projectBudgetLine.findFirst({
+            d.projectBudgetLineId ? tx.projectBudgetLine.findFirst({
               where: {
                 id: d.projectBudgetLineId,
                 companyId: actor.companyId,
                 projectId: project.id,
               },
-            }),
+            }) : Promise.resolve(null),
           ]);
-        if (!warehouse || !product || !budget)
+        if (!warehouse || !product || (d.projectBudgetLineId && !budget))
           throw new Error("INVALID_PROJECT_MATERIAL_CONTEXT");
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:${warehouse.id}:${product.id}`}))`;
         const prior = await tx.stockMovement.findMany({
@@ -361,7 +362,7 @@ export async function issueInventoryToProjectForActor(
               originalUnitCost: unitCost,
               totalCost: total,
               movementDate: d.movementDate,
-              projectBudgetLineId: budget.id,
+              projectBudgetLineId: budget?.id ?? null,
               notes: d.notes,
               attachmentKey: d.attachmentKey,
               createdById: actor.id,
@@ -1381,7 +1382,7 @@ export async function projectMaterialContextForActor(
       db.project.findMany({
         where: {
           companyId: actor.companyId,
-          status: { notIn: ["CLOSED", "CANCELLED"] },
+          status: { notIn: [...FINAL_PROJECT_STATUSES] },
           ...scope,
         },
         select: { id: true, name: true, projectNumber: true, branchId: true },
@@ -1408,7 +1409,7 @@ export async function projectMaterialContextForActor(
           companyId: actor.companyId,
           project: {
             ...scope,
-            status: { notIn: ["CLOSED", "CANCELLED"] },
+            status: { notIn: [...FINAL_PROJECT_STATUSES] },
           },
         },
         select: { id: true, projectId: true, title: true, category: true },

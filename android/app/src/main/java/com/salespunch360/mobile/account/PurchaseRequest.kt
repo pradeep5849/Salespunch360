@@ -24,8 +24,8 @@ fun purchaseValidation(draft: PurchaseDraft, state: PurchaseState): String? {
     if (!validDate(draft.issueDate) || listOf(draft.dueDate, draft.postingDate, draft.vendorInvoiceDate).any { it.isNotBlank() && !validDate(it) }) return "Enter dates in YYYY-MM-DD format."
     if (draft.type == "PURCHASE_BILL" && (draft.vendorInvoiceNumber.isBlank() || draft.vendorInvoiceDate.isBlank())) return "Vendor invoice number and date are required."
     if (draft.type == "DEBIT_NOTE" && state.sources.none { it.str("id") == draft.sourceDocumentId && it.str("type") == "PURCHASE_BILL" && it.str("branchId") == draft.branchId && it.str("vendorId") == draft.vendorId }) return "Select a purchase bill for this branch and vendor."
-    fun projectValid(id: String, budget: String) = state.projects.any { it.id == id && it.branchId == draft.branchId } && state.projectBudgetLines.any { it.str("id") == budget && it.str("projectId") == id }
-    if (draft.type != "DEBIT_NOTE" && draft.purpose == "PROJECT" && !projectValid(draft.projectId, draft.projectBudgetLineId)) return "Select a Project and budget line in this branch."
+    fun projectValid(id: String, budget: String) = state.projects.any { it.id == id && it.branchId == draft.branchId } && (budget.isBlank() || state.projectBudgetLines.any { it.str("id") == budget && it.str("projectId") == id })
+    if (draft.type != "DEBIT_NOTE" && draft.purpose == "PROJECT" && !projectValid(draft.projectId, draft.projectBudgetLineId)) return "Select an available Project in this branch."
     if (draft.lines.isEmpty() || draft.lines.size > 500) return "Add between 1 and 500 lines."
     for ((index, line) in draft.lines.withIndex()) {
         val prefix = "Line ${index + 1}: "
@@ -52,7 +52,7 @@ fun purchaseValidation(draft: PurchaseDraft, state: PurchaseState): String? {
                 val amount = number(allocation.quantity) ?: return prefix + "Enter a valid allocated quantity."
                 if (amount <= BigDecimal.ZERO) return prefix + "Allocated quantity must be positive."
                 total += amount
-                if (allocation.allocationType == "PROJECT" && !projectValid(allocation.projectId, allocation.projectBudgetLineId)) return prefix + "Select an allocated Project and budget line in this branch."
+                if (allocation.allocationType == "PROJECT" && !projectValid(allocation.projectId, allocation.projectBudgetLineId)) return prefix + "Select an allocated Project in this branch."
                 if (allocation.allocationType == "INVENTORY" && master?.trackInventory == true && state.warehouses.none { it.id == allocation.warehouseId && it.branchId == draft.branchId }) return prefix + "Select an allocation warehouse in this branch."
             }
             if (total.compareTo(qty) != 0) return prefix + "Allocated quantities must equal the line quantity."
@@ -89,7 +89,7 @@ fun purchasePayload(draft: PurchaseDraft) = buildJsonObject {
                 line.purchaseAllocations.forEach { allocation -> add(buildJsonObject {
                     put("allocationType", allocation.allocationType); put("quantity", allocation.quantity)
                     if (allocation.allocationType == "PROJECT") {
-                        put("projectId", allocation.projectId); put("projectBudgetLineId", allocation.projectBudgetLineId)
+                        put("projectId", allocation.projectId); if (allocation.projectBudgetLineId.isNotBlank()) put("projectBudgetLineId", allocation.projectBudgetLineId)
                         put("materialTreatment", allocation.materialTreatment)
                     }
                     if (allocation.allocationType in listOf("INVENTORY", "PROJECT") && allocation.warehouseId.isNotBlank()) put("warehouseId", allocation.warehouseId)

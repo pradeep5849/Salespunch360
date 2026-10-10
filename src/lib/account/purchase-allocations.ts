@@ -105,7 +105,7 @@ export function buildPurchaseAllocations(input: {
   for (const row of requests) {
     if (
       row.allocationType === "PROJECT" &&
-      (!row.projectId || !row.projectBudgetLineId)
+      !row.projectId
     )
       throw new Error("PROJECT_ALLOCATION_INCOMPLETE");
     if (

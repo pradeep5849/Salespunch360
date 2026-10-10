@@ -12,7 +12,6 @@ const operationalStatuses = [
   "PLANNING",
   "ACTIVE",
   "ON_HOLD",
-  "COMPLETED",
   "CANCELLED",
 ] as const;
 

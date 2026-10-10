@@ -3,7 +3,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import kotlinx.serialization.json.*
 class ProjectMaterialRequestTest {
- private fun state()=ProjectMaterialState(loading=false,allowedActions=listOf("ISSUE","CONSUME","RETURN","TRANSFER","REVERSE"),projectId="a",productId="product",warehouseId="warehouse",budgetLineId="budget",quantity="2",movementDate="2026-10-09",requestKey="stable-request")
+ private fun state()=ProjectMaterialState(loading=false,allowedActions=listOf("ISSUE","CONSUME","RETURN","TRANSFER","REVERSE"),projectId="a",productId="product",warehouseId="warehouse",budgetLineId="",quantity="2",movementDate="2026-10-09",requestKey="stable-request")
  @Test fun unchangedRetryKeepsSameRequestReference(){val s=state();assertEquals(projectMaterialPayload(s),projectMaterialPayload(s));assertEquals("stable-request",projectMaterialPayload(s)["idempotencyKey"]?.jsonPrimitive?.content)}
  @Test fun reversalDoesNotSendQuantityOrNotes(){val s=state().copy(action="REVERSE",movementId="movement",reason="Correction");val payload=projectMaterialPayload(s);assertEquals("movement",payload["movementId"]?.jsonPrimitive?.content);assertFalse(payload.containsKey("quantity"));assertFalse(payload.containsKey("notes"));assertNull(projectMaterialValidation(s))}
  @Test fun permissionAndQuantityBoundsAreChecked(){assertNotNull(projectMaterialValidation(state().copy(allowedActions=emptyList())));assertNotNull(projectMaterialValidation(state().copy(quantity="NaN")));assertNotNull(projectMaterialValidation(state().copy(quantity="0")));assertNotNull(projectMaterialValidation(state().copy(quantity="1.0000001")));assertNull(projectMaterialValidation(state()))}
@@ -25,4 +25,11 @@ class ProjectMaterialRequestTest {
   assertNull(projectMaterialValidation(s.copy(batchId="batch")))
   assertEquals("batch",projectMaterialPayload(s.copy(batchId="batch"))["batchId"]?.jsonPrimitive?.content)
  }
+ @Test fun inventoryIssueDoesNotRequireABudgetButValidatesAnyProvidedLink(){
+  val s=state();assertNull(projectMaterialValidation(s));assertFalse(projectMaterialPayload(s).containsKey("projectBudgetLineId"))
+  assertNotNull(projectMaterialValidation(s.copy(budgetLineId="foreign")))
+  val budget=buildJsonObject{put("id","budget");put("projectId","a")}
+  val linked=s.copy(budgetLineId="budget",budgetLines=listOf(budget));assertNull(projectMaterialValidation(linked));assertEquals("budget",projectMaterialPayload(linked)["projectBudgetLineId"]?.jsonPrimitive?.content)
+ }
+
 }

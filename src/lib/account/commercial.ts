@@ -385,16 +385,6 @@ export const commercialDocumentInput = z
         path: ["projectId"],
       });
     if (
-      v.type !== "DEBIT_NOTE" &&
-      v.purchasePurpose === "PROJECT" &&
-      !v.projectBudgetLineId
-    )
-      c.addIssue({
-        code: "custom",
-        message: "Project budget line is required",
-        path: ["projectBudgetLineId"],
-      });
-    if (
       v.purchasePurpose !== "PROJECT" &&
       (v.projectBudgetLineId || v.materialTreatment)
     )
@@ -1238,6 +1228,7 @@ export async function createCommercialDocumentForActor(
                 tx,
               );
               if (
+                allocation.projectBudgetLineId &&
                 !(await tx.projectBudgetLine.findFirst({
                   where: {
                     id: allocation.projectBudgetLineId,

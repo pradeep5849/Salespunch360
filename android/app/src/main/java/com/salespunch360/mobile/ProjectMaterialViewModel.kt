@@ -19,7 +19,7 @@ internal fun projectMaterialPayload(s:ProjectMaterialState)=buildJsonObject{
  put("movementDate",s.movementDate);put("idempotencyKey",s.requestKey)
  if(s.action=="REVERSE"){put("movementId",s.movementId);put("reason",s.reason)}
  else{put("quantity",s.quantity);put("notes",s.notes);when(s.action){
-  "ISSUE"->{put("projectId",s.projectId);put("warehouseId",s.warehouseId);put("productId",s.productId);put("projectBudgetLineId",s.budgetLineId);if(s.batchId.isNotBlank())put("batchId",s.batchId);if(s.serialNumberId.isNotBlank())put("serialNumberId",s.serialNumberId)}
+  "ISSUE"->{put("projectId",s.projectId);put("warehouseId",s.warehouseId);put("productId",s.productId);if(s.budgetLineId.isNotBlank())put("projectBudgetLineId",s.budgetLineId);if(s.batchId.isNotBlank())put("batchId",s.batchId);if(s.serialNumberId.isNotBlank())put("serialNumberId",s.serialNumberId)}
   "CONSUME"->{put("projectId",s.projectId);put("sourceMovementId",s.sourceMovementId)}
   "RETURN"->{put("projectId",s.projectId);put("sourceMovementId",s.sourceMovementId);put("warehouseId",s.warehouseId);put("reason",s.reason)}
   "TRANSFER"->{put("sourceProjectId",s.projectId);put("destinationProjectId",s.destinationProjectId);put("sourceMovementId",s.sourceMovementId);put("reason",s.reason)}
@@ -32,8 +32,9 @@ internal fun projectMaterialValidation(s:ProjectMaterialState):String?{
  val quantity=runCatching{java.math.BigDecimal(s.quantity)}.getOrNull()
  if(!Regex("\\d{1,14}(\\.\\d{1,6})?").matches(s.quantity)||quantity==null||quantity.signum()<=0)return "Enter a positive quantity with up to six decimal places."
  if(s.projectId.isBlank())return "Select a Project."
- if(s.action=="ISSUE"&&(s.productId.isBlank()||s.warehouseId.isBlank()||s.budgetLineId.isBlank()))return "Select a product, warehouse and Project budget line."
+ if(s.action=="ISSUE"&&(s.productId.isBlank()||s.warehouseId.isBlank()))return "Select a product and warehouse."
  if(s.action=="ISSUE"){
+  if(s.budgetLineId.isNotBlank() && s.budgetLines.none{it.str("id")==s.budgetLineId && it.str("projectId")==s.projectId})return "Select a budget line belonging to this Project, or leave it blank."
   val mode=s.products.find{it.str("id")==s.productId}?.str("trackingMode")
   if(mode=="BATCH"&&s.batchId.isBlank())return "Select a batch."
   if(mode=="SERIAL"&&(s.serialNumberId.isBlank()||quantity.compareTo(java.math.BigDecimal.ONE)!=0))return "Select a serial number and issue exactly one unit."

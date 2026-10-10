@@ -271,13 +271,9 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
                       </label>
                     )}
                     <label>
-                      Budget line
-                      <select
-                        name="projectBudgetLineId"
-                        required
-                        onChange={change}
-                      >
-                        <option value="">Select budget line</option>
+                      Budget line (optional)
+                      <select name="projectBudgetLineId" onChange={change}>
+                        <option value="">No budget link</option>
                         {c.budgetLines
                           .filter((x) => x.projectId === project)
                           .map((x) => (

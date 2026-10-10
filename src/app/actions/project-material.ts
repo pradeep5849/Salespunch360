@@ -8,10 +8,22 @@ import {
   reverseProjectMaterial,
   transferProjectMaterial,
 } from "@/lib/account/project-material-service";
+const optionalMaterialFields = new Set([
+  "projectBudgetLineId",
+  "batchId",
+  "serialNumberId",
+  "attachmentKey",
+]);
 const payload = (f: FormData) =>
   f.get("payload")
     ? JSON.parse(String(f.get("payload")))
-    : Object.fromEntries([...f.entries()].filter(([key]) => key !== "payload"));
+    : Object.fromEntries(
+        [...f.entries()].filter(
+          ([key, value]) =>
+            key !== "payload" &&
+            !(optionalMaterialFields.has(key) && value === ""),
+        ),
+      );
 export async function issueProjectMaterialAction(f: FormData) {
   return accountAction(async () => {
     await issueInventoryToProject(payload(f));
