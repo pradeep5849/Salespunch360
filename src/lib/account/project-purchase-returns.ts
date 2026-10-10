@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { authorizeProjectForCommercial, type ProjectActor } from "./projects";
-import { assertMaterialAvailability } from "./project-material";
+import { projectMaterialIssueValue } from "./project-material";
 
 const D = Prisma.Decimal;
 type Document = Prisma.CommercialDocumentGetPayload<{
@@ -159,10 +159,7 @@ export async function projectPurchaseReturnsInTx(
           ],
         },
       });
-      assertMaterialAvailability(lineage, quantity);
-      const totalCost = quantity
-        .mul(original.originalUnitCost)
-        .toDecimalPlaces(2);
+      const totalCost = projectMaterialIssueValue(lineage, quantity);
       const movement = await tx.projectMaterialMovement.create({
         data: {
           companyId: actor.companyId,

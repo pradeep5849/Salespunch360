@@ -553,6 +553,128 @@ describe.skipIf(!url)(
       expect(report.metrics.actualCost.toString()).toBe("10");
       expect((await balance(project.id)).available.toString()).toBe("0");
     });
+
+    it("conserves exact posted material value through rounded unit cost, partial transfer, return and consumption", async () => {
+      const product = await client.accountProduct.create({
+        data: {
+          companyId,
+          name: "Fractional value material",
+          code: key(),
+          trackInventory: true,
+          costPrice: "0.0095",
+        },
+      });
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Precise material job",
+        projectValue: "100",
+      });
+      const next = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Precise receiving job",
+        projectValue: "100",
+      });
+      const purchase = await createCommercialDocumentForActor(actor, {
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        projectId: project.id,
+        purchasePurpose: "PROJECT",
+        materialTreatment: "DIRECT_TO_PROJECT",
+        taxCreditTreatment: "BLOCKED",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "MATERIAL",
+            sourceId: product.id,
+            warehouseId,
+            quantity: "1000",
+            rate: "0.0095",
+            taxRate: "18",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: purchase.id });
+      const source = await client.projectMaterialMovement.findFirstOrThrow({
+        where: {
+          companyId,
+          projectId: project.id,
+          purchaseDocumentId: purchase.id,
+        },
+      });
+      expect(source.totalCost.toString()).toBe("11.21");
+      const inventory = async () =>
+        (await inventorySnapshotForActor(actor)).find(
+          (row) =>
+            row.productId === product.id && row.warehouseId === warehouseId,
+        )!;
+      expect((await inventory()).stockValue.toString()).toBe("0");
+      const transfer = await transferProjectMaterialForActor(actor, {
+        sourceProjectId: project.id,
+        destinationProjectId: next.id,
+        sourceMovementId: source.id,
+        quantity: "333",
+        movementDate: date,
+        reason: "Leftovers",
+        idempotencyKey: key(),
+      });
+      expect(transfer.totalCost.toString()).toBe("3.73");
+      expect((await inventory()).stockValue.toString()).toBe("0");
+      await returnProjectMaterialForActor(actor, {
+        projectId: project.id,
+        sourceMovementId: source.id,
+        warehouseId,
+        quantity: "667",
+        movementDate: date,
+        reason: "Unused",
+        idempotencyKey: key(),
+      });
+      expect((await inventory()).stockValue.toString()).toBe("7.48");
+      const incoming = await client.projectMaterialMovement.findFirstOrThrow({
+        where: {
+          companyId,
+          projectId: next.id,
+          movementType: "TRANSFER_IN",
+          sourceMovementId: source.id,
+        },
+      });
+      await consumeProjectMaterialForActor(actor, {
+        projectId: next.id,
+        sourceMovementId: incoming.id,
+        quantity: "333",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      const issued = await issueInventoryToProjectForActor(actor, {
+        projectId: project.id,
+        productId: product.id,
+        warehouseId,
+        quantity: "667",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      expect(issued.totalCost.toString()).toBe("7.48");
+      expect((await inventory()).quantity.toString()).toBe("0");
+      expect((await inventory()).stockValue.toString()).toBe("0");
+      await consumeProjectMaterialForActor(actor, {
+        projectId: project.id,
+        sourceMovementId: issued.id,
+        quantity: "667",
+        movementDate: date,
+        idempotencyKey: key(),
+      });
+      const [firstReport, nextReport] = await Promise.all([
+        loadProjectCostingForActor(actor, project.id),
+        loadProjectCostingForActor(actor, next.id),
+      ]);
+      expect(
+        firstReport.metrics.actualCost
+          .add(nextReport.metrics.actualCost)
+          .toString(),
+      ).toBe("11.21");
+    });
     it("deduplicates concurrent manual Project creation with exactly one customer and audit", async () => {
       const customerCount = await client.customer.count({
         where: { companyId },

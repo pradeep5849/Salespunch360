@@ -19,7 +19,7 @@ export {
   itemProfitability,
 } from "./inventory-policy";
 import {
-  stockOutgoingUnitCost,
+  stockMovementValue,
   stockValuation,
   signedQuantity,
   isInboundStockMovement,
@@ -238,7 +238,9 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
       if (d.serialNumberId && (!q.equals(1) || !valuation.quantity.equals(1)))
         throw new Error("SERIAL_NOT_AVAILABLE");
       const transferId = crypto.randomUUID(),
-        unitCost = valuation.averageUnitCost,
+        unitCost = valuation.quantity.gt(0)
+          ? valuation.stockValue.div(valuation.quantity)
+          : valuation.averageUnitCost,
         totalCost = q.mul(unitCost).toDecimalPlaces(2),
         base = {
           companyId: a.companyId!,
@@ -316,6 +318,7 @@ export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
             movementType: true,
             quantity: true,
             unitCost: true,
+            totalCost: true,
             sourceType: true,
           },
           orderBy: [
@@ -335,11 +338,10 @@ export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
               value: Z,
             };
           const q = signedQuantity(row.movementType, row.quantity);
-          const cost = q.gte(0)
-            ? row.unitCost
-            : stockOutgoingUnitCost(state.quantity, state.value, row);
+          state.value = state.value.add(
+            stockMovementValue(state.quantity, state.value, row),
+          );
           state.quantity = state.quantity.add(q);
-          state.value = state.value.add(q.mul(cost));
           grouped.set(key, state);
         }
         if (rows.length < 1000) break;

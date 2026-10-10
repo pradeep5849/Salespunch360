@@ -1665,15 +1665,15 @@ async function commercialInventoryInTx(
       unitCost: Prisma.Decimal;
     if (doc.type === "SALES_INVOICE") {
       movementType = "SALE";
-      unitCost = valuation.averageUnitCost;
+      unitCost = valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost;
       cogs = cogs.add(quantity.mul(unitCost));
     } else if (doc.type === "DEBIT_NOTE") {
       movementType = "PURCHASE_RETURN";
-      unitCost = valuation.averageUnitCost;
+      unitCost = valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost;
       returnCost = returnCost.add(quantity.mul(unitCost));
     } else {
       movementType = "SALES_RETURN";
-      unitCost = valuation.averageUnitCost;
+      unitCost = valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost;
       returnCost = returnCost.add(quantity.mul(unitCost));
     }
     if (

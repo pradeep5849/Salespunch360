@@ -1,4 +1,5 @@
-import {FINAL_PROJECT_STATUSES} from "./project-state";
+import { projectMaterialIssueValue } from "./project-material";
+import { FINAL_PROJECT_STATUSES } from "./project-state";
 import { createHash } from "node:crypto";
 import { retrySerializable } from "./transaction-retry";
 import { Prisma } from "@prisma/client";
@@ -254,13 +255,15 @@ export async function issueInventoryToProjectForActor(
                 trackInventory: true,
               },
             }),
-            d.projectBudgetLineId ? tx.projectBudgetLine.findFirst({
-              where: {
-                id: d.projectBudgetLineId,
-                companyId: actor.companyId,
-                projectId: project.id,
-              },
-            }) : Promise.resolve(null),
+            d.projectBudgetLineId
+              ? tx.projectBudgetLine.findFirst({
+                  where: {
+                    id: d.projectBudgetLineId,
+                    companyId: actor.companyId,
+                    projectId: project.id,
+                  },
+                })
+              : Promise.resolve(null),
           ]);
         if (!warehouse || !product || (d.projectBudgetLineId && !budget))
           throw new Error("INVALID_PROJECT_MATERIAL_CONTEXT");
@@ -333,7 +336,7 @@ export async function issueInventoryToProjectForActor(
         if (!settings?.negativeStockAllowed && valuation.quantity.lt(quantity))
           throw new Error("INSUFFICIENT_STOCK");
         const unitCost = valuation.quantity.gt(0)
-            ? valuation.averageUnitCost
+            ? valuation.stockValue.div(valuation.quantity)
             : valuation.quantity.lt(0)
               ? Prisma.Decimal.max(
                   0,
@@ -538,7 +541,7 @@ export async function consumeProjectMaterialForActor(
         const { assertMaterialAvailability } =
           await import("./project-material");
         assertMaterialAvailability(rows, quantity);
-        const total = quantity.mul(source.originalUnitCost).toDecimalPlaces(2),
+        const total = projectMaterialIssueValue(rows, quantity),
           ctx = await postingContext(
             tx,
             actor,
@@ -674,7 +677,7 @@ export async function returnProjectMaterialForActor(
         const quantity = new D(d.quantity),
           { assertMaterialAvailability } = await import("./project-material");
         assertMaterialAvailability(rows, quantity);
-        const total = quantity.mul(source.originalUnitCost).toDecimalPlaces(2),
+        const total = projectMaterialIssueValue(rows, quantity),
           ctx = await postingContext(
             tx,
             actor,
@@ -838,7 +841,7 @@ export async function transferProjectMaterialForActor(
         const quantity = new D(d.quantity),
           { assertMaterialAvailability } = await import("./project-material");
         assertMaterialAvailability(rows, quantity);
-        const total = quantity.mul(source.originalUnitCost).toDecimalPlaces(2),
+        const total = projectMaterialIssueValue(rows, quantity),
           ctx = await postingContext(
             tx,
             actor,

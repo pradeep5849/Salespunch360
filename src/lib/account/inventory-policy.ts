@@ -26,26 +26,43 @@ export function stockOutgoingUnitCost(
     return row.unitCost;
   return quantity.gt(0) ? value.div(quantity) : row.unitCost;
 }
+export function stockMovementValue(
+  priorQuantity: Prisma.Decimal,
+  priorValue: Prisma.Decimal,
+  row: {
+    movementType: StockMovementType;
+    quantity: Prisma.Decimal;
+    unitCost: Prisma.Decimal;
+    totalCost?: Prisma.Decimal;
+    sourceType?: string;
+  },
+) {
+  const signed = signedQuantity(row.movementType, row.quantity);
+  if (row.totalCost !== undefined)
+    return isInboundStockMovement(row.movementType)
+      ? row.totalCost
+      : row.totalCost.neg();
+  return signed.mul(
+    signed.gte(0)
+      ? row.unitCost
+      : stockOutgoingUnitCost(priorQuantity, priorValue, row),
+  );
+}
 export function stockValuation(
   rows: Array<{
     movementType: StockMovementType;
     sourceType?: string;
     quantity: Prisma.Decimal;
     unitCost: Prisma.Decimal;
+    totalCost?: Prisma.Decimal;
   }>,
 ) {
   let quantity = Z,
     value = Z;
   for (const row of rows) {
     const q = signedQuantity(row.movementType, row.quantity);
-    if (q.gte(0)) {
-      quantity = quantity.add(q);
-      value = value.add(q.mul(row.unitCost));
-    } else {
-      const average = stockOutgoingUnitCost(quantity, value, row);
-      quantity = quantity.add(q);
-      value = value.add(q.mul(average));
-    }
+    value = value.add(stockMovementValue(quantity, value, row));
+    quantity = quantity.add(q);
   }
   return {
     quantity,

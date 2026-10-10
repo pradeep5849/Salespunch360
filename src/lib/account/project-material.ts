@@ -78,6 +78,21 @@ export function assertMaterialAvailability(
     throw new Error("INSUFFICIENT_PROJECT_MATERIAL");
   return balance;
 }
+/** Allocate remaining posted value; the final quantity carries any rounding remainder. */
+export function projectMaterialIssueValue(
+  rows: MaterialMovement[],
+  quantity: Prisma.Decimal,
+) {
+  const balance = assertMaterialAvailability(rows, quantity);
+  if (balance.availableValue.lt(0))
+    throw new Error("INVALID_PROJECT_MATERIAL_VALUE");
+  return quantity.eq(balance.available)
+    ? balance.availableValue.toDecimalPlaces(2)
+    : quantity
+        .mul(balance.availableValue)
+        .div(balance.available)
+        .toDecimalPlaces(2);
+}
 export function projectRetainedMaterialValue(rows: MaterialMovement[]) {
   const reversed = new Set(
     rows
