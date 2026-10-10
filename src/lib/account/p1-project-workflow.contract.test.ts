@@ -57,7 +57,7 @@ describe("P1 simple project workflow contract", () => {
     expect(detailPage).toContain("Final project report");
     expect(actions).toContain("completeSimpleProject");
     expect(actions).not.toContain("reopenProject");
-    expect(simpleWorkflow).toContain("return closeProjectForActor(actor, projectId");
+    expect(simpleWorkflow).toContain("return closeAndBillProjectForActor(actor, projectId");
     const lockedLifecycle = readFileSync("src/lib/account/projects.ts", "utf8");
     expect(lockedLifecycle).toContain('status: "CLOSED"');
     expect(lockedLifecycle).toContain("FOR UPDATE");

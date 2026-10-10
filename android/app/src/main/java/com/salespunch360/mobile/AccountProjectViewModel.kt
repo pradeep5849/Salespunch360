@@ -54,10 +54,10 @@ class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
     fun search(query: String) { _state.value = _state.value.copy(query = query); load() }
     fun filter(status: String?) { _state.value = _state.value.copy(status = status); load() }
     fun create() { _state.value = _state.value.copy(editing = buildJsonObject {}, error = null, creationRequestKey = UUID.randomUUID().toString(), creationIntent = null) }
-    fun action(id: String, action: String) = viewModelScope.launch {
+    fun action(id: String, action: String, billingServiceId: String? = null) = viewModelScope.launch {
         if (_state.value.saving) return@launch
         _state.value = _state.value.copy(saving = true, error = null)
-        try { api.projectAction(id, action); _state.value = _state.value.copy(saving = false); open(id); load() } catch (e: Exception) { fail(e) }
+        try { api.projectAction(id, action, billingServiceId); _state.value = _state.value.copy(saving = false); open(id); load() } catch (e: Exception) { fail(e) }
     }
     fun editBudget(value: Boolean = true) { if (!_state.value.saving) _state.value = _state.value.copy(budgetEditing = value, error = null) }
     fun saveBudget(id: String, lines: List<ProjectBudgetLineDraft>) = viewModelScope.launch {

@@ -23,6 +23,7 @@ vi.mock("next/headers", () => ({
 }));
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import { createSimpleProjectForActor } from "./project-simple-workflow";
+import { closeAndBillProjectForActor } from "./project-close";
 import {
   createProjectForActor,
   getProjectForActor,
@@ -2110,6 +2111,7 @@ describe.skipIf(!url)(
         ).rejects.toThrow("Not authorized");
         for (const call of [
           () => getProjectForActor(actor, a),
+          () => closeAndBillProjectForActor(actor, a),
           () => projectMaterialContextForActor(actor),
           () => issueInventoryToProjectForActor(actor, {}),
           () => consumeProjectMaterialForActor(actor, {}),
@@ -2136,6 +2138,169 @@ describe.skipIf(!url)(
           },
         });
       }
+    });
+    it("closes a 100000 contract plus 10000 extra job by billing only the balance and applying advances atomically", async () => {
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Final balance billing",
+        projectValue: "100000",
+      });
+      const extra = await createChangeOrderForActor(actor, {
+        projectId: project.id,
+        title: "Extra job during work",
+        valueDelta: "10000",
+        estimatedCostDelta: "0",
+        idempotencyKey: key(),
+      });
+      await transitionChangeOrderForActor(
+        actor,
+        project.id,
+        extra.id,
+        "PENDING_APPROVAL",
+      );
+      const approver = await client.user.findFirstOrThrow({
+        where: { companyId, accountRole: "ACCOUNT_ADMIN", id: { not: userId } },
+      });
+      await transitionChangeOrderForActor(
+        { ...actor, id: approver.id },
+        project.id,
+        extra.id,
+        "APPROVED",
+      );
+      const advance = await createSettlementForActor(actor, {
+        type: "CUSTOMER_ADVANCE",
+        branchId,
+        partyId: project.customerId,
+        projectId: project.id,
+        paymentMode: "CASH",
+        amount: "20000",
+        transactionDate: date,
+        idempotencyKey: key(),
+      });
+      for (let i = 0; i < 2; i++) {
+        const doc = await createCommercialDocumentForActor(actor, {
+          type: "SALES_INVOICE",
+          branchId,
+          projectId: project.id,
+          partyId: project.customerId,
+          issueDate: date,
+          lines: [
+            {
+              lineType: "SERVICE",
+              sourceId: serviceId,
+              quantity: "1",
+              rate: "50000",
+              taxRate: "18",
+            },
+          ],
+        });
+        await postCommercialDocumentForActor(actor, { documentId: doc.id });
+      }
+      await Promise.all([
+        closeAndBillProjectForActor(actor, project.id, { postingDate: date }),
+        closeAndBillProjectForActor(actor, project.id, { postingDate: date }),
+      ]);
+      const docs = await client.commercialDocument.findMany({
+        where: { companyId, projectId: project.id, type: "SALES_INVOICE" },
+      });
+      expect(docs).toHaveLength(3);
+      expect(docs.filter((x) => x.taxableTotal.eq(10000))).toHaveLength(1);
+      expect(docs.every((x) => x.status === "POSTED")).toBe(true);
+      expect(
+        (
+          await client.accountSettlement.findUniqueOrThrow({
+            where: { id: advance.id },
+          })
+        ).remainingAmount.toString(),
+      ).toBe("0");
+      expect(
+        await client.advanceApplication.count({
+          where: { companyId, advanceId: advance.id },
+        }),
+      ).toBe(1);
+      expect(
+        await client.projectAuditEvent.count({
+          where: {
+            companyId,
+            projectId: project.id,
+            eventType: "PROJECT_CLOSED",
+          },
+        }),
+      ).toBe(1);
+      const report = await loadProjectCostingForActor(actor, project.id);
+      expect(report.project.status).toBe("CLOSED");
+      expect(report.metrics.revenue.toString()).toBe("110000");
+      expect(report.metrics.finalProfit?.toString()).toBe("110000");
+      expect(report.metrics.accountingReceivable.toString()).toBe("109800");
+    });
+    it("creates no closing invoice for a fully billed contract and denies an unbilled close without a valid service", async () => {
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Fully billed closing",
+        projectValue: "100",
+      });
+      const doc = await createCommercialDocumentForActor(actor, {
+        type: "SALES_INVOICE",
+        branchId,
+        projectId: project.id,
+        partyId: project.customerId,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "SERVICE",
+            sourceId: serviceId,
+            quantity: "1",
+            rate: "100",
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: doc.id });
+      await closeAndBillProjectForActor(actor, project.id, {
+        postingDate: date,
+      });
+      expect(
+        await client.commercialDocument.count({
+          where: { companyId, projectId: project.id },
+        }),
+      ).toBe(1);
+      const unbilled = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Missing billing service",
+        projectValue: "100",
+      });
+      await expect(
+        closeAndBillProjectForActor(actor, unbilled.id),
+      ).rejects.toThrow("PROJECT_FINAL_INVOICE_SERVICE_REQUIRED");
+      expect(
+        (await client.project.findUniqueOrThrow({ where: { id: unbilled.id } }))
+          .status,
+      ).toBe("ACTIVE");
+      expect(
+        await client.commercialDocument.count({
+          where: { companyId, projectId: unbilled.id },
+        }),
+      ).toBe(0);
+    });
+    it("rolls back final invoice creation, numbering, posting and closure when the accounting period is locked", async () => {
+      const project = await createSimpleProjectForActor(actor, {branchId, name: "Atomic failed closing", projectValue: "100"});
+      const year = await client.financialYear.findFirstOrThrow({where: {companyId, isActive: true}});
+      const lock = await client.accountingPeriodLock.create({data: {companyId, financialYearId: year.id, lockedThrough: date, updatedById: userId}});
+      try {
+        await expect(closeAndBillProjectForActor(actor, project.id, {billingServiceId: serviceId, postingDate: date})).rejects.toThrow("PERIOD_LOCKED");
+        expect((await client.project.findUniqueOrThrow({where: {id: project.id}})).status).toBe("ACTIVE");
+        expect(await client.commercialDocument.count({where: {companyId, projectId: project.id}})).toBe(0);
+        expect(await client.projectAuditEvent.count({where: {companyId, projectId: project.id, eventType: "PROJECT_CLOSED"}})).toBe(0);
+      } finally {await client.accountingPeriodLock.delete({where: {id: lock.id}});}
+    });
+    it("rejects unauthorized branch and financial roles and requires pending extra jobs to be resolved", async () => {
+      const project = await createSimpleProjectForActor(actor, {branchId, name: "Guarded closing", projectValue: "100"});
+      await expect(closeAndBillProjectForActor({...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [otherBranch]}, project.id, {billingServiceId: serviceId})).rejects.toThrow();
+      await expect(closeAndBillProjectForActor({...actor, accountRole: "ACCOUNTANT"}, project.id, {billingServiceId: serviceId})).rejects.toThrow();
+      const job = await createChangeOrderForActor(actor, {projectId: project.id, title: "Pending extra job", valueDelta: "10", estimatedCostDelta: "0", idempotencyKey: key()});
+      await expect(closeAndBillProjectForActor(actor, project.id, {billingServiceId: serviceId})).rejects.toThrow("PROJECT_EXTRA_JOBS_PENDING");
+      await transitionChangeOrderForActor(actor, project.id, job.id, "CANCELLED");
+      expect((await client.project.findUniqueOrThrow({where: {id: project.id}})).status).toBe("ACTIVE");
     });
     it("lists posted labour and expenses by category while excluding drafts, reversals and another Project", async () => {
       const project = await createSimpleProjectForActor(actor, {

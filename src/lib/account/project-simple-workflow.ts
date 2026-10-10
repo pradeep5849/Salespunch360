@@ -12,11 +12,11 @@ import {
   projectCreationHash,
   authorizedProjectBranchIds,
   projectRecordScope,
-  closeProjectForActor,
   getProjectForActor,
   getProjectFormOptionsForActor,
   type ProjectActor,
 } from "@/lib/account/projects";
+import { closeAndBillProjectForActor } from "./project-close";
 
 export type ManualProjectInput = {
   idempotencyKey?: string;
@@ -37,10 +37,19 @@ export async function createSimpleProjectForActor(
   actor: ProjectActor,
   raw: ManualProjectInput,
 ) {
-  const normalized = projectInput.omit({customerId: true}).parse(raw);
-  const {idempotencyKey, ...fields} = normalized;
-  const {branchId, name, siteName, siteAddress, siteContactName, siteContactPhone} = fields;
-  const requestHash = idempotencyKey ? projectCreationHash("MANUAL_PROJECT", fields) : null;
+  const normalized = projectInput.omit({ customerId: true }).parse(raw);
+  const { idempotencyKey, ...fields } = normalized;
+  const {
+    branchId,
+    name,
+    siteName,
+    siteAddress,
+    siteContactName,
+    siteContactPhone,
+  } = fields;
+  const requestHash = idempotencyKey
+    ? projectCreationHash("MANUAL_PROJECT", fields)
+    : null;
   const ids = await authorizedProjectBranchIds(actor);
 
   const options = await getProjectFormOptionsForActor(actor);
@@ -55,10 +64,24 @@ export async function createSimpleProjectForActor(
       async (tx) => {
         if (idempotencyKey) {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
-          const existing = await tx.project.findUnique({where: {companyId_creationRequestKey: {companyId: actor.companyId, creationRequestKey: idempotencyKey}}});
+          const existing = await tx.project.findUnique({
+            where: {
+              companyId_creationRequestKey: {
+                companyId: actor.companyId,
+                creationRequestKey: idempotencyKey,
+              },
+            },
+          });
           if (existing) {
-            if (!(await tx.project.findFirst({where: {id: existing.id, ...projectRecordScope(actor, ids)}, select: {id: true}}))) throw new AuthorizationError();
-            if (existing.creationRequestHash !== requestHash) throw new Error("IDEMPOTENCY_KEY_REUSED");
+            if (
+              !(await tx.project.findFirst({
+                where: { id: existing.id, ...projectRecordScope(actor, ids) },
+                select: { id: true },
+              }))
+            )
+              throw new AuthorizationError();
+            if (existing.creationRequestHash !== requestHash)
+              throw new Error("IDEMPOTENCY_KEY_REUSED");
             return existing;
           }
         }
@@ -74,11 +97,18 @@ export async function createSimpleProjectForActor(
           },
         });
 
-        const project = await createProjectInTx(tx, actor, {...fields, customerId: customer.id});
+        const project = await createProjectInTx(tx, actor, {
+          ...fields,
+          customerId: customer.id,
+        });
 
         const updated = await tx.project.update({
           where: { id: project.id },
-          data: { status: "ACTIVE", creationRequestKey: idempotencyKey, creationRequestHash: requestHash },
+          data: {
+            status: "ACTIVE",
+            creationRequestKey: idempotencyKey,
+            creationRequestHash: requestHash,
+          },
         });
         await tx.projectAuditEvent.create({
           data: {
@@ -126,19 +156,17 @@ export async function assertProjectEditable(projectId: string) {
 export async function completeSimpleProjectForActor(
   actor: ProjectActor,
   projectId: string,
+  raw: unknown = {},
 ) {
-  const project = await getProjectForActor(actor, projectId);
-  if (!["PLANNING", "ACTIVE", "ON_HOLD"].includes(project.status))
-    throw new Error("PROJECT_FINAL");
-
-  return closeProjectForActor(actor, projectId, {
-    closureNote: "Completed via project workflow",
-  });
+  return closeAndBillProjectForActor(actor, projectId, raw);
 }
 
-export async function completeSimpleProject(projectId: string) {
+export async function completeSimpleProject(
+  projectId: string,
+  raw: unknown = {},
+) {
   const actor = await requirePermissionForMutation("ACCOUNT_PROJECTS");
   if (!actor.companyId) throw new AuthorizationError();
   await requireAccountModules(actor, "PROJECTS");
-  return completeSimpleProjectForActor(actor as ProjectActor, projectId);
+  return completeSimpleProjectForActor(actor as ProjectActor, projectId, raw);
 }

@@ -86,7 +86,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun projects(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/projects"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonObject
  suspend fun projectOptions(id:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/projects/options${id?.let{"?id=${enc(it)}"}.orEmpty()}")).jsonObject
  suspend fun project(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}")).jsonObject
- suspend fun projectAction(id:String,action:String)=call("api/v1/mobile/account/projects/${enc(id)}/action","POST",buildJsonObject{put("action",action)}.toString())
+ suspend fun projectAction(id:String,action:String,billingServiceId:String?=null)=call("api/v1/mobile/account/projects/${enc(id)}/action","POST",buildJsonObject{put("action",action);billingServiceId?.takeIf{it.isNotBlank()}?.let{put("billingServiceId",it)}}.toString())
  suspend fun saveProjectBudget(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/budget","PUT",payload.toString())).jsonObject
  suspend fun projectChangeOrder(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing","POST",payload.toString())).jsonObject
  suspend fun projectCosting(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing")).jsonObject

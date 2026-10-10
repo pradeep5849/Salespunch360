@@ -8,6 +8,8 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  PROJECT_EXTRA_JOBS_PENDING: "Approve or cancel pending extra jobs before closing the project.",
+  PROJECT_FINAL_INVOICE_SERVICE_REQUIRED: "Choose the service / SAC for the remaining project invoice.",
   ADJUSTMENT_STOCK_EXCEEDS_SOURCE:
     "The cumulative returned quantity exceeds the original purchase quantity.",
   INVALID_SOURCE_STOCK_IDENTITY:

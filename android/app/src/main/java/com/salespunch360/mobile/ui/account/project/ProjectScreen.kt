@@ -121,7 +121,7 @@ fun ProjectScreen(
     }
     s.editing?.let { ProjectEditor(it, s.options, s.saving, s.error, vm::close, vm::save) }
     s.detail?.let {
-        ProjectDetail(it,s.costing,s.options["capabilities"]?.jsonObject?.get("budgetEdit")?.jsonPrimitive?.booleanOrNull==true,s.saving,s.error,vm::close,vm::edit,vm::action,vm::editBudget,vm::editChange,vm::transitionChange)
+        ProjectDetail(it,s.costing,s.options.array("billingServices"),s.saving,s.error,vm::close,vm::edit,vm::action,vm::editBudget,vm::editChange,vm::transitionChange)
     }
     s.changeEditing?.let { ChangeOrderDialog(it,s.saving,s.error,vm::closeChange,vm::updateChange,vm::saveChange) }
     if (s.budgetEditing && s.detail != null) {
@@ -234,17 +234,18 @@ private fun ProjectEditor(
 private fun ProjectDetail(
     x: JsonObject,
     costing: JsonObject?,
-    canBudget: Boolean,
+    billingServices: List<JsonElement>,
     saving: Boolean,
     error: String?,
     close: () -> Unit,
     edit: () -> Unit,
-    action: (String, String) -> Unit,
+    action: (String, String, String?) -> Unit,
     budget: () -> Unit,
     editChange: (JsonObject?) -> Unit,
     transitionChange: (String, String) -> Unit,
 ) {
     val final = workflowStatus(x.str("status")) == "COMPLETED"
+    var billingServiceId by remember(x.str("id")) { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = close,
         title = { Text(x.str("projectNumber")) },
@@ -356,6 +357,14 @@ private fun ProjectDetail(
                         )
                     }
                 }
+                if (!final) item {
+                    Text("Closing bills only the remaining contract balance and applies available advances. Earlier invoices are retained.")
+                    Pick("Final invoice service / SAC", billingServiceId, billingServices.map { element ->
+                        val row = element.jsonObject
+                        buildJsonObject { put("id",row.str("id"));put("name","${row.str("name")} · SAC ${row.str("sacCode")} · GST ${row.str("taxRate")}%") }
+                    }, enabled = !saving) { billingServiceId = it }
+                    TextButton({ billingServiceId = "" },enabled = !saving) { Text("Reuse existing invoice service") }
+                }
                 item { Text("Related documents", style = MaterialTheme.typography.titleMedium) }
                 items(x.array("commercialDocuments")) { document ->
                     val row = document.jsonObject
@@ -368,7 +377,7 @@ private fun ProjectDetail(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(edit,enabled=!saving) { Text("Edit") }
 
-                    FilledTonalButton({ action(x.str("id"), "COMPLETE") },enabled=!saving) {
+                    FilledTonalButton({ action(x.str("id"), "COMPLETE", billingServiceId.takeIf { it.isNotBlank() }) },enabled=!saving) {
                         Text("Close Project")
                     }
                 }

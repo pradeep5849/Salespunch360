@@ -135,9 +135,8 @@ export async function mobileProjectAction(
 ) {
   await assertOperationalWrite(u.companyId);
   const actor = (await permit(u, "ACCOUNT_PROJECTS")) as ProjectActor;
-  const action = z.object({ action: z.literal("COMPLETE") }).strict().parse(raw);
-  await completeSimpleProjectForActor(actor, id);
-  void action;
+  const action = z.object({ action: z.literal("COMPLETE"), billingServiceId: z.string().uuid().optional(), postingDate: z.coerce.date().optional() }).strict().parse(raw);
+  await completeSimpleProjectForActor(actor, id, {billingServiceId: action.billingServiceId, postingDate: action.postingDate});
   return getProjectForActor(actor, id);
 }
 

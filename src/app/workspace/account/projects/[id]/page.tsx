@@ -5,12 +5,12 @@ import {
   addProjectDocumentAction,
   addProjectMemberAction,
   addTaskAction,
-  completeProjectAction,
   linkBoqAction,
   updateMilestoneAction,
   updateTaskAction,
 } from "@/app/actions/projects";
 import { BudgetEditor } from "./budget-editor";
+import {ProjectCloseForm} from "@/components/account/project-close-form";
 import {
   getProject,
   getProjectFormOptions,
@@ -419,14 +419,13 @@ export default async function Page({
 
         <h2>{mutable ? "Complete project" : "Final project report"}</h2>
         {mutable ? (
-          <form action={completeProjectAction}>
-            <input type="hidden" name="projectId" value={id} />
+          <div>
             <p>
               Completing this project will make it report-only. It cannot be
               reopened.
             </p>
-            <button>Complete project</button>
-          </form>
+            <ProjectCloseForm projectId={id} services={options.billingServices.map(x => ({...x, taxRate: x.taxRate?.toString() ?? null}))} />
+          </div>
         ) : (
           <>
             <p>

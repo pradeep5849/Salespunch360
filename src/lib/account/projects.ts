@@ -1,3 +1,4 @@
+import { inAccountTransaction } from "./transaction-scope";
 import { retrySerializable } from "./transaction-retry";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -287,10 +288,26 @@ async function validateTaskRelations(
     throw new Error("INVALID_TASK_ASSIGNEE");
 }
 
-export function projectCreationHash(kind: string, input: Record<string, unknown>) {
-  const fields = Object.fromEntries(Object.entries(input).filter(([key, value]) => key !== "idempotencyKey" && value !== undefined)
-    .sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => [key, value instanceof Date ? value.toISOString().slice(0, 10) : key === "projectValue" ? new Prisma.Decimal(String(value)).toString() : value]));
-  return createHash("sha256").update(JSON.stringify({kind, fields})).digest("hex");
+export function projectCreationHash(
+  kind: string,
+  input: Record<string, unknown>,
+) {
+  const fields = Object.fromEntries(
+    Object.entries(input)
+      .filter(([key, value]) => key !== "idempotencyKey" && value !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => [
+        key,
+        value instanceof Date
+          ? value.toISOString().slice(0, 10)
+          : key === "projectValue"
+            ? new Prisma.Decimal(String(value)).toString()
+            : value,
+      ]),
+  );
+  return createHash("sha256")
+    .update(JSON.stringify({ kind, fields }))
+    .digest("hex");
 }
 export async function createProjectInTx(
   tx: Prisma.TransactionClient,
@@ -298,7 +315,7 @@ export async function createProjectInTx(
   raw: unknown,
 ) {
   await requireProjectFunction(actor);
-  const {idempotencyKey, ...parsed} = projectInput.parse(raw);
+  const { idempotencyKey, ...parsed } = projectInput.parse(raw);
   const ids = await authorizedProjectBranchIds(actor);
   if (!ids.includes(parsed.branchId)) throw new AuthorizationError();
   const data =
@@ -325,13 +342,29 @@ export async function createProjectInTx(
   if (!branch) throw new Error("INVALID_BRANCH");
   if (!customer) throw new Error("INVALID_CUSTOMER");
   await validateManager(tx, actor, data.projectManagerId, data.branchId);
-  const requestHash = idempotencyKey ? projectCreationHash("PROJECT", data) : null;
+  const requestHash = idempotencyKey
+    ? projectCreationHash("PROJECT", data)
+    : null;
   if (idempotencyKey) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
-    const existing = await tx.project.findUnique({where: {companyId_creationRequestKey: {companyId: actor.companyId, creationRequestKey: idempotencyKey}}});
+    const existing = await tx.project.findUnique({
+      where: {
+        companyId_creationRequestKey: {
+          companyId: actor.companyId,
+          creationRequestKey: idempotencyKey,
+        },
+      },
+    });
     if (existing) {
-            if (!(await tx.project.findFirst({where: {id: existing.id, ...projectRecordScope(actor, ids)}, select: {id: true}}))) throw new AuthorizationError();
-      if (existing.creationRequestHash !== requestHash) throw new Error("IDEMPOTENCY_KEY_REUSED");
+      if (
+        !(await tx.project.findFirst({
+          where: { id: existing.id, ...projectRecordScope(actor, ids) },
+          select: { id: true },
+        }))
+      )
+        throw new AuthorizationError();
+      if (existing.creationRequestHash !== requestHash)
+        throw new Error("IDEMPOTENCY_KEY_REUSED");
       return existing;
     }
   }
@@ -388,8 +421,16 @@ export async function updateProjectForActor(actor: ProjectActor, raw: unknown) {
       const value = new Prisma.Decimal(data.projectValue),
         managerChanged =
           (data.projectManagerId ?? null) !== project.projectManagerId;
-      const approvedChanges = await tx.projectChangeOrder.aggregate({where:{companyId:actor.companyId,projectId:project.id,status:"APPROVED"},_sum:{valueDelta:true}});
-      if(value.add(approvedChanges._sum.valueDelta ?? 0).lt(0)) throw new Error("INVALID_PROJECT_VALUE");
+      const approvedChanges = await tx.projectChangeOrder.aggregate({
+        where: {
+          companyId: actor.companyId,
+          projectId: project.id,
+          status: "APPROVED",
+        },
+        _sum: { valueDelta: true },
+      });
+      if (value.add(approvedChanges._sum.valueDelta ?? 0).lt(0))
+        throw new Error("INVALID_PROJECT_VALUE");
       await tx.project.update({
         where: { id: project.id },
         data: {
@@ -869,7 +910,8 @@ export async function getProjectFormOptionsForActor(
         orderBy: { documentNumber: "asc" },
       })
     : [];
-  return { branches, managers, memberCandidates, boqCandidates };
+  const billingServices = await db.accountService.findMany({where: {companyId: actor.companyId, isActive: true}, select: {id: true, name: true, sacCode: true, taxRate: true}, orderBy: [{name: "asc"}, {id: "asc"}]});
+  return { branches, managers, memberCandidates, boqCandidates, billingServices };
 }
 export async function replaceBudgetForActor(actor: ProjectActor, raw: unknown) {
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_EDIT");
@@ -1165,34 +1207,37 @@ export async function linkBoq(projectId: string, boqId: string) {
 export async function closeProjectForActor(
   actor: ProjectActor,
   projectId: string,
-  raw: { handoverDate?: Date; handoverNote?: string; closureNote?: string },
+  raw: {
+    handoverDate?: Date;
+    handoverNote?: string;
+    closureNote?: string;
+    billingSummary?: Prisma.InputJsonObject;
+  },
+  transaction?: Prisma.TransactionClient,
 ) {
   await requireProjectFunction(actor);
   const ids = await authorizedProjectBranchIds(actor);
-  return db.$transaction(
-    async (tx) => {
-      const project = await mutable(tx, actor, projectId, ids),
-        now = new Date();
-      await tx.project.updateMany({
-        where: {
-          id: project.id,
-          companyId: actor.companyId,
-          status: project.status,
-        },
-        data: {
-          status: "CLOSED",
-          actualEndDate: now,
-          handoverDate: raw.handoverDate,
-          handoverNote: raw.handoverNote,
-          closureNote: raw.closureNote,
-          closedById: actor.id,
-          closedAt: now,
-        },
-      });
-      await audit(tx, actor, project.id, "PROJECT_CLOSED");
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+  return inAccountTransaction(transaction, async (tx) => {
+    const project = await mutable(tx, actor, projectId, ids),
+      now = new Date();
+    await tx.project.updateMany({
+      where: {
+        id: project.id,
+        companyId: actor.companyId,
+        status: project.status,
+      },
+      data: {
+        status: "CLOSED",
+        actualEndDate: now,
+        handoverDate: raw.handoverDate,
+        handoverNote: raw.handoverNote,
+        closureNote: raw.closureNote,
+        closedById: actor.id,
+        closedAt: now,
+      },
+    });
+    await audit(tx, actor, project.id, "PROJECT_CLOSED", raw.billingSummary);
+  });
 }
 export async function reopenProjectForActor(
   actor: ProjectActor,

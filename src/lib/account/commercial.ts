@@ -1,3 +1,4 @@
+import { inAccountTransaction } from "./transaction-scope";
 import { commercialCreationHash } from "./commercial-request-identity";
 import { retrySerializable } from "./transaction-retry";
 import { projectPurchaseReturnsInTx } from "./project-purchase-returns";
@@ -773,6 +774,7 @@ function nestedSalesInvoiceLine<T extends { companyId: string | null }>(
 export async function createCommercialDocumentForActor(
   actor: Actor,
   raw: unknown,
+  transaction?: Prisma.TransactionClient,
 ) {
   const d = commercialDocumentInput.parse(raw),
     p = policies[d.type];
@@ -799,8 +801,7 @@ export async function createCommercialDocumentForActor(
         ),
       ),
     );
-  return retrySerializable(() =>
-    db.$transaction(
+  return inAccountTransaction(transaction,
       async (tx) => {
         const [branch, settings] = await Promise.all([
           tx.branch.findFirst({
@@ -1410,8 +1411,6 @@ export async function createCommercialDocumentForActor(
         );
         return document;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
   );
 }
 export async function finalizeNonFinancialDocument(raw: unknown) {
@@ -1916,14 +1915,14 @@ export async function postProjectPurchaseMaterialsInTx(
 export async function postCommercialDocumentForActor(
   actor: Actor,
   raw: unknown,
+  transaction?: Prisma.TransactionClient,
 ) {
   const { documentId } = z
     .object({ documentId: z.string().uuid() })
     .strict()
     .parse(raw);
   financialRole(actor);
-  return retrySerializable(() =>
-    db.$transaction(
+  return inAccountTransaction(transaction,
       async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
         const doc = await tx.commercialDocument.findFirst({
@@ -2249,8 +2248,6 @@ export async function postCommercialDocumentForActor(
         );
         return journal;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
   );
 }
 export async function documentOutstandingInTx(
@@ -2750,7 +2747,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
     ),
   );
 }
-export async function applyAdvanceForActor(actor: Actor, raw: unknown) {
+export async function applyAdvanceForActor(actor: Actor, raw: unknown, transaction?: Prisma.TransactionClient) {
   const d = z
     .object({
       advanceId: z.string().uuid(),
@@ -2764,8 +2761,7 @@ export async function applyAdvanceForActor(actor: Actor, raw: unknown) {
   financialRole(actor);
   const amount = new D(d.amount);
   if (amount.lte(0)) throw new Error("INVALID_AMOUNT");
-  return retrySerializable(() =>
-    db.$transaction(
+  return inAccountTransaction(transaction,
       async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "account_settlements" WHERE "id"=${d.advanceId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
         await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${d.documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
@@ -2891,8 +2887,6 @@ export async function applyAdvanceForActor(actor: Actor, raw: unknown) {
         );
         return application;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
   );
 }
 export async function applyAdvance(raw: unknown) {
