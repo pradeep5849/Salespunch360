@@ -92,6 +92,7 @@ export async function mobileProjectOptions(u: MobileAppPrincipal, id?: string) {
     getProjectFormOptionsForActor(actor, id), enabledModulesForCompany(actor.companyId),
   ]);
   return { ...options, capabilities: {
+    invoiceCreate: modules.includes("SALES") && canUsePermission(actor, u.productEdition, "ACCOUNT_SALES_ENTRY") && canUsePermission(actor, u.productEdition, "ACCOUNT_JOURNAL_POST"),
     costView: modules.includes("PROJECT_COSTING") && canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_VIEW"),
     budgetEdit: canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_EDIT"),
     managerEditable: actor.accountRole === "ACCOUNT_ADMIN", actorId: actor.id,

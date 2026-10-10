@@ -14,7 +14,8 @@ const productId = randomUUID(),
   projectA = randomUUID(),
   projectB = randomUUID(),
   budgetA = randomUUID();
-const vendorId = randomUUID();
+const vendorId = randomUUID(),
+  serviceId = randomUUID();
 const batchProductId = randomUUID(),
   batchId = randomUUID();
 const password = "Project-browser-fixture-934!",
@@ -50,6 +51,7 @@ test.beforeAll(async () => {
         "DEBIT_NOTE",
       ],
       negativeStockAllowed: false,
+      defaultStateCode: "29",
     },
   });
   await db.branch.create({
@@ -59,6 +61,7 @@ test.beforeAll(async () => {
       name: "Project branch",
       code: "PRIMARY",
       isPrimary: true,
+      gstStateCode: "29",
     },
   });
   await db.user.create({
@@ -168,6 +171,17 @@ test.beforeAll(async () => {
       endDate: new Date("2027-03-31"),
     },
   });
+  await db.accountService.create({
+    data: {
+      id: serviceId,
+      companyId,
+      name: "Project billing service",
+      code: "SERVICE",
+      sellingRate: 100,
+      taxRate: 18,
+      sacCode: "995419",
+    },
+  });
   await db.ledgerAccount.createMany({
     data: DEFAULT_LEDGER_ACCOUNTS.map((x) => ({ ...x, companyId })),
   });
@@ -233,6 +247,7 @@ test.afterAll(async () => {
   await db.warehouse.deleteMany({ where: { companyId } });
   await db.inventoryBatch.deleteMany({ where: { companyId } });
   await db.accountProduct.deleteMany({ where: { companyId } });
+  await db.accountService.deleteMany({ where: { companyId } });
   await db.ledgerAccount.deleteMany({ where: { companyId } });
   await db.financialYear.deleteMany({ where: { companyId } });
   await db.numberingSeries.deleteMany({ where: { companyId } });
@@ -741,4 +756,111 @@ test("purchase draft creation survives a lost response without duplicate documen
       },
     }),
   ).toBe(1);
+});
+
+test("Project invoice entry links customer and retries GST revenue exactly once", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      enabledModules: [
+        "PROJECTS",
+        "PROJECT_COSTING",
+        "INVENTORY",
+        "PURCHASES",
+        "PURCHASE_BILLS",
+        "DEBIT_NOTE",
+        "SALES",
+      ],
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/workspace\/account/);
+  await page.goto(
+    "/workspace/account/transactions/new?type=SALES_INVOICE&project=select",
+  );
+  await page
+    .getByRole("combobox", { name: "Project *", exact: true })
+    .selectOption(projectA);
+  await expect(
+    page.getByPlaceholder("Search customer name or phone"),
+  ).toHaveValue("Project customer");
+  await expect(
+    page.getByPlaceholder("Search customer name or phone"),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: /Add Items/ }).click();
+  await page
+    .getByRole("button")
+    .filter({ hasText: "Project billing service" })
+    .click();
+  const itemEntry = page
+    .locator("section")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Add Items to Sale",
+        exact: true,
+      }),
+    });
+  await itemEntry.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Add Items to Sale", exact: true }),
+  ).toHaveCount(0);
+  await page.route("**/workspace/account/transactions/new**", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "could not be saved" }),
+  ).toBeVisible();
+  const invoice = await db.commercialDocument.findFirstOrThrow({
+    where: { companyId, projectId: projectA, type: "SALES_INVOICE" },
+    include: { lines: true },
+  });
+  expect(invoice).toMatchObject({ status: "POSTED", branchId, customerId });
+  expect(invoice.lines[0].hsnSacCode).toBe("995419");
+  expect(invoice.grandTotal.toString()).toBe("118");
+  await page.unroute("**/workspace/account/transactions/new**");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Preview", exact: true }),
+  ).toBeVisible();
+  expect(
+    await db.commercialDocument.count({
+      where: { companyId, projectId: projectA, type: "SALES_INVOICE" },
+    }),
+  ).toBe(1);
+  const journals = await db.journalEntry.findMany({
+    where: { companyId, sourceId: invoice.id },
+    include: { lines: { include: { ledgerAccount: true } } },
+  });
+  expect(journals).toHaveLength(1);
+  expect(
+    journals[0].lines
+      .find((line) => line.ledgerAccount.systemKey === "SALES_INCOME")
+      ?.credit.toString(),
+  ).toBe("100");
+  expect(
+    journals[0].lines
+      .find((line) => line.ledgerAccount.systemKey === "ACCOUNTS_RECEIVABLE")
+      ?.debit.toString(),
+  ).toBe("118");
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { enabledModules: ["SALES", "INVENTORY"] },
+  });
+  const denied = await page.goto(
+    "/workspace/account/transactions/new?type=SALES_INVOICE&project=select",
+  );
+  expect(denied?.status()).toBe(404);
+  const normalSale = await page.goto(
+    "/workspace/account/transactions/new?type=SALES_INVOICE",
+  );
+  expect(normalSale?.status()).toBe(200);
 });

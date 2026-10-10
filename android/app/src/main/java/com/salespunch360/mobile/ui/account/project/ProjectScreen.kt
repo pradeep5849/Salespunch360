@@ -70,7 +70,14 @@ fun ProjectScreen(
                                 Triple("Move / Return Stock",Icons.Default.Inventory2,"/workspace/account/projects/material"),
                                 Triple("Project Settings",Icons.Default.Settings,"/workspace/account/settings/modules"),
                                 Triple("View All",Icons.Default.Apps,"/workspace/account/projects/actions")
-                            ).forEach{(label,icon,path)->
+                            ).filter { (label, _, _) ->
+                                val caps = s.options["capabilities"]?.jsonObject
+                                when (label) {
+                                    "Project Invoice" -> caps?.get("invoiceCreate")?.jsonPrimitive?.booleanOrNull == true
+                                    "Project Settings" -> caps?.get("managerEditable")?.jsonPrimitive?.booleanOrNull == true
+                                    else -> true
+                                }
+                            }.forEach{(label,icon,path)->
                                 Column(
                                     Modifier.weight(1f).clickable{navigate(path)}.padding(vertical=8.dp,horizontal=2.dp),
                                     horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,

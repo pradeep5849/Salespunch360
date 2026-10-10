@@ -1180,6 +1180,14 @@ describe.skipIf(!url)(
         });
         expect(options.capabilities.costView).toBe(false);
         expect(options.capabilities.budgetEdit).toBe(true);
+        expect(options.capabilities.invoiceCreate).toBe(true);
+        const managerOptions = await mobileProjectOptions({
+          ...actor, accountRole: "PROJECT_MANAGER", name: "Manager",
+          email: "manager@example.test", productEdition: "SALESPUNCH360_ACCOUNT",
+          authorizedWorkspaces: ["ACCOUNT"],
+        });
+        expect(managerOptions.capabilities.invoiceCreate).toBe(false);
+        expect(managerOptions.capabilities.managerEditable).toBe(false);
         await expect(loadProjectCostingForActor(actor, a)).rejects.toThrow(
           "MODULE_DISABLED:PROJECT_COSTING",
         );

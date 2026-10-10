@@ -192,7 +192,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))
-            sales!=null->AccountSalesScreen(sales,padding,vm::select)
+            sales!=null->AccountSalesScreen(sales,padding,vm::select,initialProjectId=queryValue(state.selectedPath,"projectId"),projectMode=queryValue(state.selectedPath,"project")!=null||queryValue(state.selectedPath,"projectId")!=null)
             masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding)
             else->NativeDestinationNotice(Modifier.padding(padding),titleFor(state.selectedPath,navigation))
         }

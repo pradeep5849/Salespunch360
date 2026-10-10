@@ -474,14 +474,14 @@ private fun DirectSaleInvoiceEditor(
             item{
                 if(options.projects.isNotEmpty()){
                     SelectField(
-                        "Project (optional for regular sale)",
+                        if(draft.projectRequired) "Project *" else "Project (optional for regular sale)",
                         draft.projectId,
-                        options.projects.filter{it.branchId==draft.branchId}.map{it.id to it.name}
-                    ){id->onDraft(draft.copy(projectId=id))}
+                        options.projects.filter{draft.projectRequired||it.branchId==draft.branchId}.map{it.id to it.name}
+                    ){id->selectProjectForInvoice(draft,options,id)?.let(onDraft)}
                 }
             }
             item{
-                OutlinedButton(onClick={customerSheet=true},modifier=Modifier.fillMaxWidth()){
+                OutlinedButton(enabled=!saving&&!draft.projectRequired,onClick={customerSheet=true},modifier=Modifier.fillMaxWidth()){
                     Text(options.customers.firstOrNull{it.id==draft.customerId}?.name?:"Search or select customer")
                 }
             }
