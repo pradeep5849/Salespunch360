@@ -267,6 +267,8 @@ describe.skipIf(!url)(
       ).id;
     }, 30000);
     afterAll(async () => {
+      await client.expenseTransaction.deleteMany({ where: { companyId } });
+      await client.expenseCategory.deleteMany({ where: { companyId } });
       await client.projectAuditEvent.deleteMany({ where: { companyId } });
       // Only the guarded, isolated local _test database permits fixture cleanup.
       // The production append-only trigger remains installed and enabled.
@@ -787,6 +789,13 @@ describe.skipIf(!url)(
       expect(costing.metrics.revenue.toString()).toBe("1000");
       expect(costing.metrics.accountingReceivable.toString()).toBe("980");
       expect(costing.metrics.amountReceived.toString()).toBe("200");
+      expect(
+        costing.details.invoices.find((x) => x.id === invoiceId)?.outstanding,
+      ).toBe("980.00");
+      expect(
+        costing.details.payments.find((x) => x.id === advanceId)
+          ?.remainingAmount,
+      ).toBe("100.00");
     });
     it("serves paginated authoritative availability and role capabilities", async () => {
       const context = await projectMaterialContextForActor(actor);
@@ -843,6 +852,20 @@ describe.skipIf(!url)(
       const costing = await loadProjectCostingForActor(actor, a);
       expect(costing.metrics.actualCost.toString()).toBe("50");
       expect(costing.metrics.profit.toString()).toBe("950");
+      expect(
+        costing.details.purchases.filter((x) => x.documentId === doc.id),
+      ).toEqual([
+        expect.objectContaining({
+          number: doc.documentNumber,
+          item: expect.any(String),
+          quantity: "5",
+          taxableAmount: "50.00",
+          status: "POSTED",
+        }),
+      ]);
+      expect(
+        costing.details.materialMovements.find((x) => x.id === movement.id),
+      ).toMatchObject({ quantity: "5", cost: "50.00" });
       expect(
         await client.projectAuditEvent.count({
           where: {
@@ -1182,8 +1205,11 @@ describe.skipIf(!url)(
         expect(options.capabilities.budgetEdit).toBe(true);
         expect(options.capabilities.invoiceCreate).toBe(true);
         const managerOptions = await mobileProjectOptions({
-          ...actor, accountRole: "PROJECT_MANAGER", name: "Manager",
-          email: "manager@example.test", productEdition: "SALESPUNCH360_ACCOUNT",
+          ...actor,
+          accountRole: "PROJECT_MANAGER",
+          name: "Manager",
+          email: "manager@example.test",
+          productEdition: "SALESPUNCH360_ACCOUNT",
           authorizedWorkspaces: ["ACCOUNT"],
         });
         expect(managerOptions.capabilities.invoiceCreate).toBe(false);
@@ -2110,6 +2136,59 @@ describe.skipIf(!url)(
           },
         });
       }
+    });
+    it("lists posted labour and expenses by category while excluding drafts, reversals and another Project", async () => {
+      const project = await createSimpleProjectForActor(actor, {
+        branchId,
+        name: "Detailed P&L",
+        projectValue: "110000",
+      });
+      const ledger = await client.ledgerAccount.findFirstOrThrow({
+        where: { companyId, systemKey: "GENERAL_EXPENSES" },
+      });
+      const category = await client.expenseCategory.create({
+        data: {
+          companyId,
+          name: "Labour",
+          scope: "EXPENSE",
+          defaultLedgerAccountId: ledger.id,
+        },
+      });
+      for (const [status, amount, projectId] of [
+        ["POSTED", "20000", project.id],
+        ["POSTED", "5000", project.id],
+        ["DRAFT", "900", project.id],
+        ["REVERSED", "800", project.id],
+        ["POSTED", "700", a],
+      ] as const) {
+        await client.expenseTransaction.create({
+          data: {
+            companyId,
+            branchId,
+            projectId,
+            categoryId: category.id,
+            type: "PROJECT_EXPENSE",
+            status,
+            transactionNumber: key(),
+            transactionDate: date,
+            taxableAmount: new Prisma.Decimal(amount),
+            totalAmount: new Prisma.Decimal(amount),
+            createdById: userId,
+          },
+        });
+      }
+      const report = await loadProjectCostingForActor(actor, project.id);
+      expect(report.details.expenses).toHaveLength(2);
+      expect(report.details.expenseCategories).toEqual([
+        {
+          id: category.id,
+          category: "Labour",
+          amount: "25000.00",
+          cost: "25000.00",
+        },
+      ]);
+      expect(report.metrics.expenseCost.toString()).toBe("25000");
+      expect(report.metrics.contractProfit.toString()).toBe("85000");
     });
   },
 );

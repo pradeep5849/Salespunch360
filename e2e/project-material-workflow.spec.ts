@@ -798,14 +798,12 @@ test("Project invoice entry links customer and retries GST revenue exactly once"
     .getByRole("button")
     .filter({ hasText: "Project billing service" })
     .click();
-  const itemEntry = page
-    .locator("section")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Add Items to Sale",
-        exact: true,
-      }),
-    });
+  const itemEntry = page.locator("section").filter({
+    has: page.getByRole("heading", {
+      name: "Add Items to Sale",
+      exact: true,
+    }),
+  });
   await itemEntry.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Add Items to Sale", exact: true }),
@@ -851,6 +849,31 @@ test("Project invoice entry links customer and retries GST revenue exactly once"
       .find((line) => line.ledgerAccount.systemKey === "ACCOUNTS_RECEIVABLE")
       ?.debit.toString(),
   ).toBe("118");
+  await page.goto(`/workspace/account/projects/${projectA}/costing`);
+  await expect(
+    page.getByRole("heading", {
+      name: "Invoices and customer balance",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const invoiceTable = page
+    .getByRole("table")
+    .filter({ has: page.getByText(invoice.documentNumber, { exact: true }) });
+  await expect(
+    invoiceTable.getByRole("cell", { name: "100.00", exact: true }),
+  ).toBeVisible();
+  await expect(
+    invoiceTable.getByRole("cell", { name: "18.00", exact: true }),
+  ).toBeVisible();
+  await expect(
+    invoiceTable.getByRole("cell", { name: "118.00", exact: true }),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("heading", {
+      name: "Labour and other expenses",
+      exact: true,
+    }),
+  ).toBeVisible();
   await db.accountSettings.update({
     where: { companyId },
     data: { enabledModules: ["SALES", "INVENTORY"] },

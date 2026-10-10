@@ -8,6 +8,35 @@ import {
 } from "./project-costing";
 const d = (x: number | string) => new Prisma.Decimal(x);
 describe("A8 tax-exclusive costing", () => {
+  it("reconciles the user's contract, extra job, invoices, labour and leftover transfer without adding advances to profit", () => {
+    const result = projectCosting({
+      originalValue: d(100000),
+      estimatedCost: d(0),
+      budget: d(0),
+      approvedChanges: [{ valueDelta: d(10000), estimatedCostDelta: d(0) }],
+      documents: [
+        { type: "SALES_INVOICE", status: "POSTED", taxableTotal: d(50000) },
+        { type: "SALES_INVOICE", status: "POSTED", taxableTotal: d(50000) },
+      ],
+      allocatedPurchaseCost: d(30000),
+      expenses: [d(20000), d(5000)],
+      advanceReceived: d(20000),
+      materialAdjustments: {
+        inventoryIssued: d(0),
+        transferIn: d(0),
+        returned: d(0),
+        transferOut: d(5000),
+        consumed: d(25000),
+        unused: d(0),
+      },
+    });
+    expect(result.contractRevenueBase.toString()).toBe("110000");
+    expect(result.actualCost.toString()).toBe("50000");
+    expect(result.expenseCost.toString()).toBe("25000");
+    expect(result.contractProfit.toString()).toBe("60000");
+    expect(result.profit.toString()).toBe("50000");
+    expect(result.unbilledContractRevenue.toString()).toBe("10000");
+  });
   it("excludes GST and cash movements from project P&L", () => {
     const r = projectCosting({
       originalValue: d(118),
@@ -202,8 +231,32 @@ describe("Project allocated purchase cost and commitments", () => {
 
 describe("Project purchase material costing", () => {
   it("counts purchase allocation cost once while retaining independent inventory issues", () => {
-    const row = (id: string, purchaseAllocationId: string | null, cost: number) => ({id, purchaseAllocationId, totalCost: d(cost), movementType: "INVENTORY_ISSUE_TO_PROJECT", reversalOfId: null});
-    expect(inventoryIssueCostNotPurchased([row("purchase", "allocation", 50), row("inventory", null, 20)]).toString()).toBe("20");
-    expect(inventoryIssueCostNotPurchased([row("inventory", null, 20), {...row("reversal", null, 20), movementType: "REVERSAL", reversalOfId: "inventory"}]).toString()).toBe("0");
+    const row = (
+      id: string,
+      purchaseAllocationId: string | null,
+      cost: number,
+    ) => ({
+      id,
+      purchaseAllocationId,
+      totalCost: d(cost),
+      movementType: "INVENTORY_ISSUE_TO_PROJECT",
+      reversalOfId: null,
+    });
+    expect(
+      inventoryIssueCostNotPurchased([
+        row("purchase", "allocation", 50),
+        row("inventory", null, 20),
+      ]).toString(),
+    ).toBe("20");
+    expect(
+      inventoryIssueCostNotPurchased([
+        row("inventory", null, 20),
+        {
+          ...row("reversal", null, 20),
+          movementType: "REVERSAL",
+          reversalOfId: "inventory",
+        },
+      ]).toString(),
+    ).toBe("0");
   });
 });

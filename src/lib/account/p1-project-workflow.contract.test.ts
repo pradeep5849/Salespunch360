@@ -77,7 +77,7 @@ describe("P1 simple project workflow contract", () => {
     expect(androidProjectScreen).toContain('listOf<String?>(null, "ACTIVE", "ON_HOLD", "COMPLETED")');
     expect(androidProjectScreen).toContain('listOf("ACTIVE", "ON_HOLD")');
     expect(androidProjectScreen).toContain('Text("Status: Active")');
-    expect(androidProjectScreen).toContain('Text("Complete")');
+    expect(androidProjectScreen).toContain('Text("Close Project")');
     expect(androidProjectScreen).toContain("Completed project · report only");
     expect(androidProjectScreen).not.toContain('Pick("Customer"');
     expect(androidProjectScreen).not.toContain("Target end date");

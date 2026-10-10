@@ -277,19 +277,17 @@ private fun ProjectDetail(
                         "Customer received ₹${x.str("customerPayments")} · Vendor paid ₹${x.str("vendorPayments")}",
                     )
                 }
-                item { Text("Open tasks ${x.str("openTasks")}") }
                 x.str("sourceQuotationId").takeIf { it.isNotBlank() }?.let { quotation ->
                     item { Text("Created from accepted quotation · $quotation") }
                 }
                 costing?.get("metrics")?.jsonObject?.let { metrics ->
                     item { Text("Project report / costing", style = MaterialTheme.typography.titleMedium) }
                     listOf(
-                        "originalValue", "approvedChangeOrders", "contractRevenueBase", "estimatedCost",
-                        "actualCost", "committedCost", "remainingForecast", "forecastCost", "budgetVariance",
-                        "revenue", "profit", "expectedProfit", "forecastProfit", "finalProfit",
+                        "originalValue", "approvedChangeOrders", "contractRevenueBase",
+                        "actualCost", "expenseCost", "contractProfit", "unbilledContractRevenue", "revenue", "profit", "finalProfit",
                         "advanceReceived", "amountReceived", "accountingReceivable",
                         "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned", "materialReturnedToInventory", "materialReturnedToVendor",
-                        "materialTransferredIn", "materialTransferredOut", "actualMarginPercent", "expectedMarginPercent", "forecastMarginPercent",
+                        "materialTransferredIn", "materialTransferredOut", "actualMarginPercent",
                     ).forEach { key ->
                         item {
                             ListItem(
@@ -323,6 +321,28 @@ private fun ProjectDetail(
                         }
                     }
                 }
+                costing?.get("details")?.jsonObject?.let { details ->
+                    listOf(
+                        "expenseCategories" to "Labour and expense category totals",
+                        "purchases" to "Purchases",
+                        "expenses" to "Labour and other expenses",
+                        "materialMovements" to "Material movement and cost adjustments",
+                        "payments" to "Advances, installments and payments",
+                        "invoices" to "Invoices and customer balance",
+                    ).forEach { (key, title) ->
+                        item { Text(title, style = MaterialTheme.typography.titleMedium) }
+                        val records = details.array(key)
+                        if (records.isEmpty()) item { Text("No entries recorded.") }
+                        items(records, key = { "$key:${it.jsonObject.str("id")}" }) { element ->
+                            val record = element.jsonObject
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                record.entries.filter { it.key != "id" && it.value != JsonNull }.forEach { (field, value) ->
+                                    Text("${field.replace(Regex("([A-Z])"), " $1")}: ${value.jsonPrimitive.content}")
+                                }
+                            }
+                        }
+                    }
+                }
                 costing?.array("packages")?.let { packages ->
                     item { Text("Package profitability", style = MaterialTheme.typography.titleMedium) }
                     items(packages) { element ->
@@ -347,9 +367,9 @@ private fun ProjectDetail(
             if (!final) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(edit,enabled=!saving) { Text("Edit") }
-                    if (canBudget) OutlinedButton(budget,enabled=!saving) { Text("Budget") }
+
                     FilledTonalButton({ action(x.str("id"), "COMPLETE") },enabled=!saving) {
-                        Text("Complete")
+                        Text("Close Project")
                     }
                 }
             }

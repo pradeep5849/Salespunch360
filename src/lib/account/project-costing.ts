@@ -163,6 +163,12 @@ export function projectCosting(input: {
     contractRevenueBase,
     estimatedCost: estimated,
     actualCost,
+    expenseCost: sum(input.expenses ?? []),
+    contractProfit: contractRevenueBase.sub(actualCost),
+    unbilledContractRevenue: Prisma.Decimal.max(
+      Z,
+      contractRevenueBase.sub(revenue),
+    ),
     directProjectPurchases: actualPurchases,
     inventoryMaterialIssued: material?.inventoryIssued ?? Z,
     materialConsumed: material?.consumed ?? Z,
@@ -430,17 +436,21 @@ export async function loadProjectCostingForActor(
         status: "POSTED",
         type: { in: ["PROJECT_EXPENSE", "REIMBURSEMENT"] },
       },
+      orderBy: [{ transactionDate: "asc" }, { id: "asc" }],
     }),
     purchaseAllocations = await db.purchaseLineAllocation.findMany({
       where: { companyId: actor.companyId, projectId },
       include: { documentLine: { include: { document: true } } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
     materialRows = await db.projectMaterialMovement.findMany({
       where: { companyId: actor.companyId, projectId },
+      orderBy: [{ movementDate: "asc" }, { id: "asc" }],
     }),
     projectSettlements = await db.accountSettlement.findMany({
       where: { companyId: actor.companyId, projectId },
       include: { applications: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
     material = projectMaterialCostBreakdown(materialRows),
     purchaseAdjustments = await db.commercialDocumentLine.findMany({
@@ -553,11 +563,114 @@ export async function loadProjectCostingForActor(
     ] as string[],
     works = await db.workPackage.findMany({
       where: { companyId: actor.companyId, id: { in: workIds } },
-    });
+    }),
+    categories = await db.expenseCategory.findMany({
+      where: {
+        companyId: actor.companyId,
+        id: { in: [...new Set(expenses.map((x) => x.categoryId))] },
+      },
+      select: { id: true, name: true },
+    }),
+    categoryNames = new Map(categories.map((x) => [x.id, x.name])),
+    products = await db.accountProduct.findMany({
+      where: {
+        companyId: actor.companyId,
+        id: { in: [...new Set(materialRows.map((x) => x.productId))] },
+      },
+      select: { id: true, name: true },
+    }),
+    productNames = new Map(products.map((x) => [x.id, x.name]));
+  // These are supporting records, not additional costs to add to metrics.
+  // Retain supplier corrections, material reversals and payment applications
+  // so the user can reconcile the P&L without counting movements twice.
+  const details = {
+    expenseCategories: [...new Set(expenses.map((x) => x.categoryId))].map(
+      (categoryId) => ({
+        id: categoryId,
+        category: categoryNames.get(categoryId) ?? "Historical category",
+        amount: sum(
+          expenses
+            .filter((x) => x.categoryId === categoryId)
+            .map((x) => x.totalAmount),
+        ).toFixed(2),
+        cost: sum(
+          expenses
+            .filter((x) => x.categoryId === categoryId)
+            .map((x) =>
+              x.totalAmount.sub(
+                x.taxCreditTreatment === "ELIGIBLE" ? x.taxAmount : 0,
+              ),
+            ),
+        ).toFixed(2),
+      }),
+    ),
+    purchases: purchaseAllocations.map((x) => ({
+      id: x.id,
+      documentId: x.documentLine.documentId,
+      number: x.documentLine.document.documentNumber,
+      date: x.documentLine.document.issueDate.toISOString().slice(0, 10),
+      status: x.documentLine.document.status,
+      item: x.documentLine.itemName,
+      quantity: x.quantity.toString(),
+      taxableAmount: x.taxableAmount.toFixed(2),
+      taxAmount: x.taxAmount.toFixed(2),
+      totalAmount: x.totalAmount.toFixed(2),
+    })),
+    expenses: expenses.map((x) => ({
+      id: x.id,
+      number: x.transactionNumber,
+      date: x.transactionDate.toISOString().slice(0, 10),
+      category: categoryNames.get(x.categoryId) ?? "Historical category",
+      reference: x.reference,
+      notes: x.notes,
+      amount: x.totalAmount.toFixed(2),
+      cost: x.totalAmount
+        .sub(x.taxCreditTreatment === "ELIGIBLE" ? x.taxAmount : 0)
+        .toFixed(2),
+    })),
+    materialMovements: materialRows.map((x) => ({
+      id: x.id,
+      type: x.movementType,
+      date: x.movementDate.toISOString().slice(0, 10),
+      productId: x.productId,
+      item: productNames.get(x.productId) ?? "Historical item",
+      quantity: x.quantity.toString(),
+      cost: x.totalCost.toFixed(2),
+      sourceProjectId: x.sourceProjectId,
+      destinationProjectId: x.destinationProjectId,
+      reversalOfId: x.reversalOfId,
+      reason: x.reason,
+    })),
+    payments: projectSettlements.map((x) => ({
+      id: x.id,
+      number: x.settlementNumber,
+      type: x.type,
+      status: x.status,
+      date: x.transactionDate.toISOString().slice(0, 10),
+      reference: x.reference,
+      paymentMode: x.paymentMode,
+      amount: x.amount.toFixed(2),
+      remainingAmount: x.remainingAmount.toFixed(2),
+    })),
+    invoices: project.commercialDocuments
+      .filter((x) => ["SALES_INVOICE", "CREDIT_NOTE"].includes(x.type))
+      .map((x) => ({
+        id: x.id,
+        number: x.documentNumber,
+        type: x.type,
+        status: x.status,
+        date: x.issueDate.toISOString().slice(0, 10),
+        revenue: x.taxableTotal.toFixed(2),
+        tax: x.taxTotal.toFixed(2),
+        total: x.grandTotal.toFixed(2),
+        outstanding: invoiceOutstandings.get(x.id)?.toFixed(2) ?? null,
+      })),
+  };
   return {
     project,
     changes,
     metrics,
+    details,
     packages: packageProfitability(
       project.commercialDocuments,
       quotation?.revisions[0]?.lines ?? [],

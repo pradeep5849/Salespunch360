@@ -388,6 +388,8 @@ export async function updateProjectForActor(actor: ProjectActor, raw: unknown) {
       const value = new Prisma.Decimal(data.projectValue),
         managerChanged =
           (data.projectManagerId ?? null) !== project.projectManagerId;
+      const approvedChanges = await tx.projectChangeOrder.aggregate({where:{companyId:actor.companyId,projectId:project.id,status:"APPROVED"},_sum:{valueDelta:true}});
+      if(value.add(approvedChanges._sum.valueDelta ?? 0).lt(0)) throw new Error("INVALID_PROJECT_VALUE");
       await tx.project.update({
         where: { id: project.id },
         data: {
@@ -696,8 +698,8 @@ export async function getProjectForActor(
     include: {
       customer: true,
       branch: true,
-      projectManager: true,
-      members: { include: { user: true } },
+      projectManager: { select: { id: true, name: true } },
+      members: { include: { user: { select: { id: true, name: true } } } },
       budgetLines: { orderBy: { position: "asc" } },
       milestones: { orderBy: { position: "asc" } },
       tasks: {

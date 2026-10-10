@@ -1,3 +1,4 @@
+import { projectWorkflowCapabilities } from "@/lib/account/project-workflow-capabilities";
 import { z } from "zod";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
@@ -92,6 +93,7 @@ export async function mobileProjectOptions(u: MobileAppPrincipal, id?: string) {
     getProjectFormOptionsForActor(actor, id), enabledModulesForCompany(actor.companyId),
   ]);
   return { ...options, capabilities: {
+    workflow: projectWorkflowCapabilities(actor, u.productEdition, modules),
     invoiceCreate: modules.includes("SALES") && canUsePermission(actor, u.productEdition, "ACCOUNT_SALES_ENTRY") && canUsePermission(actor, u.productEdition, "ACCOUNT_JOURNAL_POST"),
     costView: modules.includes("PROJECT_COSTING") && canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_VIEW"),
     budgetEdit: canUsePermission(actor, u.productEdition, "ACCOUNT_PROJECT_COST_EDIT"),
