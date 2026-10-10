@@ -665,3 +665,80 @@ test("Project links, material forms and API enforce the same scope and module ru
     page.getByRole("button", { name: "Post movement", exact: true }),
   ).toHaveCount(0);
 });
+
+test("purchase draft creation survives a lost response without duplicate documents", async ({
+  page,
+}) => {
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      enabledModules: [
+        "PROJECTS",
+        "PROJECT_COSTING",
+        "INVENTORY",
+        "PURCHASES",
+        "PURCHASE_BILLS",
+        "DEBIT_NOTE",
+      ],
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/workspace\/account/);
+  await page.goto("/workspace/account/transactions/new?type=PURCHASE_BILL");
+  await page
+    .getByRole("combobox", { name: "Vendor", exact: true })
+    .selectOption(vendorId);
+  const invoiceNumber = randomUUID();
+  await page
+    .getByRole("textbox", { name: "Vendor invoice number", exact: true })
+    .fill(invoiceNumber);
+  await page
+    .getByLabel("Vendor invoice date", { exact: true })
+    .fill("2026-10-09");
+  await page
+    .getByRole("combobox", { name: "Line type", exact: true })
+    .selectOption("MATERIAL");
+  await page
+    .getByRole("combobox", { name: "Item", exact: true })
+    .selectOption(productId);
+  await page
+    .getByRole("combobox", { name: "Warehouse", exact: true })
+    .selectOption(warehouseId);
+  await page.getByRole("spinbutton", { name: "Rate", exact: true }).fill("10");
+  await page.route("**/workspace/account/transactions/new**", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await page.getByRole("button", { name: "Create Draft", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Connection interrupted" }),
+  ).toBeVisible();
+  const created = await db.commercialDocument.findFirstOrThrow({
+    where: { companyId, vendorInvoiceNumber: invoiceNumber },
+  });
+  expect(created.creationRequestKey).toBeTruthy();
+  await expect(
+    page.getByRole("textbox", { name: "Vendor invoice number", exact: true }),
+  ).toHaveValue(invoiceNumber);
+  await page.unroute("**/workspace/account/transactions/new**");
+  await page.getByRole("button", { name: "Create Draft", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
+  expect(
+    await db.commercialDocument.count({
+      where: { companyId, vendorInvoiceNumber: invoiceNumber },
+    }),
+  ).toBe(1);
+  expect(
+    await db.commercialAuditEvent.count({
+      where: {
+        companyId,
+        entityId: created.id,
+        eventType: "DOCUMENT_CREATED",
+      },
+    }),
+  ).toBe(1);
+});

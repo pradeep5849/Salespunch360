@@ -146,9 +146,10 @@ export async function mobileCreateSales(
     );
     await postCommercialDocumentForActor(actor, { documentId: row.id });
   } catch (error) {
-    await db.commercialDocument
-      .deleteMany({ where: { id: row.id, status: "DRAFT" } })
-      .catch(() => undefined);
+    if (!documentPayload.idempotencyKey)
+      await db.commercialDocument
+        .deleteMany({ where: { id: row.id, status: "DRAFT" } })
+        .catch(() => undefined);
     throw error;
   }
   if (Number.isFinite(receivedAmount) && receivedAmount > 0) {

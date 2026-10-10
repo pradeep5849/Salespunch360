@@ -1,3 +1,4 @@
+import { commercialCreationHash } from "./commercial-request-identity";
 import { retrySerializable } from "./transaction-retry";
 import { projectPurchaseReturnsInTx } from "./project-purchase-returns";
 import {
@@ -25,6 +26,7 @@ import { canUsePermission, type Permission } from "@/lib/auth/permissions";
 import {
   authorizeProjectForCommercial,
   listOpenProjectOptionsForActor,
+  getProjectForActor,
   type ProjectActor,
 } from "./projects";
 import { postJournalInTx } from "@/lib/accounting/service";
@@ -305,6 +307,7 @@ const lineSchema = z.object({
 });
 export const commercialDocumentInput = z
   .object({
+    idempotencyKey: z.string().trim().min(1).max(120).optional(),
     type: z.nativeEnum(CommercialDocumentType),
     branchId: z.string().uuid(),
     partyId: z.string().uuid(),
@@ -812,6 +815,51 @@ export async function createCommercialDocumentForActor(
           }),
         ]);
         if (!branch) throw new Error("INVALID_BRANCH");
+        const creationRequestHash = d.idempotencyKey
+          ? commercialCreationHash(d)
+          : null;
+        if (d.idempotencyKey) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`commercial-create:${actor.companyId}:${d.idempotencyKey}`},0))`;
+          const existing = await tx.commercialDocument.findUnique({
+            where: {
+              companyId_creationRequestKey: {
+                companyId: actor.companyId,
+                creationRequestKey: d.idempotencyKey,
+              },
+            },
+          });
+          if (existing) {
+            if (existing.creationRequestHash !== creationRequestHash)
+              throw new Error("IDEMPOTENCY_KEY_REUSED");
+            // Replays still require current Project visibility and module entitlement.
+            // Final Project status is readable: replay creates no new business movement.
+            const projectIds = new Set<string>();
+            if (existing.projectId) projectIds.add(existing.projectId);
+            const allocations = await tx.purchaseLineAllocation.findMany({
+              where: {
+                companyId: actor.companyId,
+                projectId: { not: null },
+                documentLine: {
+                  documentId: {
+                    in: [
+                      existing.id,
+                      ...(existing.sourceDocumentId
+                        ? [existing.sourceDocumentId]
+                        : []),
+                    ],
+                  },
+                },
+              },
+              select: { projectId: true },
+            });
+            for (const allocation of allocations)
+              projectIds.add(allocation.projectId!);
+            for (const projectId of projectIds)
+              await getProjectForActor(actor, projectId);
+            return existing;
+          }
+        }
+
         const party =
           p.party === "customer"
             ? await tx.customer.findFirst({
@@ -1264,6 +1312,8 @@ export async function createCommercialDocumentForActor(
             })),
           document = await tx.commercialDocument.create({
             data: {
+              creationRequestKey: d.idempotencyKey,
+              creationRequestHash,
               companyId: actor.companyId,
               branchId: d.branchId,
               type: d.type,

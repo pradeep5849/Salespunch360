@@ -2355,6 +2355,8 @@ model QuotationAuditEvent {
 
 model CommercialDocument {
   id                     String                   @id @default(uuid()) @db.Uuid
+  creationRequestKey     String?                  @db.VarChar(120)
+  creationRequestHash    String?                  @db.VarChar(64)
   companyId              String                   @db.Uuid
   branchId               String                   @db.Uuid
   type                   CommercialDocumentType
@@ -2430,6 +2432,7 @@ model CommercialDocument {
   advanceApplications    AdvanceApplication[]
 
   @@unique([companyId, id])
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, branchId, type, documentNumber])
   @@unique([companyId, vendorId, purchaseFinancialYearId, vendorInvoiceNumberNormalized])
   @@index([companyId, type, issueDate])

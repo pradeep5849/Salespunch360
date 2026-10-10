@@ -18,6 +18,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(PurchaseState())
     val state: StateFlow<PurchaseState> = _state
 
+    private val creationIdentity = CommercialCreationIdentity()
     private var refreshJob: Job? = null
     private var refreshGeneration = 0
 
@@ -91,6 +92,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = _state.value.copy(error = "This Project is unavailable.")
             return
         }
+        creationIdentity.reset()
         _state.value = _state.value.copy(
             draft = PurchaseDraft(
                 type = type,
@@ -141,10 +143,11 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(saving = true, error = null)
         viewModelScope.launch {
             try {
-                val payload = purchasePayload(draft)
+                val payload = creationIdentity.payload(purchasePayload(draft))
 
                 val created = api.createPurchase(payload)
                 val id = created.str("id")
+                creationIdentity.reset()
                 _state.value = _state.value.copy(
                     saving = false,
                     draft = null,
@@ -211,7 +214,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun errorText(e: Exception) = when {
-        e is IOException -> "Connection interrupted. Review the purchase list before retrying."
+        e is IOException -> "Connection interrupted. Your inputs were kept; retry the same request when online."
         e is ApiException && e.status == 403 -> "You are not authorized for this purchase action."
         e is ApiException -> e.serverMessage ?: "The server rejected this purchase action (${e.code ?: e.status})."
         else -> "The server rejected this purchase action."

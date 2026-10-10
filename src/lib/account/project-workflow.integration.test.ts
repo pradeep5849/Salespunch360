@@ -1871,6 +1871,163 @@ describe.skipIf(!url)(
           ).rejects.toThrow("Not authorized");
       }
     });
+    it("retries Project invoice creation without duplicate revenue and rejects changed or unauthorized replay", async () => {
+      const request = {
+        idempotencyKey: key(),
+        type: "SALES_INVOICE",
+        branchId,
+        partyId: customerId,
+        projectId: a,
+        issueDate: date,
+        stateOfSupplyCode: "29",
+        lines: [
+          {
+            lineType: "SERVICE",
+            sourceId: serviceId,
+            quantity: "1",
+            rate: "25",
+            taxRate: "18",
+          },
+        ],
+      };
+      const [first, retry] = await Promise.all([
+        createCommercialDocumentForActor(actor, request),
+        createCommercialDocumentForActor(actor, request),
+      ]);
+      expect(retry.id).toBe(first.id);
+      expect(
+        await client.commercialDocument.count({
+          where: { companyId, creationRequestKey: request.idempotencyKey },
+        }),
+      ).toBe(1);
+      expect(
+        await client.commercialAuditEvent.count({
+          where: {
+            companyId,
+            entityId: first.id,
+            eventType: "DOCUMENT_CREATED",
+          },
+        }),
+      ).toBe(1);
+      await postCommercialDocumentForActor(actor, { documentId: first.id });
+      expect(
+        (
+          await createCommercialDocumentForActor(actor, {
+            ...request,
+            lines: [{ ...request.lines[0], rate: "25.00", quantity: "1.0000" }],
+          })
+        ).id,
+      ).toBe(first.id);
+      await postCommercialDocumentForActor(actor, { documentId: retry.id });
+      const journal = await client.journalEntry.findMany({
+        where: { companyId, sourceId: first.id },
+        include: { lines: { include: { ledgerAccount: true } } },
+      });
+      expect(journal).toHaveLength(1);
+      expect(
+        journal[0].lines
+          .find((line) => line.ledgerAccount.systemKey === "SALES_INCOME")
+          ?.credit.toString(),
+      ).toBe("25");
+      await expect(
+        createCommercialDocumentForActor(actor, {
+          ...request,
+          lines: [{ ...request.lines[0], rate: "26" }],
+        }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      await expect(
+        createCommercialDocumentForActor(
+          { ...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [] },
+          request,
+        ),
+      ).rejects.toThrow("INVALID_BRANCH");
+      const settings = await client.accountSettings.findUniqueOrThrow({
+        where: { companyId },
+      });
+      try {
+        await client.accountSettings.update({
+          where: { companyId },
+          data: {
+            enabledModules: settings.enabledModules!.filter(
+              (module) => module !== "PROJECTS",
+            ),
+          },
+        });
+        await expect(
+          createCommercialDocumentForActor(actor, request),
+        ).rejects.toThrow("MODULE_DISABLED:PROJECTS");
+      } finally {
+        await client.accountSettings.update({
+          where: { companyId },
+          data: { enabledModules: settings.enabledModules! },
+        });
+      }
+    }, 30_000);
+    it("retries purchase creation before duplicate invoice checks and fully adjusted correction replay", async () => {
+      const request = {
+        idempotencyKey: key(),
+        type: "PURCHASE_BILL",
+        branchId,
+        partyId: vendorId,
+        purchasePurpose: "GENERAL_OFFICE",
+        vendorInvoiceNumber: key(),
+        vendorInvoiceDate: date,
+        issueDate: date,
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Retry-safe office supply",
+            quantity: "1",
+            rate: "20",
+            taxRate: "0",
+            warehouseId,
+          },
+        ],
+      };
+      const [first, retry] = await Promise.all([
+        createCommercialDocumentForActor(actor, request),
+        createCommercialDocumentForActor(actor, request),
+      ]);
+      expect(retry.id).toBe(first.id);
+      await postCommercialDocumentForActor(actor, { documentId: first.id });
+      expect((await createCommercialDocumentForActor(actor, request)).id).toBe(
+        first.id,
+      );
+      const original = await client.commercialDocumentLine.findFirstOrThrow({
+        where: { companyId, documentId: first.id },
+      });
+      const correction = {
+        ...request,
+        idempotencyKey: key(),
+        type: "DEBIT_NOTE",
+        vendorInvoiceNumber: undefined,
+        vendorInvoiceDate: undefined,
+        sourceDocumentId: first.id,
+        lines: [
+          {
+            ...request.lines[0],
+            sourceCommercialLineId: original.id,
+            stockReturnQuantity: "0",
+          },
+        ],
+      };
+      const debit = await createCommercialDocumentForActor(actor, correction);
+      await postCommercialDocumentForActor(actor, { documentId: debit.id });
+      expect(
+        (await createCommercialDocumentForActor(actor, correction)).id,
+      ).toBe(debit.id);
+      expect(
+        await client.commercialDocument.count({
+          where: { companyId, creationRequestKey: correction.idempotencyKey },
+        }),
+      ).toBe(1);
+      await expect(
+        createCommercialDocumentForActor(actor, {
+          ...request,
+          idempotencyKey: key(),
+        }),
+      ).rejects.toThrow("DUPLICATE_VENDOR_INVOICE");
+    }, 30_000);
     it("blocks direct domain reads and every material action when Projects is OFF", async () => {
       await client.accountSettings.update({
         where: { companyId },
