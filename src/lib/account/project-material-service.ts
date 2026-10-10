@@ -18,6 +18,9 @@ import { reverseJournalInTx, postJournalInTx } from "@/lib/accounting/service";
 import { signedQuantity, stockValuation } from "./inventory";
 import { enabledModulesForCompany, requireAccountModules } from "./modules";
 import { resolveItemSettings } from "./item-settings-policy";
+// Every replay checks tenant, authorization, movement type and request hash.
+const retryMaterialTransaction = <T>(operation: () => Promise<T>) =>
+  retrySerializable(operation, 3, ["companyId", "idempotencyKey"]);
 const D = Prisma.Decimal,
   decimal = z
     .union([z.string(), z.number().finite()])
@@ -207,7 +210,7 @@ export async function issueInventoryToProjectForActor(
   await requireAccountModules(actor, "INVENTORY");
   const d = inventoryIssueInput.parse(raw);
   const requestHash = materialRequestHash("INVENTORY_ISSUE_TO_PROJECT", d);
-  return retrySerializable(() =>
+  return retryMaterialTransaction(() =>
     db.$transaction(
       async (tx) => {
         const existing = await tx.projectMaterialMovement.findUnique({
@@ -510,7 +513,7 @@ export async function consumeProjectMaterialForActor(
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_MATERIAL_CONSUME");
   const d = consumeMaterialInput.parse(raw);
   const requestHash = materialRequestHash("CONSUMPTION", d);
-  return retrySerializable(() =>
+  return retryMaterialTransaction(() =>
     db.$transaction(
       async (tx) => {
         const existing = await tx.projectMaterialMovement.findUnique({
@@ -638,7 +641,7 @@ export async function returnProjectMaterialForActor(
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_MATERIAL_RETURN");
   const d = returnMaterialInput.parse(raw);
   const requestHash = materialRequestHash("RETURN_TO_INVENTORY", d);
-  return retrySerializable(() =>
+  return retryMaterialTransaction(() =>
     db.$transaction(
       async (tx) => {
         const existing = await tx.projectMaterialMovement.findUnique({
@@ -798,7 +801,7 @@ export async function transferProjectMaterialForActor(
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_MATERIAL_TRANSFER");
   const d = transferProjectMaterialInput.parse(raw);
   const requestHash = materialRequestHash("TRANSFER_OUT", d);
-  return retrySerializable(() =>
+  return retryMaterialTransaction(() =>
     db.$transaction(
       async (tx) => {
         const existing = await tx.projectMaterialMovement.findUnique({
@@ -1009,7 +1012,7 @@ export async function reverseProjectMaterialForActor(
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_MATERIAL_TRANSFER");
   const d = reverseProjectMaterialInput.parse(raw);
   const requestHash = materialRequestHash("REVERSAL", d);
-  return retrySerializable(() =>
+  return retryMaterialTransaction(() =>
     db.$transaction(
       async (tx) => {
         const existing = await tx.projectMaterialMovement.findUnique({
