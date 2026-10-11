@@ -1307,3 +1307,33 @@ test("A060 Show All opens scoped Products and Services catalogue with matching a
     page.getByRole("button", { name: "Services", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
 });
+
+test("A058 Accountant can open Add Item without settings administration", async ({
+  page,
+}) => {
+  await db.user.update({
+    where: { id: userId },
+    data: { accountRole: "ACCOUNTANT" },
+  });
+  try {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/);
+    const response = await page.goto("/workspace/account/inventory/items/new");
+    expect(response?.status()).toBe(200);
+    await expect(
+      page.getByRole("heading", { name: "Add Item", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Item Name *", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Settings", exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await db.user.update({
+      where: { id: userId },
+      data: { accountRole: "ACCOUNT_ADMIN" },
+    });
+  }
+});

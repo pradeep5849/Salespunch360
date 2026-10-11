@@ -2209,13 +2209,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Account Admin/Accountant permitted; unauthorized roles denied; no settings-write privilege escalation; direct web/native/API parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A058_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A058_Findings.json, SalesPunch360_A058_Audit_Report.md.
 
 **Linked finding IDs:** A058-F02, A058-F04, A058-F05.
+
+**Checkpoint work:** Add Item uses a dedicated ACCOUNT_STOCK-authorized, Inventory/Items-gated company settings reader returning only item presentation settings. Accountant can open the page without ACCOUNT_SETTINGS; existing settings mutation restrictions remain enforced.
+
+**Intermediate validation:** 8 focused unit tests and 2 desktop/mobile Accountant browser cases passed. TypeScript and focused ESLint passed. Final-head native/API parity verification pending.
 
 ## A058-F04 — Image capture and HSN/SAC lookup controls are unavailable or inert
 

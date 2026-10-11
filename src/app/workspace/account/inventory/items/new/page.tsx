@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { getAccountSettings } from "@/lib/account/settings";
+import { getItemWorkflowSettings } from "@/lib/account/item-workflow-settings";
 import { accountMasterOverview } from "@/lib/account/service";
 import { AddItemEditor } from "./add-item-editor";
 
@@ -11,7 +11,7 @@ export default async function AddItemPage({
   const query = await searchParams;
   const [data, row] = await Promise.all([
     accountMasterOverview("products", {}),
-    getAccountSettings(),
+    getItemWorkflowSettings(),
   ]);
   const customFields = row
     ? await db.customFieldDefinition.findMany({

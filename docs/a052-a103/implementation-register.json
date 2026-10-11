@@ -6002,14 +6002,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A058-F02",
         "A058-F04",
         "A058-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Add Item uses a dedicated ACCOUNT_STOCK-authorized, Inventory/Items-gated company settings reader returning only item presentation settings. Accountant can open the page without ACCOUNT_SETTINGS; existing settings mutation restrictions remain enforced.",
+        "remaining_work": "Final-head regression and original native/API permission parity verification pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A058-F04",
@@ -21212,6 +21218,16 @@
       "android_failed": 0,
       "android_skipped": 0,
       "native_device": "NOT RUN",
+      "final_head_validation": "NOT RUN"
+    },
+    "item_creation_settings_reader": {
+      "unit_files_passed": 2,
+      "unit_tests_passed": 8,
+      "browser_desktop_passed": 1,
+      "browser_mobile_web_passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Operational settings scoping/permission/module/Items OFF/defaults, existing settings write restrictions and Accountant Add Item access",
       "final_head_validation": "NOT RUN"
     }
   }
