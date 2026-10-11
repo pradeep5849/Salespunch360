@@ -1159,3 +1159,94 @@ test("A052 expected expense permission and module denial render a recoverable pa
     });
   }
 });
+
+test("A060 item sheets contain keyboard focus and recover from share failures", async ({
+  page,
+}) => {
+  await db.accountProduct.create({
+    data: {
+      companyId,
+      name: "A060 share item",
+      code: "A060-SHARE",
+      salePrice: "12.50",
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory");
+  const filter = page.getByRole("button", {
+    name: "Filter items",
+    exact: true,
+  });
+  await filter.click();
+  const sheet = page.getByRole("dialog", { name: "Filter By", exact: true });
+  await expect(sheet).toBeVisible();
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await sheet.evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(sheet).not.toBeVisible();
+  await expect(filter).toBeFocused();
+  await filter.click();
+  await sheet.getByLabel("Services", { exact: true }).check();
+  await sheet.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page.getByText("No items found", { exact: true })).toBeVisible();
+  await filter.click();
+  await sheet.getByRole("button", { name: "Clear", exact: true }).click();
+  await sheet.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "A060 share item", exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() =>
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async () => {
+        throw new DOMException("Denied", "NotAllowedError");
+      },
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Share A060 share item", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Unable to share item details",
+  );
+  await page.evaluate(() =>
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async () => {
+        throw new DOMException("Cancelled", "AbortError");
+      },
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Share A060 share item", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("1 items match");
+  const more = page.getByRole("button", {
+    name: "More item options",
+    exact: true,
+  });
+  await more.click();
+  const options = page.getByRole("dialog", {
+    name: "More Options",
+    exact: true,
+  });
+  await expect(options.getByRole("link", { name: "Categories" })).toBeVisible();
+  const axe = await new AxeBuilder({ page })
+    .include("dialog[open]")
+    .analyze();
+  expect(
+    axe.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+});

@@ -2503,13 +2503,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** More than200 products/services; late name/code search; category filtering and full count; pagination errors; tenant isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A060_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A060_Findings.json, SalesPunch360_A060_Audit_Report.md.
 
 **Linked finding IDs:** A060-F01, A060-F03, A060-F04.
+
+**Checkpoint work:** Android Inventory viewmodel now loads all item, service and category pages using the shared complete-page loader, preserving cancellation/generation protection and removing the 200-row search/filter cap.
+
+**Intermediate validation:** Desktop/mobile browser sheet/share regression passed (2 tests). Android compilation and 141 JVM tests passed (0 failures, 0 skips), including 3 new quantity-formatting tests and existing complete-page/error/stock-sum regressions. Final-head and native device verification pending.
 
 ## A060-F03 — Catalog fetch errors are converted to false empty results
 
@@ -2545,13 +2549,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Stock succeeds/catalog403/offline/500; distinguish no items; retain previous list; retry clears failure; cancelled obsolete request.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A060_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A060_Findings.json, SalesPunch360_A060_Audit_Report.md.
 
 **Linked finding IDs:** A060-F02, A060-F04, A060-F05.
+
+**Checkpoint work:** Catalogue failures propagate to an explicit error with Retry, retain last confirmed data and suppress the successful-empty message. Invalid stock values are rejected rather than displayed as zero.
+
+**Intermediate validation:** Desktop/mobile browser sheet/share regression passed (2 tests). Android compilation and 141 JVM tests passed (0 failures, 0 skips), including 3 new quantity-formatting tests and existing complete-page/error/stock-sum regressions. Final-head and native device verification pending.
 
 ## A060-F04 — Per-item sharing is missing in native and web failures are unhandled
 
@@ -2587,13 +2595,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Share success/cancel, unsupported browser/clipboard permission, native intent; exact item/price payload; no business mutation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A060_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A060_Findings.json, SalesPunch360_A060_Audit_Report.md.
 
 **Linked finding IDs:** A060-F03, A060-F05, A060-F06.
+
+**Checkpoint work:** Android item cards prepare text for the system share chooser with recoverable launch failure. Web sharing catches clipboard/share failures, treats user cancellation neutrally and announces clipboard success/failure.
+
+**Intermediate validation:** Desktop/mobile browser sheet/share regression passed (2 tests). Android compilation and 141 JVM tests passed (0 failures, 0 skips), including 3 new quantity-formatting tests and existing complete-page/error/stock-sum regressions. Final-head and native device verification pending.
 
 ## A060-F05 — Stock display ignores configured quantity decimals
 
@@ -2629,13 +2641,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Decimals0–4, negative/fractional/zero stock; no sign loss and web/native equality.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A060_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A060_Findings.json, SalesPunch360_A060_Audit_Report.md.
 
 **Linked finding IDs:** A060-F04, A060-F06.
+
+**Checkpoint work:** Android Items screen receives resolved company quantityDecimals from bootstrap; stock aggregation uses exact decimal quantities and display formats 0–4 decimals without mutating movement precision.
+
+**Intermediate validation:** Desktop/mobile browser sheet/share regression passed (2 tests). Android compilation and 141 JVM tests passed (0 failures, 0 skips), including 3 new quantity-formatting tests and existing complete-page/error/stock-sum regressions. Final-head and native device verification pending.
 
 ## A060-F06 — Filter/More Options sheets omit accessible modal behavior
 
@@ -2671,13 +2687,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Keyboard open/close, Escape, focus containment/restoration; screen reader titles; long category list and narrow heights.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A060_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A060_Findings.json, SalesPunch360_A060_Audit_Report.md.
 
 **Linked finding IDs:** A060-F05.
+
+**Checkpoint work:** Web Filter/More sheets use labelled modal dialogs, explicit keyboard focus wrapping, Escape close and native focus restoration. Results/filter count and share feedback are announced.
+
+**Intermediate validation:** Desktop/mobile browser sheet/share regression passed (2 tests). Android compilation and 141 JVM tests passed (0 failures, 0 skips), including 3 new quantity-formatting tests and existing complete-page/error/stock-sum regressions. Final-head and native device verification pending.
 
 ## A061-F01 — Inactive stock filter always returns empty
 

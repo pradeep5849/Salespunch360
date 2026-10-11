@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account
 
+import kotlinx.serialization.json.*
 import android.content.Intent
 import android.net.Uri
 import java.io.File
@@ -180,7 +181,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/branches"||state.selectedPath=="/workspace/account/settings/multi-branch"->Box(Modifier.padding(padding)){if(data.user.salesRole==com.salespunch360.mobile.data.MobileRole.PRIMARY_ADMIN)BranchesScreen() else Column(Modifier.padding(16.dp)){Text("Multi-Branch Settings",style=MaterialTheme.typography.headlineSmall);Text("Branch creation and changes require the Primary Admin.")}}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
-            state.selectedPath.substringBefore("?")=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
+            state.selectedPath.substringBefore("?")=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),quantityDecimals=account?.itemSettings?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2)
             state.selectedPath=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select)
             state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
             state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)

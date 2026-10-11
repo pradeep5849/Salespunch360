@@ -1,6 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { AccountIcon, type AccountIconName } from "./account-icons";
 
 type Item = {
@@ -48,6 +54,29 @@ const currency = new Intl.NumberFormat("en-IN", {
   currency: "INR",
   maximumFractionDigits: 2,
 });
+function containDialogFocus(event: KeyboardEvent<HTMLDialogElement>) {
+  if (event.key !== "Tab") return;
+  const dialog = event.currentTarget;
+  const focusable = Array.from(
+    dialog.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+    ),
+  ).filter((node) => node.getClientRects().length > 0);
+  const first = focusable[0],
+    last = focusable[focusable.length - 1];
+  if (!first || !last) {
+    event.preventDefault();
+    dialog.focus();
+    return;
+  }
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 export function ItemsScreen({
   items,
   categories,
@@ -70,6 +99,17 @@ export function ItemsScreen({
     [cats, setCats] = useState<Set<string>>(new Set()),
     [draftTypes, setDraftTypes] = useState<Set<string>>(new Set()),
     [draftCats, setDraftCats] = useState<Set<string>>(new Set());
+  const filterDialog = useRef<HTMLDialogElement>(null);
+  const moreDialog = useRef<HTMLDialogElement>(null);
+  const [shareMessage, setShareMessage] = useState("");
+  useEffect(() => {
+    if (filterOpen) filterDialog.current?.showModal();
+    else filterDialog.current?.close();
+  }, [filterOpen]);
+  useEffect(() => {
+    if (moreOpen) moreDialog.current?.showModal();
+    else moreDialog.current?.close();
+  }, [moreOpen]);
   const visible = useMemo(
     () =>
       items.filter((i) => {
@@ -95,8 +135,17 @@ export function ItemsScreen({
   };
   const share = async (item: Item) => {
     const text = `${item.name}${item.code ? ` (${item.code})` : ""} · ${currency.format(Number(item.salePrice))}`;
-    if (navigator.share) await navigator.share({ title: item.name, text });
-    else await navigator.clipboard.writeText(text);
+    setShareMessage("");
+    try {
+      if (navigator.share) await navigator.share({ title: item.name, text });
+      else {
+        await navigator.clipboard.writeText(text);
+        setShareMessage("Item details copied.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareMessage("Unable to share item details. Please try again.");
+    }
   };
   return (
     <div className="account-items-screen">
@@ -148,6 +197,9 @@ export function ItemsScreen({
           ⋮
         </button>
       </div>
+      <p role="status" aria-live="polite">
+        {shareMessage || `${visible.length} items match the current filters.`}
+      </p>
       <section className="account-item-list">
         {visible.length ? (
           visible.map((item) => (
@@ -205,104 +257,112 @@ export function ItemsScreen({
         ＋ Add New Item
       </Link>
 
-      {filterOpen && (
-        <div className="sale-more-sheet">
-          <section className="items-filter-sheet">
-            <header>
-              <h2>Filter By</h2>
-              <button onClick={() => setFilterOpen(false)} aria-label="Close">
-                ×
-              </button>
-            </header>
-            <div className="items-filter-list">
-              {[
-                ["PRODUCT", "Products"],
-                ["SERVICE", "Services"],
-              ].map(([value, label]) => (
-                <label key={value}>
-                  <span>{label}</span>
-                  <input
-                    type="checkbox"
-                    checked={draftTypes.has(value)}
-                    onChange={() => setDraftTypes(toggle(draftTypes, value))}
-                  />
-                </label>
-              ))}
-              <h3>Categories</h3>
-              {categories.map((cat) => (
-                <label key={cat.id}>
-                  <span>{cat.name}</span>
-                  <input
-                    type="checkbox"
-                    checked={draftCats.has(cat.id)}
-                    onChange={() => setDraftCats(toggle(draftCats, cat.id))}
-                  />
-                </label>
-              ))}
-            </div>
-            <footer>
-              <button
-                onClick={() => {
-                  setDraftTypes(new Set());
-                  setDraftCats(new Set());
-                }}
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => {
-                  setTypes(new Set(draftTypes));
-                  setCats(new Set(draftCats));
-                  setFilterOpen(false);
-                }}
-              >
-                Apply
-              </button>
-            </footer>
-          </section>
-        </div>
-      )}
+      <dialog
+        ref={filterDialog}
+        onKeyDown={containDialogFocus}
+        className="items-modal"
+        aria-labelledby="items-filter-title"
+        onCancel={() => setFilterOpen(false)}
+      >
+        <section className="items-filter-sheet">
+          <header>
+            <h2 id="items-filter-title">Filter By</h2>
+            <button onClick={() => setFilterOpen(false)} aria-label="Close">
+              ×
+            </button>
+          </header>
+          <div className="items-filter-list">
+            {[
+              ["PRODUCT", "Products"],
+              ["SERVICE", "Services"],
+            ].map(([value, label]) => (
+              <label key={value}>
+                <span>{label}</span>
+                <input
+                  type="checkbox"
+                  checked={draftTypes.has(value)}
+                  onChange={() => setDraftTypes(toggle(draftTypes, value))}
+                />
+              </label>
+            ))}
+            <h3>Categories</h3>
+            {categories.map((cat) => (
+              <label key={cat.id}>
+                <span>{cat.name}</span>
+                <input
+                  type="checkbox"
+                  checked={draftCats.has(cat.id)}
+                  onChange={() => setDraftCats(toggle(draftCats, cat.id))}
+                />
+              </label>
+            ))}
+          </div>
+          <footer>
+            <button
+              onClick={() => {
+                setDraftTypes(new Set());
+                setDraftCats(new Set());
+              }}
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => {
+                setTypes(new Set(draftTypes));
+                setCats(new Set(draftCats));
+                setFilterOpen(false);
+              }}
+            >
+              Apply
+            </button>
+          </footer>
+        </section>
+      </dialog>
 
-      {moreOpen && (
-        <div className="sale-more-sheet">
-          <section>
-            <header>
-              <h2>More Options</h2>
-              <button onClick={() => setMoreOpen(false)} aria-label="Close">
-                ×
-              </button>
-            </header>
-            <Link
-              className="sale-more-row"
-              href="/workspace/account/inventory/active?mode=activate"
-              onClick={() => setMoreOpen(false)}
-            >
-              Mark Items Active <b>›</b>
-            </Link>
-            <Link
-              className="sale-more-row"
-              href="/workspace/account/inventory/active?mode=deactivate"
-              onClick={() => setMoreOpen(false)}
-            >
-              Mark Items Inactive <b>›</b>
-            </Link>
-            <Link
-              className="sale-more-row"
-              href="/workspace/account/inventory/units"
-              onClick={() => setMoreOpen(false)}
-            >
-              Units <b>›</b>
-            </Link>
-            <Link
-              className="sale-more-row"
-              href="/workspace/account/inventory/categories"
-              onClick={() => setMoreOpen(false)}
-            >
-              Categories <b>›</b>
-            </Link>
-          </section>
-        </div>
-      )}
+      <dialog
+        ref={moreDialog}
+        onKeyDown={containDialogFocus}
+        className="items-modal"
+        aria-labelledby="items-more-title"
+        onCancel={() => setMoreOpen(false)}
+      >
+        <section>
+          <header>
+            <h2 id="items-more-title">More Options</h2>
+            <button onClick={() => setMoreOpen(false)} aria-label="Close">
+              ×
+            </button>
+          </header>
+          <Link
+            className="sale-more-row"
+            href="/workspace/account/inventory/active?mode=activate"
+            onClick={() => setMoreOpen(false)}
+          >
+            Mark Items Active <b>›</b>
+          </Link>
+          <Link
+            className="sale-more-row"
+            href="/workspace/account/inventory/active?mode=deactivate"
+            onClick={() => setMoreOpen(false)}
+          >
+            Mark Items Inactive <b>›</b>
+          </Link>
+          <Link
+            className="sale-more-row"
+            href="/workspace/account/inventory/units"
+            onClick={() => setMoreOpen(false)}
+          >
+            Units <b>›</b>
+          </Link>
+          <Link
+            className="sale-more-row"
+            href="/workspace/account/inventory/categories"
+            onClick={() => setMoreOpen(false)}
+          >
+            Categories <b>›</b>
+          </Link>
+        </section>
+      </dialog>
     </div>
   );
 }

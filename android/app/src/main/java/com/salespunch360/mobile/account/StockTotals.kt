@@ -15,3 +15,7 @@ fun productStockTotals(rows: List<JsonObject>): Map<String, BigDecimal> {
     }
     return totals
 }
+
+/** Display only: movement quantities retain their authoritative precision. */
+fun formatStockQuantity(quantity: BigDecimal, decimals: Int): String =
+    quantity.setScale(decimals.coerceIn(0, 4), java.math.RoundingMode.HALF_UP).toPlainString()

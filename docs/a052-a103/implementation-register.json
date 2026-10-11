@@ -6750,14 +6750,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A060-F01",
         "A060-F03",
         "A060-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Android Inventory viewmodel now loads all item, service and category pages using the shared complete-page loader, preserving cancellation/generation protection and removing the 200-row search/filter cap.",
+        "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A060-F03",
@@ -6854,14 +6860,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A060-F02",
         "A060-F04",
         "A060-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Catalogue failures propagate to an explicit error with Retry, retain last confirmed data and suppress the successful-empty message. Invalid stock values are rejected rather than displayed as zero.",
+        "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A060-F04",
@@ -6958,14 +6970,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A060-F03",
         "A060-F05",
         "A060-F06"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Android item cards prepare text for the system share chooser with recoverable launch failure. Web sharing catches clipboard/share failures, treats user cancellation neutrally and announces clipboard success/failure.",
+        "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A060-F05",
@@ -7062,13 +7080,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A060-F04",
         "A060-F06"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Android Items screen receives resolved company quantityDecimals from bootstrap; stock aggregation uses exact decimal quantities and display formats 0\u20134 decimals without mutating movement precision.",
+        "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A060-F06",
@@ -7163,12 +7187,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A060-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Web Filter/More sheets use labelled modal dialogs, explicit keyboard focus wrapping, Escape close and native focus restoration. Results/filter count and share feedback are announced.",
+        "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A061-F01",
@@ -21145,6 +21175,23 @@
       "android_device": "NOT RUN",
       "browser_evidence": "e2e/a049-a051-expenses.spec.ts A052 tests: 205 rows, branch selection/isolation, search beyond former cap, page continuation, malformed status, empty state, role/module denials, serious/critical Axe scan",
       "initial_test_failures": "Invalid cookie fixture options corrected; empty-state check moved before API login to preserve browser session."
+    },
+    "items_slice": {
+      "browser_desktop_passed": 1,
+      "browser_mobile_web_passed": 1,
+      "browser_failed": 0,
+      "browser_skipped": 0,
+      "android_compile_debug_kotlin": "PASS",
+      "android_jvm": {
+        "tests": 141,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tests_added": "StockQuantityDisplayTest: supported decimals, negatives, zero, stable decimal notation and unchanged underlying precision; A060 browser sheet/share regression",
+      "initial_failures": "Android composable share formatter moved outside callback. Explicit keyboard wrapping added after Tab escaped native dialog. Axe include corrected to active dialog because background is inert.",
+      "final_head_validation": "NOT RUN",
+      "android_device": "NOT RUN"
     }
   }
 }
