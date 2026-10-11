@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.64.0",
     "@types/node": "^22.18.0",
     "@types/nodemailer": "^8.0.1",
     "@types/qrcode": "^1.5.5",
