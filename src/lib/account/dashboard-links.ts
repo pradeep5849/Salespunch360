@@ -41,7 +41,7 @@ export function dashboardLinks(
       : null,
     items:
       canStock && itemsEnabled
-        ? `/workspace/account/inventory?${period}`
+        ? `/workspace/account/inventory/catalog?${period}&type=PRODUCT`
         : null,
     lowStock:
       canStock && itemsEnabled

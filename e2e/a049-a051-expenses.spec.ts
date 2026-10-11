@@ -874,10 +874,16 @@ test("A056 categories retain duplicate errors and provide modal keyboard navigat
   ).toHaveAttribute("aria-current", "page");
   await expect(
     sections.getByRole("link", { name: "Products", exact: true }),
-  ).toHaveAttribute("href", "/workspace/account/inventory?type=PRODUCT");
+  ).toHaveAttribute(
+    "href",
+    "/workspace/account/inventory/catalog?type=PRODUCT",
+  );
   await expect(
     sections.getByRole("link", { name: "Services", exact: true }),
-  ).toHaveAttribute("href", "/workspace/account/inventory?type=SERVICE");
+  ).toHaveAttribute(
+    "href",
+    "/workspace/account/inventory/catalog?type=SERVICE",
+  );
   await expect(
     sections.getByRole("link", { name: "Units", exact: true }),
   ).toHaveAttribute("href", "/workspace/account/inventory/units");
@@ -1239,9 +1245,7 @@ test("A060 item sheets contain keyboard focus and recover from share failures", 
     exact: true,
   });
   await expect(options.getByRole("link", { name: "Categories" })).toBeVisible();
-  const axe = await new AxeBuilder({ page })
-    .include("dialog[open]")
-    .analyze();
+  const axe = await new AxeBuilder({ page }).include("dialog[open]").analyze();
   expect(
     axe.violations.filter((v) =>
       ["critical", "serious"].includes(v.impact ?? ""),
@@ -1249,4 +1253,57 @@ test("A060 item sheets contain keyboard focus and recover from share failures", 
   ).toEqual([]);
   await page.keyboard.press("Escape");
   await expect(more).toBeFocused();
+});
+
+test("A060 Show All opens scoped Products and Services catalogue with matching add controls", async ({
+  page,
+}) => {
+  await db.accountProduct.create({
+    data: { companyId, name: "A060 catalogue product" },
+  });
+  await db.accountService.create({
+    data: { companyId, name: "A060 catalogue service", sellingRate: "25" },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto(
+    `/workspace/account/inventory?branchId=${branchId}&asOf=2026-10-09`,
+  );
+  await page.getByRole("link", { name: "Show All", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/inventory/catalog\\?.*branchId=${branchId}.*type=PRODUCT`),
+  );
+  const tabs = page.getByRole("navigation", { name: "Items sections" });
+  await expect(
+    tabs.getByRole("link", { name: "Products", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "A060 catalogue product", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "A060 catalogue service", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Add Product", exact: false }),
+  ).toBeVisible();
+  await tabs.getByRole("link", { name: "Services", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`branchId=${branchId}.*asOf=2026-10-09.*type=SERVICE`),
+  );
+  await expect(
+    tabs.getByRole("link", { name: "Services", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "A060 catalogue product", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "A060 catalogue service", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Add Service", exact: false }).click();
+  await expect(
+    page.getByRole("button", { name: "Services", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });

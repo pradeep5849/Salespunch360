@@ -45,7 +45,7 @@ const links: {
   },
   {
     label: "Show All",
-    href: "/workspace/account/inventory/items",
+    href: "/workspace/account/inventory/catalog?type=PRODUCT",
     icon: "grid",
   },
 ];
@@ -83,13 +83,19 @@ export function ItemsScreen({
   canConfigure,
   quantityDecimals,
   initialType,
+  catalogMode = false,
+  contextQuery = "",
 }: {
   items: Item[];
   categories: Category[];
   canConfigure: boolean;
   quantityDecimals: number;
   initialType?: "PRODUCT" | "SERVICE";
+  catalogMode?: boolean;
+  contextQuery?: string;
 }) {
+  const catalogHref = (type: "PRODUCT" | "SERVICE") =>
+    `/workspace/account/inventory/catalog?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(contextQuery)), type })}`;
   const [q, setQ] = useState(""),
     [filterOpen, setFilterOpen] = useState(false),
     [moreOpen, setMoreOpen] = useState(false),
@@ -118,9 +124,11 @@ export function ItemsScreen({
           .includes(q.toLowerCase());
         const typeOk = !types.size || types.has(i.type);
         const catOk = !cats.size || (i.categoryId && cats.has(i.categoryId));
-        return search && typeOk && catOk;
+        return (
+          search && typeOk && catOk && (!catalogMode || i.type === initialType)
+        );
       }),
-    [items, q, types, cats],
+    [items, q, types, cats, catalogMode, initialType],
   );
   const openFilter = () => {
     setDraftTypes(new Set(types));
@@ -155,21 +163,45 @@ export function ItemsScreen({
           <p>Products, services and live inventory</p>
         </div>
       </header>
-      <section className="account-card account-quick-card">
-        <h2>Quick Links</h2>
-        <div>
-          {links
-            .filter((x) => !x.settings || canConfigure)
-            .map((x) => (
-              <Link href={x.href} key={x.label}>
-                <span>
-                  <AccountIcon name={x.icon} />
-                </span>
-                {x.label}
-              </Link>
-            ))}
-        </div>
-      </section>
+      {catalogMode ? (
+        <nav className="items-section-tabs" aria-label="Items sections">
+          <Link
+            href={catalogHref("PRODUCT")}
+            aria-current={initialType === "PRODUCT" ? "page" : undefined}
+          >
+            Products
+          </Link>
+          <Link
+            href={catalogHref("SERVICE")}
+            aria-current={initialType === "SERVICE" ? "page" : undefined}
+          >
+            Services
+          </Link>
+          <Link href="/workspace/account/inventory/categories">Categories</Link>
+          <Link href="/workspace/account/inventory/units">Units</Link>
+        </nav>
+      ) : (
+        <section className="account-card account-quick-card">
+          <h2>Quick Links</h2>
+          <div>
+            {links
+              .filter((x) => !x.settings || canConfigure)
+              .map((x) => (
+                <Link
+                  href={
+                    x.label === "Show All" ? catalogHref("PRODUCT") : x.href
+                  }
+                  key={x.label}
+                >
+                  <span>
+                    <AccountIcon name={x.icon} />
+                  </span>
+                  {x.label}
+                </Link>
+              ))}
+          </div>
+        </section>
+      )}
       <div className="items-search-row">
         <label className="items-search-box">
           <AccountIcon name="search" />
@@ -245,16 +277,27 @@ export function ItemsScreen({
           ))
         ) : (
           <div className="account-home-empty">
-            <strong>No items found</strong>
+            <strong>
+              {catalogMode
+                ? initialType === "SERVICE"
+                  ? "No services found"
+                  : "No products found"
+                : "No items found"}
+            </strong>
             <p>Try another item name, code or category.</p>
           </div>
         )}
       </section>
       <Link
         className="account-floating-action"
-        href="/workspace/account/inventory/items/new"
+        href={`/workspace/account/inventory/items/new${catalogMode && initialType === "SERVICE" ? "?kind=services" : ""}`}
       >
-        ＋ Add New Item
+        ＋{" "}
+        {catalogMode
+          ? initialType === "SERVICE"
+            ? "Add Service"
+            : "Add Product"
+          : "Add New Item"}
       </Link>
 
       <dialog

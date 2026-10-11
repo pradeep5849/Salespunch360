@@ -6645,13 +6645,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A060-F02",
         "A060-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Dedicated web/native Products/Services catalogue preserves the separate Quick Links and generic inventory settings screens. Dashboard See All and Show All open Products; tab navigation preserves branch/as-of context, Categories/Units remain reachable, and Add Service preselects the existing service form. Products/Services lists and empty messages remain tab-specific.",
+        "remaining_work": "Final-head regression, original reference parity and independent native device navigation verification pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A060-F02",
@@ -21192,6 +21198,21 @@
       "initial_failures": "Android composable share formatter moved outside callback. Explicit keyboard wrapping added after Tab escaped native dialog. Axe include corrected to active dialog because background is inert.",
       "final_head_validation": "NOT RUN",
       "android_device": "NOT RUN"
+    },
+    "items_catalogue_navigation": {
+      "unit_tests_passed": 8,
+      "unit_failed": 0,
+      "unit_skipped": 0,
+      "browser_tests_passed": 6,
+      "browser_failed": 0,
+      "browser_skipped": 0,
+      "browser_scope": "A056 category modal/destinations and A060 sheets/share/scoped catalogue/Add Service in desktop and mobile web",
+      "android_compile": "PASS",
+      "android_jvm_tests_passed": 141,
+      "android_failed": 0,
+      "android_skipped": 0,
+      "native_device": "NOT RUN",
+      "final_head_validation": "NOT RUN"
     }
   }
 }

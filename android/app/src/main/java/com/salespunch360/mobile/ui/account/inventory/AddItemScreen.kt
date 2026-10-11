@@ -31,10 +31,11 @@ import java.time.LocalDate
 fun AddItemScreen(
     back:()->Unit,
     navigate:(String)->Unit,
-    vm:AccountAddItemViewModel=viewModel()
+    vm:AccountAddItemViewModel=viewModel(),
+    initialService:Boolean=false
 ){
     val s=vm.state.collectAsStateWithLifecycle().value
-    var service by remember{mutableStateOf(false)}
+    var service by remember(initialService){mutableStateOf(initialService)}
     var name by remember{mutableStateOf("")}
     var customValues by remember(service){mutableStateOf<Map<String,String>>(emptyMap())}
     val customFields=if(service)s.serviceFields else s.productFields

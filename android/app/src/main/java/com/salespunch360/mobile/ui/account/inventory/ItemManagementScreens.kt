@@ -45,7 +45,7 @@ fun CategoriesManagementScreen(
     ){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(bottom=96.dp)){
             item{ScrollableTabRow(selectedTabIndex=2){
-                listOf("Products" to "/workspace/account/inventory?type=PRODUCT","Services" to "/workspace/account/inventory?type=SERVICE","Categories" to "/workspace/account/inventory/categories","Units" to "/workspace/account/inventory/units").forEachIndexed{index,(title,path)->Tab(selected=index==2,onClick={if(index!=2)navigate(path)},text={Text(title)})}
+                listOf("Products" to "/workspace/account/inventory/catalog?type=PRODUCT","Services" to "/workspace/account/inventory/catalog?type=SERVICE","Categories" to "/workspace/account/inventory/categories","Units" to "/workspace/account/inventory/units").forEachIndexed{index,(title,path)->Tab(selected=index==2,onClick={if(index!=2)navigate(path)},text={Text(title)})}
             }}
             if(s.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
             s.error?.let{message->item{Column(Modifier.padding(16.dp)){Text(message,color=MaterialTheme.colorScheme.error);TextButton(onClick={vm.refresh()},enabled=!s.loading&&!s.saving){Text("Retry")}}}}

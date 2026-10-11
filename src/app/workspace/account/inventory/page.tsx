@@ -9,14 +9,20 @@ export const metadata = { title: "Items | SalesPunch360" };
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string; scope?: string; type?: string }>;
+  searchParams: Promise<{
+    branchId?: string;
+    scope?: string;
+    type?: string;
+    view?: string;
+    asOf?: string;
+  }>;
 }) {
   const actor = await requirePermission("ACCOUNT_STOCK"),
     companyId = actor.companyId!;
   const query = await searchParams;
   const scoped = await inventoryContext(
     { ...actor, companyId } as ProjectActor,
-    { branchId: query.branchId, scope: query.scope },
+    { branchId: query.branchId, scope: query.scope, asOf: query.asOf },
   );
   const [products, services, stock, settings, categories] = await Promise.all([
     db.accountProduct.findMany({
@@ -87,11 +93,20 @@ export default async function Page({
           : scoped.context.branchName}
       </p>
       <ItemsScreen
-        key={query.type ?? "all"}
+        key={`${query.view ?? "quick"}-${query.type ?? "all"}`}
+        catalogMode={query.view === "catalog"}
+        contextQuery={new URLSearchParams({
+          ...(scoped.context.mode === "COMPANY"
+            ? { scope: "all" }
+            : { branchId: scoped.context.branchId }),
+          ...(query.asOf ? { asOf: query.asOf } : {}),
+        }).toString()}
         initialType={
           query.type === "PRODUCT" || query.type === "SERVICE"
             ? query.type
-            : undefined
+            : query.view === "catalog"
+              ? "PRODUCT"
+              : undefined
         }
         quantityDecimals={itemSettings.quantityDecimals ?? 2}
         canConfigure={actor.accountRole === "ACCOUNT_ADMIN"}

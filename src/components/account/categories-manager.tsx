@@ -67,8 +67,8 @@ export function CategoriesManager({
         </Link>
       </header>
       <nav className="items-section-tabs" aria-label="Items sections">
-        <Link href="/workspace/account/inventory?type=PRODUCT">Products</Link>
-        <Link href="/workspace/account/inventory?type=SERVICE">Services</Link>
+        <Link href="/workspace/account/inventory/catalog?type=PRODUCT">Products</Link>
+        <Link href="/workspace/account/inventory/catalog?type=SERVICE">Services</Link>
         <Link
           href="/workspace/account/inventory/categories"
           aria-current="page"

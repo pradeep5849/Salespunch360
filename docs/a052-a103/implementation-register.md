@@ -2461,13 +2461,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Real clicks dashboard See All/Quick Show All on web/native; Products default; Services empty-versus-populated; all tabs; back; permission/settings denial.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A060_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A060_Findings.json, SalesPunch360_A060_Audit_Report.md.
 
 **Linked finding IDs:** A060-F02, A060-F03.
+
+**Checkpoint work:** Dedicated web/native Products/Services catalogue preserves the separate Quick Links and generic inventory settings screens. Dashboard See All and Show All open Products; tab navigation preserves branch/as-of context, Categories/Units remain reachable, and Add Service preselects the existing service form. Products/Services lists and empty messages remain tab-specific.
+
+**Intermediate validation:** 8 dashboard destination tests and 6 desktop/mobile browser catalogue/category/modal/share cases passed. Android compile and 141 JVM tests passed. Final-head and native device verification pending.
 
 ## A060-F02 — Native list/search/filter silently omits items beyond API cap
 
