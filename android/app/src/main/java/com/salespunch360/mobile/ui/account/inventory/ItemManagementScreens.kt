@@ -130,21 +130,23 @@ fun ActiveItemsManagementScreen(
     var selected by remember{mutableStateOf(setOf<String>())}
     val source=(if(products)s.items else s.services).filter{it.isActive!=activate}
     val rows=source.filter{"${it.name} ${it.code.orEmpty()}".contains(q,true)}
-    val stockMap=remember(s.stock){s.stock.associate{row->val p=row["product"]?.jsonObject; p?.get("id")?.jsonPrimitive?.content.orEmpty() to (row["quantity"]?.jsonPrimitive?.content?.toDoubleOrNull()?:0.0)}}
+    val stockMap=remember(s.stock){runCatching{com.salespunch360.mobile.account.productStockTotals(s.stock)}.getOrNull()}
     Scaffold(
         topBar={TopAppBar(title={Text(if(activate)"Inactive Items" else "Active Items")},navigationIcon={IconButton(onClick=back){Icon(Icons.Default.ArrowBack,"Back")}})},
-        bottomBar={Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick=back,Modifier.weight(1f).height(56.dp)){Text("Cancel")};Button(onClick={vm.setActive(if(products)"items" else "services",selected.toList(),activate){back()}},enabled=selected.isNotEmpty()&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text(if(activate)"Mark as Active" else "Mark as Inactive")}}}
+        bottomBar={Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick=back,Modifier.weight(1f).height(56.dp)){Text("Cancel")};Button(onClick={vm.setActive(if(products)"items" else "services",selected.toList(),activate){back()}},enabled=selected.isNotEmpty()&&!s.saving&&!s.loading,modifier=Modifier.weight(1f).height(56.dp)){Text(if(activate)"Mark as Active" else "Mark as Inactive")}}}
     ){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(bottom=20.dp)){
+            if(s.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
+            s.error?.let{message->item{Column(Modifier.padding(16.dp)){Text(message,color=MaterialTheme.colorScheme.error);TextButton(onClick={vm.refresh()}){Text("Retry")}}}}
             item{Row(Modifier.fillMaxWidth().padding(18.dp),horizontalArrangement=Arrangement.spacedBy(40.dp)){RadioChoice("Products",products){products=true;selected=emptySet()};RadioChoice("Services",!products){products=false;selected=emptySet()}}}
             item{OutlinedTextField(q,{q=it},placeholder={Text("Search by Name or Code")},leadingIcon={Icon(Icons.Default.Search,null)},modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp))}
             if(rows.isNotEmpty())item{Row(Modifier.fillMaxWidth().clickable{selected=if(rows.all{it.id in selected})emptySet() else rows.map{it.id}.toSet()}.padding(18.dp),verticalAlignment=Alignment.CenterVertically){Checkbox(rows.all{it.id in selected},{checked->selected=if(checked)rows.map{it.id}.toSet() else emptySet()});Text("Select All")}}
-            if(rows.isEmpty()&&activate)item{Box(Modifier.fillMaxWidth().height(420.dp),contentAlignment=Alignment.Center){Text("There are no Inactive Items yet.",style=MaterialTheme.typography.titleMedium)}}
+            if(rows.isEmpty()&&activate&&!s.loading&&s.error==null)item{Box(Modifier.fillMaxWidth().height(420.dp),contentAlignment=Alignment.Center){Text("There are no Inactive Items yet.",style=MaterialTheme.typography.titleMedium)}}
             items(rows,key={it.id}){r->
                 Row(Modifier.fillMaxWidth().clickable{selected=if(r.id in selected)selected-r.id else selected+r.id}.padding(horizontal=18.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
                     Checkbox(r.id in selected,{checked->selected=if(checked)selected+r.id else selected-r.id})
                     Text(r.name,Modifier.weight(1f).padding(start=10.dp))
-                    if(products)Text("%.1f".format(stockMap[r.id]?:0.0))
+                    if(products)Text(if(!s.stockLoaded||stockMap==null)"Stock unavailable"else (stockMap[r.id]?:java.math.BigDecimal.ZERO).setScale(1,java.math.RoundingMode.HALF_UP).toPlainString())
                 }
                 HorizontalDivider()
             }

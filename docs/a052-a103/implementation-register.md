@@ -431,13 +431,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Native ViewModel failed→successful refresh, empty failure, retained query/status; UI error cleared/retry removed; no silent loss of unsaved entry.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F08, A052-F10, A052-F11.
+
+
+**Checkpoint work:** Android successful expense refresh clears the preceding error.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A052-F10 — Android status filter omits supported CANCELLED state
 
@@ -473,13 +478,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Cancelled record appears in cancelled filter, all view and detail; other status filters unchanged; scoped API returns correct results.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F09, A052-F11, A052-F12.
+
+
+**Checkpoint work:** Android status filter includes CANCELLED.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A052-F11 — Mobile web and Android do not implement required list and linked-entry reference UI
 
@@ -641,13 +651,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Real Next production form submission on desktop/mobile; reserved metadata excluded; valid creation persists once; unknown business fields still rejected.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F02, A053-F03.
+
+
+**Checkpoint work:** React action metadata removed before strict schedule validation; browser creation succeeds.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F02 — No recurring workspace to manage schedules or mark overdue bills paid
 
@@ -683,13 +698,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Create/list/edit/pause/stop schedules; upcoming/due/overdue; manual payment on-time/late; correct actual payment date/account; duplicate/concurrent/replayed paid request; approval and locked periods; branch/company permissions; reconcile expense, cash/bank and financial reports without duplicate recognition; equivalent Android/mobile-web/desktop behavior.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F01, A053-F03, A053-F04.
+
+
+**Checkpoint work:** Web and native schedule registers, pause/resume, due generation, bill navigation and scoped GET/PATCH APIs implemented.
+
+**Remaining work:** Schedule editing, complete manual payment date/account workflow, late/locked-period/concurrent payment tests and final-head verification remain pending.
 
 ## A053-F03 — Project-linked recurrence generation bypasses Projects OFF
 
@@ -725,13 +745,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** ON/OFF direct server action/service; Admin/Accountant and assigned/unassigned PM; non-project OFF still works; no mutation/number advance on denied operation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F02, A053-F04, A053-F05.
+
+
+**Checkpoint work:** Project-linked generation enforces Projects module before accessing the project; OFF regression passes.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F04 — Month-end and leap-year recurrence dates drift
 
@@ -767,13 +792,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Jan 29–31, Feb 28/29; monthly/quarterly/yearly/week; timezone independence and repeated cycles.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F03, A053-F05, A053-F06.
+
+
+**Checkpoint work:** Persisted recurrence anchor restores month-end/leap dates; new additive migration backfills existing anchors from their current next due dates.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F05 — Generator allows future bills before their due date
 
@@ -809,13 +839,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Future, exact due date, overdue, timezone boundary, paused schedule; rejected generation leaves template/number/expense unchanged.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F04, A053-F06, A053-F07.
+
+
+**Checkpoint work:** Future occurrence generation is rejected; future generate controls disabled.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F06 — Generation retry creates a different period instead of replaying the first result
 
@@ -851,13 +886,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Sequential/concurrent duplicate, response loss/retry, request mismatch, overdue backlog and authorized distinct periods.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F05, A053-F07, A053-F08.
+
+
+**Checkpoint work:** Requested due date is explicit in web/native/API generation; matching retries return the same bill and do not advance another period.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F07 — Repeated schedule creation saves duplicate recurring templates
 
@@ -893,13 +933,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Sequential/concurrent repeats and lost response; same key different payload; legitimate separate schedules.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F06, A053-F08, A053-F09.
+
+
+**Checkpoint work:** Stable company-scoped creation UUID, company lock, Serializable retry and unique constraint prevent duplicate schedule creation; changed retry payload rejected.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F08 — Recurring web validation loses the form behind generic error
 
@@ -935,13 +980,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Negative/zero/oversized amount, invalid date/category, scope denial, network failure, retry and successful feedback.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F07, A053-F09, A053-F10.
+
+
+**Checkpoint work:** Structured action feedback preserves schedule fields and reports domain errors; shared feedback contrast corrected.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F09 — Recurring form offers incompatible income categories and cross-branch projects
 
@@ -977,13 +1027,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Income/expense/BOTH categories; branch change; Projects OFF; assigned PM; stale category/project rejection.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F08, A053-F10, A053-F11.
+
+
+**Checkpoint work:** Only eligible expense categories are offered; branch change clears project selection and project options follow the chosen branch.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F10 — Schedule creation is absent from operational audit history
 
@@ -1019,13 +1074,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Actor/template/before-after metadata; audit failure rolls back creation; replay does not duplicate audit.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F09, A053-F11, A053-F12.
+
+
+**Checkpoint work:** Schedule creation and pause/resume write operational audit records.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F11 — Recurring web form fields have no accessible labels
 
@@ -1061,13 +1121,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Axe normal/error/empty; keyboard/screen reader; mobile/desktop/zoom; labels announced and errors associated.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F10, A053-F12.
+
+
+**Checkpoint work:** Schedule creation and generation fields have accessible labels; desktop/mobile-web Axe reports no serious/critical violations in tested flow.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A053-F12 — Always create a draft caption contradicts approval-dependent generation
 
@@ -1103,13 +1168,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Approval off/threshold below/above; displayed guidance matches resulting status; no journal/payment created by schedule alone.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A053_Findings.json, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** A053-F11.
+
+
+**Checkpoint work:** Web and native captions describe draft versus approval-dependent generation and explicit posting.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A054-F01 — Web adjustments fail strict movement validation
 
@@ -1145,13 +1215,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Real Next adjustment submission IN/OUT; valid persistence, bad input rejection, web/mobile parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A054_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A054_Findings.json, SalesPunch360_A054_Audit_Report.md.
 
 **Linked finding IDs:** A054-F02, A054-F03.
+
+
+**Checkpoint work:** React metadata stripped from inventory actions; direction removed before strict stock-movement validation. IN/OUT action regressions and invalid direction rejection pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A054-F02 — Items disabled setting is bypassed by shared forms and mobile mutations
 
@@ -1187,13 +1262,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Settings false: direct stock/catalog/options/movement denied on web/API; true allowed; selected branches and company isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A054_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A054_Findings.json, SalesPunch360_A055_Audit_Report.md, SalesPunch360_A062_Audit_Report.md, SalesPunch360_A058_Audit_Report.md, SalesPunch360_A061_Audit_Report.md, SalesPunch360_A056_Audit_Report.md, SalesPunch360_A057_Audit_Report.md, SalesPunch360_A054_Audit_Report.md, SalesPunch360_A063_Audit_Report.md.
 
 **Linked finding IDs:** A054-F01, A054-F03, A054-F04, A057-F04.
+
+
+**Checkpoint work:** Shared inventory actor/API/master guards reject Items OFF before reads and mutations; nine focused action regressions plus API OFF checks pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A054-F03 — Native inventory editors omit supported web fields/functions
 
@@ -1271,13 +1351,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Rendered accessibility scan and keyboard/screen-reader check on all dynamic sections.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A054_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A054_Findings.json, SalesPunch360_A054_Audit_Report.md.
 
 **Linked finding IDs:** A054-F03, A054-F05.
+
+
+**Checkpoint work:** All shared inventory fields are named, including explicit warehouse labels; nested main removed. Adjustment browser flow and Axe pass on desktop and mobile web.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A054-F05 — Every shared section loads the full options bundle serially
 
@@ -1313,13 +1398,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Query-count/bounded-load tests per section plus scope regression; measure representative large tenant latency.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A054_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A054_Findings.json, SalesPunch360_A054_Audit_Report.md.
 
 **Linked finding IDs:** A054-F04.
+
+
+**Checkpoint work:** Section-specific options avoid unrelated catalogues; independent reads use Promise.all. Four scoped options tests pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A055-F01 — Stock quantity overwrites other warehouse positions
 
@@ -1355,13 +1445,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** One/multiple warehouses; negative quantities; branch/company context; native/web equality.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A055_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A055_Findings.json, SalesPunch360_A055_Audit_Report.md.
 
 **Linked finding IDs:** A055-F02, A055-F03.
+
+
+**Checkpoint work:** Android stock totals now sum all authorized warehouse positions with BigDecimal; three native aggregation tests pass. Web warehouse sum regression passes.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A055-F02 — Native activation search silently omits items beyond the first 200
 
@@ -1397,13 +1492,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** More than 200 mixed active/inactive products/services; later-item search and activation; no false empty results.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A055_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A055_Findings.json, SalesPunch360_A055_Audit_Report.md.
 
 **Linked finding IDs:** A055-F01, A055-F03, A055-F04.
+
+
+**Checkpoint work:** Backward-compatible offset API and native complete-page loader include records beyond 200. Three loader unit tests and real API 201-record regression pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A055-F03 — Activation failures and missing stock are not recoverable in-page
 
@@ -1439,13 +1539,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Offline/403/500 list, stock and save failures; retry success; selection retention; no false zero.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A055_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A055_Findings.json, SalesPunch360_A055_Audit_Report.md.
 
 **Linked finding IDs:** A055-F02, A055-F04, A055-F05.
+
+
+**Checkpoint work:** Web and native render failures, preserve selections, show loading/retry and distinguish unavailable stock from zero; four web stock failure unit tests pass. Device error-path verification remains pending.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A055-F04 — Bulk update reports success for missing or foreign-company IDs
 
@@ -1481,13 +1586,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Malformed/missing/foreign IDs; mixed batch; no foreign writes; exact result, idempotent repeat, concurrent deletion.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A055_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A055_Findings.json, SalesPunch360_A055_Audit_Report.md.
 
 **Linked finding IDs:** A055-F03, A055-F05.
+
+
+**Checkpoint work:** Strict UUID validation, atomic tenant-scoped all-ID check, count validation and Serializable retry reject mixed missing IDs without changing valid IDs. Seven focused unit tests and browser/API regression pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A055-F05 — Search/back controls lack accessible names and page nests main
 
@@ -1523,13 +1633,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Rendered accessibility/keyboard test for active/inactive, products/services, search/selection.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A055_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A055_Findings.json, SalesPunch360_A055_Audit_Report.md.
 
 **Linked finding IDs:** A054-F02, A055-F04.
+
+
+**Checkpoint work:** Web search/back named, nested main removed and control contrast corrected; desktop/mobile-web Axe reports no serious or critical violations.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A056-F01 — Category screens omit the reference Items tabs and mobile shell
 
@@ -3497,13 +3612,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Untouched default Company-wide, explicit authorized branch, foreign/inactive branch, missing branch and malformed UUID; persistence and no partial ledger on rejection.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+
+**Checkpoint work:** Blank optional company-wide account branch normalizes to undefined.
+
+**Remaining work:** Independent account creation browser/API regression and final-head verification remain pending.
 
 ## A064-F08 — Android account type options contradict the server and edit is silently ignored
 
@@ -3539,13 +3659,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Create every supported type; no unsupported picker options; edit type cannot pretend to save; native/server validation messages.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+
+**Checkpoint work:** Native account creation offers CASH/BANK/PETTY_CASH only; saved account type shown as immutable text.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A064-F09 — Android repeated transfer submissions can post duplicate journals
 
@@ -3581,13 +3706,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Double tap, delayed response, disconnect after server commit and retry; exactly one MoneyTransfer/journal/audit and one balance delta; new intentional operation receives a new key.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A067_Audit_Report.md, SalesPunch360_A064_Audit_Report.md, SalesPunch360_A065_Audit_Report.md.
 
 **Linked finding IDs:** A065-F06.
+
+
+**Checkpoint work:** Native money editor retains one request key for retries and disables confirmation/dismissal while saving; ViewModel rejects concurrent submission.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A064-F10 — Transfer idempotency replay bypasses branch authorization and payload equivalence
 
@@ -3623,13 +3753,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Identical authorized retry; inaccessible branch replay; changed amount/date/accounts/branch/reference under same key; foreign-company key; racing identical requests and no extra posting.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md, SalesPunch360_A065_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+
+**Checkpoint work:** Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A064-F11 — Shared-account balances ignore branch restrictions and selected report context
 
@@ -3833,13 +3968,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Zero, exact balance, one paisa excess; 5000/3000 owners; cash/bank/branch compatibility; simultaneous drawings and transfers; reversals; rollback and retry.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F01, A065-F03, A065-F04.
+
+
+**Checkpoint work:** Withdrawal locks the selected money account and checks the ledger-effective money balance before posting.
+
+**Remaining work:** Real-database insufficient-funds, concurrent withdrawal, reversal/net-balance and final-head regressions remain pending.
 
 ## A065-F03 — Capital & Drawings lacks the agreed owner list, details and polished reference-free UI
 
@@ -4001,13 +4141,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Double taps, slow server, network loss after commit/retry; exactly one owner transaction/journal/audit, one money-account delta and unchanged capital for drawings.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A067_Audit_Report.md, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A064-F09, A065-F05, A065-F07, A065-F08.
+
+
+**Checkpoint work:** Native money editor retains one request key for retries and disables confirmation/dismissal while saving; ViewModel rejects concurrent submission.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A065-F07 — Owner transaction replay returns prior rows without branch or payload checks
 
@@ -4043,13 +4188,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Identical allowed retry; denied branch replay; changed owner/account/type/amount/date/reference; foreign company and racing retries without additional journal.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F06, A065-F08, A065-F09.
+
+
+**Checkpoint work:** Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A065-F08 — Owner setup omits operational audit of identity and linked ledger creation
 
@@ -4925,13 +5075,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Both blanks, each blank independently, valid optional values, invalid date/rate; rejected values do not post receipt.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F05, A067-F07, A067-F08.
+
+
+**Checkpoint work:** Blank optional loan rate/maturity values normalize to undefined; matching retry with blank values passes.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A067-F07 — Loan request replay bypasses branch checks and payload equivalence
 
@@ -4967,13 +5122,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Replay after branch access revoked; changed payload/key reuse; valid identical retry; cross-company isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F06, A067-F08, A067-F09.
+
+
+**Checkpoint work:** Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A067-F08 — Native repeated confirmation can post duplicate receipts or EMIs
 
@@ -5009,13 +5169,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Double-tap receipt and partial EMI; delayed response; retry after disconnect; one receipt/payment/journal/audit.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F07, A067-F09, A067-F10.
+
+
+**Checkpoint work:** Native money editor retains one request key for retries and disables confirmation/dismissal while saving; ViewModel rejects concurrent submission.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A067-F09 — Journal reversal leaves loan principal and paid-off lifecycle stale
 
@@ -5051,13 +5216,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Reverse partial/full EMI; restore outstanding and ACTIVE after full EMI reversal; reversal retry; receipt with subsequent payments; journal/liability versus statement reconciliation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F08, A067-F10.
+
+
+**Checkpoint work:** Generic LOAN_RECEIPT/LOAN_PAYMENT journal reversal is blocked before writes, an explicitly permitted fix strategy in the original finding; two focused regressions pass.
+
+**Remaining work:** Check any already-reversed legacy loan rows and reconcile effective outstanding/history where required; final-head ledger/API regressions remain pending.
 
 ## A067-F10 — Loan controls lack accessible labels and actionable validation feedback
 

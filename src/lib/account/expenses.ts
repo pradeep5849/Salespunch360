@@ -1,3 +1,8 @@
+import { nextRecurringDueDate } from "./recurrence";
+import {
+  indiaDateText,
+  parseIndiaBusinessDate,
+} from "@/lib/follow-up-tasks/date";
 import { expenseCapabilities } from "./expense-capabilities";
 import { createHash } from "node:crypto";
 import { retrySerializable } from "./transaction-retry";
@@ -1110,7 +1115,8 @@ const templateInput = z
     projectId: optionalUuid,
     categoryId: z.string().uuid(),
     frequency: z.nativeEnum(RecurringFrequency),
-    nextDueDate: z.coerce.date(),
+    creationRequestKey: z.string().uuid(),
+    nextDueDate: z.string().transform((value) => parseIndiaBusinessDate(value)),
     amount: money.refine((v) => new D(v).gt(0), "Amount must be positive"),
   })
   .strict();
@@ -1156,124 +1162,262 @@ export async function createRecurringTemplateForActor(a: Actor, raw: unknown) {
     )
       throw new AuthorizationError();
   }
-  return db.recurringExpenseTemplate.create({
-    data: {
-      ...d,
-      amount: new D(d.amount),
-      companyId: a.companyId,
-      createdById: a.id,
-    },
-  });
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        if (d.creationRequestKey) {
+          const existing = await tx.recurringExpenseTemplate.findFirst({
+            where: {
+              companyId: a.companyId,
+              creationRequestKey: d.creationRequestKey,
+            },
+          });
+          if (existing) {
+            if (!branchOk(a, existing.branchId)) throw new AuthorizationError();
+            if (
+              existing.branchId !== d.branchId ||
+              existing.projectId !== (d.projectId ?? null) ||
+              existing.categoryId !== d.categoryId ||
+              existing.frequency !== d.frequency ||
+              (existing.anchorDate ?? existing.nextDueDate).getTime() !==
+                d.nextDueDate.getTime() ||
+              !existing.amount.eq(d.amount)
+            )
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return existing;
+          }
+        }
+        const row = await tx.recurringExpenseTemplate.create({
+          data: {
+            ...d,
+            anchorDate: d.nextDueDate,
+            amount: new D(d.amount),
+            companyId: a.companyId,
+            createdById: a.id,
+          },
+        });
+        await audit(
+          tx,
+          a,
+          "RECURRING_TEMPLATE_CREATED",
+          "RECURRING_EXPENSE_TEMPLATE",
+          row.id,
+        );
+        return row;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
 }
-const next = (date: Date, f: RecurringFrequency) => {
-  const x = new Date(date);
-  if (f === "WEEKLY") x.setUTCDate(x.getUTCDate() + 7);
-  else if (f === "MONTHLY") x.setUTCMonth(x.getUTCMonth() + 1);
-  else if (f === "QUARTERLY") x.setUTCMonth(x.getUTCMonth() + 3);
-  else x.setUTCFullYear(x.getUTCFullYear() + 1);
-  return x;
-};
 export async function generateRecurringExpense(
   templateId: string,
   moneyAccountId: string,
+  expectedDueDate: string,
 ) {
-  const a = await actor("ACCOUNT_EXPENSE_ENTRY", true);
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "recurring_expense_templates" WHERE "id"=${templateId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
-      const t = await tx.recurringExpenseTemplate.findFirst({
-        where: { id: templateId, companyId: a.companyId, isActive: true },
-      });
-      if (!t || !branchOk(a, t.branchId)) throw new AuthorizationError();
-      if (
-        !(await tx.branch.findFirst({
-          where: { id: t.branchId, companyId: a.companyId, isActive: true },
-        })) ||
-        (a.accountRole === "PROJECT_MANAGER" && !t.projectId)
-      )
-        throw new AuthorizationError();
-      if (t.projectId) {
-        const ids = await authorizedProjectBranchIds(a);
+  return generateRecurringExpenseForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    templateId,
+    moneyAccountId,
+    expectedDueDate,
+  );
+}
+export async function generateRecurringExpenseForActor(
+  a: Actor,
+  templateId: string,
+  moneyAccountId: string,
+  expectedDueDate: string,
+) {
+  await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
+  const due = parseIndiaBusinessDate(expectedDueDate);
+  if (due > parseIndiaBusinessDate(indiaDateText(new Date())))
+    throw new Error("RECURRING_NOT_DUE");
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "recurring_expense_templates" WHERE "id"=${templateId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+        const t = await tx.recurringExpenseTemplate.findFirst({
+          where: { id: templateId, companyId: a.companyId, isActive: true },
+        });
+        if (!t || !branchOk(a, t.branchId)) throw new AuthorizationError();
         if (
-          !(await tx.project.findFirst({
+          !(await tx.branch.findFirst({
+            where: { id: t.branchId, companyId: a.companyId, isActive: true },
+          })) ||
+          (a.accountRole === "PROJECT_MANAGER" && !t.projectId)
+        )
+          throw new AuthorizationError();
+        if (t.projectId) {
+          await requireAccountModules(a, "PROJECTS");
+          const ids = await authorizedProjectBranchIds(a);
+          if (
+            !(await tx.project.findFirst({
+              where: {
+                id: t.projectId,
+                branchId: t.branchId,
+                status: { notIn: ["CLOSED", "CANCELLED"] },
+                ...projectRecordScope(a, ids),
+              },
+            }))
+          )
+            throw new AuthorizationError();
+        }
+        const category = await tx.expenseCategory.findFirst({
+          where: { id: t.categoryId, companyId: a.companyId, isActive: true },
+        });
+        if (!category) throw new Error("INVALID_EXPENSE_CATEGORY");
+        if (
+          !["EXPENSE", "BOTH"].includes(category.scope) ||
+          !(await tx.ledgerAccount.findFirst({
             where: {
-              id: t.projectId,
-              branchId: t.branchId,
-              status: { notIn: ["CLOSED", "CANCELLED"] },
-              ...projectRecordScope(a, ids),
+              id: category.defaultLedgerAccountId,
+              companyId: a.companyId,
+              isActive: true,
+              allowPosting: true,
+              accountClass: "EXPENSE",
             },
           }))
         )
-          throw new AuthorizationError();
-      }
-      const category = await tx.expenseCategory.findFirst({
-        where: { id: t.categoryId, companyId: a.companyId, isActive: true },
-      });
-      if (!category) throw new Error("INVALID_EXPENSE_CATEGORY");
-      if (
-        !["EXPENSE", "BOTH"].includes(category.scope) ||
-        !(await tx.ledgerAccount.findFirst({
-          where: {
-            id: category.defaultLedgerAccountId,
+          throw new Error("EXPENSE_CATEGORY_CLASS_MISMATCH");
+        const key = recurringOccurrenceKey(t.id, due),
+          existing = await tx.expenseTransaction.findFirst({
+            where: { companyId: a.companyId, occurrenceKey: key },
+          });
+        if (existing) {
+          if (existing.moneyAccountId !== moneyAccountId)
+            throw new Error("IDEMPOTENCY_CONFLICT");
+          return existing;
+        }
+        if (t.nextDueDate.getTime() !== due.getTime())
+          throw new Error("RECURRING_DUE_DATE_CHANGED");
+        const number = await allocateDocumentNumberInTx(tx, {
             companyId: a.companyId,
-            isActive: true,
-            allowPosting: true,
-            accountClass: "EXPENSE",
-          },
-        }))
-      )
-        throw new Error("EXPENSE_CATEGORY_CLASS_MISMATCH");
-      const key = recurringOccurrenceKey(t.id, t.nextDueDate),
-        existing = await tx.expenseTransaction.findFirst({
-          where: { companyId: a.companyId, occurrenceKey: key },
-        });
-      if (existing) return existing;
-      const number = await allocateDocumentNumberInTx(tx, {
-          companyId: a.companyId,
-          branchId: t.branchId,
-          seriesKey: "EXPENSE",
-          defaults: { prefix: "EXP-", padding: 6 },
-        }),
-        money = await tx.moneyAccount.findFirst({
-          where: {
-            id: moneyAccountId,
+            branchId: t.branchId,
+            seriesKey: "EXPENSE",
+            defaults: { prefix: "EXP-", padding: 6 },
+          }),
+          money = await tx.moneyAccount.findFirst({
+            where: {
+              id: moneyAccountId,
+              companyId: a.companyId,
+              isActive: true,
+              OR: [{ branchId: null }, { branchId: t.branchId }],
+            },
+          });
+        if (!money) throw new Error("INVALID_MONEY_ACCOUNT");
+        const needsApproval = await approvalRequired(tx, a.companyId, t.amount);
+        const row = await tx.expenseTransaction.create({
+          data: {
             companyId: a.companyId,
-            isActive: true,
-            OR: [{ branchId: null }, { branchId: t.branchId }],
+            branchId: t.branchId,
+            projectId: t.projectId,
+            categoryId: t.categoryId,
+            type: t.projectId ? "PROJECT_EXPENSE" : "OFFICE_EXPENSE",
+            status: needsApproval ? "PENDING_APPROVAL" : "DRAFT",
+            transactionNumber: number,
+            transactionDate: t.nextDueDate,
+            taxableAmount: t.amount,
+            taxAmount: Z,
+            taxRate: Z,
+            totalAmount: t.amount,
+            moneyAccountId,
+            occurrenceKey: key,
+            createdById: a.id,
           },
         });
-      if (!money) throw new Error("INVALID_MONEY_ACCOUNT");
-      const needsApproval = await approvalRequired(tx, a.companyId, t.amount);
-      const row = await tx.expenseTransaction.create({
-        data: {
-          companyId: a.companyId,
-          branchId: t.branchId,
-          projectId: t.projectId,
-          categoryId: t.categoryId,
-          type: t.projectId ? "PROJECT_EXPENSE" : "OFFICE_EXPENSE",
-          status: needsApproval ? "PENDING_APPROVAL" : "DRAFT",
-          transactionNumber: number,
-          transactionDate: t.nextDueDate,
-          taxableAmount: t.amount,
-          taxAmount: Z,
-          taxRate: Z,
-          totalAmount: t.amount,
-          moneyAccountId,
-          occurrenceKey: key,
-          createdById: a.id,
-        },
-      });
-      await tx.recurringExpenseTemplate.update({
-        where: { id: t.id },
-        data: { nextDueDate: next(t.nextDueDate, t.frequency) },
-      });
-      await audit(tx, a, "RECURRING_OCCURRENCE_CREATED", "EXPENSE", row.id, {
-        templateId: t.id,
-      });
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        await tx.recurringExpenseTemplate.update({
+          where: { id: t.id },
+          data: {
+            nextDueDate: nextRecurringDueDate(
+              t.nextDueDate,
+              t.frequency,
+              t.anchorDate ?? t.nextDueDate,
+            ),
+            anchorDate: t.anchorDate ?? t.nextDueDate,
+          },
+        });
+        await audit(tx, a, "RECURRING_OCCURRENCE_CREATED", "EXPENSE", row.id, {
+          templateId: t.id,
+        });
+        return row;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
+}
+export async function recurringTemplates() {
+  return recurringTemplatesForActor(await actor("ACCOUNT_EXPENSE_VIEW"));
+}
+export async function recurringTemplatesForActor(a: Actor) {
+  const scope = await expenseRecordScope(a);
+  return db.recurringExpenseTemplate.findMany({
+    where: {
+      companyId: a.companyId,
+      ...(scope.branchId
+        ? {
+            branchId:
+              scope.branchId as Prisma.RecurringExpenseTemplateWhereInput["branchId"],
+          }
+        : {}),
+      ...(scope.projectId
+        ? {
+            projectId:
+              scope.projectId as Prisma.RecurringExpenseTemplateWhereInput["projectId"],
+          }
+        : {}),
+    },
+    orderBy: [{ isActive: "desc" }, { nextDueDate: "asc" }],
+  });
+}
+export async function setRecurringTemplateActive(
+  id: string,
+  isActive: boolean,
+) {
+  return setRecurringTemplateActiveForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    id,
+    isActive,
+  );
+}
+export async function setRecurringTemplateActiveForActor(
+  a: Actor,
+  id: string,
+  isActive: boolean,
+) {
+  const scope = await expenseRecordScope(a);
+  return db.$transaction(async (tx) => {
+    const row = await tx.recurringExpenseTemplate.findFirst({
+      where: {
+        id,
+        companyId: a.companyId,
+        ...(scope.branchId
+          ? {
+              branchId:
+                scope.branchId as Prisma.RecurringExpenseTemplateWhereInput["branchId"],
+            }
+          : {}),
+        ...(scope.projectId
+          ? {
+              projectId:
+                scope.projectId as Prisma.RecurringExpenseTemplateWhereInput["projectId"],
+            }
+          : {}),
+      },
+    });
+    if (!row) throw new AuthorizationError();
+    await tx.recurringExpenseTemplate.update({
+      where: { id },
+      data: { isActive },
+    });
+    await audit(
+      tx,
+      a,
+      "RECURRING_TEMPLATE_UPDATED",
+      "RECURRING_EXPENSE_TEMPLATE",
+      id,
+      { isActive },
+    );
+  });
 }
 const allowedMime = new Set(["application/pdf", "image/jpeg", "image/png"]);
 export async function addExpenseAttachmentForActor(

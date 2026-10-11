@@ -137,16 +137,21 @@ test.afterAll(async () => {
   await db.expenseCategory.deleteMany({ where: { companyId } });
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+    await tx.stockMovement.deleteMany({ where: { companyId } });
     await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
     await tx.journalLine.deleteMany({ where: { companyId } });
     await tx.journalEntry.deleteMany({ where: { companyId } });
   });
+  await db.accountProduct.deleteMany({ where: { companyId } });
+  await db.warehouse.deleteMany({ where: { companyId } });
   await db.moneyAccount.deleteMany({ where: { companyId } });
   await db.ledgerAccount.deleteMany({ where: { companyId } });
   await db.financialYear.deleteMany({ where: { companyId } });
   await db.accountOperationalAudit.deleteMany({ where: { companyId } });
   await db.numberingSeries.deleteMany({ where: { companyId } });
   await db.accountSettings.deleteMany({ where: { companyId } });
+  await db.project.deleteMany({ where: { companyId } });
+  await db.customer.deleteMany({ where: { companyId } });
   await db.user.deleteMany({ where: { companyId } });
   await db.branch.deleteMany({ where: { companyId } });
   await db.company.deleteMany({ where: { id: companyId } });
@@ -370,4 +375,481 @@ test("Other Income category eligibility, posting, reversal and direct tax valida
   expect(d.status).toBe("REVERSED");
   expect(d.category.name).toBe("Other receipts");
   expect(d.capabilities.edit).toBe(false);
+});
+
+test("A053 recurring schedules retain inputs, reject premature bills and replay the requested occurrence", async ({
+  page,
+  request,
+}) => {
+  const { createRecurringTemplateForActor, generateRecurringExpenseForActor } =
+    await import("../src/lib/account/expenses");
+  const user = await db.user.findUniqueOrThrow({ where: { id: userId } }),
+    actor = {
+      ...user,
+      companyId,
+      branchAccessScope: "ALL_BRANCHES" as const,
+      branchIds: [],
+    };
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/expenses/recurring");
+  await page.getByText("Create recurring schedule", { exact: true }).click();
+  const form = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Create schedule", exact: true }),
+  });
+  await expect(
+    form
+      .getByLabel("Expense category")
+      .locator(`option[value="${incomeCategory}"]`),
+  ).toHaveCount(0);
+  await form.getByLabel("Expense category").selectOption(expenseCategory);
+  await form.getByLabel("First due date").fill("2026-04-30");
+  await form.getByLabel("Amount", { exact: true }).fill("31");
+  const key = await form
+    .locator('input[name="creationRequestKey"]')
+    .inputValue();
+  await form
+    .getByRole("button", { name: "Create schedule", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.recurringExpenseTemplate.count({
+        where: { companyId, creationRequestKey: key },
+      }),
+    )
+    .toBe(1);
+  const template = await db.recurringExpenseTemplate.findFirstOrThrow({
+      where: { companyId, creationRequestKey: key },
+    }),
+    input = {
+      branchId,
+      categoryId: expenseCategory,
+      frequency: "MONTHLY",
+      nextDueDate: "2026-04-30",
+      amount: "31",
+      creationRequestKey: key,
+    };
+  expect((await createRecurringTemplateForActor(actor, input)).id).toBe(
+    template.id,
+  );
+  await expect(
+    createRecurringTemplateForActor(actor, { ...input, amount: "32" }),
+  ).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+  await expect(
+    createRecurringTemplateForActor(
+      { ...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [] },
+      input,
+    ),
+  ).rejects.toThrow();
+  await expect(
+    generateRecurringExpenseForActor(actor, template.id, moneyId, "2027-12-31"),
+  ).rejects.toThrow("RECURRING_NOT_DUE");
+  const first = await generateRecurringExpenseForActor(
+    actor,
+    template.id,
+    moneyId,
+    "2026-04-30",
+  );
+  expect(first.status).toBe("PENDING_APPROVAL");
+  expect(
+    (
+      await generateRecurringExpenseForActor(
+        actor,
+        template.id,
+        moneyId,
+        "2026-04-30",
+      )
+    ).id,
+  ).toBe(first.id);
+  expect(
+    (
+      await db.recurringExpenseTemplate.findUniqueOrThrow({
+        where: { id: template.id },
+      })
+    ).nextDueDate
+      .toISOString()
+      .slice(0, 10),
+  ).toBe("2026-05-30");
+  expect(
+    await db.expenseTransaction.count({
+      where: { companyId, occurrenceKey: `${template.id}:2026-04-30` },
+    }),
+  ).toBe(1);
+  const customer = await db.customer.create({
+    data: { companyId, branchId, name: "Recurring project customer" },
+  });
+  const project = await db.project.create({
+    data: {
+      companyId,
+      branchId,
+      customerId: customer.id,
+      createdById: userId,
+      projectNumber: `REC-${randomUUID()}`,
+      name: "Recurring module fixture",
+    },
+  });
+  await db.recurringExpenseTemplate.update({
+    where: { id: template.id },
+    data: { projectId: project.id },
+  });
+  await expect(
+    generateRecurringExpenseForActor(actor, template.id, moneyId, "2026-05-30"),
+  ).rejects.toThrow("MODULE_DISABLED:PROJECTS");
+  await db.recurringExpenseTemplate.update({
+    where: { id: template.id },
+    data: { projectId: null },
+  });
+  await page.reload();
+  const card = page.getByRole("region", { name: `Schedule ${template.id}` });
+  await card
+    .getByRole("button", { name: "Pause schedule", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.recurringExpenseTemplate
+        .findUnique({ where: { id: template.id } })
+        .then((row) => row?.isActive),
+    )
+    .toBe(false);
+  const axe = await new AxeBuilder({ page })
+    .include(".employees-content")
+    .analyze();
+  expect(
+    axe.violations.filter((row) =>
+      ["critical", "serious"].includes(row.impact ?? ""),
+    ),
+  ).toEqual([]);
+  expect(
+    (await request.get("/api/v1/mobile/account/expenses/recurring")).status(),
+  ).toBe(401);
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Recurring API regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const list = await request.get("/api/v1/mobile/account/expenses/recurring", {
+    headers,
+  });
+  expect(list.status()).toBe(200);
+  expect(
+    (await list.json()).some((row: { id: string }) => row.id === template.id),
+  ).toBe(true);
+  expect(
+    (
+      await request.patch(
+        `/api/v1/mobile/account/expenses/recurring/${randomUUID()}`,
+        { headers, data: { action: "ACTIVE", isActive: true } },
+      )
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.patch(
+        `/api/v1/mobile/account/expenses/recurring/${template.id}`,
+        { headers, data: { action: "ACTIVE", isActive: "true" } },
+      )
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await request.patch(
+        `/api/v1/mobile/account/expenses/recurring/${template.id}`,
+        { headers, data: { action: "ACTIVE", isActive: true } },
+      )
+    ).status(),
+  ).toBe(200);
+  const generated = await request.patch(
+    `/api/v1/mobile/account/expenses/recurring/${template.id}`,
+    {
+      headers,
+      data: {
+        action: "GENERATE",
+        moneyAccountId: moneyId,
+        expectedDueDate: "2026-05-30",
+      },
+    },
+  );
+  expect(generated.status()).toBe(200);
+  const generatedId = (await generated.json()).id;
+  const replay = await request.patch(
+    `/api/v1/mobile/account/expenses/recurring/${template.id}`,
+    {
+      headers,
+      data: {
+        action: "GENERATE",
+        moneyAccountId: moneyId,
+        expectedDueDate: "2026-05-30",
+      },
+    },
+  );
+  expect(replay.status()).toBe(200);
+  expect((await replay.json()).id).toBe(generatedId);
+});
+
+test("A055 active items sum every warehouse and support accessible bulk activation", async ({
+  page,
+  request,
+}) => {
+  const product = await db.accountProduct.create({
+    data: {
+      companyId,
+      name: "Activation stock item",
+      code: "ACT-1",
+      trackInventory: true,
+    },
+  });
+  const first = await db.warehouse.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Activation first store",
+      code: "ACT-A",
+    },
+  });
+  const second = await db.warehouse.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Activation second store",
+      code: "ACT-B",
+    },
+  });
+  await db.stockMovement.createMany({
+    data: [first, second].map((store, i) => ({
+      companyId,
+      branchId,
+      warehouseId: store.id,
+      productId: product.id,
+      movementType: "OPENING" as const,
+      quantity: i ? 3 : 2,
+      unitCost: 1,
+      totalCost: i ? 3 : 2,
+      sourceType: "OPENING_STOCK",
+      sourceId: randomUUID(),
+      movementDate: new Date("2026-10-09"),
+      createdById: userId,
+    })),
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/active");
+  await expect(
+    page.getByRole("link", { name: "Back to inventory" }),
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Search by name or code" })
+    .fill("ACT-1");
+  const row = page
+    .locator(".active-items-list label")
+    .filter({ hasText: "Activation stock item" });
+  await expect(row.locator("b")).toHaveText("5.0");
+  await row.getByRole("checkbox").check();
+  const axe = await new AxeBuilder({ page })
+    .include(".active-items-page")
+    .analyze();
+  expect(
+    axe.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page
+    .getByRole("button", { name: "Mark as Inactive", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.accountProduct
+        .findUnique({ where: { id: product.id } })
+        .then((r) => r?.isActive),
+    )
+    .toBe(false);
+  await expect(page).toHaveURL(/\/workspace\/account\/inventory$/);
+  await page.goto("/workspace/account/inventory/active?mode=activate");
+  await page
+    .getByRole("textbox", { name: "Search by name or code" })
+    .fill("ACT-1");
+  await page
+    .locator(".active-items-list label")
+    .filter({ hasText: "Activation stock item" })
+    .getByRole("checkbox")
+    .check();
+  await page
+    .getByRole("button", { name: "Mark as Active", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.accountProduct
+        .findUnique({ where: { id: product.id } })
+        .then((r) => r?.isActive),
+    )
+    .toBe(true);
+  await expect(page).toHaveURL(/\/workspace\/account\/inventory$/);
+  await db.accountProduct.createMany({
+    data: Array.from({ length: 201 }, (_, i) => ({
+      companyId,
+      name: `Paging item ${String(i).padStart(3, "0")}`,
+    })),
+  });
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Activation API regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const firstPage = await request.get(
+    "/api/v1/mobile/account/master-data/items?q=Paging%20item&active=all&offset=0",
+    { headers },
+  );
+  expect(firstPage.status()).toBe(200);
+  expect((await firstPage.json()).length).toBe(200);
+  const secondPage = await request.get(
+    "/api/v1/mobile/account/master-data/items?q=Paging%20item&active=all&offset=200",
+    { headers },
+  );
+  expect(secondPage.status()).toBe(200);
+  expect((await secondPage.json()).length).toBe(1);
+  const missing = await request.post("/api/v1/mobile/account/item-management", {
+    headers,
+    data: {
+      action: "SET_ACTIVE",
+      kind: "items",
+      ids: [product.id, randomUUID()],
+      isActive: false,
+    },
+  });
+  expect(missing.status()).toBe(403);
+  expect(
+    (await db.accountProduct.findUniqueOrThrow({ where: { id: product.id } }))
+      .isActive,
+  ).toBe(true);
+  const invalid = await request.post("/api/v1/mobile/account/item-management", {
+    headers,
+    data: {
+      action: "SET_ACTIVE",
+      kind: "items",
+      ids: [product.id, "invalid"],
+      isActive: false,
+    },
+  });
+  expect(invalid.status()).toBe(400);
+  const changed = await request.post("/api/v1/mobile/account/item-management", {
+    headers,
+    data: {
+      action: "SET_ACTIVE",
+      kind: "items",
+      ids: [product.id],
+      isActive: false,
+    },
+  });
+  expect(changed.status()).toBe(200);
+  expect((await changed.json()).count).toBe(1);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: { enabled: false } },
+  });
+  expect(
+    (
+      await request.get("/api/v1/mobile/account/master-data/items?active=all", {
+        headers,
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await request.post("/api/v1/mobile/account/item-management", {
+        headers,
+        data: {
+          action: "SET_ACTIVE",
+          kind: "items",
+          ids: [product.id],
+          isActive: true,
+        },
+      })
+    ).status(),
+  ).toBe(400);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: { enabled: true } },
+  });
+});
+
+test("A054 inventory forms accept React metadata and expose accessible adjustment fields", async ({
+  page,
+}) => {
+  const product = await db.accountProduct.create({
+    data: {
+      companyId,
+      name: "Adjustment regression item",
+      trackInventory: true,
+    },
+  });
+  const warehouse = await db.warehouse.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Adjustment regression store",
+      code: `ADJ-${randomUUID().slice(0, 8)}`,
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/adjustments");
+  await page
+    .getByLabel("Warehouse", { exact: true })
+    .selectOption(warehouse.id);
+  await page.getByLabel("Product", { exact: true }).selectOption(product.id);
+  await page.getByLabel("Adjustment direction").selectOption("IN");
+  await page.getByLabel("Quantity", { exact: true }).fill("2");
+  await page.getByLabel("Unit cost", { exact: true }).fill("3");
+  await page.getByLabel("Movement date").fill("2026-10-09");
+  await page.getByLabel("Reason", { exact: true }).fill("Verified stock count");
+  const axe = await new AxeBuilder({ page })
+    .include(".employees-content")
+    .analyze();
+  expect(
+    axe.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page
+    .getByRole("button", { name: "Save adjustments", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.stockMovement.count({
+        where: {
+          companyId,
+          productId: product.id,
+          movementType: "ADJUSTMENT_IN",
+        },
+      }),
+    )
+    .toBe(1);
+  const row = await db.stockMovement.findFirstOrThrow({
+    where: { companyId, productId: product.id, movementType: "ADJUSTMENT_IN" },
+  });
+  expect(row.quantity.toString()).toBe("2");
+  expect(row.totalCost.toString()).toBe("6");
+  expect(row.warehouseId).toBe(warehouse.id);
 });

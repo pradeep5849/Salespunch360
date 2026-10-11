@@ -1,3 +1,4 @@
+import { retrySerializable } from "./transaction-retry";
 import {
   ChequeStatus,
   MoneyAccountType,
@@ -22,9 +23,7 @@ import { transferLines, loanPaymentLines } from "./money-ledger";
 type Actor = ProjectActor;
 async function actor(
   permission:
-    | "ACCOUNT_MONEY_VIEW"
-    | "ACCOUNT_MONEY_ENTRY"
-    | "ACCOUNT_LOAN_ADMIN",
+    "ACCOUNT_MONEY_VIEW" | "ACCOUNT_MONEY_ENTRY" | "ACCOUNT_LOAN_ADMIN",
   mutation = false,
 ) {
   return (
@@ -96,7 +95,10 @@ async function context(
 const accountInput = z.object({
   type: z.nativeEnum(MoneyAccountType),
   name: z.string().trim().min(1).max(160),
-  branchId: z.string().uuid().optional(),
+  branchId: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().uuid().optional(),
+  ),
   bankName: z.string().max(160).optional(),
   accountNumberMasked: z.string().max(40).optional(),
   ifsc: z.string().max(20).optional(),
@@ -239,61 +241,82 @@ const transferInput = z.object({
 });
 export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
   const d = transferInput.parse(raw);
-  return db.$transaction(
-    async (tx) => {
-      const existing = await tx.moneyTransfer.findFirst({
-        where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
-      });
-      if (existing) return existing;
-      const fy = await context(tx, a, d.branchId, d.transferDate),
-        accounts = await tx.moneyAccount.findMany({
-          where: {
-            companyId: a.companyId,
-            id: { in: [d.sourceAccountId, d.destinationAccountId] },
-            isActive: true,
-            ...compatibleMoneyAccount(d.branchId),
-          },
-        });
-      if (accounts.length !== 2) throw new Error("INVALID_MONEY_ACCOUNT");
-      const source = accounts.find((x) => x.id === d.sourceAccountId)!,
-        destination = accounts.find((x) => x.id === d.destinationAccountId)!,
-        amount = new D(d.amount),
-        id = crypto.randomUUID(),
-        lines = transferLines(
-          source.ledgerAccountId,
-          destination.ledgerAccountId,
-          amount,
-        ),
-        journal = await postJournalInTx(tx, a, {
-          financialYearId: fy.id,
-          branchId: d.branchId,
-          entryDate: d.transferDate,
-          reference: d.reference,
-          sourceType: "MONEY_TRANSFER",
-          sourceId: id,
-          postingPurpose: "PRIMARY",
-          lines: lines.map((x) => ({
-            ledgerAccountId: x.ledgerAccountId,
-            debit: x.debit.toFixed(2),
-            credit: x.credit.toFixed(2),
-          })),
-        }),
-        row = await tx.moneyTransfer.create({
-          data: {
-            id,
-            companyId: a.companyId,
-            ...d,
-            amount,
+  branchOk(a, d.branchId);
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"transfer:" + a.companyId + ":" + d.idempotencyKey}))`;
+          const existing = await tx.moneyTransfer.findFirst({
+            where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
+          });
+          if (existing) {
+            branchOk(a, existing.branchId);
+            if (
+              existing.branchId !== d.branchId ||
+              existing.sourceAccountId !== d.sourceAccountId ||
+              existing.destinationAccountId !== d.destinationAccountId ||
+              !existing.amount.eq(d.amount) ||
+              existing.transferDate.getTime() !== d.transferDate.getTime() ||
+              (existing.reference ?? "") !== (d.reference ?? "")
+            )
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return existing;
+          }
+          const fy = await context(tx, a, d.branchId, d.transferDate),
+            accounts = await tx.moneyAccount.findMany({
+              where: {
+                companyId: a.companyId,
+                id: { in: [d.sourceAccountId, d.destinationAccountId] },
+                isActive: true,
+                ...compatibleMoneyAccount(d.branchId),
+              },
+            });
+          if (accounts.length !== 2) throw new Error("INVALID_MONEY_ACCOUNT");
+          const source = accounts.find((x) => x.id === d.sourceAccountId)!,
+            destination = accounts.find(
+              (x) => x.id === d.destinationAccountId,
+            )!,
+            amount = new D(d.amount),
+            id = crypto.randomUUID(),
+            lines = transferLines(
+              source.ledgerAccountId,
+              destination.ledgerAccountId,
+              amount,
+            ),
+            journal = await postJournalInTx(tx, a, {
+              financialYearId: fy.id,
+              branchId: d.branchId,
+              entryDate: d.transferDate,
+              reference: d.reference,
+              sourceType: "MONEY_TRANSFER",
+              sourceId: id,
+              postingPurpose: "PRIMARY",
+              lines: lines.map((x) => ({
+                ledgerAccountId: x.ledgerAccountId,
+                debit: x.debit.toFixed(2),
+                credit: x.credit.toFixed(2),
+              })),
+            }),
+            row = await tx.moneyTransfer.create({
+              data: {
+                id,
+                companyId: a.companyId,
+                ...d,
+                amount,
+                journalEntryId: journal.id,
+                createdById: a.id,
+              },
+            });
+          await audit(tx, a, "TRANSFER_POSTED", "MONEY_TRANSFER", row.id, {
             journalEntryId: journal.id,
-            createdById: a.id,
-          },
-        });
-      await audit(tx, a, "TRANSFER_POSTED", "MONEY_TRANSFER", row.id, {
-        journalEntryId: journal.id,
-      });
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+          });
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    3,
+    ["companyId", "idempotencyKey"],
   );
 }
 const chequeInput = z.object({
@@ -490,84 +513,126 @@ const ownerInput = z.object({
 });
 export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
   const d = ownerInput.parse(raw);
-  return db.$transaction(
-    async (tx) => {
-      const existing = await tx.ownerTransaction.findFirst({
-        where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
-      });
-      if (existing) return existing;
-      const fy = await context(tx, a, d.branchId, d.transactionDate),
-        [owner, moneyAccount] = await Promise.all([
-          tx.ownerFinancialAccount.findFirst({
-            where: { id: d.ownerFinancialAccountId, companyId: a.companyId },
-          }),
-          tx.moneyAccount.findFirst({
-            where: {
-              id: d.moneyAccountId,
-              companyId: a.companyId,
-              isActive: true,
-              ...compatibleMoneyAccount(d.branchId),
-            },
-          }),
-        ]);
-      if (!owner || !moneyAccount)
-        throw new Error("INVALID_OWNER_TRANSACTION_ACCOUNT");
-      const amount = new D(d.amount),
-        ownerLedger =
-          d.type === "INVESTMENT"
-            ? owner.capitalLedgerId
-            : d.type === "WITHDRAWAL"
-              ? owner.drawingsLedgerId
-              : owner.loanLedgerId,
-        incoming = d.type !== "WITHDRAWAL",
-        id = crypto.randomUUID(),
-        journal = await postJournalInTx(tx, a, {
-          financialYearId: fy.id,
-          branchId: d.branchId,
-          entryDate: d.transactionDate,
-          reference: d.reference,
-          sourceType: d.type,
-          sourceId: id,
-          postingPurpose: "PRIMARY",
-          lines: [
-            {
-              ledgerAccountId: moneyAccount.ledgerAccountId,
-              debit: incoming ? amount.toFixed(2) : "0",
-              credit: incoming ? "0" : amount.toFixed(2),
-            },
-            {
-              ledgerAccountId: ownerLedger,
-              debit: incoming ? "0" : amount.toFixed(2),
-              credit: incoming ? amount.toFixed(2) : "0",
-            },
-          ],
-        }),
-        row = await tx.ownerTransaction.create({
-          data: {
-            id,
-            companyId: a.companyId,
-            ...d,
-            amount,
-            journalEntryId: journal.id,
-            createdById: a.id,
-          },
-        });
-      await audit(
-        tx,
-        a,
-        (
-          {
-            INVESTMENT: "OWNER_INVESTMENT_POSTED",
-            WITHDRAWAL: "OWNER_WITHDRAWAL_POSTED",
-            OWNER_LOAN: "OWNER_LOAN_POSTED",
-          } as const
-        )[d.type],
-        "OWNER_TRANSACTION",
-        row.id,
-      );
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  branchOk(a, d.branchId);
+  if (!new D(d.amount).gt(0)) throw new Error("INVALID_AMOUNT");
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"owner:" + a.companyId + ":" + d.idempotencyKey}))`;
+          const existing = await tx.ownerTransaction.findFirst({
+            where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
+          });
+          if (existing) {
+            branchOk(a, existing.branchId);
+            if (
+              existing.branchId !== d.branchId ||
+              existing.ownerFinancialAccountId !== d.ownerFinancialAccountId ||
+              existing.moneyAccountId !== d.moneyAccountId ||
+              existing.type !== d.type ||
+              !existing.amount.eq(d.amount) ||
+              existing.transactionDate.getTime() !==
+                d.transactionDate.getTime() ||
+              (existing.reference ?? "") !== (d.reference ?? "")
+            )
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return existing;
+          }
+          const fy = await context(tx, a, d.branchId, d.transactionDate),
+            [owner, moneyAccount] = await Promise.all([
+              tx.ownerFinancialAccount.findFirst({
+                where: {
+                  id: d.ownerFinancialAccountId,
+                  companyId: a.companyId,
+                },
+              }),
+              tx.moneyAccount.findFirst({
+                where: {
+                  id: d.moneyAccountId,
+                  companyId: a.companyId,
+                  isActive: true,
+                  ...compatibleMoneyAccount(d.branchId),
+                },
+              }),
+            ]);
+          if (!owner || !moneyAccount)
+            throw new Error("INVALID_OWNER_TRANSACTION_ACCOUNT");
+          if (d.type === "WITHDRAWAL") {
+            await tx.$queryRaw`SELECT "id" FROM "money_accounts" WHERE "id"=${moneyAccount.id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+            const funds = await tx.journalLine.aggregate({
+              where: {
+                companyId: a.companyId,
+                ledgerAccountId: moneyAccount.ledgerAccountId,
+                journalEntry: { status: { in: ["POSTED", "REVERSED"] } },
+              },
+              _sum: { debit: true, credit: true },
+            });
+            if (
+              new D(funds._sum.debit ?? 0)
+                .sub(funds._sum.credit ?? 0)
+                .lt(d.amount)
+            )
+              throw new Error("INSUFFICIENT_MONEY_BALANCE");
+          }
+          const amount = new D(d.amount),
+            ownerLedger =
+              d.type === "INVESTMENT"
+                ? owner.capitalLedgerId
+                : d.type === "WITHDRAWAL"
+                  ? owner.drawingsLedgerId
+                  : owner.loanLedgerId,
+            incoming = d.type !== "WITHDRAWAL",
+            id = crypto.randomUUID(),
+            journal = await postJournalInTx(tx, a, {
+              financialYearId: fy.id,
+              branchId: d.branchId,
+              entryDate: d.transactionDate,
+              reference: d.reference,
+              sourceType: d.type,
+              sourceId: id,
+              postingPurpose: "PRIMARY",
+              lines: [
+                {
+                  ledgerAccountId: moneyAccount.ledgerAccountId,
+                  debit: incoming ? amount.toFixed(2) : "0",
+                  credit: incoming ? "0" : amount.toFixed(2),
+                },
+                {
+                  ledgerAccountId: ownerLedger,
+                  debit: incoming ? "0" : amount.toFixed(2),
+                  credit: incoming ? amount.toFixed(2) : "0",
+                },
+              ],
+            }),
+            row = await tx.ownerTransaction.create({
+              data: {
+                id,
+                companyId: a.companyId,
+                ...d,
+                amount,
+                journalEntryId: journal.id,
+                createdById: a.id,
+              },
+            });
+          await audit(
+            tx,
+            a,
+            (
+              {
+                INVESTMENT: "OWNER_INVESTMENT_POSTED",
+                WITHDRAWAL: "OWNER_WITHDRAWAL_POSTED",
+                OWNER_LOAN: "OWNER_LOAN_POSTED",
+              } as const
+            )[d.type],
+            "OWNER_TRANSACTION",
+            row.id,
+          );
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    3,
+    ["companyId", "idempotencyKey"],
   );
 }
 const loanInput = z.object({
@@ -575,80 +640,110 @@ const loanInput = z.object({
   lender: z.string().trim().min(1).max(240),
   loanType: z.string().trim().min(1).max(80),
   principal: money,
-  interestRate: money.optional(),
+  interestRate: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    money.optional(),
+  ),
   startDate: z.coerce.date(),
-  maturityDate: z.coerce.date().optional(),
+  maturityDate: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.date().optional(),
+  ),
   moneyAccountId: z.string().uuid(),
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
 });
 export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
   const d = loanInput.parse(raw);
-  return db.$transaction(
-    async (tx) => {
-      const existing = await tx.loan.findFirst({
-        where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
-      });
-      if (existing) return existing;
-      const fy = await context(tx, a, d.branchId, d.startDate),
-        moneyAccount = await tx.moneyAccount.findFirst({
-          where: {
-            id: d.moneyAccountId,
-            companyId: a.companyId,
-            isActive: true,
-            ...compatibleMoneyAccount(d.branchId),
-          },
-        });
-      if (!moneyAccount) throw new Error("INVALID_MONEY_ACCOUNT");
-      const liability = await createLedger(
-          tx,
-          a,
-          d.branchId,
-          `${d.lender} Loan`,
-          "LIABILITY",
-          "CREDIT",
-        ),
-        id = crypto.randomUUID(),
-        principal = new D(d.principal),
-        journal = await postJournalInTx(tx, a, {
-          financialYearId: fy.id,
-          branchId: d.branchId,
-          entryDate: d.startDate,
-          reference: d.reference,
-          sourceType: "LOAN_RECEIPT",
-          sourceId: id,
-          postingPurpose: "PRIMARY",
-          lines: [
-            {
-              ledgerAccountId: moneyAccount.ledgerAccountId,
-              debit: principal.toFixed(2),
-              credit: "0",
-            },
-            {
-              ledgerAccountId: liability.id,
-              debit: "0",
-              credit: principal.toFixed(2),
-            },
-          ],
-        }),
-        row = await tx.loan.create({
-          data: {
-            id,
-            companyId: a.companyId,
-            ...d,
-            principal,
-            interestRate: d.interestRate ? new D(d.interestRate) : null,
-            liabilityLedgerId: liability.id,
-            receivedJournalId: journal.id,
-            createdById: a.id,
-          },
-        });
-      await audit(tx, a, "LOAN_RECEIVED", "LOAN", id, {
-        journalEntryId: journal.id,
-      });
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  branchOk(a, d.branchId);
+  if (!new D(d.principal).gt(0)) throw new Error("INVALID_AMOUNT");
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"loan:" + a.companyId + ":" + d.idempotencyKey}))`;
+          const existing = await tx.loan.findFirst({
+            where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
+          });
+          if (existing) {
+            branchOk(a, existing.branchId);
+            if (
+              existing.branchId !== d.branchId ||
+              existing.moneyAccountId !== d.moneyAccountId ||
+              existing.lender !== d.lender ||
+              existing.loanType !== d.loanType ||
+              !existing.principal.eq(d.principal) ||
+              !new D(existing.interestRate ?? 0).eq(d.interestRate ?? 0) ||
+              existing.startDate.getTime() !== d.startDate.getTime() ||
+              (existing.maturityDate?.getTime() ?? null) !==
+                (d.maturityDate?.getTime() ?? null) ||
+              (existing.reference ?? "") !== (d.reference ?? "")
+            )
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return existing;
+          }
+          const fy = await context(tx, a, d.branchId, d.startDate),
+            moneyAccount = await tx.moneyAccount.findFirst({
+              where: {
+                id: d.moneyAccountId,
+                companyId: a.companyId,
+                isActive: true,
+                ...compatibleMoneyAccount(d.branchId),
+              },
+            });
+          if (!moneyAccount) throw new Error("INVALID_MONEY_ACCOUNT");
+          const liability = await createLedger(
+              tx,
+              a,
+              d.branchId,
+              `${d.lender} Loan`,
+              "LIABILITY",
+              "CREDIT",
+            ),
+            id = crypto.randomUUID(),
+            principal = new D(d.principal),
+            journal = await postJournalInTx(tx, a, {
+              financialYearId: fy.id,
+              branchId: d.branchId,
+              entryDate: d.startDate,
+              reference: d.reference,
+              sourceType: "LOAN_RECEIPT",
+              sourceId: id,
+              postingPurpose: "PRIMARY",
+              lines: [
+                {
+                  ledgerAccountId: moneyAccount.ledgerAccountId,
+                  debit: principal.toFixed(2),
+                  credit: "0",
+                },
+                {
+                  ledgerAccountId: liability.id,
+                  debit: "0",
+                  credit: principal.toFixed(2),
+                },
+              ],
+            }),
+            row = await tx.loan.create({
+              data: {
+                id,
+                companyId: a.companyId,
+                ...d,
+                principal,
+                interestRate: d.interestRate ? new D(d.interestRate) : null,
+                liabilityLedgerId: liability.id,
+                receivedJournalId: journal.id,
+                createdById: a.id,
+              },
+            });
+          await audit(tx, a, "LOAN_RECEIVED", "LOAN", id, {
+            journalEntryId: journal.id,
+          });
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    3,
+    ["companyId", "idempotencyKey"],
   );
 }
 const paymentInput = z.object({
@@ -663,93 +758,117 @@ const paymentInput = z.object({
 });
 export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
   const d = paymentInput.parse(raw);
-  return db.$transaction(
-    async (tx) => {
-      const existing = await tx.loanPayment.findFirst({
-        where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
-      });
-      if (existing) return existing;
-      await tx.$queryRaw`SELECT "id" FROM "loans" WHERE "id"=${d.loanId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
-      const loan = await tx.loan.findFirst({
-        where: { id: d.loanId, companyId: a.companyId, status: "ACTIVE" },
-      });
-      if (!loan) throw new Error("INVALID_LOAN");
-      const fy = await context(tx, a, loan.branchId, d.paymentDate),
-        moneyAccount = await tx.moneyAccount.findFirst({
-          where: {
-            id: d.moneyAccountId,
-            companyId: a.companyId,
-            isActive: true,
-            ...compatibleMoneyAccount(loan.branchId),
-          },
-        }),
-        accounts = await tx.ledgerAccount.findMany({
-          where: {
-            companyId: a.companyId,
-            systemKey: { in: ["GENERAL_EXPENSES"] },
-          },
-        });
-      if (!moneyAccount) throw new Error("INVALID_MONEY_ACCOUNT");
-      const paid = await tx.loanPayment.aggregate({
-          where: { companyId: a.companyId, loanId: loan.id },
-          _sum: { principal: true },
-        }),
-        principal = new D(d.principal),
-        interest = new D(d.interest),
-        charges = new D(d.charges),
-        outstanding = loan.principal.sub(paid._sum.principal ?? 0);
-      if (principal.gt(outstanding))
-        throw new Error("PRINCIPAL_EXCEEDS_OUTSTANDING");
-      const expense = accounts[0]?.id;
-      if (!expense && (interest.gt(0) || charges.gt(0)))
-        throw new Error("INTEREST_LEDGER_MISSING");
-      const id = crypto.randomUUID(),
-        lines = loanPaymentLines(
-          loan.liabilityLedgerId,
-          expense!,
-          expense!,
-          moneyAccount.ledgerAccountId,
-          principal,
-          interest,
-          charges,
-        ),
-        journal = await postJournalInTx(tx, a, {
-          financialYearId: fy.id,
-          branchId: loan.branchId,
-          entryDate: d.paymentDate,
-          sourceType: "LOAN_PAYMENT",
-          sourceId: id,
-          postingPurpose: "PRIMARY",
-          lines: lines
-            .filter((x) => x.debit.gt(0) || x.credit.gt(0))
-            .map((x) => ({
-              ledgerAccountId: x.ledgerAccountId,
-              debit: x.debit.toFixed(2),
-              credit: x.credit.toFixed(2),
-            })),
-        }),
-        row = await tx.loanPayment.create({
-          data: {
-            id,
-            companyId: a.companyId,
-            ...d,
-            principal,
-            interest,
-            charges,
+  if (!new D(d.principal).add(d.interest).add(d.charges).gt(0))
+    throw new Error("INVALID_AMOUNT");
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"loan-payment:" + a.companyId + ":" + d.idempotencyKey}))`;
+          const existing = await tx.loanPayment.findFirst({
+            where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
+          });
+          if (existing) {
+            const source = await tx.loan.findFirst({
+              where: { id: existing.loanId, companyId: a.companyId },
+            });
+            if (!source) throw new AuthorizationError();
+            branchOk(a, source.branchId);
+            if (
+              existing.loanId !== d.loanId ||
+              existing.moneyAccountId !== d.moneyAccountId ||
+              existing.paymentDate.getTime() !== d.paymentDate.getTime() ||
+              !existing.principal.eq(d.principal) ||
+              !existing.interest.eq(d.interest) ||
+              !existing.charges.eq(d.charges)
+            )
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return existing;
+          }
+          await tx.$queryRaw`SELECT "id" FROM "loans" WHERE "id"=${d.loanId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+          const loan = await tx.loan.findFirst({
+            where: { id: d.loanId, companyId: a.companyId, status: "ACTIVE" },
+          });
+          if (!loan) throw new Error("INVALID_LOAN");
+          const fy = await context(tx, a, loan.branchId, d.paymentDate),
+            moneyAccount = await tx.moneyAccount.findFirst({
+              where: {
+                id: d.moneyAccountId,
+                companyId: a.companyId,
+                isActive: true,
+                ...compatibleMoneyAccount(loan.branchId),
+              },
+            }),
+            accounts = await tx.ledgerAccount.findMany({
+              where: {
+                companyId: a.companyId,
+                systemKey: { in: ["GENERAL_EXPENSES"] },
+              },
+            });
+          if (!moneyAccount) throw new Error("INVALID_MONEY_ACCOUNT");
+          const paid = await tx.loanPayment.aggregate({
+              where: { companyId: a.companyId, loanId: loan.id },
+              _sum: { principal: true },
+            }),
+            principal = new D(d.principal),
+            interest = new D(d.interest),
+            charges = new D(d.charges),
+            outstanding = loan.principal.sub(paid._sum.principal ?? 0);
+          if (principal.gt(outstanding))
+            throw new Error("PRINCIPAL_EXCEEDS_OUTSTANDING");
+          const expense = accounts[0]?.id;
+          if (!expense && (interest.gt(0) || charges.gt(0)))
+            throw new Error("INTEREST_LEDGER_MISSING");
+          const id = crypto.randomUUID(),
+            lines = loanPaymentLines(
+              loan.liabilityLedgerId,
+              expense!,
+              expense!,
+              moneyAccount.ledgerAccountId,
+              principal,
+              interest,
+              charges,
+            ),
+            journal = await postJournalInTx(tx, a, {
+              financialYearId: fy.id,
+              branchId: loan.branchId,
+              entryDate: d.paymentDate,
+              sourceType: "LOAN_PAYMENT",
+              sourceId: id,
+              postingPurpose: "PRIMARY",
+              lines: lines
+                .filter((x) => x.debit.gt(0) || x.credit.gt(0))
+                .map((x) => ({
+                  ledgerAccountId: x.ledgerAccountId,
+                  debit: x.debit.toFixed(2),
+                  credit: x.credit.toFixed(2),
+                })),
+            }),
+            row = await tx.loanPayment.create({
+              data: {
+                id,
+                companyId: a.companyId,
+                ...d,
+                principal,
+                interest,
+                charges,
+                journalEntryId: journal.id,
+              },
+            });
+          if (principal.eq(outstanding))
+            await tx.loan.update({
+              where: { id: loan.id },
+              data: { status: "PAID_OFF" },
+            });
+          await audit(tx, a, "LOAN_PAYMENT_POSTED", "LOAN_PAYMENT", id, {
             journalEntryId: journal.id,
-          },
-        });
-      if (principal.eq(outstanding))
-        await tx.loan.update({
-          where: { id: loan.id },
-          data: { status: "PAID_OFF" },
-        });
-      await audit(tx, a, "LOAN_PAYMENT_POSTED", "LOAN_PAYMENT", id, {
-        journalEntryId: journal.id,
-      });
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+          });
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    3,
+    ["companyId", "idempotencyKey"],
   );
 }
 export async function listMoneyDataForActor(a: Actor) {

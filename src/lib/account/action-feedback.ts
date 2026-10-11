@@ -8,17 +8,33 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
-  INVALID_SERVICE_REMINDER: "This reminder is no longer due or is outside your branch access. Refresh Attention.",
-  SERVICE_PERIOD_OVERRIDE_DISABLED: "Editing the service period during a sale is disabled in Service Reminders.",
-  INVALID_SERVICE_REMINDER_ITEM: "Enable service reminders for this item before setting a service period.",
+  IDEMPOTENCY_CONFLICT:
+    "This request was already used with different details. Refresh before starting a new transaction.",
+  RECURRING_NOT_DUE: "This recurring bill is not due yet.",
+  RECURRING_DUE_DATE_CHANGED:
+    "This occurrence has changed. Refresh the schedule before generating another bill.",
+  INVALID_DUE_DATE: "Enter a valid calendar date.",
+  INVALID_SERVICE_REMINDER:
+    "This reminder is no longer due or is outside your branch access. Refresh Attention.",
+  SERVICE_PERIOD_OVERRIDE_DISABLED:
+    "Editing the service period during a sale is disabled in Service Reminders.",
+  INVALID_SERVICE_REMINDER_ITEM:
+    "Enable service reminders for this item before setting a service period.",
   INVALID_SERVICE_PERIOD: "Enter a service period from 1 to 3650 days.",
-  INVALID_PAYMENT_DISCOUNT: "Enter a valid payment discount for the selected invoice.",
-  PAYMENT_DISCOUNT_DISABLED: "Discount during Payment is disabled. Enable it in Transaction Settings or remove the discount.",
-  ALLOCATION_EXCEEDS_OUTSTANDING: "Cash received plus payment discount cannot exceed the invoice balance.",
-  ALLOCATION_TOTAL_MISMATCH: "The allocated amount must equal the cash payment plus its discount.",
-  BUSINESS_CURRENCY_LOCKED: "Business currency cannot be changed after accounting entries have been posted.",
-  PROJECT_EXTRA_JOBS_PENDING: "Approve or cancel pending extra jobs before closing the project.",
-  PROJECT_FINAL_INVOICE_SERVICE_REQUIRED: "Choose the service / SAC for the remaining project invoice.",
+  INVALID_PAYMENT_DISCOUNT:
+    "Enter a valid payment discount for the selected invoice.",
+  PAYMENT_DISCOUNT_DISABLED:
+    "Discount during Payment is disabled. Enable it in Transaction Settings or remove the discount.",
+  ALLOCATION_EXCEEDS_OUTSTANDING:
+    "Cash received plus payment discount cannot exceed the invoice balance.",
+  ALLOCATION_TOTAL_MISMATCH:
+    "The allocated amount must equal the cash payment plus its discount.",
+  BUSINESS_CURRENCY_LOCKED:
+    "Business currency cannot be changed after accounting entries have been posted.",
+  PROJECT_EXTRA_JOBS_PENDING:
+    "Approve or cancel pending extra jobs before closing the project.",
+  PROJECT_FINAL_INVOICE_SERVICE_REQUIRED:
+    "Choose the service / SAC for the remaining project invoice.",
   ADJUSTMENT_STOCK_EXCEEDS_SOURCE:
     "The cumulative returned quantity exceeds the original purchase quantity.",
   INVALID_SOURCE_STOCK_IDENTITY:
@@ -135,14 +151,28 @@ const messages: Record<string, string> = {
   EXPENSE_NOT_REVERSIBLE: "Only an unreversed posted expense can be reversed.",
   EXPENSE_NOT_EDITABLE: "Only your draft expense can be edited.",
   INVALID_EXPENSE_CATEGORY: "Select an active expense or income category.",
+  MANAGED_LOAN_REVERSAL_NOT_SUPPORTED:
+    "Loan receipts and repayments cannot be reversed through the journal screen. Their loan balance must remain linked to the posted transaction.",
   PERIOD_LOCKED: "This date is in a locked accounting period.",
   INVALID_FINANCIAL_YEAR: "Choose a date within an active financial year.",
 };
 export const isAccountDomainError = (error: unknown): error is Error =>
-  error instanceof Error && (Object.hasOwn(messages, error.message) || /^(CUSTOM_FIELDS_REQUIRED|INVALID_CUSTOM_FIELD):[a-zA-Z0-9_]+$/.test(error.message));
+  error instanceof Error &&
+  (Object.hasOwn(messages, error.message) ||
+    /^(CUSTOM_FIELDS_REQUIRED|INVALID_CUSTOM_FIELD):[a-zA-Z0-9_]+$/.test(
+      error.message,
+    ));
 export function accountErrorMessage(error: unknown) {
-  if(error instanceof Error&&/^CUSTOM_FIELDS_REQUIRED:[a-zA-Z0-9_]+$/.test(error.message))return "Complete the required custom fields before saving.";
-  if(error instanceof Error&&/^INVALID_CUSTOM_FIELD:[a-zA-Z0-9_]+$/.test(error.message))return "Check the value and format of the custom fields.";
+  if (
+    error instanceof Error &&
+    /^CUSTOM_FIELDS_REQUIRED:[a-zA-Z0-9_]+$/.test(error.message)
+  )
+    return "Complete the required custom fields before saving.";
+  if (
+    error instanceof Error &&
+    /^INVALID_CUSTOM_FIELD:[a-zA-Z0-9_]+$/.test(error.message)
+  )
+    return "Check the value and format of the custom fields.";
   if (
     error instanceof AuthorizationError ||
     (error instanceof Error && error.message.startsWith("MODULE_DISABLED:"))

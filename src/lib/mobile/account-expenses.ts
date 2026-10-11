@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { ExpenseTransactionStatus } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
@@ -6,6 +7,9 @@ import {
   deactivateExpenseCategoryForActor,
   createExpenseForActor,
   createRecurringTemplateForActor,
+  recurringTemplatesForActor,
+  setRecurringTemplateActiveForActor,
+  generateRecurringExpenseForActor,
   downloadExpenseAttachmentForActor,
   saveExpenseCategoryForActor,
   expenseOptionsForActor,
@@ -150,3 +154,37 @@ export async function mobileDeactivateExpenseCategory(
   await deactivateExpenseCategoryForActor(actor, id);
   return { ok: true };
 }
+
+export async function mobileRecurringExpenseList(u: MobileAppPrincipal) {
+  return recurringTemplatesForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"));
+}
+export async function mobileRecurringExpenseAction(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await assertOperationalWrite(u.companyId);
+  const a = permit(u, "ACCOUNT_EXPENSE_ENTRY");
+  const input = recurringActionSchema.parse(raw);
+  if (input.action === "ACTIVE") {
+    await setRecurringTemplateActiveForActor(a, id, input.isActive);
+    return { ok: true };
+  }
+  return generateRecurringExpenseForActor(
+    a,
+    id,
+    input.moneyAccountId,
+    input.expectedDueDate,
+  );
+}
+
+const recurringActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("ACTIVE"), isActive: z.boolean() }).strict(),
+  z
+    .object({
+      action: z.literal("GENERATE"),
+      moneyAccountId: z.string().uuid(),
+      expectedDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .strict(),
+]);

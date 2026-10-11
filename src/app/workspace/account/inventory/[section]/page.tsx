@@ -44,7 +44,7 @@ export default async function Page({
 }) {
   const { section } = await params;
   if (!valid.has(section)) notFound();
-  const o = await inventoryOptions();
+  const o = await inventoryOptions(section);
   if (section === "warehouses") {
     const rows = await listWarehouses();
     return (
@@ -52,7 +52,7 @@ export default async function Page({
         <form action={warehouseAction} className="stack">
           <label>
             Branch
-            <select name="branchId" required>
+            <select aria-label="Branch" name="branchId" required>
               {o.branches.map((x) => (
                 <option value={x.id} key={x.id}>
                   {x.name}
@@ -60,12 +60,22 @@ export default async function Page({
               ))}
             </select>
           </label>
-          <input name="name" placeholder="Warehouse name" required />
-          <input name="code" placeholder="Code" required />
-          <textarea name="address" placeholder="Address" />
+          <input
+            aria-label="Warehouse name"
+            name="name"
+            placeholder="Warehouse name"
+            required
+          />
+          <input aria-label="Code" name="code" placeholder="Code" required />
+          <textarea aria-label="Address" name="address" placeholder="Address" />
           <label>
-            <input type="checkbox" name="isDefault" value="true" /> Default
-            warehouse
+            <input
+              aria-label="Default warehouse"
+              type="checkbox"
+              name="isDefault"
+              value="true"
+            />{" "}
+            Default warehouse
           </label>
           <button>Create warehouse</button>
         </form>
@@ -107,6 +117,7 @@ export default async function Page({
               <input type="hidden" name="productId" value={x.id} />
               <label>
                 <input
+                  aria-label="Track inventory"
                   type="checkbox"
                   name="trackInventory"
                   value="true"
@@ -116,29 +127,37 @@ export default async function Page({
               </label>
               <label>
                 Tracking
-                <select name="trackingMode" defaultValue={x.trackingMode}>
+                <select
+                  aria-label="Tracking mode"
+                  name="trackingMode"
+                  defaultValue={x.trackingMode}
+                >
                   <option>NONE</option>
                   <option>BATCH</option>
                   <option>SERIAL</option>
                 </select>
               </label>
               <input
+                aria-label="Barcode"
                 name="barcode"
                 placeholder="Barcode"
                 defaultValue={x.barcode ?? ""}
               />
               <input
+                aria-label="HSN code"
                 name="hsnCode"
                 placeholder="HSN"
                 defaultValue={x.hsnCode ?? ""}
               />
               <input
+                aria-label="Low stock threshold"
                 name="lowStockThreshold"
                 type="number"
                 step="0.0001"
                 defaultValue={x.lowStockThreshold.toString()}
               />
               <input
+                aria-label="Purchase rate"
                 name="costPrice"
                 type="number"
                 step="0.0001"
@@ -146,6 +165,7 @@ export default async function Page({
                 defaultValue={x.costPrice?.toString()}
               />
               <input
+                aria-label="Sales rate"
                 name="salePrice"
                 type="number"
                 step="0.0001"
@@ -156,12 +176,12 @@ export default async function Page({
             </form>
             <form action={priceAction} className="stack">
               <input type="hidden" name="productId" value={x.id} />
-              <select name="priceType">
+              <select aria-label="Price type" name="priceType">
                 <option>RETAIL</option>
                 <option>WHOLESALE</option>
                 <option>CUSTOMER</option>
               </select>
-              <select name="customerId">
+              <select aria-label="Customer" name="customerId">
                 <option value="">No customer</option>
                 {o.customers.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -169,7 +189,13 @@ export default async function Page({
                   </option>
                 ))}
               </select>
-              <input name="rate" type="number" step="0.01" required />
+              <input
+                aria-label="Price rate"
+                name="rate"
+                type="number"
+                step="0.01"
+                required
+              />
               <button>Add price</button>
             </form>
             {prices
@@ -193,15 +219,29 @@ export default async function Page({
       <Shell title="Batches & Serials">
         <form action={batchAction} className="stack">
           <Product o={o} mode="BATCH" />
-          <input name="batchNumber" placeholder="Batch number" required />
-          <input name="manufacturedDate" type="date" />
-          <input name="expiryDate" type="date" />
+          <input
+            aria-label="Batch number"
+            name="batchNumber"
+            placeholder="Batch number"
+            required
+          />
+          <input
+            aria-label="Manufactured date"
+            name="manufacturedDate"
+            type="date"
+          />
+          <input aria-label="Expiry date" name="expiryDate" type="date" />
           <button>Create batch</button>
         </form>
         <form action={serialAction} className="stack">
           <Product o={o} mode="SERIAL" />
-          <input name="serialNumber" placeholder="Serial number" required />
-          <input name="expiryDate" type="date" />
+          <input
+            aria-label="Serial number"
+            name="serialNumber"
+            placeholder="Serial number"
+            required
+          />
+          <input aria-label="Expiry date" name="expiryDate" type="date" />
           <button>Register serial</button>
         </form>
         {batches.map((x) => (
@@ -288,12 +328,13 @@ export default async function Page({
         )}
         <Product o={o} />
         {section === "adjustments" && (
-          <select name="direction">
+          <select aria-label="Adjustment direction" name="direction">
             <option>IN</option>
             <option>OUT</option>
           </select>
         )}
         <input
+          aria-label="Quantity"
           name="quantity"
           type="number"
           min="0.0001"
@@ -302,6 +343,7 @@ export default async function Page({
         />
         {section !== "transfers" && (
           <input
+            aria-label="Unit cost"
             name="unitCost"
             type="number"
             min="0"
@@ -309,8 +351,13 @@ export default async function Page({
             defaultValue="0"
           />
         )}
-        <input name="movementDate" type="date" required />
-        <select name="batchId">
+        <input
+          aria-label="Movement date"
+          name="movementDate"
+          type="date"
+          required
+        />
+        <select aria-label="Batch" name="batchId">
           <option value="">No batch</option>
           {o.batches.map((x) => (
             <option key={x.id} value={x.id}>
@@ -318,7 +365,7 @@ export default async function Page({
             </option>
           ))}
         </select>
-        <select name="serialNumberId">
+        <select aria-label="Serial" name="serialNumberId">
           <option value="">No serial</option>
           {o.serials.map((x) => (
             <option key={x.id} value={x.id}>
@@ -327,7 +374,12 @@ export default async function Page({
           ))}
         </select>
         {section !== "opening" && (
-          <textarea name="reason" placeholder="Reason" required />
+          <textarea
+            aria-label="Reason"
+            name="reason"
+            placeholder="Reason"
+            required
+          />
         )}
         <button>Save {section}</button>
       </form>
@@ -342,12 +394,12 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="employees-shell">
+    <div className="employees-shell">
       <section className="employees-content">
         <h1>Inventory · {title}</h1>
         {children}
       </section>
-    </main>
+    </div>
   );
 }
 function Product({
@@ -360,7 +412,7 @@ function Product({
   return (
     <label>
       Product
-      <select name="productId" required>
+      <select aria-label="Product" name="productId" required>
         <option value="">Select</option>
         {o.products
           .filter((x) => !mode || x.trackingMode === mode)
@@ -385,7 +437,7 @@ function Warehouse({
   return (
     <label>
       {label}
-      <select name={name} required>
+      <select aria-label={label} name={name} required>
         <option value="">Select</option>
         {o.warehouses.map((x) => (
           <option value={x.id} key={x.id}>

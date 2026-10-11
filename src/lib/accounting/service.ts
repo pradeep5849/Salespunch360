@@ -366,6 +366,10 @@ export async function reverseJournalInTx(
     include: { lines: true },
   });
   if (!original) throw new Error("JOURNAL_NOT_REVERSIBLE");
+  // Loan balances are managed by the loan lifecycle. A generic journal reversal
+  // cannot change its principal/status and must never detach the two records.
+  if (["LOAN_RECEIPT", "LOAN_PAYMENT"].includes(original.sourceType))
+    throw new Error("MANAGED_LOAN_REVERSAL_NOT_SUPPORTED");
   const reversalYear = await tx.financialYear.findFirst({
     where: {
       companyId: a.companyId,

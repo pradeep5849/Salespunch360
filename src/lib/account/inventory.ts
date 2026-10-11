@@ -7,6 +7,7 @@ import {
   requirePermissionForMutation,
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "./modules";
+import { resolveItemSettings } from "./item-settings-policy";
 import type { ProjectActor } from "./projects";
 const D = Prisma.Decimal,
   Z = new D(0),
@@ -30,9 +31,21 @@ async function actor(write = false) {
       ? await requirePermissionForMutation("ACCOUNT_STOCK")
       : await requirePermission("ACCOUNT_STOCK")
   ) as ProjectActor;
-  await requireAccountModules(a, "INVENTORY");
+  await assertInventoryAvailable(a);
   if (a.accountRole === "PROJECT_MANAGER") throw new AuthorizationError();
   return a;
+}
+export async function assertInventoryAvailable(a: {
+  companyId: string | null;
+}) {
+  await requireAccountModules(a, "INVENTORY");
+  if (!a.companyId) throw new AuthorizationError();
+  const settings = await db.accountSettings.findUnique({
+    where: { companyId: a.companyId },
+    select: { itemSettings: true },
+  });
+  if (!resolveItemSettings(settings?.itemSettings).enabled)
+    throw new Error("ITEMS_DISABLED");
 }
 const branchAllowed = (a: ProjectActor, id: string) =>
   a.branchAccessScope !== "SELECTED_BRANCHES" || a.branchIds?.includes(id);
@@ -101,6 +114,7 @@ export async function createStockMovementForActor(
   type: StockMovementType,
   raw: unknown,
 ) {
+  await assertInventoryAvailable(a);
   const d = movement.parse(raw);
   return db.$transaction(
     async (tx) => {
@@ -202,6 +216,7 @@ export const transferInput = z
   })
   .strict();
 export async function transferStockForActor(a: ProjectActor, raw: unknown) {
+  await assertInventoryAvailable(a);
   const d = transferInput.parse(raw);
   if (d.sourceWarehouseId === d.destinationWarehouseId)
     throw new Error("SAME_WAREHOUSE");
@@ -282,6 +297,7 @@ export async function transferStock(raw: unknown) {
   return transferStockForActor(await actor(true), raw);
 }
 export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
+  await assertInventoryAvailable(a);
   const warehouses = await db.warehouse.findMany({
     where: {
       companyId: a.companyId,
@@ -376,6 +392,7 @@ export async function inventorySnapshot(asOf?: Date) {
   return inventorySnapshotForActor(await actor(), asOf);
 }
 export async function listWarehousesForActor(a: ProjectActor) {
+  await assertInventoryAvailable(a);
   return db.warehouse.findMany({
     where: {
       companyId: a.companyId,
@@ -496,6 +513,7 @@ export async function updateInventoryProduct(productId: string, raw: unknown) {
   });
 }
 export async function listInventoryProductsForActor(a: ProjectActor) {
+  await assertInventoryAvailable(a);
   return db.accountProduct.findMany({
     where: { companyId: a.companyId, isActive: true },
     include: { unit: true, category: true },
@@ -506,6 +524,7 @@ export async function listInventoryProducts() {
   return listInventoryProductsForActor(await actor());
 }
 export async function createBatchForActor(a: ProjectActor, raw: unknown) {
+  await assertInventoryAvailable(a);
   const d = z
       .object({
         productId: z.string().uuid(),
@@ -533,6 +552,7 @@ export async function createBatch(raw: unknown) {
   return createBatchForActor(await actor(true), raw);
 }
 export async function listBatchesForActor(a: ProjectActor, productId?: string) {
+  await assertInventoryAvailable(a);
   return db.inventoryBatch.findMany({
     where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
     orderBy: { createdAt: "desc" },
@@ -545,6 +565,7 @@ export async function registerSerialNumberForActor(
   a: ProjectActor,
   raw: unknown,
 ) {
+  await assertInventoryAvailable(a);
   const d = z
       .object({
         productId: z.string().uuid(),
@@ -574,6 +595,7 @@ export async function listSerialNumbersForActor(
   a: ProjectActor,
   productId?: string,
 ) {
+  await assertInventoryAvailable(a);
   const rows = await db.inventorySerialNumber.findMany({
       where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
       orderBy: { createdAt: "desc" },
@@ -631,6 +653,7 @@ export async function createProductPriceForActor(
   a: ProjectActor,
   raw: unknown,
 ) {
+  await assertInventoryAvailable(a);
   const d = priceInput.parse(raw);
   await validatePrice(a, d);
   return db.productPrice.create({
@@ -665,6 +688,7 @@ export async function listProductPricesForActor(
   a: ProjectActor,
   productId?: string,
 ) {
+  await assertInventoryAvailable(a);
   return db.productPrice.findMany({
     where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
     orderBy: { createdAt: "desc" },
@@ -690,49 +714,89 @@ async function auditInventory(
     },
   });
 }
-export async function inventoryOptionsForActor(a: ProjectActor) {
-  const branches = await db.branch.findMany({
-    where: {
-      companyId: a.companyId,
-      isActive: true,
-      ...(a.branchAccessScope === "SELECTED_BRANCHES"
-        ? { id: { in: a.branchIds ?? [] } }
-        : {}),
-    },
-    orderBy: { name: "asc" },
-  });
-  return {
-    branches,
-    warehouses: await db.warehouse.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        branchId: { in: branches.map((x) => x.id) },
-      },
-      orderBy: { name: "asc" },
-    }),
-    products: await db.accountProduct.findMany({
-      where: { companyId: a.companyId, isActive: true },
-      orderBy: { name: "asc" },
-    }),
-    customers: await db.customer.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        isAccountCustomer: true,
-      },
-      orderBy: { name: "asc" },
-    }),
-    batches: await db.inventoryBatch.findMany({
-      where: { companyId: a.companyId },
-    }),
-    serials: await db.inventorySerialNumber.findMany({
-      where: { companyId: a.companyId },
-    }),
-  };
+export async function inventoryOptionsForActor(
+  a: ProjectActor,
+  section = "all",
+) {
+  await assertInventoryAvailable(a);
+  const needsBranches = [
+    "all",
+    "warehouses",
+    "stock",
+    "low-stock",
+    "opening",
+    "transfers",
+    "adjustments",
+  ].includes(section);
+  const branches = needsBranches
+    ? await db.branch.findMany({
+        where: {
+          companyId: a.companyId,
+          isActive: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { id: { in: a.branchIds ?? [] } }
+            : {}),
+        },
+        orderBy: { name: "asc" },
+      })
+    : [];
+  const [warehouses, products, customers, batches, serials] = await Promise.all(
+    [
+      [
+        "all",
+        "stock",
+        "low-stock",
+        "opening",
+        "transfers",
+        "adjustments",
+      ].includes(section)
+        ? db.warehouse.findMany({
+            where: {
+              companyId: a.companyId,
+              isActive: true,
+              branchId: { in: branches.map((x) => x.id) },
+            },
+            orderBy: { name: "asc" },
+          })
+        : Promise.resolve([]),
+      [
+        "all",
+        "batches",
+        "stock",
+        "low-stock",
+        "opening",
+        "transfers",
+        "adjustments",
+      ].includes(section)
+        ? db.accountProduct.findMany({
+            where: { companyId: a.companyId, isActive: true },
+            orderBy: { name: "asc" },
+          })
+        : Promise.resolve([]),
+      ["all", "items"].includes(section)
+        ? db.customer.findMany({
+            where: {
+              companyId: a.companyId,
+              isActive: true,
+              isAccountCustomer: true,
+            },
+            orderBy: { name: "asc" },
+          })
+        : Promise.resolve([]),
+      ["all", "opening", "transfers", "adjustments"].includes(section)
+        ? db.inventoryBatch.findMany({ where: { companyId: a.companyId } })
+        : Promise.resolve([]),
+      ["all", "opening", "transfers", "adjustments"].includes(section)
+        ? db.inventorySerialNumber.findMany({
+            where: { companyId: a.companyId },
+          })
+        : Promise.resolve([]),
+    ],
+  );
+  return { branches, warehouses, products, customers, batches, serials };
 }
-export async function inventoryOptions() {
-  return inventoryOptionsForActor(await actor());
+export async function inventoryOptions(section = "all") {
+  return inventoryOptionsForActor(await actor(), section);
 }
 export async function lowStockSnapshotForActor(
   a: ProjectActor,
@@ -797,8 +861,9 @@ export async function recordAdjustment(raw: unknown) {
     })
     .strict()
     .parse(raw);
-  return adjustStock(d.direction, {
-    ...d,
+  const { direction, ...movementInput } = d;
+  return adjustStock(direction, {
+    ...movementInput,
     sourceType: "STOCK_ADJUSTMENT",
     sourceId: crypto.randomUUID(),
   });

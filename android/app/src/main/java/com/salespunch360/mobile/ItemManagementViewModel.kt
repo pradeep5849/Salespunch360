@@ -18,6 +18,7 @@ data class ItemManagementState(
     val items:List<AccountMasterRecord> = emptyList(),
     val services:List<AccountMasterRecord> = emptyList(),
     val stock:List<JsonObject> = emptyList(),
+    val stockLoaded:Boolean=false,
     val error:String?=null
 )
 
@@ -28,15 +29,21 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     init{refresh()}
 
     fun refresh()=viewModelScope.launch{
-        _state.value=_state.value.copy(loading=true,error=null)
+        _state.value=_state.value.copy(loading=true,error=null,stockLoaded=false)
         try{
-            val units=api.accountMasterList("units","", "true")
-            val categories=api.accountMasterList("categories","", "true")
-            val items=api.accountMasterList("items","", "all")
-            val services=api.accountMasterList("services","", "all")
-            val stock=runCatching{api.inventoryStock().map{it.jsonObject}}.getOrDefault(emptyList())
-            _state.value=_state.value.copy(loading=false,units=units,categories=categories,items=items,services=services,stock=stock)
+            val units=loadAll("units","true")
+            val categories=loadAll("categories","true")
+            val items=loadAll("items","all")
+            val services=loadAll("services","all")
+            _state.value=_state.value.copy(units=units,categories=categories,items=items,services=services)
+            val stock=api.inventoryStock().map{it.jsonObject}
+            com.salespunch360.mobile.account.productStockTotals(stock)
+            _state.value=_state.value.copy(loading=false,units=units,categories=categories,items=items,services=services,stock=stock,stockLoaded=true,error=null)
         }catch(e:Exception){fail(e)}
+    }
+
+    private suspend fun loadAll(kind:String,active:String):List<AccountMasterRecord>{
+        return com.salespunch360.mobile.account.loadMasterPages { offset->api.accountMasterList(kind,"",active,offset=offset) }.distinctBy{it.id}
     }
 
     fun saveUnit(id:String?,name:String,symbol:String,done:()->Unit)=viewModelScope.launch{
@@ -54,8 +61,9 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     }
 
     fun setActive(kind:String,ids:List<String>,active:Boolean,done:()->Unit)=viewModelScope.launch{
+        if(_state.value.saving)return@launch
         _state.value=_state.value.copy(saving=true,error=null)
-        runCatching{api.setAccountItemsActive(kind,ids,active)}
+        runCatching{api.setAccountItemsActive(kind,ids,active).also{require(it["count"]?.jsonPrimitive?.intOrNull==ids.distinct().size){"Incomplete item update"}}}
             .onSuccess{_state.value=_state.value.copy(saving=false);refresh();done()}
             .onFailure{fail(it as Exception)}
     }
@@ -70,6 +78,7 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     private fun fail(e:Exception){
         _state.value=_state.value.copy(loading=false,saving=false,error=when{
             e is IOException->"You're offline. Reconnect and try again."
+            e is ApiException&&e.serverMessage!=null->e.serverMessage
             e is ApiException&&e.status==403->"You don't have permission for this item action."
             else->"Unable to complete the item action."
         })

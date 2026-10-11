@@ -2979,6 +2979,8 @@ model RecurringExpenseTemplate {
   categoryId  String             @db.Uuid
   frequency   RecurringFrequency
   nextDueDate DateTime           @db.Date
+  anchorDate DateTime?           @db.Date
+  creationRequestKey String?     @db.Uuid
   amount      Decimal            @db.Decimal(18, 2)
   isActive    Boolean            @default(true)
   createdById String             @db.Uuid
@@ -2986,6 +2988,7 @@ model RecurringExpenseTemplate {
   updatedAt   DateTime           @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, nextDueDate, isActive])
   @@map("recurring_expense_templates")
 }

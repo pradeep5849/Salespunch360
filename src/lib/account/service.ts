@@ -1,4 +1,7 @@
-import {ACCOUNT_ROLE_PERMISSIONS} from "@/lib/auth/permissions";
+import { assertInventoryAvailable } from "./inventory";
+import { z } from "zod";
+import { retrySerializable } from "./transaction-retry";
+import { ACCOUNT_ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -19,8 +22,8 @@ import {
   workPackageSchema,
 } from "./validation";
 import { allocateDocumentNumberInTx } from "./numbering";
-import {resolvePartySettings} from "./party-settings";
-import {saveCustomFieldValuesInTx} from "./custom-field-values";
+import { resolvePartySettings } from "./party-settings";
+import { saveCustomFieldValuesInTx } from "./custom-field-values";
 
 const readActor = () => requirePermission("ACCOUNT_DASHBOARD");
 const writeActor = () => requirePermissionForMutation("ACCOUNT_ACCOUNTS");
@@ -50,7 +53,12 @@ export async function accountOverview() {
         include: { unit: true, workCategory: true },
       },
       customers: {
-        where: { isAccountCustomer: true, ...(a.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: a.branchIds ?? [] } } : {}) },
+        where: {
+          isAccountCustomer: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { branchId: { in: a.branchIds ?? [] } }
+            : {}),
+        },
         orderBy: { name: "asc" },
       },
       customFieldDefinitions: {
@@ -60,45 +68,276 @@ export async function accountOverview() {
   });
 }
 
-const MASTER_PAGE_SIZE=50;
-const masterKinds=new Set(["financial-years","customers","vendors","units","categories","products","services","work-categories","work-packages"]);
-export async function accountMasterOverview(master:string,raw:{q?:string;page?:string|number}={}){
-  if(!masterKinds.has(master))throw new Error("INVALID_MASTER_TYPE");
-  const a=await readActor(),companyId=a.companyId!,q=(raw.q??"").trim().slice(0,100),parsedPage=Number(raw.page??1),page=Number.isFinite(parsedPage)&&parsedPage>0?Math.floor(parsedPage):1,skip=(page-1)*MASTER_PAGE_SIZE;
-  const nameWhere=q?{name:{contains:q,mode:"insensitive" as const}}:{};
-  const paged={skip,take:MASTER_PAGE_SIZE+1};
-  const [accountSettings,financialYears,vendors,accountUnits,accountCategories,accountProducts,accountServices,workCategories,workPackages,customers,partyCustomFields]=await Promise.all([
-    master==="financial-years"||master==="customers"||master==="vendors"?db.accountSettings.findUnique({where:{companyId}}):Promise.resolve(null),
-    master==="financial-years"?db.financialYear.findMany({where:{companyId,...nameWhere},orderBy:{startDate:"desc"},...paged}):Promise.resolve([]),
-    master==="vendors"?db.vendor.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
-    master==="units"?db.accountUnit.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(["products","services","work-packages"].includes(master)?db.accountUnit.findMany({where:{companyId,isActive:true},select:{id:true,name:true,symbol:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
-    master==="categories"?db.accountCategory.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(["products","services"].includes(master)?db.accountCategory.findMany({where:{companyId,isActive:true},select:{id:true,name:true,scope:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
-    master==="products"?db.accountProduct.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,category:true},...paged}):Promise.resolve([]),
-    master==="services"?db.accountService.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,category:true},...paged}):Promise.resolve([]),
-    master==="work-categories"?db.workCategory.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},...paged}):(master==="work-packages"?db.workCategory.findMany({where:{companyId,isActive:true},select:{id:true,name:true},orderBy:{name:"asc"},take:200}):Promise.resolve([])),
-    master==="work-packages"?db.workPackage.findMany({where:{companyId,...nameWhere},orderBy:{name:"asc"},include:{unit:true,workCategory:true},...paged}):Promise.resolve([]),
-    master==="customers"?db.customer.findMany({where:{companyId,isAccountCustomer:true,...(a.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: a.branchIds ?? [] } } : {}),...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
-    master==="customers"||master==="vendors"?db.customFieldDefinition.findMany({where:{companyId,entityType:master==="customers"?"CUSTOMER":"VENDOR",isActive:true},orderBy:{position:"asc"}}):Promise.resolve([]),
+const MASTER_PAGE_SIZE = 50;
+const masterKinds = new Set([
+  "financial-years",
+  "customers",
+  "vendors",
+  "units",
+  "categories",
+  "products",
+  "services",
+  "work-categories",
+  "work-packages",
+]);
+export async function accountMasterOverview(
+  master: string,
+  raw: { q?: string; page?: string | number } = {},
+) {
+  if (!masterKinds.has(master)) throw new Error("INVALID_MASTER_TYPE");
+  const a = await readActor(),
+    companyId = a.companyId!,
+    q = (raw.q ?? "").trim().slice(0, 100),
+    parsedPage = Number(raw.page ?? 1),
+    page =
+      Number.isFinite(parsedPage) && parsedPage > 0
+        ? Math.floor(parsedPage)
+        : 1,
+    skip = (page - 1) * MASTER_PAGE_SIZE;
+  const nameWhere = q
+    ? { name: { contains: q, mode: "insensitive" as const } }
+    : {};
+  const paged = { skip, take: MASTER_PAGE_SIZE + 1 };
+  const [
+    accountSettings,
+    financialYears,
+    vendors,
+    accountUnits,
+    accountCategories,
+    accountProducts,
+    accountServices,
+    workCategories,
+    workPackages,
+    customers,
+    partyCustomFields,
+  ] = await Promise.all([
+    master === "financial-years" ||
+    master === "customers" ||
+    master === "vendors"
+      ? db.accountSettings.findUnique({ where: { companyId } })
+      : Promise.resolve(null),
+    master === "financial-years"
+      ? db.financialYear.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { startDate: "desc" },
+          ...paged,
+        })
+      : Promise.resolve([]),
+    master === "vendors"
+      ? db.vendor.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          ...paged,
+        })
+      : Promise.resolve([]),
+    master === "units"
+      ? db.accountUnit.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          ...paged,
+        })
+      : ["products", "services", "work-packages"].includes(master)
+        ? db.accountUnit.findMany({
+            where: { companyId, isActive: true },
+            select: { id: true, name: true, symbol: true },
+            orderBy: { name: "asc" },
+            take: 200,
+          })
+        : Promise.resolve([]),
+    master === "categories"
+      ? db.accountCategory.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          ...paged,
+        })
+      : ["products", "services"].includes(master)
+        ? db.accountCategory.findMany({
+            where: { companyId, isActive: true },
+            select: { id: true, name: true, scope: true },
+            orderBy: { name: "asc" },
+            take: 200,
+          })
+        : Promise.resolve([]),
+    master === "products"
+      ? db.accountProduct.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          include: { unit: true, category: true },
+          ...paged,
+        })
+      : Promise.resolve([]),
+    master === "services"
+      ? db.accountService.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          include: { unit: true, category: true },
+          ...paged,
+        })
+      : Promise.resolve([]),
+    master === "work-categories"
+      ? db.workCategory.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          ...paged,
+        })
+      : master === "work-packages"
+        ? db.workCategory.findMany({
+            where: { companyId, isActive: true },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" },
+            take: 200,
+          })
+        : Promise.resolve([]),
+    master === "work-packages"
+      ? db.workPackage.findMany({
+          where: { companyId, ...nameWhere },
+          orderBy: { name: "asc" },
+          include: { unit: true, workCategory: true },
+          ...paged,
+        })
+      : Promise.resolve([]),
+    master === "customers"
+      ? db.customer.findMany({
+          where: {
+            companyId,
+            isAccountCustomer: true,
+            ...(a.branchAccessScope === "SELECTED_BRANCHES"
+              ? { branchId: { in: a.branchIds ?? [] } }
+              : {}),
+            ...nameWhere,
+          },
+          orderBy: { name: "asc" },
+          ...paged,
+        })
+      : Promise.resolve([]),
+    master === "customers" || master === "vendors"
+      ? db.customFieldDefinition.findMany({
+          where: {
+            companyId,
+            entityType: master === "customers" ? "CUSTOMER" : "VENDOR",
+            isActive: true,
+          },
+          orderBy: { position: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
-  const itemCustomFields=["products","services"].includes(master)?await db.customFieldDefinition.findMany({where:{companyId,entityType:master==="products"?"PRODUCT":"SERVICE",isActive:true},orderBy:{position:"asc"}}):[];
-  const primary=master==="customers"?customers:master==="vendors"?vendors:master==="units"?accountUnits:master==="categories"?accountCategories:master==="products"?accountProducts:master==="services"?accountServices:master==="work-categories"?workCategories:master==="work-packages"?workPackages:financialYears;
-  const hasMore=primary.length>MASTER_PAGE_SIZE;
-  return{canCreate:!!a.accountRole&&ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(master==="financial-years"?"ACCOUNT_SETTINGS":"ACCOUNT_ACCOUNTS"),accountSettings,partySettings:resolvePartySettings(accountSettings?.transactionDefaults),partyCustomFields,itemCustomFields,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
+  const itemCustomFields = ["products", "services"].includes(master)
+    ? await db.customFieldDefinition.findMany({
+        where: {
+          companyId,
+          entityType: master === "products" ? "PRODUCT" : "SERVICE",
+          isActive: true,
+        },
+        orderBy: { position: "asc" },
+      })
+    : [];
+  const primary =
+    master === "customers"
+      ? customers
+      : master === "vendors"
+        ? vendors
+        : master === "units"
+          ? accountUnits
+          : master === "categories"
+            ? accountCategories
+            : master === "products"
+              ? accountProducts
+              : master === "services"
+                ? accountServices
+                : master === "work-categories"
+                  ? workCategories
+                  : master === "work-packages"
+                    ? workPackages
+                    : financialYears;
+  const hasMore = primary.length > MASTER_PAGE_SIZE;
+  return {
+    canCreate:
+      !!a.accountRole &&
+      ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(
+        master === "financial-years" ? "ACCOUNT_SETTINGS" : "ACCOUNT_ACCOUNTS",
+      ),
+    accountSettings,
+    partySettings: resolvePartySettings(accountSettings?.transactionDefaults),
+    partyCustomFields,
+    itemCustomFields,
+    financialYears: financialYears.slice(0, MASTER_PAGE_SIZE),
+    vendors: vendors.slice(0, MASTER_PAGE_SIZE),
+    accountUnits:
+      master === "units"
+        ? accountUnits.slice(0, MASTER_PAGE_SIZE)
+        : accountUnits,
+    accountCategories:
+      master === "categories"
+        ? accountCategories.slice(0, MASTER_PAGE_SIZE)
+        : accountCategories,
+    accountProducts: accountProducts.slice(0, MASTER_PAGE_SIZE),
+    accountServices: accountServices.slice(0, MASTER_PAGE_SIZE),
+    workCategories:
+      master === "work-categories"
+        ? workCategories.slice(0, MASTER_PAGE_SIZE)
+        : workCategories,
+    workPackages: workPackages.slice(0, MASTER_PAGE_SIZE),
+    customers: customers.slice(0, MASTER_PAGE_SIZE),
+    page,
+    q,
+    hasMore,
+  };
 }
 
-export async function createPartyWithCustomValues(kind:"customers"|"vendors",raw:unknown,customValues:Record<string,unknown>){
- const a=await writeActor(),d=partySchema.parse(raw);
- return db.$transaction(async tx=>{
-  const data={companyId:a.companyId!,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes};
-  let row:{id:string};
-  if(kind==="customers"){
-   const branch=await tx.branch.findFirst({where:{companyId:a.companyId!,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},orderBy:[{isPrimary:"desc"},{createdAt:"asc"}],select:{id:true}});
-   if(!branch)throw new AuthorizationError();
-   row=await tx.customer.create({data:{...data,branchId:branch.id,isAccountCustomer:true,billingAddress:d.address,shippingAddress:d.shippingAddress}});
-  }else row=await tx.vendor.create({data});
-  await saveCustomFieldValuesInTx(tx,a.companyId!,kind==="customers"?"CUSTOMER":"VENDOR",row.id,customValues);
-  return row;
- });
+export async function createPartyWithCustomValues(
+  kind: "customers" | "vendors",
+  raw: unknown,
+  customValues: Record<string, unknown>,
+) {
+  const a = await writeActor(),
+    d = partySchema.parse(raw);
+  return db.$transaction(async (tx) => {
+    const data = {
+      companyId: a.companyId!,
+      name: d.name,
+      contactPerson: d.contactPerson,
+      phone: d.phone,
+      email: d.email,
+      address: d.address,
+      gstin: d.gstin,
+      stateCode: d.stateCode,
+      gstRegistrationType: d.gstRegistrationType,
+      pan: d.pan,
+      notes: d.notes,
+    };
+    let row: { id: string };
+    if (kind === "customers") {
+      const branch = await tx.branch.findFirst({
+        where: {
+          companyId: a.companyId!,
+          isActive: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { id: { in: a.branchIds ?? [] } }
+            : {}),
+        },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+        select: { id: true },
+      });
+      if (!branch) throw new AuthorizationError();
+      row = await tx.customer.create({
+        data: {
+          ...data,
+          branchId: branch.id,
+          isAccountCustomer: true,
+          billingAddress: d.address,
+          shippingAddress: d.shippingAddress,
+        },
+      });
+    } else row = await tx.vendor.create({ data });
+    await saveCustomFieldValuesInTx(
+      tx,
+      a.companyId!,
+      kind === "customers" ? "CUSTOMER" : "VENDOR",
+      row.id,
+      customValues,
+    );
+    return row;
+  });
 }
 export async function setCurrency(raw: unknown) {
   const a = await settingsActor();
@@ -151,31 +390,121 @@ export async function createCategory(raw: unknown) {
   });
 }
 
-export async function updateUnit(id:string,raw:unknown){
-  const a=await writeActor(),d=unitSchema.parse(raw);
-  const row=await db.accountUnit.updateMany({where:{id,companyId:a.companyId!},data:d});
-  if(row.count!==1)throw new AuthorizationError();
-  return db.accountUnit.findFirstOrThrow({where:{id,companyId:a.companyId!}});
+export async function updateUnit(id: string, raw: unknown) {
+  const a = await writeActor(),
+    d = unitSchema.parse(raw);
+  const row = await db.accountUnit.updateMany({
+    where: { id, companyId: a.companyId! },
+    data: d,
+  });
+  if (row.count !== 1) throw new AuthorizationError();
+  return db.accountUnit.findFirstOrThrow({
+    where: { id, companyId: a.companyId! },
+  });
 }
-export async function setItemsActive(kind:"products"|"services",ids:string[],isActive:boolean){
-  const a=await writeActor(),unique=[...new Set(ids)].filter(Boolean);
-  if(!unique.length)return{count:0};
-  return kind==="products"
-    ?db.accountProduct.updateMany({where:{companyId:a.companyId!,id:{in:unique}},data:{isActive}})
-    :db.accountService.updateMany({where:{companyId:a.companyId!,id:{in:unique}},data:{isActive}});
+export async function setItemsActive(
+  kind: "products" | "services",
+  ids: string[],
+  isActive: boolean,
+) {
+  return setItemsActiveForActor(await writeActor(), kind, ids, isActive);
 }
-export async function saveUnitConversion(raw:{baseUnitId:string;secondaryUnitId:string;rate:string}){
-  const a=await requirePermissionForMutation("ACCOUNT_STOCK");
-  const rate=Number(raw.rate);
-  if(!raw.baseUnitId||!raw.secondaryUnitId||raw.baseUnitId===raw.secondaryUnitId||!Number.isFinite(rate)||rate<=0)throw new Error("INVALID_UNIT_CONVERSION");
-  const units=await db.accountUnit.count({where:{companyId:a.companyId!,id:{in:[raw.baseUnitId,raw.secondaryUnitId]},isActive:true}});
-  if(units!==2)throw new Error("INVALID_UNIT");
-  const settings=await db.accountSettings.findUnique({where:{companyId:a.companyId!},select:{itemSettings:true}});
-  const current=(settings?.itemSettings??{}) as Record<string,unknown>;
-  const conversions=Array.isArray(current.unitConversions)?current.unitConversions.filter((x):x is Record<string,unknown>=>Boolean(x)&&typeof x==="object"):[];
-  const next=[...conversions.filter(x=>!(x.baseUnitId===raw.baseUnitId&&x.secondaryUnitId===raw.secondaryUnitId)),{baseUnitId:raw.baseUnitId,secondaryUnitId:raw.secondaryUnitId,rate}];
-  const itemSettings={...current,unitConversions:next} as Prisma.InputJsonObject;
-  return db.accountSettings.upsert({where:{companyId:a.companyId!},create:{companyId:a.companyId!,itemSettings},update:{itemSettings}});
+export async function setItemsActiveForActor(
+  a: { companyId: string | null },
+  kind: "products" | "services",
+  ids: string[],
+  isActive: boolean,
+) {
+  if (!a.companyId) throw new AuthorizationError();
+  await assertInventoryAvailable(a);
+  const input = z
+    .object({
+      kind: z.enum(["products", "services"]),
+      ids: z.array(z.string().uuid()).max(1000),
+      isActive: z.boolean(),
+    })
+    .parse({ kind, ids, isActive });
+  const unique = [...new Set(input.ids)];
+  if (!unique.length) return { count: 0 };
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        const where = { companyId: a.companyId!, id: { in: unique } };
+        const count =
+          input.kind === "products"
+            ? await tx.accountProduct.count({ where })
+            : await tx.accountService.count({ where });
+        if (count !== unique.length) throw new AuthorizationError();
+        const changed =
+          input.kind === "products"
+            ? await tx.accountProduct.updateMany({
+                where,
+                data: { isActive: input.isActive },
+              })
+            : await tx.accountService.updateMany({
+                where,
+                data: { isActive: input.isActive },
+              });
+        if (changed.count !== unique.length) throw new AuthorizationError();
+        return changed;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
+}
+export async function saveUnitConversion(raw: {
+  baseUnitId: string;
+  secondaryUnitId: string;
+  rate: string;
+}) {
+  const a = await requirePermissionForMutation("ACCOUNT_STOCK");
+  const rate = Number(raw.rate);
+  if (
+    !raw.baseUnitId ||
+    !raw.secondaryUnitId ||
+    raw.baseUnitId === raw.secondaryUnitId ||
+    !Number.isFinite(rate) ||
+    rate <= 0
+  )
+    throw new Error("INVALID_UNIT_CONVERSION");
+  const units = await db.accountUnit.count({
+    where: {
+      companyId: a.companyId!,
+      id: { in: [raw.baseUnitId, raw.secondaryUnitId] },
+      isActive: true,
+    },
+  });
+  if (units !== 2) throw new Error("INVALID_UNIT");
+  const settings = await db.accountSettings.findUnique({
+    where: { companyId: a.companyId! },
+    select: { itemSettings: true },
+  });
+  const current = (settings?.itemSettings ?? {}) as Record<string, unknown>;
+  const conversions = Array.isArray(current.unitConversions)
+    ? current.unitConversions.filter(
+        (x): x is Record<string, unknown> =>
+          Boolean(x) && typeof x === "object",
+      )
+    : [];
+  const next = [
+    ...conversions.filter(
+      (x) =>
+        !(
+          x.baseUnitId === raw.baseUnitId &&
+          x.secondaryUnitId === raw.secondaryUnitId
+        ),
+    ),
+    { baseUnitId: raw.baseUnitId, secondaryUnitId: raw.secondaryUnitId, rate },
+  ];
+  const itemSettings = {
+    ...current,
+    unitConversions: next,
+  } as Prisma.InputJsonObject;
+  return db.accountSettings.upsert({
+    where: { companyId: a.companyId! },
+    create: { companyId: a.companyId!, itemSettings },
+    update: { itemSettings },
+  });
 }
 export async function createVendor(raw: unknown) {
   const a = await writeActor(),
@@ -200,7 +529,13 @@ export async function createAccountCustomer(raw: unknown) {
   const a = await writeActor();
   const d = partySchema.parse(raw);
   const branch = await db.branch.findFirst({
-    where: { companyId: a.companyId!, isActive: true, ...(a.branchAccessScope === "SELECTED_BRANCHES" ? { id: { in: a.branchIds ?? [] } } : {}) },
+    where: {
+      companyId: a.companyId!,
+      isActive: true,
+      ...(a.branchAccessScope === "SELECTED_BRANCHES"
+        ? { id: { in: a.branchIds ?? [] } }
+        : {}),
+    },
     orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     select: { id: true },
   });
@@ -225,12 +560,41 @@ export async function createAccountCustomer(raw: unknown) {
     },
   });
 }
-export async function createAccountCustomerForBranch(branchId:string,raw:unknown){
-  const a=await writeActor(),d=partySchema.parse(raw);
-  if(a.branchAccessScope === "SELECTED_BRANCHES" && !a.branchIds?.includes(branchId)) throw new AuthorizationError();
-  const branch=await db.branch.findFirst({where:{id:branchId,companyId:a.companyId!,isActive:true},select:{id:true}});
-  if(!branch)throw new AuthorizationError();
-  return db.customer.create({data:{companyId:a.companyId!,branchId:branch.id,isAccountCustomer:true,name:d.name,contactPerson:d.contactPerson,phone:d.phone,email:d.email,address:d.address,billingAddress:d.address,shippingAddress:d.shippingAddress,gstin:d.gstin,stateCode:d.stateCode,gstRegistrationType:d.gstRegistrationType,pan:d.pan,notes:d.notes}});
+export async function createAccountCustomerForBranch(
+  branchId: string,
+  raw: unknown,
+) {
+  const a = await writeActor(),
+    d = partySchema.parse(raw);
+  if (
+    a.branchAccessScope === "SELECTED_BRANCHES" &&
+    !a.branchIds?.includes(branchId)
+  )
+    throw new AuthorizationError();
+  const branch = await db.branch.findFirst({
+    where: { id: branchId, companyId: a.companyId!, isActive: true },
+    select: { id: true },
+  });
+  if (!branch) throw new AuthorizationError();
+  return db.customer.create({
+    data: {
+      companyId: a.companyId!,
+      branchId: branch.id,
+      isAccountCustomer: true,
+      name: d.name,
+      contactPerson: d.contactPerson,
+      phone: d.phone,
+      email: d.email,
+      address: d.address,
+      billingAddress: d.address,
+      shippingAddress: d.shippingAddress,
+      gstin: d.gstin,
+      stateCode: d.stateCode,
+      gstRegistrationType: d.gstRegistrationType,
+      pan: d.pan,
+      notes: d.notes,
+    },
+  });
 }
 async function refs(
   companyId: string,
@@ -257,54 +621,72 @@ async function refs(
   )
     throw new Error("INVALID_CATEGORY");
 }
-export async function createProduct(raw: unknown, customValues: Record<string, unknown> = {}) {
+export async function createProduct(
+  raw: unknown,
+  customValues: Record<string, unknown> = {},
+) {
   const a = await writeActor(),
     d = itemSchema.parse(raw);
   await refs(a.companyId!, d, "PRODUCT");
-  return db.$transaction(async tx => {
-  const row = await tx.accountProduct.create({
-    data: {
-      companyId: a.companyId!,
-      name: d.name,
-      code: d.code,
-      categoryId: d.categoryId,
-      unitId: d.unitId,
-      description: d.description,
-      salePrice: d.sellingRate,
-      costPrice: d.cost,
-      taxRate: d.taxRate,
-      hsnCode: d.hsnSacCode,
-      barcode: d.barcode,
-      trackInventory: d.trackInventory,
-      trackingMode: d.trackInventory ? d.trackingMode : "NONE",
-      lowStockThreshold: d.lowStockThreshold,
-    },
-  });
-  await saveCustomFieldValuesInTx(tx, a.companyId!, "PRODUCT", row.id, customValues);
-  return row;
+  return db.$transaction(async (tx) => {
+    const row = await tx.accountProduct.create({
+      data: {
+        companyId: a.companyId!,
+        name: d.name,
+        code: d.code,
+        categoryId: d.categoryId,
+        unitId: d.unitId,
+        description: d.description,
+        salePrice: d.sellingRate,
+        costPrice: d.cost,
+        taxRate: d.taxRate,
+        hsnCode: d.hsnSacCode,
+        barcode: d.barcode,
+        trackInventory: d.trackInventory,
+        trackingMode: d.trackInventory ? d.trackingMode : "NONE",
+        lowStockThreshold: d.lowStockThreshold,
+      },
+    });
+    await saveCustomFieldValuesInTx(
+      tx,
+      a.companyId!,
+      "PRODUCT",
+      row.id,
+      customValues,
+    );
+    return row;
   });
 }
-export async function createService(raw: unknown, customValues: Record<string, unknown> = {}) {
+export async function createService(
+  raw: unknown,
+  customValues: Record<string, unknown> = {},
+) {
   const a = await writeActor(),
     d = itemSchema.parse(raw);
   await refs(a.companyId!, d, "SERVICE");
-  return db.$transaction(async tx => {
-  const row = await tx.accountService.create({
-    data: {
-      companyId: a.companyId!,
-      name: d.name,
-      code: d.code,
-      categoryId: d.categoryId,
-      unitId: d.unitId,
-      description: d.description,
-      sellingRate: d.sellingRate,
-      estimatedCost: d.cost,
-      taxRate: d.taxRate,
-      sacCode: d.hsnSacCode,
-    },
-  });
-  await saveCustomFieldValuesInTx(tx, a.companyId!, "SERVICE", row.id, customValues);
-  return row;
+  return db.$transaction(async (tx) => {
+    const row = await tx.accountService.create({
+      data: {
+        companyId: a.companyId!,
+        name: d.name,
+        code: d.code,
+        categoryId: d.categoryId,
+        unitId: d.unitId,
+        description: d.description,
+        sellingRate: d.sellingRate,
+        estimatedCost: d.cost,
+        taxRate: d.taxRate,
+        sacCode: d.hsnSacCode,
+      },
+    });
+    await saveCustomFieldValuesInTx(
+      tx,
+      a.companyId!,
+      "SERVICE",
+      row.id,
+      customValues,
+    );
+    return row;
   });
 }
 export async function createWorkCategory(raw: unknown) {
