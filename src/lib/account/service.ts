@@ -23,6 +23,8 @@ import {
 } from "./validation";
 import { allocateDocumentNumberInTx } from "./numbering";
 import { resolvePartySettings } from "./party-settings";
+import { resolveItemSettings } from "./item-settings-policy";
+import { assertItemMasterCreation } from "./item-master-policy";
 import { saveCustomFieldValuesInTx } from "./custom-field-values";
 
 const readActor = () => requirePermission("ACCOUNT_DASHBOARD");
@@ -628,8 +630,18 @@ export async function createProduct(
 ) {
   const a = await writeActor(),
     d = itemSchema.parse(raw);
+  await assertInventoryAvailable(a);
   await refs(a.companyId!, d, "PRODUCT");
   return db.$transaction(async (tx) => {
+    const settings = await tx.accountSettings.findUnique({
+      where: { companyId: a.companyId! },
+      select: { itemSettings: true },
+    });
+    const policy = resolveItemSettings(settings?.itemSettings);
+    assertItemMasterCreation(policy, "PRODUCT", {
+      ...d,
+      customFields: customValues,
+    });
     const row = await tx.accountProduct.create({
       data: {
         companyId: a.companyId!,
@@ -648,13 +660,14 @@ export async function createProduct(
         lowStockThreshold: d.lowStockThreshold,
       },
     });
-    await saveCustomFieldValuesInTx(
-      tx,
-      a.companyId!,
-      "PRODUCT",
-      row.id,
-      customValues,
-    );
+    if (policy.customFields)
+      await saveCustomFieldValuesInTx(
+        tx,
+        a.companyId!,
+        "PRODUCT",
+        row.id,
+        customValues,
+      );
     return row;
   });
 }
@@ -664,8 +677,18 @@ export async function createService(
 ) {
   const a = await writeActor(),
     d = itemSchema.parse(raw);
+  await assertInventoryAvailable(a);
   await refs(a.companyId!, d, "SERVICE");
   return db.$transaction(async (tx) => {
+    const settings = await tx.accountSettings.findUnique({
+      where: { companyId: a.companyId! },
+      select: { itemSettings: true },
+    });
+    const policy = resolveItemSettings(settings?.itemSettings);
+    assertItemMasterCreation(policy, "SERVICE", {
+      ...d,
+      customFields: customValues,
+    });
     const row = await tx.accountService.create({
       data: {
         companyId: a.companyId!,
@@ -680,13 +703,14 @@ export async function createService(
         sacCode: d.hsnSacCode,
       },
     });
-    await saveCustomFieldValuesInTx(
-      tx,
-      a.companyId!,
-      "SERVICE",
-      row.id,
-      customValues,
-    );
+    if (policy.customFields)
+      await saveCustomFieldValuesInTx(
+        tx,
+        a.companyId!,
+        "SERVICE",
+        row.id,
+        customValues,
+      );
     return row;
   });
 }

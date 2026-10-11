@@ -2297,13 +2297,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** PRODUCTS/SERVICES/BOTH; units/category/HSN/tax disabled/enabled; native config refresh; direct service requests; company isolation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A058_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A058_Findings.json, SalesPunch360_A058_Audit_Report.md.
 
 **Linked finding IDs:** A058-F04, A058-F06, A058-F07.
+
+**Checkpoint work:** Shared creation policy enforces configured Products/Services, units, categories, description, HSN/SAC, tax, stock and custom fields inside web/native creation transactions. Native options return resolved company settings and correct service category scope; Add Item controls and default-unit selection apply those settings. Disabled custom fields are not erased from historical records.
+
+**Intermediate validation:** 32 focused unit tests and 6 desktop/mobile browser/API cases passed. Full unit rerun: 2631 passed, 0 failed, 77 skipped; Android compile and 142 JVM tests passed. Final-head and native device verification pending.
 
 ## A058-F06 — Secondary unit selection is not saved with the item
 
@@ -2430,6 +2434,10 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 **Source reports:** SalesPunch360_A058_Findings.json, SalesPunch360_A058_Audit_Report.md.
 
 **Linked finding IDs:** A058-F07.
+
+**Checkpoint work:** Native option loads now explicitly track usable configuration, prevent Save before it loads, expose Retry on load failure and retain draft fields; duplicate pending saves are blocked. Full overlay/selector accessibility and numeric validation findings remain unfinished.
+
+**Intermediate validation:** 32 focused unit tests and 6 desktop/mobile browser/API cases passed. Full unit rerun: 2631 passed, 0 failed, 77 skipped; Android compile and 142 JVM tests passed. Final-head and native device verification pending.
 
 ## A060-F01 — See All/Show All does not open the reference Products-tab list
 
@@ -8683,3 +8691,7 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 **Source reports:** SalesPunch360_A095-A103_Followup.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+### Intermediate shared regression validation — item creation policy
+
+Full unit suite: 2631 passed, 0 failed, 77 skipped (408 passing files, 5 skipped). Initial 23 failures resolved by supplying custom-field-definition fixtures and updating stale Project Actions/native expense context/manual messaging source contracts. Financial/branch assertions preserved. This is intermediate evidence; final-head validation remains outstanding.

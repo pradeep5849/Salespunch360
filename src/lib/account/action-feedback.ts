@@ -42,6 +42,14 @@ const messages: Record<string, string> = {
   PROJECT_PURCHASE_MATERIAL_SOURCE_REQUIRED:
     "The original Project material receipt is missing. Review the purchase history before returning it.",
   ITEMS_DISABLED: "Items are disabled in General settings.",
+  SERVICES_DISABLED: "Service items are disabled in Item settings.",
+  ITEM_UNITS_DISABLED: "Item units are disabled in Item settings.",
+  ITEM_CATEGORY_DISABLED: "Item categories are disabled in Item settings.",
+  ITEM_DESCRIPTION_DISABLED: "Item descriptions are disabled in Item settings.",
+  ITEM_HSN_DISABLED: "HSN/SAC fields are disabled in Item settings.",
+  ITEM_TAX_DISABLED: "Item tax is disabled in Item settings.",
+  ITEM_CUSTOM_FIELDS_DISABLED:
+    "Item custom fields are disabled in Item settings.",
   PRODUCTS_DISABLED: "Product items are disabled in General settings.",
   STOCK_FIELDS_DISABLED: "Stock maintenance is disabled in General settings.",
   BATCH_REQUIRED: "Select a batch for this product.",

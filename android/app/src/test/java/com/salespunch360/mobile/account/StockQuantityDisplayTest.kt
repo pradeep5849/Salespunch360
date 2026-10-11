@@ -15,6 +15,10 @@ class StockQuantityDisplayTest {
         assertEquals("0.125", formatStockQuantity(BigDecimal("0.125"), 3))
         assertEquals("1000000.00", formatStockQuantity(BigDecimal("1E+6"), 2))
     }
+    @Test fun preservesNegativeSignWhenDisplayRoundsToZero() {
+        assertEquals("-0", formatStockQuantity(BigDecimal("-0.1"), 0))
+        assertEquals("-0.00", formatStockQuantity(BigDecimal("-0.001"), 2))
+    }
     @Test fun displayNeverMutatesUnderlyingPrecision() {
         val quantity = BigDecimal("-1.12345678")
         assertEquals("-1.12", formatStockQuantity(quantity, 2))

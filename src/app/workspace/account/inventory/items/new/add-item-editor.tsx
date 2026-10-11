@@ -1,71 +1,850 @@
 "use client";
-import type {CustomFieldDefinition} from "@prisma/client";
-import {CustomFieldInput} from "@/components/account/custom-field-input";
-import {useRef} from "react";
+import type { CustomFieldDefinition } from "@prisma/client";
+import { CustomFieldInput } from "@/components/account/custom-field-input";
+import { useRef } from "react";
 import Link from "next/link";
-import {useMemo,useState,useTransition} from "react";
-import {useRouter} from "next/navigation";
-import {createAccountCategoryAction,createAccountItemAction,createAccountUnitAction} from "@/app/actions/account-masters";
-import {SaveFeedback,useSaveMutation} from "@/components/account/save-feedback";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  createAccountCategoryAction,
+  createAccountItemAction,
+  createAccountUnitAction,
+} from "@/app/actions/account-masters";
+import {
+  SaveFeedback,
+  useSaveMutation,
+} from "@/components/account/save-feedback";
 
-type Unit={id:string;name:string;symbol:string};
-type Category={id:string;name:string;scope:string};
-type Props={initialKind?:"products"|"services";units:Unit[];categories:Category[];settings:Record<string,unknown>;customFields?:CustomFieldDefinition[]};
-type HelpKey="OPENING"|"PRICE"|"MIN"|null;
-const taxRates=["0","0.1","0.25","3","5","12","18","28"];
-function HelpDialog({text,onClose}:{text:string;onClose:()=>void}){return <div className="sale-overlay"><section className="sale-dialog"><header><span/><button onClick={onClose} aria-label="Close">×</button></header><p>{text}</p><div className="dialog-actions"><button className="account-primary" onClick={onClose}>OK</button></div></section></div>}
-export function AddItemEditor({units:initialUnits,categories:initialCategories,settings,customFields=[],initialKind="products"}:Props){
- const customFieldRoot=useRef<HTMLDivElement>(null);
- const router=useRouter(),[kind,setKind]=useState<"products"|"services">(initialKind),[name,setName]=useState(""),[primaryUnit,setPrimaryUnit]=useState(""),[secondaryUnit,setSecondaryUnit]=useState(""),[drawer,setDrawer]=useState(false),[transitionPending,startTransition]=useTransition(),[units,setUnits]=useState(initialUnits),[categories,setCategories]=useState(initialCategories),mutation=useSaveMutation(),pending=transitionPending||mutation.pending;
- const [unitPage,setUnitPage]=useState(false),[unitTarget,setUnitTarget]=useState<"PRIMARY"|"SECONDARY"|null>(null),[unitDraftPrimary,setUnitDraftPrimary]=useState(""),[unitDraftSecondary,setUnitDraftSecondary]=useState(""),[addUnitOpen,setAddUnitOpen]=useState(false),[newUnitName,setNewUnitName]=useState(""),[newUnitSymbol,setNewUnitSymbol]=useState("");
- const [categoryOpen,setCategoryOpen]=useState(false),[categoryQuery,setCategoryQuery]=useState(""),[categoryId,setCategoryId]=useState(""),[categoryDraft,setCategoryDraft]=useState(""),[addCategoryOpen,setAddCategoryOpen]=useState(false),[newCategoryName,setNewCategoryName]=useState("");
- const [code,setCode]=useState(""),[description,setDescription]=useState(""),[hsn,setHsn]=useState(""),[tab,setTab]=useState<"PRICING"|"STOCK">("PRICING"),[salePrice,setSalePrice]=useState(""),[saleTaxMode,setSaleTaxMode]=useState<"WITHOUT"|"WITH">("WITHOUT"),[discount,setDiscount]=useState(""),[discountMode,setDiscountMode]=useState<"PERCENTAGE"|"AMOUNT">("PERCENTAGE"),[wholesale,setWholesale]=useState(""),[purchasePrice,setPurchasePrice]=useState(""),[purchaseTaxMode,setPurchaseTaxMode]=useState<"WITHOUT"|"WITH">("WITHOUT"),[taxRate,setTaxRate]=useState(""),[openingStock,setOpeningStock]=useState(""),[openingDate,setOpeningDate]=useState(new Date().toISOString().slice(0,10)),[atPrice,setAtPrice]=useState(""),[minStock,setMinStock]=useState(""),[itemLocation,setItemLocation]=useState(""),[help,setHelp]=useState<HelpKey>(null);
- const enabled=(key:string)=>settings[key]!==false,expanded=name.trim().length>0;
- const selectedUnit=units.find(x=>x.id===primaryUnit);
- const filteredCategories=useMemo(()=>categories.filter(x=>(kind==="products"?x.scope!=="SERVICE":x.scope!=="PRODUCT")&&x.name.toLowerCase().includes(categoryQuery.toLowerCase())),[categories,categoryQuery,kind]);
- function openUnits(){setUnitDraftPrimary(primaryUnit);setUnitDraftSecondary(secondaryUnit);setUnitPage(true);setUnitTarget(null)}
- function saveUnits(){setPrimaryUnit(unitDraftPrimary);setSecondaryUnit(unitDraftSecondary);setUnitPage(false);setUnitTarget(null)}
- function assignCode(){if(!code)setCode(`${kind==="products"?"ITEM":"SER"}-${Date.now().toString().slice(-6)}`)}
- function save(){if(!name.trim())return;const controls=Array.from(customFieldRoot.current?.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>("input,select,textarea")??[]);if(controls.some(control=>!control.reportValidity()))return;const customFields=Object.fromEntries(controls.map(control=>[control.name.slice(7),control.value]));startTransition(async()=>{const saved=await mutation.run(()=>createAccountItemAction({type:kind,customFields,name:name.trim(),unitId:primaryUnit||undefined,categoryId:categoryId||undefined,code:code||undefined,barcode:code||undefined,description:description||undefined,sellingRate:salePrice||"0",cost:purchasePrice||atPrice||"0",taxRate:taxRate||"0",hsnSacCode:hsn||undefined,trackInventory:kind==="products"&&Boolean(openingStock||minStock||itemLocation),trackingMode:"NONE",lowStockThreshold:minStock||"0"}),"Item created successfully");if(saved)window.setTimeout(()=>router.push("/workspace/account/inventory"),600)})}
- function createUnitNow(){if(!newUnitName.trim()||!newUnitSymbol.trim())return;startTransition(async()=>{const row=await createAccountUnitAction({name:newUnitName.trim(),symbol:newUnitSymbol.trim()});setUnits(old=>[...old,row]);setUnitDraftPrimary(row.id);setNewUnitName("");setNewUnitSymbol("");setAddUnitOpen(false)})}
- function createCategoryNow(){if(!newCategoryName.trim())return;startTransition(async()=>{const row=await createAccountCategoryAction({name:newCategoryName.trim(),scope:kind==="products"?"PRODUCT":"SERVICE"});setCategories(old=>[...old,{...row,scope:kind==="products"?"PRODUCT":"SERVICE"}]);setCategoryDraft(row.id);setNewCategoryName("");setAddCategoryOpen(false)})}
- return <main className="add-item-page">
-  <SaveFeedback state={mutation.feedback}/>
-  <header><Link href="/workspace/account/inventory" aria-label="Back">‹</Link><h1>Add Item</h1><button type="button" aria-label="Add item image" disabled title="Image upload unavailable">📷</button><button type="button" aria-label="Item settings" onClick={()=>setDrawer(true)}>⚙</button></header>
-  <div className="account-segmented add-item-kind" aria-label="Item type">{(["products","services"] as const).map(x=><button type="button" key={x} aria-pressed={kind===x} onClick={()=>setKind(x)}>{x==="products"?"Product":"Services"}</button>)}</div>
-  <section className="add-item-form">
-   <div className="add-item-name-unit-field"><label htmlFor="add-item-name">Item Name *</label><div className="add-item-name-unit-row"><input id="add-item-name" autoFocus required value={name} onChange={e=>setName(e.target.value)} placeholder="Enter item name"/>{enabled("itemUnits")&&<button type="button" className="add-item-unit-pill" onClick={openUnits}>{selectedUnit?`${selectedUnit.name} (${selectedUnit.symbol})`:"Select Unit"}</button>}</div></div>
-   {expanded&&<div className="add-item-expanded">
-     <label>Item Code / Barcode<div className="add-item-code-row"><input value={code} onChange={e=>setCode(e.target.value)} placeholder="Item Code / Barcode"/><button type="button" onClick={assignCode}>Assign Code</button></div></label>
-     {enabled("itemCategory")&&<button type="button" className="selector-field" onClick={()=>{setCategoryDraft(categoryId);setCategoryQuery("");setCategoryOpen(true)}}><small>Item Category</small><span>{categories.find(x=>x.id===categoryId)?.name??"Select Category"}⌄</span></button>}
-     {enabled("description")&&<label>Description<textarea rows={4} value={description} onChange={e=>setDescription(e.target.value)}/></label>}
-     <label>HSN/SAC Code<div className="add-item-hsn-field"><input value={hsn} onChange={e=>setHsn(e.target.value)} placeholder="HSN/SAC Code"/><span className="field-icon" aria-hidden>⌕</span></div></label>
-     <div className="party-detail-tabs item-detail-tabs"><button type="button" aria-pressed={tab==="PRICING"} onClick={()=>setTab("PRICING")}>Pricing</button><button type="button" aria-pressed={tab==="STOCK"} onClick={()=>setTab("STOCK")}>Stock</button></div>
-     {tab==="PRICING"?<div className="item-tab-panel">
-       <h3>Sale Price</h3><label>Sale Price<div className="price-row"><input type="number" min="0" step=".01" value={salePrice} onChange={e=>setSalePrice(e.target.value)} placeholder="Sale Price"/><select value={saleTaxMode} onChange={e=>setSaleTaxMode(e.target.value as "WITHOUT"|"WITH")}><option value="WITHOUT">Without Tax</option><option value="WITH">With Tax</option></select></div></label>
-       <label>Disc. On Sale Price<div className="price-row"><input type="number" min="0" step=".01" value={discount} onChange={e=>setDiscount(e.target.value)}/><select value={discountMode} onChange={e=>setDiscountMode(e.target.value as "PERCENTAGE"|"AMOUNT")}><option value="PERCENTAGE">Percentage</option><option value="AMOUNT">Amount</option></select></div></label>
-       {enabled("wholesalePrice")&&<><button type="button" className="link-button">＋ Add Wholesale Price</button>{wholesale&&<input value={wholesale} onChange={e=>setWholesale(e.target.value)}/>}</>}
-       <h3>Purchase Price</h3><label>Purchase Price<div className="price-row"><input type="number" min="0" step=".01" value={purchasePrice} onChange={e=>setPurchasePrice(e.target.value)} placeholder="Purchase Price"/><select value={purchaseTaxMode} onChange={e=>setPurchaseTaxMode(e.target.value as "WITHOUT"|"WITH")}><option value="WITHOUT">Without Tax</option><option value="WITH">With Tax</option></select></div></label>
-       <h3>Taxes</h3><label>Tax Rate<select value={taxRate} onChange={e=>setTaxRate(e.target.value)}><option value="">None</option>{taxRates.map(x=><option value={x} key={x}>{x}%</option>)}</select></label>
-     </div>:<div className="item-tab-panel">
-       <label>Opening Stock <button type="button" className="inline-info" onClick={()=>setHelp("OPENING")} aria-label="Opening stock help">ⓘ</button><input type="number" min="0" step=".0001" value={openingStock} onChange={e=>setOpeningStock(e.target.value)} placeholder="Ex: 300"/></label>
-       <div className="form-grid"><label>As of Date<input type="date" value={openingDate} onChange={e=>setOpeningDate(e.target.value)}/></label><label>At Price/Unit <button type="button" className="inline-info" onClick={()=>setHelp("PRICE")} aria-label="Opening price help">ⓘ</button><input type="number" min="0" step=".01" value={atPrice} onChange={e=>setAtPrice(e.target.value)} placeholder="Ex: 2,000"/></label></div>
-       <div className="form-grid"><label>Min Stock Qty <button type="button" className="inline-info" onClick={()=>setHelp("MIN")} aria-label="Minimum stock help">ⓘ</button><input type="number" min="0" step=".0001" value={minStock} onChange={e=>setMinStock(e.target.value)} placeholder="Ex: 5"/></label><label>Item Location<input value={itemLocation} onChange={e=>setItemLocation(e.target.value)} placeholder="Item Location"/></label></div>
-     </div>}
-   <div ref={customFieldRoot} key={kind}>{customFields.filter(field=>field.entityType===(kind==="products"?"PRODUCT":"SERVICE")).map(field=><CustomFieldInput key={field.id} field={field}/>)}</div>
-   </div>}
-  </section>
-  <footer><Link href="/workspace/account/inventory">Cancel</Link><button disabled={!name.trim()||pending} onClick={save}>{pending?"Saving…":"Save"}</button></footer>
+type Unit = { id: string; name: string; symbol: string };
+type Category = { id: string; name: string; scope: string };
+type Props = {
+  initialKind?: "products" | "services";
+  units: Unit[];
+  categories: Category[];
+  settings: Record<string, unknown>;
+  customFields?: CustomFieldDefinition[];
+};
+type HelpKey = "OPENING" | "PRICE" | "MIN" | null;
+const taxRates = ["0", "0.1", "0.25", "3", "5", "12", "18", "28"];
+function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
+  return (
+    <div className="sale-overlay">
+      <section className="sale-dialog">
+        <header>
+          <span />
+          <button onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </header>
+        <p>{text}</p>
+        <div className="dialog-actions">
+          <button className="account-primary" onClick={onClose}>
+            OK
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+export function AddItemEditor({
+  units: initialUnits,
+  categories: initialCategories,
+  settings,
+  customFields = [],
+  initialKind = "products",
+}: Props) {
+  const customFieldRoot = useRef<HTMLDivElement>(null);
+  const router = useRouter(),
+    [kind, setKind] = useState<"products" | "services">(
+      settings.itemType === "SERVICES"
+        ? "services"
+        : settings.itemType === "PRODUCTS"
+          ? "products"
+          : initialKind,
+    ),
+    [name, setName] = useState(""),
+    [primaryUnit, setPrimaryUnit] = useState(
+      settings.itemUnits === false
+        ? ""
+        : (initialUnits.find((u) =>
+            [u.name.toLowerCase(), u.symbol.toLowerCase()].includes(
+              String(settings.defaultUnit ?? "").toLowerCase(),
+            ),
+          )?.id ?? ""),
+    ),
+    [secondaryUnit, setSecondaryUnit] = useState(""),
+    [drawer, setDrawer] = useState(false),
+    [transitionPending, startTransition] = useTransition(),
+    [units, setUnits] = useState(initialUnits),
+    [categories, setCategories] = useState(initialCategories),
+    mutation = useSaveMutation(),
+    pending = transitionPending || mutation.pending;
+  const [unitPage, setUnitPage] = useState(false),
+    [unitTarget, setUnitTarget] = useState<"PRIMARY" | "SECONDARY" | null>(
+      null,
+    ),
+    [unitDraftPrimary, setUnitDraftPrimary] = useState(""),
+    [unitDraftSecondary, setUnitDraftSecondary] = useState(""),
+    [addUnitOpen, setAddUnitOpen] = useState(false),
+    [newUnitName, setNewUnitName] = useState(""),
+    [newUnitSymbol, setNewUnitSymbol] = useState("");
+  const [categoryOpen, setCategoryOpen] = useState(false),
+    [categoryQuery, setCategoryQuery] = useState(""),
+    [categoryId, setCategoryId] = useState(""),
+    [categoryDraft, setCategoryDraft] = useState(""),
+    [addCategoryOpen, setAddCategoryOpen] = useState(false),
+    [newCategoryName, setNewCategoryName] = useState("");
+  const [code, setCode] = useState(""),
+    [description, setDescription] = useState(""),
+    [hsn, setHsn] = useState(""),
+    [tab, setTab] = useState<"PRICING" | "STOCK">("PRICING"),
+    [salePrice, setSalePrice] = useState(""),
+    [saleTaxMode, setSaleTaxMode] = useState<"WITHOUT" | "WITH">("WITHOUT"),
+    [discount, setDiscount] = useState(""),
+    [discountMode, setDiscountMode] = useState<"PERCENTAGE" | "AMOUNT">(
+      "PERCENTAGE",
+    ),
+    [wholesale, setWholesale] = useState(""),
+    [purchasePrice, setPurchasePrice] = useState(""),
+    [purchaseTaxMode, setPurchaseTaxMode] = useState<"WITHOUT" | "WITH">(
+      "WITHOUT",
+    ),
+    [taxRate, setTaxRate] = useState(""),
+    [openingStock, setOpeningStock] = useState(""),
+    [openingDate, setOpeningDate] = useState(
+      new Date().toISOString().slice(0, 10),
+    ),
+    [atPrice, setAtPrice] = useState(""),
+    [minStock, setMinStock] = useState(""),
+    [itemLocation, setItemLocation] = useState(""),
+    [help, setHelp] = useState<HelpKey>(null);
+  const enabled = (key: string) => settings[key] !== false,
+    expanded = name.trim().length > 0;
+  const selectedUnit = units.find((x) => x.id === primaryUnit);
+  const filteredCategories = useMemo(
+    () =>
+      categories.filter(
+        (x) =>
+          (kind === "products"
+            ? x.scope !== "SERVICE"
+            : x.scope !== "PRODUCT") &&
+          x.name.toLowerCase().includes(categoryQuery.toLowerCase()),
+      ),
+    [categories, categoryQuery, kind],
+  );
+  function openUnits() {
+    setUnitDraftPrimary(primaryUnit);
+    setUnitDraftSecondary(secondaryUnit);
+    setUnitPage(true);
+    setUnitTarget(null);
+  }
+  function saveUnits() {
+    setPrimaryUnit(unitDraftPrimary);
+    setSecondaryUnit(unitDraftSecondary);
+    setUnitPage(false);
+    setUnitTarget(null);
+  }
+  function assignCode() {
+    if (!code)
+      setCode(
+        `${kind === "products" ? "ITEM" : "SER"}-${Date.now().toString().slice(-6)}`,
+      );
+  }
+  function save() {
+    if (!name.trim()) return;
+    const controls = Array.from(
+      customFieldRoot.current?.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("input,select,textarea") ?? [],
+    );
+    if (controls.some((control) => !control.reportValidity())) return;
+    const customFields = Object.fromEntries(
+      controls.map((control) => [control.name.slice(7), control.value]),
+    );
+    startTransition(async () => {
+      const saved = await mutation.run(
+        () =>
+          createAccountItemAction({
+            type: kind,
+            customFields,
+            name: name.trim(),
+            unitId: enabled("itemUnits") ? primaryUnit || undefined : undefined,
+            categoryId: enabled("itemCategory")
+              ? categoryId || undefined
+              : undefined,
+            code: code || undefined,
+            barcode: code || undefined,
+            description: enabled("description")
+              ? description || undefined
+              : undefined,
+            sellingRate: salePrice || "0",
+            cost: purchasePrice || atPrice || "0",
+            taxRate: enabled("itemWiseTax") ? taxRate || "0" : "0",
+            hsnSacCode: enabled("hsnSac") ? hsn || undefined : undefined,
+            trackInventory:
+              enabled("stockMaintenance") &&
+              kind === "products" &&
+              Boolean(openingStock || minStock || itemLocation),
+            trackingMode: "NONE",
+            lowStockThreshold:
+              enabled("stockMaintenance") && kind === "products"
+                ? minStock || "0"
+                : "0",
+          }),
+        "Item created successfully",
+      );
+      if (saved)
+        window.setTimeout(
+          () => router.push("/workspace/account/inventory"),
+          600,
+        );
+    });
+  }
+  function createUnitNow() {
+    if (!newUnitName.trim() || !newUnitSymbol.trim()) return;
+    startTransition(async () => {
+      const row = await createAccountUnitAction({
+        name: newUnitName.trim(),
+        symbol: newUnitSymbol.trim(),
+      });
+      setUnits((old) => [...old, row]);
+      setUnitDraftPrimary(row.id);
+      setNewUnitName("");
+      setNewUnitSymbol("");
+      setAddUnitOpen(false);
+    });
+  }
+  function createCategoryNow() {
+    if (!newCategoryName.trim()) return;
+    startTransition(async () => {
+      const row = await createAccountCategoryAction({
+        name: newCategoryName.trim(),
+        scope: kind === "products" ? "PRODUCT" : "SERVICE",
+      });
+      setCategories((old) => [
+        ...old,
+        { ...row, scope: kind === "products" ? "PRODUCT" : "SERVICE" },
+      ]);
+      setCategoryDraft(row.id);
+      setNewCategoryName("");
+      setAddCategoryOpen(false);
+    });
+  }
+  return (
+    <main className="add-item-page">
+      <SaveFeedback state={mutation.feedback} />
+      <header>
+        <Link href="/workspace/account/inventory" aria-label="Back">
+          ‹
+        </Link>
+        <h1>Add Item</h1>
+        <button
+          type="button"
+          aria-label="Add item image"
+          disabled
+          title="Image upload unavailable"
+        >
+          📷
+        </button>
+        <button
+          type="button"
+          aria-label="Item settings"
+          onClick={() => setDrawer(true)}
+        >
+          ⚙
+        </button>
+      </header>
+      <div className="account-segmented add-item-kind" aria-label="Item type">
+        {(["products", "services"] as const)
+          .filter((x) => settings.itemType !== "PRODUCTS" || x === "products")
+          .filter((x) => settings.itemType !== "SERVICES" || x === "services")
+          .map((x) => (
+            <button
+              type="button"
+              key={x}
+              aria-pressed={kind === x}
+              onClick={() => {
+                setKind(x);
+                setCategoryId("");
+                setTab("PRICING");
+              }}
+            >
+              {x === "products" ? "Product" : "Services"}
+            </button>
+          ))}
+      </div>
+      <section className="add-item-form">
+        <div className="add-item-name-unit-field">
+          <label htmlFor="add-item-name">Item Name *</label>
+          <div className="add-item-name-unit-row">
+            <input
+              id="add-item-name"
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter item name"
+            />
+            {enabled("itemUnits") && (
+              <button
+                type="button"
+                className="add-item-unit-pill"
+                onClick={openUnits}
+              >
+                {selectedUnit
+                  ? `${selectedUnit.name} (${selectedUnit.symbol})`
+                  : "Select Unit"}
+              </button>
+            )}
+          </div>
+        </div>
+        {expanded && (
+          <div className="add-item-expanded">
+            <label>
+              Item Code / Barcode
+              <div className="add-item-code-row">
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Item Code / Barcode"
+                />
+                <button type="button" onClick={assignCode}>
+                  Assign Code
+                </button>
+              </div>
+            </label>
+            {enabled("itemCategory") && (
+              <button
+                type="button"
+                className="selector-field"
+                onClick={() => {
+                  setCategoryDraft(categoryId);
+                  setCategoryQuery("");
+                  setCategoryOpen(true);
+                }}
+              >
+                <small>Item Category</small>
+                <span>
+                  {categories.find((x) => x.id === categoryId)?.name ??
+                    "Select Category"}
+                  ⌄
+                </span>
+              </button>
+            )}
+            {enabled("description") && (
+              <label>
+                Description
+                <textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </label>
+            )}
+            {enabled("hsnSac") && (
+              <label>
+                HSN/SAC Code
+                <div className="add-item-hsn-field">
+                  <input
+                    value={hsn}
+                    onChange={(e) => setHsn(e.target.value)}
+                    placeholder="HSN/SAC Code"
+                  />
+                  <span className="field-icon" aria-hidden>
+                    ⌕
+                  </span>
+                </div>
+              </label>
+            )}
+            <div className="party-detail-tabs item-detail-tabs">
+              <button
+                type="button"
+                aria-pressed={tab === "PRICING"}
+                onClick={() => setTab("PRICING")}
+              >
+                Pricing
+              </button>
+              {kind === "products" && enabled("stockMaintenance") && (
+                <button
+                  type="button"
+                  aria-pressed={tab === "STOCK"}
+                  onClick={() => setTab("STOCK")}
+                >
+                  Stock
+                </button>
+              )}
+            </div>
+            {tab === "PRICING" ? (
+              <div className="item-tab-panel">
+                <h3>Sale Price</h3>
+                <label>
+                  Sale Price
+                  <div className="price-row">
+                    <input
+                      type="number"
+                      min="0"
+                      step=".01"
+                      value={salePrice}
+                      onChange={(e) => setSalePrice(e.target.value)}
+                      placeholder="Sale Price"
+                    />
+                    <select
+                      value={saleTaxMode}
+                      onChange={(e) =>
+                        setSaleTaxMode(e.target.value as "WITHOUT" | "WITH")
+                      }
+                    >
+                      <option value="WITHOUT">Without Tax</option>
+                      <option value="WITH">With Tax</option>
+                    </select>
+                  </div>
+                </label>
+                {enabled("itemWiseDiscount") && (
+                  <label>
+                    Disc. On Sale Price
+                    <div className="price-row">
+                      <input
+                        type="number"
+                        min="0"
+                        step=".01"
+                        value={discount}
+                        onChange={(e) => setDiscount(e.target.value)}
+                      />
+                      <select
+                        value={discountMode}
+                        onChange={(e) =>
+                          setDiscountMode(
+                            e.target.value as "PERCENTAGE" | "AMOUNT",
+                          )
+                        }
+                      >
+                        <option value="PERCENTAGE">Percentage</option>
+                        <option value="AMOUNT">Amount</option>
+                      </select>
+                    </div>
+                  </label>
+                )}
+                {enabled("wholesalePrice") && (
+                  <>
+                    <button type="button" className="link-button">
+                      ＋ Add Wholesale Price
+                    </button>
+                    {wholesale && (
+                      <input
+                        value={wholesale}
+                        onChange={(e) => setWholesale(e.target.value)}
+                      />
+                    )}
+                  </>
+                )}
+                <h3>Purchase Price</h3>
+                <label>
+                  Purchase Price
+                  <div className="price-row">
+                    <input
+                      type="number"
+                      min="0"
+                      step=".01"
+                      value={purchasePrice}
+                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      placeholder="Purchase Price"
+                    />
+                    <select
+                      value={purchaseTaxMode}
+                      onChange={(e) =>
+                        setPurchaseTaxMode(e.target.value as "WITHOUT" | "WITH")
+                      }
+                    >
+                      <option value="WITHOUT">Without Tax</option>
+                      <option value="WITH">With Tax</option>
+                    </select>
+                  </div>
+                </label>
+                {enabled("itemWiseTax") && (
+                  <>
+                    <h3>Taxes</h3>
+                    <label>
+                      Tax Rate
+                      <select
+                        value={taxRate}
+                        onChange={(e) => setTaxRate(e.target.value)}
+                      >
+                        <option value="">None</option>
+                        {taxRates.map((x) => (
+                          <option value={x} key={x}>
+                            {x}%
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="item-tab-panel">
+                <label>
+                  Opening Stock{" "}
+                  <button
+                    type="button"
+                    className="inline-info"
+                    onClick={() => setHelp("OPENING")}
+                    aria-label="Opening stock help"
+                  >
+                    ⓘ
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    step=".0001"
+                    value={openingStock}
+                    onChange={(e) => setOpeningStock(e.target.value)}
+                    placeholder="Ex: 300"
+                  />
+                </label>
+                <div className="form-grid">
+                  <label>
+                    As of Date
+                    <input
+                      type="date"
+                      value={openingDate}
+                      onChange={(e) => setOpeningDate(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    At Price/Unit{" "}
+                    <button
+                      type="button"
+                      className="inline-info"
+                      onClick={() => setHelp("PRICE")}
+                      aria-label="Opening price help"
+                    >
+                      ⓘ
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step=".01"
+                      value={atPrice}
+                      onChange={(e) => setAtPrice(e.target.value)}
+                      placeholder="Ex: 2,000"
+                    />
+                  </label>
+                </div>
+                <div className="form-grid">
+                  <label>
+                    Min Stock Qty{" "}
+                    <button
+                      type="button"
+                      className="inline-info"
+                      onClick={() => setHelp("MIN")}
+                      aria-label="Minimum stock help"
+                    >
+                      ⓘ
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step=".0001"
+                      value={minStock}
+                      onChange={(e) => setMinStock(e.target.value)}
+                      placeholder="Ex: 5"
+                    />
+                  </label>
+                  <label>
+                    Item Location
+                    <input
+                      value={itemLocation}
+                      onChange={(e) => setItemLocation(e.target.value)}
+                      placeholder="Item Location"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+            <div ref={customFieldRoot} key={kind}>
+              {customFields
+                .filter(() => enabled("customFields"))
+                .filter(
+                  (field) =>
+                    field.entityType ===
+                    (kind === "products" ? "PRODUCT" : "SERVICE"),
+                )
+                .map((field) => (
+                  <CustomFieldInput key={field.id} field={field} />
+                ))}
+            </div>
+          </div>
+        )}
+      </section>
+      <footer>
+        <Link href="/workspace/account/inventory">Cancel</Link>
+        <button disabled={!name.trim() || pending} onClick={save}>
+          {pending ? "Saving…" : "Save"}
+        </button>
+      </footer>
 
-  {unitPage&&<div className="sale-fullscreen-panel add-unit-full"><header><button onClick={()=>setUnitPage(false)} aria-label="Back">←</button><h2>Add Item Unit</h2><span/></header><div className="sale-fullscreen-body"><div className="unit-dropdown-wrap"><button type="button" className="selector-field" onClick={()=>setUnitTarget(unitTarget==="PRIMARY"?null:"PRIMARY")}><small>Primary Unit</small><span>{units.find(x=>x.id===unitDraftPrimary)?.name??"Primary Unit"}⌄</span></button>{unitTarget==="PRIMARY"&&<div className="unit-dropdown-menu"><button type="button" className="unit-add-option" onClick={()=>setAddUnitOpen(true)}>Add Unit</button>{units.map(u=><button type="button" key={u.id} onClick={()=>{setUnitDraftPrimary(u.id);setUnitTarget(null)}}>{u.name.toUpperCase()} ( {u.symbol} )</button>)}</div>}</div><div className="unit-dropdown-wrap"><button type="button" className="selector-field" onClick={()=>setUnitTarget(unitTarget==="SECONDARY"?null:"SECONDARY")}><small>Secondary Unit</small><span>{units.find(x=>x.id===unitDraftSecondary)?.name??"Secondary Unit"}⌄</span></button>{unitTarget==="SECONDARY"&&<div className="unit-dropdown-menu"><button type="button" className="unit-add-option" onClick={()=>setAddUnitOpen(true)}>Add Unit</button><button type="button" onClick={()=>{setUnitDraftSecondary("");setUnitTarget(null)}}>None</button>{units.map(u=><button type="button" key={u.id} onClick={()=>{setUnitDraftSecondary(u.id);setUnitTarget(null)}}>{u.name.toUpperCase()} ( {u.symbol} )</button>)}</div>}</div></div><footer className="sale-fullscreen-footer"><button onClick={()=>setUnitPage(false)}>Cancel</button><button disabled={!unitDraftPrimary} onClick={saveUnits}>Save</button></footer></div>}
+      {unitPage && (
+        <div className="sale-fullscreen-panel add-unit-full">
+          <header>
+            <button onClick={() => setUnitPage(false)} aria-label="Back">
+              ←
+            </button>
+            <h2>Add Item Unit</h2>
+            <span />
+          </header>
+          <div className="sale-fullscreen-body">
+            <div className="unit-dropdown-wrap">
+              <button
+                type="button"
+                className="selector-field"
+                onClick={() =>
+                  setUnitTarget(unitTarget === "PRIMARY" ? null : "PRIMARY")
+                }
+              >
+                <small>Primary Unit</small>
+                <span>
+                  {units.find((x) => x.id === unitDraftPrimary)?.name ??
+                    "Primary Unit"}
+                  ⌄
+                </span>
+              </button>
+              {unitTarget === "PRIMARY" && (
+                <div className="unit-dropdown-menu">
+                  <button
+                    type="button"
+                    className="unit-add-option"
+                    onClick={() => setAddUnitOpen(true)}
+                  >
+                    Add Unit
+                  </button>
+                  {units.map((u) => (
+                    <button
+                      type="button"
+                      key={u.id}
+                      onClick={() => {
+                        setUnitDraftPrimary(u.id);
+                        setUnitTarget(null);
+                      }}
+                    >
+                      {u.name.toUpperCase()} ( {u.symbol} )
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="unit-dropdown-wrap">
+              <button
+                type="button"
+                className="selector-field"
+                onClick={() =>
+                  setUnitTarget(unitTarget === "SECONDARY" ? null : "SECONDARY")
+                }
+              >
+                <small>Secondary Unit</small>
+                <span>
+                  {units.find((x) => x.id === unitDraftSecondary)?.name ??
+                    "Secondary Unit"}
+                  ⌄
+                </span>
+              </button>
+              {unitTarget === "SECONDARY" && (
+                <div className="unit-dropdown-menu">
+                  <button
+                    type="button"
+                    className="unit-add-option"
+                    onClick={() => setAddUnitOpen(true)}
+                  >
+                    Add Unit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUnitDraftSecondary("");
+                      setUnitTarget(null);
+                    }}
+                  >
+                    None
+                  </button>
+                  {units.map((u) => (
+                    <button
+                      type="button"
+                      key={u.id}
+                      onClick={() => {
+                        setUnitDraftSecondary(u.id);
+                        setUnitTarget(null);
+                      }}
+                    >
+                      {u.name.toUpperCase()} ( {u.symbol} )
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <footer className="sale-fullscreen-footer">
+            <button onClick={() => setUnitPage(false)}>Cancel</button>
+            <button disabled={!unitDraftPrimary} onClick={saveUnits}>
+              Save
+            </button>
+          </footer>
+        </div>
+      )}
 
-  {categoryOpen&&<div className="sale-fullscreen-panel category-full"><header><h2>Select Category</h2><button onClick={()=>setCategoryOpen(false)} aria-label="Close">×</button></header><div className="sale-fullscreen-body"><input className="category-search" autoFocus value={categoryQuery} onChange={e=>setCategoryQuery(e.target.value)} placeholder="Search Category"/><button type="button" className="category-add" onClick={()=>setAddCategoryOpen(true)}>Add New Category <b>＋</b></button><div className="category-list">{filteredCategories.map(x=><label key={x.id}><span>{x.name.toUpperCase()}</span><input type="checkbox" checked={categoryDraft===x.id} onChange={()=>setCategoryDraft(categoryDraft===x.id?"":x.id)}/></label>)}</div></div><footer className="category-apply"><button onClick={()=>{setCategoryId(categoryDraft);setCategoryOpen(false)}}>Apply</button></footer></div>}
+      {categoryOpen && (
+        <div className="sale-fullscreen-panel category-full">
+          <header>
+            <h2>Select Category</h2>
+            <button onClick={() => setCategoryOpen(false)} aria-label="Close">
+              ×
+            </button>
+          </header>
+          <div className="sale-fullscreen-body">
+            <input
+              className="category-search"
+              autoFocus
+              value={categoryQuery}
+              onChange={(e) => setCategoryQuery(e.target.value)}
+              placeholder="Search Category"
+            />
+            <button
+              type="button"
+              className="category-add"
+              onClick={() => setAddCategoryOpen(true)}
+            >
+              Add New Category <b>＋</b>
+            </button>
+            <div className="category-list">
+              {filteredCategories.map((x) => (
+                <label key={x.id}>
+                  <span>{x.name.toUpperCase()}</span>
+                  <input
+                    type="checkbox"
+                    checked={categoryDraft === x.id}
+                    onChange={() =>
+                      setCategoryDraft(categoryDraft === x.id ? "" : x.id)
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+          <footer className="category-apply">
+            <button
+              onClick={() => {
+                setCategoryId(categoryDraft);
+                setCategoryOpen(false);
+              }}
+            >
+              Apply
+            </button>
+          </footer>
+        </div>
+      )}
 
-  {addUnitOpen&&<div className="sale-overlay"><section className="sale-dialog"><header><h2>Add Unit</h2><button onClick={()=>setAddUnitOpen(false)}>×</button></header><label>Name<input value={newUnitName} onChange={e=>setNewUnitName(e.target.value)} autoFocus/></label><label>Symbol<input value={newUnitSymbol} onChange={e=>setNewUnitSymbol(e.target.value)}/></label><div className="dialog-actions"><button onClick={()=>setAddUnitOpen(false)}>Cancel</button><button onClick={createUnitNow} disabled={!newUnitName.trim()||!newUnitSymbol.trim()||pending}>Save</button></div></section></div>}
-  {addCategoryOpen&&<div className="sale-overlay"><section className="sale-dialog"><header><h2>Add New Category</h2><button onClick={()=>setAddCategoryOpen(false)}>×</button></header><label>Category Name<input value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)} autoFocus/></label><div className="dialog-actions"><button onClick={()=>setAddCategoryOpen(false)}>Cancel</button><button onClick={createCategoryNow} disabled={!newCategoryName.trim()||pending}>Save</button></div></section></div>}
-  {help==="OPENING"&&<HelpDialog text="The quantity of item in stock before using SalesPunch360 for stock tracking." onClose={()=>setHelp(null)}/>} 
-  {help==="PRICE"&&<HelpDialog text="The average price at which you have bought the opening stock." onClose={()=>setHelp(null)}/>} 
-  {help==="MIN"&&<HelpDialog text="The minimum quantity of item you wish to maintain in stock. SalesPunch360 will notify you when stock falls below this level." onClose={()=>setHelp(null)}/>} 
-  {drawer&&<div className="sale-overlay drawer"><aside className="sale-settings"><header><h2>Item Settings</h2><button onClick={()=>setDrawer(false)}>×</button></header>{[["customFields","Item Custom Fields"],["additionalFields","Additional Item Fields"],["wholesalePrice","Wholesale Price"],["barcodeScanning","Barcode Scan"],["itemCategory","Item Category"],["description","Description"]].map(([key,label])=><div className="item-setting-row" key={key}><span>{label}</span><input type="checkbox" checked={enabled(key)} readOnly/></div>)}</aside></div>}
- </main>;
+      {addUnitOpen && (
+        <div className="sale-overlay">
+          <section className="sale-dialog">
+            <header>
+              <h2>Add Unit</h2>
+              <button onClick={() => setAddUnitOpen(false)}>×</button>
+            </header>
+            <label>
+              Name
+              <input
+                value={newUnitName}
+                onChange={(e) => setNewUnitName(e.target.value)}
+                autoFocus
+              />
+            </label>
+            <label>
+              Symbol
+              <input
+                value={newUnitSymbol}
+                onChange={(e) => setNewUnitSymbol(e.target.value)}
+              />
+            </label>
+            <div className="dialog-actions">
+              <button onClick={() => setAddUnitOpen(false)}>Cancel</button>
+              <button
+                onClick={createUnitNow}
+                disabled={
+                  !newUnitName.trim() || !newUnitSymbol.trim() || pending
+                }
+              >
+                Save
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {addCategoryOpen && (
+        <div className="sale-overlay">
+          <section className="sale-dialog">
+            <header>
+              <h2>Add New Category</h2>
+              <button onClick={() => setAddCategoryOpen(false)}>×</button>
+            </header>
+            <label>
+              Category Name
+              <input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                autoFocus
+              />
+            </label>
+            <div className="dialog-actions">
+              <button onClick={() => setAddCategoryOpen(false)}>Cancel</button>
+              <button
+                onClick={createCategoryNow}
+                disabled={!newCategoryName.trim() || pending}
+              >
+                Save
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {help === "OPENING" && (
+        <HelpDialog
+          text="The quantity of item in stock before using SalesPunch360 for stock tracking."
+          onClose={() => setHelp(null)}
+        />
+      )}
+      {help === "PRICE" && (
+        <HelpDialog
+          text="The average price at which you have bought the opening stock."
+          onClose={() => setHelp(null)}
+        />
+      )}
+      {help === "MIN" && (
+        <HelpDialog
+          text="The minimum quantity of item you wish to maintain in stock. SalesPunch360 will notify you when stock falls below this level."
+          onClose={() => setHelp(null)}
+        />
+      )}
+      {drawer && (
+        <div className="sale-overlay drawer">
+          <aside className="sale-settings">
+            <header>
+              <h2>Item Settings</h2>
+              <button onClick={() => setDrawer(false)}>×</button>
+            </header>
+            {[
+              ["customFields", "Item Custom Fields"],
+              ["additionalFields", "Additional Item Fields"],
+              ["wholesalePrice", "Wholesale Price"],
+              ["barcodeScanning", "Barcode Scan"],
+              ["itemCategory", "Item Category"],
+              ["description", "Description"],
+            ].map(([key, label]) => (
+              <div className="item-setting-row" key={key}>
+                <span>{label}</span>
+                <input type="checkbox" checked={enabled(key)} readOnly />
+              </div>
+            ))}
+          </aside>
+        </div>
+      )}
+    </main>
+  );
 }

@@ -6224,14 +6224,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A058-F04",
         "A058-F06",
         "A058-F07"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Shared creation policy enforces configured Products/Services, units, categories, description, HSN/SAC, tax, stock and custom fields inside web/native creation transactions. Native options return resolved company settings and correct service category scope; Add Item controls and default-unit selection apply those settings. Disabled custom fields are not erased from historical records.",
+        "remaining_work": "Final-head regression/original finding verification pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A058-F06",
@@ -6550,7 +6556,13 @@
       "final_tests": [],
       "shared_fix_links": [
         "A058-F07"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "PARTIAL",
+        "work": "Native option loads now explicitly track usable configuration, prevent Save before it loads, expose Retry on load failure and retain draft fields; duplicate pending saves are blocked. Full overlay/selector accessibility and numeric validation findings remain unfinished.",
+        "remaining_work": "Complete remaining modal focus/Escape, numeric validation, field errors and state-retention verification; final-head tests pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A060-F01",
@@ -7101,7 +7113,7 @@
       ],
       "checkpoint_work": {
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Android Items screen receives resolved company quantityDecimals from bootstrap; stock aggregation uses exact decimal quantities and display formats 0\u20134 decimals without mutating movement precision.",
+        "work": "Android Items screen receives resolved company quantityDecimals from bootstrap; stock aggregation uses exact decimal quantities and display formats 0\u20134 decimals without mutating movement precision. Follow-up preserves the negative sign when a negative quantity rounds to zero; native/web precision parity still requires final-head validation.",
         "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
       }
@@ -21229,6 +21241,49 @@
       "skipped": 0,
       "scope": "Operational settings scoping/permission/module/Items OFF/defaults, existing settings write restrictions and Accountant Add Item access",
       "final_head_validation": "NOT RUN"
+    },
+    "item_creation_policy": {
+      "focused_unit_passed": 32,
+      "browser_desktop_passed": 3,
+      "browser_mobile_web_passed": 3,
+      "browser_failed": 0,
+      "browser_skipped": 0,
+      "scope": "A060 catalogue service navigation, A058 Accountant access, disabled-field controls/direct API rejections and preservation of historical HSN/custom values",
+      "android_compile_debug_kotlin": "PASS",
+      "android_jvm": {
+        "tests": 142,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "typescript": "PASS",
+      "focused_eslint": "PASS",
+      "final_head_validation": "NOT RUN"
+    },
+    "broader_unit_after_item_policy": {
+      "first_run": {
+        "passed": 2608,
+        "failed": 23,
+        "skipped": 77,
+        "files_passed": 403,
+        "files_failed": 5,
+        "files_skipped": 5
+      },
+      "failure_resolution": "Empty custom-field definition mocks added to legacy commercial/branch fixtures. Stale source contracts updated for Project Actions, branch-aware native ExpenseScreen and user-approved manual Transaction SMS; item search markup assertions tolerate formatting. No ledger/branch assertions removed.",
+      "affected_rerun": {
+        "files_passed": 5,
+        "tests_passed": 54,
+        "failed": 0,
+        "skipped": 0
+      },
+      "full_rerun": {
+        "files_passed": 408,
+        "files_skipped": 5,
+        "tests_passed": 2631,
+        "failed": 0,
+        "skipped": 77
+      },
+      "final_head_validation": "NOT RUN; this intermediate unit run does not replace required final database/API/browser/device validation."
     }
   }
 }

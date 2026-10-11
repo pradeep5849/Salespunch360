@@ -11,8 +11,10 @@ import kotlinx.serialization.json.*
 data class AddItemState(
     val loading:Boolean=true,
     val saving:Boolean=false,
+    val configLoaded:Boolean=false,
     val units:List<AccountOption> = emptyList(),
     val categories:List<AccountOption> = emptyList(),
+    val serviceCategories:List<AccountOption> = emptyList(),
     val productFields:List<AccountCustomField> = emptyList(),
     val serviceFields:List<AccountCustomField> = emptyList(),
     val itemSettings:JsonObject=JsonObject(emptyMap()),
@@ -27,8 +29,9 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
     init{load()}
 
     fun load()=viewModelScope.launch{
+        _state.value=_state.value.copy(loading=true,configLoaded=false,error=null)
         runCatching{api.accountMasterOptions("items") to api.accountMasterOptions("services")}.onSuccess{(products,services)->
-            _state.value=_state.value.copy(loading=false,units=products.units,categories=products.categories,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
+            _state.value=_state.value.copy(loading=false,configLoaded=true,units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
         }.onFailure{_state.value=_state.value.copy(loading=false,error="Unable to load item options.")}
     }
 
@@ -49,7 +52,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
             api.saveAccountMaster("categories",null,buildJsonObject{put("name",name.trim());put("scope",if(service)"SERVICE" else "PRODUCT")})
         }.onSuccess{row->
             val option=AccountOption(row.id,row.name)
-            _state.value=_state.value.copy(saving=false,categories=(_state.value.categories+option).distinctBy{it.id})
+            _state.value=if(service)_state.value.copy(saving=false,serviceCategories=(_state.value.serviceCategories+option).distinctBy{it.id})else _state.value.copy(saving=false,categories=(_state.value.categories+option).distinctBy{it.id})
             done(option)
         }.onFailure{_state.value=_state.value.copy(saving=false,error="Category could not be saved.")}
     }
@@ -70,6 +73,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         customFields:Map<String,String> = emptyMap(),
         done:()->Unit
     )=viewModelScope.launch{
+        if(_state.value.saving||!_state.value.configLoaded)return@launch
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{
             api.saveAccountMaster(

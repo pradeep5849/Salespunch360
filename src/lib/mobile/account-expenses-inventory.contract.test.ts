@@ -29,7 +29,7 @@ describe("native expense and inventory boundaries", () => {
     const shell = read(
       "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
     );
-    expect(shell).toContain("ExpenseScreen(padding)");
+    expect(shell).toContain("ExpenseScreen(padding,initialQuery=");
     expect(shell).toContain("InventoryScreen(");
     expect(shell).not.toContain("AccountWorkspaceScreen");
   });

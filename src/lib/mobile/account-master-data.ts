@@ -14,6 +14,8 @@ import { setItemsActiveForActor } from "@/lib/account/service";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import type { MobileAppPrincipal } from "./auth";
 import { validateMobileItemReferences } from "./account-master-references";
+import { assertItemMasterCreation } from "@/lib/account/item-master-policy";
+import { resolveItemSettings } from "@/lib/account/item-settings-policy";
 import { resolvePartySettings } from "@/lib/account/party-settings";
 
 type MasterKind =
@@ -547,6 +549,12 @@ export async function saveMobileAccountMaster(
       };
     await validateMobileItemReferences(user.companyId, input, "SERVICE");
     const row = await db.$transaction(async (tx) => {
+      const settings = await tx.accountSettings.findUnique({
+        where: { companyId: user.companyId },
+        select: { itemSettings: true },
+      });
+      const policy = resolveItemSettings(settings?.itemSettings);
+      if (!id) assertItemMasterCreation(policy, "SERVICE", input);
       const row = id
         ? await tx.accountService.findFirst({
             where: { id, companyId: user.companyId },
@@ -556,14 +564,15 @@ export async function saveMobileAccountMaster(
           });
       if (!row) throw new Error("MOBILE_FORBIDDEN");
       if (id) await tx.accountService.update({ where: { id: row.id }, data });
-      await saveCustomFieldValuesInTx(
-        tx,
-        user.companyId,
-        "SERVICE",
-        row.id,
-        input.customFields,
-        !!id,
-      );
+      if (policy.customFields)
+        await saveCustomFieldValuesInTx(
+          tx,
+          user.companyId,
+          "SERVICE",
+          row.id,
+          input.customFields,
+          !!id,
+        );
       return row;
     });
     return id ? getMobileAccountMaster(user, kind, row.id) : row;
@@ -592,6 +601,12 @@ export async function saveMobileAccountMaster(
       ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
     };
     const row = await db.$transaction(async (tx) => {
+      const settings = await tx.accountSettings.findUnique({
+        where: { companyId: user.companyId },
+        select: { itemSettings: true },
+      });
+      const policy = resolveItemSettings(settings?.itemSettings);
+      if (!id) assertItemMasterCreation(policy, "PRODUCT", input);
       const row = id
         ? await tx.accountProduct.findFirst({
             where: { id, companyId: user.companyId },
@@ -601,14 +616,15 @@ export async function saveMobileAccountMaster(
           });
       if (!row) throw new Error("MOBILE_FORBIDDEN");
       if (id) await tx.accountProduct.update({ where: { id: row.id }, data });
-      await saveCustomFieldValuesInTx(
-        tx,
-        user.companyId,
-        "PRODUCT",
-        row.id,
-        input.customFields,
-        !!id,
-      );
+      if (policy.customFields)
+        await saveCustomFieldValuesInTx(
+          tx,
+          user.companyId,
+          "PRODUCT",
+          row.id,
+          input.customFields,
+          !!id,
+        );
       return row;
     });
     return id ? getMobileAccountMaster(user, kind, row.id) : row;
@@ -674,14 +690,14 @@ export async function mobileMasterOptions(
         where: {
           companyId: user.companyId,
           isActive: true,
-          scope: { in: ["PRODUCT", "BOTH"] },
+          scope: { in: [kind === "services" ? "SERVICE" : "PRODUCT", "BOTH"] },
         },
         select: { id: true, name: true },
         orderBy: { name: "asc" },
       }),
       db.accountSettings.findUnique({
         where: { companyId: user.companyId },
-        select: { transactionDefaults: true },
+        select: { transactionDefaults: true, itemSettings: true },
       }),
       db.customFieldDefinition.findMany({
         where: {
@@ -711,6 +727,9 @@ export async function mobileMasterOptions(
     units,
     categories,
     partySettings: resolvePartySettings(settings?.transactionDefaults),
+    itemSettings: ["items", "services"].includes(kind)
+      ? resolveItemSettings(settings?.itemSettings)
+      : {},
     partyCustomFields: ["customers", "vendors", "items", "services"].includes(
       kind,
     )

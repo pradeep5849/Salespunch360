@@ -142,9 +142,12 @@ test.afterAll(async () => {
     await tx.journalLine.deleteMany({ where: { companyId } });
     await tx.journalEntry.deleteMany({ where: { companyId } });
   });
+  await db.customFieldValue.deleteMany({ where: { companyId } });
+  await db.customFieldDefinition.deleteMany({ where: { companyId } });
   await db.accountProduct.deleteMany({ where: { companyId } });
   await db.accountService.deleteMany({ where: { companyId } });
   await db.accountCategory.deleteMany({ where: { companyId } });
+  await db.accountUnit.deleteMany({ where: { companyId } });
   await db.warehouse.deleteMany({ where: { companyId } });
   await db.moneyAccount.deleteMany({ where: { companyId } });
   await db.ledgerAccount.deleteMany({ where: { companyId } });
@@ -1336,4 +1339,141 @@ test("A058 Accountant can open Add Item without settings administration", async 
       data: { accountRole: "ACCOUNT_ADMIN" },
     });
   }
+});
+
+test("A058 item settings govern web controls and direct native creation without erasing historical fields", async ({
+  page,
+  request,
+}) => {
+  const unit = await db.accountUnit.create({
+    data: { companyId, name: "Policy unit", symbol: "POL" },
+  });
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      itemSettings: {
+        enabled: true,
+        itemType: "SERVICES",
+        itemUnits: false,
+        itemCategory: false,
+        description: false,
+        hsnSac: false,
+        itemWiseTax: false,
+        customFields: false,
+        stockMaintenance: false,
+      },
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/items/new");
+  await expect(
+    page.getByRole("button", { name: "Product", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Services", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByLabel("Item Name *", { exact: true }).fill("Policy service");
+  await expect(
+    page.getByRole("button", { name: "Select Unit", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("HSN/SAC Code", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Tax Rate", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Stock", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect
+    .poll(() =>
+      db.accountService.count({ where: { companyId, name: "Policy service" } }),
+    )
+    .toBe(1);
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Item policy regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  for (const [kind, fields, code] of [
+    ["items", {}, "PRODUCTS_DISABLED"],
+    ["services", { unitId: unit.id }, "ITEM_UNITS_DISABLED"],
+    ["services", { description: "blocked" }, "ITEM_DESCRIPTION_DISABLED"],
+    ["services", { hsnSacCode: "1234" }, "ITEM_HSN_DISABLED"],
+    ["services", { taxRate: "18" }, "ITEM_TAX_DISABLED"],
+    [
+      "services",
+      { customFields: { key: "blocked" } },
+      "ITEM_CUSTOM_FIELDS_DISABLED",
+    ],
+  ] as const) {
+    const response = await request.post(
+      `/api/v1/mobile/account/master-data/${kind}`,
+      { headers, data: { name: "Blocked item", ...fields } },
+    );
+    expect(response.status()).toBe(400);
+    expect((await response.json()).error).toBe(code);
+  }
+  const options = await request.get(
+    "/api/v1/mobile/account/master-data/services?view=options",
+    { headers },
+  );
+  expect((await options.json()).itemSettings).toMatchObject({
+    itemType: "SERVICES",
+    itemWiseTax: false,
+  });
+  const historical = await db.accountService.create({
+    data: {
+      companyId,
+      name: "Historical policy service",
+      sacCode: "998314",
+      sellingRate: "25",
+    },
+  });
+  const definition = await db.customFieldDefinition.create({
+    data: {
+      companyId,
+      entityType: "SERVICE",
+      fieldKey: "historical",
+      label: "Historical field",
+      dataType: "TEXT",
+      isActive: true,
+    },
+  });
+  await db.customFieldValue.create({
+    data: {
+      companyId,
+      entityType: "SERVICE",
+      entityId: historical.id,
+      definitionId: definition.id,
+      value: "Preserve me",
+    },
+  });
+  const edited = await request.patch(
+    `/api/v1/mobile/account/master-data/services/${historical.id}`,
+    { headers, data: { name: "Historical renamed", sellingRate: "25" } },
+  );
+  expect(edited.status()).toBe(200);
+  expect(
+    (
+      await db.accountService.findUniqueOrThrow({
+        where: { id: historical.id },
+      })
+    ).sacCode,
+  ).toBe("998314");
+  expect(
+    (
+      await db.customFieldValue.findFirstOrThrow({
+        where: { companyId, entityId: historical.id },
+      })
+    ).value,
+  ).toBe("Preserve me");
 });

@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.ui.account.inventory
+import kotlinx.serialization.json.*
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,7 +39,10 @@ fun AddItemScreen(
     var service by remember(initialService){mutableStateOf(initialService)}
     var name by remember{mutableStateOf("")}
     var customValues by remember(service){mutableStateOf<Map<String,String>>(emptyMap())}
-    val customFields=if(service)s.serviceFields else s.productFields
+    fun enabled(key:String)=s.itemSettings[key]?.jsonPrimitive?.booleanOrNull!=false
+    val itemType=s.itemSettings["itemType"]?.jsonPrimitive?.contentOrNull?:"BOTH"
+    val customFields=if(!enabled("customFields"))emptyList()else if(service)s.serviceFields else s.productFields
+    val categoryOptions=if(service)s.serviceCategories else s.categories
     var primaryUnit by remember{mutableStateOf<String?>(null)}
     var secondaryUnit by remember{mutableStateOf<String?>(null)}
     var code by remember{mutableStateOf("")}
@@ -77,7 +81,7 @@ fun AddItemScreen(
     }
     if(categoryPage){
         CategorySelectorScreen(
-            categories=s.categories,
+            categories=categoryOptions,
             selected=categoryId,
             service=service,
             saving=s.saving,
@@ -91,6 +95,13 @@ fun AddItemScreen(
         return
     }
 
+    LaunchedEffect(s.itemSettings){
+        if(itemType=="PRODUCTS")service=false
+        if(itemType=="SERVICES")service=true
+        if(service||!enabled("stockMaintenance"))tab="PRICING"
+        val defaultUnit=s.itemSettings["defaultUnit"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        if(primaryUnit==null&&enabled("itemUnits")&&defaultUnit.isNotBlank())primaryUnit=s.units.firstOrNull{it.name.equals(defaultUnit,true)||it.symbol.equals(defaultUnit,true)}?.id
+    }
     val expanded=name.isNotBlank()
     Scaffold(
         containerColor=MaterialTheme.colorScheme.surface,
@@ -113,20 +124,20 @@ fun AddItemScreen(
                             vm.save(
                                 service=service,
                                 name=name,
-                                unitId=primaryUnit,
-                                categoryId=categoryId,
+                                unitId=primaryUnit.takeIf{enabled("itemUnits")},
+                                categoryId=categoryId.takeIf{enabled("itemCategory")},
                                 code=code,
-                                description=description,
+                                description=if(enabled("description"))description else "",
                                 sellingRate=salePrice,
                                 cost=purchasePrice.ifBlank{atPrice},
-                                taxRate=taxRate,
-                                hsnSac=hsn,
-                                trackInventory=!service&&(openingStock.isNotBlank()||minStock.isNotBlank()||itemLocation.isNotBlank()),
-                                lowStockThreshold=minStock,
-                                customFields=customValues,
+                                taxRate=if(enabled("itemWiseTax"))taxRate else "0",
+                                hsnSac=if(enabled("hsnSac"))hsn else "",
+                                trackInventory=enabled("stockMaintenance")&&!service&&(openingStock.isNotBlank()||minStock.isNotBlank()||itemLocation.isNotBlank()),
+                                lowStockThreshold=if(enabled("stockMaintenance")&&!service)minStock else "0",
+                                customFields=if(enabled("customFields"))customValues else emptyMap(),
                             ){back()}
                         },
-                        enabled=name.isNotBlank()&&!s.loading&&!s.saving&&customFields.filter{it.isRequired}.all{!customValues[it.fieldKey].isNullOrBlank()},
+                        enabled=name.isNotBlank()&&s.configLoaded&&!s.loading&&!s.saving&&customFields.filter{it.isRequired}.all{!customValues[it.fieldKey].isNullOrBlank()},
                         modifier=Modifier.weight(1f).height(64.dp),
                         shape=MaterialTheme.shapes.extraSmall
                     ){Text(if(s.saving)"Saving…" else "Save")}
@@ -147,9 +158,11 @@ fun AddItemScreen(
                     Text("Product",fontWeight=if(!service)FontWeight.Bold else FontWeight.Normal)
                     Switch(
                         checked=service,
+                        enabled=itemType=="BOTH",
                         onCheckedChange={
                             service=it
                             categoryId=null
+                            tab="PRICING"
                         },
                         modifier=Modifier.padding(horizontal=18.dp)
                     )
@@ -178,7 +191,7 @@ fun AddItemScreen(
                         modifier=Modifier.fillMaxWidth(),
                         singleLine=true,
                         trailingIcon={
-                            FilledTonalButton(onClick={unitPage=true}){
+                            if(enabled("itemUnits"))FilledTonalButton(onClick={unitPage=true}){
                                 Text(s.units.firstOrNull{it.id==primaryUnit}?.symbol?:"Select Unit")
                             }
                         }
@@ -200,8 +213,8 @@ fun AddItemScreen(
                                 ){Text("Assign Code")}
                             }
                         )
-                        OutlinedTextField(
-                            value=s.categories.firstOrNull{it.id==categoryId}?.name.orEmpty(),
+                        if(enabled("itemCategory"))OutlinedTextField(
+                            value=categoryOptions.firstOrNull{it.id==categoryId}?.name.orEmpty(),
                             onValueChange={},
                             readOnly=true,
                             label={Text("Item Category")},
@@ -212,14 +225,14 @@ fun AddItemScreen(
                                 }
                             }
                         )
-                        OutlinedTextField(
+                        if(enabled("description"))OutlinedTextField(
                             description,
                             {description=it},
                             label={Text("Description")},
                             modifier=Modifier.fillMaxWidth(),
                             minLines=3
                         )
-                        OutlinedTextField(
+                        if(enabled("hsnSac"))OutlinedTextField(
                             hsn,
                             {hsn=it},
                             label={Text("HSN/SAC Code")},
@@ -236,7 +249,7 @@ fun AddItemScreen(
                             onClick={tab="PRICING"},
                             modifier=Modifier.weight(1f)
                         ){Text("Pricing",fontWeight=if(tab=="PRICING")FontWeight.Bold else FontWeight.Normal)}
-                        TextButton(
+                        if(!service&&enabled("stockMaintenance"))TextButton(
                             onClick={tab="STOCK"},
                             modifier=Modifier.weight(1f)
                         ){Text("Stock",fontWeight=if(tab=="STOCK")FontWeight.Bold else FontWeight.Normal)}
@@ -248,14 +261,14 @@ fun AddItemScreen(
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
                             Text("Sale Price",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
                             PriceWithTaxField("Sale Price",salePrice,{salePrice=it})
-                            DiscountField()
-                            TextButton(onClick={}){Text("+ Add Wholesale Price")}
+                            if(enabled("itemWiseDiscount"))DiscountField()
+                            if(enabled("wholesalePrice"))TextButton(onClick={}){Text("+ Add Wholesale Price")}
                             HorizontalDivider()
                             Text("Purchase Price",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
                             PriceWithTaxField("Purchase Price",purchasePrice,{purchasePrice=it})
                             HorizontalDivider()
                             Text("Taxes",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
-                            TaxRateField(taxRate){taxRate=it}
+                            if(enabled("itemWiseTax"))TaxRateField(taxRate){taxRate=it}
                         }
                     }
                 }else{
@@ -289,7 +302,7 @@ fun AddItemScreen(
                 }
             }
             s.error?.let{error->
-                item{Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.padding(16.dp))}
+                item{Column(Modifier.padding(16.dp)){Text(error,color=MaterialTheme.colorScheme.error);if(!s.configLoaded)OutlinedButton(onClick={vm.load()}){Text("Retry item options")}}}
             }
         }
     }
