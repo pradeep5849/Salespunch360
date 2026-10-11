@@ -158,7 +158,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding,vm::select)
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
-            state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
             state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"))
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId")?:android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(3)?.takeIf{it!="new"},initialCreate=android.net.Uri.parse(state.selectedPath).path?.endsWith("/projects/new")==true)

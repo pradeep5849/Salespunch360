@@ -937,12 +937,73 @@ export async function reverseExpenseForActor(
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
-export async function listExpensesForActor(a: Actor) {
-  return db.expenseTransaction.findMany({
-    where: await expenseRecordScope(a),
-    orderBy: { transactionDate: "desc" },
-    take: 200,
-  });
+export const expenseListQuerySchema = z
+  .object({
+    q: z.string().trim().max(160).optional(),
+    status: z.nativeEnum(ExpenseTransactionStatus).optional(),
+    type: z.nativeEnum(ExpenseTransactionType).optional(),
+    categoryId: z.string().uuid().optional(),
+    branchId: z.string().uuid().optional(),
+    offset: z.coerce.number().int().min(0).max(10000000).default(0),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+export async function expensePageForActor(a: Actor, raw: unknown = {}) {
+  const query = expenseListQuerySchema.parse(raw);
+  const scope = await expenseRecordScope(a);
+  if (query.branchId) {
+    const branches = await authorizedProjectBranchIds(a);
+    if (!branches.includes(query.branchId)) throw new AuthorizationError();
+  }
+  const where: Prisma.ExpenseTransactionWhereInput = {
+    AND: [
+      scope,
+      {
+        ...(query.branchId ? { branchId: query.branchId } : {}),
+        ...(query.status ? { status: query.status } : {}),
+        ...(query.type ? { type: query.type } : {}),
+        ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+        ...(query.q
+          ? {
+              OR: [
+                {
+                  transactionNumber: { contains: query.q, mode: "insensitive" },
+                },
+                { reference: { contains: query.q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+    ],
+  };
+  const [rows, total] = await db.$transaction(
+    [
+      db.expenseTransaction.findMany({
+        where,
+        orderBy: [
+          { transactionDate: "desc" },
+          { createdAt: "desc" },
+          { id: "desc" },
+        ],
+        skip: query.offset,
+        take: query.limit,
+      }),
+      db.expenseTransaction.count({ where }),
+    ],
+    { isolationLevel: "RepeatableRead" },
+  );
+  return {
+    rows,
+    total,
+    offset: query.offset,
+    limit: query.limit,
+    nextOffset:
+      query.offset + rows.length < total ? query.offset + rows.length : null,
+  };
+}
+export async function listExpensesForActor(a: Actor, raw: unknown = {}) {
+  return (await expensePageForActor(a, { limit: 200, ...(raw as object) }))
+    .rows;
 }
 export async function getExpenseForActor(a: Actor, id: string) {
   const expense = await scopedExpense(a, id);

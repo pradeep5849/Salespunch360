@@ -7,3 +7,11 @@ it("requires every child document module",()=>{const actor={...base,accountRole:
 it.each([["Sales","sales"],["Cash & Bank","cash-bank"],["Users & Permissions","users-permissions"],["Company / Branch","company-branch"],["Help / Support","help-support"]])("creates a shared safe section ID for %s",(label,id)=>expect(accountNavSectionId(label)).toBe(id));
 it("uses one My Business group with nested Sales and Purchase and one Expenses row",()=>{const nav=buildAccountNavigation({...base,accountRole:"ACCOUNT_ADMIN"},"SALESPUNCH360_ACCOUNT",["SALES","PURCHASES","EXPENSES"]),business=nav.find(x=>x.label==="My Business");expect(business?.children?.map(x=>x.label)).toEqual(["Sales","Purchase"]);expect(items(nav).filter(x=>x.label==="Expenses")).toHaveLength(1)});
 });
+
+describe("A052 expense navigation matches Project module enforcement",()=>{
+ it("hides Expenses for Project Manager when Projects is OFF",()=>{
+  const actor={...base,accountRole:"PROJECT_MANAGER" as const};
+  expect(items(buildAccountNavigation(actor,"SALESPUNCH360_ACCOUNT",["EXPENSES"])).some(x=>x.href==="/workspace/account/expenses")).toBe(false);
+  expect(items(buildAccountNavigation(actor,"SALESPUNCH360_ACCOUNT",["EXPENSES","PROJECTS"])).some(x=>x.href==="/workspace/account/expenses")).toBe(true);
+ });
+});

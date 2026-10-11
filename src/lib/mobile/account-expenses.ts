@@ -15,13 +15,15 @@ import {
   expenseOptionsForActor,
   expenseCategoryOptionsForActor,
   getExpenseForActor,
-  listExpensesForActor,
+  expensePageForActor,
+  expenseListQuerySchema,
   postExpenseForActor,
   reverseExpenseForActor,
   transitionExpenseForActor,
   updateExpenseForActor,
 } from "@/lib/account/expenses";
 import { requireAccountModules } from "@/lib/account/modules";
+import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 function permit(
@@ -38,14 +40,28 @@ export async function mobileExpenseList(
   q?: string | null,
   status?: string | null,
 ) {
-  const rows = await listExpensesForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"));
-  return rows.filter(
-    (x) =>
-      (!status || x.status === status) &&
-      (!q ||
-        x.transactionNumber.toLowerCase().includes(q.toLowerCase()) ||
-        (x.reference ?? "").toLowerCase().includes(q.toLowerCase())),
-  );
+  return (
+    await mobileExpensePage(u, {
+      q: q || undefined,
+      status: status || undefined,
+      limit: 200,
+    })
+  ).rows;
+}
+export async function mobileExpensePage(u: MobileAppPrincipal, raw: unknown) {
+  const a = permit(u, "ACCOUNT_EXPENSE_VIEW");
+  const { scope, ...query } = expenseListQuerySchema
+    .extend({ scope: z.literal("all").optional() })
+    .parse(raw);
+  const scoped = await resolveAccountBranchContext(a, {
+    scope,
+    branchId: query.branchId,
+  });
+  return expensePageForActor(a, {
+    ...query,
+    branchId:
+      scoped.context.mode === "BRANCH" ? scoped.context.branchId : undefined,
+  });
 }
 export async function mobileExpenseDetail(u: MobileAppPrincipal, id: string) {
   return getExpenseForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"), id);

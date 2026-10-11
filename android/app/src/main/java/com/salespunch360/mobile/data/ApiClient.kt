@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.data
+import kotlinx.serialization.json.JsonObject
 
 import com.salespunch360.mobile.BuildConfig
 import java.util.concurrent.TimeUnit
@@ -68,6 +69,11 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun vendorPaymentContext()=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments")).jsonObject
  suspend fun createVendorPayment(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments","POST",payload.toString())).jsonObject
  suspend fun expenseOptions()=json.parseToJsonElement(call("api/v1/mobile/account/expenses/options")).jsonObject
+ suspend fun expensePage(q:String="",status:String?=null,type:String?=null,categoryId:String?=null,offset:Int=0,contextQuery:String=""):JsonObject{
+  val context=android.net.Uri.parse("https://local.invalid/?$contextQuery")
+  val query=buildList{add("page=1");add("offset=$offset");if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")};type?.let{add("type=${enc(it)}")};categoryId?.let{add("categoryId=${enc(it)}")};listOf("branchId","scope").forEach{key->context.getQueryParameter(key)?.let{add("$key=${enc(it)}")}}}.joinToString("&")
+  return json.parseToJsonElement(call("api/v1/mobile/account/expenses?$query")).jsonObject
+ }
  suspend fun expenses(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/expenses"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
  suspend fun expense(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/expenses/${enc(id)}")).jsonObject
  suspend fun saveExpense(id:String?,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/expenses${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())).jsonObject

@@ -41,7 +41,7 @@ export function accountNavSectionId(label: string) { return label.toLowerCase().
 export function buildAccountNavigation(actor: WorkspacePrincipal, edition: ProductEdition, enabled: readonly AccountModule[]) {
   const set = new Set(enabled);
   const filter = (group: AccountNavGroup): AccountNavGroup | null => {
-    const items = group.items.filter(item => (item.requiredModules ?? []).every(module => set.has(module)) && (!item.permission || canUsePermission(actor, edition, item.permission)) && (!item.roles || !!actor.accountRole && item.roles.includes(actor.accountRole)));
+    const items = group.items.filter(item => (item.requiredModules ?? []).every(module => set.has(module)) && !(item.href === "/workspace/account/expenses" && actor.accountRole === "PROJECT_MANAGER" && !set.has("PROJECTS")) && (!item.permission || canUsePermission(actor, edition, item.permission)) && (!item.roles || !!actor.accountRole && item.roles.includes(actor.accountRole)));
     const children = group.children?.map(filter).filter((child): child is AccountNavGroup => child !== null);
     return items.length || children?.length ? { ...group, items, children } : null;
   };

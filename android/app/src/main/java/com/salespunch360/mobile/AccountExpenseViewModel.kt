@@ -9,13 +9,31 @@ import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
-data class ExpenseState(val recurringOpen:Boolean=false,val recurringRows:List<JsonObject> = emptyList(),val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val requestKey:String=UUID.randomUUID().toString(),val error:String?=null,val message:String?=null,val newCategoryId:String?=null,val categoryOpen:Boolean=false,val downloaded:Pair<String,ByteArray>?=null)
+data class ExpenseState(val recurringOpen:Boolean=false,val recurringRows:List<JsonObject> = emptyList(),val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val type:String?=null,val categoryId:String?=null,val total:Int=0,val nextOffset:Int?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val requestKey:String=UUID.randomUUID().toString(),val error:String?=null,val message:String?=null,val newCategoryId:String?=null,val categoryOpen:Boolean=false,val downloaded:Pair<String,ByteArray>?=null)
 class AccountExpenseViewModel(app:Application):AndroidViewModel(app){
  private val api=ApiClient(SecureSession(app));private val _state=MutableStateFlow(ExpenseState());val state:StateFlow<ExpenseState> = _state
  private var loadJob:Job?=null;private var detailJob:Job?=null
  init{refresh()}
  fun refresh(){load(false)}
- private fun load(debounce:Boolean){loadJob?.cancel();val q=_state.value.query;val status=_state.value.status;loadJob=viewModelScope.launch{if(debounce)delay(250);_state.value=_state.value.copy(loading=true);try{val o=api.expenseOptions();val rows=api.expenses(q,status).map{it.jsonObject};_state.value=_state.value.copy(loading=false,options=o,rows=rows,error=null)}catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}}}
+ private var contextQuery=""
+ fun context(query:String){contextQuery=query;load(false)}
+ private fun load(debounce:Boolean,append:Boolean=false){
+  if(append&&_state.value.loading)return
+  loadJob?.cancel();val snapshot=_state.value;val offset=if(append)snapshot.nextOffset?:return else 0
+  loadJob=viewModelScope.launch{
+   if(debounce)delay(250)
+   _state.value=_state.value.copy(loading=true,error=null)
+   try{
+    val o=api.expenseOptions()
+    val result=api.expensePage(snapshot.query,snapshot.status,snapshot.type,snapshot.categoryId,offset,contextQuery)
+    val rows=result["rows"]!!.jsonArray.map{it.jsonObject}
+    _state.value=_state.value.copy(loading=false,options=o,rows=if(append)(snapshot.rows+rows).distinctBy{it.str("id")}else rows,total=result["total"]!!.jsonPrimitive.int,nextOffset=result["nextOffset"]?.jsonPrimitive?.intOrNull,error=null)
+   }catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}
+  }
+ }
+ fun loadMore(){load(false,true)}
+ fun type(v:String?){_state.value=_state.value.copy(type=v);load(false)}
+ fun category(v:String?){_state.value=_state.value.copy(categoryId=v);load(false)}
  fun showRecurring(open:Boolean){if(_state.value.saving)return;_state.value=_state.value.copy(recurringOpen=open,error=null);if(open)loadRecurring()}
  private fun loadRecurring()=viewModelScope.launch{_state.value=_state.value.copy(loading=true);try{val rows=api.recurringExpenses().map{it.jsonObject};_state.value=_state.value.copy(loading=false,recurringRows=rows,error=null)}catch(e:Exception){fail(e)}}
  fun recurringAction(id:String,payload:JsonObject)=viewModelScope.launch{if(_state.value.saving)return@launch;_state.value=_state.value.copy(saving=true,error=null);try{val result=api.recurringExpenseAction(id,payload);_state.value=_state.value.copy(saving=false,message="Recurring action confirmed by server.");if(payload.str("action")=="GENERATE"){_state.value=_state.value.copy(recurringOpen=false);open(result.str("id"));refresh()}else loadRecurring()}catch(e:Exception){fail(e)}}

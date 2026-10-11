@@ -987,3 +987,175 @@ test("A057 no-op legacy settings save preserves effective defaults and conversio
     after: { barcodeScanning: false, taxOnMrp: false, updateSalePrice: false },
   });
 });
+
+test("A052 expenses search older rows before pagination and respect selected branch", async ({
+  page,
+  request,
+}) => {
+  const otherBranch = await db.branch.create({
+    data: {
+      companyId,
+      name: "Other expense branch",
+      code: `B-${randomUUID().slice(0, 6)}`,
+    },
+  });
+  await db.expenseTransaction.createMany({
+    data: Array.from({ length: 205 }, (_, i) => ({
+      companyId,
+      branchId,
+      categoryId: expenseCategory,
+      type: "OFFICE_EXPENSE",
+      status: "DRAFT",
+      transactionNumber: `PAGE-${String(i).padStart(3, "0")}`,
+      transactionDate: new Date(i === 204 ? "2026-01-01" : "2026-10-01"),
+      taxableAmount: "100",
+      totalAmount: "100",
+      createdById: userId,
+      reference: i === 204 ? "old-search-target" : undefined,
+    })),
+  });
+  await db.expenseTransaction.create({
+    data: {
+      companyId,
+      branchId: otherBranch.id,
+      categoryId: expenseCategory,
+      type: "OFFICE_EXPENSE",
+      status: "DRAFT",
+      transactionNumber: "OTHER-BRANCH",
+      transactionDate: new Date("2026-10-02"),
+      taxableAmount: "100",
+      totalAmount: "100",
+      createdById: userId,
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.context().addCookies([
+    {
+      name: "sp360_account_branch",
+      value: branchId,
+      domain: "127.0.0.1",
+      path: "/workspace/account",
+    },
+  ]);
+  await page.goto("/workspace/account/expenses");
+  await expect(
+    page.getByRole("navigation", { name: "Expense pagination" }),
+  ).toContainText("of 205 transactions");
+  await expect(
+    page.getByRole("link", { name: "OTHER-BRANCH", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "Next page", exact: true }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Expense pagination" }),
+  ).toContainText("51–100");
+  await page
+    .getByRole("textbox", { name: "Search expenses" })
+    .fill("old-search-target");
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "PAGE-204", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Expense pagination" }),
+  ).toContainText("of 1 transactions");
+  const axe = await new AxeBuilder({ page })
+    .include(".employees-content")
+    .analyze();
+  expect(
+    axe.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page.goto("/workspace/account/expenses?q=not-a-real-expense");
+  await expect(page.getByRole("status")).toContainText("No expenses match");
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Expense pagination regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const first = await request.get(
+    `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}`,
+    { headers },
+  );
+  expect(first.status()).toBe(200);
+  const firstData = await first.json();
+  expect(firstData.rows.length).toBe(50);
+  expect(firstData.total).toBe(205);
+  expect(firstData.nextOffset).toBe(50);
+  const terminal = await request.get(
+    `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}&offset=200`,
+    { headers },
+  );
+  const last = await terminal.json();
+  expect(last.rows.length).toBe(5);
+  expect(last.nextOffset).toBeNull();
+  const older = await request.get(
+    `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}&q=old-search-target&type=OFFICE_EXPENSE&status=DRAFT`,
+    { headers },
+  );
+  const found = await older.json();
+  expect(found.total).toBe(1);
+  expect(found.rows[0].transactionNumber).toBe("PAGE-204");
+  expect(
+    (
+      await request.get("/api/v1/mobile/account/expenses?page=1&status=WRONG", {
+        headers,
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await request.get(
+        `/api/v1/mobile/account/expenses?page=1&branchId=${randomUUID()}`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(403);
+});
+
+test("A052 expected expense permission and module denial render a recoverable page", async ({
+  page,
+}) => {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  try {
+    for (const accountRole of ["DATA_ENTRY", "PROJECT_MANAGER"] as const) {
+      await db.user.update({ where: { id: userId }, data: { accountRole } });
+      const response = await page.goto("/workspace/account/expenses");
+      expect(response?.status()).toBe(200);
+      await expect(
+        page.getByRole("heading", {
+          name: "Expenses access unavailable",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Back to Account", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Expenses", exact: true }),
+      ).toHaveCount(0);
+    }
+  } finally {
+    await db.user.update({
+      where: { id: userId },
+      data: { accountRole: "ACCOUNT_ADMIN" },
+    });
+  }
+});

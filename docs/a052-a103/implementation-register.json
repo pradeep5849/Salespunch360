@@ -930,14 +930,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F01",
         "A052-F03",
         "A052-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Expected authorization/module denials render an explicit recoverable web page. Expense navigation now hides Project Manager access when Projects is disabled; server denial remains enforced.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A052-F03",
@@ -1032,14 +1038,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F02",
         "A052-F04",
         "A052-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "PARTIAL",
+        "work": "Web and paged mobile expense list resolve selected branch/all-branch context before scoped reads. Android forwards its route branch context; independent device/global-selector verification remains pending.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A052-F04",
@@ -1138,14 +1150,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F03",
         "A052-F05",
         "A052-F06"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Scoped database search/filter runs before stable pagination/count. Web has page navigation; backward-compatible mobile API supports paged envelopes, and Android supports continuation without the former 200-row catalogue search cap.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A052-F05",
@@ -1244,14 +1262,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F04",
         "A052-F06",
         "A052-F07"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Database-backed search, all supported status values, expense types and category filters are wired to web and Android list controls.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A052-F06",
@@ -1452,14 +1476,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F06",
         "A052-F08",
         "A052-F09"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Successful empty web lists now explain no matching expenses and provide the authorized entry link.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A052-F08",
@@ -1552,14 +1582,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F07",
         "A052-F09",
         "A052-F10"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Removed nested main landmark; added named focusable expense-table region, accessible filter labels and pagination navigation.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A052-F09",
@@ -1662,8 +1698,8 @@
       ],
       "checkpoint_work": {
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Android successful expense refresh clears the preceding error.",
-        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "work": "Native successful refresh clears earlier errors; error state no longer displays a misleading successful empty list.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
       }
     },
@@ -1772,8 +1808,8 @@
       ],
       "checkpoint_work": {
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Android status filter includes CANCELLED.",
-        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "work": "Native status controls include CANCELLED and use server-backed status filtering.",
+        "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
       }
     },
@@ -21094,6 +21130,21 @@
       "failed": 0,
       "skipped": 0,
       "device_verification": "NOT RUN"
+    },
+    "expense_list_slice": {
+      "unit_files_passed": 2,
+      "unit_tests_passed": 21,
+      "browser_desktop_passed": 2,
+      "browser_mobile_web_passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "typescript": "PASS",
+      "focused_eslint": "PASS",
+      "android_compile": "PASS",
+      "android_jvm_tests_passed": 138,
+      "android_device": "NOT RUN",
+      "browser_evidence": "e2e/a049-a051-expenses.spec.ts A052 tests: 205 rows, branch selection/isolation, search beyond former cap, page continuation, malformed status, empty state, role/module denials, serious/critical Axe scan",
+      "initial_test_failures": "Invalid cookie fixture options corrected; empty-state check moved before API login to preserve browser session."
     }
   }
 }

@@ -137,13 +137,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Data Entry direct URL denied gracefully; Project Manager Projects OFF hidden/explicit blocked, ON assigned access works; Admin/Accountant unaffected; mobile API denial equivalent.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F01, A052-F03, A052-F04.
+
+**Checkpoint work:** Expected authorization/module denials render an explicit recoverable web page. Expense navigation now hides Project Manager access when Projects is disabled; server denial remains enforced.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F03 — Web expense list ignores selected Account branch context
 
@@ -179,13 +183,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Two authorized branches: select A/B, verify rows/totals; assigned-only user denied B; consolidated Admin; company isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F02, A052-F04, A052-F05.
+
+**Checkpoint work:** Web and paged mobile expense list resolve selected branch/all-branch context before scoped reads. Android forwards its route branch context; independent device/global-selector verification remains pending.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F04 — Silent 200-row cap hides older transactions and makes Android search incomplete
 
@@ -221,13 +229,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** More than 200 rows, older matching query/status, equal-date ordering, page boundaries, branch/company scopes, concurrent additions and clear totals.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F03, A052-F05, A052-F06.
+
+**Checkpoint work:** Scoped database search/filter runs before stable pagination/count. Web has page navigation; backward-compatible mobile API supports paged envelopes, and Android supports continuation without the former 200-row catalogue search cap.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F05 — Expense list search and type/status filtering lack platform parity
 
@@ -263,13 +275,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Search number/reference and category as defined; expense/income separation; status/type/category intersections; clear filters; no-results; permission/branch/pagination interactions.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F04, A052-F06, A052-F07.
+
+**Checkpoint work:** Database-backed search, all supported status values, expense types and category filters are wired to web and Android list controls.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F06 — Reference category amounts and overall total are missing
 
@@ -347,13 +363,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Zero records; no filter matches; correct create permission; loading does not announce a definitive zero result.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F06, A052-F08, A052-F09.
+
+**Checkpoint work:** Successful empty web lists now explain no matching expenses and provide the authorized entry link.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F08 — Nested main landmarks and mobile table keyboard accessibility defects
 
@@ -389,13 +409,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Axe empty/populated at desktop/mobile; keyboard reach all columns/actions; screen-reader landmarks and category amounts; zoom/reflow.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F07, A052-F09, A052-F10.
+
+**Checkpoint work:** Removed nested main landmark; added named focusable expense-table region, accessible filter labels and pagination navigation.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F09 — Android successful refresh retains a previous expense error
 
@@ -444,6 +468,10 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Remaining work:** Final-head regression and original finding verification remain pending.
 
+**Checkpoint work:** Native successful refresh clears earlier errors; error state no longer displays a misleading successful empty list.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
+
 ## A052-F10 — Android status filter omits supported CANCELLED state
 
 **Title:** Android status filter omits supported CANCELLED state
@@ -490,6 +518,10 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 **Checkpoint work:** Android status filter includes CANCELLED.
 
 **Remaining work:** Final-head regression and original finding verification remain pending.
+
+**Checkpoint work:** Native status controls include CANCELLED and use server-backed status filtering.
+
+**Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
 
 ## A052-F11 — Mobile web and Android do not implement required list and linked-entry reference UI
 
