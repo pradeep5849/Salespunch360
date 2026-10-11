@@ -75,6 +75,7 @@ fun purchasePayload(draft: PurchaseDraft) = buildJsonObject {
     put("issueDate", draft.issueDate); optional("dueDate", draft.dueDate)
     put("taxMode", draft.taxMode); optional("stateOfSupplyCode", draft.stateOfSupplyCode)
     put("reverseCharge", draft.reverseCharge); put("taxCreditTreatment", draft.taxCreditTreatment)
+    if(draft.type=="PURCHASE_BILL")putJsonObject("customFields"){draft.customFields.forEach{(key,value)->put(key,value)}}
     put("tdsRate", draft.tdsRate); put("notes", draft.notes)
     putJsonArray("lines") {
         draft.lines.forEach { line -> add(buildJsonObject {

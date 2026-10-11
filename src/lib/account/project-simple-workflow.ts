@@ -29,6 +29,7 @@ export type ManualProjectInput = {
   projectManagerId?: string;
   startDate?: string;
   projectValue?: string;
+  customFields?: Record<string,string>;
 };
 
 const finalStatuses = new Set(["COMPLETED", "CLOSED", "CANCELLED"]);
@@ -48,7 +49,7 @@ export async function createSimpleProjectForActor(
     siteContactPhone,
   } = fields;
   const requestHash = idempotencyKey
-    ? projectCreationHash("MANUAL_PROJECT", fields)
+    ? projectCreationHash("MANUAL_PROJECT", {...fields,...(fields.customFields?{customFields:Object.fromEntries(Object.entries(fields.customFields).sort(([a],[b])=>a.localeCompare(b)))}:{})})
     : null;
   const ids = await authorizedProjectBranchIds(actor);
 

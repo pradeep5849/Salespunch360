@@ -1,3 +1,6 @@
+import {reportExportRows} from "@/lib/account/reports/export-data";
+import {formatReport} from "@/lib/account/reports/display";
+import {resolveDisplayPreferences} from "@/lib/account/display-preferences";
 import { canUsePermission } from "@/lib/auth/permissions";
 import {
   exportCsv,
@@ -23,6 +26,7 @@ export const ACCOUNT_REPORTS = [
   "payable-aging",
   "cash-bank",
   "owner-capital",
+  "profit-withdrawal",
   "projects",
   "branches",
   "items",
@@ -56,7 +60,9 @@ export async function mobileAccountReport(
   filters: unknown,
 ) {
   valid(name);
-  return runFinancialReportForActor(actor(u), name, filters);
+  const a = actor(u);
+  const [data, settings] = await Promise.all([runFinancialReportForActor(a, name, filters), db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}})]);
+  return formatReport(data, resolveDisplayPreferences(settings));
 }
 export async function mobileAccountReportExport(
   u: MobileAppPrincipal,
@@ -66,7 +72,9 @@ export async function mobileAccountReportExport(
 ) {
   valid(name);
   const a = actor(u),
-    data = await runFinancialReportForActor(a, name, filters),
+    raw = await runFinancialReportForActor(a, name, filters),
+    settings = await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}}),
+    data = formatReport(raw, resolveDisplayPreferences(settings), true),
     company = await db.company.findUniqueOrThrow({
       where: { id: a.companyId },
       select: { name: true },
@@ -76,11 +84,11 @@ export async function mobileAccountReportExport(
       company: company.name,
       filter: new URLSearchParams(filters).toString(),
       columns: data.columns,
-      rows: data.rows,
+      rows: reportExportRows(data, new URLSearchParams(filters).toString()),
     };
   if (format === "csv")
     return {
-      bytes: new TextEncoder().encode(exportCsv(data.columns, data.rows)),
+      bytes: new TextEncoder().encode(exportCsv(data.columns, input.rows)),
       mime: "text/csv",
       extension: "csv",
     };

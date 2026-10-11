@@ -8,14 +8,14 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [{ asset }, options] = await assetPageRead(() =>
+  const [{ asset,customValues }, options] = await assetPageRead(() =>
     Promise.all([getAsset(id), assetOptions()]),
   );
   return (
     <div className="employees-shell">
       <section className="employees-content">
         <h1>Edit {asset.assetNumber}</h1>
-        <AssetForm options={options} asset={asset} action={updateAssetAction} />
+        <AssetForm customValues={customValues} options={options} asset={asset} action={updateAssetAction} />
       </section>
     </div>
   );

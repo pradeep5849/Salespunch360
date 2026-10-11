@@ -23,6 +23,7 @@ const messages: Record<string, string> = {
   LINE_SOURCE_REQUIRED: "Select an item for every invoice line.",
   INVALID_LINE_SOURCE:
     "An invoice item is unavailable. Select an active item from this company.",
+  REVERSE_CHARGE_DISABLED: "Enable Reverse Charge in Transaction Settings before using it on a new sale.",
   INVALID_AMOUNT: "Check the item quantity, rate, discount and tax amounts.",
   INVALID_DISCOUNT: "The discount cannot exceed the item amount or 100%.",
   INVALID_TAX_INPUT: "Check the invoice tax amounts.",

@@ -1,5 +1,6 @@
 import { Prisma, CustomFieldDataType, CustomFieldEntity, PrintPaperSize } from "@prisma/client";
 import { z } from "zod";
+import { businessCurrencySchema } from "./business-currency";
 import { db } from "@/lib/db";
 import { AuthorizationError, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import {LEGACY_DEFAULT_ACCOUNT_MODULES} from "./modules";
@@ -12,12 +13,34 @@ const printProfileSchema = z.object({ displayName: z.string().max(160).optional(
 
 export async function getAccountSettings() { const actor = await requirePermission("ACCOUNT_SETTINGS"); return db.accountSettings.findUnique({ where: { companyId: actor.companyId! } }); }
 export async function getTransactionSettingsData() { const actor=await requirePermission("ACCOUNT_SETTINGS");const [settings,branches]=await Promise.all([db.accountSettings.findUnique({where:{companyId:actor.companyId!}}),db.branch.findMany({where:{companyId:actor.companyId!,isActive:true,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:actor.branchIds??[]}}:{})},orderBy:{name:"asc"},select:{id:true,name:true}})]);return{companyId:actor.companyId!,settings,branches}; }
-export async function updateAccountSettings(raw: unknown) { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); const input = z.object({ expenseApprovalRequired: z.boolean(), expenseApprovalThreshold: z.string(), negativeStockAllowed: z.boolean(), transactionDefaults: defaultsSchema, printProfile: printProfileSchema }).strict().parse(raw); const threshold = new Prisma.Decimal(input.expenseApprovalThreshold); if (threshold.isNegative()) throw new Error("INVALID_APPROVAL_THRESHOLD");const current=await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true}}),transactionDefaults={...((current?.transactionDefaults as Record<string,unknown>|null)??{}),...input.transactionDefaults}; const row = await db.accountSettings.upsert({ where: { companyId: actor.companyId! }, create: { companyId: actor.companyId!, expenseApprovalRequired: input.expenseApprovalRequired, expenseApprovalThreshold: threshold, negativeStockAllowed: input.negativeStockAllowed, transactionDefaults, printProfile: input.printProfile }, update: { ...input, transactionDefaults, expenseApprovalThreshold: threshold } }); await db.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "SETTINGS_CHANGED", entityType: "ACCOUNT_SETTINGS", entityId: actor.companyId!, metadata: { sections: ["TRANSACTIONS", "INVENTORY", "APPROVALS", "PRINT_PROFILE"] } } }); return row; }
+export async function updateAccountSettingsForActor(actor:{id:string;companyId:string|null;accountRole?:string|null},raw:unknown){
+ if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+ const input=z.object({expenseApprovalRequired:z.boolean(),expenseApprovalThreshold:z.string(),negativeStockAllowed:z.boolean(),transactionDefaults:defaultsSchema,printProfile:printProfileSchema}).strict().parse(raw);
+ const threshold=new Prisma.Decimal(input.expenseApprovalThreshold);if(!threshold.isFinite()||threshold.isNegative())throw new Error("INVALID_APPROVAL_THRESHOLD");
+ return db.$transaction(async tx=>{
+ await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId!+":account-settings"}))`;
+ const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true,printProfile:true}}),transactionDefaults={...((current?.transactionDefaults as Record<string,unknown>|null)??{}),...input.transactionDefaults},printProfile={...((current?.printProfile as Record<string,unknown>|null)??{}),...input.printProfile} as Prisma.InputJsonValue;
+ const data={expenseApprovalRequired:input.expenseApprovalRequired,expenseApprovalThreshold:threshold,negativeStockAllowed:input.negativeStockAllowed,transactionDefaults,printProfile};
+ const row=await tx.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,...data},update:data});
+ await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["TRANSACTIONS","INVENTORY","APPROVALS","PRINT_PROFILE"]}}});return row;
+ });
+}
+export async function updateAccountSettings(raw:unknown){return updateAccountSettingsForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS"),raw)}
 
-export async function updateItemSettings(raw:unknown){const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const input=resolveItemSettings(raw);assertItemSettings(input);const current=await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true}}),existing=(current?.itemSettings as Record<string,unknown>|null)??{},itemSettings={...input,...(Array.isArray(existing.unitConversions)?{unitConversions:existing.unitConversions}:{})} as Prisma.InputJsonValue;const row=await db.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,itemSettings},update:{itemSettings}});await db.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["ITEMS"]}}});return row}
 
-export async function updateTransactionSettings(raw: unknown) {
-  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+export async function updateItemSettingsForActor(actor:{id:string;companyId:string|null;accountRole?:string|null},raw:unknown){
+ if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const input=resolveItemSettings(raw);assertItemSettings(input);
+ return db.$transaction(async tx=>{
+ await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId!+":account-settings"}))`;
+ const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true}}),existing=(current?.itemSettings as Record<string,unknown>|null)??{},itemSettings={...existing,...input} as Prisma.InputJsonValue;
+ const row=await tx.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,itemSettings},update:{itemSettings}});
+ await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["ITEMS"]}}});return row;
+ });
+}
+export async function updateItemSettings(raw:unknown){return updateItemSettingsForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS"),raw)}
+
+
+export async function updateTransactionSettingsForActor(actor:ProjectActor,raw: unknown) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const input = z.object({
     preferences: transactionPreferencesSchema,
@@ -29,6 +52,7 @@ export async function updateTransactionSettings(raw: unknown) {
   const allowedPrefixes = new Set(PREFIX_TYPES.map(([key]) => key));
   if (Object.keys(input.prefixes).some(key => !allowedPrefixes.has(key as never))) throw new Error("INVALID_PREFIX_TYPE");
   return db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId! + ":account-settings"}))`;
     const current = await tx.accountSettings.findUnique({ where: { companyId: actor.companyId! }, select: { transactionDefaults: true, itemSettings: true } });
     const defaults = (current?.transactionDefaults as Record<string, unknown> | null) ?? {};
     const itemSettings = (current?.itemSettings as Record<string, unknown> | null) ?? {};
@@ -48,6 +72,8 @@ export async function updateTransactionSettings(raw: unknown) {
   });
 }
 
+export async function updateTransactionSettings(raw:unknown){return updateTransactionSettingsForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS") as ProjectActor,raw)}
+
 /** Updates the existing canonical sale series; allocation remains save-time only. */
 export async function updateSalesInvoicePrefix(branchId:string,prefix:string){
  const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const value=z.string().trim().max(30).parse(prefix);
@@ -55,23 +81,40 @@ export async function updateSalesInvoicePrefix(branchId:string,prefix:string){
  return db.$transaction(async tx=>{const existing=await tx.numberingSeries.findFirst({where:{companyId:actor.companyId!,branchId,seriesKey:"SALES_INVOICE"}});const series=existing?await tx.numberingSeries.update({where:{id:existing.id},data:{prefix:value}}):await tx.numberingSeries.create({data:{companyId:actor.companyId!,branchId,seriesKey:"SALES_INVOICE",prefix:value,padding:2}});await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["NUMBERING_PREFIXES"],branchId}}});return{prefix:series.prefix,padding:series.padding,nextSequence:Number(series.nextSequence),suffix:series.suffix}});
 }
 
-const fieldSchema = z.object({ id: z.string().uuid().optional(), entityType: z.nativeEnum(CustomFieldEntity), fieldKey: z.string().regex(/^[a-z][a-z0-9_]{1,59}$/), label: z.string().min(1).max(100), dataType: z.nativeEnum(CustomFieldDataType), isRequired: z.boolean().default(false), position: z.number().int().min(0).max(1000).default(0), options: z.array(z.string().min(1).max(100)).max(100).optional() }).strict();
-export async function saveCustomField(raw: unknown) { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); const input = fieldSchema.parse(raw); if (input.dataType === "SELECT" && !input.options?.length) throw new Error("SELECT_OPTIONS_REQUIRED"); const data = { companyId: actor.companyId!, entityType: input.entityType, fieldKey: input.fieldKey, label: input.label, dataType: input.dataType, isRequired: input.isRequired, position: input.position, options: input.options ?? Prisma.JsonNull }; const row = input.id ? await db.customFieldDefinition.updateMany({ where: { id: input.id, companyId: actor.companyId! }, data }) : await db.customFieldDefinition.create({ data }); await db.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "SETTINGS_CHANGED", entityType: "CUSTOM_FIELD", entityId: input.id ?? (row as { id: string }).id } }); return row; }
+const fieldSchema = z.object({ showInPrint:z.boolean().optional(), id: z.string().uuid().optional(), entityType: z.nativeEnum(CustomFieldEntity), fieldKey: z.string().regex(/^[a-z][a-z0-9_]{1,59}$/), label: z.string().min(1).max(100), dataType: z.nativeEnum(CustomFieldDataType), isRequired: z.boolean().default(false), isActive:z.boolean().optional(), position: z.number().int().min(0).max(1000).default(0), options: z.array(z.string().min(1).max(100)).max(100).optional() }).strict();
+export async function saveCustomFieldForActor(actor:{id:string;companyId:string|null;accountRole?:string|null},raw:unknown){
+ if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+ const input=fieldSchema.parse(raw);if(input.dataType==="SELECT"&&!input.options?.length)throw new Error("SELECT_OPTIONS_REQUIRED");
+ return db.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId!+":custom-fields"}))`;
+  let existingValidation:Prisma.JsonValue|null=null;
+  if(input.id){const existing=await tx.customFieldDefinition.findFirst({where:{id:input.id,companyId:actor.companyId!}});if(!existing)throw new Error("CUSTOM_FIELD_NOT_FOUND");existingValidation=existing.validation;
+   if((existing.entityType!==input.entityType||existing.fieldKey!==input.fieldKey||existing.dataType!==input.dataType)&&await tx.customFieldValue.count({where:{companyId:actor.companyId!,definitionId:input.id}})>0)throw new Error("USED_CUSTOM_FIELD_TYPE_LOCKED");
+  }
+  const data={...(input.showInPrint!==undefined?{validation:{...(existingValidation&&typeof existingValidation==="object"&&!Array.isArray(existingValidation)?existingValidation:{}),showInPrint:input.showInPrint}}:{}),companyId:actor.companyId!,entityType:input.entityType,fieldKey:input.fieldKey,label:input.label,dataType:input.dataType,isRequired:input.isRequired,position:input.position,options:input.options??Prisma.JsonNull,...(input.isActive!==undefined?{isActive:input.isActive}:{})};
+  const row=input.id?await tx.customFieldDefinition.update({where:{id:input.id},data}):await tx.customFieldDefinition.create({data});
+  await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"CUSTOM_FIELD",entityId:row.id}});return row;
+ });
+}
+export async function saveCustomField(raw:unknown){return saveCustomFieldForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS"),raw)}
+
 export async function deactivateCustomField(id: string) { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); return db.customFieldDefinition.updateMany({ where: { id, companyId: actor.companyId! }, data: { isActive: false } }); }
 export async function saveCustomFieldValues(entityType: CustomFieldEntity, entityId: string, values: Record<string, unknown>) { const actor = await requirePermissionForMutation("ACCOUNT_ACCOUNTS"); const definitions = await db.customFieldDefinition.findMany({ where: { companyId: actor.companyId!, entityType, isActive: true } }); const missing = definitions.filter((x) => x.isRequired && (values[x.fieldKey] === undefined || values[x.fieldKey] === "")); if (missing.length) throw new Error(`CUSTOM_FIELDS_REQUIRED:${missing.map((x) => x.fieldKey).join(",")}`); return db.$transaction(definitions.filter((x) => values[x.fieldKey] !== undefined).map((definition) => db.customFieldValue.upsert({ where: { companyId_definitionId_entityId: { companyId: actor.companyId!, definitionId: definition.id, entityId } }, create: { companyId: actor.companyId!, definitionId: definition.id, entityType, entityId, value: values[definition.fieldKey] as Prisma.InputJsonValue }, update: { value: values[definition.fieldKey] as Prisma.InputJsonValue } }))); }
 
 const templateSchema = z.object({ branchId: z.string().uuid().nullable().optional(), documentType: z.enum(["INVOICE", "QUOTATION", "PURCHASE_ORDER", "RECEIPT", "BOQ"]), name: z.string().min(1).max(120), paperSize: z.nativeEnum(PrintPaperSize), isDefault: z.boolean().default(false), config: z.object({ accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#075985"), showBank: z.boolean().default(true), showUpiQr: z.boolean().default(false), showSignature: z.boolean().default(true), footer: z.string().max(500).optional() }).strict() }).strict();
 export async function createPrintTemplate(raw: unknown) { const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS"); if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError(); const input = templateSchema.parse(raw); if (input.branchId && !await db.branch.findFirst({ where: { id: input.branchId, companyId: actor.companyId!, isActive: true } })) throw new Error("INVALID_BRANCH"); return db.$transaction(async (tx) => { if (input.isDefault) await tx.printTemplate.updateMany({ where: { companyId: actor.companyId!, branchId: input.branchId ?? null, documentType: input.documentType, paperSize: input.paperSize }, data: { isDefault: false } }); const latest = await tx.printTemplate.aggregate({ where: { companyId: actor.companyId!, branchId: input.branchId ?? null, documentType: input.documentType, name: input.name }, _max: { version: true } }); const row = await tx.printTemplate.create({ data: { ...input, branchId: input.branchId ?? null, companyId: actor.companyId!, version: (latest._max.version ?? 0) + 1, createdById: actor.id } }); await tx.accountingAuditEvent.create({ data: { companyId: actor.companyId!, actorUserId: actor.id, eventType: "SETTINGS_CHANGED", entityType: "PRINT_TEMPLATE", entityId: row.id } }); return row; }); }
 export async function resolvePrintTemplate(companyId: string, branchId: string, documentType: string, paperSize: PrintPaperSize) { return db.printTemplate.findFirst({ where: { companyId, documentType, paperSize, isActive: true, OR: [{ branchId }, { branchId: null }] }, orderBy: [{ branchId: "desc" }, { isDefault: "desc" }, { version: "desc" }] }); }
-export function buildUpiUri(profile: { upiId?: string; upiPayeeName?: string }, amount?: Prisma.Decimal, reference?: string) { if (!profile.upiId) return null; const params = new URLSearchParams({ pa: profile.upiId, pn: profile.upiPayeeName ?? "" }); if (amount) params.set("am", amount.toFixed(2)); if (reference) params.set("tn", reference.slice(0, 80)); params.set("cu", "INR"); return `upi://pay?${params.toString()}`; }
+export function buildUpiUri(profile: { upiId?: string; upiPayeeName?: string }, amount?: Prisma.Decimal, reference?: string, currency="INR") { if (currency!=="INR"||!profile.upiId) return null; const params = new URLSearchParams({ pa: profile.upiId, pn: profile.upiPayeeName ?? "" }); if (amount) params.set("am", amount.toFixed(2)); if (reference) params.set("tn", reference.slice(0, 80)); params.set("cu", "INR"); return `upi://pay?${params.toString()}`; }
 
-export const generalSettingsSchema=z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/),displayDecimalPlaces:z.coerce.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.literal("STANDARD"),fixedAssetsEnabled:z.boolean().optional()}).strict();
+export const generalSettingsSchema=z.object({appLanguage:z.enum(["en","hi"]),baseCurrency:z.string().trim().toUpperCase().pipe(businessCurrencySchema),displayDecimalPlaces:z.coerce.number().int().min(0).max(4),dateFormat:z.enum(["DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD"]),warnUnsavedChanges:z.boolean(),appearance:z.literal("STANDARD"),fixedAssetsEnabled:z.boolean().optional()}).strict();
 export async function updateGeneralSettingsForActor(actor:ProjectActor,raw:unknown){
  if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
  const {fixedAssetsEnabled,...input}=generalSettingsSchema.parse(raw);
  return db.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId! + ":account-settings"}))`;
-  const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{enabledModules:true}});
+  await tx.$executeRaw`SELECT 1 FROM "companies" WHERE "id"=${actor.companyId!}::uuid FOR UPDATE`;
+  const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{enabledModules:true,baseCurrency:true}});
+  if(input.baseCurrency!==(current?.baseCurrency??"INR")&&await tx.journalEntry.count({where:{companyId:actor.companyId!,status:{in:["POSTED","REVERSED"]}}})>0)throw new Error("BUSINESS_CURRENCY_LOCKED");
   const stored=current?.enabledModules??[...LEGACY_DEFAULT_ACCOUNT_MODULES];
   const enabledModules=fixedAssetsEnabled===undefined?undefined:fixedAssetsEnabled?[...new Set([...stored,"ASSETS" as const])]:stored.filter(x=>x!=="ASSETS");
   const data={...input,...(enabledModules?{enabledModules}:{})};

@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.salespunch360.mobile.AccountPurchaseViewModel
 import com.salespunch360.mobile.account.*
+import com.salespunch360.mobile.ui.account.sales.InvoiceCustomFields
+import com.salespunch360.mobile.ui.account.sales.invoiceCustomFieldsValid
 import com.salespunch360.mobile.ui.account.sales.SelectField
 import kotlinx.serialization.json.JsonObject
 
@@ -23,7 +25,7 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
         onDismissRequest = vm::closeDraft,
         title = { Text("New ${draft.type.replace('_', ' ')}") },
         confirmButton = {
-            Button(enabled = !state.saving, onClick = vm::save) { Text(if (state.saving) "Saving…" else "Create draft") }
+            Button(enabled = !state.saving && invoiceCustomFieldsValid(state.invoiceCustomFields,draft.type,draft.customFields), onClick = vm::save) { Text(if (state.saving) "Saving…" else "Create draft") }
         },
         dismissButton = { TextButton(enabled = !state.saving, onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
@@ -64,6 +66,7 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
                 item { SelectField("Tax mode", draft.taxMode, listOf("EXCLUSIVE" to "Exclusive", "INCLUSIVE" to "Inclusive")) { vm.edit(draft.copy(taxMode = it)) } }
                 itemsIndexed(draft.lines) { index, line -> PurchaseLine(index, line, draft, state, sourceLines, vm) }
                 item { OutlinedButton(enabled = !state.saving, onClick = vm::addLine) { Text("Add line") } }
+                item { InvoiceCustomFields(state.invoiceCustomFields,draft.type,draft.customFields,state.saving){vm.edit(draft.copy(customFields=it))} }
                 item { OutlinedTextField(draft.notes, { vm.edit(draft.copy(notes = it)) }, label = { Text("Notes") }) }
                 item { Text("Totals, GST, stock valuation, and postings are authoritative only after the server response.", style = MaterialTheme.typography.bodySmall) }
             }

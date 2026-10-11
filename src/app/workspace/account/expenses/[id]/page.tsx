@@ -1,3 +1,4 @@
+import {Money} from "@/components/account/account-ui";
 import Link from "next/link";
 import {
   expenseAttachmentAction,
@@ -79,7 +80,7 @@ export default async function Page({
             <h2>Billed items</h2>
             {lines.map((l, i) => (
               <p key={i}>
-                {l.name} · {l.quantity} × ₹{l.rate}
+                {l.name} · {l.quantity} × <Money value={l.rate}/>
               </p>
             ))}
           </section>

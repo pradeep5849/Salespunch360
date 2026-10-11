@@ -18,5 +18,16 @@ export const editionHasAccount=(x:ProductEdition)=>x==="SALESPUNCH360_ACCOUNT"||
 export async function enabledModulesForCompany(companyId:string){const company=await db.company.findUnique({where:{id:companyId},select:{productEdition:true,accountSettings:{select:{enabledModules:true}}}});if(!company||!editionHasAccount(company.productEdition))return [];const stored=company.accountSettings?.enabledModules??LEGACY_DEFAULT_ACCOUNT_MODULES;return [...new Set([...BASIC_ACCOUNTING_MODULES,...stored])] as ModuleKey[]}
 export async function requireAccountModules(actor:{companyId:string|null},...keys:ModuleKey[]){if(!actor.companyId)throw new AuthorizationError();const enabled=await enabledModulesForCompany(actor.companyId);for(const key of keys)if(!enabled.includes(key))throw new Error(`MODULE_DISABLED:${key}`)}
 export async function getModuleSettings(){const a=await requirePermission("ACCOUNT_SETTINGS"),settings=await db.accountSettings.findUnique({where:{companyId:a.companyId!}}),stored=settings?.enabledModules??LEGACY_DEFAULT_ACCOUNT_MODULES,businessType=settings?.businessType??BusinessType.OTHER_MIXED;return{businessType,enabledModules:optionalModulesFromStored(stored),businessTypes:BUSINESS_TYPES,moduleCatalog:MODULE_SETUP_CATALOG,recommendedModules:recommendedSetupModules(businessType)}}
-export async function updateModuleSettings(raw:unknown){const a=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(a.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();const d=z.object({businessType:z.nativeEnum(BusinessType),enabledModules:z.array(z.enum(["ASSETS","PROJECTS","BARCODE","POS"]))}).strict().parse(raw),enabledModules=expandSetupModules(d.enabledModules);return db.accountSettings.upsert({where:{companyId:a.companyId!},create:{companyId:a.companyId!,businessType:d.businessType,enabledModules},update:{businessType:d.businessType,enabledModules}})}
+export async function updateModuleSettingsForActor(a:{id:string;companyId:string|null;accountRole?:string|null},raw:unknown){
+ if(!a.companyId||a.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+ const d=z.object({businessType:z.nativeEnum(BusinessType),enabledModules:z.array(z.enum(["ASSETS","PROJECTS","BARCODE","POS"]))}).strict().parse(raw),enabledModules=expandSetupModules(d.enabledModules);
+ return db.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId!+":account-settings"}))`;
+  const data={businessType:d.businessType,enabledModules};
+  const saved=await tx.accountSettings.upsert({where:{companyId:a.companyId!},create:{companyId:a.companyId!,...data},update:data});
+  await tx.accountingAuditEvent.create({data:{companyId:a.companyId!,actorUserId:a.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:a.companyId!,metadata:{sections:["MODULES"],businessType:d.businessType,optionalModules:optionalModulesFromStored(enabledModules)}}});
+  return saved;
+ });
+}
+export async function updateModuleSettings(raw:unknown){return updateModuleSettingsForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS"),raw)}
 export const canAdministerModules=(role:AccountRole|null)=>role==="ACCOUNT_ADMIN";

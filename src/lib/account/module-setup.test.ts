@@ -28,9 +28,9 @@ describe("two-step Account module setup",()=>{
     expect(optionalModulesFromStored(expandSetupModules([]))).toEqual([]);
   });
   it("drives both Web and Android from the shared server catalog",()=>{
-    const web=readFileSync("src/app/workspace/account/settings/modules/page.tsx","utf8");
+    const web=readFileSync("src/components/account/module-settings-form.tsx","utf8");
     const android=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt","utf8");
-    expect(web).toContain("s.moduleCatalog.map");
+    expect(web).toContain("values.moduleCatalog.map");
     expect(android).toContain('root["catalog"]');
     expect(android).toContain('root["businessTypes"]');
   });

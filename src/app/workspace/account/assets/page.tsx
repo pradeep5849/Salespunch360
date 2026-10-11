@@ -1,3 +1,4 @@
+import {Money} from "@/components/account/account-ui";
 import Link from "next/link";
 import { assetPageRead } from "./page-access";
 import { listAssets } from "@/lib/account/assets";
@@ -61,7 +62,7 @@ export default async function Page({
               {x.assetNumber} · {x.name}
             </Link>
             <p>
-              {x.assetType} · {x.status} · ₹{x.purchaseValue.toFixed(2)}
+              {x.assetType} · {x.status} · <Money value={x.purchaseValue.toFixed(2)}/>
             </p>
           </article>
         ))}

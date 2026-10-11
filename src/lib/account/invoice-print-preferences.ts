@@ -17,7 +17,8 @@ export async function loadInvoicePrintPreferences(documentType:string){
 
 export function applyInvoicePrintPreferences(documentType:string,doc:AccountPrintDocument,paper:PrintPaperSize,settings:InvoicePrintPreferences){
  if(documentType!=="SALES_INVOICE")return{document:doc,paper};
- const printer=text(settings,"printer","REGULAR"),pageSize=text(settings,"pageSize","A4");
+ const printer=typeof settings.regularDefault==="boolean"?(settings.regularDefault?"REGULAR":"THERMAL"):text(settings,"printer","REGULAR");
+ const requestedPageSize=text(settings,"pageSize","A4"),pageSize=printer==="REGULAR"&&requestedPageSize==="THERMAL_80MM"?"A4":requestedPageSize;
  const preferredPaper:PrintPaperSize=printer==="THERMAL"||pageSize==="THERMAL_80MM"?"THERMAL_80MM":"A4";
  const transactionName=text(settings,"transactionName",doc.title).trim()||doc.title;
  const termsText=text(settings,"termsText",doc.terms??"").trim();
@@ -25,7 +26,8 @@ export function applyInvoicePrintPreferences(documentType:string,doc:AccountPrin
  const taxDetails=enabled(settings,"taxDetails",true);
  const adjusted:AccountPrintDocument={
   ...doc,
-  title:transactionName,
+  printOptions:{...settings,printer,pageSize},
+  title:enabled(settings,"billOfSupply",false)&&[doc.cgst,doc.sgst,doc.igst,doc.cess].every(x=>Number(x)===0)?"Bill of Supply":transactionName,
   company:enabled(settings,"printCompanyName",true)?doc.company:"",
   logoDataUrl:enabled(settings,"companyLogo",true)?doc.logoDataUrl:null,
   companyAddress:enabled(settings,"address",true)?doc.companyAddress:null,

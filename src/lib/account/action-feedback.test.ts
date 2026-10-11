@@ -60,3 +60,10 @@ it("preserves framework authentication redirects", async () => {
     }),
   ).rejects.toThrow("NEXT_REDIRECT");
 });
+
+it("explains custom-field rejection without exposing implementation details",async()=>{
+ const required=await accountAction(async()=>{throw new Error("CUSTOM_FIELDS_REQUIRED:site_reference")});
+ expect(required).toEqual({kind:"error",message:"Complete the required custom fields before saving."});
+ const invalid=await accountAction(async()=>{throw new Error("INVALID_CUSTOM_FIELD:measurement")});
+ expect(invalid.message).toBe("Check the value and format of the custom fields.");
+});

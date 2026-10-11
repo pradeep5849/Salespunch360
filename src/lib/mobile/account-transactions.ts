@@ -1,3 +1,7 @@
+import { replacePostedSaleForActor, reversePostedSaleForActor } from "@/lib/account/sale-amendments";
+import {invoiceShareUrl} from "@/lib/account/invoice-share";
+import {resolveTransactionMessaging} from "@/lib/account/transaction-messaging";
+import {formatMoney,formatCalendarDate,resolveDisplayPreferences} from "@/lib/account/display-preferences";
 import { listOpenProjectOptionsForActor } from "@/lib/account/projects";
 import { enabledModulesForCompany } from "@/lib/account/modules";
 import { applyAdvanceForActor } from "@/lib/account/commercial";
@@ -9,6 +13,7 @@ import {
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
   createSettlementForActor,
+  saleReceiptBalanceForActor,
   documentOutstandingsBatch,
   getCommercialDocumentForActor,
   listCommercialDocumentsForActor,
@@ -111,7 +116,11 @@ export async function mobileSalesDetail(user: MobileAppPrincipal, id: string) {
     id,
   );
   if (!SALES_TYPES.has(row.type)) throw new Error("MOBILE_FORBIDDEN");
-  return row;
+  if(row.type!=="SALES_INVOICE")return row;
+  const [settings,customer,company]=await Promise.all([db.accountSettings.findUnique({where:{companyId:row.companyId}}),row.customerId?db.customer.findFirst({where:{companyId:row.companyId,id:row.customerId},select:{phone:true}}):null,db.company.findUnique({where:{id:row.companyId},select:{primaryPhone:true}})]);
+  const preferences=resolveTransactionMessaging(settings?.transactionDefaults),display=resolveDisplayPreferences(settings);
+  const message=`Hi ${row.partyName}, invoice ${row.documentNumber} dated ${formatCalendarDate(row.issueDate,display)} totals ${formatMoney(row.payableAmount??row.grandTotal,display)}.${preferences.includeInvoiceLink&&row.status==="POSTED"?`\n${invoiceShareUrl(row)}`:""}`;
+  return {...row,shareAs:((settings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences as Record<string,unknown>|undefined)?.shareAs==="PDF"?"PDF":"ASK",preparedMessages:[...(preferences.sendToParty?[{label:"Message to party",message,phone:customer?.phone??null}]:[]),...(preferences.copyToSelf?[{label:"Copy to Self",message,phone:company?.primaryPhone??null}]:[])]};
 }
 export async function mobileCreateSales(
   user: MobileAppPrincipal,
@@ -132,10 +141,11 @@ export async function mobileCreateSales(
       permit(user, policy.permission),
       raw,
     );
-  const receivedAmount = Number(source.receivedAmount ?? 0),
+  const requestedReceived = Number(source.receivedAmount ?? 0),
     paymentType = String(source.paymentType ?? "CASH"),
     documentPayload = { ...source };
   delete documentPayload.receivedAmount;
+  delete documentPayload.receivedInFull;
   delete documentPayload.paymentType;
   const actor = permit(user, "ACCOUNT_JOURNAL_POST"),
     row = await createCommercialDocumentForActor(actor, documentPayload);
@@ -152,6 +162,7 @@ export async function mobileCreateSales(
         .catch(() => undefined);
     throw error;
   }
+  const receivedAmount=source.receivedInFull===true?Number(await saleReceiptBalanceForActor(permit(user,"ACCOUNT_SETTLEMENT_ENTRY"),row.id,`mobile-sale-receipt:${row.id}`)):requestedReceived;
   if (Number.isFinite(receivedAmount) && receivedAmount > 0) {
     const receiptActor = permit(user, "ACCOUNT_SETTLEMENT_ENTRY");
     await createSettlementForActor(receiptActor, {
@@ -175,119 +186,16 @@ export async function mobilePostSales(user: MobileAppPrincipal, id: string) {
   return postCommercialDocumentForActor(actor, { documentId: id });
 }
 
-async function editableMobileSale(user: MobileAppPrincipal, id: string) {
-  const actor = permit(user, "ACCOUNT_JOURNAL_POST"),
-    sale = await getCommercialDocumentForActor(actor, id);
-  if (
-    sale.type !== "SALES_INVOICE" ||
-    sale.status !== "POSTED" ||
-    !sale.partyId ||
-    !sale.financial
-  )
-    throw new Error("SALE_NOT_EDITABLE");
-  const base = sale.payableAmount ?? sale.grandTotal;
-  if (
-    !sale.financial.outstanding.eq(base) ||
-    sale.adjustments.length ||
-    sale.allocations.length ||
-    sale.advanceApplications.length
-  )
-    throw new Error("SALE_HAS_PAYMENTS_OR_ADJUSTMENTS");
-  return { actor, sale };
-}
-function mobileCreditPayload(
-  sale: Awaited<ReturnType<typeof editableMobileSale>>["sale"],
-) {
-  return {
-    type: "CREDIT_NOTE" as const,
-    branchId: sale.branchId,
-    partyId: sale.partyId!,
-    sourceDocumentId: sale.id,
-    issueDate: new Date().toISOString().slice(0, 10),
-    taxMode: sale.taxMode,
-    stateOfSupplyCode: sale.stateOfSupplyCode ?? undefined,
-    roundOffAmount: sale.roundOffAmount.toString(),
-    lines: sale.lines.map((line) => ({
-      lineType: line.lineType,
-      sourceId:
-        line.productId ?? line.serviceId ?? line.workPackageId ?? undefined,
-      itemName: line.itemName,
-      itemCode: line.itemCode ?? undefined,
-      description: line.description ?? undefined,
-      specification: line.specification ?? undefined,
-      unitName: line.unitName ?? undefined,
-      unitSymbol: line.unitSymbol ?? undefined,
-      quantity: line.quantity.toString(),
-      rate: line.rate.toString(),
-      discountType: line.discountType ?? undefined,
-      discountValue: line.discountValue?.toString() ?? undefined,
-      taxRate: line.taxRate.toString(),
-      cessRate: line.cessRate.toString(),
-      warehouseId: line.warehouseId ?? undefined,
-      batchId: line.batchId ?? undefined,
-      serialNumberId: line.serialNumberId ?? undefined,
-      stockReturnQuantity: line.quantity.toString(),
-      sourceCommercialLineId: line.id,
-    })),
-  };
-}
-async function mobileReverseSale(user: MobileAppPrincipal, id: string) {
-  const { actor, sale } = await editableMobileSale(user, id),
-    credit = await createCommercialDocumentForActor(
-      actor,
-      mobileCreditPayload(sale),
-    );
-  try {
-    await ensureOpenFinancialYearForDate(actor.companyId, new Date());
-    await postCommercialDocumentForActor(actor, { documentId: credit.id });
-  } catch (error) {
-    await db.commercialDocument
-      .deleteMany({ where: { id: credit.id, status: "DRAFT" } })
-      .catch(() => undefined);
-    throw error;
-  }
-  await db.commercialDocument.update({
-    where: { id: sale.id },
-    data: { status: "CANCELLED" },
-  });
-  return credit;
-}
 export async function mobileDeleteSale(user: MobileAppPrincipal, id: string) {
   await assertOperationalWrite(user.companyId);
-  await mobileReverseSale(user, id);
-  return { ok: true };
+  await reversePostedSaleForActor(permit(user,"ACCOUNT_JOURNAL_POST"),id);
+  return {ok:true};
 }
-export async function mobileReplaceSale(
-  user: MobileAppPrincipal,
-  id: string,
-  raw: unknown,
-) {
+export async function mobileReplaceSale(user:MobileAppPrincipal,id:string,raw:unknown){
   await assertOperationalWrite(user.companyId);
-  await editableMobileSale(user, id);
-  const source =
-    raw && typeof raw === "object" && !Array.isArray(raw)
-      ? { ...(raw as Record<string, unknown>) }
-      : null;
-  if (!source) throw new Error("INVALID_INPUT");
-  source.type = "SALES_INVOICE";
-  delete source.receivedAmount;
-  delete source.paymentType;
-  const actor = permit(user, "ACCOUNT_JOURNAL_POST"),
-    replacement = await createCommercialDocumentForActor(actor, source);
-  try {
-    await ensureOpenFinancialYearForDate(
-      actor.companyId,
-      new Date(String(source.issueDate)),
-    );
-    await postCommercialDocumentForActor(actor, { documentId: replacement.id });
-    await mobileReverseSale(user, id);
-  } catch (error) {
-    await db.commercialDocument
-      .deleteMany({ where: { id: replacement.id, status: "DRAFT" } })
-      .catch(() => undefined);
-    throw error;
-  }
-  return getCommercialDocumentForActor(actor, replacement.id);
+  const actor=permit(user,"ACCOUNT_JOURNAL_POST");
+  const replacement=await replacePostedSaleForActor(actor,id,raw);
+  return getCommercialDocumentForActor(actor,replacement.id);
 }
 
 export async function mobileCustomerReceipt(
@@ -425,5 +333,6 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
       }))
       .filter((x) => x.outstanding !== "0"),
     receipts,
+    discountDuringPayment:((await db.accountSettings.findUnique({where:{companyId:actor.companyId},select:{transactionDefaults:true}}))?.transactionDefaults as {transactionPreferences?:{discountDuringPayment?:boolean}}|null)?.transactionPreferences?.discountDuringPayment===true,
   };
 }

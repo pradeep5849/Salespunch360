@@ -9,6 +9,7 @@ android { namespace="com.salespunch360.mobile"; compileSdk=35
  compileOptions { sourceCompatibility=JavaVersion.VERSION_17; targetCompatibility=JavaVersion.VERSION_17 }; kotlinOptions { jvmTarget="17" }
 }
 dependencies {
+ implementation("androidx.camera:camera-camera2:1.4.1"); implementation("androidx.camera:camera-lifecycle:1.4.1"); implementation("androidx.camera:camera-view:1.4.1"); implementation("com.google.zxing:core:3.5.3")
  implementation("androidx.browser:browser:1.8.0")
  implementation(platform("com.google.firebase:firebase-bom:33.9.0")); implementation("com.google.firebase:firebase-messaging")
  implementation(platform("androidx.compose:compose-bom:2025.01.00")); implementation("androidx.activity:activity-compose:1.10.0"); implementation("androidx.fragment:fragment-ktx:1.8.5"); implementation("androidx.compose.material3:material3"); implementation("androidx.compose.material:material-icons-extended"); implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"); implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")

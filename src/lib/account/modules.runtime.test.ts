@@ -1,7 +1,7 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
-const m=vi.hoisted(()=>({auth:vi.fn(),company:vi.fn(),settings:vi.fn(),upsert:vi.fn()}));
+const m=vi.hoisted(()=>({auth:vi.fn(),company:vi.fn(),settings:vi.fn(),upsert:vi.fn(),lock:vi.fn(),audit:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class extends Error{},requirePermission:m.auth,requirePermissionForMutation:m.auth}));
-vi.mock("@/lib/db",()=>({db:{company:{findUnique:m.company},accountSettings:{findUnique:m.settings,upsert:m.upsert}}}));
+vi.mock("@/lib/db",()=>({db:{company:{findUnique:m.company},accountSettings:{findUnique:m.settings,upsert:m.upsert},$transaction:async(fn:(tx:Record<string,unknown>)=>unknown)=>fn({$executeRaw:m.lock,accountSettings:{upsert:m.upsert},accountingAuditEvent:{create:m.audit}})}}));
 import {enabledModulesForCompany,requireAccountModules,updateModuleSettings} from "./modules";
 const actor={id:"u",companyId:"c",accountRole:"ACCOUNT_ADMIN"};
 describe("module runtime enforcement",()=>{

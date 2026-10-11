@@ -1,4 +1,9 @@
 "use client";
+import { useDisplayPreferences } from "./display-preferences";
+import {
+  formatMoney,
+  formatCalendarDate,
+} from "@/lib/account/display-preferences";
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
@@ -93,6 +98,7 @@ function MaterialFields({
 }
 const subscribeHydration = () => () => {};
 export function ProjectMaterialForms({ context: c }: { context: Context }) {
+  const preferences = useDisplayPreferences();
   const hydrated = useSyncExternalStore(
     subscribeHydration,
     () => true,
@@ -301,7 +307,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
                         {sources.map((x) => (
                           <option key={x.id} value={x.id}>
                             {x.productName} · available {x.availableQuantity} ·
-                            ₹{x.originalUnitCost}/unit
+                            {formatMoney(x.originalUnitCost, preferences)}/unit
                           </option>
                         ))}
                       </select>
@@ -388,7 +394,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
                     .map((x) => (
                       <option key={x.id} value={x.id}>
                         {x.movementType.replaceAll("_", " ")} · {x.quantity} ·{" "}
-                        {x.movementDate.slice(0, 10)}
+                        {formatCalendarDate(x.movementDate, preferences)}
                       </option>
                     ))}
                 </select>
@@ -443,9 +449,9 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
         {c.movements.length ? (
           c.movements.map((x) => (
             <p key={x.id}>
-              {x.movementDate.slice(0, 10)} ·{" "}
-              {x.movementType.replaceAll("_", " ")} · Qty {x.quantity} · ₹
-              {x.totalCost}
+              {formatCalendarDate(x.movementDate, preferences)} ·{" "}
+              {x.movementType.replaceAll("_", " ")} · Qty {x.quantity} ·{" "}
+              {formatMoney(x.totalCost, preferences)}
               {x.isReversed ? " · Reversed" : ""}
             </p>
           ))

@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.accounting
 
+import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -26,14 +27,17 @@ import kotlinx.serialization.json.*
   if(s.loading||s.saving)LinearProgressIndicator(Modifier.fillMaxWidth())
   s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)};s.message?.let{Text(it)}
   if(!s.loading&&s.rows.isEmpty())Text(if(s.query.isBlank()&&s.status==null)"No assets yet. Add an asset to track its value, assignments, and history." else "No assets match these filters.")
-  LazyColumn(modifier=Modifier.weight(1f)){items(s.rows,key={it.str("id")}){x->ListItem(headlineContent={Text("${x.str("assetNumber")} · ${x.str("name")}",fontWeight=FontWeight.Bold)},supportingContent={Text("${x.str("assetType")} · ${x.str("depreciationMethod")} · ₹${x.str("purchaseValue")}")},trailingContent={Text(x.str("status"))},modifier=Modifier.clickable(enabled=!s.saving){vm.open(x.str("id"))})};if(s.hasMore)item{OutlinedButton(vm::more,enabled=!s.loading){Text("Load more assets")}}}
+  LazyColumn(modifier=Modifier.weight(1f)){items(s.rows,key={it.str("id")}){x->ListItem(headlineContent={Text("${x.str("assetNumber")} · ${x.str("name")}",fontWeight=FontWeight.Bold)},supportingContent={Text("${x.str("assetType")} · ${x.str("depreciationMethod")} · ${accountMoney(x.str("purchaseValue"))}")},trailingContent={Text(x.str("status"))},modifier=Modifier.clickable(enabled=!s.saving){vm.open(x.str("id"))})};if(s.hasMore)item{OutlinedButton(vm::more,enabled=!s.loading){Text("Load more assets")}}}
  }
  if(s.editing!=null)AssetEditor(s.editing,s.options,s.saving,s.error,vm::close,vm::save)
  else s.detail?.let{AssetDetail(it,s.options,s.saving,s.error,vm::close,vm::edit,vm::action)}
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun AssetEditor(x:JsonObject,o:JsonObject,saving:Boolean,error:String?,close:()->Unit,save:(JsonObject,Boolean)->Unit){
  val edit=x.containsKey("id")
+ val customFields=o.array("customFields").map{it.jsonObject}
+ val customValues=remember(x){mutableStateMapOf<String,String>().apply{if(edit)x["customValues"]?.jsonObject?.forEach{(key,value)->put(key,(value as? JsonPrimitive)?.contentOrNull.orEmpty())}}}
  val values=remember(x){mutableStateMapOf<String,String>().apply{x.forEach{(k,v)->put(k,(v as? JsonPrimitive)?.contentOrNull.orEmpty())};putIfAbsent("assetType","EQUIPMENT");putIfAbsent("purchaseDate",java.time.LocalDate.now().toString());putIfAbsent("depreciationMethod","NONE");putIfAbsent("salvageValue","0");listOf("purchaseDate","depreciationStartDate","effectiveDate").forEach{k->this[k]=get(k).orEmpty().take(10)}}}
  fun get(key:String)=values[key].orEmpty()
  fun put(key:String,v:String){values[key]=v}
@@ -43,8 +47,8 @@ import kotlinx.serialization.json.*
  val opening=runCatching{if(get("openingQuantity").isBlank()||get("unitPrice").isBlank())null else BigDecimal(get("openingQuantity")).multiply(BigDecimal(get("unitPrice"))).setScale(2,RoundingMode.HALF_UP).toPlainString()}.getOrNull()
  val effectiveValue=line?.str("taxableAmount")?:opening?:get("purchaseValue")
  val nullable=listOf("category","hsnCode","openingQuantity","unitPrice","effectiveDate","vendorId","purchaseDocumentId","purchaseDocumentLineId","description","serialNumber","registrationNumber","makeModel","manufactureYear","location","usefulLifeMonths","depreciationStartDate","assetLedgerId","accumulatedDepreciationLedgerId","depreciationExpenseLedgerId")
- fun payload()=buildJsonObject{if(!edit)put("branchId",get("branchId"));listOf("name","assetType","purchaseDate","depreciationMethod","salvageValue").forEach{put(it,get(it))};put("purchaseValue",effectiveValue);nullable.forEach{k->if(get(k).isNotBlank())put(k,get(k))else if(edit)put(k,JsonNull)}}
- val canSave=!saving&&get("name").isNotBlank()&&effectiveValue.isNotBlank()&&get("branchId").isNotBlank()
+ fun payload()=buildJsonObject{putJsonObject("customFields"){customValues.forEach{put(it.key,it.value)}};if(!edit)put("branchId",get("branchId"));listOf("name","assetType","purchaseDate","depreciationMethod","salvageValue").forEach{put(it,get(it))};put("purchaseValue",effectiveValue);nullable.forEach{k->if(get(k).isNotBlank())put(k,get(k))else if(edit)put(k,JsonNull)}}
+ val canSave=!saving&&customFields.filter{it["isRequired"]?.jsonPrimitive?.booleanOrNull==true}.all{!customValues[it.str("fieldKey")].isNullOrBlank()}&&get("name").isNotBlank()&&effectiveValue.isNotBlank()&&get("branchId").isNotBlank()
  AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(edit)"Edit asset" else "New asset")},text={LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
   item{Text("Asset number: ${x.str("assetNumber").ifBlank{"Assigned automatically when saved"}}")}
   item{OutlinedTextField(get("name"),{put("name",it)},label={Text("Asset name *")},enabled=!saving)}
@@ -56,13 +60,25 @@ import kotlinx.serialization.json.*
   item{OutlinedTextField(get("purchaseDate"),{put("purchaseDate",it)},label={Text("Purchase date (YYYY-MM-DD) *")},enabled=!saving)}
   item{Option("Vendor",get("vendorId"),listOf(buildJsonObject{put("id","");put("name","None")})+o.array("vendors")){put("vendorId",it);put("purchaseDocumentId","");put("purchaseDocumentLineId","")}}
   item{Option("Posted purchase bill",get("purchaseDocumentId"),listOf(buildJsonObject{put("id","");put("name","None")})+purchases.map{JsonObject(it+mapOf("name" to JsonPrimitive("${it.str("documentNumber")} · ${it.str("partyName")}")))} ){put("purchaseDocumentId",it);put("purchaseDocumentLineId","")}}
-  item{Option("Purchase line",get("purchaseDocumentLineId"),listOf(buildJsonObject{put("id","");put("name","None")})+(purchase?.array("lines")?.map{val l=it.jsonObject;JsonObject(l+mapOf("name" to JsonPrimitive("${l.str("itemName")} · ₹${l.str("taxableAmount")}")))}?:emptyList())){put("purchaseDocumentLineId",it)}}
+  item{Option("Purchase line",get("purchaseDocumentLineId"),listOf(buildJsonObject{put("id","");put("name","None")})+(purchase?.array("lines")?.map{val l=it.jsonObject;JsonObject(l+mapOf("name" to JsonPrimitive("${l.str("itemName")} · ${accountMoney(l.str("taxableAmount"))}")))}?:emptyList())){put("purchaseDocumentLineId",it)}}
   item{OutlinedTextField(effectiveValue,{put("purchaseValue",it)},readOnly=line!=null||opening!=null,label={Text("Effective purchase value *")},enabled=!saving)}
   if(line!=null)item{Text("Value is the selected posted purchase line value, excluding tax.")}
   items(listOf("openingQuantity" to "Opening quantity","unitPrice" to "Price per unit","effectiveDate" to "As of / effective date (YYYY-MM-DD)","description" to "Description","serialNumber" to "Serial number","registrationNumber" to "Registration number","makeModel" to "Make / model","manufactureYear" to "Manufacture year","location" to "Location")){(key,label)->OutlinedTextField(get(key),{put(key,it)},label={Text(label)},enabled=!saving)}
   item{TextOption("Depreciation method",get("depreciationMethod"),listOf("NONE","STRAIGHT_LINE","WRITTEN_DOWN_VALUE")){put("depreciationMethod",it)}}
   items(listOf("usefulLifeMonths" to "Useful life in months","salvageValue" to "Salvage value","depreciationStartDate" to "Depreciation start date (YYYY-MM-DD)")){(key,label)->OutlinedTextField(get(key),{put(key,it)},label={Text(label)},enabled=!saving)}
   items(listOf("assetLedgerId" to "Asset ledger","accumulatedDepreciationLedgerId" to "Accumulated depreciation ledger","depreciationExpenseLedgerId" to "Depreciation expense ledger")){(key,label)->Option(label,get(key),listOf(buildJsonObject{put("id","");put("name","None")})+o.array("ledgers").filter{it.jsonObject.str("accountClass")==if(key=="depreciationExpenseLedgerId")"EXPENSE" else "ASSET"}){put(key,it)}}
+  items(customFields,key={it.str("fieldKey")}){field->
+   val key=field.str("fieldKey");val current=customValues[key].orEmpty()
+   val label=field.str("label")+if(field["isRequired"]?.jsonPrimitive?.booleanOrNull==true)" *"else ""
+   if(field.str("dataType") in listOf("SELECT","BOOLEAN")){
+    var open by remember(key){mutableStateOf(false)}
+    val choices=if(field.str("dataType")=="BOOLEAN")listOf("true" to "Yes","false" to "No")else field.array("options").map{it.jsonPrimitive.content to it.jsonPrimitive.content}
+    ExposedDropdownMenuBox(open,{if(!saving)open=!open}){
+     OutlinedTextField(choices.firstOrNull{it.first==current}?.second.orEmpty(),{},readOnly=true,enabled=!saving,label={Text(label)},modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable))
+     ExposedDropdownMenu(open,{open=false}){(listOf("" to "Select")+choices).forEach{(value,text)->DropdownMenuItem({Text(text)},{customValues[key]=value;open=false})}}
+    }
+   }else OutlinedTextField(current,{customValues[key]=it},enabled=!saving,label={Text(if(field.str("dataType")=="DATE")"$label (YYYY-MM-DD)"else label)},singleLine=field.str("dataType")!="TEXTAREA",isError=field["isRequired"]?.jsonPrimitive?.booleanOrNull==true&&current.isBlank())
+  }
   error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}}
  }},confirmButton={Column{Button(enabled=canSave,onClick={save(payload(),false)}){Text(if(saving)"Saving…" else "Save")};if(!edit)OutlinedButton(enabled=canSave,onClick={save(payload(),true)}){Text("Save & New")}}},dismissButton={TextButton(close,enabled=!saving){Text("Cancel")}})
 }

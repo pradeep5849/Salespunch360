@@ -36,6 +36,8 @@ fun AddItemScreen(
     val s=vm.state.collectAsStateWithLifecycle().value
     var service by remember{mutableStateOf(false)}
     var name by remember{mutableStateOf("")}
+    var customValues by remember(service){mutableStateOf<Map<String,String>>(emptyMap())}
+    val customFields=if(service)s.serviceFields else s.productFields
     var primaryUnit by remember{mutableStateOf<String?>(null)}
     var secondaryUnit by remember{mutableStateOf<String?>(null)}
     var code by remember{mutableStateOf("")}
@@ -120,9 +122,10 @@ fun AddItemScreen(
                                 hsnSac=hsn,
                                 trackInventory=!service&&(openingStock.isNotBlank()||minStock.isNotBlank()||itemLocation.isNotBlank()),
                                 lowStockThreshold=minStock,
+                                customFields=customValues,
                             ){back()}
                         },
-                        enabled=name.isNotBlank()&&!s.saving,
+                        enabled=name.isNotBlank()&&!s.loading&&!s.saving&&customFields.filter{it.isRequired}.all{!customValues[it.fieldKey].isNullOrBlank()},
                         modifier=Modifier.weight(1f).height(64.dp),
                         shape=MaterialTheme.shapes.extraSmall
                     ){Text(if(s.saving)"Saving…" else "Save")}
@@ -152,6 +155,18 @@ fun AddItemScreen(
                     Text("Services",fontWeight=if(service)FontWeight.Bold else FontWeight.Normal)
                 }
                 HorizontalDivider()
+            }
+            if(expanded)items(customFields,key={it.fieldKey}){field->
+                val value=customValues[field.fieldKey].orEmpty()
+                val label=field.label+if(field.isRequired)" *"else ""
+                if(field.dataType in listOf("SELECT","BOOLEAN")){
+                    var open by remember(field.fieldKey){mutableStateOf(false)}
+                    val choices=if(field.dataType=="BOOLEAN")listOf("true" to "Yes","false" to "No")else field.options.map{it to it}
+                    ExposedDropdownMenuBox(open,{open=!open},Modifier.padding(horizontal=16.dp)){
+                        OutlinedTextField(choices.firstOrNull{it.first==value}?.second.orEmpty(),{},readOnly=true,enabled=!s.saving,label={Text(label)},modifier=Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable))
+                        ExposedDropdownMenu(open,{open=false}){(listOf("" to "Select")+choices).forEach{(key,text)->DropdownMenuItem({Text(text)},{customValues=customValues+(field.fieldKey to key);open=false})}}
+                    }
+                }else OutlinedTextField(value,{customValues=customValues+(field.fieldKey to it)},enabled=!s.saving,label={Text(if(field.dataType=="DATE")"$label (YYYY-MM-DD)"else label)},singleLine=field.dataType!="TEXTAREA",isError=field.isRequired&&value.isBlank(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
             }
             item{
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){

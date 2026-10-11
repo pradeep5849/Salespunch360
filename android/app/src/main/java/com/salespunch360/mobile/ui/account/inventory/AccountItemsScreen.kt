@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.inventory
 
+import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -110,8 +111,8 @@ fun AccountItemsScreen(
                         }
                         if(!r.code.isNullOrBlank())Text(r.code.orEmpty(),style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                            Column{Text("Sale Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text("₹${r.salePrice.orEmpty().ifBlank{"0.00"}}")}
-                            Column{Text("Purchase Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text("₹${r.costPrice.orEmpty().ifBlank{"0.00"}}")}
+                            Column{Text("Sale Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(accountMoney(r.salePrice.orEmpty().ifBlank{"0.00"}))}
+                            Column{Text("Purchase Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(accountMoney(r.costPrice.orEmpty().ifBlank{"0.00"}))}
                             Column{Text(if(item.kind=="PRODUCT")"In Stock" else "Type",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(item.stock?.let{"%.2f".format(it)}?:"Service",color=if((item.stock?:0.0)<0)Color(0xFFDC2654) else MaterialTheme.colorScheme.onSurface)}
                         }
                     }

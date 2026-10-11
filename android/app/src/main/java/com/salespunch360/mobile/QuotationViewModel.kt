@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
 data class QuotationDraft(
+    val customFields:Map<String,String> = emptyMap(),
     val id: String? = null,
     val revision: Boolean = false,
     val branchId: String = "",
@@ -23,7 +24,10 @@ data class QuotationDraft(
     val inclusions: String = "",
     val exclusions: String = "",
     val notes: String = "",
-    val lines: List<SalesLineDraft> = listOf(SalesLineDraft())
+    val lines: List<SalesLineDraft> = listOf(SalesLineDraft()),
+    val lineMetadata: List<JsonObject> = emptyList(),
+    val adjustments: List<JsonObject> = emptyList(),
+    val paymentSchedule: List<JsonObject> = emptyList()
 )
 
 data class QuotationRow(
@@ -37,6 +41,7 @@ data class QuotationRow(
 )
 
 data class QuotationState(
+    val customFields:List<JsonObject> = emptyList(),
     val loading: Boolean = true,
     val saving: Boolean = false,
     val query: String = "",
@@ -87,6 +92,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = _state.value.copy(
                 loading = false,
                 rows = rows,
+                customFields=options.array("customFields"),
                 branches = options.array("branches").map { it.option() },
                 customers = options.array("customers").map { it.option() },
                 products = options.array("products").map { it.option() },
@@ -125,57 +131,20 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun line(index: Int, line: SalesLineDraft) {
-        _state.value.draft?.let {
-            editDraft(it.copy(lines = it.lines.mapIndexed { i, current -> if (i == index) line else current }))
-        }
+        _state.value.draft?.let { editDraft(editedQuotationLine(it, index, line)) }
     }
 
     fun addLine() {
         _state.value.draft?.let {
-            editDraft(it.copy(lines = it.lines + SalesLineDraft()))
+            editDraft(it.copy(lines = it.lines + SalesLineDraft(), lineMetadata = it.lines.indices.map { i -> it.lineMetadata.getOrNull(i) ?: JsonObject(emptyMap()) } + JsonObject(emptyMap())))
         }
     }
 
     fun removeLine(index: Int) {
-        _state.value.draft?.let {
-            if (it.lines.size > 1) {
-                editDraft(it.copy(lines = it.lines.filterIndexed { i, _ -> i != index }))
-            }
-        }
+        _state.value.draft?.let { editDraft(removedQuotationLine(it, index)) }
     }
 
-    private fun payload(draft: QuotationDraft) = buildJsonObject {
-        put("branchId", draft.branchId)
-        put("documentType", draft.documentType)
-        put("customerId", draft.customerId)
-        put("issueDate", draft.issueDate)
-        draft.validUntil.takeIf { it.isNotBlank() }?.let { put("validUntil", it) }
-        put("terms", draft.terms)
-        put("inclusions", draft.inclusions)
-        put("exclusions", draft.exclusions)
-        put("notes", draft.notes)
-        putJsonArray("lines") {
-            draft.lines.forEach { line ->
-                add(
-                    buildJsonObject {
-                        put("lineType", line.lineType)
-                        line.sourceId.takeIf { it.isNotBlank() }?.let { put("sourceId", it) }
-                        line.itemName.takeIf { it.isNotBlank() }?.let { put("itemName", it) }
-                        put("description", line.description)
-                        put("quantity", line.quantity)
-                        line.rate.takeIf { it.isNotBlank() }?.let { put("rate", it) }
-                        line.taxRate.takeIf { it.isNotBlank() }?.let { put("taxRate", it) }
-                        line.discountType.takeIf { it.isNotBlank() }?.let {
-                            put("discountType", it)
-                            put("discountValue", line.discountValue)
-                        }
-                    }
-                )
-            }
-        }
-        putJsonArray("adjustments") {}
-        putJsonArray("paymentSchedule") {}
-    }
+    private fun payload(draft: QuotationDraft) = quotationDraftPayload(draft)
 
     fun save() {
         val draft = _state.value.draft ?: return
@@ -248,34 +217,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         val detail = _state.value.detail ?: return
         val revision = detail.array("revisions").firstOrNull() ?: return
         _state.value = _state.value.copy(
-            draft = QuotationDraft(
-                id = detail.str("id"),
-                revision = detail.str("status") != "DRAFT",
-                branchId = detail.str("branchId"),
-                customerId = detail.str("customerId"),
-                documentType = detail.str("documentType"),
-                issueDate = revision.str("issueDate").take(10),
-                validUntil = revision.str("validUntil").take(10),
-                terms = revision.str("terms"),
-                inclusions = revision.str("inclusions"),
-                exclusions = revision.str("exclusions"),
-                notes = revision.str("notes"),
-                lines = revision.array("lines").map {
-                    SalesLineDraft(
-                        it.str("lineType"),
-                        it.str("productId").ifBlank {
-                            it.str("serviceId").ifBlank { it.str("workPackageId") }
-                        },
-                        it.str("itemName"),
-                        it.str("description"),
-                        it.str("quantity"),
-                        it.str("rate"),
-                        it.str("discountType"),
-                        it.str("discountValue"),
-                        it.str("taxRate")
-                    )
-                }
-            )
+            draft = savedQuotationDraft(detail, revision)
         )
     }
 

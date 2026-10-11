@@ -13,6 +13,7 @@ data class BranchesState(val loading:Boolean=true,val saving:Boolean=false,val b
 class BranchesViewModel(app:Application):AndroidViewModel(app){
  private val api=ApiClient(SecureSession(app));private val _state=MutableStateFlow(BranchesState());val state:StateFlow<BranchesState> = _state
  init{load()}
+ fun clearMessage(){_state.value=_state.value.copy(message=null)}
  fun load()=viewModelScope.launch{_state.value=_state.value.copy(loading=true,message=null);_state.value=try{BranchesState(loading=false,branches=api.branches())}catch(e:Exception){_state.value.copy(loading=false,message=message(e))}}
  fun create(name:String,code:String,address:String?,city:String?,state:String?,postal:String?,country:String?,phone:String?,email:String?,done:()->Unit)=save(done){api.createBranch(name,code,address,city,state,postal,country,phone,email)}
  fun edit(branch:BranchDetails,done:()->Unit)=save(done){api.editBranch(branch)}

@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.accounting
 
+import com.salespunch360.mobile.ui.account.accountDate
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -63,8 +65,8 @@ fun FinancialYearScreen(
                     headlineContent = { Text(year.str("name")) },
                     supportingContent = {
                         Text(
-                            "${year.str("startDate").take(10)} – ${year.str("endDate").take(10)}" +
-                                lock?.let { " · locked through ${it.str("lockedThrough").take(10)}" }.orEmpty()
+                            "${accountDate(year.str("startDate"))} – ${accountDate(year.str("endDate"))}" +
+                                lock?.let { " · locked through ${accountDate(it.str("lockedThrough"))}" }.orEmpty()
                         )
                     },
                     trailingContent = {

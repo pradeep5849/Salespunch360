@@ -16,7 +16,8 @@ import {
   trialBalance,
   type ReportLine,
 } from "../financial-reports";
-import { gstReport } from "../tax";
+import { gstReportForActor } from "../tax";
+import { reportFinancialYearStart } from "./dates";
 import { itemProfitability } from "../inventory";
 import {
   authorizedProjectBranchIds,
@@ -26,19 +27,22 @@ import {
 import { loadProjectCostingForActor } from "../project-costing";
 import { documentOutstandingsBatch } from "../commercial";
 
+const blankFilter = (value: unknown) => typeof value === "string" && !value.trim() ? undefined : value;
+
 const D = Prisma.Decimal,
   Z = new D(0),
   filterSchema = z
     .object({
-      from: z.coerce.date().optional(),
-      to: z.coerce.date().optional(),
-      asOf: z.coerce.date().optional(),
-      branchId: z.string().uuid().optional(),
-      projectId: z.string().uuid().optional(),
-      customerId: z.string().uuid().optional(),
-      vendorId: z.string().uuid().optional(),
-      productId: z.string().uuid().optional(),
-      ledgerId: z.string().uuid().optional(),
+      scope: z.literal("all").optional(),
+      from: z.preprocess(blankFilter, z.coerce.date().optional()),
+      to: z.preprocess(blankFilter, z.coerce.date().optional()),
+      asOf: z.preprocess(blankFilter, z.coerce.date().optional()),
+      branchId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      projectId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      customerId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      vendorId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      productId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      ledgerId: z.preprocess(blankFilter, z.string().uuid().optional()),
     })
     .strict();
 
@@ -66,8 +70,8 @@ async function context(
     throw new AuthorizationError();
 
   const f = filterSchema.parse(raw),
-    from = f.from ?? new Date(Date.UTC(new Date().getUTCFullYear(), 3, 1)),
-    to = f.to ?? f.asOf ?? new Date();
+    to = f.to ?? f.asOf ?? new Date(),
+    from = f.from ?? reportFinancialYearStart(to);
 
   if (to < from) throw new Error("INVALID_DATE_RANGE");
   if (actor.accountRole === "PROJECT_MANAGER" && !projectOnly)
@@ -163,7 +167,8 @@ async function ledgerData(raw: unknown, actor?: ProjectActor) {
   return { ...c, lines: mapped };
 }
 
-const n = (x: Prisma.Decimal) => x.toFixed(2);
+// Keep report values exact until the presentation/export boundary applies display precision.
+const n = (x: Prisma.Decimal) => x.toString();
 export function vendorDocumentAmount(document: {
   grandTotal: Prisma.Decimal;
   payableAmount: Prisma.Decimal | null;
@@ -189,7 +194,7 @@ export async function runFinancialReportForActor(
 
   if (name === "tax") {
     const c = await context(raw, false, actor),
-      r = await gstReport({ from: c.from, to: c.to, branchId: c.f.branchId });
+      r = await gstReportForActor(c.actor, { from: c.from, to: c.to, branchId: c.f.branchId });
     return {
       title: "GST / Tax",
       columns: [
@@ -673,6 +678,30 @@ export async function runFinancialReportForActor(
     };
   }
 
+  if (name === "profit-withdrawal") {
+    const owners = await db.ownerFinancialAccount.findMany({ where: { companyId: c.actor.companyId } });
+    const [users, entries] = await Promise.all([
+      db.user.findMany({ where: { companyId: c.actor.companyId, id: { in: owners.map(owner => owner.userId) } }, select: { id: true, name: true } }),
+      db.journalLine.findMany({
+        where: {
+          companyId: c.actor.companyId,
+          ledgerAccountId: { in: owners.map(owner => owner.drawingsLedgerId) },
+          journalEntry: { status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] }, entryDate: { gte: c.from, lte: c.to }, ...c.branch },
+        },
+        include: { journalEntry: true }, orderBy: [{ journalEntry: { entryDate: "asc" } }, { id: "asc" }],
+      }),
+    ]);
+    const names = new Map(users.map(user => [user.id, user.name]));
+    const ownerNames = new Map(owners.map(owner => [owner.drawingsLedgerId, names.get(owner.userId) ?? owner.userId]));
+    return {
+      title: "Profit Withdrawal Report",
+      columns: ["Date", "Owner / Partner", "Reference", "Amount", "Transaction"],
+      rows: entries.map(entry => [entry.journalEntry.entryDate.toISOString().slice(0, 10), ownerNames.get(entry.ledgerAccountId) ?? "", entry.journalEntry.reference ?? "", n(entry.debit.sub(entry.credit)), entry.journalEntry.sourceType]),
+      totals: ["Net withdrawals", "", "", n(entries.reduce((total, entry) => total.add(entry.debit).sub(entry.credit), Z)), ""],
+      note: "Owner/partner drawings from the business; withdrawals are not business expenses. Reversals reduce withdrawals on their journal date. This report does not calculate distributable profit.",
+    };
+  }
+
   if (name === "owner-capital") {
     const owners = await db.ownerFinancialAccount.findMany({
       where: { companyId: c.actor.companyId },
@@ -939,6 +968,9 @@ export async function reportOptionsForActor(a: ProjectActor) {
           companyId: a.companyId,
           isActive: true,
           isAccountCustomer: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { branchId: { in: a.branchIds ?? [] } }
+            : {}),
         },
       }),
       db.vendor.findMany({ where: { companyId: a.companyId, isActive: true } }),

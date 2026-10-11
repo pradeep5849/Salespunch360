@@ -5,13 +5,13 @@ import { createAccountCustomerForBranch, createCategory, createFinancialYear, cr
 export async function saveAccountMaster(formData:FormData){
  const type=String(formData.get("type")); const raw=Object.fromEntries(formData.entries());
  const customValues=Object.fromEntries([...formData.entries()].filter(([key])=>key.startsWith("custom_")).map(([key,value])=>[key.slice(7),value]));
- const calls:Record<string,(v:unknown)=>Promise<unknown>>={customers:v=>createPartyWithCustomValues("customers",v,customValues),vendors:v=>createPartyWithCustomValues("vendors",v,customValues),units:createUnit,categories:createCategory,products:createProduct,services:createService,"work-categories":createWorkCategory,"work-packages":createWorkPackage,"financial-years":createFinancialYear,currency:setCurrency};
+ const calls:Record<string,(v:unknown)=>Promise<unknown>>={customers:v=>createPartyWithCustomValues("customers",v,customValues),vendors:v=>createPartyWithCustomValues("vendors",v,customValues),units:createUnit,categories:createCategory,products:v=>createProduct(v,customValues),services:v=>createService(v,customValues),"work-categories":createWorkCategory,"work-packages":createWorkPackage,"financial-years":createFinancialYear,currency:setCurrency};
  const call=calls[type]; if(!call)throw new Error("INVALID_MASTER_TYPE"); await call(raw); revalidatePath(`/workspace/account/${type}`); revalidatePath("/workspace/account");
 }
-export type CreateAccountItemInput={type:"products"|"services";name:string;unitId?:string;categoryId?:string;code?:string;barcode?:string;description?:string;sellingRate?:string;cost?:string;taxRate?:string;hsnSacCode?:string;trackInventory?:boolean;trackingMode?:"NONE"|"BATCH"|"SERIAL";lowStockThreshold?:string};
+export type CreateAccountItemInput={type:"products"|"services";name:string;unitId?:string;categoryId?:string;code?:string;barcode?:string;description?:string;sellingRate?:string;cost?:string;taxRate?:string;hsnSacCode?:string;trackInventory?:boolean;trackingMode?:"NONE"|"BATCH"|"SERIAL";lowStockThreshold?:string;customFields?:Record<string,string>};
 export async function createAccountItemAction(raw:CreateAccountItemInput){
  const call=raw.type==="products"?createProduct:createService;
- const row=await call({name:raw.name,unitId:raw.unitId,categoryId:raw.categoryId,code:raw.code??"",barcode:raw.barcode,description:raw.description??"",sellingRate:raw.sellingRate??"0",cost:raw.cost??"0",taxRate:raw.taxRate??"0",hsnSacCode:raw.hsnSacCode??"",trackInventory:raw.type==="products"&&Boolean(raw.trackInventory),trackingMode:raw.type==="products"?(raw.trackingMode??"NONE"):"NONE",lowStockThreshold:raw.type==="products"?(raw.lowStockThreshold??"0"):"0"});
+ const row=await call({name:raw.name,unitId:raw.unitId,categoryId:raw.categoryId,code:raw.code??"",barcode:raw.barcode,description:raw.description??"",sellingRate:raw.sellingRate??"0",cost:raw.cost??"0",taxRate:raw.taxRate??"0",hsnSacCode:raw.hsnSacCode??"",trackInventory:raw.type==="products"&&Boolean(raw.trackInventory),trackingMode:raw.type==="products"?(raw.trackingMode??"NONE"):"NONE",lowStockThreshold:raw.type==="products"?(raw.lowStockThreshold??"0"):"0"},raw.customFields??{});
  revalidatePath("/workspace/account/inventory");
  return {id:row.id};
 }

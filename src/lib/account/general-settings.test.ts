@@ -1,15 +1,20 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
-const m=vi.hoisted(()=>({auth:vi.fn(),upsert:vi.fn(),audit:vi.fn(),transaction:vi.fn(),find:vi.fn(),lock:vi.fn()}));
+const m=vi.hoisted(()=>({auth:vi.fn(),upsert:vi.fn(),audit:vi.fn(),transaction:vi.fn(),find:vi.fn(),lock:vi.fn(),journalCount:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class extends Error{},requirePermission:vi.fn(),requirePermissionForMutation:m.auth}));
 vi.mock("@/lib/db",()=>({db:{$transaction:m.transaction}}));
-import {generalSettingsSchema,updateGeneralSettings} from "./settings";
+import {generalSettingsSchema,updateGeneralSettings,buildUpiUri} from "./settings";
 const valid={appLanguage:"en",baseCurrency:"INR",displayDecimalPlaces:2,dateFormat:"DD/MM/YYYY",warnUnsavedChanges:true,appearance:"STANDARD"} as const;
 describe("Account General settings",()=>{
- beforeEach(()=>{vi.clearAllMocks();m.find.mockResolvedValue({enabledModules:["PROJECTS","PROJECT_COSTING","ASSETS"]});m.transaction.mockImplementation(fn=>fn({accountSettings:{upsert:m.upsert,findUnique:m.find},accountingAuditEvent:{create:m.audit},$executeRaw:m.lock}));m.auth.mockResolvedValue({id:"user",companyId:"company",accountRole:"ACCOUNT_ADMIN"});m.upsert.mockResolvedValue(valid);m.audit.mockResolvedValue({})});
+ beforeEach(()=>{vi.clearAllMocks();m.find.mockResolvedValue({enabledModules:["PROJECTS","PROJECT_COSTING","ASSETS"]});m.transaction.mockImplementation(fn=>fn({accountSettings:{upsert:m.upsert,findUnique:m.find},accountingAuditEvent:{create:m.audit},$executeRaw:m.lock,journalEntry:{count:m.journalCount}}));m.auth.mockResolvedValue({id:"user",companyId:"company",accountRole:"ACCOUNT_ADMIN"});m.upsert.mockResolvedValue(valid);m.audit.mockResolvedValue({});m.journalCount.mockResolvedValue(0)});
  it("accepts supported preferences and normalizes currency",()=>expect(generalSettingsSchema.parse({...valid,baseCurrency:"usd"}).baseCurrency).toBe("USD"));
  it.each([{...valid,displayDecimalPlaces:5},{...valid,dateFormat:"DD-MM-YY"},{...valid,appearance:"BLUE"}])("rejects invalid display preferences",input=>expect(()=>generalSettingsSchema.parse(input)).toThrow());
  it("persists one company-scoped source of truth and audits it",async()=>{await updateGeneralSettings(valid);expect(m.upsert).toHaveBeenCalledWith({where:{companyId:"company"},create:{companyId:"company",...valid},update:valid});expect(m.audit).toHaveBeenCalled()});
  it("disables Assets without changing the other module choices",async()=>{await updateGeneralSettings({...valid,fixedAssetsEnabled:false});expect(m.upsert).toHaveBeenCalledWith(expect.objectContaining({update:{...valid,enabledModules:["PROJECTS","PROJECT_COSTING"]}}))});
  it("enables Assets exactly once",async()=>{await updateGeneralSettings({...valid,fixedAssetsEnabled:true});expect(m.upsert).toHaveBeenCalledWith(expect.objectContaining({update:{...valid,enabledModules:["PROJECTS","PROJECT_COSTING","ASSETS"]}}))});
+ it("does not generate an INR payment request for another business currency",()=>expect(buildUpiUri({upiId:"acme@upi"},undefined,"INV-1","USD")).toBeNull());
+ it("refuses unsupported business currencies",()=>expect(()=>generalSettingsSchema.parse({...valid,baseCurrency:"XYZ"})).toThrow());
+ it("blocks currency changes after posted accounting entries",async()=>{m.journalCount.mockResolvedValue(1);await expect(updateGeneralSettings({...valid,baseCurrency:"USD"})).rejects.toThrow("BUSINESS_CURRENCY_LOCKED");expect(m.upsert).not.toHaveBeenCalled();expect(m.audit).not.toHaveBeenCalled()});
+ it("allows display changes without changing a locked currency",async()=>{m.journalCount.mockResolvedValue(1);await updateGeneralSettings({...valid,displayDecimalPlaces:4,dateFormat:"YYYY-MM-DD"});expect(m.journalCount).not.toHaveBeenCalled();expect(m.upsert).toHaveBeenCalled()});
+ it("allows currency selection before posting",async()=>{await updateGeneralSettings({...valid,baseCurrency:"USD"});expect(m.journalCount).toHaveBeenCalledWith({where:{companyId:"company",status:{in:["POSTED","REVERSED"]}}});expect(m.upsert).toHaveBeenCalledWith(expect.objectContaining({update:expect.objectContaining({baseCurrency:"USD"})}))});
  it("preserves Account Admin permission enforcement",async()=>{m.auth.mockResolvedValue({id:"user",companyId:"company",accountRole:"ACCOUNTANT"});await expect(updateGeneralSettings(valid)).rejects.toThrow();expect(m.upsert).not.toHaveBeenCalled()});
 });

@@ -36,12 +36,25 @@ private fun PrintValue(label:String,value:String,onChange:(String)->Unit){
 }
 
 @Composable
-private fun PrintStepper(label:String,value:Int,onChange:(Int)->Unit){
+private fun PrintChoice(label:String,value:String,options:List<String>,onChange:(String)->Unit){
+    var open by remember{mutableStateOf(false)}
+    Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f),fontSize=15.5.sp)
+        Box{TextButton(onClick={open=true}){Text(value.replace('_',' ')+" ▾")}
+            DropdownMenu(expanded=open,onDismissRequest={open=false}){
+                options.forEach{option->DropdownMenuItem(text={Text(option.replace('_',' '))},onClick={onChange(option);open=false})}
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrintStepper(label:String,value:Int,maxValue:Int=50,onChange:(Int)->Unit){
     Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
         Text(label,Modifier.weight(1f),fontSize=15.5.sp)
         TextButton(onClick={onChange((value-1).coerceAtLeast(0))}){Text("−")}
         Text(value.toString(),style=MaterialTheme.typography.titleMedium)
-        TextButton(onClick={onChange((value+1).coerceAtMost(50))}){Text("+")}
+        TextButton(onClick={onChange((value+1).coerceAtMost(maxValue))}){Text("+")}
     }
 }
 
@@ -104,20 +117,20 @@ fun InvoicePrintSettingsView(data: JsonElement, vm: AccountAdministrationViewMod
         item{PrintSwitch("Make Regular Printer Default",regularDefault){regularDefault=it}}
         item{PrintSection("Themes")}
         item{PrintValue("Change Theme and Colors",theme){theme=it}}
-        item{PrintValue("Print text size",printTextSize){printTextSize=it}}
-        item{PrintValue("Page size",pageSize){pageSize=it}}
-        item{PrintValue("Orientation",orientation){orientation=it}}
+        item{PrintChoice("Print text size",printTextSize,listOf("SMALL","MEDIUM","LARGE")){printTextSize=it}}
+        item{PrintChoice("Page size",pageSize,listOf("A4","A5","THERMAL_80MM")){pageSize=it}}
+        item{PrintChoice("Orientation",orientation,listOf("PORTRAIT","LANDSCAPE")){orientation=it}}
         item{PrintSection("Print Company Info/Header")}
         item{PrintSwitch("Print repeat header in all pages",repeatHeader){repeatHeader=it}}
         item{PrintSwitch("Print Company Name",printCompanyName){printCompanyName=it}}
-        item{PrintValue("Company Name Text Size",companyNameTextSize){companyNameTextSize=it}}
+        item{PrintChoice("Company Name Text Size",companyNameTextSize,listOf("SMALL","MEDIUM","LARGE")){companyNameTextSize=it}}
         item{PrintSwitch("Company logo",companyLogo){companyLogo=it}}
         item{PrintSwitch("Address",address){address=it}}
         item{PrintSwitch("Email",email){email=it}}
         item{PrintSwitch("Phone number",phone){phone=it}}
         item{PrintSwitch("GSTIN on Sale",gstinOnSale){gstinOnSale=it}}
         item{PrintSwitch("Print Bill of Supply for non tax invoices",billOfSupply){billOfSupply=it}}
-        item{PrintStepper("Extra spaces on top of PDF",topSpace){topSpace=it}}
+        item{PrintStepper("Extra spaces on top of PDF",topSpace,maxValue=20){topSpace=it}}
         item{PrintSwitch("Print Original/Duplicate",originalDuplicate){originalDuplicate=it}}
         item{PrintValue("Change Transaction Names",transactionName){transactionName=it}}
         item{PrintSection("Totals & Taxes")}
@@ -131,7 +144,7 @@ fun InvoicePrintSettingsView(data: JsonElement, vm: AccountAdministrationViewMod
         item{PrintSwitch("Print Current Balance of Party",partyCurrentBalance){partyCurrentBalance=it}}
         item{PrintSwitch("Tax details",taxDetails){taxDetails=it}}
         item{PrintSwitch("Amount Grouping",amountGrouping){amountGrouping=it}}
-        item{PrintValue("Amount in words format",amountWordsFormat){amountWordsFormat=it}}
+        item{PrintChoice("Amount in words format",amountWordsFormat,listOf("INDIAN","INTERNATIONAL")){amountWordsFormat=it}}
         item{PrintSwitch("You Saved",youSaved){youSaved=it}}
         item{PrintSection("Footer")}
         item{PrintSwitch("Print description",printDescription){printDescription=it}}

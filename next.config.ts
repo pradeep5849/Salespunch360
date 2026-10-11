@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
     return [
       { source: "/(.*)", headers: securityHeaders },
       {
+        source: "/workspace/account/transactions/new",
+        headers: [{key:"Permissions-Policy",value:"camera=(self), microphone=(), geolocation=(self)"}],
+      },
+      {
         source: "/workspace/:path*",
         headers: [
           { key: "Cache-Control", value: "private, no-store, max-age=0" },

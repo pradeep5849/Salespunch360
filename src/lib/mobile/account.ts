@@ -1,3 +1,4 @@
+import {resolveDisplayPreferences} from "@/lib/account/display-preferences";
 import { dashboardLinks } from "@/lib/account/dashboard-links";
 import type { AccountModule } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -50,7 +51,7 @@ export async function mobileAccountBootstrap(
     effectiveEntitlement(actor.companyId),
     db.accountSettings.findUnique({
       where: { companyId: actor.companyId },
-      select: { itemSettings: true },
+      select: { itemSettings: true, appLanguage: true, baseCurrency: true, displayDecimalPlaces: true, dateFormat: true },
     }),
   ]);
   const filter =
@@ -72,6 +73,7 @@ export async function mobileAccountBootstrap(
     productEdition: company.productEdition,
     enabledModules: modules,
     itemSettings: settings?.itemSettings ?? {},
+    displayPreferences: resolveDisplayPreferences(settings),
     effectivePermissions: rolePermissionSummary(actor.accountRole),
     canSwitchWorkspace: user.authorizedWorkspaces.includes("SALES"),
     branch: branch.context,

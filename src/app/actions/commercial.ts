@@ -6,6 +6,7 @@ import {
   applyAdvance,
   createCommercialDocument,
   createSettlement,
+  saleReceiptBalance,
   finalizeNonFinancialDocument,
   postCommercialDocument,
   schedulePaymentReminder,
@@ -19,7 +20,7 @@ import {
   type CommercialCreateResult,
 } from "@/lib/account/commercial-action-errors";
 import { logEvent } from "@/lib/logging";
-const payload = (form: FormData) => JSON.parse(String(form.get("payload")));
+const payload = (form: FormData) => {const input=JSON.parse(String(form.get("payload")));const fields=[...form.entries()].filter(([key])=>key.startsWith("custom_"));return fields.length?{...input,customFields:Object.fromEntries(fields.map(([key,value])=>[key.slice(7),String(value)]))}:input;};
 function normalizeClientCommercialInput(raw: unknown) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const input = { ...(raw as Record<string, unknown>) };
@@ -68,7 +69,7 @@ export async function createCommercialDocumentAction(
  */
 export async function submitSaleInvoiceAction(
   raw: unknown,
-  payment?: { receivedAmount?: number; paymentType?: string },
+  payment?: { receivedAmount?: number; receivedInFull?:boolean; paymentType?: string },
 ): Promise<CommercialCreateResult> {
   let createdId = "";
   let durableRequest = false;
@@ -94,7 +95,7 @@ export async function submitSaleInvoiceAction(
     );
     await postCommercialDocument({ documentId: row.id });
 
-    const received = Number(payment?.receivedAmount ?? 0);
+    const received = payment?.receivedInFull===true?Number(await saleReceiptBalance(row.id,`sale-save-receipt:${row.id}`)):Number(payment?.receivedAmount ?? 0);
     if (Number.isFinite(received) && received > 0) {
       const paymentMode = payment?.paymentType === "CASH" ? "CASH" : "BANK";
       await createSettlement({
@@ -143,6 +144,12 @@ export async function postCommercialAction(form: FormData) {
   const id = String(form.get("id"));
   await postCommercialDocument({ documentId: id });
   revalidatePath(`/workspace/account/transactions/${id}`);
+}
+export async function saveSettlementWithFeedback(form: FormData) {
+  return accountAction(async () => {
+    await createSettlement(payload(form));
+    return "/workspace/account/transactions";
+  }, "Payment posted");
 }
 export async function saveSettlementAction(form: FormData) {
   await createSettlement(payload(form));

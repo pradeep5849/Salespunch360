@@ -18,6 +18,9 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountReportViewModel
+import com.salespunch360.mobile.account.accountReportNames
+import com.salespunch360.mobile.account.accountReportColumns
+import com.salespunch360.mobile.account.accountReportRows
 import com.salespunch360.mobile.account.array
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.ui.account.accounting.Option
@@ -49,8 +52,8 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     if (state.report == null) {
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp)) {
             item { Text("Account reports", style = MaterialTheme.typography.headlineSmall) }
-            items(state.options.array("reports")) { report ->
-                val name = report.jsonPrimitive.content
+            items(accountReportNames(state.options)) { report ->
+                val name = report
                 ListItem(headlineContent = { Text(name.replace('-', ' ').replaceFirstChar { it.uppercase() }) }, modifier = Modifier.clickable { vm.choose(name) })
             }
         }
@@ -81,9 +84,11 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.data?.let { data ->
             Text(data.str("title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            data.str("note").takeIf { it.isNotBlank() }?.let { Text(it) }
+            state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
             LazyRow {
-                item { Column { data.array("columns").forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } }
-                items(data.array("rows")) { row -> Column { row.jsonArray.forEach { Text(it.jsonPrimitive.content) } } }
+                item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
+                items(accountReportRows(data)) { row -> Column { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }
             }
         }

@@ -1,3 +1,4 @@
+import { ClientMoney } from "@/components/account/display-preferences";
 import { ProjectChangeOrders } from "@/components/account/project-change-orders";
 import { ProjectFinancialDetails } from "@/components/account/project-financial-details";
 import { requirePermission } from "@/lib/auth/authorization";
@@ -8,8 +9,8 @@ import { notFound } from "next/navigation";
 import type { ProjectActor } from "@/lib/account/projects";
 import { loadProjectCostingForActor } from "@/lib/account/project-costing";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
-const money = (x: { toFixed(n: number): string } | null) =>
-  x ? x.toFixed(2) : "—";
+const money = (value: { toString(): string } | null) =>
+  value === null ? "—" : <ClientMoney value={value.toString()} />;
 export default async function Page({
   params,
 }: {
@@ -37,24 +38,54 @@ export default async function Page({
       company.productEdition,
       "ACCOUNT_PROJECT_COST_EDIT",
     );
-  const cards = [
-    ["Project Value / Gross Value", metrics.originalValue],
-    ["Approved Change Orders (tax-exclusive)", metrics.approvedChangeOrders],
-    ["Current Tax-exclusive Contract Revenue", metrics.contractRevenueBase],
-    ["Net purchases / direct material cost", metrics.directProjectPurchases],
-    ["Actual Cost", metrics.actualCost],
-    ["Labour and other expenses", metrics.expenseCost],
-    ["Contract amount less actual costs", metrics.contractProfit],
-    ["Contract revenue remaining to invoice", metrics.unbilledContractRevenue],
-    ["Material transferred in", metrics.materialTransferredIn],
-    ["Material transferred out", metrics.materialTransferredOut],
-    ["Project Revenue", metrics.revenue],
-    ["Project P&L", metrics.profit],
-    ["Advances received", metrics.advanceReceived],
-    ["Payments applied to invoices", metrics.amountReceived],
-    ["Customer invoice outstanding", metrics.accountingReceivable],
-    ["Final Profit", metrics.finalProfit],
-    ["Actual Margin %", metrics.actualMarginPercent],
+  const groups = [
+    {
+      title: "Contract and revenue",
+      cards: [
+        ["Project Value / Gross Value", metrics.originalValue],
+        [
+          "Approved Change Orders (tax-exclusive)",
+          metrics.approvedChangeOrders,
+        ],
+        ["Current Tax-exclusive Contract Revenue", metrics.contractRevenueBase],
+        ["Project Revenue", metrics.revenue],
+        [
+          "Contract revenue remaining to invoice",
+          metrics.unbilledContractRevenue,
+        ],
+      ],
+    },
+    {
+      title: "Costs and materials",
+      cards: [
+        [
+          "Net purchases / direct material cost",
+          metrics.directProjectPurchases,
+        ],
+        ["Actual Cost", metrics.actualCost],
+        ["Labour and other expenses", metrics.expenseCost],
+        ["Material transferred in", metrics.materialTransferredIn],
+        ["Material transferred out", metrics.materialTransferredOut],
+      ],
+    },
+    {
+      title: "Payments and outstanding",
+      cards: [
+        ["Advances received", metrics.advanceReceived],
+        ["Payments applied to invoices", metrics.amountReceived],
+        ["Customer invoice outstanding", metrics.accountingReceivable],
+      ],
+    },
+    {
+      title: "Profit",
+      cards: [
+        ["Contract amount less actual costs", metrics.contractProfit],
+        ["Project P&L", metrics.profit],
+        ...(metrics.finalProfit === null
+          ? []
+          : [["Final Profit", metrics.finalProfit] as const]),
+      ],
+    },
   ] as const;
   return (
     <main className="employees-shell">
@@ -63,14 +94,29 @@ export default async function Page({
           title={`${project.projectNumber} · Profit & Loss`}
           backHref={`/workspace/account/projects/${id}`}
         />
-        <div className="metric-grid">
-          {cards.map(([label, value]) => (
-            <article key={label}>
-              <b>{label}</b>
-              <p>{money(value)}</p>
-            </article>
-          ))}
-        </div>
+        {groups.map(({ title, cards }) => (
+          <section
+            key={title}
+            aria-label={title}
+            id={title === "Profit" ? "report" : undefined}
+          >
+            <h2>{title}</h2>
+            <div className="metric-grid">
+              {cards.map(([label, value]) => (
+                <article key={label}>
+                  <b>{label}</b>
+                  <p>{money(value)}</p>
+                </article>
+              ))}
+              {title === "Profit" && (
+                <article>
+                  <b>Actual Margin %</b>
+                  <p>{metrics.actualMarginPercent.toFixed(2)}%</p>
+                </article>
+              )}
+            </div>
+          </section>
+        ))}
         <ProjectChangeOrders
           projectId={id}
           actorId={actor.id}
@@ -91,34 +137,38 @@ export default async function Page({
         <details>
           <summary>Additional work/package analysis</summary>
           <h2>Work / Package Profitability</h2>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Package</th>
-                  <th>Estimated Revenue</th>
-                  <th>Estimated Cost</th>
-                  <th>Actual Revenue</th>
-                  <th>Actual Cost</th>
-                  <th>Profit</th>
-                  <th>Margin %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {packages.map((x) => (
-                  <tr key={x.id ?? "other"}>
-                    <td>{x.name}</td>
-                    <td>{money(x.estimatedRevenue)}</td>
-                    <td>{money(x.estimatedCost)}</td>
-                    <td>{money(x.actualRevenue)}</td>
-                    <td>{money(x.actualCost)}</td>
-                    <td>{money(x.profit)}</td>
-                    <td>{money(x.marginPercent)}</td>
+          {packages.length ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Package</th>
+                    <th>Estimated Revenue</th>
+                    <th>Estimated Cost</th>
+                    <th>Actual Revenue</th>
+                    <th>Actual Cost</th>
+                    <th>Profit</th>
+                    <th>Margin %</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {packages.map((x) => (
+                    <tr key={x.id ?? "other"}>
+                      <td>{x.name}</td>
+                      <td>{money(x.estimatedRevenue)}</td>
+                      <td>{money(x.estimatedCost)}</td>
+                      <td>{money(x.actualRevenue)}</td>
+                      <td>{money(x.actualCost)}</td>
+                      <td>{money(x.profit)}</td>
+                      <td>{x.marginPercent.toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>No work packages recorded.</p>
+          )}
         </details>
       </section>
     </main>

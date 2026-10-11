@@ -1,4 +1,6 @@
 "use client";
+import type {CustomFieldDefinition} from "@prisma/client";
+import {CustomFieldInput} from "@/components/account/custom-field-input";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createProjectAction } from "@/app/actions/projects";
@@ -9,7 +11,7 @@ function Save() {
   const {pending} = useFormStatus();
   return <button type="submit" disabled={pending}>{pending ? "Creating…" : "Create project"}</button>;
 }
-export function ProjectForm({branches, managers, accountAdmin}: {branches: Branch[]; managers: Manager[]; accountAdmin: boolean}) {
+export function ProjectForm({branches, managers, accountAdmin,customFields=[]}: {customFields?:CustomFieldDefinition[];branches: Branch[]; managers: Manager[]; accountAdmin: boolean}) {
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
   const [managerId, setManagerId] = useState("");
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
@@ -26,6 +28,7 @@ export function ProjectForm({branches, managers, accountAdmin}: {branches: Branc
       <label>Site contact<input name="siteContactName" maxLength={160} /></label>
       <label>Mobile number<input name="siteContactPhone" inputMode="tel" maxLength={30} /></label>
       <label>Start date<input type="date" name="startDate" /></label>
+      {customFields.map(field=><CustomFieldInput key={field.id} field={field}/>)}
     </fieldset>
     <p>Status: Active</p><Save />
   </ActionFeedbackForm>;

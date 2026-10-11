@@ -1,4 +1,10 @@
+import { normalizeTransactionPreferences } from "./transaction-settings";
+import {recentSalePrices} from "./recent-sale-prices";
+import {transactionRoundingLimit,defaultTransactionRoundOff} from "./transaction-rounding";
+import {transactionHeaderFields} from "./transaction-header";
+import {applyTransactionDefaults} from "./transaction-defaults";
 import { inAccountTransaction } from "./transaction-scope";
+import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { commercialCreationHash } from "./commercial-request-identity";
 import { retrySerializable } from "./transaction-retry";
 import { projectPurchaseReturnsInTx } from "./project-purchase-returns";
@@ -265,6 +271,7 @@ export function assertAdjustmentWithinSource(
 }
 const decimal = z.union([z.string(), z.number()]).transform(String);
 const lineSchema = z.object({
+  servicePeriodDays:z.number().int().min(1).max(3650).optional(),
   lineType: z.nativeEnum(CommercialLineType),
   sourceId: z.string().uuid().optional(),
   itemName: z.string().trim().min(1).max(240).optional(),
@@ -308,7 +315,9 @@ const lineSchema = z.object({
 });
 export const commercialDocumentInput = z
   .object({
+    ...transactionHeaderFields,
     idempotencyKey: z.string().trim().min(1).max(120).optional(),
+    customFields:z.record(z.string(),z.string().max(10000)).optional(),
     type: z.nativeEnum(CommercialDocumentType),
     branchId: z.string().uuid(),
     partyId: z.string().uuid(),
@@ -492,6 +501,7 @@ async function snapshotLine(
   sourceTaxMode?: "EXCLUSIVE" | "INCLUSIVE",
   itemSettings: ItemSettings = resolveItemSettings(null),
   purchaseInventory = true,
+  transactionDefaults?:Prisma.JsonValue,
 ) {
   assertCommercialItemLine(itemSettings, row);
   const purchase = policies[type].party === "vendor",
@@ -713,8 +723,18 @@ async function snapshotLine(
       ),
     };
   }
+  let servicePeriodDays:number|undefined;
+  if(type==="SALES_INVOICE"&&row.sourceId){
+    const service=((transactionDefaults as {reminderSettings?:{service?:{enabled?:boolean;selectedItemIds?:string[];periodDays?:number;allowSalePeriodOverride?:boolean}}}|null)?.reminderSettings?.service);
+    if(service?.enabled===true&&service.selectedItemIds?.includes(row.sourceId)&&Number.isInteger(service.periodDays)){
+      if(row.servicePeriodDays!==undefined&&service.allowSalePeriodOverride!==true)throw new Error("SERVICE_PERIOD_OVERRIDE_DISABLED");
+      servicePeriodDays=row.servicePeriodDays??service.periodDays;
+      if(servicePeriodDays===undefined||servicePeriodDays<1||servicePeriodDays>3650)throw new Error("INVALID_SERVICE_PERIOD");
+    }else if(row.servicePeriodDays!==undefined)throw new Error("INVALID_SERVICE_REMINDER_ITEM");
+  }else if(row.servicePeriodDays!==undefined)throw new Error("INVALID_SERVICE_REMINDER_ITEM");
   return {
     companyId: a.companyId,
+    servicePeriodDays,
     position,
     lineType: row.lineType,
     productId: ["PRODUCT", "MATERIAL"].includes(row.lineType)
@@ -806,6 +826,7 @@ export async function createCommercialDocumentForActor(
           }),
         ]);
         if (!branch) throw new Error("INVALID_BRANCH");
+        const resolvedDefaults=applyTransactionDefaults(d,settings?.transactionDefaults);
         const creationRequestHash = d.idempotencyKey
           ? commercialCreationHash(d)
           : null;
@@ -851,6 +872,9 @@ export async function createCommercialDocumentForActor(
           }
         }
 
+        if (d.type === "SALES_INVOICE" && d.reverseCharge &&
+            !normalizeTransactionPreferences((settings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences).reverseCharge)
+          throw new Error("REVERSE_CHARGE_DISABLED");
         const party =
           p.party === "customer"
             ? await tx.customer.findFirst({
@@ -1057,6 +1081,7 @@ export async function createCommercialDocumentForActor(
                         row.allocationType === "INVENTORY" ||
                         row.allocationType === "PROJECT",
                     )),
+                settings?.transactionDefaults??undefined,
               ),
             ),
           ),
@@ -1144,11 +1169,11 @@ export async function createCommercialDocumentForActor(
           otherChargesAmount = new D(d.otherChargesAmount ?? 0).toDecimalPlaces(
             2,
           ),
-          roundOffAmount = new D(d.roundOffAmount ?? 0).toDecimalPlaces(2);
+          roundOffAmount = d.roundOffAmount===undefined&&d.type==="SALES_INVOICE"?defaultTransactionRoundOff(taxableTotal.add(d.reverseCharge?0:cgstTotal.add(sgstTotal).add(igstTotal).add(cessTotal)).add(freightAmount).add(otherChargesAmount).add(taxableTotal.mul(d.tcsRate??0).div(100).toDecimalPlaces(2)),settings?.transactionDefaults):new D(d.roundOffAmount ?? 0).toDecimalPlaces(2);
         if (
           freightAmount.lt(0) ||
           otherChargesAmount.lt(0) ||
-          roundOffAmount.abs().gt(10)
+          roundOffAmount.abs().gt(transactionRoundingLimit(settings?.transactionDefaults))
         )
           throw new Error("INVALID_PURCHASE_CHARGES");
         const taxTotal = cgstTotal.add(sgstTotal).add(igstTotal).add(cessTotal),
@@ -1314,6 +1339,11 @@ export async function createCommercialDocumentForActor(
               vendorId: p.party === "vendor" ? party.id : null,
               partyId: party.id,
               partyName: party.name,
+              billingName: d.billingName || null,
+              customerPoNumber: d.customerPoNumber || null,
+              customerPoDate: d.customerPoDate,
+              transactionTime: d.transactionTime,
+              ewayBillNumber: d.ewayBillNumber,
               sourceDocumentId: d.sourceDocumentId,
               sourcePurchaseOrderId: d.sourcePurchaseOrderId,
               purchasePurpose:
@@ -1353,8 +1383,8 @@ export async function createCommercialDocumentForActor(
               otherChargesAmount,
               roundOffAmount,
               issueDate: d.issueDate,
-              dueDate: d.dueDate,
-              notes: d.notes,
+              dueDate: resolvedDefaults.dueDate,
+              notes: resolvedDefaults.notes,
               sellerGstin: source?.sellerGstin ?? branch.gstin,
               partyGstin: source?.partyGstin ?? party.gstin,
               stateOfSupplyCode:
@@ -1376,13 +1406,11 @@ export async function createCommercialDocumentForActor(
               taxableTotal,
               taxTotal,
               grandTotal,
-              payableAmount: (p.party === "vendor" &&
-              (source?.reverseCharge ?? d.reverseCharge)
+              payableAmount: ((source?.reverseCharge ?? d.reverseCharge)
                 ? grandTotal.sub(taxTotal)
                 : grandTotal
               ).sub(tdsAmount),
-              balanceDue: (p.party === "vendor" &&
-              (source?.reverseCharge ?? d.reverseCharge)
+              balanceDue: ((source?.reverseCharge ?? d.reverseCharge)
                 ? grandTotal.sub(taxTotal)
                 : grandTotal
               ).sub(tdsAmount),
@@ -1392,6 +1420,7 @@ export async function createCommercialDocumentForActor(
               },
             },
           });
+        if(d.type==="SALES_INVOICE"||d.type==="PURCHASE_BILL")await saveCustomFieldValuesInTx(tx,actor.companyId,d.type,document.id,d.customFields??{});
         await audit(
           tx,
           actor,
@@ -1673,7 +1702,9 @@ async function commercialInventoryInTx(
       returnCost = returnCost.add(quantity.mul(unitCost));
     } else {
       movementType = "SALES_RETURN";
-      unitCost = valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost;
+      // Reverse the original cost, even after a serial or batch is sold out.
+      const sourceSale = prior.find(movement => movement.movementType === "SALE" && movement.sourceId === doc.sourceDocumentId && movement.sourceLineId === line.sourceCommercialLineId);
+      unitCost = sourceSale?.unitCost ?? (valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost);
       returnCost = returnCost.add(quantity.mul(unitCost));
     }
     if (
@@ -2114,6 +2145,7 @@ export async function postCommercialDocumentForActor(
               description: doc.documentNumber,
             });
         };
+        if (sale && doc.reverseCharge) doc.payableAmount = doc.grandTotal.sub(doc.taxTotal).sub(doc.tdsAmount);
         const partyAmount =
           doc.payableAmount ??
           (doc.reverseCharge
@@ -2153,7 +2185,7 @@ export async function postCommercialDocumentForActor(
           } else
             push(
               keys[1],
-              sale ? doc.taxableTotal : inventory.nonInventoryPurchase,
+              sale ? doc.taxableTotal.add(doc.freightAmount).add(doc.otherChargesAmount).add(doc.roundOffAmount) : inventory.nonInventoryPurchase,
               counterDebit,
             );
           if (inventory.inventoryPurchase.gt(0))
@@ -2167,7 +2199,7 @@ export async function postCommercialDocumentForActor(
         ] as const;
         for (const [name, amount] of components) {
           if (amount.lte(0)) continue;
-          if (sale) push(`${name}_PAYABLE`, amount, !creditSide);
+          if (sale) { if (!doc.reverseCharge) push(`${name}_PAYABLE`, amount, !creditSide); }
           else if (doc.reverseCharge) {
             push(`${name}_PAYABLE`, amount, !counterDebit);
             if (doc.taxCreditTreatment === "ELIGIBLE")
@@ -2216,9 +2248,35 @@ export async function postCommercialDocumentForActor(
               status: "POSTED",
               journalEntryId: journal.id,
               signatureVersionId: signature?.id,
+              ...(sale && doc.reverseCharge ? {payableAmount:partyAmount,balanceDue:partyAmount} : {}),
             },
           });
         if (changed.count !== 1) throw new Error("STALE");
+        if (doc.type === "SALES_INVOICE") {
+          const settings = await tx.accountSettings.findUnique({where:{companyId:actor.companyId}});
+          const defaults = settings?.transactionDefaults as Record<string, unknown> | null;
+          if (normalizeTransactionPreferences(defaults?.transactionPreferences).linkPayments &&
+              (await enabledModulesForCompany(actor.companyId)).includes("CUSTOMER_ADVANCES")) {
+            // Apply only matching customer/branch/project advances. This is part of
+            // posting, so a failed application rolls back the invoice as well.
+            const advances = await tx.accountSettlement.findMany({
+              where:{companyId:actor.companyId,type:"CUSTOMER_ADVANCE",partyId:doc.partyId,
+                branchId:doc.branchId,projectId:doc.projectId,remainingAmount:{gt:0}},
+              orderBy:[{transactionDate:"asc"},{createdAt:"asc"},{id:"asc"}],
+            });
+            for (const advance of advances) {
+              const {outstanding} = await documentOutstandingInTx(tx,actor.companyId,doc.id);
+              if (outstanding.lte(0)) break;
+              const amount = D.min(outstanding,advance.remainingAmount);
+              await applyAdvanceForActor(actor,{
+                advanceId:advance.id,documentId:doc.id,amount:amount.toFixed(2),
+                applicationDate:advance.transactionDate > doc.issueDate ? advance.transactionDate : doc.issueDate,
+                idempotencyKey:`invoice-advance:${doc.id}:${advance.id}`,
+              },tx);
+            }
+          }
+        }
+
         await audit(
           tx,
           actor,
@@ -2319,6 +2377,21 @@ export async function documentOutstanding(documentId: string) {
     return documentOutstandingInTx(tx, a.companyId, authorized.id);
   });
 }
+/** A full-payment save collects only the remaining balance after advances.
+ * Preserve the original amount on retries so the receipt key remains stable. */
+export async function saleReceiptBalanceForActor(actor: Actor, documentId: string, idempotencyKey: string) {
+  return db.$transaction(async tx => {
+    const doc = await tx.commercialDocument.findFirst({where:{id:documentId,companyId:actor.companyId,type:"SALES_INVOICE",status:"POSTED"}});
+    if (!doc) throw new Error("NOT_FOUND");
+    assertBranch(actor,doc.branchId);
+    const existing = await tx.accountSettlement.findUnique({where:{companyId_idempotencyKey:{companyId:actor.companyId,idempotencyKey}}});
+    return existing?.amount ?? (await documentOutstandingInTx(tx,actor.companyId,documentId)).outstanding;
+  });
+}
+export async function saleReceiptBalance(documentId: string, idempotencyKey: string) {
+  return saleReceiptBalanceForActor((await requirePermissionForMutation("ACCOUNT_SETTLEMENT_ENTRY")) as Actor,documentId,idempotencyKey);
+}
+
 export async function partyOutstanding(
   partyId: string,
   party: "customer" | "vendor",
@@ -2375,6 +2448,7 @@ const settlementInput = z
             documentId: z.string().uuid().optional(),
             openingBalanceId: z.string().uuid().optional(),
             amount: decimal,
+            discountAmount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)).default("0"),
           })
           .refine(
             (x) => Boolean(x.documentId) !== Boolean(x.openingBalanceId),
@@ -2425,6 +2499,9 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
   await requireAccountModules(actor, ...p.modules);
   assertBranch(actor, d.branchId);
   const amount = new D(d.amount);
+  const discountAmount=d.allocations.reduce((sum,row)=>sum.add(row.discountAmount),new D(0));
+  if(d.allocations.some(row=>new D(row.discountAmount).lt(0)||(new D(row.discountAmount).gt(0)&&new D(row.discountAmount).gte(row.amount))))throw new Error("INVALID_PAYMENT_DISCOUNT");
+  if(discountAmount.gt(0)&&(d.type!=="CUSTOMER_RECEIPT"||d.allocations.some(row=>row.openingBalanceId)))throw new Error("INVALID_PAYMENT_DISCOUNT");
   if (amount.lte(0)) throw new Error("INVALID_AMOUNT");
   if (
     (p.advance && d.allocations.length) ||
@@ -2435,7 +2512,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
     );
   if (
     !p.advance &&
-    !d.allocations.reduce((n, x) => n.add(x.amount), new D(0)).eq(amount)
+    !d.allocations.reduce((n, x) => n.add(x.amount), new D(0)).eq(amount.add(discountAmount))
   )
     throw new Error("ALLOCATION_TOTAL_MISMATCH");
   if (
@@ -2491,6 +2568,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             existing.branchId !== d.branchId ||
             existing.projectId !== (d.projectId ?? null) ||
             !existing.amount.eq(amount) ||
+            !(existing.discountAmount??new D(0)).eq(discountAmount) ||
             existing.paymentMode !== d.paymentMode ||
             existing.moneyAccountId !== (d.moneyAccountId ?? null) ||
             existing.transactionDate.toISOString().slice(0, 10) !==
@@ -2511,6 +2589,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
               [
                 "documentId" in row ? row.documentId : row.openingBalanceId,
                 row.amount.toString(),
+                "discountAmount" in row?row.discountAmount.toString():"0",
               ].join(":"),
             )
             .sort();
@@ -2519,6 +2598,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
               [
                 row.documentId ?? row.openingBalanceId,
                 new D(row.amount).toString(),
+                new D(row.discountAmount).toString(),
               ].join(":"),
             )
             .sort();
@@ -2526,6 +2606,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             throw new Error("IDEMPOTENCY_KEY_REUSED");
           return existing;
         }
+        if(discountAmount.gt(0)){const settings=await tx.accountSettings.findUnique({where:{companyId:actor.companyId},select:{transactionDefaults:true}});const defaults=settings?.transactionDefaults as {transactionPreferences?:{discountDuringPayment?:boolean}}|null;if(defaults?.transactionPreferences?.discountDuringPayment!==true)throw new Error("PAYMENT_DISCOUNT_DISABLED");}
         const party =
           p.party === "customer"
             ? await tx.customer.findFirst({
@@ -2625,7 +2706,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             tx,
             actor,
             d.transactionDate,
-            selectedMoney ? [balanceKey] : [moneyKey, balanceKey],
+            [...(selectedMoney ? [balanceKey] : [moneyKey, balanceKey]),...(discountAmount.gt(0)?["SALES_INCOME"]:[])],
           ),
           settlementNumber = await allocateDocumentNumberInTx(tx, {
             companyId: actor.companyId,
@@ -2639,12 +2720,14 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             p.advance || p.party === "customer"
               ? [
                   {
+                    description: "Payment",
                     ledgerAccountId:
                       selectedMoney?.ledgerAccountId ?? ctx.account(moneyKey),
                     debit: cashDebit ? money : "0",
                     credit: cashDebit ? "0" : money,
                   },
                   {
+                    description: "Payment",
                     ledgerAccountId: ctx.account(balanceKey),
                     debit: cashDebit ? "0" : money,
                     credit: cashDebit ? money : "0",
@@ -2652,11 +2735,13 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
                 ]
               : [
                   {
+                    description: "Payment",
                     ledgerAccountId: ctx.account(balanceKey),
                     debit: money,
                     credit: "0",
                   },
                   {
+                    description: "Payment",
                     ledgerAccountId:
                       selectedMoney?.ledgerAccountId ?? ctx.account(moneyKey),
                     debit: "0",
@@ -2664,6 +2749,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
                   },
                 ],
           placeholder = crypto.randomUUID();
+        if(discountAmount.gt(0)){lines.push({ledgerAccountId:ctx.account("SALES_INCOME"),debit:discountAmount.toFixed(2),credit:"0",description:"Payment discount"});const receivable=lines.find(line=>line.ledgerAccountId===ctx.account(balanceKey));if(receivable)receivable.credit=amount.add(discountAmount).toFixed(2);}
         await tx.$executeRaw`SELECT set_config('app.financial_write_company_id', ${actor.companyId}, true)`;
         const journal = await postJournalInTx(tx, actor, {
             financialYearId: ctx.fy.id,
@@ -2689,6 +2775,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
               moneyAccountId: d.moneyAccountId,
               projectId: settlementProject?.id,
               amount,
+              discountAmount,
               remainingAmount: p.advance ? amount : 0,
               transactionDate: d.transactionDate,
               reference: d.reference,
@@ -2699,9 +2786,9 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
                 create: d.allocations
                   .filter((x) => x.documentId)
                   .map((x) => ({
-                    companyId: actor.companyId,
                     documentId: x.documentId!,
                     amount: x.amount,
+                    discountAmount:x.discountAmount,
                   })),
               },
             },
@@ -3011,7 +3098,8 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string) {
           documentOutstandingInTx(tx, actor.companyId, row.id),
         )
       : null;
-  return { ...row, financial, stockMovements, projectMaterialMovements };
+  const customRows=row.type==="SALES_INVOICE"||row.type==="PURCHASE_BILL"?await db.customFieldValue.findMany({where:{companyId:actor.companyId,entityType:row.type,entityId:row.id,definition:{isActive:true}},include:{definition:{select:{fieldKey:true}}}}):[];
+  return { ...row, financial, stockMovements, projectMaterialMovements, customValues:Object.fromEntries(customRows.map(value=>[value.definition.fieldKey,value.value])) };
 }
 async function safeSalesInvoiceNumberingSeriesOptions(companyId: string) {
   try {
@@ -3152,11 +3240,21 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         status: true,
       },
     });
+  const editorSettings=await db.accountSettings.findUnique({where:{companyId:actor.companyId}});
+  const storedPreferences=((editorSettings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences??{}) as Record<string,unknown>;
+  const customerAdvances = enabledModules.includes("CUSTOMER_ADVANCES") ? await db.accountSettlement.findMany({
+    where:{companyId:actor.companyId,type:"CUSTOMER_ADVANCE",remainingAmount:{gt:0},...scope(actor)},
+    select:{partyId:true,branchId:true,projectId:true,remainingAmount:true},
+  }) : [];
+  for (const advance of customerAdvances) customerBalances.set(advance.partyId,
+    (customerBalances.get(advance.partyId) ?? new D(0)).sub(advance.remainingAmount));
   const allowedDocumentTypes = availableCommercialDocumentTypes(
     enabledModules,
     (permission) => canUsePermission(actor, company.productEdition, permission),
   );
   return {
+    customerAdvances,
+    recentSalePrices:await recentSalePrices(actor,storedPreferences.lastFiveSalePrices===true),
     sourceDocuments,
     purchaseOrders,
     enabledModules,
@@ -3172,6 +3270,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
           ? { id: { in: actor.branchIds ?? [] } }
           : {}),
       },
+      orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }, { id: "asc" }],
       select: { id: true, name: true, code: true },
     }),
     customers: (
@@ -3182,7 +3281,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
           isAccountCustomer: true,
           ...scope(actor),
         },
-        select: { id: true, name: true, phone: true, branchId: true },
+        select: { id: true, name: true, phone: true, branchId: true, stateCode:true },
       })
     ).map((customer) => ({
       ...customer,
@@ -3203,6 +3302,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         id: true,
         name: true,
         code: true,
+        barcode: true,
         salePrice: true,
         costPrice: true,
         taxRate: true,
@@ -3232,9 +3332,8 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         expiryDate: true,
       },
     }),
-    accountSettings: await db.accountSettings.findUnique({
-      where: { companyId: actor.companyId! },
-    }),
+    invoiceCustomFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId,entityType:{in:["SALES_INVOICE","PURCHASE_BILL"]},isActive:true},orderBy:{position:"asc"}}),
+    accountSettings: editorSettings,
     numberingSeries: await safeSalesInvoiceNumberingSeriesOptions(
       actor.companyId,
     ),
@@ -3408,6 +3507,7 @@ export function proportionalTaxReversal(
   sourceTaxable: Prisma.Decimal,
   adjustmentTaxable: Prisma.Decimal,
 ) {
+  if (sourceTax.isZero() && sourceTaxable.isZero() && adjustmentTaxable.isZero()) return new D(0);
   if (
     sourceTaxable.lte(0) ||
     adjustmentTaxable.lt(0) ||
@@ -3423,6 +3523,7 @@ export function adjustmentTaxableBasis(
   enteredAmount: Prisma.Decimal,
   taxMode: "EXCLUSIVE" | "INCLUSIVE",
 ) {
+  if (sourceTaxable.isZero() && sourceTotal.isZero() && enteredAmount.isZero()) return new D(0);
   if (
     enteredAmount.lt(0) ||
     sourceTaxable.lt(0) ||

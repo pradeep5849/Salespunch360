@@ -1,3 +1,4 @@
+import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { inAccountTransaction } from "./transaction-scope";
 import { FINAL_PROJECT_STATUSES, isFinalProjectStatus } from "./project-state";
 import { retrySerializable } from "./transaction-retry";
@@ -316,7 +317,7 @@ export async function createProjectInTx(
   raw: unknown,
 ) {
   await requireProjectFunction(actor);
-  const { idempotencyKey, ...parsed } = projectInput.parse(raw);
+  const { idempotencyKey, customFields, ...parsed } = projectInput.parse(raw);
   const ids = await authorizedProjectBranchIds(actor);
   if (!ids.includes(parsed.branchId)) throw new AuthorizationError();
   const data =
@@ -344,7 +345,7 @@ export async function createProjectInTx(
   if (!customer) throw new Error("INVALID_CUSTOMER");
   await validateManager(tx, actor, data.projectManagerId, data.branchId);
   const requestHash = idempotencyKey
-    ? projectCreationHash("PROJECT", data)
+    ? projectCreationHash("PROJECT", {...data,...(customFields?{customFields:Object.fromEntries(Object.entries(customFields).sort(([a],[b])=>a.localeCompare(b)))}:{})})
     : null;
   if (idempotencyKey) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${actor.companyId}:project-create:${idempotencyKey}`}))`;
@@ -394,6 +395,7 @@ export async function createProjectInTx(
         : undefined,
     },
   });
+  await saveCustomFieldValuesInTx(tx,actor.companyId,"PROJECT",project.id,customFields??{});
   await audit(tx, actor, project.id, "PROJECT_CREATED");
   return project;
 }
@@ -477,6 +479,7 @@ export async function updateProjectForActor(actor: ProjectActor, raw: unknown) {
           },
           update: { role: "PROJECT_MANAGER" },
         });
+      await saveCustomFieldValuesInTx(tx,actor.companyId,"PROJECT",project.id,data.customFields??{},true);
       await audit(tx, actor, project.id, "PROJECT_UPDATED", {
         projectValue: {
           from: project.projectValue.toString(),
@@ -914,7 +917,9 @@ export async function getProjectFormOptionsForActor(
       })
     : [];
   const billingServices = await db.accountService.findMany({where: {companyId: actor.companyId, isActive: true}, select: {id: true, name: true, sacCode: true, taxRate: true}, orderBy: [{name: "asc"}, {id: "asc"}]});
-  return { branches, managers, memberCandidates, boqCandidates, billingServices };
+  const customFields=await db.customFieldDefinition.findMany({where:{companyId:actor.companyId,entityType:"PROJECT",isActive:true},orderBy:{position:"asc"}});
+  const customRows=project?await db.customFieldValue.findMany({where:{companyId:actor.companyId,entityType:"PROJECT",entityId:project.id,definition:{isActive:true}},include:{definition:{select:{fieldKey:true}}}}):[];
+  return { branches, managers, memberCandidates, boqCandidates, billingServices, customFields, customValues:Object.fromEntries(customRows.map(row=>[row.definition.fieldKey,row.value])) };
 }
 export async function replaceBudgetForActor(actor: ProjectActor, raw: unknown) {
   await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_EDIT");

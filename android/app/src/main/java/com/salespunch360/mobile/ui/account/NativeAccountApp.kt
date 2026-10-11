@@ -111,6 +111,7 @@ fun NativeAccountAuthenticatedApp(
     BackHandler(enabled=state.selectedPath!=ACCOUNT_HOME){vm.back()}
     val rootChrome=bottom.any{it.path==state.selectedPath}
 
+    androidx.compose.runtime.CompositionLocalProvider(LocalAccountDisplayPreferences provides AccountDisplayPreferences.from(account?.displayPreferences)){
     Scaffold(
         containerColor=Color(0xFFF7F8FC),
         topBar={if(rootChrome){
@@ -176,8 +177,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
-            state.selectedPath=="/workspace/account/settings/multi-currency"->Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Multi-Currency",style=MaterialTheme.typography.headlineSmall);Text("Coming Soon",style=MaterialTheme.typography.titleLarge);Text("Exchange rates and multi-currency accounting are not available yet.")}}
-            state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
+            state.selectedPath=="/workspace/branches"||state.selectedPath=="/workspace/account/settings/multi-branch"->Box(Modifier.padding(padding)){if(data.user.salesRole==com.salespunch360.mobile.data.MobileRole.PRIMARY_ADMIN)BranchesScreen() else Column(Modifier.padding(16.dp)){Text("Multi-Branch Settings",style=MaterialTheme.typography.headlineSmall);Text("Branch creation and changes require the Primary Admin.")}}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
             state.selectedPath.substringBefore("?")=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
@@ -199,6 +199,8 @@ fun NativeAccountAuthenticatedApp(
     }
 }
 
+}
+
 @Composable
 private fun AccountBottomBar(items:List<AccountBottomDestination>,current:String,navigate:(String)->Unit){
     NavigationBar(containerColor=Color.White,tonalElevation=4.dp){
@@ -215,7 +217,7 @@ private fun AccountBottomBar(items:List<AccountBottomDestination>,current:String
                 selected=selected,
                 onClick={navigate(item.path)},
                 icon={Icon(item.icon,item.label)},
-                label={Text(item.label,maxLines=1)}
+                label={Text(accountLabel(item.label),maxLines=1)}
             )
         }
     }
@@ -287,14 +289,14 @@ private fun AccountHomeScreen(
                     ElevatedCard(Modifier.fillMaxWidth()){
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(tx.partyName,fontWeight=FontWeight.SemiBold);AssistChip(onClick={},label={Text(tx.status.replace('_',' '))})}
-                            Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(tx.issueDate.take(10),style=MaterialTheme.typography.bodySmall)
+                            Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(accountDate(tx.issueDate),style=MaterialTheme.typography.bodySmall)
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total ${formatMetric(tx.grandTotal,"MONEY")}");Text("Balance ${formatMetric(tx.balanceDue,"MONEY")}")}
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"View / print PDF")}}){Text("Print")};TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"Share transaction")}}){Text("Share")};TextButton(onClick={navigate("/workspace/account/transactions/${tx.id}")}){Text("More")}}
                         }
                     }
                 }
             }else{
-                items(home?.parties.orEmpty(),key={it.id}){party->ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${party.lastActivity.take(10)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}}
+                items(home?.parties.orEmpty(),key={it.id}){party->ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${accountDate(party.lastActivity)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}}
             }
         }
         AnimatedVisibility(visible=floatingVisible,modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
@@ -365,7 +367,7 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
                 item(key="account-group-$groupIndex-${group.label}"){
                     OutlinedButton(onClick={reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                            Text(group.label,fontWeight=FontWeight.Bold)
+                            Text(accountLabel(group.label),fontWeight=FontWeight.Bold)
                             Text(if(reportsOpen)"⌃" else "⌄")
                         }
                     }
@@ -374,18 +376,18 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
                     items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
                         val nav=rows[rowIndex]
                         OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text("›")}
                         }
                     }
                 }
             }else{
                 item(key="account-group-$groupIndex-${group.label}"){
-                    Text(group.label,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(top=10.dp,bottom=2.dp))
+                    Text(accountLabel(group.label),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(top=10.dp,bottom=2.dp))
                 }
                 items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
                     val nav=rows[rowIndex]
                     OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text("›")}
                     }
                 }
             }
@@ -478,7 +480,7 @@ private fun masterKind(path:String)=when{
 }
 
 private fun salesType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("SALES_INVOICE","PROFORMA_INVOICE","SALES_ORDER","DELIVERY_CHALLAN","CREDIT_NOTE")} else null
-private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else runCatching{NumberFormat.getCurrencyInstance(Locale("en","IN")).format(BigDecimal(raw))}.getOrDefault(raw)
+@Composable private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else accountMoney(raw)
 private fun purchaseType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE")} else null
 private fun queryValue(path:String,key:String)=Regex("(?:\\?|&)${Regex.escape(key)}=([^&#]+)").find(path)?.groupValues?.get(1)
 
@@ -506,6 +508,9 @@ private fun reportName(path:String)=path.substringBefore("?").removePrefix("/wor
 
 private fun adminMode(path:String)=when{
     path=="/workspace/account/notifications"->"notifications"
+    path.endsWith("/settings/backup")->"backup-settings"
+    path.endsWith("/settings/transactions/defaults")->"transaction-defaults"
+    path.endsWith("/settings/multi-currency")->"business-currency"
     path.endsWith("/settings/general")->"general"
     path.endsWith("/settings/party")->"party-settings"
     path.endsWith("/settings/party/additional-fields")->"party-additional-fields"

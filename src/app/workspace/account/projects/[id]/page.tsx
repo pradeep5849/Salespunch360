@@ -1,3 +1,4 @@
+import {AccountDate, ClientMoney} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { projectWorkflowCapabilities } from "@/lib/account/project-workflow-capabilities";
 import {
@@ -109,7 +110,7 @@ export default async function Page({
         <div className="metric-grid">
           <article>
             <b>Project value</b>
-            <p>{project.projectValue.toString()}</p>
+            <p><ClientMoney value={project.projectValue.toString()}/></p>
           </article>
 
           <article>
@@ -210,7 +211,7 @@ export default async function Page({
           <ul>
             {project.budgetLines.map((line) => (
               <li key={line.id}>
-                {line.category}: {line.title} — {line.amount.toString()}
+                {line.category}: {line.title} — <ClientMoney value={line.amount.toString()}/>
               </li>
             ))}
           </ul>
@@ -409,8 +410,8 @@ export default async function Page({
 
         <h2>Payments</h2>
         <p>
-          Customer payments: {project.customerPayments.toString()} · Vendor
-          payments: {project.vendorPayments.toString()}
+          Customer payments: <ClientMoney value={project.customerPayments.toString()}/> · Vendor
+          payments: <ClientMoney value={project.vendorPayments.toString()}/>
         </p>
         <p>
           Totals derive automatically from existing settlement allocations and
@@ -429,7 +430,7 @@ export default async function Page({
         ) : (
           <>
             <p>
-              Completed: {project.actualEndDate?.toLocaleDateString() ?? project.closedAt?.toLocaleDateString() ?? "—"}
+              Completed: {(project.actualEndDate ?? project.closedAt) ? <AccountDate value={(project.actualEndDate ?? project.closedAt)!.toISOString()}/> : "—"}
             </p>
             <p>
               Project value, expenses, purchases, invoices,
@@ -522,8 +523,8 @@ function Documents({
               <td>{row.type}</td>
               <td>{row.documentNumber}</td>
               <td>{row.status}</td>
-              <td>{row.grandTotal.toString()}</td>
-              <td>{row.balanceDue.toString()}</td>
+              <td><ClientMoney value={row.grandTotal.toString()}/></td>
+              <td><ClientMoney value={row.balanceDue.toString()}/></td>
             </tr>
           ))}
         </tbody>

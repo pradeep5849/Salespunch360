@@ -1,3 +1,6 @@
+import {SaveFeedbackForm,SaveSubmitButton,SavePendingFields} from "@/components/account/save-feedback";
+import {saveReminderSettingsForActor} from "@/lib/account/reminder-settings";
+import type {ProjectActor} from "@/lib/account/projects";
 import Link from "next/link";
 import {revalidatePath} from "next/cache";
 import {AuthorizationError,requirePermission,requirePermissionForMutation} from "@/lib/auth/authorization";
@@ -15,16 +18,11 @@ export default async function Page(){
   "use server";
   const editor=await requirePermissionForMutation("ACCOUNT_SETTINGS");
   if(editor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
-  const existing=await db.accountSettings.findUnique({where:{companyId:editor.companyId!},select:{transactionDefaults:true}});
-  const transactionDefaults=(existing?.transactionDefaults as Record<string,unknown>|null)??{};
-  const reminderSettings=(transactionDefaults.reminderSettings as Record<string,unknown>|undefined)??{};
-  const previous=(reminderSettings.payment as Record<string,unknown>|undefined)??{};
-  const nextMessage=String(fd.get("message")??"").slice(0,2000);
-  await db.accountSettings.upsert({where:{companyId:editor.companyId!},create:{companyId:editor.companyId!,transactionDefaults:{...transactionDefaults,reminderSettings:{...reminderSettings,payment:{...previous,message:nextMessage}}}},update:{transactionDefaults:{...transactionDefaults,reminderSettings:{...reminderSettings,payment:{...previous,message:nextMessage}}}}});
+  await saveReminderSettingsForActor(editor as ProjectActor,{payment:{message:String(fd.get("message")??"")}});
   revalidatePath("/workspace/account/settings/reminders/payment/message");
  }
  return <main className={styles.sheet}>
   <header className={styles.header}><Link href="/workspace/account/settings/reminders/payment" aria-label="Back">←</Link><h1>Reminder message to party</h1></header>
-  <form action={save} className={styles.message}><textarea name="message" defaultValue={message} maxLength={2000}/><button type="submit">Save Reminder Message</button></form>
+  <SaveFeedbackForm action={save} className={styles.message}><SavePendingFields><textarea aria-label="Reminder message" name="message" required defaultValue={message} maxLength={2000}/></SavePendingFields><SaveSubmitButton>Save Reminder Message</SaveSubmitButton></SaveFeedbackForm>
  </main>;
 }

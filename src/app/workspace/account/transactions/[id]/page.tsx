@@ -1,3 +1,4 @@
+import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import {
@@ -37,8 +38,8 @@ export default async function Page({
         {x.partyName} · {x.branch.name} · {x.status}
       </p>
       <p>
-        Issue {x.issueDate.toLocaleDateString()}{" "}
-        {x.dueDate && `· Due ${x.dueDate.toLocaleDateString()}`}
+        Issue {<AccountDate value={x.issueDate.toISOString()}/>}{" "}
+        {x.dueDate && <>· Due <AccountDate value={x.dueDate.toISOString()}/></>}
       </p>
       {x.purchasePurpose && (
         <section className="account-card">
@@ -52,9 +53,9 @@ export default async function Page({
           <p>
             Vendor invoice {x.vendorInvoiceNumber ?? "—"}{" "}
             {x.vendorInvoiceDate &&
-              `· ${x.vendorInvoiceDate.toLocaleDateString()}`}{" "}
+              <>· <AccountDate value={x.vendorInvoiceDate.toISOString()}/></>}{" "}
             · Accounting date{" "}
-            {(x.postingDate ?? x.issueDate).toLocaleDateString()}
+            {<AccountDate value={(x.postingDate ?? x.issueDate).toISOString()}/>}
           </p>
           <p>
             Vendor GSTIN {x.partyGstin ?? "—"} · Address {x.partyAddress ?? "—"}{" "}
@@ -187,7 +188,7 @@ export default async function Page({
       {x.advanceApplications.map((a) => (
         <p key={a.id}>
           Applied advance: {a.amount.toString()} on{" "}
-          {a.applicationDate.toLocaleDateString()}
+          {<AccountDate value={a.applicationDate.toISOString()}/>}
         </p>
       ))}
       {controls.canManage &&

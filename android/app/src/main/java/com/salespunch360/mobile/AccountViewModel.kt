@@ -51,6 +51,7 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
  fun select(path:String){
   val current=_state.value.selectedPath
   if(path==current)return
+  if(current in listOf("/workspace/account/settings/general","/workspace/account/settings/multi-currency","/workspace/account/settings/modules","/workspace/branches","/workspace/account/settings/multi-branch"))refreshDisplayPreferences()
   history+=current
   if(history.size>60)history.removeAt(0)
   _state.value=_state.value.copy(selectedPath=path)
@@ -58,12 +59,17 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
 
  fun back():Boolean{
   val current=_state.value.selectedPath
+  if(current in listOf("/workspace/account/settings/general","/workspace/account/settings/multi-currency","/workspace/account/settings/modules","/workspace/branches","/workspace/account/settings/multi-branch"))refreshDisplayPreferences()
   val previous=if(history.isNotEmpty())history.removeAt(history.lastIndex) else null
   return when{
    previous!=null->{_state.value=_state.value.copy(selectedPath=previous);true}
    current!=ACCOUNT_ROOT->{_state.value=_state.value.copy(selectedPath=ACCOUNT_ROOT);true}
    else->false
   }
+ }
+
+ private fun refreshDisplayPreferences()=viewModelScope.launch{
+  try{val branch=_state.value.bootstrap?.branch;val bootstrap=api.accountBootstrap(branch?.branchId,branch?.mode=="COMPANY");_state.value=_state.value.copy(bootstrap=bootstrap)}catch(_:Exception){_state.value=_state.value.copy(error="Display settings could not be refreshed. Retry to load saved preferences.")}
  }
 
  fun resetNavigation(){history.clear();_state.value=_state.value.copy(selectedPath=ACCOUNT_ROOT)}

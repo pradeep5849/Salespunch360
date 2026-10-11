@@ -1,4 +1,7 @@
 "use client";
+import type {CustomFieldDefinition} from "@prisma/client";
+import {CustomFieldInput} from "@/components/account/custom-field-input";
+import {useRef} from "react";
 import Link from "next/link";
 import {useMemo,useState,useTransition} from "react";
 import {useRouter} from "next/navigation";
@@ -7,11 +10,12 @@ import {SaveFeedback,useSaveMutation} from "@/components/account/save-feedback";
 
 type Unit={id:string;name:string;symbol:string};
 type Category={id:string;name:string;scope:string};
-type Props={units:Unit[];categories:Category[];settings:Record<string,unknown>};
+type Props={units:Unit[];categories:Category[];settings:Record<string,unknown>;customFields?:CustomFieldDefinition[]};
 type HelpKey="OPENING"|"PRICE"|"MIN"|null;
 const taxRates=["0","0.1","0.25","3","5","12","18","28"];
 function HelpDialog({text,onClose}:{text:string;onClose:()=>void}){return <div className="sale-overlay"><section className="sale-dialog"><header><span/><button onClick={onClose} aria-label="Close">×</button></header><p>{text}</p><div className="dialog-actions"><button className="account-primary" onClick={onClose}>OK</button></div></section></div>}
-export function AddItemEditor({units:initialUnits,categories:initialCategories,settings}:Props){
+export function AddItemEditor({units:initialUnits,categories:initialCategories,settings,customFields=[]}:Props){
+ const customFieldRoot=useRef<HTMLDivElement>(null);
  const router=useRouter(),[kind,setKind]=useState<"products"|"services">("products"),[name,setName]=useState(""),[primaryUnit,setPrimaryUnit]=useState(""),[secondaryUnit,setSecondaryUnit]=useState(""),[drawer,setDrawer]=useState(false),[transitionPending,startTransition]=useTransition(),[units,setUnits]=useState(initialUnits),[categories,setCategories]=useState(initialCategories),mutation=useSaveMutation(),pending=transitionPending||mutation.pending;
  const [unitPage,setUnitPage]=useState(false),[unitTarget,setUnitTarget]=useState<"PRIMARY"|"SECONDARY"|null>(null),[unitDraftPrimary,setUnitDraftPrimary]=useState(""),[unitDraftSecondary,setUnitDraftSecondary]=useState(""),[addUnitOpen,setAddUnitOpen]=useState(false),[newUnitName,setNewUnitName]=useState(""),[newUnitSymbol,setNewUnitSymbol]=useState("");
  const [categoryOpen,setCategoryOpen]=useState(false),[categoryQuery,setCategoryQuery]=useState(""),[categoryId,setCategoryId]=useState(""),[categoryDraft,setCategoryDraft]=useState(""),[addCategoryOpen,setAddCategoryOpen]=useState(false),[newCategoryName,setNewCategoryName]=useState("");
@@ -22,7 +26,7 @@ export function AddItemEditor({units:initialUnits,categories:initialCategories,s
  function openUnits(){setUnitDraftPrimary(primaryUnit);setUnitDraftSecondary(secondaryUnit);setUnitPage(true);setUnitTarget(null)}
  function saveUnits(){setPrimaryUnit(unitDraftPrimary);setSecondaryUnit(unitDraftSecondary);setUnitPage(false);setUnitTarget(null)}
  function assignCode(){if(!code)setCode(`${kind==="products"?"ITEM":"SER"}-${Date.now().toString().slice(-6)}`)}
- function save(){if(!name.trim())return;startTransition(async()=>{const saved=await mutation.run(()=>createAccountItemAction({type:kind,name:name.trim(),unitId:primaryUnit||undefined,categoryId:categoryId||undefined,code:code||undefined,barcode:code||undefined,description:description||undefined,sellingRate:salePrice||"0",cost:purchasePrice||atPrice||"0",taxRate:taxRate||"0",hsnSacCode:hsn||undefined,trackInventory:kind==="products"&&Boolean(openingStock||minStock||itemLocation),trackingMode:"NONE",lowStockThreshold:minStock||"0"}),"Item created successfully");if(saved)window.setTimeout(()=>router.push("/workspace/account/inventory"),600)})}
+ function save(){if(!name.trim())return;const controls=Array.from(customFieldRoot.current?.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>("input,select,textarea")??[]);if(controls.some(control=>!control.reportValidity()))return;const customFields=Object.fromEntries(controls.map(control=>[control.name.slice(7),control.value]));startTransition(async()=>{const saved=await mutation.run(()=>createAccountItemAction({type:kind,customFields,name:name.trim(),unitId:primaryUnit||undefined,categoryId:categoryId||undefined,code:code||undefined,barcode:code||undefined,description:description||undefined,sellingRate:salePrice||"0",cost:purchasePrice||atPrice||"0",taxRate:taxRate||"0",hsnSacCode:hsn||undefined,trackInventory:kind==="products"&&Boolean(openingStock||minStock||itemLocation),trackingMode:"NONE",lowStockThreshold:minStock||"0"}),"Item created successfully");if(saved)window.setTimeout(()=>router.push("/workspace/account/inventory"),600)})}
  function createUnitNow(){if(!newUnitName.trim()||!newUnitSymbol.trim())return;startTransition(async()=>{const row=await createAccountUnitAction({name:newUnitName.trim(),symbol:newUnitSymbol.trim()});setUnits(old=>[...old,row]);setUnitDraftPrimary(row.id);setNewUnitName("");setNewUnitSymbol("");setAddUnitOpen(false)})}
  function createCategoryNow(){if(!newCategoryName.trim())return;startTransition(async()=>{const row=await createAccountCategoryAction({name:newCategoryName.trim(),scope:kind==="products"?"PRODUCT":"SERVICE"});setCategories(old=>[...old,{...row,scope:kind==="products"?"PRODUCT":"SERVICE"}]);setCategoryDraft(row.id);setNewCategoryName("");setAddCategoryOpen(false)})}
  return <main className="add-item-page">
@@ -48,6 +52,7 @@ export function AddItemEditor({units:initialUnits,categories:initialCategories,s
        <div className="form-grid"><label>As of Date<input type="date" value={openingDate} onChange={e=>setOpeningDate(e.target.value)}/></label><label>At Price/Unit <button type="button" className="inline-info" onClick={()=>setHelp("PRICE")} aria-label="Opening price help">ⓘ</button><input type="number" min="0" step=".01" value={atPrice} onChange={e=>setAtPrice(e.target.value)} placeholder="Ex: 2,000"/></label></div>
        <div className="form-grid"><label>Min Stock Qty <button type="button" className="inline-info" onClick={()=>setHelp("MIN")} aria-label="Minimum stock help">ⓘ</button><input type="number" min="0" step=".0001" value={minStock} onChange={e=>setMinStock(e.target.value)} placeholder="Ex: 5"/></label><label>Item Location<input value={itemLocation} onChange={e=>setItemLocation(e.target.value)} placeholder="Item Location"/></label></div>
      </div>}
+   <div ref={customFieldRoot} key={kind}>{customFields.filter(field=>field.entityType===(kind==="products"?"PRODUCT":"SERVICE")).map(field=><CustomFieldInput key={field.id} field={field}/>)}</div>
    </div>}
   </section>
   <footer><Link href="/workspace/account/inventory">Cancel</Link><button disabled={!name.trim()||pending} onClick={save}>{pending?"Saving…":"Save"}</button></footer>

@@ -823,6 +823,7 @@ model Company {
 }
 
 model User {
+  completedServiceReminders ServiceReminderCompletion[] @relation("ServiceReminderCompleter")
   id                         String                   @id @default(uuid()) @db.Uuid
   companyId                  String?                  @db.Uuid
   company                    Company?                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -2366,6 +2367,11 @@ model CommercialDocument {
   vendorId               String?                  @db.Uuid
   partyId                String                   @db.Uuid
   partyName              String                   @db.VarChar(240)
+  billingName            String?                  @db.VarChar(240)
+  customerPoNumber       String?                  @db.VarChar(100)
+  customerPoDate         DateTime?                @db.Date
+  transactionTime        String?                  @db.VarChar(8)
+  ewayBillNumber         String?                  @db.VarChar(12)
   sourceDocumentId       String?                  @db.Uuid
   sourcePurchaseOrderId  String?                  @db.Uuid
   purchasePurpose        PurchasePurpose?
@@ -2444,7 +2450,20 @@ model CommercialDocument {
   @@map("commercial_documents")
 }
 
+model ServiceReminderCompletion {
+  companyId String @db.Uuid
+  lineId String @db.Uuid
+  completedById String @db.Uuid
+  completedAt DateTime @default(now())
+  line CommercialDocumentLine @relation(fields:[companyId,lineId],references:[companyId,id],onDelete:Cascade,onUpdate:Restrict)
+  completedBy User @relation("ServiceReminderCompleter",fields:[companyId,completedById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@id([companyId, lineId])
+  @@map("service_reminder_completions")
+}
+
 model CommercialDocumentLine {
+  serviceReminderCompletion ServiceReminderCompletion?
+  servicePeriodDays Int?
   id             String             @id @default(uuid()) @db.Uuid
   companyId      String             @db.Uuid
   documentId     String             @db.Uuid
@@ -2532,6 +2551,7 @@ model AccountSettlement {
   moneyAccountId   String?                @db.Uuid
   projectId        String?                @db.Uuid
   amount           Decimal                @db.Decimal(18, 2)
+  discountAmount   Decimal                @default(0) @db.Decimal(18, 2)
   remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
   transactionDate  DateTime               @db.Date
   reference        String?                @db.VarChar(160)
@@ -2562,6 +2582,7 @@ model SettlementAllocation {
   settlementId String             @db.Uuid
   documentId   String             @db.Uuid
   amount       Decimal            @db.Decimal(18, 2)
+  discountAmount Decimal          @default(0) @db.Decimal(18, 2)
   createdAt    DateTime           @default(now())
   company      Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   settlement   AccountSettlement  @relation(fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)

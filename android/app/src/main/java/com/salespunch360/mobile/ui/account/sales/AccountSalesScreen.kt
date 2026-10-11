@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.sales
 
+import com.salespunch360.mobile.ui.account.accountMoney
+import com.salespunch360.mobile.ui.account.accountDate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -56,7 +58,7 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
                             Column(Modifier.weight(1f)){Text(row.party,fontWeight=FontWeight.SemiBold);Text(if(isSale)paymentLabel else row.type.replace('_',' '),style=MaterialTheme.typography.labelSmall,color=if(row.paymentStatus=="PAID")MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)}
                             Column{Text("#${row.number}",fontWeight=FontWeight.Medium,style=MaterialTheme.typography.bodySmall);Text(row.date,style=MaterialTheme.typography.labelSmall)}
                         }
-                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text("₹${row.total}",fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text("₹${row.balance.ifBlank{row.total}}",fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
+                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.total),fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.balance.ifBlank{row.total}),fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
                     }
                 }
             }

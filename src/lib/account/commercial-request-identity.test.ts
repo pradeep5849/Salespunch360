@@ -27,6 +27,13 @@ describe("commercial creation intent", () => {
       }),
     );
   });
+  it("preserves custom text even when field keys resemble financial or request keys", () => {
+    const customFields={rate:"Agreed onsite",idempotencyKey:"Customer reference",quantity:"01"};
+    const hash=commercialCreationHash({...input,customFields});
+    expect(hash).toBe(commercialCreationHash({...input,customFields:{quantity:"01",idempotencyKey:"Customer reference",rate:"Agreed onsite"}}));
+    expect(hash).not.toBe(commercialCreationHash({...input,customFields:{...customFields,quantity:"1"}}));
+    expect(hash).not.toBe(commercialCreationHash({...input,customFields:{...customFields,idempotencyKey:"Different reference"}}));
+  });
   it("includes allocations, Project scope and physical-return identity", () => {
     const purchase = {
       ...input,

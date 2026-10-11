@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.sales
 
+import com.salespunch360.mobile.ui.account.accountMoney
 import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -67,7 +68,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
                 ListItem(
                     headlineContent = { Text(quotation.number, fontWeight = FontWeight.Bold) },
                     supportingContent = { Text("${quotation.customer} · ${quotation.type} · R${quotation.revision}") },
-                    trailingContent = { Column { Text("₹${quotation.total}"); Text(quotation.status) } },
+                    trailingContent = { Column { Text(accountMoney(quotation.total)); Text(quotation.status) } },
                     modifier = Modifier.clickable { vm.open(quotation.id) }
                 )
             }
@@ -82,7 +83,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
     AlertDialog(
         onDismissRequest = vm::closeDraft,
         title = { Text(when { draft.id == null -> "New quotation"; draft.revision -> "New revision"; else -> "Edit quotation" }) },
-        confirmButton = { Button(enabled = !state.saving && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text("Save") } },
+        confirmButton = { Button(enabled = !state.saving && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields) && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text("Save") } },
         dismissButton = { TextButton(onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -96,6 +97,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 item { OutlinedTextField(draft.terms, { vm.editDraft(draft.copy(terms = it)) }, label = { Text("Terms") }, minLines = 2) }
                 item { OutlinedTextField(draft.inclusions, { vm.editDraft(draft.copy(inclusions = it)) }, label = { Text("Inclusions") }) }
                 item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") }) }
+                item { InvoiceCustomFields(state.customFields,"QUOTATION",draft.customFields,state.saving){vm.editDraft(draft.copy(customFields=it))} }
                 item { OutlinedTextField(draft.notes, { vm.editDraft(draft.copy(notes = it)) }, label = { Text("Notes") }) }
                 item { Text("All totals and lifecycle validation are calculated by the server.", style = MaterialTheme.typography.bodySmall) }
             }
@@ -138,9 +140,9 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel) {
                 item {
                     Text("${quotation.str("documentType")} · ${quotation.str("status")}", fontWeight = FontWeight.Bold)
                     Text(revision?.str("customerName").orEmpty())
-                    Text("Grand total ₹${revision?.str("grandTotal").orEmpty()}")
+                    Text("Grand total ${accountMoney(revision?.str("grandTotal").orEmpty())}")
                 }
-                revision?.array("lines")?.let { lines -> items(lines) { line -> Text("${line.str("itemName")} · ${line.str("quantity")} × ₹${line.str("rate")} = ₹${line.str("lineTotal")}") } }
+                revision?.array("lines")?.let { lines -> items(lines) { line -> Text("${line.str("itemName")} · ${line.str("quantity")} × ${accountMoney(line.str("rate"))} = ${accountMoney(line.str("lineTotal"))}") } }
                 item {
                     allowedTransitions.forEach { target -> Button(onClick = { vm.transition(target) }, modifier = Modifier.fillMaxWidth()) { Text(target.replace('_', ' ')) } }
                     if (quotation.str("status") in listOf("DRAFT", "APPROVED", "REJECTED", "SENT", "DECLINED", "EXPIRED")) {

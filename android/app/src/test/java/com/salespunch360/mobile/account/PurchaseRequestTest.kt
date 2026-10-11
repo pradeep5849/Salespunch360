@@ -5,6 +5,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PurchaseRequestTest {
+    @Test fun termsDefaultsFollowPurchaseProjectAndDisabledSettings(){
+        val enabled=buildJsonObject{put("transactionDefaults",buildJsonObject{put("purchaseTerms","Purchase terms");put("projectTerms","Project terms")})}
+        assertEquals("Purchase terms",purchaseDefaultTerms(enabled,"PURCHASE_BILL"))
+        assertEquals("Project terms",purchaseDefaultTerms(enabled,"PURCHASE_ORDER",true))
+        assertEquals("",purchaseDefaultTerms(enabled,"DEBIT_NOTE"))
+        val disabled=buildJsonObject{put("transactionDefaults",buildJsonObject{put("purchaseTerms","Purchase terms");put("transactionPreferences",buildJsonObject{put("termsEnabled",false)})})}
+        assertEquals("",purchaseDefaultTerms(disabled,"PURCHASE_BILL"))
+    }
+
+    @Test fun changingPurchaseContextPreservesCustomAndClearedTerms(){
+        val settings=buildJsonObject{put("transactionDefaults",buildJsonObject{put("purchaseTerms","Purchase terms");put("projectTerms","Project terms")})}
+        val previous=PurchaseDraft(notes="Purchase terms")
+        assertEquals("Project terms",purchaseTermsForContextChange(previous,previous.copy(purpose="PROJECT"),settings).notes)
+        val customized=previous.copy(notes="Agreed custom terms")
+        assertEquals("Agreed custom terms",purchaseTermsForContextChange(customized,customized.copy(purpose="PROJECT"),settings).notes)
+        assertEquals("",purchaseTermsForContextChange(previous,previous.copy(purpose="PROJECT",notes=""),settings).notes)
+    }
     private val project = SalesOption("project", "Project", branchId = "branch")
     private fun state() = PurchaseState(types = listOf("PURCHASE_BILL", "DEBIT_NOTE"), branches = listOf(SalesOption("branch", "Branch")), vendors = listOf(SalesOption("vendor", "Vendor")), projects = listOf(project), projectBudgetLines = listOf(buildJsonObject { put("id", "budget"); put("projectId", "project") }), warehouses = listOf(SalesOption("warehouse", "Warehouse", branchId = "branch")), products = listOf(SalesOption("item", "Material", trackInventory = true, trackingMode = "BATCH")), batches = listOf(buildJsonObject { put("id", "batch"); put("productId", "item") }))
     private fun draft() = PurchaseDraft(branchId = "branch", vendorId = "vendor", vendorInvoiceNumber = "SUP-1", vendorInvoiceDate = "2026-10-09", lines = listOf(SalesLineDraft(lineType = "MATERIAL", sourceId = "item", rate = "10", warehouseId = "warehouse", batchId = "batch")))

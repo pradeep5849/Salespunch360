@@ -21,16 +21,17 @@ const nullableFields = new Set([
   "effectiveDate",
 ]);
 export function assetFormInput(form: FormData, edit = false) {
-  return Object.fromEntries(
+  const customFields=Object.fromEntries([...form.entries()].filter(([key])=>key.startsWith("custom_")).map(([key,value])=>[key.slice(7),String(value)]));
+  return {...Object.fromEntries(
     [...form.entries()]
       .filter(
         ([key, value]) =>
-          !["id", "saveMode"].includes(key) &&
+          !key.startsWith("custom_") && !["id", "saveMode"].includes(key) &&
           (value !== "" || (edit && nullableFields.has(key))),
       )
       .map(([key, value]) => [
         key,
         value === "" && nullableFields.has(key) ? null : value,
       ]),
-  );
+  ),...(Object.keys(customFields).length?{customFields}:{})};
 }

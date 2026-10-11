@@ -1,0 +1,22 @@
+import {beforeEach,describe,expect,it,vi} from "vitest";
+import {Prisma} from "@prisma/client";
+const m=vi.hoisted(()=>({settings:vi.fn(),companies:vi.fn(),docs:vi.fn(),rows:vi.fn(),balances:vi.fn(),existing:vi.fn(),current:vi.fn(),create:vi.fn(),lock:vi.fn()}));
+vi.mock("@/lib/db",()=>({db:{accountSettings:{findUnique:m.settings,findMany:m.companies},commercialDocument:{findMany:m.docs},paymentReminder:{findMany:m.rows},$transaction:async(fn:(tx:unknown)=>Promise<unknown>)=>fn({$executeRaw:m.lock,paymentReminder:{findFirst:m.existing,create:m.create},commercialDocument:{findFirst:m.current}})}}));
+vi.mock("./commercial",()=>({documentOutstandingsBatch:m.balances}));
+import {paymentReminderSlot,duePaymentReminders,generateAccountPaymentReminders} from "./payment-reminder-execution";
+import {applyTransactionDefaults,transactionDefaultsSchema} from "./transaction-defaults";
+const settings={companyId:"tenant",baseCurrency:"INR",transactionDefaults:{reminderSettings:{payment:{enabled:true,overdueDays:1,frequency:"ONCE_DAILY",message:"Hi {party}, pay {amount} for {document} by {date}."}}}};
+const doc={id:"invoice",grandTotal:new Prisma.Decimal(100),payableAmount:null,partyName:"Customer",documentNumber:"INV-1",dueDate:new Date("2026-10-01"),customerId:"customer",createdById:"admin"};
+beforeEach(()=>{vi.clearAllMocks();m.settings.mockResolvedValue(settings);m.companies.mockResolvedValue([settings]);m.docs.mockResolvedValue([doc]);m.rows.mockResolvedValue([{id:"reminder",documentId:doc.id,document:doc,remindAt:new Date("2026-10-11T03:30:00Z"),message:"stale balance 100",customer:{phone:"123"}}]);m.balances.mockResolvedValue(new Map([[doc.id,new Prisma.Decimal(25)]]));m.current.mockResolvedValue({id:doc.id});m.existing.mockResolvedValue(null)});
+describe("A100 reminder execution",()=>{
+ it.each([["ONCE_DAILY","2026-10-11T02:00:00Z","2026-10-10T03:30:00.000Z"],["TWICE_DAILY","2026-10-11T12:00:00Z","2026-10-11T11:30:00.000Z"],["THREE_DAILY","2026-10-11T08:00:00Z","2026-10-11T07:30:00.000Z"],["WEEKLY","2026-10-12T02:00:00Z","2026-10-05T03:30:00.000Z"]])("uses Indian business time for %s",(frequency,now,result)=>expect(paymentReminderSlot(frequency,new Date(now)).toISOString()).toBe(result));
+ it("hides pending reminders when disabled",async()=>{m.settings.mockResolvedValue({transactionDefaults:{reminderSettings:{payment:{enabled:false}}}});expect(await duePaymentReminders({companyId:"tenant"})).toEqual([]);expect(m.rows).not.toHaveBeenCalled()});
+ it("prepares the current outstanding amount and keeps branch restrictions",async()=>{const rows=await duePaymentReminders({companyId:"tenant",branchAccessScope:"SELECTED_BRANCHES",branchIds:["branch"]},new Date("2026-10-12"));expect(rows[0].message).toContain("₹25.00");expect(rows[0].message).not.toContain("100");expect(m.rows.mock.calls[0][0].where.document.branchId).toEqual({in:["branch"]})});
+ it("excludes paid documents and repeated reminder rows",async()=>{m.balances.mockResolvedValue(new Map([[doc.id,new Prisma.Decimal(0)]]));expect(await duePaymentReminders({companyId:"tenant"})).toEqual([])});
+ it("creates a manual pending reminder once per scheduled slot",async()=>{expect((await generateAccountPaymentReminders(new Date("2026-10-11T06:00Z"))).created).toBe(1);expect(m.create.mock.calls[0][0].data).toMatchObject({companyId:"tenant",status:"PENDING",documentId:"invoice"});m.existing.mockResolvedValue({id:"exists"});expect((await generateAccountPaymentReminders(new Date("2026-10-11T06:00Z"))).created).toBe(0)});
+ it("does not create a reminder after the document stops being posted",async()=>{m.current.mockResolvedValue(null);expect((await generateAccountPaymentReminders()).created).toBe(0);expect(m.create).not.toHaveBeenCalled()});
+});
+describe("A103 defaults",()=>{
+ it("applies due days and project invoice terms without overriding entered values",()=>{const input={type:"SALES_INVOICE",issueDate:new Date("2026-12-25"),projectId:"project"};expect(applyTransactionDefaults(input,{defaultDueDays:15,salesTerms:"Sale",projectTerms:"Project"})).toEqual({dueDate:new Date("2027-01-09"),notes:"Project"});expect(applyTransactionDefaults({...input,notes:"Entered",dueDate:new Date("2026-12-30")},{defaultDueDays:15,projectTerms:"Project"}).notes).toBe("Entered")});
+ it("limits terms to the length accepted by document saving",()=>expect(()=>transactionDefaultsSchema.parse({defaultDueDays:0,salesTerms:"x".repeat(5001),purchaseTerms:"",projectTerms:""})).toThrow());
+});

@@ -7,12 +7,14 @@ type Options = Awaited<ReturnType<typeof assetOptions>>;
 export function AssetForm({
   options,
   asset,
+  customValues={},
   action,
   formKey = "create",
 }: {
   formKey?: string;
   options: Options;
   asset?: Asset;
+  customValues?:Record<string,unknown>;
   action: (f: FormData) => Promise<AccountActionResult>;
 }) {
   const requestKey = randomUUID();
@@ -32,9 +34,11 @@ export function AssetForm({
     <AssetEditor
       key={asset?.id ?? formKey}
       asset={fields}
+      customValues={customValues}
       requestKey={requestKey}
       action={action}
       options={{
+        customFields:options.customFields,
         branches: options.branches.map((x) => ({ id: x.id, name: x.name })),
         vendors: options.vendors.map((x) => ({ id: x.id, name: x.name })),
         hsnCodes: options.hsnCodes,

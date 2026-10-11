@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {isValidElement,useMemo,useState,type ReactNode} from "react";
-import {SaveFeedbackForm,SaveSubmitButton} from "./save-feedback";
+import {SaveFeedbackForm,SaveSubmitButton,SavePendingFields} from "./save-feedback";
 import styles from "./invoice-print-settings.module.css";
 
 export type InvoicePrintSettings=Record<string,string|number|boolean>;
@@ -18,10 +18,14 @@ export function InvoicePrintSettingsForm({values,action}:Props){
  const rows=(items:ReactNode[])=>items.filter(Boolean);
  const toggle=(name:string,label:string,checked:boolean,info=true)=><label className={styles.row} data-search={label.toLowerCase()}><span>{label}{info&&<i title={label}>i</i>}</span><input className={styles.switch} name={name} type="checkbox" defaultChecked={checked}/></label>;
  const nav=(label:string,name:string,value:string,placeholder:string)=><label className={styles.navRow} data-search={label.toLowerCase()}><span>{label}<i>i</i></span><input name={name} defaultValue={value} placeholder={placeholder}/><b>›</b></label>;
- const section=(title:string,items:ReactNode[])=>{const visible=search.trim()?items.filter(item=>isValidElement<SearchableProps>(item)&&String(item.props["data-search"]??"").includes(search.toLowerCase())):items;return visible.length?<section className={styles.section}><h2>{title}</h2>{visible}</section>:null};
+ const section=(title:string,items:ReactNode[])=>{
+  const query=search.trim().toLowerCase();
+  const matches=(item:ReactNode)=>!query||(isValidElement<SearchableProps>(item)&&String(item.props["data-search"]??"").includes(query));
+  return <section className={styles.section} style={items.some(matches)?undefined:{display:"none"}}><h2>{title}</h2>{items.map((item,index)=><div key={index} style={{display:matches(item)?"contents":"none"}}>{item}</div>)}</section>;
+ };
  return <SaveFeedbackForm action={action} className={styles.root}>
   <header className={styles.header}><Link href="/workspace/account/settings" aria-label="Back">←</Link><strong>Invoice Print</strong><button type="button" onClick={()=>{const q=prompt("Search Invoice Print settings",search);if(q!==null)setSearch(q.trim().toLowerCase())}} aria-label="Search">⌕</button></header>
-  <div className={styles.tabs}><button type="button" className={printer==="REGULAR"?styles.active:""} onClick={()=>setPrinter("REGULAR")}>Regular</button><button type="button" className={printer==="THERMAL"?styles.active:""} onClick={()=>setPrinter("THERMAL")}>Thermal</button></div><input type="hidden" name="printer" value={printer}/>
+<SavePendingFields>  <div className={styles.tabs}><button type="button" className={printer==="REGULAR"?styles.active:""} onClick={()=>setPrinter("REGULAR")}>Regular</button><button type="button" className={printer==="THERMAL"?styles.active:""} onClick={()=>setPrinter("THERMAL")}>Thermal</button></div><input type="hidden" name="printer" value={printer}/>
   {toggle("regularDefault","Make Regular Printer Default",defaults.regularDefault,false)}
   {section("Themes",rows([
    nav("Change Theme and Colors","theme",defaults.theme,"Regular"),
@@ -45,6 +49,6 @@ export function InvoicePrintSettingsForm({values,action}:Props){
   {section("Footer",rows([
    toggle("printDescription","Print description",defaults.printDescription),toggle("termsEnabled","Terms & Conditions",defaults.termsEnabled),nav("Set Terms & Conditions","termsText",defaults.termsText,"Enter terms & conditions"),toggle("receivedBy","Print Received by details",defaults.receivedBy),toggle("deliveredBy","Print Delivered by details",defaults.deliveredBy),toggle("signatureText","Print Signature Text",defaults.signatureText),nav("Set Custom Signature Text","customSignatureText",defaults.customSignatureText,"Authorized Signatory"),toggle("paymentMode","Payment mode",defaults.paymentMode),toggle("acknowledgement","Print Acknowledgement",defaults.acknowledgement),toggle("pageNumbers","Print Page Numbers",defaults.pageNumbers)
   ]))}
-  <div className={styles.save}><SaveSubmitButton className="account-primary">Save Invoice Print Settings</SaveSubmitButton></div>
+</SavePendingFields>  <div className={styles.save}><SaveSubmitButton className="account-primary">Save Invoice Print Settings</SaveSubmitButton></div>
  </SaveFeedbackForm>;
 }

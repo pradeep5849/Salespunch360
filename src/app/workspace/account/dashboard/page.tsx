@@ -11,7 +11,8 @@ import { requirePermission } from "@/lib/auth/authorization";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { accountBranchDashboard } from "@/lib/account/branch-dashboard";
 import { enabledModulesForCompany } from "@/lib/account/modules";
-import { formatInr } from "@/lib/account/presentation";
+import {Money} from "@/components/account/account-ui";
+import {AccountDate} from "@/components/account/display-preferences";
 import { db } from "@/lib/db";
 import { dashboardCardVisibility } from "@/lib/account/dashboard-policy";
 type Query = { branchId?: string; scope?: string; view?: string };
@@ -67,7 +68,7 @@ export default async function Page({
           </AccountCard>
           <AccountCard>
             <small>Project value</small>
-            <strong>{formatInr(data.projectValue)}</strong>
+            <strong><Money value={data.projectValue}/></strong>
           </AccountCard>
         </section>
       </>
@@ -98,7 +99,7 @@ export default async function Page({
           <AccountCard className="account-sale-overview">
             <small>SALE OVERVIEW · CURRENT MONTH</small>
             <h2>Sales revenue</h2>
-            <strong>{formatInr(data.currentMonthSales)}</strong>
+            <strong><Money value={data.currentMonthSales}/></strong>
             <p>
               {data.salesGrowthPercent === null
                 ? "Previous-period comparison becomes available after the first recorded month."
@@ -129,7 +130,7 @@ export default async function Page({
             <ul aria-label="Exact monthly sales values">
               {data.salesTrend.map((point) => (
                 <li key={point.month}>
-                  {point.month}: {formatInr(point.total)}
+                  {point.month}: <Money value={point.total}/>
                 </li>
               ))}
             </ul>
@@ -139,19 +140,19 @@ export default async function Page({
           {visible.expenses && (
             <AccountCard>
               <small>EXPENSES</small>
-              <h2>{formatInr(data.currentMonthExpenses)}</h2>
+              <h2><Money value={data.currentMonthExpenses}/></h2>
               <p>Posted this month</p>
             </AccountCard>
           )}
           <AccountCard>
             <small>CASH &amp; BANK</small>
-            <h2>{formatInr(data.cashBank)}</h2>
+            <h2><Money value={data.cashBank}/></h2>
             <p>
-              Cash in hand: {formatInr(data.cash)} · Bank:{" "}
-              {formatInr(data.bank)}
+              Cash in hand: <Money value={data.cash}/> · Bank:{" "}
+              <Money value={data.bank}/>
             </p>
             <p>
-              Ledger-backed balance as of {now.toISOString().slice(0, 10)};
+              Ledger-backed balance as of <AccountDate value={now.toISOString()}/>;
               includes inactive accounts with historical balances.
             </p>
             {links.cashBank && (
@@ -162,7 +163,7 @@ export default async function Page({
         {visible.inventory && (
           <AccountCard className="account-inventory-overview">
             <small>INVENTORY</small>
-            <h2>{formatInr(data.stockValue)}</h2>
+            <h2><Money value={data.stockValue}/></h2>
             <div className="account-breakdown-row">
               <span>
                 Tracked products <strong>{data.itemCount}</strong>
@@ -203,7 +204,7 @@ export default async function Page({
               data.expenseBreakdown.map((row) => (
                 <div className="account-breakdown-row" key={row.categoryId}>
                   <span>{row.category}</span>
-                  <strong>{formatInr(row.amount)}</strong>
+                  <strong><Money value={row.amount}/></strong>
                 </div>
               ))
             ) : (
@@ -224,27 +225,27 @@ export default async function Page({
           {query.view === "full" && (
             <dl>
               <dt>Receivables</dt>
-              <dd>{formatInr(data.receivables)}</dd>
+              <dd><Money value={data.receivables}/></dd>
               <dt>Vendor payables</dt>
-              <dd>{formatInr(data.payables)}</dd>
+              <dd><Money value={data.payables}/></dd>
               <dt>Financial-year profit</dt>
-              <dd>{formatInr(data.profit)}</dd>
+              <dd><Money value={data.profit}/></dd>
               {visible.sales && (
                 <>
                   <dt>Financial-year sales</dt>
-                  <dd>{formatInr(data.sales)}</dd>
+                  <dd><Money value={data.sales}/></dd>
                 </>
               )}
               {visible.purchases && (
                 <>
                   <dt>Financial-year purchases</dt>
-                  <dd>{formatInr(data.purchases)}</dd>
+                  <dd><Money value={data.purchases}/></dd>
                 </>
               )}
               {visible.expenses && (
                 <>
                   <dt>Financial-year expenses</dt>
-                  <dd>{formatInr(data.expenses)}</dd>
+                  <dd><Money value={data.expenses}/></dd>
                 </>
               )}
               {visible.projects && (
@@ -252,7 +253,7 @@ export default async function Page({
                   <dt>Active projects</dt>
                   <dd>{data.projects}</dd>
                   <dt>Project value</dt>
-                  <dd>{formatInr(data.projectValue)}</dd>
+                  <dd><Money value={data.projectValue}/></dd>
                 </>
               )}
               {visible.inventory && (
@@ -285,10 +286,10 @@ export default async function Page({
                   {data.branchComparison.map((row) => (
                     <tr key={row.id}>
                       <td>{row.name}</td>
-                      {visible.sales && <td>{formatInr(row.sales)}</td>}
-                      {visible.expenses && <td>{formatInr(row.expenses)}</td>}
+                      {visible.sales && <td><Money value={row.sales}/></td>}
+                      {visible.expenses && <td><Money value={row.expenses}/></td>}
                       {visible.sales && visible.expenses && (
-                        <td>{formatInr(row.operatingContribution)}</td>
+                        <td><Money value={row.operatingContribution}/></td>
                       )}
                     </tr>
                   ))}

@@ -1,18 +1,21 @@
-import { Prisma } from "@prisma/client";
+import {updatePartySettingsForActor,savePartyAdditionalFieldsForActor} from "@/lib/account/party-settings";
+import {backupReminderDue} from "@/lib/account/backup-settings";
+import {duePaymentReminders} from "@/lib/account/payment-reminder-execution";
+import {dueServiceReminders,completeServiceReminder} from "@/lib/account/service-reminders";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
-  enabledModulesForCompany,
+  enabledModulesForCompany,updateModuleSettingsForActor,
 } from "@/lib/account/modules";
-import {BUSINESS_TYPES,MODULE_SETUP_CATALOG,expandSetupModules,optionalModulesFromStored,recommendedSetupModules} from "@/lib/account/module-setup";
-import {updateGeneralSettingsForActor} from "@/lib/account/settings";
+import {BUSINESS_TYPES,MODULE_SETUP_CATALOG,optionalModulesFromStored,recommendedSetupModules} from "@/lib/account/module-setup";
+import {updateAccountSettingsForActor,updateItemSettingsForActor,updateTransactionSettingsForActor,saveCustomFieldForActor,updateGeneralSettingsForActor} from "@/lib/account/settings";
 import { taxProfileInput } from "@/lib/account/tax";
 import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
-import { normalizeTransactionPreferences, PREFIX_TYPES, transactionPreferencesSchema } from "@/lib/account/transaction-settings";
+import { PREFIX_TYPES } from "@/lib/account/transaction-settings";
 
 const actor = (
   u: MobileAppPrincipal,
@@ -49,7 +52,7 @@ export async function mobileSettings(u: MobileAppPrincipal) {
       where: { companyId: a.companyId, ...branchWhere(a) },
       orderBy: { name: "asc" },
     }),
-    db.numberingSeries.findMany({where:{companyId:a.companyId,seriesKey:{in:PREFIX_TYPES.map(([key])=>key)}},select:{branchId:true,seriesKey:true,prefix:true}}),
+    db.numberingSeries.findMany({where:{companyId:a.companyId,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{}),seriesKey:{in:PREFIX_TYPES.map(([key])=>key)}},select:{branchId:true,seriesKey:true,prefix:true}}),
   ]);
   return {
     settings,
@@ -59,6 +62,7 @@ export async function mobileSettings(u: MobileAppPrincipal) {
     businessTypes: BUSINESS_TYPES,
     catalog: MODULE_SETUP_CATALOG,
     recommendations: recommendedSetupModules(settings?.businessType ?? "OTHER_MIXED"),
+    recommendationsByBusinessType: Object.fromEntries(BUSINESS_TYPES.map(type=>[type.key,recommendedSetupModules(type.key)])),
     branches,
     numberingSeries,
   };
@@ -80,148 +84,16 @@ export async function mobileSaveSettings(
       return{branchId:v.branchId,prefix:series.prefix,suffix:series.suffix,padding:series.padding,nextSequence:Number(series.nextSequence)};
     });
   }
-  if (section === "settings") {
-    const schema = z
-        .object({
-          expenseApprovalRequired: z.boolean(),
-          expenseApprovalThreshold: z.string(),
-          negativeStockAllowed: z.boolean(),
-          transactionDefaults: z.record(z.string(), z.unknown()),
-          printProfile: z.record(z.string(), z.unknown()),
-        })
-        .strict(),
-      v = schema.parse(raw),
-      threshold = new Prisma.Decimal(v.expenseApprovalThreshold);
-    if (threshold.isNegative()) throw new Error("INVALID_APPROVAL_THRESHOLD");
-    const existing=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true}});
-    const transactionDefaults = {...((existing?.transactionDefaults as Record<string,unknown>|null)??{}),...v.transactionDefaults} as Prisma.InputJsonValue;
-    const printProfile = v.printProfile as Prisma.InputJsonValue;
-    return db.accountSettings.upsert({
-      where: { companyId: a.companyId },
-      create: {
-        companyId: a.companyId,
-        ...v,
-        transactionDefaults,
-        printProfile,
-        expenseApprovalThreshold: threshold,
-      },
-      update: {
-        ...v,
-        transactionDefaults,
-        printProfile,
-        expenseApprovalThreshold: threshold,
-      },
-    });
-  }
+  if(section==="settings")return updateAccountSettingsForActor(a,raw);
   if (section === "general") {
     return updateGeneralSettingsForActor(a,raw);
   }
-  if(section==="party-settings"){
-    const partySettings=z.object({gstinEnabled:z.boolean(),groupingEnabled:z.boolean(),shippingAddressEnabled:z.boolean(),printShippingAddress:z.boolean()}).strict().parse(raw),current=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true}}),transactionDefaults={...((current?.transactionDefaults as Record<string,unknown>|null)??{}),partySettings} as Prisma.InputJsonValue;
-    return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,transactionDefaults},update:{transactionDefaults}})
-  }
-  if(section==="party-additional-fields"){
-    const fields=z.array(z.object({key:z.enum(["party_additional_1","party_additional_2","party_additional_3","party_date"]),enabled:z.boolean(),label:z.string().trim().min(1).max(100),showInPrint:z.boolean(),dateFormat:z.literal("DD/MM/YYYY").optional()}).strict()).length(4).parse(raw);
-    return db.$transaction(fields.flatMap((field,position)=>(["CUSTOMER","VENDOR"] as const).map(entityType=>db.customFieldDefinition.upsert({where:{companyId_entityType_fieldKey:{companyId:a.companyId,entityType,fieldKey:field.key}},create:{companyId:a.companyId,entityType,fieldKey:field.key,label:field.label,dataType:field.key==="party_date"?"DATE":"TEXT",isActive:field.enabled,isRequired:false,position,validation:{showInPrint:field.showInPrint,...field.dateFormat?{dateFormat:field.dateFormat}:{}}},update:{label:field.label,dataType:field.key==="party_date"?"DATE":"TEXT",isActive:field.enabled,position,validation:{showInPrint:field.showInPrint,...field.dateFormat?{dateFormat:field.dateFormat}:{}}}}))))
-  }
-  if (section === "transaction-settings") {
-    const v=z.object({preferences:transactionPreferencesSchema,branchId:z.string().uuid(),prefixes:z.record(z.string(),z.string().max(30))}).strict().parse(raw);
-    if(!await db.branch.findFirst({where:{id:v.branchId,companyId:a.companyId,isActive:true,...branchWhere(a)}}))throw new Error("MOBILE_FORBIDDEN");
-    const allowed=new Set(PREFIX_TYPES.map(([key])=>key));if(Object.keys(v.prefixes).some(key=>!allowed.has(key as never)))throw new Error("INVALID_PREFIX_TYPE");
-    return db.$transaction(async tx=>{const current=await tx.accountSettings.findUnique({where:{companyId:a.companyId},select:{transactionDefaults:true,itemSettings:true}}),defaults=(current?.transactionDefaults as Record<string,unknown>|null)??{},items=(current?.itemSettings as Record<string,unknown>|null)??{},preferences=normalizeTransactionPreferences(v.preferences);const saved=await tx.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}},update:{transactionDefaults:{...defaults,transactionPreferences:preferences},itemSettings:{...items,barcodeScanning:preferences.barcodeScanning}}});for(const[seriesKey,prefix]of Object.entries(v.prefixes)){const row=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey}});if(row)await tx.numberingSeries.update({where:{id:row.id},data:{prefix}});else await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey,prefix,padding:seriesKey==="SALES_INVOICE"?2:6}})}return saved});
-  }
-  if (section === "modules") {
-    const v = z.object({
-      businessType: z.enum(BUSINESS_TYPES.map(type => type.key) as [typeof BUSINESS_TYPES[number]["key"], ...typeof BUSINESS_TYPES[number]["key"][]]),
-      enabledModules: z.array(z.enum(["ASSETS", "PROJECTS", "BARCODE", "POS"])),
-    }).strict().parse(raw);
-    const enabledModules = expandSetupModules(v.enabledModules);
-    return db.accountSettings.upsert({
-      where: { companyId: a.companyId },
-      create: {
-        companyId: a.companyId,
-        businessType: v.businessType,
-        enabledModules,
-      },
-      update: {
-        businessType: v.businessType,
-        enabledModules,
-      },
-    });
-  }
-  if(section==="item-settings"){
-    const v=z.object({
-      enabled:z.boolean(),
-      itemType:z.enum(["PRODUCTS","SERVICES","BOTH"]),
-      barcodeScanning:z.boolean(),
-      stockMaintenance:z.boolean(),
-      itemUnits:z.boolean(),
-      defaultUnit:z.string().max(40),
-      itemCategory:z.boolean(),
-      partyWiseRate:z.boolean(),
-      wholesalePrice:z.boolean(),
-      quantityDecimals:z.number().int().min(0).max(4),
-      itemWiseTax:z.boolean(),
-      taxOnMrp:z.boolean(),
-      itemWiseDiscount:z.boolean(),
-      updateSalePrice:z.boolean(),
-      additionalFields:z.boolean(),
-      customFields:z.boolean(),
-      description:z.boolean(),
-      hsnSac:z.boolean(),
-      additionalCess:z.boolean()
-    }).strict().parse(raw),
-    current=await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{itemSettings:true}}),
-    itemSettings={...((current?.itemSettings as Record<string,unknown>|null)??{}),...v} as Prisma.InputJsonValue;
-    return db.accountSettings.upsert({where:{companyId:a.companyId},create:{companyId:a.companyId,itemSettings},update:{itemSettings}})
-  }
-  if (section === "custom-fields") {
-    const v = z
-      .object({
-        id: z.string().uuid().optional(),
-        entityType: z.enum([
-          "CUSTOMER",
-          "VENDOR",
-          "PRODUCT",
-          "SERVICE",
-          "PROJECT",
-          "ASSET",
-          "QUOTATION",
-          "SALES_INVOICE",
-          "PURCHASE_BILL",
-        ]),
-        fieldKey: z.string().regex(/^[a-z][a-z0-9_]{1,59}$/),
-        label: z.string().min(1).max(100),
-        dataType: z.enum([
-          "TEXT",
-          "TEXTAREA",
-          "NUMBER",
-          "DATE",
-          "BOOLEAN",
-          "SELECT",
-        ]),
-        isRequired: z.boolean(),
-        position: z.number().int().min(0).max(1000),
-        options: z.array(z.string()).optional(),
-        isActive: z.boolean().optional(),
-      })
-      .parse(raw);
-    if (v.dataType === "SELECT" && !v.options?.length)
-      throw new Error("SELECT_OPTIONS_REQUIRED");
-    const { id, ...data } = v;
-    return id
-      ? db.customFieldDefinition.updateMany({
-          where: { id, companyId: a.companyId },
-          data: { ...data, options: data.options ?? Prisma.JsonNull },
-        })
-      : db.customFieldDefinition.create({
-          data: {
-            ...data,
-            companyId: a.companyId,
-            options: data.options ?? Prisma.JsonNull,
-          },
-        });
-  }
+  if(section==="party-settings")return updatePartySettingsForActor(a,raw);
+  if(section==="party-additional-fields")return savePartyAdditionalFieldsForActor(a,raw);
+  if(section==="transaction-settings")return updateTransactionSettingsForActor(a,raw);
+  if (section === "modules") return updateModuleSettingsForActor(a,raw);
+  if(section==="item-settings")return updateItemSettingsForActor(a,raw);
+  if (section === "custom-fields") return saveCustomFieldForActor(a,raw);
   if (section === "print-templates") {
     const v = z
       .object({
@@ -295,7 +167,7 @@ export async function mobileNotifications(u: MobileAppPrincipal) {
       branchId: true,
     },
   });
-  return rows.map((x) => ({ ...x, type: "EXPENSE_APPROVAL", isRead: false }));
+  return [...rows.map((x) => ({ ...x, type: "EXPENSE_APPROVAL", isRead: false })),...(await dueServiceReminders(a)).map(x=>({...x,isRead:false})),...(await duePaymentReminders(a)).map(x=>({...x,isRead:false})),...(a.accountRole==="ACCOUNT_ADMIN"&&await backupReminderDue(a.companyId)?[{id:"BACKUP_DUE",type:"BACKUP_REMINDER",title:"Your manual backup is due",navigationTarget:"/workspace/account/utilities/backup",isRead:false}]:[])];
 }
 export async function mobileTax(
   u: MobileAppPrincipal,
@@ -526,3 +398,5 @@ export async function mobileAccountUserSave(
     ? service.editAccountUserForActor(u as never, raw)
     : service.createAccountUserForActor(u as never, raw);
 }
+
+export async function mobileCompleteServiceReminder(u:MobileAppPrincipal,raw:unknown){const a=actor(u,"ACCOUNT_DASHBOARD");await assertOperationalWrite(a.companyId);const input=z.object({lineId:z.string().uuid()}).strict().parse(raw);return completeServiceReminder(a,input.lineId)}

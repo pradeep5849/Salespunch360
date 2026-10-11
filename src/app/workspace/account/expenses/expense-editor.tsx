@@ -1,4 +1,6 @@
 "use client";
+import {useDisplayPreferences} from "@/components/account/display-preferences";
+import {formatMoney} from "@/lib/account/display-preferences";
 import { useEffect, useState } from "react";
 import { Prisma } from "@prisma/client";
 import {
@@ -69,6 +71,7 @@ export function ExpenseEditor({
   action: (f: FormData) => Promise<AccountActionResult>;
   requestKey: string;
 }) {
+  const displayPreferences=useDisplayPreferences();
   const [stableKey] = useState(requestKey),
     [branch, setBranch] = useState(x?.branchId ?? o.branches[0]?.id ?? ""),
     [type, setType] = useState(
@@ -488,7 +491,7 @@ export function ExpenseEditor({
         </details>
         <p role="status" aria-live="polite">
           {preview
-            ? `Taxable ₹${preview.taxable.toFixed(2)} · GST/CESS ₹${preview.totalTax.toFixed(2)} · Round off ₹${preview.roundOffAmount.toFixed(2)} · Total ₹${preview.grandTotal.toFixed(2)}`
+            ? `Taxable ${formatMoney(preview.taxable,displayPreferences)} · GST/CESS ${formatMoney(preview.totalTax,displayPreferences)} · Round off ${formatMoney(preview.roundOffAmount,displayPreferences)} · Total ${formatMoney(preview.grandTotal,displayPreferences)}`
             : "Complete positive amounts and billed items to preview the total."}
         </p>
         <label>

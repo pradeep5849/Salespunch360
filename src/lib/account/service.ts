@@ -80,9 +80,10 @@ export async function accountMasterOverview(master:string,raw:{q?:string;page?:s
     master==="customers"?db.customer.findMany({where:{companyId,isAccountCustomer:true,...(a.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: a.branchIds ?? [] } } : {}),...nameWhere},orderBy:{name:"asc"},...paged}):Promise.resolve([]),
     master==="customers"||master==="vendors"?db.customFieldDefinition.findMany({where:{companyId,entityType:master==="customers"?"CUSTOMER":"VENDOR",isActive:true},orderBy:{position:"asc"}}):Promise.resolve([]),
   ]);
+  const itemCustomFields=["products","services"].includes(master)?await db.customFieldDefinition.findMany({where:{companyId,entityType:master==="products"?"PRODUCT":"SERVICE",isActive:true},orderBy:{position:"asc"}}):[];
   const primary=master==="customers"?customers:master==="vendors"?vendors:master==="units"?accountUnits:master==="categories"?accountCategories:master==="products"?accountProducts:master==="services"?accountServices:master==="work-categories"?workCategories:master==="work-packages"?workPackages:financialYears;
   const hasMore=primary.length>MASTER_PAGE_SIZE;
-  return{canCreate:!!a.accountRole&&ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(master==="financial-years"?"ACCOUNT_SETTINGS":"ACCOUNT_ACCOUNTS"),accountSettings,partySettings:resolvePartySettings(accountSettings?.transactionDefaults),partyCustomFields,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
+  return{canCreate:!!a.accountRole&&ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(master==="financial-years"?"ACCOUNT_SETTINGS":"ACCOUNT_ACCOUNTS"),accountSettings,partySettings:resolvePartySettings(accountSettings?.transactionDefaults),partyCustomFields,itemCustomFields,financialYears:financialYears.slice(0,MASTER_PAGE_SIZE),vendors:vendors.slice(0,MASTER_PAGE_SIZE),accountUnits:master==="units"?accountUnits.slice(0,MASTER_PAGE_SIZE):accountUnits,accountCategories:master==="categories"?accountCategories.slice(0,MASTER_PAGE_SIZE):accountCategories,accountProducts:accountProducts.slice(0,MASTER_PAGE_SIZE),accountServices:accountServices.slice(0,MASTER_PAGE_SIZE),workCategories:master==="work-categories"?workCategories.slice(0,MASTER_PAGE_SIZE):workCategories,workPackages:workPackages.slice(0,MASTER_PAGE_SIZE),customers:customers.slice(0,MASTER_PAGE_SIZE),page,q,hasMore};
 }
 
 export async function createPartyWithCustomValues(kind:"customers"|"vendors",raw:unknown,customValues:Record<string,unknown>){
@@ -256,11 +257,12 @@ async function refs(
   )
     throw new Error("INVALID_CATEGORY");
 }
-export async function createProduct(raw: unknown) {
+export async function createProduct(raw: unknown, customValues: Record<string, unknown> = {}) {
   const a = await writeActor(),
     d = itemSchema.parse(raw);
   await refs(a.companyId!, d, "PRODUCT");
-  return db.accountProduct.create({
+  return db.$transaction(async tx => {
+  const row = await tx.accountProduct.create({
     data: {
       companyId: a.companyId!,
       name: d.name,
@@ -278,12 +280,16 @@ export async function createProduct(raw: unknown) {
       lowStockThreshold: d.lowStockThreshold,
     },
   });
+  await saveCustomFieldValuesInTx(tx, a.companyId!, "PRODUCT", row.id, customValues);
+  return row;
+  });
 }
-export async function createService(raw: unknown) {
+export async function createService(raw: unknown, customValues: Record<string, unknown> = {}) {
   const a = await writeActor(),
     d = itemSchema.parse(raw);
   await refs(a.companyId!, d, "SERVICE");
-  return db.accountService.create({
+  return db.$transaction(async tx => {
+  const row = await tx.accountService.create({
     data: {
       companyId: a.companyId!,
       name: d.name,
@@ -296,6 +302,9 @@ export async function createService(raw: unknown) {
       taxRate: d.taxRate,
       sacCode: d.hsnSacCode,
     },
+  });
+  await saveCustomFieldValuesInTx(tx, a.companyId!, "SERVICE", row.id, customValues);
+  return row;
   });
 }
 export async function createWorkCategory(raw: unknown) {

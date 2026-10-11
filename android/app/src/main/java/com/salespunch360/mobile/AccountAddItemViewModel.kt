@@ -13,6 +13,8 @@ data class AddItemState(
     val saving:Boolean=false,
     val units:List<AccountOption> = emptyList(),
     val categories:List<AccountOption> = emptyList(),
+    val productFields:List<AccountCustomField> = emptyList(),
+    val serviceFields:List<AccountCustomField> = emptyList(),
     val itemSettings:JsonObject=JsonObject(emptyMap()),
     val error:String?=null
 )
@@ -25,8 +27,8 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
     init{load()}
 
     fun load()=viewModelScope.launch{
-        runCatching{api.accountMasterOptions()}.onSuccess{
-            _state.value=_state.value.copy(loading=false,units=it.units,categories=it.categories)
+        runCatching{api.accountMasterOptions("items") to api.accountMasterOptions("services")}.onSuccess{(products,services)->
+            _state.value=_state.value.copy(loading=false,units=products.units,categories=products.categories,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
         }.onFailure{_state.value=_state.value.copy(loading=false,error="Unable to load item options.")}
     }
 
@@ -65,6 +67,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         hsnSac:String,
         trackInventory:Boolean,
         lowStockThreshold:String,
+        customFields:Map<String,String> = emptyMap(),
         done:()->Unit
     )=viewModelScope.launch{
         _state.value=_state.value.copy(saving=true,error=null)
@@ -74,6 +77,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
                 null,
                 buildJsonObject{
                     put("name",name.trim())
+                    putJsonObject("customFields"){customFields.forEach{put(it.key,it.value)}}
                     put("code",code.trim())
                     unitId?.let{put("unitId",it)}
                     categoryId?.let{put("categoryId",it)}
