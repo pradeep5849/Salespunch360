@@ -40,7 +40,11 @@ fun AccountItemsScreen(
     var categories by remember{mutableStateOf(setOf<String>())}
     var draftTypes by remember{mutableStateOf(setOf<String>())}
     var draftCategories by remember{mutableStateOf(setOf<String>())}
-    LaunchedEffect(initialQuery){vm.context(initialQuery);vm.show("stock")}
+    LaunchedEffect(initialQuery){
+        val uri=android.net.Uri.parse("https://local.invalid/?$initialQuery")
+        types=uri.getQueryParameter("type")?.takeIf{it in setOf("PRODUCT","SERVICE")}?.let{setOf(it)}?:emptySet()
+        vm.context(initialQuery);vm.show("stock")
+    }
 
     val stockById=remember(state.rows){
         state.rows.groupBy{row->row["product"]?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty()}.mapValues{(_,rows)->rows.sumOf{row->

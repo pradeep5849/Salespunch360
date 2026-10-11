@@ -1680,13 +1680,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Mobile tab destinations/back/settings/FAB, active Categories state, narrow-screen layout and Android/web UI parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A056_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A056_Findings.json, SalesPunch360_A056_Audit_Report.md.
 
 **Linked finding IDs:** A056-F02, A056-F03.
+
+
+**Checkpoint work:** Web/native Items category shell includes Products, Services, Categories and Units destinations; query-selected product/service filtering wired; mobile category FAB centered.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A056-F02 — Category counts and search are incomplete above 200 records
 
@@ -1722,13 +1727,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** More than 200 products/services/categories; mixed active states; exact categorized/uncategorized totals; company isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A056_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A056_Findings.json, SalesPunch360_A056_Audit_Report.md.
 
 **Linked finding IDs:** A056-F01, A056-F03, A056-F04.
+
+
+**Checkpoint work:** Native categories/items/services load every offset page before calculating active category and uncategorized totals. Failed catalogues show Unavailable; pagination regression covers 401 records. Final >200 mixed-category native/device counts verification remains pending.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A056-F03 — Category creation/load errors have no actionable in-page feedback
 
@@ -1764,13 +1774,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Blank/overlong/duplicate name, offline/403/500, retry and success; retain name; no false empty state.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A056_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A056_Findings.json, SalesPunch360_A056_Audit_Report.md.
 
 **Linked finding IDs:** A056-F02, A056-F04.
+
+
+**Checkpoint work:** Creation catches safe duplicate/permission/network feedback, retains the name, bounds it at 100 characters and prevents duplicate submissions. Native loading/errors and retry rendered; web load error boundary provides retry.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A056-F04 — Category search and creation sheet lack accessible form/dialog semantics
 
@@ -1806,13 +1821,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Keyboard open/close/Escape, focus trap/restore, screen-reader names and landmark scan.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A056_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A056_Findings.json, SalesPunch360_A056_Audit_Report.md.
 
 **Linked finding IDs:** A056-F03.
+
+
+**Checkpoint work:** Web named fields and native dialog modal support keyboard trap, Escape and focus restoration; nested main removed; contrast corrected. Desktop/mobile-web keyboard and Axe checks pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A057-F01 — Web unsaved defaults unexpectedly enable three settings
 
@@ -1848,13 +1868,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Null/partial/full settings render on desktop/mobile/native; no-op Save retains false defaults.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A057_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A057_Findings.json, SalesPunch360_A057_Audit_Report.md.
 
 **Linked finding IDs:** A057-F02, A057-F03.
+
+
+**Checkpoint work:** Web renders resolved documented defaults. Desktop/mobile-web no-op legacy save preserves barcodeScanning, taxOnMrp and updateSalePrice OFF plus unit conversion metadata.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A057-F02 — Native Default Unit control and validation differ from web
 
@@ -1890,13 +1915,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Units OFF/default nonblank denial on web/API; correct default-unit selection/roundtrip; company-specific unit validity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A057_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A057_Findings.json, SalesPunch360_A057_Audit_Report.md.
 
 **Linked finding IDs:** A057-F01, A057-F03, A057-F04.
+
+
+**Checkpoint work:** Android default unit is an editable bounded 40-character value; Item Units OFF clears it. Shared server validates the default-unit dependency for web/native. Native device entry verification pending.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A057-F03 — Saved commercial switches have incomplete business enforcement
 
@@ -2016,13 +2046,18 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Audit failure rollback, save failure no audit, identical web/native event; concurrent settings/conversion preservation; tenant/role denial.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A057_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A057_Findings.json, SalesPunch360_A057_Audit_Report.md.
 
 **Linked finding IDs:** A057-F04.
+
+
+**Checkpoint work:** Existing shared web/native transaction service independently verified; item setting audit now includes before/after and preserves legacy unit conversion metadata. Four focused write tests and real browser save/audit checks pass.
+
+**Remaining work:** Final-head regression and original finding verification remain pending.
 
 ## A058-F01 — Opening stock fields are discarded on item Save
 

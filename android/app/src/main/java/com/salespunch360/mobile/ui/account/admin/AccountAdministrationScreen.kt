@@ -158,12 +158,9 @@ private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel)
         item{SwitchRow("Barcode scanning for items",barcode){barcode=it}}
         item{SwitchRow("Stock maintenance",stock){stock=it}}
         item{SwitchRow("Manufacturing",false,enabled=false){}}
-        item{SwitchRow("Item Units",units){units=it}}
+        item{SwitchRow("Item Units",units){units=it;if(!it)defaultUnit=""}}
         item{
-            Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
-                Text("Default Unit",Modifier.weight(1f))
-                Switch(checked=defaultUnit.isNotBlank(),onCheckedChange={checked->defaultUnit=if(checked)defaultUnit.ifBlank{"Unit"} else ""})
-            }
+            OutlinedTextField(defaultUnit,{if(it.length<=40)defaultUnit=it},label={Text("Default Unit")},placeholder={Text("For example, PCS")},enabled=units,modifier=Modifier.fillMaxWidth(),singleLine=true)
         }
         item{SwitchRow("Item Category",category){category=it}}
         item{SwitchRow("Party wise item rate",partyRate){partyRate=it}}

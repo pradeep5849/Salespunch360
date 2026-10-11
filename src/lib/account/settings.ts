@@ -34,7 +34,7 @@ export async function updateItemSettingsForActor(actor:{id:string;companyId:stri
  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId!+":account-settings"}))`;
  const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true}}),existing=(current?.itemSettings as Record<string,unknown>|null)??{},itemSettings={...existing,...input} as Prisma.InputJsonValue;
  const row=await tx.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,itemSettings},update:{itemSettings}});
- await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["ITEMS"]}}});return row;
+ await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["ITEMS"],before:existing as Prisma.InputJsonValue,after:itemSettings}}});return row;
  });
 }
 export async function updateItemSettings(raw:unknown){return updateItemSettingsForActor(await requirePermissionForMutation("ACCOUNT_SETTINGS"),raw)}

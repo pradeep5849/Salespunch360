@@ -9,13 +9,14 @@ export const metadata = { title: "Items | SalesPunch360" };
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string; scope?: string }>;
+  searchParams: Promise<{ branchId?: string; scope?: string; type?: string }>;
 }) {
   const actor = await requirePermission("ACCOUNT_STOCK"),
     companyId = actor.companyId!;
+  const query = await searchParams;
   const scoped = await inventoryContext(
     { ...actor, companyId } as ProjectActor,
-    await searchParams,
+    { branchId: query.branchId, scope: query.scope },
   );
   const [products, services, stock, settings, categories] = await Promise.all([
     db.accountProduct.findMany({
@@ -86,6 +87,12 @@ export default async function Page({
           : scoped.context.branchName}
       </p>
       <ItemsScreen
+        key={query.type ?? "all"}
+        initialType={
+          query.type === "PRODUCT" || query.type === "SERVICE"
+            ? query.type
+            : undefined
+        }
         quantityDecimals={itemSettings.quantityDecimals ?? 2}
         canConfigure={actor.accountRole === "ACCOUNT_ADMIN"}
         items={items}

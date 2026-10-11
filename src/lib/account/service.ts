@@ -385,6 +385,7 @@ export async function createUnit(raw: unknown) {
 }
 export async function createCategory(raw: unknown) {
   const a = await writeActor();
+  await assertInventoryAvailable(a);
   return db.accountCategory.create({
     data: { companyId: a.companyId!, ...categorySchema.parse(raw) },
   });

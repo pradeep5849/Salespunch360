@@ -143,6 +143,8 @@ test.afterAll(async () => {
     await tx.journalEntry.deleteMany({ where: { companyId } });
   });
   await db.accountProduct.deleteMany({ where: { companyId } });
+  await db.accountService.deleteMany({ where: { companyId } });
+  await db.accountCategory.deleteMany({ where: { companyId } });
   await db.warehouse.deleteMany({ where: { companyId } });
   await db.moneyAccount.deleteMany({ where: { companyId } });
   await db.ledgerAccount.deleteMany({ where: { companyId } });
@@ -852,4 +854,136 @@ test("A054 inventory forms accept React metadata and expose accessible adjustmen
   expect(row.quantity.toString()).toBe("2");
   expect(row.totalCost.toString()).toBe("6");
   expect(row.warehouseId).toBe(warehouse.id);
+});
+
+test("A056 categories retain duplicate errors and provide modal keyboard navigation", async ({
+  page,
+}) => {
+  const category = await db.accountCategory.create({
+    data: { companyId, name: `Category-${randomUUID()}` },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/categories");
+  const sections = page.getByRole("navigation", { name: "Items sections" });
+  await expect(
+    sections.getByRole("link", { name: "Categories", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    sections.getByRole("link", { name: "Products", exact: true }),
+  ).toHaveAttribute("href", "/workspace/account/inventory?type=PRODUCT");
+  await expect(
+    sections.getByRole("link", { name: "Services", exact: true }),
+  ).toHaveAttribute("href", "/workspace/account/inventory?type=SERVICE");
+  await expect(
+    sections.getByRole("link", { name: "Units", exact: true }),
+  ).toHaveAttribute("href", "/workspace/account/inventory/units");
+  await page.getByLabel("Search categories").fill(category.name);
+  await expect(
+    page.locator(".manager-row").filter({ hasText: category.name }),
+  ).toBeVisible();
+  const trigger = page.getByRole("button", { name: "Add Category" });
+  await trigger.click();
+  const modal = page.getByRole("dialog", { name: "Add Category" });
+  const name = modal.getByLabel("Category name", { exact: true });
+  await expect(name).toBeFocused();
+  await expect(name).toHaveAttribute("maxlength", "100");
+  await name.fill(category.name);
+  await modal.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(modal.getByRole("alert")).toContainText("already exists");
+  await expect(name).toHaveValue(category.name);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  expect(
+    await modal.evaluate((el) => el.contains(document.activeElement)),
+  ).toBe(true);
+  const axe = await new AxeBuilder({ page })
+    .include(".category-create-dialog")
+    .analyze();
+  expect(
+    axe.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(modal).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  const unique = `New-${randomUUID()}`;
+  await name.fill(unique);
+  await modal.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(modal).not.toBeVisible();
+  await expect
+    .poll(() =>
+      db.accountCategory.count({ where: { companyId, name: unique } }),
+    )
+    .toBe(1);
+  await page.getByLabel("Search categories").fill(unique);
+  await expect(
+    page.locator(".manager-row").filter({ hasText: unique }),
+  ).toContainText("0");
+  const pageAxe = await new AxeBuilder({ page })
+    .include(".categories-page")
+    .analyze();
+  expect(
+    pageAxe.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+});
+
+test("A057 no-op legacy settings save preserves effective defaults and conversion metadata", async ({
+  page,
+}) => {
+  const legacy = {
+    unitConversions: [
+      { baseUnitId: randomUUID(), secondaryUnitId: randomUUID(), rate: "12" },
+    ],
+  };
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: legacy },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/item-settings");
+  await expect(
+    page.getByRole("checkbox", { name: /Barcode scanning for items/ }),
+  ).not.toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: /Calculate tax based on MRP/ }),
+  ).not.toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: /Update sale price from transaction/ }),
+  ).not.toBeChecked();
+  await page
+    .getByRole("button", { name: "Save Item Settings", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  const saved = await db.accountSettings.findUniqueOrThrow({
+    where: { companyId },
+  });
+  expect(saved.itemSettings).toMatchObject({
+    ...legacy,
+    barcodeScanning: false,
+    taxOnMrp: false,
+    updateSalePrice: false,
+    itemUnits: true,
+  });
+  const event = await db.accountingAuditEvent.findFirstOrThrow({
+    where: { companyId, eventType: "SETTINGS_CHANGED" },
+    orderBy: { createdAt: "desc" },
+  });
+  expect(event.metadata).toMatchObject({
+    sections: ["ITEMS"],
+    before: legacy,
+    after: { barcodeScanning: false, taxOnMrp: false, updateSalePrice: false },
+  });
 });

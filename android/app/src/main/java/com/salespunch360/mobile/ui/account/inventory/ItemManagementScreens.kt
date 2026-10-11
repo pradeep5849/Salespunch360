@@ -39,20 +39,27 @@ fun CategoriesManagementScreen(
     }
     val uncategorized=(s.items+s.services).count{it.isActive&&it.categoryId==null}
     Scaffold(
-        topBar={TopAppBar(title={Text("Categories")},navigationIcon={IconButton(onClick=back){Icon(Icons.Default.ArrowBack,"Back")}},actions={IconButton(onClick={navigate("/workspace/account/inventory/item-settings")}){Icon(Icons.Default.Settings,"Item settings")}})},
+        topBar={TopAppBar(title={Text("Items")},navigationIcon={IconButton(onClick=back){Icon(Icons.Default.ArrowBack,"Back")}},actions={IconButton(onClick={navigate("/workspace/account/inventory/item-settings")}){Icon(Icons.Default.Settings,"Item settings")}})},
+        floatingActionButtonPosition=FabPosition.Center,
         floatingActionButton={ExtendedFloatingActionButton(onClick={add=true},icon={Icon(Icons.Default.Add,null)},text={Text("Add Category")})}
     ){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(bottom=96.dp)){
-            item{OutlinedTextField(q,{q=it},placeholder={Text("Search Category")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,modifier=Modifier.fillMaxWidth().padding(16.dp))}
+            item{ScrollableTabRow(selectedTabIndex=2){
+                listOf("Products" to "/workspace/account/inventory?type=PRODUCT","Services" to "/workspace/account/inventory?type=SERVICE","Categories" to "/workspace/account/inventory/categories","Units" to "/workspace/account/inventory/units").forEachIndexed{index,(title,path)->Tab(selected=index==2,onClick={if(index!=2)navigate(path)},text={Text(title)})}
+            }}
+            if(s.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
+            s.error?.let{message->item{Column(Modifier.padding(16.dp)){Text(message,color=MaterialTheme.colorScheme.error);TextButton(onClick={vm.refresh()},enabled=!s.loading&&!s.saving){Text("Retry")}}}}
+            item{OutlinedTextField(q,{q=it},label={Text("Search Category")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,modifier=Modifier.fillMaxWidth().padding(16.dp))}
             item{Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),horizontalArrangement=Arrangement.SpaceBetween){Text("Category Name",color=MaterialTheme.colorScheme.onSurfaceVariant);Text("Item Count",color=MaterialTheme.colorScheme.onSurfaceVariant)}}
-            item{ListItem(headlineContent={Text("Items Not in Any Category")},trailingContent={Text(uncategorized.toString())});HorizontalDivider()}
-            items(rows,key={it.id}){cat->ListItem(headlineContent={Text(cat.name.uppercase())},trailingContent={Text((counts[cat.id]?:0).toString())});HorizontalDivider()}
+            item{ListItem(headlineContent={Text("Items Not in Any Category")},trailingContent={Text(if(s.catalogLoaded)uncategorized.toString() else "Unavailable")});HorizontalDivider()}
+            items(rows,key={it.id}){cat->ListItem(headlineContent={Text(cat.name.uppercase())},trailingContent={Text(if(s.catalogLoaded)(counts[cat.id]?:0).toString() else "Unavailable")});HorizontalDivider()}
         }
     }
-    if(add)ModalBottomSheet(onDismissRequest={add=false}){
+    if(add)ModalBottomSheet(onDismissRequest={if(!s.saving)add=false}){
         Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Add Category",style=MaterialTheme.typography.headlineSmall);IconButton(onClick={add=false}){Icon(Icons.Default.Close,"Close")}}
-            OutlinedTextField(name,{name=it},placeholder={Text("Enter Category Name")},modifier=Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Add Category",style=MaterialTheme.typography.headlineSmall);IconButton(onClick={add=false},enabled=!s.saving){Icon(Icons.Default.Close,"Close")}}
+            OutlinedTextField(name,{if(it.length<=100)name=it},label={Text("Category name")},enabled=!s.saving,modifier=Modifier.fillMaxWidth())
+            s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             Button(onClick={vm.saveCategory(name){name="";add=false}},enabled=name.isNotBlank()&&!s.saving,modifier=Modifier.fillMaxWidth().height(56.dp)){Text(if(s.saving)"Creating…" else "Create")}
         }
     }

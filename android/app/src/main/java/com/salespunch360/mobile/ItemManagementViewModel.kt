@@ -19,6 +19,7 @@ data class ItemManagementState(
     val services:List<AccountMasterRecord> = emptyList(),
     val stock:List<JsonObject> = emptyList(),
     val stockLoaded:Boolean=false,
+    val catalogLoaded:Boolean=false,
     val error:String?=null
 )
 
@@ -29,13 +30,13 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     init{refresh()}
 
     fun refresh()=viewModelScope.launch{
-        _state.value=_state.value.copy(loading=true,error=null,stockLoaded=false)
+        _state.value=_state.value.copy(loading=true,error=null,stockLoaded=false,catalogLoaded=false)
         try{
             val units=loadAll("units","true")
             val categories=loadAll("categories","true")
             val items=loadAll("items","all")
             val services=loadAll("services","all")
-            _state.value=_state.value.copy(units=units,categories=categories,items=items,services=services)
+            _state.value=_state.value.copy(units=units,categories=categories,items=items,services=services,catalogLoaded=true)
             val stock=api.inventoryStock().map{it.jsonObject}
             com.salespunch360.mobile.account.productStockTotals(stock)
             _state.value=_state.value.copy(loading=false,units=units,categories=categories,items=items,services=services,stock=stock,stockLoaded=true,error=null)
@@ -54,6 +55,11 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     }
 
     fun saveCategory(name:String,done:()->Unit)=viewModelScope.launch{
+        if(_state.value.saving)return@launch
+        if(name.trim().isEmpty()||name.trim().length>100){
+            _state.value=_state.value.copy(error="Enter a category name from 1 to 100 characters.")
+            return@launch
+        }
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{
             api.saveAccountMaster("categories",null,buildJsonObject{put("name",name.trim());put("scope","BOTH")})

@@ -4781,13 +4781,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A056-F02",
         "A056-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Web/native Items category shell includes Products, Services, Categories and Units destinations; query-selected product/service filtering wired; mobile category FAB centered.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A056-F02",
@@ -4879,14 +4885,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A056-F01",
         "A056-F03",
         "A056-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Native categories/items/services load every offset page before calculating active category and uncategorized totals. Failed catalogues show Unavailable; pagination regression covers 401 records. Final >200 mixed-category native/device counts verification remains pending.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A056-F03",
@@ -4980,13 +4992,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A056-F02",
         "A056-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Creation catches safe duplicate/permission/network feedback, retains the name, bounds it at 100 characters and prevents duplicate submissions. Native loading/errors and retry rendered; web load error boundary provides retry.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A056-F04",
@@ -5076,12 +5094,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A056-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Web named fields and native dialog modal support keyboard trap, Escape and focus restoration; nested main removed; contrast corrected. Desktop/mobile-web keyboard and Axe checks pass.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A057-F01",
@@ -5176,13 +5200,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A057-F02",
         "A057-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Web renders resolved documented defaults. Desktop/mobile-web no-op legacy save preserves barcodeScanning, taxOnMrp and updateSalePrice OFF plus unit conversion metadata.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A057-F02",
@@ -5279,14 +5309,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A057-F01",
         "A057-F03",
         "A057-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Android default unit is an editable bounded 40-character value; Item Units OFF clears it. Shared server validates the default-unit dependency for web/native. Native device entry verification pending.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A057-F03",
@@ -5597,12 +5633,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A057-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Existing shared web/native transaction service independently verified; item setting audit now includes before/after and preserves legacy unit conversion metadata. Four focused write tests and real browser save/audit checks pass.",
+        "remaining_work": "Final-head regression and original finding verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A058-F01",
@@ -21031,6 +21073,27 @@
       "adjustment_desktop_and_mobile_passed": 2,
       "adjustment_initial_failures": 2,
       "initial_failure_resolution": "Explicit accessible name on warehouse selector; rerun passed."
+    },
+    "category_and_settings_unit": {
+      "files_passed": 3,
+      "tests_passed": 12,
+      "failed": 0,
+      "skipped": 0
+    },
+    "category_and_settings_browser": {
+      "desktop_passed": 2,
+      "mobile_web_passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "earlier_failures": "Contrast issues corrected; fixture category cleanup repaired; subsequent run passed."
+    },
+    "category_settings_typescript": "PASS after next typegen and sequential TypeScript rerun",
+    "category_settings_android": {
+      "compile_debug_kotlin": "PASS",
+      "jvm_tests_passed": 138,
+      "failed": 0,
+      "skipped": 0,
+      "device_verification": "NOT RUN"
     }
   }
 }
