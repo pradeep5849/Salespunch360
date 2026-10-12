@@ -53,3 +53,6 @@ jobs:
       - name: Verify migration status after deployment
         run: npx --no-install prisma migrate status
 
+
+      - name: Verify generated-client runtime columns
+        run: node scripts/check-runtime-schema.mjs

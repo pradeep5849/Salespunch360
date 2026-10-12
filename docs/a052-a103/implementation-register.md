@@ -105,6 +105,8 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Production evidence received 2026-10-12:** P2022 confirms `expense_transactions.creationRequestKey` is absent. Matching existing migration: `20261009050000_asset_and_expense_reference_fields`. Cause now identified as schema/client mismatch; exact migration history/target remains unverified. PARTIAL; production migration and post-deploy validation pending. No production change performed.
 
+**Checkpoint deployment guard:** Read-only generated-client scalar-column preflight added after migration deployment. Three regression tests, isolated migrated-database check and focused lint passed. Production migration status/target and post-deploy verification remain pending; no historical migration edited and no production changes performed.
+
 ## A052-F02 — Expected permission/module denial renders as an unhandled web failure
 
 **Title:** Expected permission/module denial renders as an unhandled web failure

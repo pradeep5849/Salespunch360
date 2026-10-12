@@ -737,7 +737,9 @@
         "src/app/error.tsx",
         "src/lib/db.ts",
         "prisma/schema.prisma",
-        ".github/workflows/deploy-prisma-migrations.yml"
+        ".github/workflows/deploy-prisma-migrations.yml",
+        "scripts/check-runtime-schema.mjs",
+        "scripts/check-runtime-schema.test.mjs"
       ],
       "affected_services_apis_actions": [
         "Deployed failing request unknown; candidate web listExpenses(), Account layout and shared dependencies."
@@ -834,7 +836,7 @@
       ],
       "checkpoint_work": {
         "status": "PARTIAL",
-        "summary": "Matched supplied production exception to existing additive migration. No production migration executed. Earlier user deferral preceded this new diagnostic evidence; production remediation and validation remain pending."
+        "summary": "Matched supplied production exception to existing additive migration. No production migration executed. Earlier user deferral preceded this new diagnostic evidence; production remediation and validation remain pending. Added read-only generated-client scalar-column verification after migration deployment; it detects missing columns and wrong/empty database targets. Existing historical migrations remain unchanged; no production migration or deployment performed."
       },
       "production_evidence": {
         "code": "P2022",
@@ -843,6 +845,11 @@
         "missing_column": "expense_transactions.creationRequestKey",
         "matching_migration": "20261009050000_asset_and_expense_reference_fields",
         "production_verified": false
+      },
+      "intermediate_validation": {
+        "schema_preflight": "3 regression tests passed; all generated-client scalar columns confirmed on isolated migrated local database; focused lint passed",
+        "production": "NOT VERIFIED; matching migration and deployment database target must be checked/applied in production",
+        "final_head": "NOT RUN"
       }
     },
     {
