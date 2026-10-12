@@ -4643,13 +4643,16 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Open recording leaves bank/cash unchanged; Close1593 into Bank/Cash increases that account1593 once; second click/retry no extra credit; source amount/destination authorization; period locks; atomic rollback; reference open/closed grouping.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint atomic cheque work: Initial completed states are rejected and clearance without a linked journal is blocked. This prevents new false completion but does not yet implement the required amount/source-linked bank/cash receipt command.
+Remaining: Implement amount/source normalization, manual deposit/closure posting and destination/date/description contract without duplicate income; web/native integration and all original required tests remain pending.
 
 ## A066-F04 — Re-Open and View Txn reference actions are unavailable
 
@@ -4769,13 +4772,16 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Failure at reversal/status/audit boundaries; no partial side effect; commit-response loss/retry; reversible journal validation and locked period; complete audit trail.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint atomic cheque work: Cheque creation now validates and records its operational audit in one company-locked serializable transaction. Bounce uses reverseJournalInTx inside the same transaction as conditional source status and audit. Original company/branch/journal authorization and posted history remain enforced. Real DB audit-failure injection proves cheque, original journal and reversal all roll back.
+Remaining: Final-head regression; complete amount/source financial lifecycle is separately pending A066-F02/F03.
 
 ## A066-F07 — Concurrent cheque transitions use stale state and unconditional writes
 
@@ -4811,13 +4817,16 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Deposit/cancel, clear/bounce, reopen/clear races; duplicate click/retry; state/journal/audit agreement; no double reversal or stale overwrite.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint atomic cheque work: Transitions lock the company and re-read scoped state inside a retryable serializable transaction, then compare-and-swap status. Identical status/date retries return the committed result without a second reversal or audit; changed explicit replay dates and stale incompatible transitions are rejected. Real DB deposit/cancel race commits one intent and parallel bounce retries commit one balanced reversal.
+Remaining: Final-head regression; reopen/clear workflow race verification depends on A066-F04 implementation.
 
 ## A066-F08 — Cheque listing ignores selected branch context and loads unbounded results
 
@@ -4895,13 +4904,16 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Admin/Accountant denied/allowed linked and unlinked bounce; page action visibility; direct action enforcement; transaction rollback on denial.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint atomic cheque work: Cheque actor commands explicitly enforce Money Entry permission; journal-backed bounce additionally checks Journal Reverse permission before using the transaction-aware reversal helper.
+Remaining: Expose matching transition capabilities in cheque UI/API/native routes and verify final-head permission cases alongside remaining cheque workflow.
 
 ## A066-F10 — Cheque forms lack accessible labels and actionable status feedback
 

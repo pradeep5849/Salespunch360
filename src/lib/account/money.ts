@@ -13,7 +13,8 @@ import {
   requirePermissionForMutation,
 } from "@/lib/auth/authorization";
 import { allocateDocumentNumberInTx } from "./numbering";
-import { postJournalInTx, reverseJournal } from "@/lib/accounting/service";
+import { canUsePermission } from "@/lib/auth/permissions";
+import { postJournalInTx, reverseJournalInTx } from "@/lib/accounting/service";
 import type { ProjectActor } from "./projects";
 const D = Prisma.Decimal,
   Z = new D(0),
@@ -329,83 +330,197 @@ const chequeInput = z.object({
   reference: z.string().max(160).optional(),
   journalEntryId: z.string().uuid().optional(),
 });
-export async function createCheque(raw: unknown) {
-  const a = await actor("ACCOUNT_MONEY_ENTRY", true),
-    d = chequeInput.parse(raw);
-  branchOk(a, d.branchId);
-  if (
-    !(await db.branch.findFirst({
-      where: { id: d.branchId, companyId: a.companyId, isActive: true },
-    }))
-  )
+export async function createChequeForActor(a: Actor, raw: unknown) {
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
     throw new AuthorizationError();
-  if (
-    !(await db.moneyAccount.findFirst({
-      where: {
-        id: d.moneyAccountId,
-        companyId: a.companyId,
-        isActive: true,
-        ...compatibleMoneyAccount(d.branchId),
+  const d = chequeInput.parse(raw);
+  if (!["ISSUED", "RECEIVED"].includes(d.status))
+    throw new Error("INVALID_CHEQUE_INITIAL_STATUS");
+  branchOk(a, d.branchId);
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        if (
+          !(await tx.branch.findFirst({
+            where: { id: d.branchId, companyId: a.companyId, isActive: true },
+          }))
+        )
+          throw new AuthorizationError();
+        if (
+          !(await tx.moneyAccount.findFirst({
+            where: {
+              id: d.moneyAccountId,
+              companyId: a.companyId,
+              isActive: true,
+              ...compatibleMoneyAccount(d.branchId),
+            },
+          }))
+        )
+          throw new Error("INVALID_MONEY_ACCOUNT");
+        if (
+          d.journalEntryId &&
+          !(await tx.journalEntry.findFirst({
+            where: {
+              id: d.journalEntryId,
+              companyId: a.companyId,
+              branchId: d.branchId,
+              status: "POSTED",
+            },
+          }))
+        )
+          throw new Error("INVALID_JOURNAL");
+        const existing = await tx.cheque.findFirst({
+          where: {
+            companyId: a.companyId,
+            moneyAccountId: d.moneyAccountId,
+            chequeNumber: d.chequeNumber,
+          },
+        });
+        if (existing) {
+          branchOk(a, existing.branchId);
+          if (
+            existing.branchId !== d.branchId ||
+            existing.partyName !== d.partyName ||
+            existing.status !== d.status ||
+            existing.chequeDate.toISOString().slice(0, 10) !==
+              d.chequeDate.toISOString().slice(0, 10) ||
+            (existing.reference ?? "") !== (d.reference ?? "") ||
+            (existing.journalEntryId ?? "") !== (d.journalEntryId ?? "")
+          )
+            throw new Error("IDEMPOTENCY_CONFLICT");
+          return existing;
+        }
+        const row = await tx.cheque.create({
+          data: { ...d, companyId: a.companyId },
+        });
+        await audit(tx, a, "CHEQUE_CREATED", "CHEQUE", row.id, {
+          status: d.status,
+          branchId: d.branchId,
+          moneyAccountId: d.moneyAccountId,
+        });
+        return row;
       },
-    }))
-  )
-    throw new Error("INVALID_MONEY_ACCOUNT");
-  if (
-    d.journalEntryId &&
-    !(await db.journalEntry.findFirst({
-      where: {
-        id: d.journalEntryId,
-        companyId: a.companyId,
-        branchId: d.branchId,
-        status: "POSTED",
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
+}
+export async function createCheque(raw: unknown) {
+  return createChequeForActor(await actor("ACCOUNT_MONEY_ENTRY", true), raw);
+}
+export async function transitionChequeForActor(
+  a: Actor,
+  id: string,
+  to: ChequeStatus,
+  clearedDate?: Date,
+) {
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
+    throw new AuthorizationError();
+  z.string().uuid().parse(id);
+  z.nativeEnum(ChequeStatus).parse(to);
+  const entryDate =
+    clearedDate === undefined ? new Date() : z.coerce.date().parse(clearedDate);
+  const dateKey = entryDate.toISOString().slice(0, 10);
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        const row = await tx.cheque.findFirst({
+          where: { id, companyId: a.companyId, ...branchScope(a) },
+        });
+        if (!row) throw new AuthorizationError();
+        if (row.status === to) {
+          if (clearedDate) {
+            const prior = await tx.accountOperationalAudit.findFirst({
+              where: {
+                companyId: a.companyId,
+                entityType: "CHEQUE",
+                entityId: id,
+                eventType: "CHEQUE_STATUS_CHANGED",
+              },
+              orderBy: { createdAt: "desc" },
+            });
+            const metadata = prior?.metadata as Record<string, unknown> | null;
+            if (metadata?.to !== to || metadata?.date !== dateKey)
+              throw new Error("IDEMPOTENCY_CONFLICT");
+          }
+          return row;
+        }
+        const allowed: Record<ChequeStatus, ChequeStatus[]> = {
+          ISSUED: ["CLEARED", "BOUNCED", "CANCELLED"],
+          RECEIVED: ["DEPOSITED", "CANCELLED"],
+          DEPOSITED: ["CLEARED", "BOUNCED"],
+          CLEARED: ["BOUNCED"],
+          BOUNCED: [],
+          CANCELLED: [],
+        };
+        if (!allowed[row.status].includes(to))
+          throw new Error("INVALID_CHEQUE_TRANSITION");
+        if (to === "CLEARED" && !row.journalEntryId)
+          throw new Error("CHEQUE_RECEIPT_REQUIRED");
+        if (to === "BOUNCED" && row.journalEntryId) {
+          if (
+            !canUsePermission(
+              a,
+              "SALESPUNCH360_ACCOUNT",
+              "ACCOUNT_JOURNAL_REVERSE",
+            )
+          )
+            throw new AuthorizationError();
+          const original = await tx.journalEntry.findFirst({
+            where: {
+              id: row.journalEntryId,
+              companyId: a.companyId,
+              branchId: row.branchId,
+              status: "POSTED",
+            },
+          });
+          if (!original) throw new Error("INVALID_JOURNAL");
+          await reverseJournalInTx(tx, a, {
+            journalEntryId: row.journalEntryId,
+            entryDate,
+            reason: "Cheque bounced",
+          });
+        }
+        const changed = await tx.cheque.updateMany({
+          where: {
+            id,
+            companyId: a.companyId,
+            status: row.status,
+            ...branchScope(a),
+          },
+          data: {
+            status: to,
+            clearedDate: to === "CLEARED" ? entryDate : row.clearedDate,
+          },
+        });
+        if (changed.count !== 1) throw new Error("INVALID_CHEQUE_TRANSITION");
+        await audit(tx, a, "CHEQUE_STATUS_CHANGED", "CHEQUE", id, {
+          from: row.status,
+          to,
+          date: dateKey,
+        });
+        return tx.cheque.findFirstOrThrow({
+          where: { id, companyId: a.companyId, ...branchScope(a) },
+        });
       },
-    }))
-  )
-    throw new Error("INVALID_JOURNAL");
-  return db.cheque.create({ data: { ...d, companyId: a.companyId } });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
 }
 export async function transitionCheque(
   id: string,
   to: ChequeStatus,
   clearedDate?: Date,
 ) {
-  const a = await actor("ACCOUNT_MONEY_ENTRY", true),
-    row = await db.cheque.findFirst({
-      where: { id, companyId: a.companyId, ...branchScope(a) },
-    });
-  if (!row) throw new AuthorizationError();
-  const allowed: Record<ChequeStatus, ChequeStatus[]> = {
-    ISSUED: ["CLEARED", "BOUNCED", "CANCELLED"],
-    RECEIVED: ["DEPOSITED", "CANCELLED"],
-    DEPOSITED: ["CLEARED", "BOUNCED"],
-    CLEARED: ["BOUNCED"],
-    BOUNCED: [],
-    CANCELLED: [],
-  };
-  if (!allowed[row.status].includes(to))
-    throw new Error("INVALID_CHEQUE_TRANSITION");
-  if (to === "BOUNCED" && row.journalEntryId)
-    await reverseJournal({
-      journalEntryId: row.journalEntryId,
-      entryDate: clearedDate ?? new Date(),
-      reason: "Cheque bounced",
-    });
-  const updated = await db.cheque.update({
-    where: { id },
-    data: {
-      status: to,
-      clearedDate:
-        to === "CLEARED" ? (clearedDate ?? new Date()) : row.clearedDate,
-    },
-  });
-  await db.$transaction((tx) =>
-    audit(tx, a, "CHEQUE_STATUS_CHANGED", "CHEQUE", id, {
-      from: row.status,
-      to,
-    }),
+  return transitionChequeForActor(
+    await actor("ACCOUNT_MONEY_ENTRY", true),
+    id,
+    to,
+    clearedDate,
   );
-  return updated;
 }
+
 async function createLedger(
   tx: Prisma.TransactionClient,
   a: Actor,

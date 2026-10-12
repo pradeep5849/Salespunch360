@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_CHEQUE_INITIAL_STATUS:
+    "Record a cheque as Issued or Received before changing its status.",
+  INVALID_CHEQUE_TRANSITION:
+    "This cheque status has changed or the selected action is unavailable. Refresh and try again.",
+  CHEQUE_RECEIPT_REQUIRED:
+    "Record the linked receipt or payment before marking this cheque cleared.",
   ITEM_IDENTIFIER_EXISTS:
     "This item code or barcode is already in use. Enter another code and try again.",
   IDEMPOTENCY_CONFLICT:
