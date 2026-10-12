@@ -1,3 +1,4 @@
+import { chequeFinancialActionForActor } from "@/lib/account/cheque-finance";
 import {
   chequePageForActor,
   chequeListQuerySchema,
@@ -9,6 +10,7 @@ import { ownerCapitalSummaryForActor } from "@/lib/account/owner-capital-summary
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
+  createChequeForActor,
   createAndReceiveLoanForActor,
   createOwnerFinancialAccountForActor,
   updateOwnerFinancialAccountForActor,
@@ -209,4 +211,13 @@ export async function mobileChequePage(
     branchId:
       context.context.mode === "BRANCH" ? context.context.branchId : undefined,
   });
+}
+
+export async function mobileCreateCheque(u: MobileAppPrincipal, raw: unknown) {
+  await write(u);
+  return createChequeForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+export async function mobileChequeFinancialAction(u: MobileAppPrincipal, id: string, raw: unknown) {
+  await write(u);
+  return chequeFinancialActionForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), id, raw);
 }

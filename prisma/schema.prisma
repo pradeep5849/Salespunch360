@@ -284,10 +284,13 @@ enum PurchaseClassification {
 enum PaymentMode {
   CASH
   BANK
+  CHEQUE
 }
 
 enum SettlementStatus {
   POSTED
+  PENDING_CHEQUE
+  REVERSED
 }
 
 enum PaymentReminderStatus {
@@ -2587,18 +2590,22 @@ model AccountSettlement {
   transactionDate  DateTime               @db.Date
   reference        String?                @db.VarChar(160)
   notes            String?
-  journalEntryId   String                 @db.Uuid
+  journalEntryId   String?                @db.Uuid
   createdById      String                 @db.Uuid
   createdAt        DateTime               @default(now())
   company          Company                @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   branch           Branch                 @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  journalEntry     JournalEntry           @relation("SettlementJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalEntry     JournalEntry?          @relation("SettlementJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   createdBy        User                   @relation("SettlementCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   customer         Customer?              @relation("SettlementCustomer", fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   vendor           Vendor?                @relation("SettlementVendor", fields: [companyId, vendorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   allocations      SettlementAllocation[]
   applications     AdvanceApplication[]
   openingAllocations OpeningBalanceAllocation[]
+  creationRequestHash String? @db.VarChar(64)
+  chequeId String? @db.Uuid
+  cheque Cheque? @relation("ChequeSettlementHistory", fields: [companyId, chequeId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "settlement_cheque_company_fkey")
+  currentCheques Cheque[] @relation("ChequeCurrentSettlement")
 
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, settlementNumber])
@@ -3100,10 +3107,16 @@ model Cheque {
   clearedDate    DateTime?    @db.Date
   reference      String?      @db.VarChar(160)
   journalEntryId String?      @db.Uuid
+  amount         Decimal? @db.Decimal(18, 2)
+  settlementId   String? @db.Uuid
+  settlement     AccountSettlement? @relation("ChequeCurrentSettlement", fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "cheque_settlement_company_fkey")
+  settlements    AccountSettlement[] @relation("ChequeSettlementHistory")
+  actionVersion  Int @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, settlementId])
   @@unique([companyId, moneyAccountId, chequeNumber])
   @@map("cheques")
 }

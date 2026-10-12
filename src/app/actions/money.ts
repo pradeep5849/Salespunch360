@@ -61,3 +61,78 @@ export async function saveChequeAction(fd: FormData) {
     fd.get("id") ? "Cheque status updated" : "Cheque recorded",
   );
 }
+
+export async function saveChequeFinancialAction(fd: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  const { requirePermissionForMutation } =
+    await import("@/lib/auth/authorization");
+  const { chequeFinancialActionForActor } =
+    await import("@/lib/account/cheque-finance");
+  return accountAction(async () => {
+    const actor = await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");
+    const input = Object.fromEntries(fd.entries());
+    delete input.id;
+    if (!actor.companyId) throw new Error("NOT_AUTHORIZED");
+    await chequeFinancialActionForActor(
+      { ...actor, companyId: actor.companyId },
+      String(fd.get("id")),
+      {
+        ...input,
+        expectedVersion: Number(fd.get("expectedVersion")),
+      },
+    );
+    refresh();
+  }, "Cheque updated");
+}
+
+export async function searchChequeParties(rawInput: unknown) {
+  const { z } = await import("zod");
+  const { db } = await import("@/lib/db");
+  const { requirePermissionForMutation, AuthorizationError } =
+    await import("@/lib/auth/authorization");
+  const input = z
+    .object({
+      branchId: z.string().uuid(),
+      direction: z.enum(["RECEIVED", "ISSUED"]),
+      q: z.string().trim().max(160),
+      offset: z.number().int().min(0).max(1000000),
+    })
+    .strict()
+    .parse(rawInput);
+  const actor = await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");
+  if (
+    !actor.companyId ||
+    (actor.branchAccessScope === "SELECTED_BRANCHES" &&
+      !actor.branchIds?.includes(input.branchId))
+  )
+    throw new AuthorizationError();
+  if (
+    !(await db.branch.findFirst({
+      where: { id: input.branchId, companyId: actor.companyId, isActive: true },
+      select: { id: true },
+    }))
+  )
+    throw new AuthorizationError();
+  const where = {
+    companyId: actor.companyId,
+    isActive: true,
+    name: { contains: input.q, mode: "insensitive" as const },
+  };
+  const rows =
+    input.direction === "RECEIVED"
+      ? await db.customer.findMany({
+          where: { ...where, branchId: input.branchId },
+          select: { id: true, name: true },
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          skip: input.offset,
+          take: 26,
+        })
+      : await db.vendor.findMany({
+          where,
+          select: { id: true, name: true },
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          skip: input.offset,
+          take: 26,
+        });
+  return { rows: rows.slice(0, 25), hasMore: rows.length > 25 };
+}

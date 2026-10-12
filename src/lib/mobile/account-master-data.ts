@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT } from "../account/settlement-policy";
 import {
   itemCreationExtras,
   itemCreationHash,
@@ -359,7 +360,7 @@ export async function getMobileAccountMaster(
       },
     }),
     db.accountSettlement.findMany({
-      where: {
+      where: { ...EFFECTIVE_SETTLEMENT,
         companyId: user.companyId,
         ...party,
         ...(kind === "customers" ? branchFilter(user) : {}),

@@ -1,0 +1,399 @@
+import { randomUUID } from "node:crypto";
+import { PrismaClient } from "@prisma/client";
+import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
+const url = process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
+if (
+  url &&
+  (!["localhost", "127.0.0.1"].includes(new URL(url).hostname) ||
+    !new URL(url).pathname.endsWith("_ci"))
+)
+  throw new Error("Isolated local *_ci database required");
+const client = new PrismaClient({
+  datasources: {
+    db: { url: url ?? "postgresql://test:test@127.0.0.1:55432/checkpoint_ci" },
+  },
+});
+vi.mock("@/lib/db", () => ({
+  db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
+}));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: () => undefined }),
+}));
+import { saveBusinessCurrency } from "./business-currency";
+import { reverseJournalForActor } from "@/lib/accounting/service";
+import { createChequeForActor } from "./money";
+import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
+import {
+  createCommercialDocumentForActor,
+  postCommercialDocumentForActor,
+  createSettlementForActor,
+  documentOutstandingInTx,
+  applyAdvanceForActor,
+} from "./commercial";
+import { chequeFinancialActionForActor } from "./cheque-finance";
+import type { ProjectActor } from "./projects";
+const companyId = randomUUID(),
+  branchId = randomUUID(),
+  otherBranch = randomUUID(),
+  userId = randomUUID(),
+  customerId = randomUUID(),
+  bankId = randomUUID();
+const actor = {
+  id: userId,
+  companyId,
+  role: "ACCOUNT_USER",
+  accountRole: "ACCOUNT_ADMIN",
+  isActive: true,
+  accountAccessActive: true,
+  salesAccessActive: false,
+  salesRole: null,
+  managerType: null,
+  branchAccessScope: "ALL_BRANCHES",
+  branchIds: [branchId, otherBranch],
+} as ProjectActor;
+let bankLedger: string;
+async function invoice(amount = "100") {
+  const doc = await createCommercialDocumentForActor(actor, {
+    type: "SALES_INVOICE",
+    idempotencyKey: randomUUID(),
+    branchId,
+    partyId: customerId,
+    issueDate: "2026-10-10",
+    lines: [
+      {
+        lineType: "CUSTOM",
+        itemName: "Cheque source invoice",
+        quantity: "1",
+        rate: amount,
+        taxRate: "0",
+      },
+    ],
+  });
+  await postCommercialDocumentForActor(actor, { documentId: doc.id });
+  return client.commercialDocument.findUniqueOrThrow({ where: { id: doc.id } });
+}
+async function record(documentId?: string) {
+  const receipt = await createSettlementForActor(actor, {
+    type: documentId ? "CUSTOMER_RECEIPT" : "CUSTOMER_ADVANCE",
+    idempotencyKey: randomUUID(),
+    branchId,
+    partyId: customerId,
+    moneyAccountId: bankId,
+    paymentMode: "CHEQUE",
+    chequeNumber: randomUUID().slice(0, 8),
+    chequeDate: "2026-10-10",
+    transactionDate: "2026-10-10",
+    amount: "100",
+    allocations: documentId ? [{ documentId, amount: "100" }] : [],
+  });
+  const cheque = await client.cheque.findFirstOrThrow({
+    where: { companyId, settlementId: receipt.id },
+  });
+  return { receipt, cheque };
+}
+async function outstanding(id: string) {
+  return (
+    await client.$transaction((tx) =>
+      documentOutstandingInTx(tx, companyId, id),
+    )
+  ).outstanding.toFixed(2);
+}
+async function bankEffect(chequeId: string) {
+  const entries = await client.journalEntry.findMany({
+    where: {
+      companyId,
+      OR: [
+        {
+          sourceId: {
+            in: (
+              await client.accountSettlement.findMany({
+                where: { companyId, chequeId },
+                select: { id: true },
+              })
+            ).map((row) => row.id),
+          },
+        },
+        {
+          reversalOf: {
+            sourceId: {
+              in: (
+                await client.accountSettlement.findMany({
+                  where: { companyId, chequeId },
+                  select: { id: true },
+                })
+              ).map((row) => row.id),
+            },
+          },
+        },
+      ],
+    },
+    include: { lines: { where: { ledgerAccountId: bankLedger } } },
+  });
+  return entries
+    .flatMap((row) => row.lines)
+    .reduce((n, row) => n + Number(row.debit) - Number(row.credit), 0);
+}
+describe.skipIf(!url)(
+  "A066 cheque ledger/settlement lifecycle on isolated PostgreSQL",
+  () => {
+    beforeAll(async () => {
+      await client.company.create({
+        data: {
+          id: companyId,
+          name: "Cheque finance fixture",
+          slug: `cheque-${companyId}`,
+          productEdition: "SALESPUNCH360_ACCOUNT",
+        },
+      });
+      await client.accountSettings.create({
+        data: { companyId, enabledModules: [] },
+      });
+      await client.branch.createMany({
+        data: [
+          {
+            id: branchId,
+            companyId,
+            name: "Cheque branch",
+            code: "A",
+            isPrimary: true,
+          },
+          { id: otherBranch, companyId, name: "Other branch", code: "B" },
+        ],
+      });
+      await client.user.create({
+        data: {
+          id: userId,
+          companyId,
+          name: "Cheque administrator",
+          email: `${userId}@example.test`,
+          passwordHash: "isolated-fixture",
+          role: "ACCOUNT_USER",
+          accountRole: "ACCOUNT_ADMIN",
+          accountAccessActive: true,
+        },
+      });
+      await client.customer.create({
+        data: {
+          id: customerId,
+          companyId,
+          branchId,
+          name: "Cheque customer",
+          isAccountCustomer: true,
+        },
+      });
+      await client.financialYear.create({
+        data: {
+          companyId,
+          name: "2026-27",
+          startDate: new Date("2026-04-01"),
+          endDate: new Date("2027-03-31"),
+        },
+      });
+      await client.ledgerAccount.createMany({
+        data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
+      });
+      bankLedger = (
+        await client.ledgerAccount.findFirstOrThrow({
+          where: { companyId, systemKey: "BANK" },
+        })
+      ).id;
+      await client.moneyAccount.create({
+        data: {
+          id: bankId,
+          companyId,
+          branchId,
+          name: "Cheque bank",
+          type: "BANK",
+          ledgerAccountId: bankLedger,
+        },
+      });
+    });
+    afterAll(async () => {
+      if (url)
+        await client.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+          await tx.cheque.updateMany({
+            where: { companyId },
+            data: { settlementId: null },
+          });
+          await tx.advanceApplication.deleteMany({ where: { companyId } });
+          await tx.openingBalanceAllocation.deleteMany({
+            where: { companyId },
+          });
+          await tx.settlementAllocation.deleteMany({ where: { companyId } });
+          await tx.accountSettlement.deleteMany({ where: { companyId } });
+          await tx.cheque.deleteMany({ where: { companyId } });
+          await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+          await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
+          await tx.commercialDocument.deleteMany({ where: { companyId } });
+          await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
+          await tx.journalLine.deleteMany({ where: { companyId } });
+          await tx.journalEntry.deleteMany({ where: { companyId } });
+          await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
+          await tx.numberingSeries.deleteMany({ where: { companyId } });
+          await tx.moneyAccount.deleteMany({ where: { companyId } });
+          await tx.ledgerAccount.deleteMany({ where: { companyId } });
+          await tx.financialYear.deleteMany({ where: { companyId } });
+          await tx.customer.deleteMany({ where: { companyId } });
+          await tx.user.deleteMany({ where: { companyId } });
+          await tx.branch.deleteMany({ where: { companyId } });
+          await tx.accountSettings.deleteMany({ where: { companyId } });
+          await tx.company.deleteMany({ where: { id: companyId } });
+        });
+      await client.$disconnect();
+    });
+    it("does not relabel an unposted cheque by changing business currency", async () => {
+      expect(await client.journalEntry.count({ where: { companyId } })).toBe(0);
+      await record();
+      await expect(saveBusinessCurrency(actor, "USD")).rejects.toThrow(
+        "BUSINESS_CURRENCY_LOCKED",
+      );
+      expect(
+        (
+          await client.accountSettings.findUniqueOrThrow({
+            where: { companyId },
+          })
+        ).baseCurrency,
+      ).toBe("INR");
+    });
+    it("records no payment or invoice settlement until manual closure, then posts once under concurrent retries", async () => {
+      const doc = await invoice();
+      const original = await client.commercialDocument.findUniqueOrThrow({
+        where: { id: doc.id },
+      });
+      const { receipt, cheque } = await record(doc.id);
+      expect(receipt.status).toBe("PENDING_CHEQUE");
+      expect(receipt.journalEntryId).toBeNull();
+      expect(await outstanding(doc.id)).toBe("100.00");
+      expect(await bankEffect(cheque.id)).toBe(0);
+      const input = {
+        action: "CLOSE",
+        requestKey: randomUUID(),
+        expectedVersion: 0,
+        actionDate: "2026-10-12",
+        moneyAccountId: bankId,
+      };
+      const closed = await Promise.all(
+        Array.from({ length: 4 }, () =>
+          chequeFinancialActionForActor(actor, cheque.id, input),
+        ),
+      );
+      expect(new Set(closed.map((row) => row.journalEntryId)).size).toBe(1);
+      expect(await outstanding(doc.id)).toBe("0.00");
+      expect(await bankEffect(cheque.id)).toBe(100);
+      await expect(reverseJournalForActor(actor, {
+        journalEntryId: closed[0].journalEntryId, entryDate: "2026-10-13", reason: "Generic reversal bypass",
+      })).rejects.toThrow("MANAGED_SETTLEMENT_REVERSAL_REQUIRED");
+      expect(await outstanding(doc.id)).toBe("0.00");
+      const reopened = await chequeFinancialActionForActor(actor, cheque.id, {
+        action: "REOPEN",
+        requestKey: randomUUID(),
+        expectedVersion: 1,
+        actionDate: "2026-10-13",
+        reason: "Undo closure payment",
+      });
+      expect(reopened.status).toBe("RECEIVED");
+      expect(await outstanding(doc.id)).toBe("100.00");
+      expect(await bankEffect(cheque.id)).toBe(0);
+      expect(
+        await client.commercialDocument.findUniqueOrThrow({
+          where: { id: doc.id },
+        }),
+      ).toEqual(original);
+      // A late retry of the original closure must not re-post after reopening.
+      await chequeFinancialActionForActor(actor, cheque.id, input);
+      expect(await outstanding(doc.id)).toBe("100.00");
+      expect(await bankEffect(cheque.id)).toBe(0);
+      const reclosed = await chequeFinancialActionForActor(actor, cheque.id, {
+        action: "CLOSE", requestKey: randomUUID(), expectedVersion: 2,
+        actionDate: "2026-10-14", moneyAccountId: bankId,
+      });
+      expect(reclosed.status).toBe("CLEARED");
+      expect(reclosed.settlementId).not.toBe(receipt.id);
+      expect(await outstanding(doc.id)).toBe("0.00");
+      expect(await bankEffect(cheque.id)).toBe(100);
+      expect((await client.accountSettlement.findUniqueOrThrow({ where: { id: receipt.id } })).status).toBe("REVERSED");
+    });
+    it("reverses applications of a cleared advance when reopening its cheque", async () => {
+      const doc = await invoice();
+      const { receipt, cheque } = await record();
+      expect(receipt.remainingAmount.toFixed(2)).toBe("0.00");
+      await chequeFinancialActionForActor(actor, cheque.id, {
+        action: "CLOSE",
+        requestKey: randomUUID(),
+        expectedVersion: 0,
+        actionDate: "2026-10-12",
+      });
+      const application = await applyAdvanceForActor(actor, {
+        advanceId: receipt.id,
+        documentId: doc.id,
+        amount: "100",
+        applicationDate: "2026-10-12",
+        idempotencyKey: randomUUID(),
+      });
+      expect(await outstanding(doc.id)).toBe("0.00");
+      await chequeFinancialActionForActor(actor, cheque.id, {
+        action: "REOPEN",
+        requestKey: randomUUID(),
+        expectedVersion: 1,
+        actionDate: "2026-10-13",
+        reason: "Cheque closure correction",
+      });
+      expect(await outstanding(doc.id)).toBe("100.00");
+      expect(await bankEffect(cheque.id)).toBe(0);
+      expect(
+        (
+          await client.journalEntry.findUniqueOrThrow({
+            where: { id: application.journalEntryId },
+          })
+        ).status,
+      ).toBe("REVERSED");
+      expect(
+        (
+          await client.accountSettlement.findUniqueOrThrow({
+            where: { id: receipt.id },
+          })
+        ).status,
+      ).toBe("REVERSED");
+    });
+    it("rejects stale versions and wrong-branch actors without posting", async () => {
+      const { cheque } = await record();
+      const input = {
+        action: "CLOSE",
+        requestKey: randomUUID(),
+        expectedVersion: 0,
+        actionDate: "2026-10-12",
+      };
+      await expect(
+        chequeFinancialActionForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          cheque.id,
+          input,
+        ),
+      ).rejects.toThrow();
+      await expect(
+        chequeFinancialActionForActor(actor, cheque.id, {
+          ...input,
+          expectedVersion: 1,
+        }),
+      ).rejects.toThrow("CHEQUE_CHANGED");
+      expect(await bankEffect(cheque.id)).toBe(0);
+    });
+    it("preserves the full 1593.00 cheque amount and rejects changed retry content", async () => {
+      const doc = await invoice("1593");
+      const input = { branchId, moneyAccountId: bankId, partyId: customerId, sourceDocumentId: doc.id,
+        amount: "1593.00", requestKey: randomUUID(), chequeNumber: randomUUID().slice(0, 8), chequeDate: "2026-10-10", status: "RECEIVED" };
+      const cheque = await createChequeForActor(actor, input);
+      expect((await createChequeForActor(actor, input)).id).toBe(cheque.id);
+      await expect(createChequeForActor(actor, { ...input, amount: "1592.00" })).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      expect(await outstanding(doc.id)).toBe("1593.00");
+      await chequeFinancialActionForActor(actor, cheque.id, { action: "CLOSE", requestKey: randomUUID(), expectedVersion: 0, actionDate: "2026-10-12" });
+      expect(await outstanding(doc.id)).toBe("0.00");
+      expect(await bankEffect(cheque.id)).toBe(1593);
+    });
+  },
+);

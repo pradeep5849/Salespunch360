@@ -353,7 +353,11 @@ export async function reverseJournalInTx(
   tx: Prisma.TransactionClient,
   a: ReversalActor,
   raw: unknown,
-  sourceLifecycle?: { expenseId: string },
+  sourceLifecycle?: {
+    expenseId?: string;
+    settlementId?: string;
+    advanceApplicationId?: string;
+  },
 ) {
   const d = reversalSchema.parse(raw);
   await lockCompany(tx, a.companyId);
@@ -381,6 +385,21 @@ export async function reverseJournalInTx(
     sourceLifecycle?.expenseId !== original.sourceId
   )
     throw new Error("MANAGED_EXPENSE_REVERSAL_REQUIRED");
+  if (
+    [
+      "CUSTOMER_RECEIPT",
+      "CUSTOMER_ADVANCE",
+      "VENDOR_PAYMENT",
+      "VENDOR_ADVANCE",
+    ].includes(original.sourceType) &&
+    sourceLifecycle?.settlementId !== original.sourceId
+  )
+    throw new Error("MANAGED_SETTLEMENT_REVERSAL_REQUIRED");
+  if (
+    original.sourceType === "ADVANCE_APPLICATION" &&
+    sourceLifecycle?.advanceApplicationId !== original.sourceId
+  )
+    throw new Error("MANAGED_ADVANCE_REVERSAL_REQUIRED");
   const reversalYear = await tx.financialYear.findFirst({
     where: {
       companyId: a.companyId,

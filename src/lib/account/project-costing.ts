@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { retrySerializable } from "./transaction-retry";
 import { Prisma, ProjectChangeOrderStatus } from "@prisma/client";
@@ -448,7 +449,7 @@ export async function loadProjectCostingForActor(
       orderBy: [{ movementDate: "asc" }, { id: "asc" }],
     }),
     projectSettlements = await db.accountSettlement.findMany({
-      where: { companyId: actor.companyId, projectId },
+      where: { ...EFFECTIVE_SETTLEMENT, companyId: actor.companyId, projectId },
       include: { applications: true },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),

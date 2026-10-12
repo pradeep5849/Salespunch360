@@ -20,6 +20,7 @@ import {
   type CommercialCreateResult,
 } from "@/lib/account/commercial-action-errors";
 import { logEvent } from "@/lib/logging";
+import { chequePaymentDetails } from "@/lib/account/cheque-payment-input";
 const payload = (form: FormData) => {const input=JSON.parse(String(form.get("payload")));const fields=[...form.entries()].filter(([key])=>key.startsWith("custom_"));return fields.length?{...input,customFields:Object.fromEntries(fields.map(([key,value])=>[key.slice(7),String(value)]))}:input;};
 function normalizeClientCommercialInput(raw: unknown) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
@@ -69,7 +70,7 @@ export async function createCommercialDocumentAction(
  */
 export async function submitSaleInvoiceAction(
   raw: unknown,
-  payment?: { receivedAmount?: number; receivedInFull?:boolean; paymentType?: string },
+  payment?: { receivedAmount?: number; receivedInFull?:boolean; paymentType?: string; chequeNumber?: string; chequeDate?: string; moneyAccountId?: string; reference?: string },
 ): Promise<CommercialCreateResult> {
   let createdId = "";
   let durableRequest = false;
@@ -84,6 +85,7 @@ export async function submitSaleInvoiceAction(
     }
     const input = normalized as Record<string, unknown>;
     if (input.type !== "SALES_INVOICE") throw new Error("INVALID_INPUT");
+    if (payment?.paymentType === "CHEQUE" && (payment.receivedInFull || Number(payment.receivedAmount ?? 0) > 0)) chequePaymentDetails.parse(payment);
     durableRequest =
       typeof input.idempotencyKey === "string" &&
       input.idempotencyKey.length > 0;
@@ -97,13 +99,16 @@ export async function submitSaleInvoiceAction(
 
     const received = payment?.receivedInFull===true?Number(await saleReceiptBalance(row.id,`sale-save-receipt:${row.id}`)):Number(payment?.receivedAmount ?? 0);
     if (Number.isFinite(received) && received > 0) {
-      const paymentMode = payment?.paymentType === "CASH" ? "CASH" : "BANK";
+      const paymentMode = payment?.paymentType === "CHEQUE" ? "CHEQUE" : payment?.paymentType === "CASH" ? "CASH" : "BANK";
       await createSettlement({
         idempotencyKey: `sale-save-receipt:${row.id}`,
         type: "CUSTOMER_RECEIPT",
         branchId: String(input.branchId),
         partyId: String(input.partyId),
         paymentMode,
+        ...(payment?.moneyAccountId ? { moneyAccountId: payment.moneyAccountId } : {}),
+        ...(paymentMode === "CHEQUE" ? { chequeNumber: payment?.chequeNumber, chequeDate: payment?.chequeDate } : {}),
+        ...(payment?.reference ? { reference: payment.reference } : {}),
         amount: received.toFixed(2),
         transactionDate: String(input.issueDate),
         allocations: [{ documentId: row.id, amount: received.toFixed(2) }],

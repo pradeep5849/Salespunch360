@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import {transactionHeaderPrintFields} from "./transaction-header";
 import {formatCalendarDate,resolveDisplayPreferences} from "./display-preferences";
 import QRCode from "qrcode"; import sharp from "sharp"; import { Prisma, type CustomFieldEntity, type PrintPaperSize } from "@prisma/client"; import { db } from "@/lib/db"; import { requirePermission } from "@/lib/auth/authorization"; import {privateStorage} from "@/lib/storage"; import { resolvePrintTemplate, buildUpiUri } from "./settings"; import {listOpeningOutstandings} from "./opening-balances";
@@ -20,7 +21,7 @@ async function printablePartyBalance(companyId:string,partyId:string,customer:bo
  const [documents,opening,advances]=await Promise.all([
  db.commercialDocument.findMany({where:{companyId,partyId,type:customer?"SALES_INVOICE":"PURCHASE_BILL",status:"POSTED",...(branches?{branchId:{in:branches}}:{})},select:{id:true,grandTotal:true,payableAmount:true}}),
  listOpeningOutstandings({companyId,partyId,partyType,branchIds:branches}),
- db.accountSettlement.findMany({where:{companyId,partyId,status:"POSTED",type:customer?"CUSTOMER_ADVANCE":"VENDOR_ADVANCE",...(branches?{branchId:{in:branches}}:{})},select:{remainingAmount:true}})
+ db.accountSettlement.findMany({where:{ ...EFFECTIVE_SETTLEMENT,companyId,partyId,status:"POSTED",type:customer?"CUSTOMER_ADVANCE":"VENDOR_ADVANCE",...(branches?{branchId:{in:branches}}:{})},select:{remainingAmount:true}})
  ]);
  const amounts=await documentOutstandingsBatch(companyId,documents);
  return [...amounts.values(),...opening.map(x=>x.outstanding)].reduce((n,x)=>n.add(x),new Prisma.Decimal(0)).sub(advances.reduce((n,x)=>n.add(x.remainingAmount),new Prisma.Decimal(0))).toString();

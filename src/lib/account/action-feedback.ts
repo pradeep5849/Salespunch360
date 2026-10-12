@@ -8,6 +8,18 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  CHEQUE_NUMBER_REQUIRED: "Enter the cheque number before recording this payment.",
+  CHEQUE_BANK_REQUIRED: "Add or select an active bank account before recording the cheque.",
+  CHEQUE_NUMBER_EXISTS: "This cheque number is already recorded for the selected bank. Open the existing cheque.",
+  CHEQUE_CHANGED: "This cheque changed. Refresh before closing or reopening it.",
+  CHEQUE_NOT_DUE: "The closure date cannot be before the cheque date.",
+  INVALID_CHEQUE_SOURCE: "The cheque source is inconsistent. Refresh or complete its source details.",
+  LEGACY_CHEQUE_SOURCE_REQUIRED: "This legacy cheque needs its original amount and receipt/payment source before a financial action.",
+  INVALID_CHEQUE_CORRECTION_DATE: "The correction date cannot be before the original payment date.",
+  CHEQUE_FINANCIAL_ACTION_REQUIRED: "Use Close, Re-Open or Bounce with a date and reason from the cheque page.",
+  MANAGED_SETTLEMENT_REVERSAL_REQUIRED: "Correct this payment from its source or cheque so allocations and accounting stay consistent.",
+  MANAGED_ADVANCE_REVERSAL_REQUIRED: "Correct this advance application through its payment lifecycle.",
+
   RECURRING_DUE_DATE_IMMUTABLE:
     "A recurring bill keeps its original due date. Enter the actual payment date when marking it paid.",
   RECURRING_SCHEDULE_CHANGED:
@@ -81,7 +93,7 @@ const messages: Record<string, string> = {
   ALLOCATION_TOTAL_MISMATCH:
     "The allocated amount must equal the cash payment plus its discount.",
   BUSINESS_CURRENCY_LOCKED:
-    "Business currency cannot be changed after accounting entries have been posted.",
+    "Business currency cannot be changed after payments or accounting entries have been recorded.",
   PROJECT_EXTRA_JOBS_PENDING:
     "Approve or cancel pending extra jobs before closing the project.",
   PROJECT_FINAL_INVOICE_SERVICE_REQUIRED:

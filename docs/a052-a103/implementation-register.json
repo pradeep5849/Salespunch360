@@ -12454,6 +12454,11 @@
             "A052",
             "A066"
           ]
+        },
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
         }
       },
       "intermediate_validation": {
@@ -12484,7 +12489,9 @@
         "src/lib/account/money.ts",
         "prisma/schema.prisma",
         "src/app/workspace/account/money/cheques/page.tsx",
-        "src/lib/account/commercial.ts"
+        "src/lib/account/commercial.ts",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -12500,7 +12507,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -12575,10 +12584,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        }
+      }
     },
     {
       "finding_id": "A066-F03",
@@ -12594,7 +12613,10 @@
         "src/lib/account/money.ts",
         "src/app/workspace/account/money/cheques/page.tsx",
         "src/app/actions/money.ts",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts",
+        "src/lib/account/commercial.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -12610,7 +12632,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -12693,7 +12717,15 @@
         "implementation_status": "PARTIAL",
         "work": "Initial completed states are rejected and clearance without a linked journal is blocked. This prevents new false completion but does not yet implement the required amount/source-linked bank/cash receipt command.",
         "remaining_work": "Implement amount/source normalization, manual deposit/closure posting and destination/date/description contract without duplicate income; web/native integration and all original required tests remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        }
       }
     },
     {
@@ -12709,7 +12741,10 @@
       "affected_files": [
         "src/app/workspace/account/money/cheques/page.tsx",
         "src/lib/account/money.ts",
-        "src/app/actions/money.ts"
+        "src/app/actions/money.ts",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts",
+        "src/lib/account/commercial.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -12725,7 +12760,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -12799,12 +12836,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "approved_reopen_policy": "Reverse closure bank/cash receipt and undo invoice settlement/allocation atomically, restoring unpaid balance without changing original sale; implementation pending."
+        "approved_reopen_policy": "Reverse closure bank/cash receipt and undo invoice settlement/allocation atomically, restoring unpaid balance without changing original sale; implementation pending.",
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        }
       }
     },
     {
@@ -12924,6 +12969,11 @@
             "A052",
             "A066"
           ]
+        },
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
         }
       },
       "intermediate_validation": {
@@ -12953,7 +13003,10 @@
       "affected_files": [
         "src/lib/account/money.ts",
         "src/lib/accounting/service.ts",
-        "src/app/actions/money.ts"
+        "src/app/actions/money.ts",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts",
+        "src/lib/account/commercial.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -12969,7 +13022,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -13043,7 +13098,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -13051,7 +13106,15 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Cheque creation now validates and records its operational audit in one company-locked serializable transaction. Bounce uses reverseJournalInTx inside the same transaction as conditional source status and audit. Original company/branch/journal authorization and posted history remain enforced. Real DB audit-failure injection proves cheque, original journal and reversal all roll back.",
         "remaining_work": "Final-head regression; complete amount/source financial lifecycle is separately pending A066-F02/F03.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        }
       }
     },
     {
@@ -13066,7 +13129,10 @@
       "root_cause": "Read/validate/write lifecycle has no lock, compare-and-swap or stable operation identity.",
       "affected_files": [
         "src/lib/account/money.ts",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts",
+        "src/lib/account/commercial.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -13082,7 +13148,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -13155,7 +13223,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -13163,7 +13231,15 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Transitions lock the company and re-read scoped state inside a retryable serializable transaction, then compare-and-swap status. Identical status/date retries return the committed result without a second reversal or audit; changed explicit replay dates and stale incompatible transitions are rejected. Real DB deposit/cancel race commits one intent and parallel bounce retries commit one balanced reversal.",
         "remaining_work": "Final-head regression; reopen/clear workflow race verification depends on A066-F04 implementation.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        }
       }
     },
     {
@@ -13311,7 +13387,10 @@
         "src/lib/account/money.ts",
         "src/app/workspace/account/money/cheques/page.tsx",
         "src/lib/auth/permissions.ts",
-        "src/lib/accounting/service.ts"
+        "src/lib/accounting/service.ts",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts",
+        "src/lib/account/commercial.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -13327,7 +13406,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -13410,7 +13491,15 @@
         "implementation_status": "PARTIAL",
         "work": "Cheque actor commands explicitly enforce Money Entry permission; journal-backed bounce additionally checks Journal Reverse permission before using the transaction-aware reversal helper.",
         "remaining_work": "Expose matching transition capabilities in cheque UI/API/native routes and verify final-head permission cases alongside remaining cheque workflow.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        }
       }
     },
     {
@@ -13425,7 +13514,10 @@
       "root_cause": "Thin forms omit capability/state/error contracts and accessible semantics.",
       "affected_files": [
         "src/app/workspace/account/money/cheques/page.tsx",
-        "src/app/actions/money.ts"
+        "src/app/actions/money.ts",
+        "src/lib/account/cheque-finance.ts",
+        "src/lib/account/settlement-policy.ts",
+        "src/lib/account/commercial.ts"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -13441,7 +13533,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -13526,6 +13620,14 @@
             "A052",
             "A066"
           ]
+        },
+        "cheque_financial_slice": "Added nullable normalized settlement source/amount/version, pending cheque payment mode and lifecycle statuses through new forward migrations. Commercial capture records a pending settlement without journal/allocation recognition; closure posts once and reopening reverses receipt plus applied advance journals, preserving sale and immutable application history. Source-aware journal reversal blocks generic settlement/application reversals. UI/API compatibility/source-completion work still in progress.",
+        "cheque_intermediate_evidence": "Four isolated PostgreSQL financial scenarios and23 focused settings tests passed (27 total), including closure concurrency, reopening invoice/advance balances, branch/stale-version denial and business-currency lock for unposted cheques. TypeScript passed. Native/browser cheque mutation flows and final-head validation not yet run.",
+        "migration_rehearsal": "Forward draft rehearsal exposed a missing legacy Cheque(companyId,id) key; failed draft transaction rolled back without changing data. Added prerequisite migration and corrected only the failed, uncommitted draft; deployed/validated on isolated local CI database. Historical migration files unchanged; no production deployment.",
+        "cheque_payment_boundary_progress": {
+          "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
+          "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+          "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
         }
       },
       "intermediate_validation": {
@@ -21824,6 +21926,14 @@
       "database": "6 owner/balance integration tests passed, including two added dashboard reversal/assigned-branch regressions",
       "typescript": "passed",
       "stage": "INTERMEDIATE ONLY"
+    },
+    "cheque_payment_boundaries": {
+      "status": "PARTIAL",
+      "results": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
+      "limitations": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation.",
+      "final_head_validation": false,
+      "shared_consumer_regression": "7 files, 64 tests passed (project costing/material, opening balances, report boundaries, mobile transactions and currency/settings).",
+      "schema_validation": "Prisma validate passed with isolated local database configuration; 114 migrations present and local database up to date. Initial validate lacked DIRECT_URL; rerun succeeded with local-only configuration."
     }
   },
   "approved_business_decisions": {

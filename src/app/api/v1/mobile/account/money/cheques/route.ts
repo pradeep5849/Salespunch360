@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { authenticateMobileToken } from "@/lib/mobile/auth";
-import { mobileChequePage } from "@/lib/mobile/account-money";
+import {
+  mobileChequePage,
+  mobileCreateCheque,
+} from "@/lib/mobile/account-money";
 import {
   mobileJson,
   mobileUnauthorized,
@@ -39,6 +42,24 @@ export async function GET(request: Request) {
         ? mobileJson({ error: "INVALID_INPUT" }, 400)
         : null) ??
       mobileUnexpected("MOBILE_CHEQUE_LIST", error)
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    return mobileJson(
+      await mobileCreateCheque(
+        await authenticateMobileToken(request.headers.get("authorization")),
+        await request.json(),
+      ),
+      201,
+    );
+  } catch (error) {
+    return (
+      mobileUnauthorized(error) ??
+      mobileAuthorizationFailure(error) ??
+      mobileUnexpected("MOBILE_CHEQUE_CREATE", error)
     );
   }
 }

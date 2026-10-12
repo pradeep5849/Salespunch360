@@ -1,8 +1,8 @@
 import {Prisma} from "@prisma/client";
 import {describe,it,expect,vi,beforeEach} from "vitest";
 import {PDFDocument} from "pdf-lib";
-const mock=vi.hoisted(()=>({settings:vi.fn(),company:vi.fn(),documents:vi.fn(),upsert:vi.fn(),audit:vi.fn(),lock:vi.fn(),completed:vi.fn(),count:vi.fn()}));
-vi.mock("@/lib/db",()=>({db:{serviceReminderCompletion:{findMany:mock.completed},accountSettings:{findUnique:mock.settings},company:{findUnique:mock.company},commercialDocument:{findMany:mock.documents},$transaction:async(fn:(tx:unknown)=>Promise<unknown>)=>fn({$executeRaw:mock.lock,accountSettings:{findUnique:mock.settings,upsert:mock.upsert},journalEntry:{count:mock.count},accountingAuditEvent:{create:mock.audit}})}}));
+const mock=vi.hoisted(()=>({settings:vi.fn(),company:vi.fn(),documents:vi.fn(),upsert:vi.fn(),audit:vi.fn(),lock:vi.fn(),completed:vi.fn(),count:vi.fn(),paymentCount:vi.fn()}));
+vi.mock("@/lib/db",()=>({db:{serviceReminderCompletion:{findMany:mock.completed},accountSettings:{findUnique:mock.settings},company:{findUnique:mock.company},commercialDocument:{findMany:mock.documents},$transaction:async(fn:(tx:unknown)=>Promise<unknown>)=>fn({$executeRaw:mock.lock,accountSettings:{findUnique:mock.settings,upsert:mock.upsert},journalEntry:{count:mock.count},accountSettlement:{count:mock.paymentCount},accountingAuditEvent:{create:mock.audit}})}}));
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class extends Error{}}));
 import {serviceReminderDate,dueServiceReminders,prepareServiceMessage} from "./service-reminders";
 import {saveBusinessCurrency} from "./business-currency";
@@ -11,7 +11,7 @@ import {formatMoney,formatCalendarDate,resolveDisplayPreferences} from "./displa
 import {renderAccountPrintPdf,renderAccountPrintHtml} from "./print-renderer";
 const actor={id:"admin",companyId:"company",accountRole:"ACCOUNT_ADMIN"};
 const document={title:"Invoice",number:"S1",date:"11/10/2026",company:"Company",branch:"Branch",party:"Customer",lines:[{description:"Item",quantity:"1",rate:"100",taxable:"100",tax:"18",total:"118"}],subtotal:"100",cgst:"9",sgst:"9",igst:"0",cess:"0",total:"118"};
-beforeEach(()=>{vi.clearAllMocks();mock.completed.mockResolvedValue([]);mock.count.mockResolvedValue(0);mock.company.mockResolvedValue({name:"Acme",primaryPhone:null,contactEmail:null})});
+beforeEach(()=>{vi.clearAllMocks();mock.completed.mockResolvedValue([]);mock.count.mockResolvedValue(0);mock.paymentCount.mockResolvedValue(0);mock.company.mockResolvedValue({name:"Acme",primaryPhone:null,contactEmail:null})});
 describe("working settings",()=>{
  it("calculates fixed-day reminders across months in UTC",()=>{expect(serviceReminderDate(new Date("2026-12-15T00:00:00Z"),60).toISOString()).toBe("2027-02-13T00:00:00.000Z");expect(()=>serviceReminderDate(new Date(),0)).toThrow()});
  it("prepares literal party text without interpreting it as placeholders",()=>expect(prepareServiceMessage("Hi {Party name}: {Item name}",{"Party name":"{Company name}","Item name":"Bolt"})).toBe("Hi {Company name}: Bolt"));

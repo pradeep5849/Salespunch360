@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -166,7 +167,7 @@ export async function closeAndBillProjectForActor(
           .map((x) => x.id);
         if (finalInvoiceId) targets.push(finalInvoiceId);
         const advances = await tx.accountSettlement.findMany({
-          where: {
+          where: { ...EFFECTIVE_SETTLEMENT,
             companyId: actor.companyId,
             projectId,
             branchId: project.branchId,

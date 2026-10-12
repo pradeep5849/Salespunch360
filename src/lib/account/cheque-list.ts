@@ -121,6 +121,8 @@ export async function chequePageForActor(
   });
   const names = new Map(accounts.map((account) => [account.id, account]));
   return {
+    canClose: canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"),
+    canCorrect: canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY") && canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_JOURNAL_REVERSE"),
     rows: rows.map((row) => ({
       ...row,
       moneyAccount: names.get(row.moneyAccountId) ?? null,

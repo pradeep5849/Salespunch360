@@ -81,29 +81,21 @@ describe("A066 atomic cheque lifecycle", () => {
     m.branch.mockResolvedValue({ id: branch });
     m.account.mockResolvedValue({ id: account });
   });
-  it("uses one serializable transaction for reversal, status and audit", async () => {
-    await transitionChequeForActor(actor, id, "BOUNCED", date);
-    expect(m.transaction).toHaveBeenCalledOnce();
-    expect(m.transaction).toHaveBeenCalledWith(expect.any(Function), {
-      isolationLevel: "Serializable",
-    });
-    expect(m.reverse).toHaveBeenCalledWith(tx, actor, {
-      journalEntryId: journal,
-      entryDate: date,
-      reason: "Cheque bounced",
-    });
-    expect(m.update).toHaveBeenCalledWith({
-      where: { id, companyId: id, status: "CLEARED" },
-      data: { status: "BOUNCED", clearedDate: date },
-    });
-    expect(m.audit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          eventType: "CHEQUE_STATUS_CHANGED",
-          metadata: { from: "CLEARED", to: "BOUNCED", date: "2026-10-09" },
-        }),
-      }),
-    );
+  it("blocks legacy arbitrary-journal reversal before any financial write", async () => {
+    await expect(
+      transitionChequeForActor(actor, id, "BOUNCED", date),
+    ).rejects.toThrow("LEGACY_CHEQUE_SOURCE_REQUIRED");
+    expect(m.reverse).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+    expect(m.audit).not.toHaveBeenCalled();
+  });
+  it("requires the versioned financial action for normalized cheques", async () => {
+    m.cheque.mockResolvedValue({ ...row, settlementId: journal });
+    await expect(
+      transitionChequeForActor(actor, id, "BOUNCED", date),
+    ).rejects.toThrow("CHEQUE_FINANCIAL_ACTION_REQUIRED");
+    expect(m.reverse).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
   });
   it("checks company and assigned branch scope before any write", async () => {
     m.cheque.mockResolvedValue(null);
@@ -149,25 +141,33 @@ describe("A066 atomic cheque lifecycle", () => {
     m.cheque.mockResolvedValue({ ...row, status: "CANCELLED" });
     await expect(
       transitionChequeForActor(actor, id, "DEPOSITED", date),
-    ).rejects.toThrow("INVALID_CHEQUE_TRANSITION");
+    ).rejects.toThrow("LEGACY_CHEQUE_SOURCE_REQUIRED");
     expect(m.update).not.toHaveBeenCalled();
   });
-  it.each(["reverse", "update", "audit"])(
-    "propagates %s boundary failure through the transaction",
+  it.each(["update", "audit"] as const)(
+    "propagates legacy cancellation %s failure",
     async (stage) => {
-      m[stage as "reverse" | "update" | "audit"].mockRejectedValue(
-        new Error("boundary failure"),
-      );
+      m.cheque.mockResolvedValue({
+        ...row,
+        status: "RECEIVED",
+        journalEntryId: null,
+      });
+      m[stage].mockRejectedValue(new Error("boundary failure"));
       await expect(
-        transitionChequeForActor(actor, id, "BOUNCED", date),
+        transitionChequeForActor(actor, id, "CANCELLED", date),
       ).rejects.toThrow("boundary failure");
-      expect(m.transaction).toHaveBeenCalledOnce();
+      expect(m.reverse).not.toHaveBeenCalled();
     },
   );
-  it("rejects conditional status update lost race", async () => {
+  it("rejects a lost legacy cancellation race", async () => {
+    m.cheque.mockResolvedValue({
+      ...row,
+      status: "RECEIVED",
+      journalEntryId: null,
+    });
     m.update.mockResolvedValue({ count: 0 });
     await expect(
-      transitionChequeForActor(actor, id, "BOUNCED", date),
+      transitionChequeForActor(actor, id, "CANCELLED", date),
     ).rejects.toThrow("INVALID_CHEQUE_TRANSITION");
     expect(m.audit).not.toHaveBeenCalled();
   });
@@ -179,18 +179,8 @@ describe("A066 atomic cheque lifecycle", () => {
     });
     await expect(
       transitionChequeForActor(actor, id, "CLEARED", date),
-    ).rejects.toThrow("CHEQUE_RECEIPT_REQUIRED");
+    ).rejects.toThrow("LEGACY_CHEQUE_SOURCE_REQUIRED");
     expect(m.update).not.toHaveBeenCalled();
-  });
-  it("validates original journal company and branch before reversal", async () => {
-    m.journal.mockResolvedValue(null);
-    await expect(
-      transitionChequeForActor(actor, id, "BOUNCED", date),
-    ).rejects.toThrow("INVALID_JOURNAL");
-    expect(m.journal).toHaveBeenCalledWith({
-      where: { id: journal, companyId: id, branchId: branch, status: "POSTED" },
-    });
-    expect(m.reverse).not.toHaveBeenCalled();
   });
   it("rejects uninitialised completed creation states", async () => {
     await expect(
@@ -205,27 +195,18 @@ describe("A066 atomic cheque lifecycle", () => {
     ).rejects.toThrow("INVALID_CHEQUE_INITIAL_STATUS");
     expect(m.transaction).not.toHaveBeenCalled();
   });
-  it("creates and audits a new Open cheque within one transaction", async () => {
-    m.cheque.mockResolvedValue(null);
-    m.create.mockResolvedValue({
-      ...row,
-      status: "RECEIVED",
-      journalEntryId: null,
-    });
-    await createChequeForActor(actor, {
-      branchId: branch,
-      moneyAccountId: account,
-      chequeNumber: "123",
-      chequeDate: date,
-      partyName: "Customer",
-      status: "RECEIVED",
-    });
-    expect(m.create).toHaveBeenCalledOnce();
-    expect(m.audit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ eventType: "CHEQUE_CREATED" }),
+  it("rejects legacy free-text creation with no amount, party identity or retry identity", async () => {
+    await expect(
+      createChequeForActor(actor, {
+        branchId: branch,
+        moneyAccountId: account,
+        chequeNumber: "123",
+        chequeDate: date,
+        partyName: "Customer",
+        status: "RECEIVED",
       }),
-    );
-    expect(m.reverse).not.toHaveBeenCalled();
+    ).rejects.toThrow();
+    expect(m.transaction).not.toHaveBeenCalled();
+    expect(m.create).not.toHaveBeenCalled();
   });
 });

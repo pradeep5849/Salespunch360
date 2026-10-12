@@ -1,6 +1,6 @@
 import { Prisma, CustomFieldDataType, CustomFieldEntity, PrintPaperSize } from "@prisma/client";
 import { z } from "zod";
-import { businessCurrencySchema } from "./business-currency";
+import { businessCurrencySchema, recordedCurrencyHistory } from "./business-currency";
 import { db } from "@/lib/db";
 import { AuthorizationError, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import {LEGACY_DEFAULT_ACCOUNT_MODULES} from "./modules";
@@ -114,7 +114,7 @@ export async function updateGeneralSettingsForActor(actor:ProjectActor,raw:unkno
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId! + ":account-settings"}))`;
   await tx.$executeRaw`SELECT 1 FROM "companies" WHERE "id"=${actor.companyId!}::uuid FOR UPDATE`;
   const current=await tx.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{enabledModules:true,baseCurrency:true}});
-  if(input.baseCurrency!==(current?.baseCurrency??"INR")&&await tx.journalEntry.count({where:{companyId:actor.companyId!,status:{in:["POSTED","REVERSED"]}}})>0)throw new Error("BUSINESS_CURRENCY_LOCKED");
+  if(input.baseCurrency!==(current?.baseCurrency??"INR")&&await recordedCurrencyHistory(tx,actor.companyId!))throw new Error("BUSINESS_CURRENCY_LOCKED");
   const stored=current?.enabledModules??[...LEGACY_DEFAULT_ACCOUNT_MODULES];
   const enabledModules=fixedAssetsEnabled===undefined?undefined:fixedAssetsEnabled?[...new Set([...stored,"ASSETS" as const])]:stored.filter(x=>x!=="ASSETS");
   const data={...input,...(enabledModules?{enabledModules}:{})};

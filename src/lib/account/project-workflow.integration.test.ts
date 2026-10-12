@@ -1040,6 +1040,8 @@ describe.skipIf(!url)(
       await expect(
         createSettlementForActor(actor, { ...input, amount: "301" }),
       ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      expect(advance.journalEntryId).not.toBeNull();
+      if (!advance.journalEntryId) throw new Error("Posted bank advance requires a journal");
       const journal = await client.journalEntry.findFirstOrThrow({
         where: { companyId, id: advance.journalEntryId },
         include: { lines: { include: { ledgerAccount: true } } },

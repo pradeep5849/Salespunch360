@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT } from "../settlement-policy";
 import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { listOpeningOutstandings } from "../opening-balances";
 import { Prisma } from "@prisma/client";
@@ -516,7 +517,7 @@ export async function runFinancialReportForActor(
         orderBy: { issueDate: "asc" },
       }),
       db.accountSettlement.findMany({
-        where: {
+        where: { ...EFFECTIVE_SETTLEMENT,
           companyId: c.actor.companyId,
           ...(customer ? { customerId: partyId } : { vendorId: partyId }),
           transactionDate: { gte: c.from, lte: c.to },

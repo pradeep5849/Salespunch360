@@ -1,3 +1,5 @@
+import { EFFECTIVE_SETTLEMENT } from "@/lib/account/settlement-policy";
+import { chequePaymentDetails } from "@/lib/account/cheque-payment-input";
 import { replacePostedSaleForActor, reversePostedSaleForActor } from "@/lib/account/sale-amendments";
 import {invoiceShareUrl} from "@/lib/account/invoice-share";
 import {resolveTransactionMessaging} from "@/lib/account/transaction-messaging";
@@ -144,9 +146,11 @@ export async function mobileCreateSales(
   const requestedReceived = Number(source.receivedAmount ?? 0),
     paymentType = String(source.paymentType ?? "CASH"),
     documentPayload = { ...source };
+  if (paymentType === "CHEQUE" && (source.receivedInFull === true || requestedReceived > 0)) chequePaymentDetails.parse(source);
   delete documentPayload.receivedAmount;
   delete documentPayload.receivedInFull;
   delete documentPayload.paymentType;
+  for (const key of ["chequeNumber", "chequeDate", "moneyAccountId", "paymentReference"]) delete documentPayload[key];
   const actor = permit(user, "ACCOUNT_JOURNAL_POST"),
     row = await createCommercialDocumentForActor(actor, documentPayload);
   try {
@@ -170,7 +174,10 @@ export async function mobileCreateSales(
       type: "CUSTOMER_RECEIPT",
       branchId: String(source.branchId),
       partyId: String(source.partyId),
-      paymentMode: paymentType === "CASH" ? "CASH" : "BANK",
+      paymentMode: paymentType === "CHEQUE" ? "CHEQUE" : paymentType === "CASH" ? "CASH" : "BANK",
+      ...(source.moneyAccountId ? { moneyAccountId: source.moneyAccountId } : {}),
+      ...(paymentType === "CHEQUE" ? { chequeNumber: source.chequeNumber, chequeDate: source.chequeDate } : {}),
+      ...(source.paymentReference ? { reference: source.paymentReference } : {}),
       amount: receivedAmount.toFixed(2),
       transactionDate: String(source.issueDate),
       allocations: [{ documentId: row.id, amount: receivedAmount.toFixed(2) }],
@@ -302,6 +309,7 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
     advances = allowedTypes.includes("APPLY_ADVANCE")
       ? await db.accountSettlement.findMany({
           where: {
+            ...EFFECTIVE_SETTLEMENT,
             companyId: actor.companyId,
             type: "CUSTOMER_ADVANCE",
             remainingAmount: { gt: 0 },

@@ -1,3 +1,5 @@
+import { createSettlementForActor } from "./commercial";
+import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { retrySerializable } from "./transaction-retry";
@@ -223,7 +225,7 @@ export async function moneyDashboardForActor(a: Actor) {
       where: { companyId: a.companyId, status: "ACTIVE", ...branchScope(a) },
     }),
     advances: await db.accountSettlement.findMany({
-      where: {
+      where: { ...EFFECTIVE_SETTLEMENT,
         companyId: a.companyId,
         type: { in: ["CUSTOMER_ADVANCE", "VENDOR_ADVANCE"] },
         ...branchScope(a),
@@ -341,89 +343,27 @@ export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
   );
 }
 const chequeInput = z.object({
-  branchId: z.string().uuid(),
-  moneyAccountId: z.string().uuid(),
-  chequeNumber: z.string().trim().min(1).max(80),
-  chequeDate: z.coerce.date(),
-  partyName: z.string().trim().min(1).max(240),
-  status: z.nativeEnum(ChequeStatus),
+  branchId: z.string().uuid(), moneyAccountId: z.string().uuid(),
+  partyId: z.string().uuid(), sourceDocumentId: z.string().uuid().optional(),
+  amount: money.refine(value => new D(value).gt(0), "Amount must be positive"),
+  requestKey: z.string().uuid(), chequeNumber: z.string().trim().min(1).max(80),
+  chequeDate: z.coerce.date(), status: z.nativeEnum(ChequeStatus),
   reference: z.string().max(160).optional(),
-  journalEntryId: z.string().uuid().optional(),
-});
+}).strict();
 export async function createChequeForActor(a: Actor, raw: unknown) {
-  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
-    throw new AuthorizationError();
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY")) throw new AuthorizationError();
+  const status = z.nativeEnum(ChequeStatus).parse((raw as { status?: unknown }).status);
+  if (!["ISSUED", "RECEIVED"].includes(status)) throw new Error("INVALID_CHEQUE_INITIAL_STATUS");
   const d = chequeInput.parse(raw);
-  if (!["ISSUED", "RECEIVED"].includes(d.status))
-    throw new Error("INVALID_CHEQUE_INITIAL_STATUS");
-  branchOk(a, d.branchId);
-  return retrySerializable(() =>
-    db.$transaction(
-      async (tx) => {
-        await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
-        if (
-          !(await tx.branch.findFirst({
-            where: { id: d.branchId, companyId: a.companyId, isActive: true },
-          }))
-        )
-          throw new AuthorizationError();
-        if (
-          !(await tx.moneyAccount.findFirst({
-            where: {
-              id: d.moneyAccountId,
-              companyId: a.companyId,
-              isActive: true,
-              ...compatibleMoneyAccount(d.branchId),
-            },
-          }))
-        )
-          throw new Error("INVALID_MONEY_ACCOUNT");
-        if (
-          d.journalEntryId &&
-          !(await tx.journalEntry.findFirst({
-            where: {
-              id: d.journalEntryId,
-              companyId: a.companyId,
-              branchId: d.branchId,
-              status: "POSTED",
-            },
-          }))
-        )
-          throw new Error("INVALID_JOURNAL");
-        const existing = await tx.cheque.findFirst({
-          where: {
-            companyId: a.companyId,
-            moneyAccountId: d.moneyAccountId,
-            chequeNumber: d.chequeNumber,
-          },
-        });
-        if (existing) {
-          branchOk(a, existing.branchId);
-          if (
-            existing.branchId !== d.branchId ||
-            existing.partyName !== d.partyName ||
-            existing.status !== d.status ||
-            existing.chequeDate.toISOString().slice(0, 10) !==
-              d.chequeDate.toISOString().slice(0, 10) ||
-            (existing.reference ?? "") !== (d.reference ?? "") ||
-            (existing.journalEntryId ?? "") !== (d.journalEntryId ?? "")
-          )
-            throw new Error("IDEMPOTENCY_CONFLICT");
-          return existing;
-        }
-        const row = await tx.cheque.create({
-          data: { ...d, companyId: a.companyId },
-        });
-        await audit(tx, a, "CHEQUE_CREATED", "CHEQUE", row.id, {
-          status: d.status,
-          branchId: d.branchId,
-          moneyAccountId: d.moneyAccountId,
-        });
-        return row;
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
-  );
+  const customer = d.status === "RECEIVED";
+  const source = await createSettlementForActor(a, {
+    idempotencyKey: d.requestKey, branchId: d.branchId, partyId: d.partyId,
+    type: customer ? (d.sourceDocumentId ? "CUSTOMER_RECEIPT" : "CUSTOMER_ADVANCE") : (d.sourceDocumentId ? "VENDOR_PAYMENT" : "VENDOR_ADVANCE"),
+    moneyAccountId: d.moneyAccountId, paymentMode: "CHEQUE", amount: d.amount,
+    chequeNumber: d.chequeNumber, chequeDate: d.chequeDate, transactionDate: d.chequeDate, reference: d.reference,
+    allocations: d.sourceDocumentId ? [{ documentId: d.sourceDocumentId, amount: d.amount }] : [],
+  });
+  return db.cheque.findFirstOrThrow({ where: { companyId: a.companyId, id: source.chequeId! } });
 }
 export async function createCheque(raw: unknown) {
   return createChequeForActor(await actor("ACCOUNT_MONEY_ENTRY", true), raw);
@@ -466,6 +406,9 @@ export async function transitionChequeForActor(
           }
           return row;
         }
+        // Legacy metadata transitions cannot post or undo a receipt without a normalized source and action identity.
+        if (row.settlementId) throw new Error("CHEQUE_FINANCIAL_ACTION_REQUIRED");
+        if (row.journalEntryId || ["DEPOSITED", "CLEARED"].includes(to)) throw new Error("LEGACY_CHEQUE_SOURCE_REQUIRED");
         const allowed: Record<ChequeStatus, ChequeStatus[]> = {
           ISSUED: ["CLEARED", "BOUNCED", "CANCELLED"],
           RECEIVED: ["DEPOSITED", "CANCELLED"],
@@ -476,32 +419,6 @@ export async function transitionChequeForActor(
         };
         if (!allowed[row.status].includes(to))
           throw new Error("INVALID_CHEQUE_TRANSITION");
-        if (to === "CLEARED" && !row.journalEntryId)
-          throw new Error("CHEQUE_RECEIPT_REQUIRED");
-        if (to === "BOUNCED" && row.journalEntryId) {
-          if (
-            !canUsePermission(
-              a,
-              "SALESPUNCH360_ACCOUNT",
-              "ACCOUNT_JOURNAL_REVERSE",
-            )
-          )
-            throw new AuthorizationError();
-          const original = await tx.journalEntry.findFirst({
-            where: {
-              id: row.journalEntryId,
-              companyId: a.companyId,
-              branchId: row.branchId,
-              status: "POSTED",
-            },
-          });
-          if (!original) throw new Error("INVALID_JOURNAL");
-          await reverseJournalInTx(tx, a, {
-            journalEntryId: row.journalEntryId,
-            entryDate,
-            reason: "Cheque bounced",
-          });
-        }
         const changed = await tx.cheque.updateMany({
           where: {
             id,

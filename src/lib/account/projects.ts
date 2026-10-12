@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION, EFFECTIVE_ADVANCE_APPLICATION } from "./settlement-policy";
 import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { inAccountTransaction } from "./transaction-scope";
 import { FINAL_PROJECT_STATUSES, isFinalProjectStatus } from "./project-state";
@@ -634,7 +635,7 @@ export async function projectDashboardForActor(actor: ProjectActor) {
         select: { projectId: true, valueDelta: true },
       }),
       db.accountSettlement.findMany({
-        where: {
+        where: { ...EFFECTIVE_SETTLEMENT,
           companyId: actor.companyId,
           projectId: { in: projectIds },
           type: { in: ["CUSTOMER_RECEIPT", "CUSTOMER_ADVANCE"] },
@@ -811,19 +812,19 @@ export async function getProjectForActor(
         },
       }),
       db.settlementAllocation.aggregate({
-        where: paymentWhere("SALES_INVOICE"),
+        where: { ...paymentWhere("SALES_INVOICE"), ...EFFECTIVE_SETTLEMENT_ALLOCATION },
         _sum: { amount: true },
       }),
       db.advanceApplication.aggregate({
-        where: paymentWhere("SALES_INVOICE"),
+        where: { ...paymentWhere("SALES_INVOICE"), ...EFFECTIVE_ADVANCE_APPLICATION },
         _sum: { amount: true },
       }),
       db.settlementAllocation.aggregate({
-        where: paymentWhere("PURCHASE_BILL"),
+        where: { ...paymentWhere("PURCHASE_BILL"), ...EFFECTIVE_SETTLEMENT_ALLOCATION },
         _sum: { amount: true },
       }),
       db.advanceApplication.aggregate({
-        where: paymentWhere("PURCHASE_BILL"),
+        where: { ...paymentWhere("PURCHASE_BILL"), ...EFFECTIVE_ADVANCE_APPLICATION },
         _sum: { amount: true },
       }),
     ]);

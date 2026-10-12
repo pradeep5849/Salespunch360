@@ -1,3 +1,5 @@
+import { EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
+import { createHash } from "node:crypto";
 import { normalizeTransactionPreferences } from "./transaction-settings";
 import {recentSalePrices} from "./recent-sale-prices";
 import {transactionRoundingLimit,defaultTransactionRoundOff} from "./transaction-rounding";
@@ -2260,7 +2262,7 @@ export async function postCommercialDocumentForActor(
             // Apply only matching customer/branch/project advances. This is part of
             // posting, so a failed application rolls back the invoice as well.
             const advances = await tx.accountSettlement.findMany({
-              where:{companyId:actor.companyId,type:"CUSTOMER_ADVANCE",partyId:doc.partyId,
+              where:{ ...EFFECTIVE_SETTLEMENT,companyId:actor.companyId,type:"CUSTOMER_ADVANCE",partyId:doc.partyId,
                 branchId:doc.branchId,projectId:doc.projectId,remainingAmount:{gt:0}},
               orderBy:[{transactionDate:"asc"},{createdAt:"asc"},{id:"asc"}],
             });
@@ -2333,11 +2335,11 @@ export async function documentOutstandingInTx(
   const [adjustmentRows, allocations, applications] = await Promise.all([
       adjustmentQuery,
       tx.settlementAllocation.aggregate({
-        where: { companyId, documentId },
+        where: { ...EFFECTIVE_SETTLEMENT_ALLOCATION, companyId, documentId },
         _sum: { amount: true },
       }),
       tx.advanceApplication.aggregate({
-        where: { companyId, documentId },
+        where: { ...EFFECTIVE_ADVANCE_APPLICATION, companyId, documentId },
         _sum: { amount: true },
       }),
     ]),
@@ -2440,6 +2442,8 @@ const settlementInput = z
     amount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)),
     transactionDate: z.coerce.date(),
     reference: z.string().max(160).optional(),
+    chequeNumber: z.string().trim().min(1).max(80).optional(),
+    chequeDate: z.coerce.date().optional(),
     notes: z.string().max(5000).optional(),
     allocations: z
       .array(
@@ -2492,9 +2496,16 @@ const settlementPolicy: Record<
     advance: true,
   },
 };
-export async function createSettlementForActor(actor: Actor, raw: unknown) {
+export async function createSettlementForActor(actor: Actor, raw: unknown, transaction?: Prisma.TransactionClient, chequeLifecycle?: { closeChequeId?: string; reuseChequeId?: string }) {
   financialRole(actor);
   const d = settlementInput.parse(raw);
+  if (d.paymentMode === "CHEQUE" && !d.chequeNumber) throw new Error("CHEQUE_NUMBER_REQUIRED");
+  const requestHash = createHash("sha256").update(JSON.stringify({
+    ...d, amount: new D(d.amount).toFixed(2),
+    transactionDate: d.transactionDate.toISOString().slice(0,10),
+    chequeDate: d.chequeDate?.toISOString().slice(0,10),
+    allocations: d.allocations.map(row => [row.documentId ?? row.openingBalanceId, new D(row.amount).toString(), new D(row.discountAmount).toString()].join(":" )).sort(),
+  })).digest("hex");
   const p = settlementPolicy[d.type];
   await requireAccountModules(actor, ...p.modules);
   assertBranch(actor, d.branchId);
@@ -2520,9 +2531,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
       .size !== d.allocations.length
   )
     throw new Error("DUPLICATE_ALLOCATION");
-  return retrySerializable(() =>
-    db.$transaction(
-      async (tx) => {
+  return inAccountTransaction(transaction, async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId}::uuid FOR UPDATE`;
         const settlementProject = d.projectId
           ? await authorizeProjectForCommercial(
@@ -2561,6 +2570,11 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             },
           },
         });
+        if (existing && !chequeLifecycle?.closeChequeId && existing.creationRequestHash) {
+          if (existing.creationRequestHash !== requestHash) throw new Error("IDEMPOTENCY_KEY_REUSED");
+          return existing;
+        }
+        if (chequeLifecycle?.closeChequeId && (!existing || existing.status !== "PENDING_CHEQUE" || existing.chequeId !== chequeLifecycle.closeChequeId)) throw new Error("INVALID_CHEQUE_SOURCE");
         if (existing) {
           if (
             existing.type !== d.type ||
@@ -2570,9 +2584,8 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             !existing.amount.eq(amount) ||
             !(existing.discountAmount??new D(0)).eq(discountAmount) ||
             existing.paymentMode !== d.paymentMode ||
-            existing.moneyAccountId !== (d.moneyAccountId ?? null) ||
-            existing.transactionDate.toISOString().slice(0, 10) !==
-              d.transactionDate.toISOString().slice(0, 10) ||
+            (!chequeLifecycle?.closeChequeId && existing.moneyAccountId !== (d.moneyAccountId ?? null)) ||
+            (!chequeLifecycle?.closeChequeId && existing.transactionDate.toISOString().slice(0, 10) !== d.transactionDate.toISOString().slice(0, 10)) ||
             (existing.reference ?? "") !== (d.reference ?? "") ||
             (existing.notes ?? "") !== (d.notes ?? "")
           )
@@ -2604,7 +2617,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             .sort();
           if (JSON.stringify(stored) !== JSON.stringify(requested))
             throw new Error("IDEMPOTENCY_KEY_REUSED");
-          return existing;
+          if (!chequeLifecycle?.closeChequeId) return existing;
         }
         if(discountAmount.gt(0)){const settings=await tx.accountSettings.findUnique({where:{companyId:actor.companyId},select:{transactionDefaults:true}});const defaults=settings?.transactionDefaults as {transactionPreferences?:{discountDuringPayment?:boolean}}|null;if(defaults?.transactionPreferences?.discountDuringPayment!==true)throw new Error("PAYMENT_DISCOUNT_DISABLED");}
         const party =
@@ -2642,7 +2655,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
               }),
               used = opening
                 ? await tx.openingBalanceAllocation.aggregate({
-                    where: {
+                    where: { ...EFFECTIVE_SETTLEMENT_ALLOCATION,
                       companyId: actor.companyId,
                       openingBalanceId: opening.id,
                     },
@@ -2694,6 +2707,32 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
           : null;
         if (d.moneyAccountId && !selectedMoney)
           throw new Error("INVALID_MONEY_ACCOUNT");
+        if (d.paymentMode === "CHEQUE" && !chequeLifecycle?.closeChequeId) {
+          const bank = selectedMoney ?? await tx.moneyAccount.findFirst({ where: { companyId: actor.companyId, isActive: true, type: "BANK", OR: [{ branchId: null }, { branchId: d.branchId }] }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+          if (!bank || (!chequeLifecycle?.reuseChequeId && bank.type !== "BANK")) throw new Error("CHEQUE_BANK_REQUIRED");
+          const number = await allocateDocumentNumberInTx(tx, { companyId: actor.companyId, branchId: d.branchId, seriesKey: d.type, defaults: { prefix: p.prefix, padding: 6 } });
+          await tx.$executeRaw`SELECT set_config('app.financial_write_company_id', ${actor.companyId}, true)`;
+          const pending = await tx.accountSettlement.create({ data: {
+            companyId: actor.companyId, branchId: d.branchId, type: d.type, status: "PENDING_CHEQUE", settlementNumber: number,
+            partyId: d.partyId, customerId: p.party === "customer" ? d.partyId : null, vendorId: p.party === "vendor" ? d.partyId : null,
+            idempotencyKey: d.idempotencyKey, creationRequestHash: requestHash, paymentMode: "CHEQUE", moneyAccountId: bank.id, projectId: settlementProject?.id,
+            amount, discountAmount, remainingAmount: 0, transactionDate: d.transactionDate, reference: d.reference, notes: d.notes, createdById: actor.id,
+            allocations: { create: d.allocations.filter(row => row.documentId).map(row => ({ documentId: row.documentId!, amount: row.amount, discountAmount: row.discountAmount })) },
+          } });
+          if (d.allocations.some(row => row.openingBalanceId)) await tx.openingBalanceAllocation.createMany({ data: d.allocations.filter(row => row.openingBalanceId).map(row => ({ companyId: actor.companyId, settlementId: pending.id, openingBalanceId: row.openingBalanceId!, amount: row.amount })) });
+          let cheque;
+          if (chequeLifecycle?.reuseChequeId) {
+            const current = await tx.cheque.findFirst({ where: { id: chequeLifecycle.reuseChequeId, companyId: actor.companyId, branchId: d.branchId } });
+            if (!current || current.amount?.toFixed(2) !== amount.toFixed(2) || !["ISSUED", "RECEIVED"].includes(current.status)) throw new Error("INVALID_CHEQUE_SOURCE");
+            cheque = await tx.cheque.update({ where: { id: current.id }, data: { settlementId: pending.id } });
+          } else {
+            if (await tx.cheque.findFirst({ where: { companyId: actor.companyId, moneyAccountId: bank.id, chequeNumber: d.chequeNumber! } })) throw new Error("CHEQUE_NUMBER_EXISTS");
+            cheque = await tx.cheque.create({ data: { companyId: actor.companyId, branchId: d.branchId, moneyAccountId: bank.id, chequeNumber: d.chequeNumber!, chequeDate: d.chequeDate ?? d.transactionDate, partyName: party.name.slice(0,240), amount, settlementId: pending.id, status: p.party === "customer" ? "RECEIVED" : "ISSUED", reference: d.reference } });
+          }
+          const linked = await tx.accountSettlement.update({ where: { id: pending.id }, data: { chequeId: cheque.id } });
+          await tx.accountOperationalAudit.create({ data: { companyId: actor.companyId, actorUserId: actor.id, eventType: "CHEQUE_PAYMENT_RECORDED", entityType: "CHEQUE", entityId: cheque.id, metadata: { settlementId: pending.id, amount: amount.toFixed(2), type: d.type } } });
+          return linked;
+        }
         const moneyKey = d.paymentMode === "CASH" ? "CASH" : "BANK",
           balanceKey = p.advance
             ? p.party === "customer"
@@ -2708,7 +2747,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             d.transactionDate,
             [...(selectedMoney ? [balanceKey] : [moneyKey, balanceKey]),...(discountAmount.gt(0)?["SALES_INCOME"]:[])],
           ),
-          settlementNumber = await allocateDocumentNumberInTx(tx, {
+          settlementNumber = existing?.settlementNumber ?? await allocateDocumentNumberInTx(tx, {
             companyId: actor.companyId,
             branchId: d.branchId,
             seriesKey: d.type,
@@ -2748,7 +2787,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
                     credit: money,
                   },
                 ],
-          placeholder = crypto.randomUUID();
+          placeholder = existing?.id ?? crypto.randomUUID();
         if(discountAmount.gt(0)){lines.push({ledgerAccountId:ctx.account("SALES_INCOME"),debit:discountAmount.toFixed(2),credit:"0",description:"Payment discount"});const receivable=lines.find(line=>line.ledgerAccountId===ctx.account(balanceKey));if(receivable)receivable.credit=amount.add(discountAmount).toFixed(2);}
         await tx.$executeRaw`SELECT set_config('app.financial_write_company_id', ${actor.companyId}, true)`;
         const journal = await postJournalInTx(tx, actor, {
@@ -2760,7 +2799,9 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
             postingPurpose: "PRIMARY",
             lines,
           }),
-          settlement = await tx.accountSettlement.create({
+          settlement = existing && chequeLifecycle?.closeChequeId
+            ? await tx.accountSettlement.update({ where: { id: existing.id }, data: { status: "POSTED", journalEntryId: journal.id, moneyAccountId: d.moneyAccountId, transactionDate: d.transactionDate, remainingAmount: p.advance ? amount : 0 } })
+            : await tx.accountSettlement.create({
             data: {
               id: placeholder,
               companyId: actor.companyId,
@@ -2771,6 +2812,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
               customerId: p.party === "customer" ? d.partyId : null,
               vendorId: p.party === "vendor" ? d.partyId : null,
               idempotencyKey: d.idempotencyKey,
+              creationRequestHash: requestHash,
               paymentMode: d.paymentMode,
               moneyAccountId: d.moneyAccountId,
               projectId: settlementProject?.id,
@@ -2793,7 +2835,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
               },
             },
           });
-        if (d.allocations.some((x) => x.openingBalanceId))
+        if (!existing && d.allocations.some((x) => x.openingBalanceId))
           await tx.openingBalanceAllocation.createMany({
             data: d.allocations
               .filter((x) => x.openingBalanceId)
@@ -2821,8 +2863,6 @@ export async function createSettlementForActor(actor: Actor, raw: unknown) {
         );
         return settlement;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
   );
 }
 export async function applyAdvanceForActor(actor: Actor, raw: unknown, transaction?: Prisma.TransactionClient) {
@@ -2846,6 +2886,7 @@ export async function applyAdvanceForActor(actor: Actor, raw: unknown, transacti
         const advance = await tx.accountSettlement.findFirst({
             where: {
               id: d.advanceId,
+              ...EFFECTIVE_SETTLEMENT,
               companyId: actor.companyId,
               type: { in: ["CUSTOMER_ADVANCE", "VENDOR_ADVANCE"] },
             },
@@ -3076,8 +3117,8 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string) {
       },
       reminders: { orderBy: { createdAt: "desc" } },
       adjustments: { where: { status: "POSTED" } },
-      allocations: { include: { settlement: true } },
-      advanceApplications: { include: { advance: true } },
+      allocations: { where: EFFECTIVE_SETTLEMENT_ALLOCATION, include: { settlement: true } },
+      advanceApplications: { where: EFFECTIVE_ADVANCE_APPLICATION, include: { advance: true } },
     },
   });
   if (!row) throw new Error("NOT_FOUND");
@@ -3144,8 +3185,8 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
           where: { status: "POSTED" },
           select: { grandTotal: true },
         },
-        allocations: { select: { amount: true } },
-        advanceApplications: { select: { amount: true } },
+        allocations: { where: EFFECTIVE_SETTLEMENT_ALLOCATION, select: { amount: true } },
+        advanceApplications: { where: EFFECTIVE_ADVANCE_APPLICATION, select: { amount: true } },
         lines: {
           select: {
             id: true,
@@ -3243,7 +3284,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
   const editorSettings=await db.accountSettings.findUnique({where:{companyId:actor.companyId}});
   const storedPreferences=((editorSettings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences??{}) as Record<string,unknown>;
   const customerAdvances = enabledModules.includes("CUSTOMER_ADVANCES") ? await db.accountSettlement.findMany({
-    where:{companyId:actor.companyId,type:"CUSTOMER_ADVANCE",remainingAmount:{gt:0},...scope(actor)},
+    where:{ ...EFFECTIVE_SETTLEMENT,companyId:actor.companyId,type:"CUSTOMER_ADVANCE",remainingAmount:{gt:0},...scope(actor)},
     select:{partyId:true,branchId:true,projectId:true,remainingAmount:true},
   }) : [];
   for (const advance of customerAdvances) customerBalances.set(advance.partyId,
@@ -3389,7 +3430,7 @@ export async function commercialDocumentControls(documentId: string) {
     advances =
       canManage && enabledModules.includes(advanceModule)
         ? await db.accountSettlement.findMany({
-            where: {
+            where: { ...EFFECTIVE_SETTLEMENT,
               companyId: actor.companyId,
               branchId: document.branchId,
               type: advanceType,
@@ -3435,12 +3476,12 @@ export async function documentOutstandingsBatch(
       }),
       db.settlementAllocation.groupBy({
         by: ["documentId"],
-        where: { companyId, documentId: { in: ids } },
+        where: { ...EFFECTIVE_SETTLEMENT_ALLOCATION, companyId, documentId: { in: ids } },
         _sum: { amount: true },
       }),
       db.advanceApplication.groupBy({
         by: ["documentId"],
-        where: { companyId, documentId: { in: ids } },
+        where: { ...EFFECTIVE_ADVANCE_APPLICATION, companyId, documentId: { in: ids } },
         _sum: { amount: true },
       }),
     ]),

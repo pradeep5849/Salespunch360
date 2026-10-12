@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { z } from "zod";
-import { saveChequeAction } from "@/app/actions/money";
 import {
   chequePageForActor,
   chequeListQuerySchema,
@@ -14,18 +13,9 @@ import { canUsePermission } from "@/lib/auth/permissions";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { AccountDate } from "@/components/account/display-preferences";
-import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
-import { SaveSubmitButton } from "@/components/account/save-feedback";
 import { ChequeRecordForm } from "@/components/account/cheque-record-form";
-import type { ChequeStatus } from "@prisma/client";
-const transitions: Record<ChequeStatus, ChequeStatus[]> = {
-  ISSUED: ["CLEARED", "BOUNCED", "CANCELLED"],
-  RECEIVED: ["DEPOSITED", "CANCELLED"],
-  DEPOSITED: ["CLEARED", "BOUNCED"],
-  CLEARED: ["BOUNCED"],
-  BOUNCED: [],
-  CANCELLED: [],
-};
+import { ChequeFinancialActionForm } from "@/components/account/cheque-financial-action-form";
+import { ClientMoney } from "@/components/account/display-preferences";
 async function load(raw: Record<string, string | undefined>) {
   const authenticated = await requirePermission("ACCOUNT_MONEY_VIEW");
   const actor = { ...authenticated, companyId: authenticated.companyId! };
@@ -61,14 +51,13 @@ async function load(raw: Record<string, string | undefined>) {
     ? await db.moneyAccount.findMany({
         where: {
           companyId: actor.companyId!,
-          type: "BANK",
           isActive: true,
           OR: [
             { branchId: null },
             { branchId: { in: branches.map((row) => row.id) } },
           ],
         },
-        select: { id: true, name: true, branchId: true },
+        select: { id: true, name: true, branchId: true, type: true },
         orderBy: { name: "asc" },
       })
     : [];
@@ -160,7 +149,7 @@ export default async function Page({
             <summary>Record cheque</summary>
             <ChequeRecordForm
               branches={result.branches}
-              accounts={result.accounts}
+              accounts={result.accounts.filter(account => account.type === "BANK")}
             />
           </details>
         )}
@@ -178,11 +167,20 @@ export default async function Page({
           </div>
         )}
         {data.rows.map((row) => {
-          const actions = transitions[row.status].filter(
-            (status) =>
-              (status !== "CLEARED" || Boolean(row.journalEntryId)) &&
-              (status !== "BOUNCED" || !row.journalEntryId || canReverse),
-          );
+          const actions = row.settlementId
+            ? [
+                ...(["ISSUED", "RECEIVED"].includes(row.status)
+                  ? ["CLOSE"]
+                  : []),
+                ...(canReverse &&
+                ["CLEARED", "DEPOSITED", "BOUNCED"].includes(row.status)
+                  ? ["REOPEN"]
+                  : []),
+                ...(canReverse && !["BOUNCED", "CANCELLED"].includes(row.status)
+                  ? ["BOUNCE", "CANCEL"]
+                  : []),
+              ]
+            : [];
           return (
             <article
               key={row.id}
@@ -196,6 +194,20 @@ export default async function Page({
               <p>
                 Date: <AccountDate value={row.chequeDate.toISOString()} />
               </p>
+              <p>
+                Amount:{" "}
+                {row.amount ? (
+                  <ClientMoney value={row.amount.toString()} />
+                ) : (
+                  "Not recorded"
+                )}
+              </p>
+              {!row.settlementId && (
+                <p role="status">
+                  This legacy cheque needs its payment source linked before
+                  financial actions are available.
+                </p>
+              )}
               <p>Bank: {row.moneyAccount?.name ?? "Account unavailable"}</p>
               {row.reference && <p>Reference: {row.reference}</p>}
               {row.clearedDate && (
@@ -204,26 +216,16 @@ export default async function Page({
                 </p>
               )}
               {canWrite && actions.length > 0 && (
-                <ActionFeedbackForm action={saveChequeAction} className="stack">
-                  <input type="hidden" name="id" value={row.id} />
-                  <label>
-                    Action for cheque {row.chequeNumber}
-                    <select name="status">
-                      {actions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Action date for cheque {row.chequeNumber}
-                    <input name="clearedDate" type="date" />
-                  </label>
-                  <SaveSubmitButton>
-                    Update cheque {row.chequeNumber}
-                  </SaveSubmitButton>
-                </ActionFeedbackForm>
+                <ChequeFinancialActionForm
+                  key={`${row.id}:${row.actionVersion}`}
+                  id={row.id}
+                  version={row.actionVersion}
+                  actions={actions}
+                  accounts={result.accounts.filter(
+                    (account) =>
+                      !account.branchId || account.branchId === row.branchId,
+                  )}
+                />
               )}
             </article>
           );

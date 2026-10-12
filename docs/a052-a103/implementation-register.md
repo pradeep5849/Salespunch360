@@ -4746,13 +4746,15 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 **Required tests:** Cheque sales/receipts and issues; amount precision; source linkage/foreign-source denial; View Txn; existing manual data migration; no duplicate income/receivable settlement.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
 
 ## A066-F03 — Deposit and clearance lifecycle can report completion without money movement
 
@@ -4799,6 +4801,8 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 Checkpoint atomic cheque work: Initial completed states are rejected and clearance without a linked journal is blocked. This prevents new false completion but does not yet implement the required amount/source-linked bank/cash receipt command.
 Remaining: Implement amount/source normalization, manual deposit/closure posting and destination/date/description contract without duplicate income; web/native integration and all original required tests remain pending.
 
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
+
 ## A066-F04 — Re-Open and View Txn reference actions are unavailable
 
 **Title:** Re-Open and View Txn reference actions are unavailable
@@ -4833,13 +4837,15 @@ Remaining: Implement amount/source normalization, manual deposit/closure posting
 
 **Required tests:** Cancel/no changes; successful authorized reopen; duplicate Yes; locked-period/foreign/invalid reopen; retained source sale and correct open/closed list; View Txn permission.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
 
 ## A066-F05 — Android has no cheque route or cheque API/actions
 
@@ -4925,7 +4931,7 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 **Required tests:** Failure at reversal/status/audit boundaries; no partial side effect; commit-response loss/retry; reversible journal validation and locked period; complete audit trail.
 
-**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -4935,6 +4941,8 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 Checkpoint atomic cheque work: Cheque creation now validates and records its operational audit in one company-locked serializable transaction. Bounce uses reverseJournalInTx inside the same transaction as conditional source status and audit. Original company/branch/journal authorization and posted history remain enforced. Real DB audit-failure injection proves cheque, original journal and reversal all roll back.
 Remaining: Final-head regression; complete amount/source financial lifecycle is separately pending A066-F02/F03.
+
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
 
 ## A066-F07 — Concurrent cheque transitions use stale state and unconditional writes
 
@@ -4970,7 +4978,7 @@ Remaining: Final-head regression; complete amount/source financial lifecycle is 
 
 **Required tests:** Deposit/cancel, clear/bounce, reopen/clear races; duplicate click/retry; state/journal/audit agreement; no double reversal or stale overwrite.
 
-**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -4980,6 +4988,8 @@ Remaining: Final-head regression; complete amount/source financial lifecycle is 
 
 Checkpoint atomic cheque work: Transitions lock the company and re-read scoped state inside a retryable serializable transaction, then compare-and-swap status. Identical status/date retries return the committed result without a second reversal or audit; changed explicit replay dates and stale incompatible transitions are rejected. Real DB deposit/cancel race commits one intent and parallel bounce retries commit one balanced reversal.
 Remaining: Final-head regression; reopen/clear workflow race verification depends on A066-F04 implementation.
+
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
 
 ## A066-F08 — Cheque listing ignores selected branch context and loads unbounded results
 
@@ -5076,6 +5086,8 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 Checkpoint atomic cheque work: Cheque actor commands explicitly enforce Money Entry permission; journal-backed bounce additionally checks Journal Reverse permission before using the transaction-aware reversal helper.
 Remaining: Expose matching transition capabilities in cheque UI/API/native routes and verify final-head permission cases alongside remaining cheque workflow.
 
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
+
 ## A066-F10 — Cheque forms lack accessible labels and actionable status feedback
 
 **Title:** Cheque forms lack accessible labels and actionable status feedback
@@ -5125,6 +5137,8 @@ Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios an
 Remaining: Finish accessible amount/source/closure/reopen controls and final checkpoint-head/device verification with normalized lifecycle work.
 
 Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
+
+Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
 
 ## A067-F01 — Loan list and detail workflow missing
 
@@ -8897,3 +8911,13 @@ Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases;
 ### Intermediate shared regression validation — item creation policy
 
 Full unit suite: 2631 passed, 0 failed, 77 skipped (408 passing files, 5 skipped). Initial 23 failures resolved by supplying custom-field-definition fixtures and updating stale Project Actions/native expense context/manual messaging source contracts. Financial/branch assertions preserved. This is intermediate evidence; final-head validation remains outstanding.
+
+### Intermediate cheque payment boundary progress
+
+Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.
+
+Intermediate: 4 real PostgreSQL financial tests pass including concurrent close, reopen, late original retry, reclose, advance undo and branch/version denial; 4 mobile route tests pass; grouped 70 commercial/cheque tests pass; corrected legacy gateway group 28 pass. Not final-head verification.
+
+Remaining: Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation.
+
+Latest intermediate evidence: 5 PostgreSQL cheque lifecycle tests, 64 shared-consumer tests, Android compile and 146 JVM tests passed; TypeScript, focused lint and Prisma validation passed. Local database has 114 applied migrations. Native entry/destination selection, legacy source completion, browser and final-head checks remain. A066 stays PARTIAL.

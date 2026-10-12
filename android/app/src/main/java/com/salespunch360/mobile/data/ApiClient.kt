@@ -103,6 +103,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun projectChangeOrder(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing","POST",payload.toString())).jsonObject
  suspend fun projectCosting(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing")).jsonObject
  suspend fun saveProject(edit:Boolean,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects",if(edit)"PATCH" else "POST",payload.toString())).jsonObject
+ suspend fun chequeFinancialAction(id:String,payload:JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/cheques/${enc(id)}/action","POST",payload.toString())).jsonObject
  suspend fun chequePage(q:String,tab:String,order:String,offset:Int,contextQuery:String):JsonObject {
   val context=android.net.Uri.parse("https://local.invalid/?$contextQuery")
   val query=buildList{add("offset=$offset");add("tab=${enc(tab)}");add("order=${enc(order)}");if(q.isNotBlank())add("q=${enc(q)}");listOf("branchId","scope").forEach{key->context.getQueryParameter(key)?.let{add("$key=${enc(it)}")}}}.joinToString("&")
