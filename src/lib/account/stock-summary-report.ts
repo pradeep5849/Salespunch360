@@ -53,13 +53,11 @@ export async function stockSummaryReportForActor(
       name: product.name,
       category: product.category?.name ?? "Uncategorised",
       active: product.isActive,
-      threshold: product.lowStockThreshold.toString(),
+      threshold: product.lowStockThreshold.toFixed(),
       quantity: (
         totals.get(product.id)?.quantity ?? new Prisma.Decimal(0)
-      ).toString(),
-      value: (
-        totals.get(product.id)?.value ?? new Prisma.Decimal(0)
-      ).toString(),
+      ).toFixed(),
+      value: (totals.get(product.id)?.value ?? new Prisma.Decimal(0)).toFixed(),
     }));
   const filtered = rows.filter((row) => {
     const quantity = new Prisma.Decimal(row.quantity);

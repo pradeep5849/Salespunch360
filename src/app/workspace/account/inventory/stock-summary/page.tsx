@@ -36,12 +36,7 @@ export default async function Page({
     <StockSummary
       asOf={report.query.asOf ?? ""}
       contextQuery={contextQuery}
-      rows={report.rows.map((row) => ({
-        ...row,
-        threshold: Number(row.threshold),
-        quantity: Number(row.quantity),
-        value: Number(row.value),
-      }))}
+      rows={report.rows}
     />
   );
 }

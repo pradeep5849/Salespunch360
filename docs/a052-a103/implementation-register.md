@@ -3118,6 +3118,8 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
+Exact display follow-up: decimal-string and BigInt comparisons/aggregation replace Number conversions. 25 focused decimal/report/display tests passed; desktop/mobile 2 passed with quantity/export precision parity at 0–4. Native summary and final-head validation remain pending.
+
 ## A061-F08 — Search lacks accessible name and empty results lack explanation
 
 **Title:** Search lacks accessible name and empty results lack explanation

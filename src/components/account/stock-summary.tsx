@@ -1,5 +1,10 @@
 "use client";
 import Link from "next/link";
+import {
+  stockDecimalCompare,
+  stockDecimalFormat,
+  stockDecimalSum,
+} from "@/lib/account/stock-display-decimal";
 import { ClientMoney, useDisplayPreferences } from "./display-preferences";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,9 +14,9 @@ type Row = {
   name: string;
   category: string;
   active: boolean;
-  threshold: number;
-  quantity: number;
-  value: number;
+  threshold: string;
+  quantity: string;
+  value: string;
 };
 
 export function StockSummary({
@@ -38,10 +43,10 @@ export function StockSummary({
           (!active || String(r.active) === active) &&
           (!level ||
             (level === "negative"
-              ? r.quantity < 0
+              ? stockDecimalCompare(r.quantity, "0") < 0
               : level === "low"
-                ? r.quantity <= r.threshold
-                : r.quantity > r.threshold)),
+                ? stockDecimalCompare(r.quantity, r.threshold) <= 0
+                : stockDecimalCompare(r.quantity, r.threshold) > 0)),
       ),
     [rows, q, category, level, active],
   );
@@ -164,14 +169,18 @@ export function StockSummary({
         <article className="account-card">
           <small>Low Stock Items</small>
           <strong>
-            {filtered.filter((r) => r.quantity <= r.threshold).length}
+            {
+              filtered.filter(
+                (r) => stockDecimalCompare(r.quantity, r.threshold) <= 0,
+              ).length
+            }
           </strong>
         </article>
         <article className="account-card">
           <small>Total Stock Value</small>
           <strong>
             <ClientMoney
-              value={String(filtered.reduce((n, r) => n + r.value, 0))}
+              value={stockDecimalSum(filtered.map((row) => row.value))}
             />
           </strong>
         </article>
@@ -212,8 +221,14 @@ export function StockSummary({
               </div>
               <div>
                 <dt>Stock quantity</dt>
-                <dd className={r.quantity < 0 ? "negative" : undefined}>
-                  {r.quantity.toFixed(display.displayDecimalPlaces)}
+                <dd
+                  className={
+                    stockDecimalCompare(r.quantity, "0") < 0
+                      ? "negative"
+                      : undefined
+                  }
+                >
+                  {stockDecimalFormat(r.quantity, display.displayDecimalPlaces)}
                 </dd>
               </div>
             </dl>
