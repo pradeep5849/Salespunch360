@@ -2007,7 +2007,10 @@
         "expense_item_entry_slice": {
           "work": "Android expense entry now uses a full-page, inset-aware scrolling form with fixed Cancel/Save & New/Save draft controls and retained unsaved-change confirmation. Linked item-entry name screen is full-page on Android and mobile web; existing desktop billed-line and category workflows remain available.",
           "remaining": "Complete supplied list/category/Items layout using approved reusable expense-item catalogue. Native device/keyboard/TalkBack and final checkpoint-head verification remain pending."
-        }
+        },
+        "catalogue_and_reversal_slice": "Reusable company catalogue and web/native item selection/photo persistence added to linked expense entry. Category/list reference layout dependencies still remain; no complete status inferred.",
+        "slice_validation": "Intermediate:44 focused guard/capability/feedback tests pass;3 catalogue/input/photo tests pass; four desktop/mobile entry+paid API checks pass;two catalogue photo/retry/company-isolation API checks pass; Android compile/JVM146 pass;TypeScript/focused lint pass. Broader unit suite in progress; exact final PR-head tests not run.",
+        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head."
       },
       "intermediate_validation": {
         "expense_item_entry_slice": {
@@ -2035,14 +2038,19 @@
         "src/app/workspace/account/expenses/expense-editor.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
         "src/lib/account/expense-totals.ts",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "src/lib/account/expense-items.ts",
+        "src/app/actions/expense-items.ts",
+        "src/app/api/v1/mobile/account/expense-items/route.ts",
+        "src/components/account/add-expense-item.tsx"
       ],
       "affected_services_apis_actions": [
         "No dedicated expense-item creation/photo endpoint; existing expense create/update APIs accept billedItems."
       ],
       "affected_models": [
         "ExpenseTransaction.billedItems",
-        "ExpenseAttachment is document-level; no dedicated ExpenseItem model currently"
+        "ExpenseAttachment is document-level; no dedicated ExpenseItem model currently",
+        "ExpenseItem"
       ],
       "module_impact": "EXPENSES is Basic Accounting core; Projects remains an optional dependency for Project Manager expense access.",
       "permission_impact": "ACCOUNT_EXPENSE_VIEW; existing mutation permissions must remain enforced.",
@@ -2113,7 +2121,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -2124,7 +2132,10 @@
           "work": "Added a dedicated local Add Expense Item name-entry state on web and Android. Required trimmed name, 240-character bound, Save/Cancel, keyboard Escape/back and focus restoration preserve existing billed-line quantities, rates, totals and the enclosing expense draft. No inventory or financial write occurs from local item entry.",
           "remaining": "Implement reusable company expense-item catalogue, photo capture/storage and safe billed-line snapshots; permission/image/security/API and final checkpoint-head/device verification remain pending."
         },
-        "approved_item_persistence": "Reusable company expense-item catalogue with name/photo, selected into expense billed lines; existing local name-entry slice is partial."
+        "approved_item_persistence": "Reusable company expense-item catalogue with name/photo, selected into expense billed lines; existing local name-entry slice is partial.",
+        "catalogue_and_reversal_slice": "Added company ExpenseItem model/forward migration, retry-safe catalogue creation/search, private validated WebP photo storage/read API and cleanup queue; web/native Add Expense Item creates or selects reusable item and retains billed-line amounts. Image input bounded5MB/20M pixels/output720px. Financial and stock writes remain separate. Final-head role/module/device regression pending.",
+        "slice_validation": "Intermediate:44 focused guard/capability/feedback tests pass;3 catalogue/input/photo tests pass; four desktop/mobile entry+paid API checks pass;two catalogue photo/retry/company-isolation API checks pass; Android compile/JVM146 pass;TypeScript/focused lint pass. Broader unit suite in progress; exact final PR-head tests not run.",
+        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head."
       },
       "intermediate_validation": {
         "expense_item_entry_slice": {
@@ -2266,7 +2277,10 @@
         "paid_review_service": "Added explicit recordAsPaid atomic posting path and separate posted-expense approval review metadata; review leaves financial status/journal unchanged, admin-only, same-review retries do not add audits. Moved creation validation/calculation inside serializable transaction after scoped idempotency replay. Draft updates exclude input-only paid flag. Schema migration applied to isolated local CI database only. Web/native wiring, database review/concurrency regression and final-head validation remain pending.",
         "intermediate_tests": "25 focused unit tests passed; four desktop/mobile Playwright tests passed (paid Save & New, review rejection, concurrent API saves and repeated review); Android compileDebugKotlin/testDebugUnitTest passed. Final-head and broader financial denial/period/rollback tests still pending.",
         "paid_review_ui": "New regular web/Android entries explicitly record payment on save; reimbursements and legacy drafts retain draft behavior. Detail displays payment date and review separately. Pending review is cancelled when payment is reversed. Added concurrent API retry and metadata-only review ledger regression.",
-        "intermediate_regression": "Broader Vitest run: 2737 passed,107 skipped,0 failed (421 files passed,9 skipped), after fixing whitespace-sensitive existing schema contract. Android146 passed,0 failure/error/skip. Four browser tests passed. Intermediate evidence only; final-head validation pending."
+        "intermediate_regression": "Broader Vitest run: 2737 passed,107 skipped,0 failed (421 files passed,9 skipped), after fixing whitespace-sensitive existing schema contract. Android146 passed,0 failure/error/skip. Four browser tests passed. Intermediate evidence only; final-head validation pending.",
+        "catalogue_and_reversal_slice": "Generic journal reversal now blocks expense-linked journals outside verified expense lifecycle; expense reversal cancels pending review metadata. Added locked-period atomic rollback, committed-retry-after-lock, invalid account/branch/category denial and exact reversal regression. Broader role/project/branch and final-head checks pending.",
+        "slice_validation": "Intermediate:44 focused guard/capability/feedback tests pass;3 catalogue/input/photo tests pass; four desktop/mobile entry+paid API checks pass;two catalogue photo/retry/company-isolation API checks pass; Android compile/JVM146 pass;TypeScript/focused lint pass. Broader unit suite in progress; exact final PR-head tests not run.",
+        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head."
       }
     },
     {

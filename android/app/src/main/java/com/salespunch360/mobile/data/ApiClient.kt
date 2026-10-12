@@ -70,6 +70,8 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun postPurchase(id:String)=call("api/v1/mobile/account/purchases/${enc(id)}/post","POST")
  suspend fun vendorPaymentContext()=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments")).jsonObject
  suspend fun createVendorPayment(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/vendor-payments","POST",payload.toString())).jsonObject
+ suspend fun expenseItems(q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/expense-items?q=${enc(q.take(160))}")).jsonObject
+ suspend fun saveExpenseItem(name:String,requestKey:String,photoName:String?,photoMime:String?,photo:ByteArray?)=json.parseToJsonElement(multipart("api/v1/mobile/account/expense-items","photo",photoName?:"empty",photoMime?:"application/octet-stream",photo?:ByteArray(0),mapOf("name" to name,"requestKey" to requestKey))).jsonObject
  suspend fun expenseOptions()=json.parseToJsonElement(call("api/v1/mobile/account/expenses/options")).jsonObject
  suspend fun expensePage(q:String="",status:String?=null,type:String?=null,categoryId:String?=null,offset:Int=0,contextQuery:String=""):JsonObject{
   val context=android.net.Uri.parse("https://local.invalid/?$contextQuery")

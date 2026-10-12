@@ -1000,11 +1000,16 @@ export async function reverseExpenseForActor(
         },
       });
       if (!current?.journalEntryId) throw new Error("EXPENSE_NOT_REVERSIBLE");
-      const reversal = await reverseJournalInTx(tx, a, {
-        journalEntryId: current.journalEntryId,
-        entryDate,
-        reason,
-      });
+      const reversal = await reverseJournalInTx(
+        tx,
+        a,
+        {
+          journalEntryId: current.journalEntryId,
+          entryDate,
+          reason,
+        },
+        { expenseId: current.id },
+      );
       const changed = await tx.expenseTransaction.updateMany({
         where: {
           id,

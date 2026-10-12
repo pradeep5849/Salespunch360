@@ -375,3 +375,29 @@ it.each(["LOAN_RECEIPT", "LOAN_PAYMENT"])(
     expect(m.number).not.toHaveBeenCalled();
   },
 );
+
+it.each(["PROJECT_EXPENSE", "OFFICE_EXPENSE", "OTHER_INCOME", "REIMBURSEMENT"])(
+  "A052-F13 blocks generic %s reversal outside the expense lifecycle",
+  async (sourceType) => {
+    m.findJournal.mockResolvedValue({
+      id: "original",
+      companyId: COMPANY,
+      branchId: BRANCH,
+      status: "POSTED",
+      sourceType,
+      sourceId: "expense",
+      lines: [],
+    });
+    await expect(
+      reverseJournal({
+        journalEntryId: "77777777-7777-4777-8777-777777777777",
+        reason: "Cannot bypass expense approval permission",
+        entryDate: "2026-04-03",
+      }),
+    ).rejects.toThrow("MANAGED_EXPENSE_REVERSAL_REQUIRED");
+    expect(m.create).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+    expect(m.audit).not.toHaveBeenCalled();
+    expect(m.number).not.toHaveBeenCalled();
+  },
+);

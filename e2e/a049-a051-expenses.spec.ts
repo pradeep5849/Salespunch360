@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { expect, test } from "@playwright/test";
+import sharp from "sharp";
 import AxeBuilder from "@axe-core/playwright";
 const db = new PrismaClient(),
   companyId = randomUUID(),
@@ -134,6 +135,7 @@ test.afterAll(async () => {
   await db.cheque.deleteMany({ where: { companyId } });
   await db.ownerTransaction.deleteMany({ where: { companyId } });
   await db.ownerFinancialAccount.deleteMany({ where: { companyId } });
+  await db.expenseItem.deleteMany({ where: { companyId } });
   await db.expenseAttachment.deleteMany({ where: { companyId } });
   await db.expenseTransaction.deleteMany({ where: { companyId } });
   await db.recurringExpenseTemplate.deleteMany({ where: { companyId } });
@@ -235,6 +237,7 @@ test("expense inline category, paid Save & New, review rejection and detail work
     .click();
   await expect(page.getByLabel("name item 1", { exact: true })).toHaveValue(
     "Reference billed item",
+    { timeout: 15000 },
   );
   await page.getByLabel("quantity item 1", { exact: true }).fill("2");
   await page.getByLabel("rate item 1", { exact: true }).fill("50.25");
@@ -3001,4 +3004,217 @@ test("A052 paid save posts once under concurrent retries and review never posts 
       },
     }),
   ).toBe(1);
+  const failedKey = randomUUID();
+  const year = await db.financialYear.findFirstOrThrow({
+    where: { companyId },
+  });
+  const lock = await db.accountingPeriodLock.create({
+    data: {
+      companyId,
+      financialYearId: year.id,
+      lockedThrough: new Date("2026-10-12"),
+      updatedById: userId,
+    },
+  });
+  try {
+    const failed = await request.post("/api/v1/mobile/account/expenses", {
+      headers,
+      data: { ...input, requestKey: failedKey },
+    });
+    expect(failed.status()).toBe(400);
+    expect((await failed.json()).error).toBe("PERIOD_LOCKED");
+    expect(
+      await db.expenseTransaction.count({
+        where: { companyId, creationRequestKey: failedKey },
+      }),
+    ).toBe(0);
+    // An already committed receipt remains replayable even after its accounting period closes.
+    const replay = await request.post("/api/v1/mobile/account/expenses", {
+      headers,
+      data: input,
+    });
+    expect(replay.status()).toBe(201);
+    expect((await replay.json()).id).toBe(expense.id);
+  } finally {
+    await db.accountingPeriodLock.delete({ where: { id: lock.id } });
+  }
+  const reversal = await request.post(
+    `/api/v1/mobile/account/expenses/${expense.id}/action`,
+    {
+      headers,
+      data: {
+        action: "REVERSE",
+        entryDate: "2026-10-12",
+        reason: "Paid expense correction",
+      },
+    },
+  );
+  expect(reversal.status()).toBe(200);
+  const corrected = await db.expenseTransaction.findUniqueOrThrow({
+    where: { id: expense.id },
+  });
+  expect(corrected.status).toBe("REVERSED");
+  const correctionLines = await db.journalLine.findMany({
+    where: { journalEntryId: corrected.reversalJournalId! },
+  });
+  expect(
+    correctionLines
+      .find((line) => line.ledgerAccountId === cashLedger)
+      ?.debit.toFixed(2),
+  ).toBe("123.45");
+  expect(
+    correctionLines
+      .find((line) => line.ledgerAccountId === expenseLedger)
+      ?.credit.toFixed(2),
+  ).toBe("123.45");
+  for (const invalid of [
+    { moneyAccountId: randomUUID() },
+    { branchId: randomUUID() },
+    { categoryId: randomUUID() },
+  ]) {
+    const requestKey = randomUUID();
+    const denied = await request.post("/api/v1/mobile/account/expenses", {
+      headers,
+      data: { ...input, ...invalid, requestKey },
+    });
+    expect(denied.status()).toBe(400);
+    expect(
+      await db.expenseTransaction.count({
+        where: { companyId, creationRequestKey: requestKey },
+      }),
+    ).toBe(0);
+  }
+  const pending = await request.post("/api/v1/mobile/account/expenses", {
+    headers,
+    data: { ...input, requestKey: randomUUID() },
+  });
+  expect(pending.status()).toBe(201);
+  const pendingExpense = await pending.json();
+  expect(
+    (
+      await request.post(
+        `/api/v1/mobile/account/expenses/${pendingExpense.id}/action`,
+        {
+          headers,
+          data: {
+            action: "REVERSE",
+            entryDate: "2026-10-12",
+            reason: "Cancel pending review payment",
+          },
+        },
+      )
+    ).status(),
+  ).toBe(200);
+  expect(
+    (
+      await db.expenseTransaction.findUniqueOrThrow({
+        where: { id: pendingExpense.id },
+      })
+    ).approvalReviewStatus,
+  ).toBe("CANCELLED");
+});
+
+test("A052 expense catalogue reuses company items, stores validated photos and rejects cross-company reads", async ({
+  request,
+}) => {
+  expect(
+    (await request.get("/api/v1/mobile/account/expense-items")).status(),
+  ).toBe(401);
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Expense catalogue regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const requestKey = randomUUID();
+  const name = `Reusable fuel ${randomUUID()}`;
+  const image = await sharp({
+    create: { width: 8, height: 8, channels: 3, background: "red" },
+  })
+    .png()
+    .toBuffer();
+  const input = {
+    name,
+    requestKey,
+    photo: { name: "fuel.png", mimeType: "image/png", buffer: image },
+  };
+  const saved = await request.post("/api/v1/mobile/account/expense-items", {
+    headers,
+    multipart: input,
+  });
+  expect(saved.status()).toBe(201);
+  const item = await saved.json();
+  expect(item.hasPhoto).toBe(true);
+  expect(item).not.toHaveProperty("photoObjectKey");
+  const retry = await request.post("/api/v1/mobile/account/expense-items", {
+    headers,
+    multipart: input,
+  });
+  expect(retry.status()).toBe(201);
+  expect((await retry.json()).id).toBe(item.id);
+  const changed = await request.post("/api/v1/mobile/account/expense-items", {
+    headers,
+    multipart: { ...input, name: `${name} altered` },
+  });
+  expect(changed.status()).toBe(409);
+  const listed = await request.get(
+    `/api/v1/mobile/account/expense-items?q=${encodeURIComponent(name)}`,
+    { headers },
+  );
+  expect(
+    (await listed.json()).rows.map((row: { id: string }) => row.id),
+  ).toEqual([item.id]);
+  const photo = await request.get(
+    `/api/v1/mobile/account/expense-items/${item.id}/photo`,
+    { headers },
+  );
+  expect(photo.status()).toBe(200);
+  expect(photo.headers()["content-type"]).toBe("image/webp");
+  const foreignCompany = await db.company.create({
+    data: {
+      name: "Catalogue tenant isolation",
+      slug: `catalogue-${randomUUID()}`,
+    },
+  });
+  let foreignId: string | undefined;
+  try {
+    const foreign = await db.expenseItem.create({
+      data: {
+        companyId: foreignCompany.id,
+        name,
+        normalizedName: name.toLowerCase(),
+        creationRequestKey: randomUUID(),
+        creationRequestHash: "0".repeat(64),
+        photoObjectKey: "unreachable-foreign-photo",
+      },
+    });
+    foreignId = foreign.id;
+    expect(
+      (
+        await request.get(
+          `/api/v1/mobile/account/expense-items/${foreign.id}/photo`,
+          { headers },
+        )
+      ).status(),
+    ).toBe(403);
+    expect(
+      (
+        await (
+          await request.get(
+            `/api/v1/mobile/account/expense-items?q=${encodeURIComponent(name)}`,
+            { headers },
+          )
+        ).json()
+      ).total,
+    ).toBe(1);
+  } finally {
+    if (foreignId) await db.expenseItem.delete({ where: { id: foreignId } });
+    await db.company.delete({ where: { id: foreignCompany.id } });
+  }
 });

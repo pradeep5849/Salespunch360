@@ -8,6 +8,19 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_EXPENSE_ITEM_PHOTO: "Select a valid image smaller than 5 MB.",
+  EXPENSE_ITEM_NAME_EXISTS:
+    "This expense item already exists. Select it from the catalogue.",
+  PAID_EXPENSE_REQUEST_KEY_REQUIRED:
+    "Refresh the expense form before recording payment.",
+  REIMBURSEMENT_NOT_PAID_ENTRY:
+    "Save reimbursements as drafts and use their approval and payment workflow.",
+  EXPENSE_REVIEW_RETRY_CONFLICT:
+    "This review was already recorded with a different reason. Refresh the expense.",
+  INVALID_EXPENSE_REVIEW_TRANSITION:
+    "This expense no longer has a pending approval review. Refresh the expense.",
+  MANAGED_EXPENSE_REVERSAL_REQUIRED:
+    "Reverse this payment from its expense detail so the expense and ledger stay consistent.",
   INVALID_OPENING_WAREHOUSE:
     "Select an active warehouse in an authorized branch for opening stock.",
   OPENING_REQUEST_KEY_REQUIRED: "Refresh Add Item before saving opening stock.",

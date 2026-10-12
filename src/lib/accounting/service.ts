@@ -353,6 +353,7 @@ export async function reverseJournalInTx(
   tx: Prisma.TransactionClient,
   a: ReversalActor,
   raw: unknown,
+  sourceLifecycle?: { expenseId: string },
 ) {
   const d = reversalSchema.parse(raw);
   await lockCompany(tx, a.companyId);
@@ -370,6 +371,16 @@ export async function reverseJournalInTx(
   // cannot change its principal/status and must never detach the two records.
   if (["LOAN_RECEIPT", "LOAN_PAYMENT"].includes(original.sourceType))
     throw new Error("MANAGED_LOAN_REVERSAL_NOT_SUPPORTED");
+  if (
+    [
+      "PROJECT_EXPENSE",
+      "OFFICE_EXPENSE",
+      "OTHER_INCOME",
+      "REIMBURSEMENT",
+    ].includes(original.sourceType) &&
+    sourceLifecycle?.expenseId !== original.sourceId
+  )
+    throw new Error("MANAGED_EXPENSE_REVERSAL_REQUIRED");
   const reversalYear = await tx.financialYear.findFirst({
     where: {
       companyId: a.companyId,

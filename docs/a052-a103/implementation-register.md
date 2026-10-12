@@ -597,6 +597,9 @@ Remaining: Full supplied list/category/Items layout and connected reference pari
 
 Latest approved business clarification: User confirmed reusable company expense-item persistence; complete the Items view using that catalogue. Earlier pending-question notes are historical.
 
+Catalogue/reversal slice: Reusable company catalogue and web/native item selection/photo persistence added to linked expense entry. Category/list reference layout dependencies still remain; no complete status inferred.
+Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/paid API browser checks; two catalogue API browser checks; Android146 JVM tests and compile; TypeScript and lint pass. Final-head verification remains pending.
+
 ## A052-F12 — Reference Add Expense Item screen and item image action are missing
 
 **Title:** Reference Add Expense Item screen and item image action are missing
@@ -631,7 +634,7 @@ Latest approved business clarification: User confirmed reusable company expense-
 
 **Required tests:** Required name bounds/blank denial; Save and Cancel return to entry; preserve existing billed lines and totals; permission/company scope for any persisted item/image; upload size/type/security tests when image behavior is defined; mobile web/native/desktop parity.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -646,6 +649,9 @@ Intermediate validation: 24 focused expense totals/input tests and 2 desktop/mob
 Remaining: Photo capture/storage and any reusable item catalogue depend on the pending user persistence-semantics answer; image/security/API and final checkpoint-head/device verification remain pending.
 
 Latest approved business clarification: User confirmed: expense item name/photo must be a reusable company expense item. Complete catalogue/photo persistence and immutable billed-line snapshots; existing local entry is partial.
+
+Catalogue/reversal slice: Added company ExpenseItem model/forward migration, retry-safe catalogue creation/search, private validated WebP photo storage/read API and cleanup queue; web/native Add Expense Item creates or selects reusable item and retains billed-line amounts. Image input bounded5MB/20M pixels/output720px. Financial and stock writes remain separate. Final-head role/module/device regression pending.
+Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/paid API browser checks; two catalogue API browser checks; Android146 JVM tests and compile; TypeScript and lint pass. Final-head verification remains pending.
 
 ## A052-F13 — Regular paid-expense entry does not complete payment/accounting on save
 
@@ -681,7 +687,7 @@ Latest approved business clarification: User confirmed: expense item name/photo 
 
 **Required tests:** Regular paid expense entry with authorized cash/bank; missing/wrong-company/wrong-branch account denied; role and approval thresholds; exactly-once journal/payment under retry/concurrency; cash/bank/P&L reconciliation; period locks; native/web parity; no Due/Paid controls on regular expenses; recurring overdue-paid flow remains supported.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -694,6 +700,9 @@ Latest approved business clarification: User confirmed: saving an already-paid e
 Paid-entry service progress: explicit atomic paid-save path and metadata-only admin review added. Intermediate validation: 23 focused tests, TypeScript and focused ESLint pass. Web/native wiring and database financial/concurrency verification remain pending. No final verification status assigned.
 
 Additional implementation: web/Android paid-save wiring and separate payment/review details; pending review cancelled on reversal. Intermediate checks: 25 focused unit tests, four desktop/mobile browser tests and Android compile/JVM tests passed. Financial denial/period/rollback coverage and final-head validation pending; finding remains PARTIAL.
+
+Catalogue/reversal slice: Generic journal reversal now blocks expense-linked journals outside verified expense lifecycle; expense reversal cancels pending review metadata. Added locked-period atomic rollback, committed-retry-after-lock, invalid account/branch/category denial and exact reversal regression. Broader role/project/branch and final-head checks pending.
+Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/paid API browser checks; two catalogue API browser checks; Android146 JVM tests and compile; TypeScript and lint pass. Final-head verification remains pending.
 
 ## A053-F01 — Web Create recurring expense fails on React action metadata
 
