@@ -71,6 +71,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             Option("Project", state.projectId, state.options.array("projects")) { vm.filter("project", it) }
         }
         when (state.report) {
+            "owner-capital", "profit-withdrawal" -> Option("Owner / Partner", state.ownerId, state.options.array("owners")) { vm.filter("owner", it) }
             "general-ledger" -> Option("Ledger", state.ledgerId, state.options.array("ledgers")) { vm.filter("ledger", it) }
             "customer-ledger" -> Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
             "vendor-ledger" -> Option("Vendor", state.vendorId, state.options.array("vendors")) { vm.filter("vendor", it) }

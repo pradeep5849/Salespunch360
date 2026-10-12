@@ -25,6 +25,7 @@ data class AccountReportState(
     val customerId: String = "",
     val vendorId: String = "",
     val productId: String = "",
+    val ownerId: String = "",
     val options: JsonObject = buildJsonObject {},
     val data: JsonObject? = null,
     val appliedFilters: Map<String,String> = emptyMap(),
@@ -77,6 +78,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "ledger" -> _state.value.copy(ledgerId = value)
             "customer" -> _state.value.copy(customerId = value)
             "vendor" -> _state.value.copy(vendorId = value)
+            "owner" -> _state.value.copy(ownerId = value)
             else -> _state.value.copy(productId = value)
         }
     }
@@ -93,6 +95,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "ledgerId" to _state.value.ledgerId,
             "customerId" to _state.value.customerId,
             "vendorId" to _state.value.vendorId,
+            "ownerId" to (if(report == "owner-capital" || report == "profit-withdrawal") _state.value.ownerId else ""),
             "productId" to _state.value.productId
         ).forEach { (key, value) ->
             if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId")) put(key, value)

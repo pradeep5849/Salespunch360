@@ -1967,6 +1967,25 @@ test("A065 independent owner identity and capital/profit entries work without us
       where: { companyId, ownerFinancialAccountId: owner.id },
     }),
   ).toBe(3);
+  await page.goto(
+    `/workspace/account/reports/owner-capital?ownerId=${owner.id}&from=2026-10-01&to=2026-10-12`,
+  );
+  const reportRow = page
+    .getByRole("row")
+    .filter({ hasText: "Renamed browser partner" });
+  await expect(reportRow).toBeVisible();
+  await expect(
+    page.getByRole("row").filter({ hasText: "Combined total" }),
+  ).toBeVisible();
+  await expect(page.locator('select[name="ownerId"]')).toHaveValue(owner.id);
+  const reportCells = await reportRow.locator("td").allTextContents();
+  expect(reportCells[3]).toMatch(/90/);
+  expect(reportCells[4]).toMatch(/20/);
+  const exported = await page.request.get(
+    `/api/account/reports/owner-capital/csv?ownerId=${owner.id}&from=2026-10-01&to=2026-10-12`,
+  );
+  expect(exported.status()).toBe(200);
+  expect(await exported.text()).toContain("Combined total");
   const login = await request.post("/api/v1/mobile/auth/login", {
     data: {
       identifier: email,
@@ -2002,6 +2021,14 @@ test("A065 independent owner identity and capital/profit entries work without us
   const payload = await context.json();
   expect(JSON.stringify(payload)).not.toContain("passwordHash");
   expect(JSON.stringify(payload)).not.toContain("creationInputHash");
+  const mobileReport = await request.get(
+    `/api/v1/mobile/account/reports/owner-capital?ownerId=${owner.id}&from=2026-10-01&to=2026-10-12`,
+    { headers },
+  );
+  expect(mobileReport.status()).toBe(200);
+  expect((await mobileReport.json()).rows[0][0]).toBe(
+    "Renamed browser partner",
+  );
   expect(
     (
       await new AxeBuilder({ page }).include(".employees-content").analyze()

@@ -44,6 +44,7 @@ const D = Prisma.Decimal,
       vendorId: z.preprocess(blankFilter, z.string().uuid().optional()),
       productId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ledgerId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      ownerId: z.preprocess(blankFilter, z.string().uuid().optional()),
     })
     .strict();
 
@@ -87,6 +88,15 @@ async function context(
     f.branchId &&
     !(await db.branch.findFirst({
       where: { id: f.branchId, companyId: actor.companyId, isActive: true },
+      select: { id: true },
+    }))
+  )
+    throw new AuthorizationError();
+
+  if (
+    f.ownerId &&
+    !(await db.ownerFinancialAccount.findFirst({
+      where: { id: f.ownerId, companyId: actor.companyId },
       select: { id: true },
     }))
   )
@@ -685,7 +695,11 @@ export async function runFinancialReportForActor(
 
   if (name === "profit-withdrawal") {
     const owners = await db.ownerFinancialAccount.findMany({
-      where: { companyId: c.actor.companyId },
+      where: {
+        companyId: c.actor.companyId,
+        ...(c.f.ownerId ? { id: c.f.ownerId } : {}),
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
     const [users, entries] = await Promise.all([
       db.user.findMany({
@@ -756,55 +770,78 @@ export async function runFinancialReportForActor(
 
   if (name === "owner-capital") {
     const owners = await db.ownerFinancialAccount.findMany({
-      where: { companyId: c.actor.companyId },
+      where: {
+        companyId: c.actor.companyId,
+        ...(c.f.ownerId ? { id: c.f.ownerId } : {}),
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
-    const [users, lines] = await Promise.all([
-      db.user.findMany({
-        where: {
-          companyId: c.actor.companyId,
-          id: {
-            in: owners
-              .map((x) => x.userId)
-              .filter((id): id is string => Boolean(id)),
-          },
-        },
-      }),
+    const ledgerIds = owners.flatMap((owner) => [
+      owner.capitalLedgerId,
+      owner.drawingsLedgerId,
+      owner.loanLedgerId,
+    ]);
+    const aggregate = (entryDate: Prisma.DateTimeFilter) =>
       db.journalLine.groupBy({
         by: ["ledgerAccountId"],
         where: {
           companyId: c.actor.companyId,
-          ledgerAccountId: {
-            in: owners.flatMap((x) => [
-              x.capitalLedgerId,
-              x.drawingsLedgerId,
-              x.loanLedgerId,
-            ]),
-          },
+          ledgerAccountId: { in: ledgerIds },
           journalEntry: {
             status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
-            entryDate: { lte: c.to },
+            entryDate,
             ...c.branch,
           },
         },
         _sum: { debit: true, credit: true },
-      }),
+      });
+    const [openingRows, periodRows] = await Promise.all([
+      aggregate({ lt: c.from }),
+      aggregate({ gte: c.from, lte: c.to }),
     ]);
-    const map = new Map(
-      lines.map((x) => [
-        x.ledgerAccountId,
-        new D(x._sum.credit ?? 0).sub(x._sum.debit ?? 0),
-      ]),
-    );
-    const userNames = new Map(users.map((u) => [u.id, u.name]));
+    const opening = sumPairMap(openingRows),
+      period = sumPairMap(periodRows);
+    const creditNet = (map: ReturnType<typeof sumPairMap>, id: string) =>
+      (map.get(id)?.credit ?? Z).sub(map.get(id)?.debit ?? Z);
+    const rows = owners.map((owner) => {
+      const capitalOpen = creditNet(opening, owner.capitalLedgerId),
+        capitalMovement = creditNet(period, owner.capitalLedgerId),
+        drawingsPeriod = creditNet(period, owner.drawingsLedgerId).neg(),
+        drawingsClosing = creditNet(opening, owner.drawingsLedgerId)
+          .neg()
+          .add(drawingsPeriod),
+        loan = creditNet(opening, owner.loanLedgerId).add(
+          creditNet(period, owner.loanLedgerId),
+        );
+      return [
+        owner.name,
+        n(capitalOpen),
+        n(capitalMovement),
+        n(capitalOpen.add(capitalMovement)),
+        n(drawingsPeriod),
+        n(drawingsClosing),
+        n(loan),
+      ];
+    });
     return {
       title: "Owner Capital",
-      columns: ["Owner", "Capital", "Drawings", "Loan"],
-      rows: owners.map((x) => [
-        x.name || userNames.get(x.userId ?? "") || "Owner",
-        n(map.get(x.capitalLedgerId) ?? Z),
-        n((map.get(x.drawingsLedgerId) ?? Z).neg()),
-        n(map.get(x.loanLedgerId) ?? Z),
-      ]),
+      columns: [
+        "Owner / Partner",
+        "Opening Capital",
+        "Net Capital Movement",
+        "Capital",
+        "Period Drawings",
+        "Drawings",
+        "Loan",
+      ],
+      rows,
+      totals: [
+        "Combined total",
+        ...Array.from({ length: 6 }, (_, i) =>
+          n(rows.reduce((sum, row) => sum.add(row[i + 1]), Z)),
+        ),
+      ],
+      note: "Opening capital precedes the selected period. Net capital movement includes capital additions, capital withdrawals and their corrections. Profit distributions and legacy unclassified withdrawals appear in drawings; they do not reduce capital. Loan is separate. Figures include effective reversals and only authorized branches; owners remain visible when inactive.",
     };
   }
 
@@ -1011,7 +1048,7 @@ export async function reportOptionsForActor(a: ProjectActor) {
       ? { id: { in: a.branchIds ?? [] } }
       : {};
   const projectBranches = await authorizedProjectBranchIds(a);
-  const [branches, ledgers, customers, vendors, products, projects] =
+  const [branches, ledgers, customers, vendors, products, projects, owners] =
     await Promise.all([
       db.branch.findMany({
         where: { companyId: a.companyId, isActive: true, ...branchFilter },
@@ -1037,8 +1074,15 @@ export async function reportOptionsForActor(a: ProjectActor) {
         where: { ...projectRecordScope(a, projectBranches) },
         select: { id: true, name: true, projectNumber: true },
       }),
+      a.accountRole === "PROJECT_MANAGER"
+        ? Promise.resolve([])
+        : db.ownerFinancialAccount.findMany({
+            where: { companyId: a.companyId },
+            select: { id: true, name: true },
+            orderBy: [{ name: "asc" }, { id: "asc" }],
+          }),
     ]);
-  return { branches, ledgers, customers, vendors, products, projects };
+  return { branches, ledgers, customers, vendors, products, projects, owners };
 }
 
 export async function runFinancialReport(name: string, raw: unknown) {

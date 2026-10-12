@@ -11077,14 +11077,25 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F03",
         "A065-F05",
         "A065-F06"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "PARTIAL",
+        "summary": "Company-validated owner filter, assigned-branch journal scope, opening capital/net period movement/closing capital/period and cumulative drawings/separate loans, combined totals, web/Android owner selectors and CSV/mobile export parity implemented. Owner-history drilldown remains."
+      },
+      "intermediate_validation": {
+        "focused_tests": "22 passed, 0 failed, 0 skipped across 5 report/native-contract files",
+        "browser": "2 passed desktop/mobile Chromium, selected owner, totals, CSV and mobile API, accessibility",
+        "android": "compileDebugKotlin and 142 JVM tests passed",
+        "typescript_lint": "TypeScript/focused lint passed before final browser rerun; final checkpoint head validation pending",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F05",

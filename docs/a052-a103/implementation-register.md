@@ -4190,13 +4190,17 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Owners drawing 5000 and 3000; total8000; unchanged capital; prior-period entries excluded from period draws but present in cumulative capital; reversals/corrections; owner/date/branch/export parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Owner-history drilldown remains; final-head verification pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F03, A065-F05, A065-F06.
+
+**Checkpoint work:** Company-validated owner filter, assigned-branch journal scope, opening capital/net period movement/closing capital/period and cumulative drawings/separate loans, combined totals, web/Android owner selectors and CSV/mobile export parity implemented. Owner-history drilldown remains.
+
+**Intermediate validation:** 22 focused tests, 2 desktop/mobile browser tests including CSV/mobile API/accessibility and Android compilation/142 JVM tests passed. Final-head validation pending.
 
 ## A065-F05 — Assets has no approved linked capital summary
 
