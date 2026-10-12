@@ -635,6 +635,9 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
       db.$transaction(
         async (tx) => {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"owner:" + a.companyId + ":" + d.idempotencyKey}))`;
+          // All journal posting/reversal paths share this company row lock.
+          // Read Committed then reads funds after preceding writers have committed.
+          await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
           const existing = await tx.ownerTransaction.findFirst({
             where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
           });
@@ -744,7 +747,7 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
           );
           return row;
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
       ),
     3,
     ["companyId", "idempotencyKey"],

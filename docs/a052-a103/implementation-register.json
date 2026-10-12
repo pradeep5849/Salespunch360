@@ -10781,7 +10781,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -10790,9 +10790,9 @@
         "A065-F04"
       ],
       "checkpoint_work": {
-        "implementation_status": "PARTIAL",
-        "work": "Withdrawal locks the selected money account and checks the ledger-effective money balance before posting.",
-        "remaining_work": "Real-database insufficient-funds, concurrent withdrawal, reversal/net-balance and final-head regressions remain pending.",
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Available funds guard includes original POSTED/REVERSED journal lines plus their posted reversing effects. Owner posting now takes the shared company journal lock before reading available funds, using Read Committed for fresh post-lock balances and retaining operation-key/money-account locks, conditional scope, payload replay checks and atomic posting/audit. This coordinates drawings with other journal writers instead of checking a stale Serializable snapshot before acquiring the posting lock. Four real DB regressions passed for insufficient funds/no writes, competing withdrawals, effective reversals, and a pending external outflow that commits before the funds read.",
+        "remaining_work": "Final-head unit/database/API/browser/native regression remains pending; Owner identity, distributions/reporting/UI/corrections are separately tracked A065 findings.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
       }
     },
@@ -21366,6 +21366,14 @@
       "typescript": "passed",
       "lint": "passed",
       "scope": "Existing cheque status/bounce atomicity only; amount/source/receipt/reopen/list/native findings remain unfinished",
+      "stage": "INTERMEDIATE ONLY"
+    },
+    "owner_available_funds": {
+      "database": "4 real PostgreSQL tests passed",
+      "typescript": "passed",
+      "focused_unit": "36 tests passed across4 files",
+      "lint": "passed",
+      "migration": "none required",
       "stage": "INTERMEDIATE ONLY"
     }
   }

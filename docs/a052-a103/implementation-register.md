@@ -4082,7 +4082,7 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Zero, exact balance, one paisa excess; 5000/3000 owners; cash/bank/branch compatibility; simultaneous drawings and transfers; reversals; rollback and retry.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
@@ -4094,6 +4094,9 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 **Checkpoint work:** Withdrawal locks the selected money account and checks the ledger-effective money balance before posting.
 
 **Remaining work:** Real-database insufficient-funds, concurrent withdrawal, reversal/net-balance and final-head regressions remain pending.
+
+Checkpoint available-funds guard: Available funds guard includes original POSTED/REVERSED journal lines plus their posted reversing effects. Owner posting now takes the shared company journal lock before reading available funds, using Read Committed for fresh post-lock balances and retaining operation-key/money-account locks, conditional scope, payload replay checks and atomic posting/audit. This coordinates drawings with other journal writers instead of checking a stale Serializable snapshot before acquiring the posting lock. Four real DB regressions passed for insufficient funds/no writes, competing withdrawals, effective reversals, and a pending external outflow that commits before the funds read.
+Remaining: Final-head unit/database/API/browser/native regression remains pending; Owner identity, distributions/reporting/UI/corrections are separately tracked A065 findings.
 
 ## A065-F03 — Capital & Drawings lacks the agreed owner list, details and polished reference-free UI
 
