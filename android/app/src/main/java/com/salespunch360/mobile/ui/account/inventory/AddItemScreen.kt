@@ -325,12 +325,18 @@ fun AddItemScreen(
     if(settings)ModalBottomSheet(onDismissRequest={settings=false}){
         Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text("Add Item Settings",style=MaterialTheme.typography.titleLarge)
-            listOf("Item Custom Fields","Additional Item Fields","Wholesale Price","Barcode Scan","Item Category","Description").forEach{
-                Text("$it  ›")
+            if(!s.canManageItemSettings)Text("Only a business administrator can change item settings.")
+            listOf("customFields" to "Item Custom Fields","additionalFields" to "Additional Item Fields","wholesalePrice" to "Wholesale Price","barcodeScanning" to "Barcode Scan","itemCategory" to "Item Category","description" to "Description").forEach{(key,label)->
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                    Text(label,Modifier.weight(1f))
+                    Switch(checked=enabled(key),enabled=s.canManageItemSettings&&!s.saving,onCheckedChange={vm.toggleItemSetting(key,it)})
+                }
             }
-            Text("Service Reminders · Coming Soon")
-            TextButton(onClick={settings=false;navigate("/workspace/account/inventory/item-settings")}){
-                Text("⚙ More Settings")
+            s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+            if(s.canManageItemSettings){
+                TextButton(onClick={settings=false;navigate("/workspace/account/settings/custom-fields")}){Text("Manage Item Custom Fields")}
+                TextButton(onClick={settings=false;navigate("/workspace/account/settings/reminders/service")}){Text("Service Reminders")}
+                TextButton(onClick={settings=false;navigate("/workspace/account/inventory/item-settings")}){Text("More Settings")}
             }
         }
     }

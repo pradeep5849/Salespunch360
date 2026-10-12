@@ -40,6 +40,7 @@ export default async function AddItemPage({
         name: x.name,
         scope: x.scope,
       }))}
+      canManageSettings={row.canManageItemSettings}
       hsnCodes={hsnCodes}
       customFields={customFields}
       settings={(row?.itemSettings ?? {}) as Record<string, unknown>}

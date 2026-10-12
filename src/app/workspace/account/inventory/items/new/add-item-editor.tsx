@@ -2,7 +2,8 @@
 import { generateItemCode } from "@/lib/account/item-identifiers";
 import type { CustomFieldDefinition } from "@prisma/client";
 import { CustomFieldInput } from "@/components/account/custom-field-input";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
+import { updateQuickItemSettingAction } from "@/app/actions/account-settings";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ type Props = {
   settings: Record<string, unknown>;
   customFields?: CustomFieldDefinition[];
   hsnCodes?: string[];
+  canManageSettings?: boolean;
 };
 type HelpKey = "OPENING" | "PRICE" | "MIN" | null;
 const taxRates = ["0", "0.1", "0.25", "3", "5", "12", "18", "28"];
@@ -51,11 +53,15 @@ function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
 export function AddItemEditor({
   units: initialUnits,
   categories: initialCategories,
-  settings,
+  settings: initialSettings,
+  canManageSettings = false,
   customFields = [],
   hsnCodes = [],
   initialKind = "products",
 }: Props) {
+  const [settings, setSettings] = useState(initialSettings);
+  const settingsDialog = useRef<HTMLDialogElement>(null);
+  const settingsTrigger = useRef<HTMLButtonElement>(null);
   const customFieldRoot = useRef<HTMLDivElement>(null);
   const router = useRouter(),
     [kind, setKind] = useState<"products" | "services">(
@@ -121,6 +127,22 @@ export function AddItemEditor({
     [minStock, setMinStock] = useState(""),
     [itemLocation, setItemLocation] = useState(""),
     [help, setHelp] = useState<HelpKey>(null);
+  useEffect(() => {
+    if (!drawer) return;
+    settingsDialog.current?.showModal();
+    return () => {
+      settingsTrigger.current?.focus();
+    };
+  }, [drawer]);
+  function toggleSetting(key: string, value: boolean) {
+    startTransition(async () => {
+      const saved = await mutation.run(async () => {
+        const updated = await updateQuickItemSettingAction({ key, value });
+        setSettings((current) => ({ ...current, ...updated }));
+      }, "Item setting saved");
+      void saved;
+    });
+  }
   const enabled = (key: string) => settings[key] !== false,
     expanded = name.trim().length > 0;
   const selectedUnit = units.find((x) => x.id === primaryUnit);
@@ -248,6 +270,7 @@ export function AddItemEditor({
         </button>
         <button
           type="button"
+          ref={settingsTrigger}
           aria-label="Item settings"
           onClick={() => setDrawer(true)}
         >
@@ -830,27 +853,57 @@ export function AddItemEditor({
         />
       )}
       {drawer && (
-        <div className="sale-overlay drawer">
-          <aside className="sale-settings">
-            <header>
-              <h2>Item Settings</h2>
-              <button onClick={() => setDrawer(false)}>×</button>
-            </header>
-            {[
-              ["customFields", "Item Custom Fields"],
-              ["additionalFields", "Additional Item Fields"],
-              ["wholesalePrice", "Wholesale Price"],
-              ["barcodeScanning", "Barcode Scan"],
-              ["itemCategory", "Item Category"],
-              ["description", "Description"],
-            ].map(([key, label]) => (
-              <div className="item-setting-row" key={key}>
-                <span>{label}</span>
-                <input type="checkbox" checked={enabled(key)} readOnly />
-              </div>
-            ))}
-          </aside>
-        </div>
+        <dialog
+          ref={settingsDialog}
+          className="sale-settings add-item-settings-dialog"
+          aria-labelledby="item-settings-title"
+          onClose={() => setDrawer(false)}
+        >
+          <header>
+            <h2 id="item-settings-title">Item Settings</h2>
+            <button
+              aria-label="Close item settings"
+              onClick={() => settingsDialog.current?.close()}
+            >
+              ×
+            </button>
+          </header>
+          {!canManageSettings && (
+            <p>Only a business administrator can change item settings.</p>
+          )}
+          {[
+            ["customFields", "Item Custom Fields"],
+            ["additionalFields", "Additional Item Fields"],
+            ["wholesalePrice", "Wholesale Price"],
+            ["barcodeScanning", "Barcode Scan"],
+            ["itemCategory", "Item Category"],
+            ["description", "Description"],
+          ].map(([key, label]) => (
+            <label className="item-setting-row" key={key}>
+              <span>{label}</span>
+              <input
+                type="checkbox"
+                checked={enabled(key)}
+                disabled={!canManageSettings || pending}
+                onChange={(event) => toggleSetting(key, event.target.checked)}
+              />
+            </label>
+          ))}
+          {canManageSettings && (
+            <>
+              <Link href="/workspace/account/settings/custom-fields">
+                Manage Item Custom Fields
+              </Link>
+              <Link href="/workspace/account/settings/reminders/service">
+                Service Reminders
+              </Link>
+              <Link href="/workspace/account/inventory/item-settings">
+                More Settings
+              </Link>
+            </>
+          )}
+          <SaveFeedback state={mutation.feedback} />
+        </dialog>
       )}
     </main>
   );

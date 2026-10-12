@@ -1711,3 +1711,135 @@ test("A058 assigned item codes survive repeated clocks and concurrent duplicate 
     await db.accountProduct.count({ where: { companyId, code: first } }),
   ).toBe(1);
 });
+
+test("A057 Add Item quick settings persist single changes and enforce administration", async ({
+  page,
+  request,
+}) => {
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      itemSettings: {
+        enabled: true,
+        quantityDecimals: 4,
+        unitConversions: [{ baseUnitId: "kept", rate: "12" }],
+      },
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/items/new");
+  await page
+    .getByLabel("Item Name *", { exact: true })
+    .fill("Quick settings item");
+  const trigger = page.getByRole("button", {
+    name: "Item settings",
+    exact: true,
+  });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", {
+    name: "Item Settings",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  for (const [key, label] of [
+    ["customFields", "Item Custom Fields"],
+    ["additionalFields", "Additional Item Fields"],
+    ["wholesalePrice", "Wholesale Price"],
+    ["barcodeScanning", "Barcode Scan"],
+    ["itemCategory", "Item Category"],
+    ["description", "Description"],
+  ]) {
+    const checkbox = dialog.getByRole("checkbox", { name: label, exact: true });
+    const next = !(await checkbox.isChecked());
+    await checkbox.click();
+    await expect
+      .poll(
+        async () =>
+          (
+            (
+              await db.accountSettings.findUniqueOrThrow({
+                where: { companyId },
+              })
+            ).itemSettings as Record<string, unknown>
+          )[key],
+      )
+      .toBe(next);
+    await expect(checkbox).toBeEnabled();
+    await expect(checkbox).toBeChecked({ checked: next });
+  }
+  const saved = (
+    await db.accountSettings.findUniqueOrThrow({ where: { companyId } })
+  ).itemSettings as Record<string, unknown>;
+  expect(saved.quantityDecimals).toBe(4);
+  expect(saved.unitConversions).toEqual([{ baseUnitId: "kept", rate: "12" }]);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .include(".add-item-settings-dialog")
+        .analyze()
+    ).violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(page.getByLabel("Description", { exact: true })).toHaveCount(0);
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Quick settings regression",
+    },
+  });
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const response = await request.post(
+    "/api/v1/mobile/account/settings/item-settings-quick",
+    { headers, data: { key: "description", value: true } },
+  );
+  expect(response.status()).toBe(200);
+  expect((await response.json()).description).toBe(true);
+  await db.user.update({
+    where: { id: userId },
+    data: { accountRole: "ACCOUNTANT" },
+  });
+  try {
+    const denied = await request.post(
+      "/api/v1/mobile/account/settings/item-settings-quick",
+      { headers, data: { key: "description", value: false } },
+    );
+    expect(denied.status()).toBe(403);
+    const options = await request.get(
+      "/api/v1/mobile/account/master-data/items?view=options",
+      { headers },
+    );
+    expect((await options.json()).canManageItemSettings).toBe(false);
+    await page.context().clearCookies();
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/);
+    await page.goto("/workspace/account/inventory/items/new");
+    await page
+      .getByRole("button", { name: "Item settings", exact: true })
+      .click();
+    for (const checkbox of await page
+      .getByRole("dialog")
+      .getByRole("checkbox")
+      .all())
+      await expect(checkbox).toBeDisabled();
+  } finally {
+    await db.user.update({
+      where: { id: userId },
+      data: { accountRole: "ACCOUNT_ADMIN" },
+    });
+  }
+});

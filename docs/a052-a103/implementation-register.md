@@ -2036,13 +2036,16 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Open/close drawer, keyboard/focus, each row action, toggle persistence/effect and authorized/denied users; native/web parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A057_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A057_Findings.json, SalesPunch360_A058_Audit_Report.md, SalesPunch360_A057_Audit_Report.md.
 
 **Linked finding IDs:** A054-F02, A057-F03, A057-F05.
+
+Checkpoint settings drawer: Web and Android Add Item settings drawers now persist all six displayed switches through a shared company-locked, audited single-setting command; unrelated flags and legacy unit conversions remain intact. Admin-only writes and disabled non-admin controls are enforced server-side. Custom field management, Service Reminders and More Settings have actual destinations. Web uses labelled native modal dialog, Escape closure, explicit focus restoration and corrected feedback contrast. Earlier pending switch rendering and privilege-change session invalidation were accounted for in browser regression.
+Remaining: Final-head regression, native device switch/navigation/focus verification and commercial toggle downstream behavior under separate A057-F03 remain pending.
 
 ## A057-F05 — Settings updates and audit history differ and are not atomic
 

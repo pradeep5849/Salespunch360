@@ -36,7 +36,11 @@ describe("A058 operational item settings reader", () => {
       companyId: "company-a",
       itemSettings: { quantityDecimals: 4 },
     });
-    expect(Object.keys(result).sort()).toEqual(["companyId", "itemSettings"]);
+    expect(Object.keys(result).sort()).toEqual([
+      "canManageItemSettings",
+      "companyId",
+      "itemSettings",
+    ]);
   });
   it("does not query settings after permission denial", async () => {
     m.permission.mockRejectedValue(new Error("denied"));

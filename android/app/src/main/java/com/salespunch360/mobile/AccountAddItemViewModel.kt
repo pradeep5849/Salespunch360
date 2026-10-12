@@ -12,6 +12,7 @@ data class AddItemState(
     val loading:Boolean=true,
     val saving:Boolean=false,
     val configLoaded:Boolean=false,
+    val canManageItemSettings:Boolean=false,
     val hsnCodes:List<String> = emptyList(),
     val units:List<AccountOption> = emptyList(),
     val categories:List<AccountOption> = emptyList(),
@@ -32,8 +33,16 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
     fun load()=viewModelScope.launch{
         _state.value=_state.value.copy(loading=true,configLoaded=false,error=null)
         runCatching{api.accountMasterOptions("items") to api.accountMasterOptions("services")}.onSuccess{(products,services)->
-            _state.value=_state.value.copy(loading=false,configLoaded=true,hsnCodes=(products.hsnCodes+services.hsnCodes).distinct().sorted(),units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
+            _state.value=_state.value.copy(loading=false,configLoaded=true,canManageItemSettings=products.canManageItemSettings,hsnCodes=(products.hsnCodes+services.hsnCodes).distinct().sorted(),units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
         }.onFailure{_state.value=_state.value.copy(loading=false,error="Unable to load item options.")}
+    }
+
+    fun toggleItemSetting(key:String,value:Boolean)=viewModelScope.launch{
+        if(_state.value.saving || !_state.value.canManageItemSettings)return@launch
+        _state.value=_state.value.copy(saving=true,error=null)
+        runCatching{api.saveQuickItemSetting(key,value)}.onSuccess{
+            _state.value=_state.value.copy(saving=false,itemSettings=it)
+        }.onFailure{_state.value=_state.value.copy(saving=false,error=(it as? ApiException)?.serverMessage?:"Item setting could not be saved.")}
     }
 
     fun createUnit(name:String,symbol:String,done:(AccountOption)->Unit)=viewModelScope.launch{

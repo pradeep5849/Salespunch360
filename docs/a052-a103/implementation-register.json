@@ -5567,14 +5567,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A054-F02",
         "A057-F03",
         "A057-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Web and Android Add Item settings drawers now persist all six displayed switches through a shared company-locked, audited single-setting command; unrelated flags and legacy unit conversions remain intact. Admin-only writes and disabled non-admin controls are enforced server-side. Custom field management, Service Reminders and More Settings have actual destinations. Web uses labelled native modal dialog, Escape closure, explicit focus restoration and corrected feedback contrast. Earlier pending switch rendering and privilege-change session invalidation were accounted for in browser regression.",
+        "remaining_work": "Final-head regression, native device switch/navigation/focus verification and commercial toggle downstream behavior under separate A057-F03 remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A057-F05",
@@ -21317,6 +21323,14 @@
     "item_identifiers": {
       "unit": "22 tests passed across identifier, item creation policy and mobile reference suites",
       "browser": "2 desktop/mobile Chromium tests passed: repeated clock, distinct generated identifiers, manual preservation, concurrent duplicate requests yield201/409 and one saved row",
+      "android": "compileDebugKotlin and142 JVM tests passed",
+      "typescript": "passed",
+      "lint": "passed",
+      "stage": "INTERMEDIATE ONLY"
+    },
+    "item_settings_drawer": {
+      "unit": "26 focused tests passed across5 files, including under-lock Items OFF, permissions, all six flags, legacy metadata preservation and audit",
+      "browser": "2 desktop/mobile Chromium tests passed: six switch saves, server-side persistence, mobile quick-settings endpoint, Accountant403/disabled controls, Escape/focus restoration, no serious/critical Axe violations",
       "android": "compileDebugKotlin and142 JVM tests passed",
       "typescript": "passed",
       "lint": "passed",

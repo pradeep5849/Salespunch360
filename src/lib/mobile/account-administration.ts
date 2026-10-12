@@ -1,16 +1,35 @@
-import {updatePartySettingsForActor,savePartyAdditionalFieldsForActor} from "@/lib/account/party-settings";
-import {backupReminderDue} from "@/lib/account/backup-settings";
-import {duePaymentReminders} from "@/lib/account/payment-reminder-execution";
-import {dueServiceReminders,completeServiceReminder} from "@/lib/account/service-reminders";
+import { updateQuickItemSettingForActor } from "@/lib/account/item-settings-quick";
+import {
+  updatePartySettingsForActor,
+  savePartyAdditionalFieldsForActor,
+} from "@/lib/account/party-settings";
+import { backupReminderDue } from "@/lib/account/backup-settings";
+import { duePaymentReminders } from "@/lib/account/payment-reminder-execution";
+import {
+  dueServiceReminders,
+  completeServiceReminder,
+} from "@/lib/account/service-reminders";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
-  enabledModulesForCompany,updateModuleSettingsForActor,
+  enabledModulesForCompany,
+  updateModuleSettingsForActor,
 } from "@/lib/account/modules";
-import {BUSINESS_TYPES,MODULE_SETUP_CATALOG,optionalModulesFromStored,recommendedSetupModules} from "@/lib/account/module-setup";
-import {updateAccountSettingsForActor,updateItemSettingsForActor,updateTransactionSettingsForActor,saveCustomFieldForActor,updateGeneralSettingsForActor} from "@/lib/account/settings";
+import {
+  BUSINESS_TYPES,
+  MODULE_SETUP_CATALOG,
+  optionalModulesFromStored,
+  recommendedSetupModules,
+} from "@/lib/account/module-setup";
+import {
+  updateAccountSettingsForActor,
+  updateItemSettingsForActor,
+  updateTransactionSettingsForActor,
+  saveCustomFieldForActor,
+  updateGeneralSettingsForActor,
+} from "@/lib/account/settings";
 import { taxProfileInput } from "@/lib/account/tax";
 import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
@@ -37,23 +56,33 @@ const branchWhere = (a: ReturnType<typeof mobileAccountActor>) =>
     : {};
 export async function mobileSettings(u: MobileAppPrincipal) {
   const a = actor(u, "ACCOUNT_SETTINGS");
-  const [settings, fields, templates, modules, branches, numberingSeries] = await Promise.all([
-    db.accountSettings.findUnique({ where: { companyId: a.companyId } }),
-    db.customFieldDefinition.findMany({
-      where: { companyId: a.companyId },
-      orderBy: [{ entityType: "asc" }, { position: "asc" }],
-    }),
-    db.printTemplate.findMany({
-      where: { companyId: a.companyId },
-      orderBy: [{ documentType: "asc" }, { version: "desc" }],
-    }),
-    enabledModulesForCompany(a.companyId),
-    db.branch.findMany({
-      where: { companyId: a.companyId, ...branchWhere(a) },
-      orderBy: { name: "asc" },
-    }),
-    db.numberingSeries.findMany({where:{companyId:a.companyId,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{}),seriesKey:{in:PREFIX_TYPES.map(([key])=>key)}},select:{branchId:true,seriesKey:true,prefix:true}}),
-  ]);
+  const [settings, fields, templates, modules, branches, numberingSeries] =
+    await Promise.all([
+      db.accountSettings.findUnique({ where: { companyId: a.companyId } }),
+      db.customFieldDefinition.findMany({
+        where: { companyId: a.companyId },
+        orderBy: [{ entityType: "asc" }, { position: "asc" }],
+      }),
+      db.printTemplate.findMany({
+        where: { companyId: a.companyId },
+        orderBy: [{ documentType: "asc" }, { version: "desc" }],
+      }),
+      enabledModulesForCompany(a.companyId),
+      db.branch.findMany({
+        where: { companyId: a.companyId, ...branchWhere(a) },
+        orderBy: { name: "asc" },
+      }),
+      db.numberingSeries.findMany({
+        where: {
+          companyId: a.companyId,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { branchId: { in: a.branchIds ?? [] } }
+            : {}),
+          seriesKey: { in: PREFIX_TYPES.map(([key]) => key) },
+        },
+        select: { branchId: true, seriesKey: true, prefix: true },
+      }),
+    ]);
   return {
     settings,
     fields,
@@ -61,8 +90,15 @@ export async function mobileSettings(u: MobileAppPrincipal) {
     modules: optionalModulesFromStored(modules),
     businessTypes: BUSINESS_TYPES,
     catalog: MODULE_SETUP_CATALOG,
-    recommendations: recommendedSetupModules(settings?.businessType ?? "OTHER_MIXED"),
-    recommendationsByBusinessType: Object.fromEntries(BUSINESS_TYPES.map(type=>[type.key,recommendedSetupModules(type.key)])),
+    recommendations: recommendedSetupModules(
+      settings?.businessType ?? "OTHER_MIXED",
+    ),
+    recommendationsByBusinessType: Object.fromEntries(
+      BUSINESS_TYPES.map((type) => [
+        type.key,
+        recommendedSetupModules(type.key),
+      ]),
+    ),
     branches,
     numberingSeries,
   };
@@ -74,26 +110,84 @@ export async function mobileSaveSettings(
 ) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
-  if(section==="sales-invoice-prefix"){
-    const v=z.object({branchId:z.string().uuid(),prefix:z.string().trim().max(30)}).strict().parse(raw);
-    if(!await db.branch.findFirst({where:{id:v.branchId,companyId:a.companyId,isActive:true,...branchWhere(a)}}))throw new Error("MOBILE_FORBIDDEN");
-    return db.$transaction(async tx=>{
-      const existing=await tx.numberingSeries.findFirst({where:{companyId:a.companyId,branchId:v.branchId,seriesKey:"SALES_INVOICE"}});
-      const series=existing?await tx.numberingSeries.update({where:{id:existing.id},data:{prefix:v.prefix}}):await tx.numberingSeries.create({data:{companyId:a.companyId,branchId:v.branchId,seriesKey:"SALES_INVOICE",prefix:v.prefix,padding:2}});
-      await tx.accountingAuditEvent.create({data:{companyId:a.companyId,actorUserId:a.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:a.companyId,metadata:{sections:["NUMBERING_PREFIXES"],branchId:v.branchId,source:"ANDROID_SALE"}}});
-      return{branchId:v.branchId,prefix:series.prefix,suffix:series.suffix,padding:series.padding,nextSequence:Number(series.nextSequence)};
+  if (section === "item-settings-quick")
+    return updateQuickItemSettingForActor(a, raw);
+  if (section === "sales-invoice-prefix") {
+    const v = z
+      .object({
+        branchId: z.string().uuid(),
+        prefix: z.string().trim().max(30),
+      })
+      .strict()
+      .parse(raw);
+    if (
+      !(await db.branch.findFirst({
+        where: {
+          id: v.branchId,
+          companyId: a.companyId,
+          isActive: true,
+          ...branchWhere(a),
+        },
+      }))
+    )
+      throw new Error("MOBILE_FORBIDDEN");
+    return db.$transaction(async (tx) => {
+      const existing = await tx.numberingSeries.findFirst({
+        where: {
+          companyId: a.companyId,
+          branchId: v.branchId,
+          seriesKey: "SALES_INVOICE",
+        },
+      });
+      const series = existing
+        ? await tx.numberingSeries.update({
+            where: { id: existing.id },
+            data: { prefix: v.prefix },
+          })
+        : await tx.numberingSeries.create({
+            data: {
+              companyId: a.companyId,
+              branchId: v.branchId,
+              seriesKey: "SALES_INVOICE",
+              prefix: v.prefix,
+              padding: 2,
+            },
+          });
+      await tx.accountingAuditEvent.create({
+        data: {
+          companyId: a.companyId,
+          actorUserId: a.id,
+          eventType: "SETTINGS_CHANGED",
+          entityType: "ACCOUNT_SETTINGS",
+          entityId: a.companyId,
+          metadata: {
+            sections: ["NUMBERING_PREFIXES"],
+            branchId: v.branchId,
+            source: "ANDROID_SALE",
+          },
+        },
+      });
+      return {
+        branchId: v.branchId,
+        prefix: series.prefix,
+        suffix: series.suffix,
+        padding: series.padding,
+        nextSequence: Number(series.nextSequence),
+      };
     });
   }
-  if(section==="settings")return updateAccountSettingsForActor(a,raw);
+  if (section === "settings") return updateAccountSettingsForActor(a, raw);
   if (section === "general") {
-    return updateGeneralSettingsForActor(a,raw);
+    return updateGeneralSettingsForActor(a, raw);
   }
-  if(section==="party-settings")return updatePartySettingsForActor(a,raw);
-  if(section==="party-additional-fields")return savePartyAdditionalFieldsForActor(a,raw);
-  if(section==="transaction-settings")return updateTransactionSettingsForActor(a,raw);
-  if (section === "modules") return updateModuleSettingsForActor(a,raw);
-  if(section==="item-settings")return updateItemSettingsForActor(a,raw);
-  if (section === "custom-fields") return saveCustomFieldForActor(a,raw);
+  if (section === "party-settings") return updatePartySettingsForActor(a, raw);
+  if (section === "party-additional-fields")
+    return savePartyAdditionalFieldsForActor(a, raw);
+  if (section === "transaction-settings")
+    return updateTransactionSettingsForActor(a, raw);
+  if (section === "modules") return updateModuleSettingsForActor(a, raw);
+  if (section === "item-settings") return updateItemSettingsForActor(a, raw);
+  if (section === "custom-fields") return saveCustomFieldForActor(a, raw);
   if (section === "print-templates") {
     const v = z
       .object({
@@ -167,7 +261,23 @@ export async function mobileNotifications(u: MobileAppPrincipal) {
       branchId: true,
     },
   });
-  return [...rows.map((x) => ({ ...x, type: "EXPENSE_APPROVAL", isRead: false })),...(await dueServiceReminders(a)).map(x=>({...x,isRead:false})),...(await duePaymentReminders(a)).map(x=>({...x,isRead:false})),...(a.accountRole==="ACCOUNT_ADMIN"&&await backupReminderDue(a.companyId)?[{id:"BACKUP_DUE",type:"BACKUP_REMINDER",title:"Your manual backup is due",navigationTarget:"/workspace/account/utilities/backup",isRead:false}]:[])];
+  return [
+    ...rows.map((x) => ({ ...x, type: "EXPENSE_APPROVAL", isRead: false })),
+    ...(await dueServiceReminders(a)).map((x) => ({ ...x, isRead: false })),
+    ...(await duePaymentReminders(a)).map((x) => ({ ...x, isRead: false })),
+    ...(a.accountRole === "ACCOUNT_ADMIN" &&
+    (await backupReminderDue(a.companyId))
+      ? [
+          {
+            id: "BACKUP_DUE",
+            type: "BACKUP_REMINDER",
+            title: "Your manual backup is due",
+            navigationTarget: "/workspace/account/utilities/backup",
+            isRead: false,
+          },
+        ]
+      : []),
+  ];
 }
 export async function mobileTax(
   u: MobileAppPrincipal,
@@ -219,6 +329,7 @@ async function gstReportForMobile(
 export async function mobileSaveTax(u: MobileAppPrincipal, raw: unknown) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+
   const d = raw as Record<string, unknown>;
   if (d.branchId) {
     const branchId = String(d.branchId),
@@ -294,6 +405,7 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string) {
 export async function mobileSignatureUpload(u: MobileAppPrincipal, file: File) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+
   const { uploadAuthorizedSignatureForActor } =
     await import("@/lib/account/signatures");
   return uploadAuthorizedSignatureForActor(a, file);
@@ -301,6 +413,7 @@ export async function mobileSignatureUpload(u: MobileAppPrincipal, file: File) {
 export async function mobileSignatureRemove(u: MobileAppPrincipal) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+
   const { removeCurrentAuthorizedSignatureForActor } =
     await import("@/lib/account/signatures");
   return removeCurrentAuthorizedSignatureForActor(a);
@@ -377,6 +490,7 @@ export async function mobileBackup(u: MobileAppPrincipal) {
 export async function mobileRecycleRestore(u: MobileAppPrincipal, id: string) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+
   const { restoreMasterForActor } = await import("@/lib/account/utilities");
   return restoreMasterForActor(a, id);
 }
@@ -399,4 +513,12 @@ export async function mobileAccountUserSave(
     : service.createAccountUserForActor(u as never, raw);
 }
 
-export async function mobileCompleteServiceReminder(u:MobileAppPrincipal,raw:unknown){const a=actor(u,"ACCOUNT_DASHBOARD");await assertOperationalWrite(a.companyId);const input=z.object({lineId:z.string().uuid()}).strict().parse(raw);return completeServiceReminder(a,input.lineId)}
+export async function mobileCompleteServiceReminder(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  const a = actor(u, "ACCOUNT_DASHBOARD");
+  await assertOperationalWrite(a.companyId);
+  const input = z.object({ lineId: z.string().uuid() }).strict().parse(raw);
+  return completeServiceReminder(a, input.lineId);
+}

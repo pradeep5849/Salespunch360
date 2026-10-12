@@ -738,3 +738,6 @@ body:has(.account-shell) > .workspace-header{display:none}
 .items-modal h2{margin:0}.items-modal header button{width:42px;height:42px;border-radius:50%;border:1px solid var(--blue);background:#fff;font-size:24px}
 .items-modal .sale-more-row{display:flex;justify-content:space-between;align-items:center;min-height:64px;padding:0 22px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--account-text)}
 .items-modal .items-filter-sheet{max-height:85dvh}
+
+.add-item-settings-dialog{width:min(92vw,460px);max-height:85dvh;overflow:auto;border:1px solid var(--account-border);border-radius:18px;padding:20px;background:#fff;color:var(--account-text)}.add-item-settings-dialog::backdrop{background:#0f172a99}.add-item-settings-dialog header{display:flex;justify-content:space-between;align-items:center;gap:12px}.add-item-settings-dialog .item-setting-row{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:12px 0}.add-item-settings-dialog> a{display:block;padding:10px 0}
+.add-item-settings-dialog .account-save-feedback.success,.add-item-settings-dialog .account-save-feedback.error{color:#fff}

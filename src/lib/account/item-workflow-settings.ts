@@ -13,5 +13,9 @@ export async function getItemWorkflowSettings() {
   });
   const itemSettings = resolveItemSettings(row?.itemSettings);
   if (!itemSettings.enabled) throw new Error("ITEMS_DISABLED");
-  return { companyId: actor.companyId!, itemSettings };
+  return {
+    companyId: actor.companyId!,
+    itemSettings,
+    canManageItemSettings: actor.accountRole === "ACCOUNT_ADMIN",
+  };
 }

@@ -732,6 +732,7 @@ export async function mobileMasterOptions(
     branches,
     units,
     categories,
+    canManageItemSettings: user.accountRole === "ACCOUNT_ADMIN",
     hsnCodes:
       ["items", "services"].includes(kind) &&
       resolveItemSettings(settings?.itemSettings).hsnSac
