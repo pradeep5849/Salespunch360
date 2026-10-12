@@ -5722,7 +5722,11 @@
         "src/app/actions/account-masters.ts",
         "src/lib/account/service.ts",
         "src/lib/mobile/account-master-data.ts",
-        "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+        "src/lib/account/item-opening.ts",
+        "src/lib/account/item-opening.test.ts",
+        "src/lib/account/item-opening.integration.test.ts",
+        "prisma/migrations/20261012103000_item_opening_creation_identity/migration.sql"
       ],
       "affected_services_apis_actions": [
         "createAccountItemAction/createProduct/createService",
@@ -5736,7 +5740,10 @@
         "AccountCategory",
         "StockMovement",
         "ProductPrice",
-        "AccountSettings"
+        "AccountSettings",
+        "AccountOperationalAudit",
+        "Warehouse",
+        "Branch"
       ],
       "module_impact": "INVENTORY core; optional BARCODE for capture where applicable. Shared Items OFF gap A054-F02 and quick-settings gap A057-F04 remain linked.",
       "permission_impact": "Web create ACCOUNT_ACCOUNTS; native item create ACCOUNT_STOCK. Accountant has both, but web page settings dependency blocks access. Use explicit authorization for chosen branch/opening warehouse.",
@@ -5810,13 +5817,27 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A058-F02",
         "A058-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "IMPLEMENTED BUT NOT VERIFIED",
+        "summary": "Web/native item save carries opening quantity/date/independent unit cost, authorized active warehouse and persistent item location. Item and opening stock/audit are one transaction, with immutable creation hash, company-scoped retry key, concurrency protection and scoped replay. Zero opening creates no stock movement. Purchase cost no longer defaults from opening unit cost; API hides creation metadata."
+      },
+      "intermediate_validation": {
+        "focused_units": "33 passed across 5 item/service/reference/policy/identifier files",
+        "database": "6 isolated DB tests passed: exact valuation, concurrent retry, changed payload, audit rollback, missing/foreign/assigned warehouse denial, access-revoked replay and zero opening",
+        "browser": "8 passed desktop/mobile Chromium: new atomic opening/API/report/denial plus existing Accountant/settings/code regressions",
+        "android": "compileDebugKotlin and 142 JVM tests passed; 0 failures/errors/skips",
+        "migration": "New 20261012103000_item_opening_creation_identity applied locally (109 migrations); legacy fixture preserved IDs/names/prices with nullable new fields, rolled back",
+        "schema": "Prisma generate/validate and all generated-client runtime column checks passed",
+        "typescript_lint": "TypeScript/focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A058-F02",
@@ -6598,7 +6619,8 @@
         "implementation_status": "PARTIAL",
         "work": "Native option loads now explicitly track usable configuration, prevent Save before it loads, expose Retry on load failure and retain draft fields; duplicate pending saves are blocked. Full overlay/selector accessibility and numeric validation findings remain unfinished.",
         "remaining_work": "Complete remaining modal focus/Escape, numeric validation, field errors and state-retention verification; final-head tests pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "opening_controls": "Opening stock and unit-cost inputs have explicit accessible names; stock unit cost accepts four decimal places. Broader overlays and numeric validation remain PARTIAL."
       }
     },
     {

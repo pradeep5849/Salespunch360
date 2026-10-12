@@ -2132,13 +2132,17 @@ Remaining: Final-head regression, native device switch/navigation/focus verifica
 
 **Required tests:** Opening quantity/date/price/location persistence and exact stock value; zero/no-opening; authorized branch/warehouse; rollback on opening failure; idempotent retry; reports.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head and device validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A058_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A058_Findings.json, SalesPunch360_A058_Audit_Report.md.
 
 **Linked finding IDs:** A058-F02, A058-F03.
+
+**Checkpoint work:** Web/native item save carries opening quantity/date/independent unit cost, authorized active warehouse and persistent item location. Item and opening stock/audit are one transaction, with immutable creation hash, company-scoped retry key, concurrency protection and scoped replay. Zero opening creates no stock movement. Purchase cost no longer defaults from opening unit cost; API hides creation metadata.
+
+**Intermediate validation:** 33 focused tests, 6 real-database tests, 8 desktop/mobile browser tests, Android compilation/142 JVM tests, TypeScript/focused lint, Prisma generation/validation/runtime schema checks passed. Additive migration applied locally; legacy preservation fixture passed. Final-head/device validation pending.
 
 ## A058-F02 — Tax mode, discount and wholesale controls do not affect saved pricing
 

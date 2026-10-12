@@ -22,6 +22,7 @@ type Category = { id: string; name: string; scope: string };
 type Props = {
   initialKind?: "products" | "services";
   units: Unit[];
+  warehouses?: Array<{ id: string; name: string }>;
   categories: Category[];
   settings: Record<string, unknown>;
   customFields?: CustomFieldDefinition[];
@@ -52,6 +53,7 @@ function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
 }
 export function AddItemEditor({
   units: initialUnits,
+  warehouses = [],
   categories: initialCategories,
   settings: initialSettings,
   canManageSettings = false,
@@ -63,6 +65,8 @@ export function AddItemEditor({
   const settingsDialog = useRef<HTMLDialogElement>(null);
   const settingsTrigger = useRef<HTMLButtonElement>(null);
   const customFieldRoot = useRef<HTMLDivElement>(null);
+  const creationKey = useRef<string | null>(null);
+  const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const router = useRouter(),
     [kind, setKind] = useState<"products" | "services">(
       settings.itemType === "SERVICES"
@@ -130,8 +134,9 @@ export function AddItemEditor({
   useEffect(() => {
     if (!drawer) return;
     settingsDialog.current?.showModal();
+    const trigger = settingsTrigger.current;
     return () => {
-      settingsTrigger.current?.focus();
+      trigger?.focus();
     };
   }, [drawer]);
   function toggleSetting(key: string, value: boolean) {
@@ -188,6 +193,26 @@ export function AddItemEditor({
         () =>
           createAccountItemAction({
             type: kind,
+            creationRequestKey:
+              kind === "products"
+                ? (creationKey.current ??
+                  (creationKey.current = crypto.randomUUID()))
+                : undefined,
+            itemLocation:
+              kind === "products" && enabled("stockMaintenance")
+                ? itemLocation || undefined
+                : undefined,
+            openingStock:
+              kind === "products" &&
+              enabled("stockMaintenance") &&
+              openingStock.trim()
+                ? {
+                    warehouseId,
+                    quantity: openingStock,
+                    unitCost: atPrice || "0",
+                    movementDate: openingDate,
+                  }
+                : undefined,
             customFields,
             name: name.trim(),
             unitId: enabled("itemUnits") ? primaryUnit || undefined : undefined,
@@ -200,7 +225,7 @@ export function AddItemEditor({
               ? description || undefined
               : undefined,
             sellingRate: salePrice || "0",
-            cost: purchasePrice || atPrice || "0",
+            cost: purchasePrice || "0",
             taxRate: enabled("itemWiseTax") ? taxRate || "0" : "0",
             hsnSacCode: enabled("hsnSac") ? hsn || undefined : undefined,
             trackInventory:
@@ -513,6 +538,21 @@ export function AddItemEditor({
             ) : (
               <div className="item-tab-panel">
                 <label>
+                  Opening warehouse
+                  <select
+                    aria-label="Opening warehouse"
+                    value={warehouseId}
+                    onChange={(event) => setWarehouseId(event.target.value)}
+                  >
+                    <option value="">Select warehouse</option>
+                    {warehouses.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
                   Opening Stock{" "}
                   <button
                     type="button"
@@ -526,6 +566,7 @@ export function AddItemEditor({
                     type="number"
                     min="0"
                     step=".0001"
+                    aria-label="Opening Stock"
                     value={openingStock}
                     onChange={(e) => setOpeningStock(e.target.value)}
                     placeholder="Ex: 300"
@@ -553,7 +594,8 @@ export function AddItemEditor({
                     <input
                       type="number"
                       min="0"
-                      step=".01"
+                      step=".0001"
+                      aria-label="At Price/Unit"
                       value={atPrice}
                       onChange={(e) => setAtPrice(e.target.value)}
                       placeholder="Ex: 2,000"

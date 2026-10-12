@@ -1803,6 +1803,9 @@ model AccountProduct {
   category    AccountCategory? @relation(fields: [companyId, categoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId      String?          @db.Uuid
   unit        AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.VarChar(64)
+  itemLocation String? @db.VarChar(240)
   name        String
   code        String?          @db.VarChar(60)
   description String?
@@ -1821,6 +1824,7 @@ model AccountProduct {
   quotationLines  QuotationLine[]
   commercialLines CommercialDocumentLine[]
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, code])
   @@unique([companyId, barcode])

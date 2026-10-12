@@ -45,6 +45,14 @@ export async function saveAccountMaster(formData: FormData) {
 }
 export type CreateAccountItemInput = {
   type: "products" | "services";
+  creationRequestKey?: string;
+  itemLocation?: string;
+  openingStock?: {
+    warehouseId: string;
+    quantity: string;
+    unitCost: string;
+    movementDate: string;
+  };
   name: string;
   unitId?: string;
   categoryId?: string;
@@ -65,6 +73,10 @@ export async function createAccountItemAction(raw: CreateAccountItemInput) {
   const row = await call(
     {
       name: raw.name,
+      creationRequestKey:
+        raw.type === "products" ? raw.creationRequestKey : undefined,
+      itemLocation: raw.type === "products" ? raw.itemLocation : undefined,
+      openingStock: raw.type === "products" ? raw.openingStock : undefined,
       unitId: raw.unitId,
       categoryId: raw.categoryId,
       code: raw.code ?? "",

@@ -1,3 +1,9 @@
+import {
+  itemCreationExtras,
+  itemCreationHash,
+  saveItemOpeningInTx,
+  validateItemOpeningScopeInTx,
+} from "./item-opening";
 import { rethrowItemIdentifierConflict } from "./item-identifiers";
 import { assertInventoryAvailable } from "./inventory";
 import { z } from "zod";
@@ -630,11 +636,36 @@ export async function createProduct(
   customValues: Record<string, unknown> = {},
 ) {
   const a = await writeActor(),
-    d = itemSchema.parse(raw);
+    d = itemSchema.parse(raw),
+    extras = itemCreationExtras.parse(raw),
+    requestHash = extras.creationRequestKey
+      ? itemCreationHash(d, customValues, extras)
+      : undefined;
   await assertInventoryAvailable(a);
   await refs(a.companyId!, d, "PRODUCT");
   return db
     .$transaction(async (tx) => {
+      if (extras.creationRequestKey) {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        await validateItemOpeningScopeInTx(
+          tx,
+          a as import("./projects").ProjectActor,
+          extras,
+        );
+        const previous = await tx.accountProduct.findUnique({
+          where: {
+            companyId_creationRequestKey: {
+              companyId: a.companyId!,
+              creationRequestKey: extras.creationRequestKey,
+            },
+          },
+        });
+        if (previous) {
+          if (previous.creationRequestHash !== requestHash)
+            throw new Error("IDEMPOTENCY_CONFLICT");
+          return previous;
+        }
+      }
       const settings = await tx.accountSettings.findUnique({
         where: { companyId: a.companyId! },
         select: { itemSettings: true },
@@ -644,9 +675,17 @@ export async function createProduct(
         ...d,
         customFields: customValues,
       });
+      if (
+        !policy.stockMaintenance &&
+        (extras.openingStock || extras.itemLocation)
+      )
+        throw new Error("STOCK_FIELDS_DISABLED");
       const row = await tx.accountProduct.create({
         data: {
           companyId: a.companyId!,
+          creationRequestKey: extras.creationRequestKey,
+          creationRequestHash: requestHash,
+          itemLocation: extras.itemLocation,
           name: d.name,
           code: d.code,
           categoryId: d.categoryId,
@@ -670,6 +709,12 @@ export async function createProduct(
           row.id,
           customValues,
         );
+      await saveItemOpeningInTx(
+        tx,
+        a as import("./projects").ProjectActor,
+        row,
+        extras,
+      );
       return row;
     })
     .catch(rethrowItemIdentifierConflict);

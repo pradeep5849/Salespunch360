@@ -8,6 +8,15 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_OPENING_WAREHOUSE:
+    "Select an active warehouse in an authorized branch for opening stock.",
+  OPENING_REQUEST_KEY_REQUIRED: "Refresh Add Item before saving opening stock.",
+  OPENING_CREATE_ONLY:
+    "Opening stock is recorded when creating an item. Use stock adjustments to correct an existing item.",
+  INVALID_OPENING_PRODUCT:
+    "Opening stock requires an inventory-tracked item without batch or serial tracking.",
+  OPENING_VALUE_OUT_OF_RANGE:
+    "Opening stock value is too large. Check the quantity and price per unit.",
   INVALID_OWNER:
     "Choose an active app user from this business, or leave the user link empty.",
   OWNER_USER_ALREADY_LINKED:

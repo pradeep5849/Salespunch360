@@ -1,3 +1,9 @@
+import {
+  itemCreationExtras,
+  itemCreationHash,
+  saveItemOpeningInTx,
+  validateItemOpeningScopeInTx,
+} from "@/lib/account/item-opening";
 import { rethrowItemIdentifierConflict } from "@/lib/account/item-identifiers";
 import { savedHsnCodes } from "@/lib/account/saved-hsn-codes";
 import { saveCustomFieldValuesInTx } from "@/lib/account/custom-field-values";
@@ -36,6 +42,13 @@ const warehouseSchema = z.object({
   isDefault: z.boolean().default(false),
   isActive: z.boolean().optional(),
 });
+function publicItem<T extends object>(row: T) {
+  return Object.fromEntries(
+    Object.entries(row).filter(
+      ([key]) => !["creationRequestKey", "creationRequestHash"].includes(key),
+    ),
+  ) as Omit<T, "creationRequestKey" | "creationRequestHash">;
+}
 const itemMobileSchema = itemSchema.extend({
   barcode: z.string().trim().max(120).optional(),
   trackInventory: z.boolean().default(false),
@@ -258,7 +271,7 @@ export async function listMobileAccountMaster(
       skip: offset,
     });
     return rows.map((row) => ({
-      ...row,
+      ...publicItem(row),
       salePrice: text(row.salePrice),
       costPrice: text(row.costPrice),
       taxRate: text(row.taxRate),
@@ -585,6 +598,12 @@ export async function saveMobileAccountMaster(
     const input = itemMobileSchema
       .extend({ customFields: z.record(z.string(), z.string()).default({}) })
       .parse(raw);
+    const extras = itemCreationExtras.parse(raw);
+    if (id && (extras.openingStock || extras.creationRequestKey))
+      throw new Error("OPENING_CREATE_ONLY");
+    const requestHash = extras.creationRequestKey
+      ? itemCreationHash(itemSchema.parse(raw), input.customFields, extras)
+      : undefined;
     await validateMobileItemReferences(user.companyId, input, "PRODUCT");
     if (!input.trackInventory && input.trackingMode !== "NONE")
       throw new Error("INVALID_INPUT");
@@ -606,18 +625,55 @@ export async function saveMobileAccountMaster(
     };
     const row = await db
       .$transaction(async (tx) => {
+        if (!id && extras.creationRequestKey) {
+          await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR UPDATE`;
+          await validateItemOpeningScopeInTx(
+            tx,
+            {
+              ...user,
+              isActive: true,
+              accountAccessActive: true,
+              salesAccessActive: user.authorizedWorkspaces.includes("SALES"),
+            } as import("@/lib/account/projects").ProjectActor,
+            extras,
+          );
+          const previous = await tx.accountProduct.findUnique({
+            where: {
+              companyId_creationRequestKey: {
+                companyId: user.companyId,
+                creationRequestKey: extras.creationRequestKey,
+              },
+            },
+          });
+          if (previous) {
+            if (previous.creationRequestHash !== requestHash)
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return previous;
+          }
+        }
         const settings = await tx.accountSettings.findUnique({
           where: { companyId: user.companyId },
           select: { itemSettings: true },
         });
         const policy = resolveItemSettings(settings?.itemSettings);
         if (!id) assertItemMasterCreation(policy, "PRODUCT", input);
+        if (
+          !policy.stockMaintenance &&
+          (extras.openingStock || extras.itemLocation)
+        )
+          throw new Error("STOCK_FIELDS_DISABLED");
         const row = id
           ? await tx.accountProduct.findFirst({
               where: { id, companyId: user.companyId },
             })
           : await tx.accountProduct.create({
-              data: { ...data, companyId: user.companyId },
+              data: {
+                ...data,
+                companyId: user.companyId,
+                creationRequestKey: extras.creationRequestKey,
+                creationRequestHash: requestHash,
+                itemLocation: extras.itemLocation,
+              },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
         if (id) await tx.accountProduct.update({ where: { id: row.id }, data });
@@ -630,10 +686,22 @@ export async function saveMobileAccountMaster(
             input.customFields,
             !!id,
           );
+        if (!id)
+          await saveItemOpeningInTx(
+            tx,
+            {
+              ...user,
+              isActive: true,
+              accountAccessActive: true,
+              salesAccessActive: user.authorizedWorkspaces.includes("SALES"),
+            } as import("@/lib/account/projects").ProjectActor,
+            row,
+            extras,
+          );
         return row;
       })
       .catch(rethrowItemIdentifierConflict);
-    return id ? getMobileAccountMaster(user, kind, row.id) : row;
+    return id ? getMobileAccountMaster(user, kind, row.id) : publicItem(row);
   }
   const input = warehouseSchema.parse(raw);
   if (
@@ -730,6 +798,19 @@ export async function mobileMasterOptions(
     ]);
   return {
     branches,
+    warehouses:
+      kind === "items" &&
+      resolveItemSettings(settings?.itemSettings).stockMaintenance
+        ? await db.warehouse.findMany({
+            where: {
+              companyId: user.companyId,
+              isActive: true,
+              branchId: { in: branches.map((branch) => branch.id) },
+            },
+            select: { id: true, name: true },
+            orderBy: [{ isDefault: "desc" }, { name: "asc" }, { id: "asc" }],
+          })
+        : [],
     units,
     categories,
     canManageItemSettings: user.accountRole === "ACCOUNT_ADMIN",

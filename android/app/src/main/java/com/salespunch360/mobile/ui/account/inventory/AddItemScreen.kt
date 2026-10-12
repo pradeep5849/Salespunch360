@@ -54,6 +54,8 @@ fun AddItemScreen(
     var salePrice by remember{mutableStateOf("")}
     var purchasePrice by remember{mutableStateOf("")}
     var taxRate by remember{mutableStateOf("")}
+    val creationRequestKey=remember{java.util.UUID.randomUUID().toString()}
+    var openingWarehouseId by remember{mutableStateOf("")}
     var openingStock by remember{mutableStateOf("")}
     var openingDate by remember{mutableStateOf(LocalDate.now().toString())}
     var atPrice by remember{mutableStateOf("")}
@@ -144,7 +146,13 @@ fun AddItemScreen(
                                 code=code,
                                 description=if(enabled("description"))description else "",
                                 sellingRate=salePrice,
-                                cost=purchasePrice.ifBlank{atPrice},
+                                cost=purchasePrice,
+                                creationRequestKey=creationRequestKey,
+                                openingQuantity=if(enabled("stockMaintenance")&&!service)openingStock else "",
+                                openingWarehouseId=openingWarehouseId,
+                                openingDate=openingDate,
+                                openingPrice=atPrice,
+                                itemLocation=if(enabled("stockMaintenance")&&!service)itemLocation else "",
                                 taxRate=if(enabled("itemWiseTax"))taxRate else "0",
                                 hsnSac=if(enabled("hsnSac"))hsn else "",
                                 trackInventory=enabled("stockMaintenance")&&!service&&(openingStock.isNotBlank()||minStock.isNotBlank()||itemLocation.isNotBlank()),
@@ -289,6 +297,7 @@ fun AddItemScreen(
                 }else{
                     item{
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+                            com.salespunch360.mobile.ui.account.accounting.Option("Opening warehouse",openingWarehouseId,s.warehouses.map{buildJsonObject{put("id",it.id);put("name",it.name)}}){openingWarehouseId=it}
                             HelpField("Opening Stock",openingStock,{openingStock=it},"Ex: 300"){help="OPENING"}
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                                 OutlinedTextField(

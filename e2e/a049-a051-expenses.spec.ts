@@ -2116,3 +2116,144 @@ test("A065 independent owner identity and capital/profit entries work without us
     ),
   ).toEqual([]);
 });
+
+test("A058 item save atomically records independent opening stock and native retry", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(90000);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: { enabled: true, stockMaintenance: true } },
+  });
+  const warehouse = await db.warehouse.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Item opening warehouse",
+      code: `W-${randomUUID()}`,
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/items/new");
+  await page
+    .getByLabel("Item Name *", { exact: true })
+    .fill("Web atomic opening");
+  await page.getByPlaceholder("Purchase Price", { exact: true }).fill("20");
+  await page.getByRole("button", { name: "Stock", exact: true }).click();
+  await page
+    .getByLabel("Opening warehouse", { exact: true })
+    .selectOption(warehouse.id);
+  await page.getByRole("spinbutton", { name: /^Opening Stock/ }).fill("2.1250");
+  await page.getByLabel("As of Date", { exact: true }).fill("2026-10-12");
+  await page
+    .getByRole("spinbutton", { name: /^At Price\/Unit/ })
+    .fill("3.3333");
+  await page.getByLabel("Item Location", { exact: true }).fill("Shelf A");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account\/inventory$/);
+  const product = await db.accountProduct.findFirstOrThrow({
+    where: { companyId, name: "Web atomic opening" },
+  });
+  expect(product.costPrice?.toString()).toBe("20");
+  expect(product.itemLocation).toBe("Shelf A");
+  const opening = await db.stockMovement.findFirstOrThrow({
+    where: { companyId, productId: product.id },
+  });
+  expect(opening.quantity.toString()).toBe("2.125");
+  expect(opening.unitCost.toString()).toBe("3.3333");
+  expect(opening.totalCost.toString()).toBe("7.08");
+  expect(opening.warehouseId).toBe(warehouse.id);
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Opening retry regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const options = await request.get(
+    "/api/v1/mobile/account/master-data/items?view=options",
+    { headers },
+  );
+  expect(options.status()).toBe(200);
+  expect(
+    (await options.json()).warehouses.some(
+      (row: { id: string }) => row.id === warehouse.id,
+    ),
+  ).toBe(true);
+  const input = {
+    name: "Native atomic opening",
+    code: `M-${randomUUID()}`,
+    sellingRate: "10",
+    cost: "25",
+    trackInventory: true,
+    creationRequestKey: randomUUID(),
+    itemLocation: "Shelf B",
+    openingStock: {
+      warehouseId: warehouse.id,
+      quantity: "1.5",
+      unitCost: "5",
+      movementDate: "2026-10-12",
+    },
+  };
+  const [first, second] = await Promise.all([
+    request.post("/api/v1/mobile/account/master-data/items", {
+      headers,
+      data: input,
+    }),
+    request.post("/api/v1/mobile/account/master-data/items", {
+      headers,
+      data: input,
+    }),
+  ]);
+  expect(first.status()).toBe(201);
+  expect(second.status()).toBe(201);
+  const firstBody = await first.json();
+  expect((await second.json()).id).toBe(firstBody.id);
+  expect(firstBody).not.toHaveProperty("creationRequestHash");
+  expect(firstBody).not.toHaveProperty("creationRequestKey");
+  expect(
+    await db.stockMovement.count({
+      where: { companyId, productId: firstBody.id },
+    }),
+  ).toBe(1);
+  const stock = await request.get(
+    `/api/v1/mobile/account/inventory/stock?branchId=${branchId}&asOf=2026-10-12`,
+    { headers },
+  );
+  expect(stock.status()).toBe(200);
+  const stockRows = await stock.json();
+  const row = stockRows.find(
+    (item: { productId: string }) => item.productId === firstBody.id,
+  );
+  expect(row.quantity).toBe("1.5");
+  expect(row.stockValue).toBe("7.5");
+  const denied = await request.post(
+    "/api/v1/mobile/account/master-data/items",
+    {
+      headers,
+      data: {
+        ...input,
+        name: "Denied opening",
+        code: `X-${randomUUID()}`,
+        creationRequestKey: randomUUID(),
+        openingStock: { ...input.openingStock, warehouseId: randomUUID() },
+      },
+    },
+  );
+  expect(denied.status()).toBe(403);
+  expect(
+    await db.accountProduct.count({
+      where: { companyId, name: "Denied opening" },
+    }),
+  ).toBe(0);
+});

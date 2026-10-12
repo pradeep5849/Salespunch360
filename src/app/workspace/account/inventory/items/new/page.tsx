@@ -1,3 +1,4 @@
+import { inventoryOptions } from "@/lib/account/inventory";
 import { savedHsnCodes } from "@/lib/account/saved-hsn-codes";
 import { db } from "@/lib/db";
 import { getItemWorkflowSettings } from "@/lib/account/item-workflow-settings";
@@ -10,9 +11,10 @@ export default async function AddItemPage({
   searchParams: Promise<{ kind?: string }>;
 }) {
   const query = await searchParams;
-  const [data, row] = await Promise.all([
+  const [data, row, inventory] = await Promise.all([
     accountMasterOverview("products", {}),
     getItemWorkflowSettings(),
+    inventoryOptions("opening"),
   ]);
   const customFields = row
     ? await db.customFieldDefinition.findMany({
@@ -42,6 +44,7 @@ export default async function AddItemPage({
       }))}
       canManageSettings={row.canManageItemSettings}
       hsnCodes={hsnCodes}
+      warehouses={inventory.warehouses.map((x) => ({ id: x.id, name: x.name }))}
       customFields={customFields}
       settings={(row?.itemSettings ?? {}) as Record<string, unknown>}
     />

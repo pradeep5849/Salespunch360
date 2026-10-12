@@ -14,6 +14,7 @@ data class AddItemState(
     val configLoaded:Boolean=false,
     val canManageItemSettings:Boolean=false,
     val hsnCodes:List<String> = emptyList(),
+    val warehouses:List<AccountOption> = emptyList(),
     val units:List<AccountOption> = emptyList(),
     val categories:List<AccountOption> = emptyList(),
     val serviceCategories:List<AccountOption> = emptyList(),
@@ -33,7 +34,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
     fun load()=viewModelScope.launch{
         _state.value=_state.value.copy(loading=true,configLoaded=false,error=null)
         runCatching{api.accountMasterOptions("items") to api.accountMasterOptions("services")}.onSuccess{(products,services)->
-            _state.value=_state.value.copy(loading=false,configLoaded=true,canManageItemSettings=products.canManageItemSettings,hsnCodes=(products.hsnCodes+services.hsnCodes).distinct().sorted(),units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
+            _state.value=_state.value.copy(loading=false,configLoaded=true,canManageItemSettings=products.canManageItemSettings,warehouses=products.warehouses,hsnCodes=(products.hsnCodes+services.hsnCodes).distinct().sorted(),units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
         }.onFailure{_state.value=_state.value.copy(loading=false,error="Unable to load item options.")}
     }
 
@@ -81,6 +82,12 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         trackInventory:Boolean,
         lowStockThreshold:String,
         customFields:Map<String,String> = emptyMap(),
+        creationRequestKey:String,
+        openingQuantity:String="",
+        openingWarehouseId:String="",
+        openingDate:String="",
+        openingPrice:String="0",
+        itemLocation:String="",
         done:()->Unit
     )=viewModelScope.launch{
         if(_state.value.saving||!_state.value.configLoaded)return@launch
@@ -101,6 +108,9 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
                     put("taxRate",taxRate.ifBlank{"0"})
                     put("hsnSacCode",hsnSac)
                     if(!service){
+                        put("creationRequestKey",creationRequestKey)
+                        if(itemLocation.isNotBlank())put("itemLocation",itemLocation.trim())
+                        if(openingQuantity.isNotBlank())putJsonObject("openingStock"){put("warehouseId",openingWarehouseId);put("quantity",openingQuantity);put("unitCost",openingPrice.ifBlank{"0"});put("movementDate",openingDate)}
                         put("barcode",code.trim())
                         put("trackInventory",trackInventory)
                         put("trackingMode","NONE")
