@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
 import { expenseFormInput } from "./expense-input";
+it.each(["true", "false"])("parses paid-save flag %s as a boolean", (value) => {
+  const form = new FormData();
+  form.set("recordAsPaid", value);
+  expect(expenseFormInput(form).recordAsPaid).toBe(value === "true");
+});
 it("parses line JSON and checkbox booleans without forwarding UI controls", () => {
   const f = new FormData();
   f.set("billedItems", '[{"name":"Fuel","quantity":"2","rate":"10"}]');

@@ -681,7 +681,7 @@ Latest approved business clarification: User confirmed: expense item name/photo 
 
 **Required tests:** Regular paid expense entry with authorized cash/bank; missing/wrong-company/wrong-branch account denied; role and approval thresholds; exactly-once journal/payment under retry/concurrency; cash/bank/P&L reconciliation; period locks; native/web parity; no Due/Paid controls on regular expenses; recurring overdue-paid flow remains supported.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -690,6 +690,10 @@ Latest approved business clarification: User confirmed: expense item name/photo 
 **Linked finding IDs:** None explicitly linked.
 
 Latest approved business clarification: User confirmed: saving an already-paid expense posts payment/expense immediately; approval is a later review and must not post again. Implementation remains pending.
+
+Paid-entry service progress: explicit atomic paid-save path and metadata-only admin review added. Intermediate validation: 23 focused tests, TypeScript and focused ESLint pass. Web/native wiring and database financial/concurrency verification remain pending. No final verification status assigned.
+
+Additional implementation: web/Android paid-save wiring and separate payment/review details; pending review cancelled on reversal. Intermediate checks: 25 focused unit tests, four desktop/mobile browser tests and Android compile/JVM tests passed. Financial denial/period/rollback coverage and final-head validation pending; finding remains PARTIAL.
 
 ## A053-F01 — Web Create recurring expense fails on React action metadata
 

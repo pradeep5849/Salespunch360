@@ -2257,12 +2257,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "approved_paid_expense_policy": "Already-paid save posts payment/expense immediately; later approval only reviews, with no duplicate journal/payment."
+        "approved_paid_expense_policy": "Already-paid save posts payment/expense immediately; later approval only reviews, with no duplicate journal/payment.",
+        "paid_review_service": "Added explicit recordAsPaid atomic posting path and separate posted-expense approval review metadata; review leaves financial status/journal unchanged, admin-only, same-review retries do not add audits. Moved creation validation/calculation inside serializable transaction after scoped idempotency replay. Draft updates exclude input-only paid flag. Schema migration applied to isolated local CI database only. Web/native wiring, database review/concurrency regression and final-head validation remain pending.",
+        "intermediate_tests": "25 focused unit tests passed; four desktop/mobile Playwright tests passed (paid Save & New, review rejection, concurrent API saves and repeated review); Android compileDebugKotlin/testDebugUnitTest passed. Final-head and broader financial denial/period/rollback tests still pending.",
+        "paid_review_ui": "New regular web/Android entries explicitly record payment on save; reimbursements and legacy drafts retain draft behavior. Detail displays payment date and review separately. Pending review is cancelled when payment is reversed. Added concurrent API retry and metadata-only review ledger regression.",
+        "intermediate_regression": "Broader Vitest run: 2737 passed,107 skipped,0 failed (421 files passed,9 skipped), after fixing whitespace-sensitive existing schema contract. Android146 passed,0 failure/error/skip. Four browser tests passed. Intermediate evidence only; final-head validation pending."
       }
     },
     {
@@ -12774,7 +12778,10 @@
       "implementation_status": "NOT STARTED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "approved_reopen_policy": "Reverse closure bank/cash receipt and undo invoice settlement/allocation atomically, restoring unpaid balance without changing original sale; implementation pending."
+      }
     },
     {
       "finding_id": "A066-F05",
@@ -21810,6 +21817,18 @@
       "affected_findings": [
         "A052-F11",
         "A052-F12"
+      ]
+    },
+    "cheque_reopen": {
+      "decision": "Undo the closure receipt and restore invoice unpaid balance; preserve the original sale.",
+      "source": "Explicit user reply in this task on 2026-10-12",
+      "affected_findings": [
+        "A066-F02",
+        "A066-F03",
+        "A066-F04",
+        "A066-F06",
+        "A066-F07",
+        "A066-F09"
       ]
     }
   }

@@ -23,13 +23,18 @@ const raw = (fd: FormData) =>
     ),
   );
 export async function createExpenseAction(fd: FormData) {
-  return accountAction(async () => {
-    const row = await createExpense(expenseFormInput(fd));
-    revalidatePath("/workspace/account/expenses");
-    return fd.get("saveMode") === "new"
-      ? `/workspace/account/expenses/new?saved=${row.id}&branchId=${row.branchId}`
-      : `/workspace/account/expenses/${row.id}`;
-  }, "Draft saved with server-calculated totals.");
+  return accountAction(
+    async () => {
+      const row = await createExpense(expenseFormInput(fd));
+      revalidatePath("/workspace/account/expenses");
+      return fd.get("saveMode") === "new"
+        ? `/workspace/account/expenses/new?saved=${row.id}&branchId=${row.branchId}`
+        : `/workspace/account/expenses/${row.id}`;
+    },
+    fd.get("recordAsPaid") === "true"
+      ? "Payment recorded with server-calculated totals."
+      : "Draft saved with server-calculated totals.",
+  );
 }
 export async function updateExpenseAction(fd: FormData) {
   return accountAction(async () => {

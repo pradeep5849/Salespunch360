@@ -1,6 +1,39 @@
 import { describe, it, expect } from "vitest";
 import { expenseCapabilities } from "./expense-capabilities";
 describe("expense lifecycle capabilities", () => {
+  it.each([
+    "ACCOUNT_ADMIN",
+    "ACCOUNTANT",
+    "PROJECT_MANAGER",
+    "DATA_ENTRY",
+  ] as const)(
+    "keeps posted expenses immutable while restricting payment review to admin: %s",
+    (accountRole) => {
+      const capabilities = expenseCapabilities(
+        { id: "a", accountRole },
+        { status: "POSTED", createdById: "a", approvalReviewStatus: "PENDING" },
+      );
+      expect(capabilities).toMatchObject({
+        edit: false,
+        submit: false,
+        cancel: false,
+        post: false,
+        approve: accountRole === "ACCOUNT_ADMIN",
+        reject: accountRole === "ACCOUNT_ADMIN",
+      });
+    },
+  );
+  it.each([null, "NOT_REQUIRED", "APPROVED", "REJECTED", "CANCELLED"] as const)(
+    "does not expose a completed or absent posted review: %s",
+    (approvalReviewStatus) => {
+      expect(
+        expenseCapabilities(
+          { id: "a", accountRole: "ACCOUNT_ADMIN" },
+          { status: "POSTED", createdById: "a", approvalReviewStatus },
+        ),
+      ).toMatchObject({ approve: false, reject: false, post: false });
+    },
+  );
   it("limits edits to creator drafts", () => {
     expect(
       expenseCapabilities(

@@ -1,8 +1,16 @@
-import type { AccountRole, ExpenseTransactionStatus } from "@prisma/client";
+import type {
+  AccountRole,
+  ExpenseApprovalReviewStatus,
+  ExpenseTransactionStatus,
+} from "@prisma/client";
 import { ACCOUNT_ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 export function expenseCapabilities(
   actor: { id: string; accountRole?: AccountRole | null },
-  expense: { status: ExpenseTransactionStatus; createdById: string },
+  expense: {
+    status: ExpenseTransactionStatus;
+    createdById: string;
+    approvalReviewStatus?: ExpenseApprovalReviewStatus | null;
+  },
 ) {
   const permissions = actor.accountRole
     ? ACCOUNT_ROLE_PERMISSIONS[actor.accountRole]
@@ -14,8 +22,16 @@ export function expenseCapabilities(
       entry && expense.status === "DRAFT" && expense.createdById === actor.id,
     submit: entry && expense.status === "DRAFT",
     cancel: entry && ["DRAFT", "PENDING_APPROVAL"].includes(expense.status),
-    approve: admin && expense.status === "PENDING_APPROVAL",
-    reject: admin && expense.status === "PENDING_APPROVAL",
+    approve:
+      admin &&
+      (expense.status === "PENDING_APPROVAL" ||
+        (expense.status === "POSTED" &&
+          expense.approvalReviewStatus === "PENDING")),
+    reject:
+      admin &&
+      (expense.status === "PENDING_APPROVAL" ||
+        (expense.status === "POSTED" &&
+          expense.approvalReviewStatus === "PENDING")),
     post:
       ["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(actor.accountRole ?? "") &&
       expense.status === "APPROVED",

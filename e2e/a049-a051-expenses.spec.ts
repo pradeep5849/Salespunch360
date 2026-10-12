@@ -166,7 +166,7 @@ test.afterAll(async () => {
   await db.company.deleteMany({ where: { id: companyId } });
   await db.$disconnect();
 });
-test("expense inline category, Save & New, draft edit, rejection reason and detail work at this viewport", async ({
+test("expense inline category, paid Save & New, review rejection and detail work at this viewport", async ({
   page,
 }) => {
   await page.goto("/sign-in");
@@ -325,20 +325,23 @@ test("expense inline category, Save & New, draft edit, rejection reason and deta
   const downloadedFile = await download.path();
   expect(downloadedFile).not.toBeNull();
   expect(await readFile(downloadedFile!)).toEqual(receipt);
-  await page.getByRole("link", { name: "Edit draft", exact: true }).click();
-  await page.getByLabel("Notes", { exact: true }).fill("Updated draft notes");
-  await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/expenses/${row.id}$`));
-  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  expect(row.status).toBe("POSTED");
+  expect(row.approvalReviewStatus).toBe("PENDING");
   await expect(
-    page.getByRole("button", { name: "Reject", exact: true }),
+    page.getByRole("link", { name: "Edit draft", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Submit", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Approval review", { exact: true }),
   ).toBeVisible();
   await page
     .getByLabel("Rejection reason", { exact: true })
     .fill("Receipt requires correction");
   await page.getByRole("button", { name: "Reject", exact: true }).click();
   await expect(
-    page.getByText(/EXPENSE REJECTED.*Receipt requires correction/),
+    page.getByText(/EXPENSE REVIEW REJECTED.*Receipt requires correction/),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Edit draft", exact: true }),
@@ -2910,4 +2913,92 @@ test("A052 new expense carries the explicitly selected branch without silently u
   await expect(page.getByRole("status")).toContainText(
     "Expense entry unavailable",
   );
+});
+
+test("A052 paid save posts once under concurrent retries and review never posts payment again", async ({
+  request,
+}) => {
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Paid expense regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const input = {
+    requestKey: randomUUID(),
+    recordAsPaid: true,
+    branchId,
+    categoryId: expenseCategory,
+    moneyAccountId: moneyId,
+    type: "OFFICE_EXPENSE",
+    transactionDate: "2026-10-12",
+    taxableAmount: "123.45",
+    taxRate: "0",
+    cessRate: "0",
+  };
+  const responses = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      request.post("/api/v1/mobile/account/expenses", { headers, data: input }),
+    ),
+  );
+  for (const response of responses) expect(response.status()).toBe(201);
+  const rows = await Promise.all(responses.map((response) => response.json()));
+  expect(new Set(rows.map((row) => row.id)).size).toBe(1);
+  const expense = await db.expenseTransaction.findUniqueOrThrow({
+    where: { id: rows[0].id },
+  });
+  expect(expense.status).toBe("POSTED");
+  expect(expense.approvalReviewStatus).toBe("PENDING");
+  expect(expense.paidDate?.toISOString().slice(0, 10)).toBe("2026-10-12");
+  const lines = await db.journalLine.findMany({
+    where: { journalEntryId: expense.journalEntryId! },
+    orderBy: { id: "asc" },
+  });
+  expect(
+    lines
+      .find((line) => line.ledgerAccountId === cashLedger)
+      ?.credit.toFixed(2),
+  ).toBe("123.45");
+  expect(
+    lines
+      .find((line) => line.ledgerAccountId === expenseLedger)
+      ?.debit.toFixed(2),
+  ).toBe("123.45");
+  for (let i = 0; i < 2; i++) {
+    const response = await request.post(
+      `/api/v1/mobile/account/expenses/${expense.id}/action`,
+      {
+        headers,
+        data: { action: "TRANSITION", status: "APPROVED" },
+      },
+    );
+    expect(response.status()).toBe(200);
+  }
+  const reviewed = await db.expenseTransaction.findUniqueOrThrow({
+    where: { id: expense.id },
+  });
+  expect(reviewed.status).toBe("POSTED");
+  expect(reviewed.journalEntryId).toBe(expense.journalEntryId);
+  expect(reviewed.approvalReviewStatus).toBe("APPROVED");
+  expect(
+    await db.journalLine.findMany({
+      where: { journalEntryId: expense.journalEntryId! },
+      orderBy: { id: "asc" },
+    }),
+  ).toEqual(lines);
+  expect(
+    await db.accountOperationalAudit.count({
+      where: {
+        companyId,
+        entityId: expense.id,
+        eventType: "EXPENSE_REVIEW_APPROVED",
+      },
+    }),
+  ).toBe(1);
 });

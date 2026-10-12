@@ -101,6 +101,7 @@ enum InventoryTrackingMode {
   BATCH
   SERIAL
 }
+
 enum StockMovementType {
   OPENING
   PURCHASE
@@ -112,26 +113,31 @@ enum StockMovementType {
   ADJUSTMENT_IN
   ADJUSTMENT_OUT
 }
+
 enum InventoryPriceType {
   RETAIL
   WHOLESALE
   CUSTOMER
 }
+
 enum TaxMode {
   EXCLUSIVE
   INCLUSIVE
 }
+
 enum GstRegistrationType {
   UNREGISTERED
   REGULAR
   COMPOSITION
   SEZ
 }
+
 enum TaxCreditTreatment {
   ELIGIBLE
   INELIGIBLE
   BLOCKED
 }
+
 enum AssetType {
   VEHICLE
   EQUIPMENT
@@ -140,6 +146,7 @@ enum AssetType {
   TOOL
   OTHER
 }
+
 enum AssetStatus {
   ACTIVE
   ASSIGNED
@@ -147,6 +154,7 @@ enum AssetStatus {
   RETIRED
   DISPOSED
 }
+
 enum DepreciationMethod {
   NONE
   STRAIGHT_LINE
@@ -649,6 +657,14 @@ enum ExpenseTransactionStatus {
   REVERSED
 }
 
+enum ExpenseApprovalReviewStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum ExpenseCategoryScope {
   EXPENSE
   INCOME
@@ -913,6 +929,8 @@ model User {
   createdProjectMilestones   ProjectMilestone[]
   uploadedProjectDocuments   ProjectDocument[]
   projectAuditEvents         ProjectAuditEvent[]
+
+  expenseApprovalReviews ExpenseTransaction[] @relation("ExpenseApprovalReviewer")
 
   @@unique([companyId, id])
   @@unique([companyId, employeeCode])
@@ -2466,8 +2484,9 @@ model ServiceReminderCompletion {
   lineId String @db.Uuid
   completedById String @db.Uuid
   completedAt DateTime @default(now())
-  line CommercialDocumentLine @relation(fields:[companyId,lineId],references:[companyId,id],onDelete:Cascade,onUpdate:Restrict)
-  completedBy User @relation("ServiceReminderCompleter",fields:[companyId,completedById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  line          CommercialDocumentLine @relation(fields: [companyId, lineId], references: [companyId, id], onDelete: Cascade, onUpdate: Restrict)
+  completedBy   User                   @relation("ServiceReminderCompleter", fields: [companyId, completedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
   @@id([companyId, lineId])
   @@map("service_reminder_completions")
 }
@@ -2755,12 +2774,12 @@ model Project {
   @@unique([companyId, branchId, projectNumber])
   @@unique([companyId, sourceLeadId])
   @@unique([companyId, sourceQuotationId])
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, status])
   @@index([companyId, branchId, status])
   @@index([companyId, customerId])
   @@index([companyId, projectManagerId])
   @@index([companyId, branchId, createdAt])
-  @@unique([companyId, creationRequestKey])
   @@map("projects")
 }
 
@@ -2911,8 +2930,8 @@ model ProjectChangeOrder {
 
   @@unique([companyId, id])
   @@unique([companyId, projectId, changeOrderNumber])
-  @@index([companyId, projectId, status])
   @@unique([companyId, requestKey])
+  @@index([companyId, projectId, status])
   @@map("project_change_orders")
 }
 
@@ -2968,6 +2987,12 @@ model ExpenseTransaction {
   employeeReimbursementId String?                  @db.Uuid
   reference               String?                  @db.VarChar(160)
   notes                   String?
+  paidDate                DateTime?                    @db.Date
+  approvalReviewStatus    ExpenseApprovalReviewStatus?
+  approvalReviewAt        DateTime?
+  approvalReviewById      String?                      @db.Uuid
+  approvalReviewReason    String?                      @db.VarChar(500)
+  approvalReviewer        User?                        @relation("ExpenseApprovalReviewer", fields: [companyId, approvalReviewById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   approvedById            String?                  @db.Uuid
   approvedAt              DateTime?
   createdById             String                   @db.Uuid
@@ -2979,6 +3004,7 @@ model ExpenseTransaction {
   @@unique([companyId, occurrenceKey])
   @@unique([companyId, journalEntryId])
   @@index([companyId, projectId, status])
+  @@index([companyId, approvalReviewStatus, branchId], map: "expense_transactions_companyId_approvalReviewStatus_branchId_id")
   @@map("expense_transactions")
 }
 
@@ -3197,6 +3223,7 @@ model Warehouse {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   @@unique([companyId, id])
   @@unique([companyId, branchId, code])
   @@index([companyId, branchId, isActive])
@@ -3211,6 +3238,7 @@ model InventoryBatch {
   manufacturedDate DateTime? @db.Date
   expiryDate       DateTime? @db.Date
   createdAt        DateTime  @default(now())
+
   @@unique([companyId, id])
   @@unique([companyId, productId, batchNumber])
   @@map("inventory_batches")
@@ -3223,6 +3251,7 @@ model InventorySerialNumber {
   serialNumber String    @db.VarChar(160)
   expiryDate   DateTime? @db.Date
   createdAt    DateTime  @default(now())
+
   @@unique([companyId, id])
   @@unique([companyId, productId, serialNumber])
   @@map("inventory_serial_numbers")
@@ -3247,6 +3276,7 @@ model StockMovement {
   movementDate   DateTime          @db.Date
   createdById    String            @db.Uuid
   createdAt      DateTime          @default(now())
+
   @@unique([companyId, id])
   @@unique([companyId, sourceType, sourceId, sourceLineId, movementType])
   @@index([companyId, warehouseId, productId, movementDate])
@@ -3265,6 +3295,7 @@ model ProductPrice {
   isActive      Boolean            @default(true)
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+
   @@unique([companyId, id])
   @@index([companyId, productId, priceType, customerId, isActive])
   @@map("product_prices")
@@ -3307,6 +3338,7 @@ model Asset {
   createdById                     String              @db.Uuid
   createdAt                       DateTime            @default(now())
   updatedAt                       DateTime            @updatedAt
+
   @@unique([companyId, id])
   @@unique([companyId, assetNumber])
   @@unique([companyId, creationRequestKey])
@@ -3323,11 +3355,11 @@ model AssetAssignmentHistory {
   returnedAt   DateTime?
   assignedById String    @db.Uuid
   notes        String?
+
   @@unique([companyId, id])
   @@index([companyId, assetId, assignedAt])
   @@map("asset_assignment_history")
 }
-
 
 model PublicTestimonial {
   id          String   @id @default(uuid()) @db.Uuid
@@ -3346,7 +3378,6 @@ model PublicTestimonial {
   @@map("public_testimonials")
 }
 
-
 model PublicSiteSettings {
   id           String   @id @default("default") @db.VarChar(32)
   facebookUrl  String?  @db.VarChar(500)
@@ -3355,9 +3386,9 @@ model PublicSiteSettings {
   youtubeUrl   String?  @db.VarChar(500)
   googlePlayUrl String? @db.VarChar(500)
   updatedAt    DateTime @updatedAt
+
   @@map("public_site_settings")
 }
-
 
 model PublicBlogPost {
   id              String   @id @default(uuid()) @db.Uuid
@@ -3372,10 +3403,10 @@ model PublicBlogPost {
   publishedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@index([isPublished, publishedAt])
   @@map("public_blog_posts")
 }
-
 
 model PublicVideoTutorial {
   id           String   @id @default(uuid()) @db.Uuid
@@ -3388,6 +3419,7 @@ model PublicVideoTutorial {
   isPublished  Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
   @@index([isPublished, displayOrder])
   @@map("public_video_tutorials")
 }
@@ -3395,7 +3427,7 @@ model PublicVideoTutorial {
 model FieldJob {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
- company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
  key String @unique @db.VarChar(160)
  kind String @db.VarChar(30)
  payload Json
@@ -3406,7 +3438,8 @@ model FieldJob {
  completedAt DateTime?
  lastError String? @db.VarChar(80)
  createdAt DateTime @default(now())
- @@index([completedAt,nextAttemptAt,lockedUntil])
+
+  @@index([completedAt, nextAttemptAt, lockedUntil])
  @@index([companyId])
  @@map("field_jobs")
 }

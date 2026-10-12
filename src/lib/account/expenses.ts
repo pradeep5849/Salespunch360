@@ -24,6 +24,7 @@ import {
   ExpenseTransactionStatus,
   ExpenseTransactionType,
   Prisma,
+  type ExpenseTransaction,
   RecurringFrequency,
 } from "@prisma/client";
 import { z } from "zod";
@@ -385,20 +386,22 @@ const expenseInput = z
     employeeReimbursementId: optionalUuid,
     reference: z.string().max(160).optional(),
     notes: z.string().max(5000).optional(),
+    recordAsPaid: z.boolean().default(false),
   })
   .strict();
 async function validateExpenseRelations(
   a: Actor,
   d: z.infer<typeof expenseInput>,
+  client: Prisma.TransactionClient | typeof db = db,
 ) {
   if (
     !branchOk(a, d.branchId) ||
-    !(await db.branch.findFirst({
+    !(await client.branch.findFirst({
       where: { id: d.branchId, companyId: a.companyId, isActive: true },
     }))
   )
     throw new Error("INVALID_BRANCH");
-  const category = await db.expenseCategory.findFirst({
+  const category = await client.expenseCategory.findFirst({
     where: { id: d.categoryId, companyId: a.companyId, isActive: true },
   });
   if (!category) throw new Error("INVALID_EXPENSE_CATEGORY");
@@ -412,7 +415,7 @@ async function validateExpenseRelations(
     (new D(d.taxRate).gt(0) || new D(d.cessRate).gt(0))
   )
     throw new Error("OTHER_INCOME_TAX_REQUIRES_A12");
-  const ledger = await db.ledgerAccount.findFirst({
+  const ledger = await client.ledgerAccount.findFirst({
       where: {
         id: categoryPostingLedger(category, d.type === "OTHER_INCOME"),
         companyId: a.companyId,
@@ -436,7 +439,7 @@ async function validateExpenseRelations(
   if (d.projectId) {
     await requireAccountModules(a, "PROJECTS");
     const ids = await authorizedProjectBranchIds(a),
-      project = await db.project.findFirst({
+      project = await client.project.findFirst({
         where: {
           id: d.projectId,
           branchId: d.branchId,
@@ -450,7 +453,7 @@ async function validateExpenseRelations(
     throw new Error("MONEY_ACCOUNT_REQUIRED");
   if (
     d.moneyAccountId &&
-    !(await db.moneyAccount.findFirst({
+    !(await client.moneyAccount.findFirst({
       where: {
         id: d.moneyAccountId,
         companyId: a.companyId,
@@ -462,7 +465,7 @@ async function validateExpenseRelations(
     throw new Error("INVALID_MONEY_ACCOUNT");
   if (
     d.employeeReimbursementId &&
-    !(await db.employeeReimbursement.findFirst({
+    !(await client.employeeReimbursement.findFirst({
       where: {
         id: d.employeeReimbursementId,
         companyId: a.companyId,
@@ -480,103 +483,143 @@ export async function createExpenseForActor(
   occurrenceKey?: string,
 ) {
   await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
-  const d = expenseInput.parse(raw),
-    category = await validateExpenseRelations(a, d),
-    inputAmount = new D(d.taxableAmount),
-    context = await db.branch.findFirst({
-      where: { id: d.branchId, companyId: a.companyId },
-      select: { gstStateCode: true },
-    }),
-    settings = await db.accountSettings.findUnique({
-      where: { companyId: a.companyId! },
-    }),
-    calculated = expenseTotals({
-      amount: inputAmount,
-      billedItems: d.billedItems,
-      additionalCharges: d.additionalCharges,
-      roundOffEnabled: d.roundOffEnabled,
-      taxRate: new D(d.taxRate),
-      cessRate: new D(d.cessRate),
-      taxMode: d.taxMode,
-      sellerStateCode: context?.gstStateCode ?? settings?.defaultStateCode,
-      stateOfSupplyCode:
-        d.stateOfSupplyCode ??
-        context?.gstStateCode ??
-        settings?.defaultStateCode,
-      itcEligible: d.taxCreditTreatment === "ELIGIBLE",
-      composition: settings?.compositionEnabled,
-    }),
-    taxable = calculated.taxable,
-    tax = calculated.totalTax,
-    total = calculated.grandTotal;
-  const { requestKey, ...values } = d,
+  const parsed = expenseInput.parse(raw);
+  if (parsed.recordAsPaid) {
+    if (!parsed.requestKey)
+      throw new Error("PAID_EXPENSE_REQUEST_KEY_REQUIRED");
+    if (parsed.type === "REIMBURSEMENT")
+      throw new Error("REIMBURSEMENT_NOT_PAID_ENTRY");
+    const date = (raw as Record<string, unknown>).transactionDate;
+    if (typeof date === "string") z.string().date().parse(date);
+  }
+  const d = parsed;
+  const { requestKey, recordAsPaid, ...values } = d,
     requestHash = createHash("sha256")
-      .update(JSON.stringify(values))
+      .update(
+        JSON.stringify(
+          recordAsPaid ? { ...values, recordAsPaid: true } : values,
+        ),
+      )
       .digest("hex");
-  return retrySerializable(() =>
-    db.$transaction(
-      async (tx) => {
-        await lockCategory(tx, a.companyId);
-        if (requestKey) {
-          const existing = await tx.expenseTransaction.findUnique({
-            where: {
-              companyId_creationRequestKey: {
-                companyId: a.companyId,
-                creationRequestKey: requestKey,
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          if (recordAsPaid)
+            await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+          await lockCategory(tx, a.companyId);
+          if (requestKey) {
+            const existing = await tx.expenseTransaction.findUnique({
+              where: {
+                companyId_creationRequestKey: {
+                  companyId: a.companyId,
+                  creationRequestKey: requestKey,
+                },
               },
-            },
-          });
-          if (existing) {
-            if (existing.creationRequestHash !== requestHash)
-              throw new Error("IDEMPOTENCY_KEY_REUSED");
-            return existing;
+            });
+            if (existing) {
+              if (existing.creationRequestHash !== requestHash)
+                throw new Error("IDEMPOTENCY_KEY_REUSED");
+              const scope = await expenseRecordScope(a);
+              const accessible = await tx.expenseTransaction.findFirst({
+                where: { id: existing.id, ...scope },
+              });
+              if (!accessible) throw new AuthorizationError();
+              return accessible;
+            }
           }
-        }
-        const transactionNumber = await allocateDocumentNumberInTx(tx, {
-            companyId: a.companyId,
-            branchId: d.branchId,
-            seriesKey: "EXPENSE",
-            defaults: {
-              prefix: d.type === "OTHER_INCOME" ? "OI-" : "EXP-",
-              padding: 6,
-            },
-          }),
-          row = await tx.expenseTransaction.create({
-            data: {
-              ...values,
-              billedItems: calculated.billedItems,
-              additionalCharges: calculated.additionalCharges,
-              roundOffAmount: calculated.roundOffAmount,
-              creationRequestKey: requestKey,
-              creationRequestHash: requestKey ? requestHash : null,
-              categoryLedgerAccountId: categoryPostingLedger(
-                category,
-                d.type === "OTHER_INCOME",
-              ),
-              companyId: a.companyId,
-              transactionNumber,
-              taxableAmount: taxable,
+          const category = await validateExpenseRelations(a, d, tx),
+            inputAmount = new D(d.taxableAmount),
+            context = await tx.branch.findFirst({
+              where: { id: d.branchId, companyId: a.companyId },
+              select: { gstStateCode: true },
+            }),
+            settings = await tx.accountSettings.findUnique({
+              where: { companyId: a.companyId! },
+            }),
+            calculated = expenseTotals({
+              amount: inputAmount,
+              billedItems: d.billedItems,
+              additionalCharges: d.additionalCharges,
+              roundOffEnabled: d.roundOffEnabled,
               taxRate: new D(d.taxRate),
-              taxAmount: tax,
-              cgstAmount: calculated.cgst,
-              sgstAmount: calculated.sgst,
-              igstAmount: calculated.igst,
-              cessAmount: calculated.cess,
-              totalAmount: total,
-              status: "DRAFT",
-              approvedAt: null,
-              approvedById: null,
-              occurrenceKey,
-              createdById: a.id,
-            },
+              cessRate: new D(d.cessRate),
+              taxMode: d.taxMode,
+              sellerStateCode:
+                context?.gstStateCode ?? settings?.defaultStateCode,
+              stateOfSupplyCode:
+                d.stateOfSupplyCode ??
+                context?.gstStateCode ??
+                settings?.defaultStateCode,
+              itcEligible: d.taxCreditTreatment === "ELIGIBLE",
+              composition: settings?.compositionEnabled,
+            }),
+            taxable = calculated.taxable,
+            tax = calculated.totalTax,
+            total = calculated.grandTotal;
+          const currentCategory = category;
+          const reviewRequired =
+            recordAsPaid && (await approvalRequired(tx, a.companyId, total));
+          const transactionNumber = await allocateDocumentNumberInTx(tx, {
+              companyId: a.companyId,
+              branchId: d.branchId,
+              seriesKey: "EXPENSE",
+              defaults: {
+                prefix: d.type === "OTHER_INCOME" ? "OI-" : "EXP-",
+                padding: 6,
+              },
+            }),
+            row = await tx.expenseTransaction.create({
+              data: {
+                ...values,
+                billedItems: calculated.billedItems,
+                additionalCharges: calculated.additionalCharges,
+                roundOffAmount: calculated.roundOffAmount,
+                creationRequestKey: requestKey,
+                creationRequestHash: requestKey ? requestHash : null,
+                categoryLedgerAccountId: categoryPostingLedger(
+                  currentCategory,
+                  d.type === "OTHER_INCOME",
+                ),
+                companyId: a.companyId,
+                transactionNumber,
+                taxableAmount: taxable,
+                taxRate: new D(d.taxRate),
+                taxAmount: tax,
+                cgstAmount: calculated.cgst,
+                sgstAmount: calculated.sgst,
+                igstAmount: calculated.igst,
+                cessAmount: calculated.cess,
+                totalAmount: total,
+                status: recordAsPaid ? "APPROVED" : "DRAFT",
+                paidDate: recordAsPaid ? d.transactionDate : null,
+                approvalReviewStatus: recordAsPaid
+                  ? reviewRequired
+                    ? "PENDING"
+                    : "NOT_REQUIRED"
+                  : null,
+                approvedAt: null,
+                approvedById: null,
+                occurrenceKey,
+                createdById: a.id,
+              },
+            });
+          await audit(tx, a, "EXPENSE_CREATED", "EXPENSE", row.id, {
+            categoryId: currentCategory.id,
+            recordAsPaid,
           });
-        await audit(tx, a, "EXPENSE_CREATED", "EXPENSE", row.id, {
-          categoryId: category.id,
-        });
-        return row;
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
+          if (recordAsPaid) {
+            await postExpenseInTx(tx, a, row);
+            return tx.expenseTransaction.findFirstOrThrow({
+              where: { id: row.id, companyId: a.companyId },
+            });
+          }
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    4,
+    ["companyId", "creationRequestKey"],
   );
 }
 export async function updateExpenseForActor(
@@ -612,7 +655,9 @@ export async function updateExpenseForActor(
     }),
     updateData = {
       ...Object.fromEntries(
-        Object.entries(d).filter(([k]) => k !== "requestKey"),
+        Object.entries(d).filter(
+          ([k]) => k !== "requestKey" && k !== "recordAsPaid",
+        ),
       ),
       projectId: d.projectId ?? null,
       moneyAccountId: d.moneyAccountId ?? null,
@@ -684,6 +729,34 @@ export async function transitionExpenseForActor(
         where: { id, companyId: a.companyId },
       });
       if (!row) throw new AuthorizationError();
+      if (row.status === "POSTED" && ["APPROVED", "REJECTED"].includes(to)) {
+        if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+        const reviewStatus = to === "APPROVED" ? "APPROVED" : "REJECTED";
+        if (row.approvalReviewStatus === reviewStatus) {
+          if (
+            reviewStatus === "REJECTED" &&
+            row.approvalReviewReason !== rejectionReason
+          )
+            throw new Error("EXPENSE_REVIEW_RETRY_CONFLICT");
+          return row;
+        }
+        if (row.approvalReviewStatus !== "PENDING")
+          throw new Error("INVALID_EXPENSE_REVIEW_TRANSITION");
+        const reviewed = await tx.expenseTransaction.update({
+          where: { id },
+          data: {
+            approvalReviewStatus: reviewStatus,
+            approvalReviewAt: new Date(),
+            approvalReviewById: a.id,
+            approvalReviewReason: rejectionReason ?? null,
+          },
+        });
+        await audit(tx, a, `EXPENSE_REVIEW_${reviewStatus}`, "EXPENSE", id, {
+          journalEntryId: row.journalEntryId,
+          ...(rejectionReason ? { reason: rejectionReason } : {}),
+        });
+        return reviewed;
+      }
       if (
         a.accountRole === "PROJECT_MANAGER" &&
         ["APPROVED", "REJECTED"].includes(to)
@@ -726,176 +799,182 @@ export async function transitionExpenseForActor(
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
+async function postExpenseInTx(
+  tx: Prisma.TransactionClient,
+  a: Actor,
+  row: ExpenseTransaction,
+) {
+  await lockCategory(tx, a.companyId);
+  const [category, money, fy, system] = await Promise.all([
+    tx.expenseCategory.findFirst({
+      where: { id: row.categoryId, companyId: a.companyId, isActive: true },
+    }),
+    row.moneyAccountId
+      ? tx.moneyAccount.findFirst({
+          where: {
+            id: row.moneyAccountId,
+            companyId: a.companyId,
+            isActive: true,
+            OR: [{ branchId: null }, { branchId: row.branchId }],
+          },
+        })
+      : null,
+    tx.financialYear.findFirst({
+      where: {
+        companyId: a.companyId,
+        isActive: true,
+        startDate: { lte: row.paidDate ?? row.transactionDate },
+        endDate: { gte: row.paidDate ?? row.transactionDate },
+      },
+    }),
+    tx.ledgerAccount.findMany({
+      where: {
+        companyId: a.companyId,
+        systemKey: {
+          in: [
+            "INPUT_TAX_CREDIT",
+            "ACCOUNTS_PAYABLE",
+            "CGST_ITC",
+            "SGST_ITC",
+            "IGST_ITC",
+            "CESS_ITC",
+          ],
+        },
+        isActive: true,
+        allowPosting: true,
+      },
+    }),
+  ]);
+  if (!category || !fy) throw new Error("EXPENSE_POSTING_CONTEXT_INVALID");
+  const categoryLedgerId = categoryPostingLedger(
+    category,
+    row.type === "OTHER_INCOME",
+  );
+  if (
+    row.categoryLedgerAccountId &&
+    row.categoryLedgerAccountId !== categoryLedgerId
+  )
+    throw new Error("CATEGORY_MAPPING_CHANGED_RESUBMIT");
+  if (
+    !(await tx.ledgerAccount.findFirst({
+      where: {
+        id: categoryLedgerId,
+        companyId: a.companyId,
+        isActive: true,
+        allowPosting: true,
+        accountClass: row.type === "OTHER_INCOME" ? "INCOME" : "EXPENSE",
+      },
+    }))
+  )
+    throw new Error("EXPENSE_CATEGORY_CLASS_MISMATCH");
+  if (row.moneyAccountId && !money) throw new Error("INVALID_MONEY_ACCOUNT");
+  if (row.type !== "REIMBURSEMENT" && !money)
+    throw new Error("MONEY_ACCOUNT_REQUIRED");
+  if (row.type === "OTHER_INCOME" && (row.taxRate.gt(0) || row.cessRate.gt(0)))
+    throw new Error("OTHER_INCOME_TAX_REQUIRES_A12");
+  const byKey = new Map(system.map((x) => [x.systemKey, x.id])),
+    destination = money?.ledgerAccountId ?? byKey.get("ACCOUNTS_PAYABLE");
+  if (!destination) throw new Error("EXPENSE_DESTINATION_MISSING");
+  const eligible = row.taxCreditTreatment === "ELIGIBLE",
+    components = [
+      ["CGST_ITC", row.cgstAmount],
+      ["SGST_ITC", row.sgstAmount],
+      ["IGST_ITC", row.igstAmount],
+      ["CESS_ITC", row.cessAmount],
+    ] as const,
+    postingLines =
+      row.type === "OTHER_INCOME"
+        ? [
+            {
+              ledgerAccountId: destination,
+              debit: row.totalAmount,
+              credit: Z,
+            },
+            {
+              ledgerAccountId: categoryLedgerId,
+              debit: Z,
+              credit: row.totalAmount,
+            },
+          ]
+        : [
+            {
+              ledgerAccountId: categoryLedgerId,
+              debit: row.taxableAmount
+                .add(eligible ? Z : row.taxAmount)
+                .add(row.roundOffAmount),
+              credit: Z,
+            },
+            ...components
+              .filter(([, amount]) => eligible && amount.gt(0))
+              .map(([key, amount]) => ({
+                ledgerAccountId: byKey.get(key) ?? "",
+                debit: amount,
+                credit: Z,
+              })),
+            {
+              ledgerAccountId: destination,
+              debit: Z,
+              credit: row.totalAmount,
+            },
+          ],
+    journal = await postJournalInTx(tx, a, {
+      financialYearId: fy.id,
+      branchId: row.branchId,
+      entryDate: row.paidDate ?? row.transactionDate,
+      reference: row.reference,
+      narration: row.notes,
+      sourceType: row.type,
+      sourceId: row.id,
+      postingPurpose: "PRIMARY",
+      lines: postingLines.map((l) => ({
+        ledgerAccountId: l.ledgerAccountId,
+        debit: l.debit.toFixed(2),
+        credit: l.credit.toFixed(2),
+      })),
+    }),
+    changed = await tx.expenseTransaction.updateMany({
+      where: {
+        id: row.id,
+        companyId: a.companyId,
+        status: "APPROVED",
+        journalEntryId: null,
+      },
+      data: { status: "POSTED", journalEntryId: journal.id },
+    });
+  if (changed.count !== 1) throw new Error("STALE_EXPENSE");
+  await audit(
+    tx,
+    a,
+    row.type === "OTHER_INCOME" ? "OTHER_INCOME_POSTED" : "EXPENSE_POSTED",
+    "EXPENSE",
+    row.id,
+    { journalEntryId: journal.id },
+  );
+  return journal;
+}
 export async function postExpenseForActor(a: Actor, id: string) {
   await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
   if (!["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(a.accountRole ?? ""))
     throw new AuthorizationError();
   await scopedExpense(a, id);
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "expense_transactions" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
-      const row = await tx.expenseTransaction.findFirst({
-        where: { id, companyId: a.companyId },
-      });
-      if (!row) throw new AuthorizationError();
-      if (row.status === "POSTED" && row.journalEntryId)
-        return tx.journalEntry.findFirstOrThrow({
-          where: { id: row.journalEntryId, companyId: a.companyId },
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        await tx.$queryRaw`SELECT "id" FROM "expense_transactions" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
+        const row = await tx.expenseTransaction.findFirst({
+          where: { id, companyId: a.companyId },
         });
-      if (row.status !== "APPROVED") throw new Error("EXPENSE_NOT_APPROVED");
-      await lockCategory(tx, a.companyId);
-      const [category, money, fy, system] = await Promise.all([
-        tx.expenseCategory.findFirst({
-          where: { id: row.categoryId, companyId: a.companyId, isActive: true },
-        }),
-        row.moneyAccountId
-          ? tx.moneyAccount.findFirst({
-              where: {
-                id: row.moneyAccountId,
-                companyId: a.companyId,
-                isActive: true,
-                OR: [{ branchId: null }, { branchId: row.branchId }],
-              },
-            })
-          : null,
-        tx.financialYear.findFirst({
-          where: {
-            companyId: a.companyId,
-            isActive: true,
-            startDate: { lte: row.transactionDate },
-            endDate: { gte: row.transactionDate },
-          },
-        }),
-        tx.ledgerAccount.findMany({
-          where: {
-            companyId: a.companyId,
-            systemKey: {
-              in: [
-                "INPUT_TAX_CREDIT",
-                "ACCOUNTS_PAYABLE",
-                "CGST_ITC",
-                "SGST_ITC",
-                "IGST_ITC",
-                "CESS_ITC",
-              ],
-            },
-            isActive: true,
-            allowPosting: true,
-          },
-        }),
-      ]);
-      if (!category || !fy) throw new Error("EXPENSE_POSTING_CONTEXT_INVALID");
-      const categoryLedgerId = categoryPostingLedger(
-        category,
-        row.type === "OTHER_INCOME",
-      );
-      if (
-        row.categoryLedgerAccountId &&
-        row.categoryLedgerAccountId !== categoryLedgerId
-      )
-        throw new Error("CATEGORY_MAPPING_CHANGED_RESUBMIT");
-      if (
-        !(await tx.ledgerAccount.findFirst({
-          where: {
-            id: categoryLedgerId,
-            companyId: a.companyId,
-            isActive: true,
-            allowPosting: true,
-            accountClass: row.type === "OTHER_INCOME" ? "INCOME" : "EXPENSE",
-          },
-        }))
-      )
-        throw new Error("EXPENSE_CATEGORY_CLASS_MISMATCH");
-      if (row.moneyAccountId && !money)
-        throw new Error("INVALID_MONEY_ACCOUNT");
-      if (row.type !== "REIMBURSEMENT" && !money)
-        throw new Error("MONEY_ACCOUNT_REQUIRED");
-      if (
-        row.type === "OTHER_INCOME" &&
-        (row.taxRate.gt(0) || row.cessRate.gt(0))
-      )
-        throw new Error("OTHER_INCOME_TAX_REQUIRES_A12");
-      const byKey = new Map(system.map((x) => [x.systemKey, x.id])),
-        destination = money?.ledgerAccountId ?? byKey.get("ACCOUNTS_PAYABLE");
-      if (!destination) throw new Error("EXPENSE_DESTINATION_MISSING");
-      const eligible = row.taxCreditTreatment === "ELIGIBLE",
-        components = [
-          ["CGST_ITC", row.cgstAmount],
-          ["SGST_ITC", row.sgstAmount],
-          ["IGST_ITC", row.igstAmount],
-          ["CESS_ITC", row.cessAmount],
-        ] as const,
-        postingLines =
-          row.type === "OTHER_INCOME"
-            ? [
-                {
-                  ledgerAccountId: destination,
-                  debit: row.totalAmount,
-                  credit: Z,
-                },
-                {
-                  ledgerAccountId: categoryLedgerId,
-                  debit: Z,
-                  credit: row.totalAmount,
-                },
-              ]
-            : [
-                {
-                  ledgerAccountId: categoryLedgerId,
-                  debit: row.taxableAmount
-                    .add(eligible ? Z : row.taxAmount)
-                    .add(row.roundOffAmount),
-                  credit: Z,
-                },
-                ...components
-                  .filter(([, amount]) => eligible && amount.gt(0))
-                  .map(([key, amount]) => ({
-                    ledgerAccountId: byKey.get(key) ?? "",
-                    debit: amount,
-                    credit: Z,
-                  })),
-                {
-                  ledgerAccountId: destination,
-                  debit: Z,
-                  credit: row.totalAmount,
-                },
-              ],
-        journal = await postJournalInTx(tx, a, {
-          financialYearId: fy.id,
-          branchId: row.branchId,
-          entryDate: row.transactionDate,
-          reference: row.reference,
-          narration: row.notes,
-          sourceType: row.type,
-          sourceId: row.id,
-          postingPurpose: "PRIMARY",
-          lines: postingLines.map((l) => ({
-            ledgerAccountId: l.ledgerAccountId,
-            debit: l.debit.toFixed(2),
-            credit: l.credit.toFixed(2),
-          })),
-        }),
-        changed = await tx.expenseTransaction.updateMany({
-          where: {
-            id: row.id,
-            companyId: a.companyId,
-            status: "APPROVED",
-            journalEntryId: null,
-          },
-          data: { status: "POSTED", journalEntryId: journal.id },
-        });
-      if (changed.count !== 1) throw new Error("STALE_EXPENSE");
-      await audit(
-        tx,
-        a,
-        row.type === "OTHER_INCOME" ? "OTHER_INCOME_POSTED" : "EXPENSE_POSTED",
-        "EXPENSE",
-        row.id,
-        { journalEntryId: journal.id },
-      );
-      return journal;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        if (!row) throw new AuthorizationError();
+        if (row.status === "POSTED" && row.journalEntryId)
+          return tx.journalEntry.findFirstOrThrow({
+            where: { id: row.journalEntryId, companyId: a.companyId },
+          });
+        if (row.status !== "APPROVED") throw new Error("EXPENSE_NOT_APPROVED");
+        return postExpenseInTx(tx, a, row);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
   );
 }
 export async function reverseExpenseForActor(
@@ -910,6 +989,7 @@ export async function reverseExpenseForActor(
   if (!row?.journalEntryId) throw new Error("EXPENSE_NOT_REVERSIBLE");
   return db.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
       await tx.$queryRaw`SELECT "id" FROM "expense_transactions" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
       const current = await tx.expenseTransaction.findFirst({
         where: {
@@ -932,7 +1012,18 @@ export async function reverseExpenseForActor(
           status: "POSTED",
           reversalJournalId: null,
         },
-        data: { status: "REVERSED", reversalJournalId: reversal.id },
+        data: {
+          status: "REVERSED",
+          reversalJournalId: reversal.id,
+          ...(current.approvalReviewStatus === "PENDING"
+            ? {
+                approvalReviewStatus: "CANCELLED" as const,
+                approvalReviewAt: new Date(),
+                approvalReviewById: a.id,
+                approvalReviewReason: reason,
+              }
+            : {}),
+        },
       });
       if (changed.count !== 1) throw new Error("EXPENSE_ALREADY_REVERSED");
       await audit(tx, a, "EXPENSE_REVERSED", "EXPENSE", id, {

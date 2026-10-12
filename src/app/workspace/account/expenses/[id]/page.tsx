@@ -1,4 +1,4 @@
-import {Money} from "@/components/account/account-ui";
+import { Money } from "@/components/account/account-ui";
 import Link from "next/link";
 import {
   expenseAttachmentAction,
@@ -41,6 +41,13 @@ export default async function Page({
             Type: x.type,
             Status: x.status,
             Date: x.transactionDate.toISOString().slice(0, 10),
+            ...(x.paidDate
+              ? {
+                  "Payment date": x.paidDate.toISOString().slice(0, 10),
+                  "Approval review": x.approvalReviewStatus ?? "Not required",
+                  "Review reason": x.approvalReviewReason ?? "None",
+                }
+              : {}),
             Branch: x.branch?.name ?? "Historical branch",
             Category: x.category?.name ?? "Historical category",
             Project: x.project?.name ?? "No project",
@@ -80,7 +87,7 @@ export default async function Page({
             <h2>Billed items</h2>
             {lines.map((l, i) => (
               <p key={i}>
-                {l.name} · {l.quantity} × <Money value={l.rate}/>
+                {l.name} · {l.quantity} × <Money value={l.rate} />
               </p>
             ))}
           </section>
@@ -93,7 +100,8 @@ export default async function Page({
           )}
           {c.submit && control("PENDING_APPROVAL", "Submit")}
           {c.cancel && control("CANCELLED", "Cancel expense")}
-          {c.approve && control("APPROVED", "Approve")}
+          {c.approve &&
+            control("APPROVED", x.paidDate ? "Approve review" : "Approve")}
           {c.post && control("POSTED", "Post")}
           {c.reject && (
             <ActionFeedbackForm action={expenseLifecycleAction}>

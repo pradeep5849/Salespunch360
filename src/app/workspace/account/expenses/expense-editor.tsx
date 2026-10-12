@@ -209,6 +209,11 @@ export function ExpenseEditor({
       >
         {x && <input type="hidden" name="id" value={x.id} />}
         <input type="hidden" name="requestKey" value={stableKey} />
+        <input
+          type="hidden"
+          name="recordAsPaid"
+          value={String(!x && type !== "REIMBURSEMENT")}
+        />
         <label>
           Transaction type
           <select
@@ -526,7 +531,13 @@ export function ExpenseEditor({
             onChange={() => setDirty(true)}
           />
         </label>
-        <SaveSubmitButton>Save draft</SaveSubmitButton>
+        <SaveSubmitButton>
+          {x || type === "REIMBURSEMENT"
+            ? "Save draft"
+            : income
+              ? "Save receipt"
+              : "Save expense"}
+        </SaveSubmitButton>
         {!x && (
           <SaveSubmitButton name="saveMode" value="new">
             Save &amp; New
