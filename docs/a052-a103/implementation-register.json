@@ -1954,13 +1954,29 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F10",
         "A052-F12"
-      ]
+      ],
+      "checkpoint_work": {
+        "expense_item_entry_slice": {
+          "work": "Android expense entry now uses a full-page, inset-aware scrolling form with fixed Cancel/Save & New/Save draft controls and retained unsaved-change confirmation. Linked item-entry name screen is full-page on Android and mobile web; existing desktop billed-line and category workflows remain available.",
+          "remaining": "Full supplied list/category/Items layout and connected reference parity remain pending; photo/reuse semantics affect the Items flow. Native device/keyboard/TalkBack and final checkpoint-head verification remain pending."
+        }
+      },
+      "intermediate_validation": {
+        "expense_item_entry_slice": {
+          "focused_unit": "24 passed (expense totals/input), including blank/whitespace/overlong billed-line name denial",
+          "browser": "2 passed desktop/mobile expense-entry scenarios, including name entry, Cancel/Escape/focus, retained amounts, Save & New, edit, category creation and accessibility",
+          "android": "compileDebugKotlin and testDebugUnitTest passed; 142 JVM tests, 0 failures/errors/skips; native full-page layout has no device verification",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "final_checkpoint_head": "NOT RUN"
+        }
+      }
     },
     {
       "finding_id": "A052-F12",
@@ -2055,12 +2071,28 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F11"
-      ]
+      ],
+      "checkpoint_work": {
+        "expense_item_entry_slice": {
+          "work": "Added a dedicated local Add Expense Item name-entry state on web and Android. Required trimmed name, 240-character bound, Save/Cancel, keyboard Escape/back and focus restoration preserve existing billed-line quantities, rates, totals and the enclosing expense draft. No inventory or financial write occurs from local item entry.",
+          "remaining": "Photo capture/storage and any reusable item catalogue depend on the pending user persistence-semantics answer; image/security/API and final checkpoint-head/device verification remain pending."
+        }
+      },
+      "intermediate_validation": {
+        "expense_item_entry_slice": {
+          "focused_unit": "24 passed (expense totals/input), including blank/whitespace/overlong billed-line name denial",
+          "browser": "2 passed desktop/mobile expense-entry scenarios, including name entry, Cancel/Escape/focus, retained amounts, Save & New, edit, category creation and accessibility",
+          "android": "compileDebugKotlin and testDebugUnitTest passed; 142 JVM tests, 0 failures/errors/skips; native full-page layout has no device verification",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "final_checkpoint_head": "NOT RUN"
+        }
+      }
     },
     {
       "finding_id": "A052-F13",

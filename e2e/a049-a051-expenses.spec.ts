@@ -194,11 +194,64 @@ test("expense inline category, Save & New, draft edit, rejection reason and deta
   await page
     .getByRole("button", { name: "Add billed item", exact: true })
     .click();
+  const itemDialog = page.getByRole("dialog", { name: "Add Expense Item" });
+  await expect(itemDialog).toBeVisible();
+  await expect(
+    itemDialog.getByLabel("Item name *", { exact: true }),
+  ).toBeFocused();
+  await expect(
+    itemDialog.getByRole("button", { name: "Save item", exact: true }),
+  ).toBeDisabled();
+  await itemDialog.getByLabel("Item name *", { exact: true }).fill("   ");
+  await expect(
+    itemDialog.getByRole("button", { name: "Save item", exact: true }),
+  ).toBeDisabled();
+  await itemDialog
+    .getByLabel("Item name *", { exact: true })
+    .fill("Cancelled local item");
+  await itemDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(itemDialog).toHaveCount(0);
+  await expect(page.getByLabel("name item 1", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Add billed item", exact: true }),
+  ).toBeFocused();
   await page
-    .getByLabel("name item 1", { exact: true })
-    .fill("Reference billed item");
+    .getByRole("button", { name: "Add billed item", exact: true })
+    .click();
+  await itemDialog
+    .getByLabel("Item name *", { exact: true })
+    .fill(" Reference billed item ");
+  const itemAccessibility = await new AxeBuilder({ page })
+    .include("dialog")
+    .analyze();
+  expect(
+    itemAccessibility.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await itemDialog
+    .getByRole("button", { name: "Save item", exact: true })
+    .click();
+  await expect(page.getByLabel("name item 1", { exact: true })).toHaveValue(
+    "Reference billed item",
+  );
   await page.getByLabel("quantity item 1", { exact: true }).fill("2");
   await page.getByLabel("rate item 1", { exact: true }).fill("50.25");
+  await page
+    .getByRole("button", { name: "Add billed item", exact: true })
+    .click();
+  await itemDialog
+    .getByLabel("Item name *", { exact: true })
+    .fill("Discarded second item");
+  await itemDialog.getByLabel("Item name *", { exact: true }).press("Escape");
+  await expect(itemDialog).toHaveCount(0);
+  await expect(page.getByLabel("name item 2", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("quantity item 1", { exact: true })).toHaveValue(
+    "2",
+  );
+  await expect(page.getByLabel("rate item 1", { exact: true })).toHaveValue(
+    "50.25",
+  );
   await page
     .getByLabel("Notes", { exact: true })
     .fill("Preserved inline notes");

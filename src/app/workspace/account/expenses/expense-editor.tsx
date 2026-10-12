@@ -1,6 +1,7 @@
 "use client";
-import {useDisplayPreferences} from "@/components/account/display-preferences";
-import {formatMoney} from "@/lib/account/display-preferences";
+import { useDisplayPreferences } from "@/components/account/display-preferences";
+import { formatMoney } from "@/lib/account/display-preferences";
+import { AddExpenseItem } from "@/components/account/add-expense-item";
 import { useEffect, useState } from "react";
 import { Prisma } from "@prisma/client";
 import {
@@ -71,7 +72,7 @@ export function ExpenseEditor({
   action: (f: FormData) => Promise<AccountActionResult>;
   requestKey: string;
 }) {
-  const displayPreferences=useDisplayPreferences();
+  const displayPreferences = useDisplayPreferences();
   const [stableKey] = useState(requestKey),
     [branch, setBranch] = useState(x?.branchId ?? o.branches[0]?.id ?? ""),
     [type, setType] = useState(
@@ -94,6 +95,7 @@ export function ExpenseEditor({
     [credit, setCredit] = useState(x?.taxCreditTreatment ?? "ELIGIBLE"),
     [supply, setSupply] = useState(x?.stateOfSupplyCode ?? ""),
     [inlineCategory, setInlineCategory] = useState(false),
+    [addingItem, setAddingItem] = useState(false),
     [dirty, setDirty] = useState(false);
   useEffect(() => {
     if (!dirty) return;
@@ -330,13 +332,24 @@ export function ExpenseEditor({
           <button
             type="button"
             disabled={lines.length >= 200}
-            onClick={() => {
-              setLines([...lines, { name: "", quantity: "1", rate: "0" }]);
-              setDirty(true);
-            }}
+            onClick={() => setAddingItem(true)}
           >
             Add billed item
           </button>
+          {addingItem && (
+            <AddExpenseItem
+              onClose={() => setAddingItem(false)}
+              onSave={(name) => {
+                setLines((current) =>
+                  current.length < 200
+                    ? [...current, { name, quantity: "1", rate: "0" }]
+                    : current,
+                );
+                setDirty(true);
+                setAddingItem(false);
+              }}
+            />
+          )}
           <input
             type="hidden"
             name="billedItems"
@@ -491,7 +504,7 @@ export function ExpenseEditor({
         </details>
         <p role="status" aria-live="polite">
           {preview
-            ? `Taxable ${formatMoney(preview.taxable,displayPreferences)} · GST/CESS ${formatMoney(preview.totalTax,displayPreferences)} · Round off ${formatMoney(preview.roundOffAmount,displayPreferences)} · Total ${formatMoney(preview.grandTotal,displayPreferences)}`
+            ? `Taxable ${formatMoney(preview.taxable, displayPreferences)} · GST/CESS ${formatMoney(preview.totalTax, displayPreferences)} · Round off ${formatMoney(preview.roundOffAmount, displayPreferences)} · Total ${formatMoney(preview.grandTotal, displayPreferences)}`
             : "Complete positive amounts and billed items to preview the total."}
         </p>
         <label>

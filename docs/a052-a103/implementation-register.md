@@ -565,13 +565,19 @@ Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases;
 
 **Required tests:** Reference screenshots at supported mobile sizes; category and Items transitions; back/search/Add Expenses; totals/categories real data; keyboard/TalkBack; desktop feature parity; orange control reaches permitted expense/category entry; denied category mutation remains blocked; full-page native entry and keyboard selector behavior.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F10, A052-F12.
+
+Checkpoint expense-item entry progress: Android expense entry now uses a full-page, inset-aware scrolling form with fixed Cancel/Save & New/Save draft controls and retained unsaved-change confirmation. Linked item-entry name screen is full-page on Android and mobile web; existing desktop billed-line and category workflows remain available.
+
+Intermediate validation: 24 focused expense totals/input tests and 2 desktop/mobile entry browser scenarios passed, including accessibility/focus and retained amounts; Android full-page code compiled and 142 JVM tests passed; TypeScript/focused lint passed. Native layout remains unverified on a device.
+
+Remaining: Full supplied list/category/Items layout and connected reference parity remain pending; photo/reuse semantics affect the Items flow. Native device/keyboard/TalkBack and final checkpoint-head verification remain pending.
 
 ## A052-F12 — Reference Add Expense Item screen and item image action are missing
 
@@ -607,13 +613,19 @@ Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases;
 
 **Required tests:** Required name bounds/blank denial; Save and Cancel return to entry; preserve existing billed lines and totals; permission/company scope for any persisted item/image; upload size/type/security tests when image behavior is defined; mobile web/native/desktop parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F11.
+
+Checkpoint expense-item entry progress: Added a dedicated local Add Expense Item name-entry state on web and Android. Required trimmed name, 240-character bound, Save/Cancel, keyboard Escape/back and focus restoration preserve existing billed-line quantities, rates, totals and the enclosing expense draft. No inventory or financial write occurs from local item entry.
+
+Intermediate validation: 24 focused expense totals/input tests and 2 desktop/mobile entry browser scenarios passed, including accessibility/focus and retained amounts; Android full-page code compiled and 142 JVM tests passed; TypeScript/focused lint passed. Native layout remains unverified on a device.
+
+Remaining: Photo capture/storage and any reusable item catalogue depend on the pending user persistence-semantics answer; image/security/API and final checkpoint-head/device verification remain pending.
 
 ## A052-F13 — Regular paid-expense entry does not complete payment/accounting on save
 
