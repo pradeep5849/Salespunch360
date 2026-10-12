@@ -19,9 +19,12 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.serialization.json.*
 
-@Composable fun AssetScreen(padding:PaddingValues,vm:AccountAssetViewModel=viewModel()){
+@Composable fun AssetScreen(padding:PaddingValues,vm:AccountAssetViewModel=viewModel(),onNavigate:(String)->Unit={}){
  val s=vm.state.collectAsStateWithLifecycle().value
  Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)){
+  if(s.options.isNotEmpty()&&s.capitalLoading)Text("Loading owner capital…")
+  if(s.options.isNotEmpty())s.capitalError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+  if(s.options.isNotEmpty())s.capitalSummary?.let{summary->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text("Owner capital",fontWeight=FontWeight.Bold);Text(accountMoney(summary.str("capital")));Text("Shown separately from asset values.");TextButton(onClick={onNavigate("/workspace/account/money/capital")}){Text("View Capital & Drawings")}}}}
   Row{OutlinedTextField(s.query,vm::search,label={Text("Search assets")},modifier=Modifier.weight(1f));IconButton(vm::refresh){Icon(Icons.Default.Refresh,"Refresh")};FilledIconButton(vm::create,enabled=!s.saving){Icon(Icons.Default.Add,"New asset")}}
   LazyRow{items(listOf<String?>(null,"ACTIVE","ASSIGNED","UNDER_MAINTENANCE","DISPOSED","RETIRED")){v->FilterChip(s.status==v,{vm.filter(v)},{Text(v?.replace('_',' ')?:"All")})}}
   if(s.loading||s.saving)LinearProgressIndicator(Modifier.fillMaxWidth())

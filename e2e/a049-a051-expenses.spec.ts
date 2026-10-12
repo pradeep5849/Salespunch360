@@ -1986,6 +1986,41 @@ test("A065 independent owner identity and capital/profit entries work without us
   );
   expect(exported.status()).toBe(200);
   expect(await exported.text()).toContain("Combined total");
+  const previousModules = await db.accountSettings.findUniqueOrThrow({
+    where: { companyId },
+    select: { enabledModules: true },
+  });
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      enabledModules: [
+        ...new Set([...previousModules.enabledModules, "ASSETS"]),
+      ],
+    },
+  });
+  await page.goto("/workspace/account/assets");
+  const capitalSummary = page.getByRole("complementary", {
+    name: "Owner capital",
+  });
+  await expect(capitalSummary).toContainText("90");
+  await expect(capitalSummary).toContainText(
+    "Shown separately from asset values",
+  );
+  await capitalSummary
+    .getByRole("link", { name: "View Capital & Drawings" })
+    .click();
+  await expect(page).toHaveURL(/\/money\/capital$/);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { enabledModules: previousModules.enabledModules },
+  });
+  await page.goto("/workspace/account/assets");
+  await expect(
+    page.getByRole("complementary", { name: "Owner capital" }),
+  ).toHaveCount(0);
+  await page.goto(
+    `/workspace/account/reports/owner-capital?ownerId=${owner.id}&from=2026-10-01&to=2026-10-12`,
+  );
   const login = await request.post("/api/v1/mobile/auth/login", {
     data: {
       identifier: email,
@@ -2021,6 +2056,12 @@ test("A065 independent owner identity and capital/profit entries work without us
   const payload = await context.json();
   expect(JSON.stringify(payload)).not.toContain("passwordHash");
   expect(JSON.stringify(payload)).not.toContain("creationInputHash");
+  const mobileCapital = await request.get(
+    "/api/v1/mobile/account/money/owner-summary",
+    { headers },
+  );
+  expect(mobileCapital.status()).toBe(200);
+  expect((await mobileCapital.json()).capital).toBe("90.00");
   const mobileReport = await request.get(
     `/api/v1/mobile/account/reports/owner-capital?ownerId=${owner.id}&from=2026-10-01&to=2026-10-12`,
     { headers },

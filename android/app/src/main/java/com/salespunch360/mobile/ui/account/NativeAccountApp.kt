@@ -169,7 +169,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/accounting/new")->JournalScreen(padding=padding)
             state.selectedPath.startsWith("/workspace/account/accounting/journals")->JournalScreen(padding=padding)
             state.selectedPath.startsWith("/workspace/account/accounting/opening")->JournalScreen(padding=padding,opening=true)
-            state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding,onNavigate=vm::select)
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())

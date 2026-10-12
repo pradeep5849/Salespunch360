@@ -11207,14 +11207,25 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F04",
         "A065-F06",
         "A065-F07"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "IMPLEMENTED BUT NOT VERIFIED",
+        "summary": "Assets includes linked Owner Capital balance separate from asset valuation. Web Suspense and native independent loading/error states, Money View permission gates, company/assigned-branch effective-journal balances, native navigation to Capital & Drawings. Assets module gating preserved."
+      },
+      "intermediate_validation": {
+        "focused_tests": "22 passed, 0 failed, 0 skipped across summary and asset access/navigation regression tests",
+        "browser": "2 passed desktop/mobile Chromium including linked summary, destination, Assets OFF absence and native summary API",
+        "android": "compileDebugKotlin and 142 JVM tests passed (0 failures/errors/skips)",
+        "typescript_lint": "TypeScript/focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F06",

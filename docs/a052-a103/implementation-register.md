@@ -4236,13 +4236,17 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Assets with one/many/no owners; matching capital total; link/back; disabled Assets module; denied money-view permission; no double-counted asset valuation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F04, A065-F06, A065-F07.
+
+**Checkpoint work:** Assets includes linked Owner Capital balance separate from asset valuation. Web Suspense and native independent loading/error states, Money View permission gates, company/assigned-branch effective-journal balances, native navigation to Capital & Drawings. Assets module gating preserved.
+
+**Intermediate validation:** 22 focused tests, 2 desktop/mobile browser tests, Android compile/142 JVM tests, TypeScript and focused lint passed. Physical-device and final-head checkpoint validation remain.
 
 ## A065-F06 — Android repeated owner postings use new keys and can duplicate capital/drawings
 
