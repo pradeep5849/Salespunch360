@@ -20315,7 +20315,18 @@
       "shared_fix_links": [
         "A086-F02",
         "A086-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "summary": "Explicit retained-line source identity validated against the original invoice; foreign/duplicate/type/source mismatches rejected. Omitted retained line metadata recovered only from verified source. Web retains item codes; Android preserves cess, code/specification, withholding rates and freight/other charges/round-off snapshots through edit payloads and preview. Paid editing and attachments/shipping remain pending.",
+        "verification": "Intermediate: 17 PostgreSQL financial/correction tests, 4 desktop/mobile browser tests, 11 Android snapshot/preview/cheque-action tests passed; Android compilation, TypeScript and focused lint passed. Final-head validation pending.",
+        "files": [
+          "src/lib/account/sale-amendments.ts",
+          "src/app/workspace/account/sales/[id]/edit/page.tsx",
+          "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+          "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt"
+        ]
+      }
     },
     {
       "finding_id": "A086-F02",
@@ -20505,7 +20516,18 @@
         "A086-F04",
         "A086-F05",
         "A087-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "summary": "Explicit retained-line source identity validated against the original invoice; foreign/duplicate/type/source mismatches rejected. Omitted retained line metadata recovered only from verified source. Web retains item codes; Android preserves cess, code/specification, withholding rates and freight/other charges/round-off snapshots through edit payloads and preview. Paid editing and attachments/shipping remain pending.",
+        "verification": "Intermediate: 17 PostgreSQL financial/correction tests, 4 desktop/mobile browser tests, 11 Android snapshot/preview/cheque-action tests passed; Android compilation, TypeScript and focused lint passed. Final-head validation pending.",
+        "files": [
+          "src/lib/account/sale-amendments.ts",
+          "src/app/workspace/account/sales/[id]/edit/page.tsx",
+          "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+          "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt"
+        ]
+      }
     },
     {
       "finding_id": "A086-F04",
@@ -20713,7 +20735,18 @@
       "shared_fix_links": [
         "A086-F05",
         "A086-F07"
-      ]
+      ],
+      "checkpoint_work": {
+        "summary": "Explicit retained-line source identity validated against the original invoice; foreign/duplicate/type/source mismatches rejected. Omitted retained line metadata recovered only from verified source. Web retains item codes; Android preserves cess, code/specification, withholding rates and freight/other charges/round-off snapshots through edit payloads and preview. Paid editing and attachments/shipping remain pending.",
+        "verification": "Intermediate: 17 PostgreSQL financial/correction tests, 4 desktop/mobile browser tests, 11 Android snapshot/preview/cheque-action tests passed; Android compilation, TypeScript and focused lint passed. Final-head validation pending.",
+        "files": [
+          "src/lib/account/sale-amendments.ts",
+          "src/app/workspace/account/sales/[id]/edit/page.tsx",
+          "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+          "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt"
+        ]
+      }
     },
     {
       "finding_id": "A086-F07",
@@ -22090,6 +22123,30 @@
           "mobile web"
         ],
         "log": "work/implementation-checkpoint/sale-amendment-browser-final.log"
+      }
+    },
+    "sale_retained_line_snapshots": {
+      "database_tests": {
+        "passed": 17,
+        "failed": 0,
+        "files": 2
+      },
+      "final_head_verification": false,
+      "remaining": "Paid-sale corrections; attachments/shipping; final-head full validation.",
+      "browser": {
+        "passed": 4,
+        "failed": 0,
+        "platforms": [
+          "desktop web",
+          "mobile web"
+        ],
+        "scope": "Saved-sale edits and ordinary/batch/serial stock correction"
+      },
+      "android": {
+        "compile": "PASS",
+        "tests": 11,
+        "failures": 0,
+        "skips": 0
       }
     }
   },

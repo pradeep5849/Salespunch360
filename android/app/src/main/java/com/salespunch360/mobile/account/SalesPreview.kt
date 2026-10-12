@@ -10,12 +10,13 @@ private fun taxable(line:SalesLineDraft,draft:SalesEditorDraft):BigDecimal {
     val discount=if(percent!=null)base.multiply(number(percent)).divide(BigDecimal(100),2,RoundingMode.HALF_UP) else if(line.discountType=="FIXED")number(line.discountValue) else BigDecimal.ZERO
     val entered=(base-discount).max(BigDecimal.ZERO)
     val tax=number(draft.transactionTaxRate.ifBlank{line.taxRate}).max(BigDecimal.ZERO).min(BigDecimal(100))
-    return if(draft.taxMode=="INCLUSIVE")entered.multiply(BigDecimal(100)).divide(BigDecimal(100)+tax,2,RoundingMode.HALF_UP) else entered
+    return if(draft.taxMode=="INCLUSIVE")entered.multiply(BigDecimal(100)).divide(BigDecimal(100)+tax+number(line.cessRate),2,RoundingMode.HALF_UP) else entered
 }
 fun salesPreviewTotal(draft:SalesEditorDraft,options:SalesOptions):BigDecimal {
     val total=draft.lines.fold(BigDecimal.ZERO){sum,line->
-        val net=taxable(line,draft);sum+net+(if(draft.reverseCharge&&options.transactionPreference("reverseCharge",true))BigDecimal.ZERO else net.multiply(number(draft.transactionTaxRate.ifBlank{line.taxRate}).max(BigDecimal.ZERO).min(BigDecimal(100))).divide(BigDecimal(100),2,RoundingMode.HALF_UP))
-    }.setScale(2,RoundingMode.HALF_UP)
+        val net=taxable(line,draft);sum+net+(if(draft.reverseCharge&&options.transactionPreference("reverseCharge",true))BigDecimal.ZERO else net.multiply(number(draft.transactionTaxRate.ifBlank{line.taxRate}).max(BigDecimal.ZERO).min(BigDecimal(100))).divide(BigDecimal(100),2,RoundingMode.HALF_UP)+net.multiply(number(line.cessRate)).divide(BigDecimal(100),2,RoundingMode.HALF_UP))
+    }.setScale(2,RoundingMode.HALF_UP)+number(draft.freightAmount)+number(draft.otherChargesAmount)+draft.lines.fold(BigDecimal.ZERO){sum,line->sum+taxable(line,draft)}.multiply(number(draft.tcsRate)).divide(BigDecimal(100),2,RoundingMode.HALF_UP)
+    if(draft.roundOffAmount.isNotBlank())return (total+number(draft.roundOffAmount)).setScale(2,RoundingMode.HALF_UP)
     val step=number(options.transactionDefaults["transactionPreferences"]?.let{(it as? kotlinx.serialization.json.JsonObject)?.str("roundingStep")}.orEmpty().ifBlank{"1"})
     return if(options.transactionPreference("roundOff")&&step>BigDecimal.ZERO&&step<=BigDecimal(100))total.divide(step,0,RoundingMode.HALF_UP)*step else total
 }

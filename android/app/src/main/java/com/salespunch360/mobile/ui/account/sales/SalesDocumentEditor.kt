@@ -694,11 +694,11 @@ private fun SalesLineEditor(
                     ))
                 }
             }
-            SelectField("Type", line.lineType, listOf("PRODUCT" to "Product", "SERVICE" to "Service", "WORK_PACKAGE" to "Work package", "CUSTOM" to "Custom")) { onLine(index, line.copy(lineType = it, sourceId = "",batchId="",serialNumberId="",servicePeriodDays="")) }
+            SelectField("Type", line.lineType, listOf("PRODUCT" to "Product", "SERVICE" to "Service", "WORK_PACKAGE" to "Work package", "CUSTOM" to "Custom")) { onLine(index, line.copy(lineType = it, sourceId = "",batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
             if (line.lineType == "CUSTOM") {
                 OutlinedTextField(line.itemName, { onLine(index, line.copy(itemName = it)) }, label = { Text("Item name") })
             } else {
-                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; onLine(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="")) }
+                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; onLine(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedTextField(line.quantity, { onLine(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))

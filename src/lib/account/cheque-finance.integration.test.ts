@@ -675,7 +675,9 @@ describe.skipIf(!url)(
         where: { id: sale.id },
       });
       const credit = await reversePostedSaleForActor(actor, sale.id);
-      expect((await reversePostedSaleForActor(actor, sale.id)).id).toBe(credit.id);
+      expect((await reversePostedSaleForActor(actor, sale.id)).id).toBe(
+        credit.id,
+      );
       const corrected = await client.commercialDocument.findUniqueOrThrow({
         where: { id: credit.id },
       });
@@ -735,6 +737,84 @@ describe.skipIf(!url)(
         ),
       ).rejects.toThrow();
       expect(await outstanding(results[0].id)).toBe("140.00");
+    });
+    it("retains only verified source-line snapshots and rejects foreign or duplicate lines", async () => {
+      const draft = await createCommercialDocumentForActor(actor, {
+        type: "SALES_INVOICE",
+        branchId,
+        partyId: customerId,
+        issueDate: "2026-10-10",
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Original service",
+            itemCode: "SAVED-1",
+            description: "Original description",
+            specification: "Original specification",
+            unitName: "Saved unit",
+            unitSymbol: "Su",
+            quantity: "1",
+            rate: "100",
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: draft.id });
+      const source = await client.commercialDocumentLine.findFirstOrThrow({
+        where: { documentId: draft.id },
+      });
+      const line = {
+        originalLineId: source.id,
+        lineType: "CUSTOM",
+        quantity: "2",
+        rate: "100",
+      };
+      const input = {
+        branchId,
+        partyId: customerId,
+        issueDate: "2026-10-10",
+        lines: [line],
+      };
+      await expect(
+        replacePostedSaleForActor(actor, draft.id, {
+          ...input,
+          idempotencyKey: randomUUID(),
+          lines: [{ ...line, originalLineId: randomUUID() }],
+        }),
+      ).rejects.toThrow("INVALID_SALE_LINE_SOURCE");
+      await expect(
+        replacePostedSaleForActor(actor, draft.id, {
+          ...input,
+          idempotencyKey: randomUUID(),
+          lines: [line, line],
+        }),
+      ).rejects.toThrow("INVALID_SALE_LINE_SOURCE");
+      expect(
+        await client.commercialDocument.count({
+          where: { sourceDocumentId: draft.id, type: "CREDIT_NOTE" },
+        }),
+      ).toBe(0);
+      const replacement = await replacePostedSaleForActor(actor, draft.id, {
+        ...input,
+        idempotencyKey: randomUUID(),
+      });
+      const saved = await client.commercialDocumentLine.findFirstOrThrow({
+        where: { documentId: replacement.id },
+      });
+      expect(saved).toMatchObject({
+        itemName: "Original service",
+        itemCode: "SAVED-1",
+        description: "Original description",
+        specification: "Original specification",
+        unitName: "Saved unit",
+        unitSymbol: "Su",
+      });
+      expect(saved.quantity.toString()).toBe("2");
+      expect(
+        await client.commercialDocumentLine.findUniqueOrThrow({
+          where: { id: source.id },
+        }),
+      ).toEqual(source);
     });
   },
 );

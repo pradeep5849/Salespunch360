@@ -8016,6 +8016,8 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Linked finding IDs:** A086-F02, A086-F03.
 
+Checkpoint work: verified original-line IDs preserve retained item metadata; foreign/duplicate IDs rejected. Android retains cess, code/specification, withholding and charge/rounding snapshots. Focused financial database regression: 17 passed. Paid editing and attachment/shipping workflows remain open; status stays PARTIAL.
+
 ## A086-F02 — Failed sale replacement can leave two posted invoices
 
 **Title:** Failed sale replacement can leave two posted invoices
@@ -8101,6 +8103,8 @@ Checkpoint evidence: atomic source-bound amendment and reversal replay; full cre
 **Source reports:** SalesPunch360_Sale_Edit_Checkpoint_Findings.json, SalesPunch360_Sale_Edit_Checkpoint.md, SalesPunch360_A086-A089_Followup.md.
 
 **Linked finding IDs:** A086-F02, A086-F04, A086-F05, A087-F01.
+
+Checkpoint work: verified original-line IDs preserve retained item metadata; foreign/duplicate IDs rejected. Android retains cess, code/specification, withholding and charge/rounding snapshots. Focused financial database regression: 17 passed. Paid editing and attachment/shipping workflows remain open; status stays PARTIAL.
 
 ## A086-F04 — Full-sale reversal omits freight and other charges
 
@@ -8229,6 +8233,8 @@ Checkpoint evidence: atomic source-bound amendment and reversal replay; full cre
 **Source reports:** SalesPunch360_A086-A089_Followup.md.
 
 **Linked finding IDs:** A086-F05, A086-F07.
+
+Checkpoint work: verified original-line IDs preserve retained item metadata; foreign/duplicate IDs rejected. Android retains cess, code/specification, withholding and charge/rounding snapshots. Focused financial database regression: 17 passed. Paid editing and attachment/shipping workflows remain open; status stays PARTIAL.
 
 ## A086-F07 — Fixed footer covers Terms and Conditions
 

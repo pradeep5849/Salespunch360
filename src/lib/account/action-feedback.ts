@@ -8,19 +8,33 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
-  CHEQUE_NUMBER_REQUIRED: "Enter the cheque number before recording this payment.",
-  CHEQUE_AMOUNT_REQUIRED: "Enter a positive cheque amount. A payment discount alone does not require a cheque.",
-  SALE_LEDGER_SOURCE_REQUIRED: "This older Sale has no posted ledger source. Reconcile its original entries before correcting it.",
-  CHEQUE_BANK_REQUIRED: "Add or select an active bank account before recording the cheque.",
-  CHEQUE_NUMBER_EXISTS: "This cheque number is already recorded for the selected bank. Open the existing cheque.",
-  CHEQUE_CHANGED: "This cheque changed. Refresh before closing or reopening it.",
+  CHEQUE_NUMBER_REQUIRED:
+    "Enter the cheque number before recording this payment.",
+  CHEQUE_AMOUNT_REQUIRED:
+    "Enter a positive cheque amount. A payment discount alone does not require a cheque.",
+  INVALID_SALE_LINE_SOURCE:
+    "A retained item must belong to this invoice and keep its original item identity. Add a new line to change the item.",
+  SALE_LEDGER_SOURCE_REQUIRED:
+    "This older Sale has no posted ledger source. Reconcile its original entries before correcting it.",
+  CHEQUE_BANK_REQUIRED:
+    "Add or select an active bank account before recording the cheque.",
+  CHEQUE_NUMBER_EXISTS:
+    "This cheque number is already recorded for the selected bank. Open the existing cheque.",
+  CHEQUE_CHANGED:
+    "This cheque changed. Refresh before closing or reopening it.",
   CHEQUE_NOT_DUE: "The closure date cannot be before the cheque date.",
-  INVALID_CHEQUE_SOURCE: "The cheque source is inconsistent. Refresh or complete its source details.",
-  LEGACY_CHEQUE_SOURCE_REQUIRED: "This legacy cheque needs its original amount and receipt/payment source before a financial action.",
-  INVALID_CHEQUE_CORRECTION_DATE: "The correction date cannot be before the original payment date.",
-  CHEQUE_FINANCIAL_ACTION_REQUIRED: "Use Close, Re-Open or Bounce with a date and reason from the cheque page.",
-  MANAGED_SETTLEMENT_REVERSAL_REQUIRED: "Correct this payment from its source or cheque so allocations and accounting stay consistent.",
-  MANAGED_ADVANCE_REVERSAL_REQUIRED: "Correct this advance application through its payment lifecycle.",
+  INVALID_CHEQUE_SOURCE:
+    "The cheque source is inconsistent. Refresh or complete its source details.",
+  LEGACY_CHEQUE_SOURCE_REQUIRED:
+    "This legacy cheque needs its original amount and receipt/payment source before a financial action.",
+  INVALID_CHEQUE_CORRECTION_DATE:
+    "The correction date cannot be before the original payment date.",
+  CHEQUE_FINANCIAL_ACTION_REQUIRED:
+    "Use Close, Re-Open or Bounce with a date and reason from the cheque page.",
+  MANAGED_SETTLEMENT_REVERSAL_REQUIRED:
+    "Correct this payment from its source or cheque so allocations and accounting stay consistent.",
+  MANAGED_ADVANCE_REVERSAL_REQUIRED:
+    "Correct this advance application through its payment lifecycle.",
 
   RECURRING_DUE_DATE_IMMUTABLE:
     "A recurring bill keeps its original due date. Enter the actual payment date when marking it paid.",

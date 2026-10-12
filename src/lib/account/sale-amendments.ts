@@ -305,6 +305,46 @@ export function replacePostedSaleForActor(
         for (const [key, value] of Object.entries(headerDefaults))
           if (payload[key] === undefined) payload[key] = value;
 
+        // Retained lines name an immutable line from this invoice. Never recover
+        // a snapshot by position or by an ambiguous product/name match.
+        const retainedLineIds = new Set<string>();
+        if (Array.isArray(payload.lines))
+          payload.lines = payload.lines.map((input: unknown) => {
+            if (!input || typeof input !== "object" || Array.isArray(input))
+              throw new Error("INVALID_INPUT");
+            const line = { ...(input as Record<string, unknown>) };
+            if (line.originalLineId === undefined) return line;
+            const source = sale.lines.find(
+              (row) => row.id === line.originalLineId,
+            );
+            if (
+              !source ||
+              retainedLineIds.has(source.id) ||
+              line.lineType !== source.lineType ||
+              (line.sourceId ?? null) !==
+                (source.productId ?? source.serviceId ?? source.workPackageId)
+            )
+              throw new Error("INVALID_SALE_LINE_SOURCE");
+            retainedLineIds.add(source.id);
+            const defaults: Record<string, unknown> = {
+              itemName: source.itemName,
+              itemCode: source.itemCode ?? undefined,
+              description: source.description ?? undefined,
+              specification: source.specification ?? undefined,
+              unitName: source.unitName ?? undefined,
+              unitSymbol: source.unitSymbol ?? undefined,
+              taxRate: source.taxRate.toString(),
+              cessRate: source.cessRate.toString(),
+              discountType: source.discountType ?? undefined,
+              discountValue: source.discountValue?.toString(),
+              servicePeriodDays: source.servicePeriodDays ?? undefined,
+            };
+            for (const [key, value] of Object.entries(defaults))
+              if (line[key] === undefined) line[key] = value;
+            delete line.originalLineId;
+            return line;
+          });
+
         if (payload.customFields === undefined) {
           const values = await tx.customFieldValue.findMany({
             where: {
