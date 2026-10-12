@@ -726,11 +726,11 @@
       "page_id": "A052",
       "title": "Account Admin cannot open deployed Expenses; production cause unresolved",
       "severity": "Medium",
-      "classification": "Confirmed problem \u2014 user-observed runtime failure; root cause unconfirmed",
+      "classification": "Confirmed runtime defect \u2014 production schema/client mismatch",
       "platform": "Mobile Web",
-      "current_behavior": "User identifies Account Admin and supplies mobile browser screenshot: Something went wrong / SalesPunch360 could not complete this request. No changes should be assumed. The browser screenshot does not expose the route path, HTTP status, digest or original exception.",
+      "current_behavior": "Production expenseTransaction.findMany fails with P2022 because expense_transactions.creationRequestKey does not exist; supplied log timestamp 2026-10-12T03:35:52.327Z, correlationId 142fb75d-8610-4398-8000-f780aa770cce.",
       "expected_behavior": "Authorized Account Admin can open the Expenses area and recover from expected errors without losing access.",
-      "root_cause": "Undetermined. Error presentation matches src/app/error.tsx, a client boundary; the original server/client exception and whether it is A052-specific, shared A049\u2013A051, schema/deployment, context or another dependency are not established.",
+      "root_cause": "Confirmed schema/client mismatch: production Prisma P2022 from expenseTransaction.findMany reports expense_transactions.creationRequestKey absent. Whether its migration is pending, failed, incorrectly marked applied, or targeted a different database remains unverified.",
       "affected_files": [
         "src/app/workspace/account/expenses/page.tsx",
         "src/lib/account/expenses.ts",
@@ -752,7 +752,7 @@
       "permission_impact": "ACCOUNT_EXPENSE_VIEW; existing mutation permissions must remain enforced.",
       "branch_company_impact": "User company/branch and exact route need correlation; local branch fixtures do not establish production scope.",
       "accounting_financial_impact": "Live expense access is blocked for this user; no evidence of lost records or corrupted postings.",
-      "required_fix": "Capture deployed route/request correlation, sanitized original error/stack, deployed commit/generated client and read-only migration status; fix only the cause proven by those checks after approval.",
+      "required_fix": "Check deployed database migration status and target against release; deploy the existing 20261009050000_asset_and_expense_reference_fields migration through the validated deployment procedure before activating matching application code. If already marked applied, investigate schema drift instead of editing historical migration or blindly resolving it.",
       "required_tests": "Authenticated deployed Admin reproduction and exact-error regression after root cause established; empty/populated desktop/mobile list, tenant/branch/module checks. Do not assume a missing migration based on a generic screen.",
       "original_status": "OPEN \u2014 RECORDED; NOT FIXED",
       "original_disposition": null,
@@ -825,13 +825,25 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F02",
         "A052-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "PARTIAL",
+        "summary": "Matched supplied production exception to existing additive migration. No production migration executed. Earlier user deferral preceded this new diagnostic evidence; production remediation and validation remain pending."
+      },
+      "production_evidence": {
+        "code": "P2022",
+        "timestamp": "2026-10-12T03:35:52.327Z",
+        "correlation_id": "142fb75d-8610-4398-8000-f780aa770cce",
+        "missing_column": "expense_transactions.creationRequestKey",
+        "matching_migration": "20261009050000_asset_and_expense_reference_fields",
+        "production_verified": false
+      }
     },
     {
       "finding_id": "A052-F02",
@@ -10675,13 +10687,25 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F02",
         "A065-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "IMPLEMENTED BUT NOT VERIFIED",
+        "summary": "Independent named owner/partner identities with optional company user link, contact details, deactivation preserving ledger/history, stable creation request/hash, web and Android create/edit routes. No app role promotion."
+      },
+      "intermediate_validation": {
+        "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
+        "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
+        "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
+        "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
+        "typescript_lint": "TypeScript and focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F02",
@@ -10920,14 +10944,26 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F02",
         "A065-F04",
         "A065-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "PARTIAL",
+        "summary": "Named owner cards, Add/Edit and capital/profit action selection implemented on web and Android. Full owner details/history/corrections and summary workflow remain."
+      },
+      "intermediate_validation": {
+        "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
+        "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
+        "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
+        "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
+        "typescript_lint": "TypeScript and focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F04",
@@ -11534,14 +11570,26 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F07",
         "A065-F09",
         "A065-F10"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "IMPLEMENTED BUT NOT VERIFIED",
+        "summary": "Owner creation and contact/status updates write operational audit atomically with ledger/identity creation. Retry replay creates one owner and audit."
+      },
+      "intermediate_validation": {
+        "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
+        "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
+        "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
+        "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
+        "typescript_lint": "TypeScript and focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F09",
@@ -11655,14 +11703,26 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F08",
         "A065-F10",
         "A065-F12"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "PARTIAL",
+        "summary": "Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains."
+      },
+      "intermediate_validation": {
+        "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
+        "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
+        "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
+        "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
+        "typescript_lint": "TypeScript and focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F10",
@@ -11778,13 +11838,25 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F09",
         "A065-F12"
-      ]
+      ],
+      "checkpoint_work": {
+        "status": "PARTIAL",
+        "summary": "New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains."
+      },
+      "intermediate_validation": {
+        "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
+        "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
+        "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
+        "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
+        "typescript_lint": "TypeScript and focused lint passed",
+        "final_head": "NOT RUN"
+      }
     },
     {
       "finding_id": "A065-F11",

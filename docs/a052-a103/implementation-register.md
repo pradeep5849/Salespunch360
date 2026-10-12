@@ -103,6 +103,8 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Linked finding IDs:** A052-F02, A052-F03.
 
+**Production evidence received 2026-10-12:** P2022 confirms `expense_transactions.creationRequestKey` is absent. Matching existing migration: `20261009050000_asset_and_expense_reference_fields`. Cause now identified as schema/client mismatch; exact migration history/target remains unverified. PARTIAL; production migration and post-deploy validation pending. No production change performed.
+
 ## A052-F02 — Expected permission/module denial renders as an unhandled web failure
 
 **Title:** Expected permission/module denial renders as an unhandled web failure
@@ -4046,13 +4048,17 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Single owner; multiple partners without login; repeated additions; legacy owner migration; company/branch authorization; inactive owner history.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F02, A065-F03.
+
+**Checkpoint work:** Independent named owner/partner identities with optional company user link, contact details, deactivation preserving ledger/history, stable creation request/hash, web and Android create/edit routes. No app role promotion.
+
+**Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
 
 ## A065-F02 — Profit drawings do not enforce available funds in the selected money account
 
@@ -4138,13 +4144,17 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** One/many/empty owners, long names, all transaction types, history paging/date filters, authorized corrections with reason and traceability, small screens/desktop/native parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F02, A065-F04, A065-F05.
+
+**Checkpoint work:** Named owner cards, Add/Edit and capital/profit action selection implemented on web and Android. Full owner details/history/corrections and summary workflow remain.
+
+**Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
 
 ## A065-F04 — Owner report lacks agreed owner filter, period drawings, combined totals and drilldown
 
@@ -4358,13 +4368,17 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Owner setup success/rollback/retry, actor identity, migration linkage, future lifecycle corrections and denied setup.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F07, A065-F09, A065-F10.
+
+**Checkpoint work:** Owner creation and contact/status updates write operational audit atomically with ledger/identity creation. Retry replay creates one owner and audit.
+
+**Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
 
 ## A065-F09 — Owner forms expose unlabelled controls and generic errors without active-form recovery
 
@@ -4400,13 +4414,17 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Accountant/Admin capabilities; accessible names and keyboard; invalid field/insufficient funds/server/network rejection; recovery without duplicate posting.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F08, A065-F10, A065-F12.
+
+**Checkpoint work:** Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains.
+
+**Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
 
 ## A065-F10 — Drawings cannot distinguish profit distributions from capital withdrawals
 
@@ -4442,13 +4460,17 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Profit5000/capital3000: capital changes only for capital3000, company money decreases8000, correct owner identity, journal balance, report totals/date/source filters, sufficient funds/concurrency/retry.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F09, A065-F12.
+
+**Checkpoint work:** New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains.
+
+**Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
 
 ## A065-F11 — Company Capital management metric lacks profit-funded asset attribution
 

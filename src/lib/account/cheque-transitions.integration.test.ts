@@ -55,7 +55,7 @@ vi.mock("@/lib/db", () => ({
                 ),
               options,
             );
-        const value = client[key as keyof typeof client];
+        const value = (client as unknown as Record<PropertyKey, unknown>)[key];
         return typeof value === "function" ? value.bind(client) : value;
       },
     },

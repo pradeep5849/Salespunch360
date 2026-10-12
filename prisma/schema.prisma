@@ -681,6 +681,13 @@ enum OwnerTransactionType {
   INVESTMENT
   WITHDRAWAL
   OWNER_LOAN
+  CAPITAL_WITHDRAWAL
+  PROFIT_DISTRIBUTION
+}
+
+enum OwnerPartyType {
+  OWNER
+  PARTNER
 }
 
 enum LoanStatus {
@@ -3071,15 +3078,26 @@ model Cheque {
 }
 
 model OwnerFinancialAccount {
-  id               String @id @default(uuid()) @db.Uuid
-  companyId        String @db.Uuid
-  userId           String @db.Uuid
-  capitalLedgerId  String @db.Uuid
-  drawingsLedgerId String @db.Uuid
-  loanLedgerId     String @db.Uuid
+  id                 String         @id @default(uuid()) @db.Uuid
+  companyId          String         @db.Uuid
+  userId             String?        @db.Uuid
+  legacyUserId       String?        @db.Uuid
+  name               String         @default("Owner") @db.VarChar(160)
+  partyType          OwnerPartyType @default(OWNER)
+  phone              String?        @db.VarChar(40)
+  email              String?        @db.VarChar(320)
+  address            String?        @db.VarChar(2000)
+  isActive           Boolean        @default(true)
+  creationRequestKey String?        @db.Uuid
+  creationInputHash  String?        @db.VarChar(64)
+  capitalLedgerId    String         @db.Uuid
+  drawingsLedgerId   String         @db.Uuid
+  loanLedgerId       String         @db.Uuid
 
   @@unique([companyId, id])
   @@unique([companyId, userId])
+  @@unique([companyId, creationRequestKey])
+  @@index([companyId, isActive, name])
   @@map("owner_financial_accounts")
 }
 

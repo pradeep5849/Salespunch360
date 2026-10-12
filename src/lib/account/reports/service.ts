@@ -27,7 +27,8 @@ import {
 import { loadProjectCostingForActor } from "../project-costing";
 import { documentOutstandingsBatch } from "../commercial";
 
-const blankFilter = (value: unknown) => typeof value === "string" && !value.trim() ? undefined : value;
+const blankFilter = (value: unknown) =>
+  typeof value === "string" && !value.trim() ? undefined : value;
 
 const D = Prisma.Decimal,
   Z = new D(0),
@@ -194,7 +195,11 @@ export async function runFinancialReportForActor(
 
   if (name === "tax") {
     const c = await context(raw, false, actor),
-      r = await gstReportForActor(c.actor, { from: c.from, to: c.to, branchId: c.f.branchId });
+      r = await gstReportForActor(c.actor, {
+        from: c.from,
+        to: c.to,
+        branchId: c.f.branchId,
+      });
     return {
       title: "GST / Tax",
       columns: [
@@ -679,25 +684,72 @@ export async function runFinancialReportForActor(
   }
 
   if (name === "profit-withdrawal") {
-    const owners = await db.ownerFinancialAccount.findMany({ where: { companyId: c.actor.companyId } });
+    const owners = await db.ownerFinancialAccount.findMany({
+      where: { companyId: c.actor.companyId },
+    });
     const [users, entries] = await Promise.all([
-      db.user.findMany({ where: { companyId: c.actor.companyId, id: { in: owners.map(owner => owner.userId) } }, select: { id: true, name: true } }),
+      db.user.findMany({
+        where: {
+          companyId: c.actor.companyId,
+          id: {
+            in: owners
+              .map((owner) => owner.userId)
+              .filter((id): id is string => Boolean(id)),
+          },
+        },
+        select: { id: true, name: true },
+      }),
       db.journalLine.findMany({
         where: {
           companyId: c.actor.companyId,
-          ledgerAccountId: { in: owners.map(owner => owner.drawingsLedgerId) },
-          journalEntry: { status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] }, entryDate: { gte: c.from, lte: c.to }, ...c.branch },
+          ledgerAccountId: {
+            in: owners.map((owner) => owner.drawingsLedgerId),
+          },
+          journalEntry: {
+            status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
+            entryDate: { gte: c.from, lte: c.to },
+            ...c.branch,
+          },
         },
-        include: { journalEntry: true }, orderBy: [{ journalEntry: { entryDate: "asc" } }, { id: "asc" }],
+        include: { journalEntry: true },
+        orderBy: [{ journalEntry: { entryDate: "asc" } }, { id: "asc" }],
       }),
     ]);
-    const names = new Map(users.map(user => [user.id, user.name]));
-    const ownerNames = new Map(owners.map(owner => [owner.drawingsLedgerId, names.get(owner.userId) ?? owner.userId]));
+    const names = new Map(users.map((user) => [user.id, user.name]));
+    const ownerNames = new Map(
+      owners.map((owner) => [
+        owner.drawingsLedgerId,
+        owner.name || names.get(owner.userId ?? "") || "Owner",
+      ]),
+    );
     return {
       title: "Profit Withdrawal Report",
-      columns: ["Date", "Owner / Partner", "Reference", "Amount", "Transaction"],
-      rows: entries.map(entry => [entry.journalEntry.entryDate.toISOString().slice(0, 10), ownerNames.get(entry.ledgerAccountId) ?? "", entry.journalEntry.reference ?? "", n(entry.debit.sub(entry.credit)), entry.journalEntry.sourceType]),
-      totals: ["Net withdrawals", "", "", n(entries.reduce((total, entry) => total.add(entry.debit).sub(entry.credit), Z)), ""],
+      columns: [
+        "Date",
+        "Owner / Partner",
+        "Reference",
+        "Amount",
+        "Transaction",
+      ],
+      rows: entries.map((entry) => [
+        entry.journalEntry.entryDate.toISOString().slice(0, 10),
+        ownerNames.get(entry.ledgerAccountId) ?? "",
+        entry.journalEntry.reference ?? "",
+        n(entry.debit.sub(entry.credit)),
+        entry.journalEntry.sourceType,
+      ]),
+      totals: [
+        "Net withdrawals",
+        "",
+        "",
+        n(
+          entries.reduce(
+            (total, entry) => total.add(entry.debit).sub(entry.credit),
+            Z,
+          ),
+        ),
+        "",
+      ],
       note: "Owner/partner drawings from the business; withdrawals are not business expenses. Reversals reduce withdrawals on their journal date. This report does not calculate distributable profit.",
     };
   }
@@ -710,7 +762,11 @@ export async function runFinancialReportForActor(
       db.user.findMany({
         where: {
           companyId: c.actor.companyId,
-          id: { in: owners.map((x) => x.userId) },
+          id: {
+            in: owners
+              .map((x) => x.userId)
+              .filter((id): id is string => Boolean(id)),
+          },
         },
       }),
       db.journalLine.groupBy({
@@ -744,7 +800,7 @@ export async function runFinancialReportForActor(
       title: "Owner Capital",
       columns: ["Owner", "Capital", "Drawings", "Loan"],
       rows: owners.map((x) => [
-        userNames.get(x.userId) ?? x.userId,
+        x.name || userNames.get(x.userId ?? "") || "Owner",
         n(map.get(x.capitalLedgerId) ?? Z),
         n((map.get(x.drawingsLedgerId) ?? Z).neg()),
         n(map.get(x.loanLedgerId) ?? Z),

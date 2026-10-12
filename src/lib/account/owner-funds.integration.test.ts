@@ -47,13 +47,18 @@ vi.mock("@/lib/db", () => ({
                 ),
               options,
             );
-        const value = client[key as keyof typeof client];
+        const value = (client as unknown as Record<PropertyKey, unknown>)[key];
         return typeof value === "function" ? value.bind(client) : value;
       },
     },
   ),
 }));
-import { moneyDashboardForActor, postOwnerTransactionForActor } from "./money";
+import {
+  moneyDashboardForActor,
+  postOwnerTransactionForActor,
+  createOwnerFinancialAccountForActor,
+  updateOwnerFinancialAccountForActor,
+} from "./money";
 import {
   postJournalInTx,
   reverseJournalForActor,
@@ -222,6 +227,185 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     await client.branch.deleteMany({ where: { companyId } });
     await client.company.delete({ where: { id: companyId } });
     await client.$disconnect();
+  });
+  it("creates independent partners in different branches without app-user promotion", async () => {
+    const branch = await client.branch.create({
+      data: { companyId, name: "Identity branch", code: "IDENTITY" },
+    });
+    const first = await createOwnerFinancialAccountForActor(actor, {
+      name: "Independent partner",
+      partyType: "PARTNER",
+      branchId,
+      creationRequestKey: randomUUID(),
+    });
+    const second = await createOwnerFinancialAccountForActor(actor, {
+      name: "Independent partner",
+      partyType: "PARTNER",
+      branchId: branch.id,
+      creationRequestKey: randomUUID(),
+    });
+    expect(first.userId).toBeNull();
+    expect(second.userId).toBeNull();
+    expect(second.id).not.toBe(first.id);
+    expect(
+      await client.ledgerAccount.count({
+        where: {
+          companyId,
+          id: {
+            in: [
+              first.capitalLedgerId,
+              first.drawingsLedgerId,
+              first.loanLedgerId,
+              second.capitalLedgerId,
+              second.drawingsLedgerId,
+              second.loanLedgerId,
+            ],
+          },
+        },
+      }),
+    ).toBe(6);
+    expect(await client.user.count({ where: { companyId } })).toBe(1);
+  });
+  it("replays concurrent owner creation once and rejects changed payload", async () => {
+    const input = {
+      name: "Replay partner",
+      partyType: "PARTNER",
+      branchId,
+      creationRequestKey: randomUUID(),
+    };
+    const [first, second] = await Promise.all([
+      createOwnerFinancialAccountForActor(actor, input),
+      createOwnerFinancialAccountForActor(actor, input),
+    ]);
+    expect(first.id).toBe(second.id);
+    expect(
+      await client.accountOperationalAudit.count({
+        where: { companyId, entityId: first.id, eventType: "OWNER_CREATED" },
+      }),
+    ).toBe(1);
+    await expect(
+      createOwnerFinancialAccountForActor(actor, {
+        ...input,
+        name: "Changed partner",
+      }),
+    ).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+  });
+  it("links a non-admin user without granting app privileges", async () => {
+    const user = await client.user.create({
+      data: {
+        companyId,
+        name: "Bookkeeping partner",
+        email: `${randomUUID()}@example.test`,
+        passwordHash: await hash(randomUUID()),
+        role: "ACCOUNT_USER",
+        accountRole: "DATA_ENTRY",
+        accountAccessActive: true,
+      },
+    });
+    const owner = await createOwnerFinancialAccountForActor(actor, {
+      name: "Linked partner",
+      partyType: "PARTNER",
+      userId: user.id,
+      branchId,
+      creationRequestKey: randomUUID(),
+    });
+    expect(owner.userId).toBe(user.id);
+    expect(
+      (await client.user.findUniqueOrThrow({ where: { id: user.id } }))
+        .accountRole,
+    ).toBe("DATA_ENTRY");
+  });
+  it("deactivates an owner without deleting historical transactions", async () => {
+    const owner = await createOwnerFinancialAccountForActor(actor, {
+      name: "Inactive partner",
+      branchId,
+      creationRequestKey: randomUUID(),
+    });
+    const bank = await account();
+    await postOwnerTransactionForActor(actor, {
+      ...raw(bank.id, "INVESTMENT", "100"),
+      ownerFinancialAccountId: owner.id,
+    });
+    await updateOwnerFinancialAccountForActor(actor, owner.id, {
+      name: owner.name,
+      partyType: "OWNER",
+      phone: "",
+      email: "",
+      address: "",
+      isActive: false,
+    });
+    await expect(
+      postOwnerTransactionForActor(actor, {
+        ...raw(bank.id, "WITHDRAWAL", "10"),
+        ownerFinancialAccountId: owner.id,
+      }),
+    ).rejects.toThrow("INVALID_OWNER_TRANSACTION_ACCOUNT");
+    expect(
+      await client.ownerTransaction.count({
+        where: { companyId, ownerFinancialAccountId: owner.id },
+      }),
+    ).toBe(1);
+    expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("100.00");
+  });
+  it("keeps profit drawings out of capital and debits capital for explicit capital withdrawals", async () => {
+    const owner = await createOwnerFinancialAccountForActor(actor, {
+      name: "Capital partner",
+      branchId,
+      creationRequestKey: randomUUID(),
+    });
+    const bank = await account();
+    for (const amount of ["60", "40"])
+      await postOwnerTransactionForActor(actor, {
+        ...raw(bank.id, "INVESTMENT", amount),
+        ownerFinancialAccountId: owner.id,
+      });
+    await postOwnerTransactionForActor(actor, {
+      ...raw(bank.id, "WITHDRAWAL", "20"),
+      ownerFinancialAccountId: owner.id,
+      type: "PROFIT_DISTRIBUTION",
+    });
+    expect((await funds(owner.capitalLedgerId)).neg().toFixed(2)).toBe(
+      "100.00",
+    );
+    await postOwnerTransactionForActor(actor, {
+      ...raw(bank.id, "WITHDRAWAL", "10"),
+      ownerFinancialAccountId: owner.id,
+      type: "CAPITAL_WITHDRAWAL",
+    });
+    expect((await funds(owner.capitalLedgerId)).neg().toFixed(2)).toBe("90.00");
+    expect((await funds(owner.drawingsLedgerId)).toFixed(2)).toBe("20.00");
+    expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("70.00");
+    expect(
+      await client.ownerTransaction.count({
+        where: {
+          companyId,
+          ownerFinancialAccountId: owner.id,
+          type: "INVESTMENT",
+        },
+      }),
+    ).toBe(2);
+  });
+  it("denies owner management to Accountant while allowing authorized capital entries", async () => {
+    const accountant = { ...actor, accountRole: "ACCOUNTANT" as const };
+    await expect(
+      createOwnerFinancialAccountForActor(accountant, {
+        name: "Denied",
+        branchId,
+        creationRequestKey: randomUUID(),
+      }),
+    ).rejects.toThrow();
+    const bank = await account();
+    await postOwnerTransactionForActor(
+      accountant,
+      raw(bank.id, "INVESTMENT", "100"),
+    );
+    expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("100.00");
+    await expect(
+      postOwnerTransactionForActor(accountant, {
+        ...raw(bank.id, "INVESTMENT", "10"),
+        type: "OWNER_LOAN",
+      }),
+    ).rejects.toThrow();
   });
   it("rejects insufficient funds without posting a journal, owner record or audit", async () => {
     const bank = await account();

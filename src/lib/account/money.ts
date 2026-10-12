@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { retrySerializable } from "./transaction-retry";
 import {
@@ -231,6 +232,21 @@ export async function moneyDashboardForActor(a: Actor) {
       take: 20,
     }),
     owners: await db.ownerFinancialAccount.findMany({
+      select: {
+        id: true,
+        companyId: true,
+        userId: true,
+        name: true,
+        partyType: true,
+        phone: true,
+        email: true,
+        address: true,
+        isActive: true,
+        capitalLedgerId: true,
+        drawingsLedgerId: true,
+        loanLedgerId: true,
+      },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
       where: { companyId: a.companyId },
     }),
   };
@@ -533,21 +549,206 @@ async function createLedger(
   accountClass: "EQUITY" | "LIABILITY",
   normalBalance: "DEBIT" | "CREDIT",
 ) {
+  const series = await tx.numberingSeries.findFirst({
+    where: { companyId: a.companyId, seriesKey: "OWNER_LEDGER" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, branchId: true },
+  });
   const code = await allocateDocumentNumberInTx(tx, {
     companyId: a.companyId,
-    branchId,
-    seriesKey: "OWNER_LEDGER",
+    ...(series
+      ? { seriesId: series.id, branchId: series.branchId ?? undefined }
+      : { branchId, seriesKey: "OWNER_LEDGER" }),
     defaults: { prefix: "OWN-", padding: 6 },
   });
   return tx.ledgerAccount.create({
     data: {
       companyId: a.companyId,
       code,
-      name,
+      name: `${Array.from(name).slice(0, 120).join("")} [${code}]`,
       accountClass,
       normalBalance,
       allowPosting: true,
     },
+  });
+}
+const ownerIdentityInput = z
+  .object({
+    name: z.string().trim().min(1).max(160),
+    partyType: z.enum(["OWNER", "PARTNER"]).default("OWNER"),
+    userId: z.preprocess(
+      (v) => (v === "" || v == null ? undefined : v),
+      z.string().uuid().optional(),
+    ),
+    branchId: z.string().uuid(),
+    phone: z.string().trim().max(40).optional(),
+    email: z.preprocess(
+      (v) => (v === "" || v == null ? undefined : v),
+      z.string().trim().email().max(320).optional(),
+    ),
+    address: z.string().trim().max(2000).optional(),
+    creationRequestKey: z.string().uuid(),
+  })
+  .strict();
+export async function createOwnerFinancialAccountForActor(
+  a: Actor,
+  raw: unknown,
+) {
+  if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  const d = ownerIdentityInput.parse(raw);
+  branchOk(a, d.branchId);
+  const hash = createHash("sha256")
+    .update(
+      JSON.stringify([
+        d.name,
+        d.partyType,
+        d.userId ?? null,
+        d.branchId,
+        d.phone ?? "",
+        d.email ?? "",
+        d.address ?? "",
+      ]),
+    )
+    .digest("hex");
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+          const replay = await tx.ownerFinancialAccount.findFirst({
+            where: {
+              companyId: a.companyId,
+              creationRequestKey: d.creationRequestKey,
+            },
+          });
+          if (replay) {
+            if (replay.creationInputHash !== hash)
+              throw new Error("IDEMPOTENCY_CONFLICT");
+            return replay;
+          }
+          if (
+            !(await tx.branch.findFirst({
+              where: { id: d.branchId, companyId: a.companyId, isActive: true },
+            }))
+          )
+            throw new AuthorizationError();
+          if (d.userId) {
+            if (
+              !(await tx.user.findFirst({
+                where: { id: d.userId, companyId: a.companyId, isActive: true },
+              }))
+            )
+              throw new Error("INVALID_OWNER");
+            if (
+              await tx.ownerFinancialAccount.findFirst({
+                where: { companyId: a.companyId, userId: d.userId },
+              })
+            )
+              throw new Error("OWNER_USER_ALREADY_LINKED");
+          }
+          const capital = await createLedger(
+            tx,
+            a,
+            d.branchId,
+            `${d.name} Capital`,
+            "EQUITY",
+            "CREDIT",
+          );
+          const drawings = await createLedger(
+            tx,
+            a,
+            d.branchId,
+            `${d.name} Drawings`,
+            "EQUITY",
+            "DEBIT",
+          );
+          const loan = await createLedger(
+            tx,
+            a,
+            d.branchId,
+            `${d.name} Loan`,
+            "LIABILITY",
+            "CREDIT",
+          );
+          const row = await tx.ownerFinancialAccount.create({
+            data: {
+              companyId: a.companyId,
+              userId: d.userId,
+              name: d.name,
+              partyType: d.partyType,
+              phone: d.phone,
+              email: d.email,
+              address: d.address,
+              creationRequestKey: d.creationRequestKey,
+              creationInputHash: hash,
+              capitalLedgerId: capital.id,
+              drawingsLedgerId: drawings.id,
+              loanLedgerId: loan.id,
+            },
+          });
+          await audit(tx, a, "OWNER_CREATED", "OWNER", row.id, {
+            name: row.name,
+            partyType: row.partyType,
+            userId: row.userId,
+            ledgers: {
+              capital: capital.id,
+              drawings: drawings.id,
+              loan: loan.id,
+            },
+          });
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    3,
+    ["companyId", "creationRequestKey"],
+  );
+}
+export async function updateOwnerFinancialAccountForActor(
+  a: Actor,
+  id: string,
+  raw: unknown,
+) {
+  if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  z.string().uuid().parse(id);
+  const d = z
+    .object({
+      name: z.string().trim().min(1).max(160),
+      partyType: z.enum(["OWNER", "PARTNER"]),
+      phone: z.string().trim().max(40),
+      email: z.union([z.literal(""), z.string().trim().email().max(320)]),
+      address: z.string().trim().max(2000),
+      isActive: z.boolean(),
+    })
+    .strict()
+    .parse(raw);
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+    const before = await tx.ownerFinancialAccount.findFirst({
+      where: { id, companyId: a.companyId },
+    });
+    if (!before) throw new AuthorizationError();
+    const after = await tx.ownerFinancialAccount.update({
+      where: { id },
+      data: {
+        ...d,
+        email: d.email || null,
+        phone: d.phone || null,
+        address: d.address || null,
+      },
+    });
+    await audit(tx, a, "OWNER_UPDATED", "OWNER", id, {
+      before: {
+        name: before.name,
+        partyType: before.partyType,
+        phone: before.phone,
+        email: before.email,
+        address: before.address,
+        isActive: before.isActive,
+      },
+      after: d,
+    });
+    return after;
   });
 }
 export async function setupOwnerFinancialAccountForActor(
@@ -556,6 +757,8 @@ export async function setupOwnerFinancialAccountForActor(
   branchId: string,
 ) {
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  z.string().uuid().parse(userId);
+  z.string().uuid().parse(branchId);
   branchOk(a, branchId);
   if (
     !(await db.branch.findFirst({
@@ -563,63 +766,22 @@ export async function setupOwnerFinancialAccountForActor(
     }))
   )
     throw new AuthorizationError();
-  return db.$transaction(
-    async (tx) => {
-      const existing = await tx.ownerFinancialAccount.findFirst({
-        where: { companyId: a.companyId, userId },
-      });
-      if (existing) return existing;
-      const user = await tx.user.findFirst({
-        where: {
-          id: userId,
-          companyId: a.companyId,
-          isActive: true,
-          OR: [
-            { salesRole: "PRIMARY_ADMIN" },
-            { accountRole: "ACCOUNT_ADMIN" },
-          ],
-        },
-      });
-      if (!user) throw new Error("INVALID_OWNER");
-      const [capital, drawings, loan] = await Promise.all([
-        createLedger(
-          tx,
-          a,
-          branchId,
-          `${user.name} Capital`,
-          "EQUITY",
-          "CREDIT",
-        ),
-        createLedger(
-          tx,
-          a,
-          branchId,
-          `${user.name} Drawings`,
-          "EQUITY",
-          "DEBIT",
-        ),
-        createLedger(
-          tx,
-          a,
-          branchId,
-          `${user.name} Loan`,
-          "LIABILITY",
-          "CREDIT",
-        ),
-      ]);
-      return tx.ownerFinancialAccount.create({
-        data: {
-          companyId: a.companyId,
-          userId,
-          capitalLedgerId: capital.id,
-          drawingsLedgerId: drawings.id,
-          loanLedgerId: loan.id,
-        },
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+  const user = await db.user.findFirst({
+    where: { id: userId, companyId: a.companyId, isActive: true },
+  });
+  if (!user) throw new Error("INVALID_OWNER");
+  const existing = await db.ownerFinancialAccount.findFirst({
+    where: { companyId: a.companyId, userId },
+  });
+  if (existing) return existing;
+  return createOwnerFinancialAccountForActor(a, {
+    userId,
+    branchId,
+    name: user.name,
+    creationRequestKey: crypto.randomUUID(),
+  });
 }
+
 const ownerInput = z.object({
   ownerFinancialAccountId: z.string().uuid(),
   moneyAccountId: z.string().uuid(),
@@ -632,6 +794,12 @@ const ownerInput = z.object({
 });
 export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
   const d = ownerInput.parse(raw);
+  if (
+    !canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY") ||
+    (d.type === "OWNER_LOAN" &&
+      !canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_LOAN_ADMIN"))
+  )
+    throw new AuthorizationError();
   branchOk(a, d.branchId);
   if (!new D(d.amount).gt(0)) throw new Error("INVALID_AMOUNT");
   return retrySerializable(
@@ -666,6 +834,7 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
                 where: {
                   id: d.ownerFinancialAccountId,
                   companyId: a.companyId,
+                  isActive: true,
                 },
               }),
               tx.moneyAccount.findFirst({
@@ -679,7 +848,13 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
             ]);
           if (!owner || !moneyAccount)
             throw new Error("INVALID_OWNER_TRANSACTION_ACCOUNT");
-          if (d.type === "WITHDRAWAL") {
+          if (
+            [
+              "WITHDRAWAL",
+              "CAPITAL_WITHDRAWAL",
+              "PROFIT_DISTRIBUTION",
+            ].includes(d.type)
+          ) {
             await tx.$queryRaw`SELECT "id" FROM "money_accounts" WHERE "id"=${moneyAccount.id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
             const funds = await tx.journalLine.aggregate({
               where: {
@@ -699,13 +874,12 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
               throw new Error("INSUFFICIENT_MONEY_BALANCE");
           }
           const amount = new D(d.amount),
-            ownerLedger =
-              d.type === "INVESTMENT"
-                ? owner.capitalLedgerId
-                : d.type === "WITHDRAWAL"
-                  ? owner.drawingsLedgerId
-                  : owner.loanLedgerId,
-            incoming = d.type !== "WITHDRAWAL",
+            ownerLedger = ["INVESTMENT", "CAPITAL_WITHDRAWAL"].includes(d.type)
+              ? owner.capitalLedgerId
+              : ["WITHDRAWAL", "PROFIT_DISTRIBUTION"].includes(d.type)
+                ? owner.drawingsLedgerId
+                : owner.loanLedgerId,
+            incoming = ["INVESTMENT", "OWNER_LOAN"].includes(d.type),
             id = crypto.randomUUID(),
             journal = await postJournalInTx(tx, a, {
               financialYearId: fy.id,
@@ -746,6 +920,8 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
                 INVESTMENT: "OWNER_INVESTMENT_POSTED",
                 WITHDRAWAL: "OWNER_WITHDRAWAL_POSTED",
                 OWNER_LOAN: "OWNER_LOAN_POSTED",
+                CAPITAL_WITHDRAWAL: "OWNER_CAPITAL_WITHDRAWAL_POSTED",
+                PROFIT_DISTRIBUTION: "OWNER_PROFIT_DISTRIBUTION_POSTED",
               } as const
             )[d.type],
             "OWNER_TRANSACTION",
@@ -997,12 +1173,45 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
 }
 export async function listMoneyDataForActor(a: Actor) {
   return {
+    capabilities: {
+      manageOwners: a.accountRole === "ACCOUNT_ADMIN",
+      postMoneyEntries: canUsePermission(
+        a,
+        "SALESPUNCH360_ACCOUNT",
+        "ACCOUNT_MONEY_ENTRY",
+      ),
+      manageLoans: canUsePermission(
+        a,
+        "SALESPUNCH360_ACCOUNT",
+        "ACCOUNT_LOAN_ADMIN",
+      ),
+      postOwnerTransactions: canUsePermission(
+        a,
+        "SALESPUNCH360_ACCOUNT",
+        "ACCOUNT_MONEY_ENTRY",
+      ),
+    },
     dashboard: await moneyDashboardForActor(a),
     cheques: await db.cheque.findMany({
       where: { companyId: a.companyId, ...branchScope(a) },
       orderBy: { chequeDate: "desc" },
     }),
     owners: await db.ownerFinancialAccount.findMany({
+      select: {
+        id: true,
+        companyId: true,
+        userId: true,
+        name: true,
+        partyType: true,
+        phone: true,
+        email: true,
+        address: true,
+        isActive: true,
+        capitalLedgerId: true,
+        drawingsLedgerId: true,
+        loanLedgerId: true,
+      },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
       where: { companyId: a.companyId },
     }),
     loans: await db.loan.findMany({
@@ -1010,10 +1219,11 @@ export async function listMoneyDataForActor(a: Actor) {
       orderBy: { startDate: "desc" },
     }),
     users: await db.user.findMany({
+      select: { id: true, name: true },
       where: {
         companyId: a.companyId,
         isActive: true,
-        OR: [{ salesRole: "PRIMARY_ADMIN" }, { accountRole: "ACCOUNT_ADMIN" }],
+        ...(a.accountRole !== "ACCOUNT_ADMIN" ? { id: { in: [] } } : {}),
       },
     }),
     branches: await db.branch.findMany({
@@ -1058,7 +1268,7 @@ export async function createMoneyTransfer(raw: unknown) {
 }
 export async function postOwnerTransaction(raw: unknown) {
   return postOwnerTransactionForActor(
-    await actor("ACCOUNT_LOAN_ADMIN", true),
+    await actor("ACCOUNT_MONEY_ENTRY", true),
     raw,
   );
 }

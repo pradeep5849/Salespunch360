@@ -2,6 +2,8 @@ import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
   createAndReceiveLoanForActor,
+  createOwnerFinancialAccountForActor,
+  updateOwnerFinancialAccountForActor,
   createMoneyAccountForActor,
   createMoneyTransferForActor,
   deactivateMoneyAccountForActor,
@@ -34,7 +36,9 @@ export async function mobileMoneyContext(u: MobileAppPrincipal) {
         ? { branchId: { in: a.branchIds ?? [] } }
         : {},
     loanIds = data.loans.map((x) => x.id),
-    ownerIds = data.owners.map((x) => x.userId);
+    ownerIds = data.owners
+      .map((x) => x.userId)
+      .filter((id): id is string => Boolean(id));
   const [transfers, ownerTransactions, loanPayments, users] = await Promise.all(
     [
       db.moneyTransfer.findMany({
@@ -62,7 +66,7 @@ export async function mobileMoneyContext(u: MobileAppPrincipal) {
     ...data,
     owners: data.owners.map((x) => ({
       ...x,
-      name: users.find((u) => u.id === x.userId)?.name ?? "Owner",
+      name: x.name || users.find((u) => u.id === x.userId)?.name || "Owner",
     })),
     transfers,
     ownerTransactions,
@@ -103,7 +107,7 @@ export async function mobileOwnerTransaction(
   raw: unknown,
 ) {
   await write(u);
-  return postOwnerTransactionForActor(permit(u, "ACCOUNT_LOAN_ADMIN"), raw);
+  return postOwnerTransactionForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
 }
 export async function mobileLoan(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
@@ -116,11 +120,48 @@ export async function mobileLoanPayment(u: MobileAppPrincipal, raw: unknown) {
 
 export async function mobileOwnerSetup(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
-  const d = raw as { userId?: string; branchId?: string };
-  if (!d.userId || !d.branchId) throw new Error("INVALID_INPUT");
-  return setupOwnerFinancialAccountForActor(
-    permit(u, "ACCOUNT_LOAN_ADMIN"),
-    d.userId,
-    d.branchId,
+  const a = permit(u, "ACCOUNT_LOAN_ADMIN");
+  const d = raw as { name?: string; userId?: string; branchId?: string };
+  const row = d.name
+    ? await createOwnerFinancialAccountForActor(a, raw)
+    : d.userId && d.branchId
+      ? await setupOwnerFinancialAccountForActor(a, d.userId, d.branchId)
+      : null;
+  if (!row) throw new Error("INVALID_INPUT");
+  return ownerIdentityView(row);
+}
+function ownerIdentityView(row: {
+  id: string;
+  name: string;
+  partyType: string;
+  userId: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  isActive: boolean;
+}) {
+  return {
+    id: row.id,
+    name: row.name,
+    partyType: row.partyType,
+    userId: row.userId,
+    phone: row.phone,
+    email: row.email,
+    address: row.address,
+    isActive: row.isActive,
+  };
+}
+export async function mobileUpdateOwnerIdentity(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await write(u);
+  return ownerIdentityView(
+    await updateOwnerFinancialAccountForActor(
+      permit(u, "ACCOUNT_LOAN_ADMIN"),
+      id,
+      raw,
+    ),
   );
 }

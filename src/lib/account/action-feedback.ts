@@ -8,6 +8,10 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_OWNER:
+    "Choose an active app user from this business, or leave the user link empty.",
+  OWNER_USER_ALREADY_LINKED:
+    "This app user is already linked to an owner or partner. Open that record to edit it.",
   INVALID_CHEQUE_INITIAL_STATUS:
     "Record a cheque as Issued or Received before changing its status.",
   INVALID_CHEQUE_TRANSITION:
@@ -16,6 +20,8 @@ const messages: Record<string, string> = {
     "Record the linked receipt or payment before marking this cheque cleared.",
   ITEM_IDENTIFIER_EXISTS:
     "This item code or barcode is already in use. Enter another code and try again.",
+  INSUFFICIENT_MONEY_BALANCE:
+    "The selected bank or cash account has insufficient funds. Reduce the amount or select another account.",
   IDEMPOTENCY_CONFLICT:
     "This request was already used with different details. Refresh before starting a new transaction.",
   RECURRING_NOT_DUE: "This recurring bill is not due yet.",

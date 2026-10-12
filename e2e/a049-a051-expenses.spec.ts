@@ -131,6 +131,8 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   await db.mobileSession.deleteMany({ where: { userId } });
+  await db.ownerTransaction.deleteMany({ where: { companyId } });
+  await db.ownerFinancialAccount.deleteMany({ where: { companyId } });
   await db.expenseAttachment.deleteMany({ where: { companyId } });
   await db.expenseTransaction.deleteMany({ where: { companyId } });
   await db.recurringExpenseTemplate.deleteMany({ where: { companyId } });
@@ -1842,4 +1844,169 @@ test("A057 Add Item quick settings persist single changes and enforce administra
       data: { accountRole: "ACCOUNT_ADMIN" },
     });
   }
+});
+
+test("A065 independent owner identity and capital/profit entries work without user promotion", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/money/capital");
+  await page
+    .getByRole("button", { name: "Add owner / partner", exact: true })
+    .click();
+  const identity = page.locator(".owner-identity-form");
+  await identity.getByLabel("Name", { exact: true }).fill("Browser partner");
+  await identity.getByLabel("Type", { exact: true }).selectOption("PARTNER");
+  await identity.getByLabel("Phone", { exact: true }).fill("9999999999");
+  await identity
+    .getByRole("button", { name: "Save owner / partner", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Browser partner", exact: true }),
+  ).toBeVisible();
+  const owner = await db.ownerFinancialAccount.findFirstOrThrow({
+    where: { companyId, name: "Browser partner" },
+  });
+  expect(owner.userId).toBeNull();
+  expect(owner.partyType).toBe("PARTNER");
+  await page.getByRole("button", { name: "Add capital", exact: true }).click();
+  const entry = page.locator(".owner-entry-form");
+  await entry.getByLabel("Amount", { exact: true }).fill("100");
+  await entry.getByLabel("Date", { exact: true }).fill("2026-10-09");
+  await entry
+    .getByRole("button", { name: "Post owner transaction", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.ownerTransaction.count({
+        where: {
+          companyId,
+          ownerFinancialAccountId: owner.id,
+          type: "INVESTMENT",
+        },
+      }),
+    )
+    .toBe(1);
+  await page
+    .getByRole("button", { name: "Draw from profit", exact: true })
+    .click();
+  await entry.getByLabel("Amount", { exact: true }).fill("101");
+  await entry.getByLabel("Date", { exact: true }).fill("2026-10-09");
+  await entry
+    .getByRole("button", { name: "Post owner transaction", exact: true })
+    .click();
+  await expect(entry.getByRole("alert")).toContainText(/funds|balance/i);
+  await expect(entry.getByLabel("Amount", { exact: true })).toHaveValue("101");
+  await expect(entry.getByLabel("Date", { exact: true })).toHaveValue(
+    "2026-10-09",
+  );
+  await entry.getByLabel("Amount", { exact: true }).fill("20");
+  await entry
+    .getByRole("button", { name: "Post owner transaction", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.ownerTransaction.count({
+        where: {
+          companyId,
+          ownerFinancialAccountId: owner.id,
+          type: "PROFIT_DISTRIBUTION",
+        },
+      }),
+    )
+    .toBe(1);
+  await page
+    .getByRole("button", { name: "Draw from capital", exact: true })
+    .click();
+  await entry.getByLabel("Amount", { exact: true }).fill("10");
+  await entry.getByLabel("Date", { exact: true }).fill("2026-10-09");
+  await entry
+    .getByRole("button", { name: "Post owner transaction", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      db.ownerTransaction.count({
+        where: {
+          companyId,
+          ownerFinancialAccountId: owner.id,
+          type: "CAPITAL_WITHDRAWAL",
+        },
+      }),
+    )
+    .toBe(1);
+  const sums = await db.journalLine.aggregate({
+    where: {
+      companyId,
+      ledgerAccountId: owner.capitalLedgerId,
+      journalEntry: { status: { in: ["POSTED", "REVERSED"] } },
+    },
+    _sum: { credit: true, debit: true },
+  });
+  expect(Number(sums._sum.credit) - Number(sums._sum.debit)).toBe(90);
+  await page
+    .getByRole("button", { name: "Edit Browser partner", exact: true })
+    .click();
+  await identity
+    .getByLabel("Name", { exact: true })
+    .fill("Renamed browser partner");
+  await identity.getByLabel("Active", { exact: true }).uncheck();
+  await identity
+    .getByRole("button", { name: "Save owner / partner", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Renamed browser partner", exact: true }),
+  ).toBeVisible();
+  expect(
+    await db.ownerTransaction.count({
+      where: { companyId, ownerFinancialAccountId: owner.id },
+    }),
+  ).toBe(3);
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Owner parity regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const created = await request.post(
+    "/api/v1/mobile/account/money/owner-setup",
+    {
+      headers,
+      data: {
+        name: "Mobile partner",
+        partyType: "PARTNER",
+        branchId,
+        creationRequestKey: randomUUID(),
+      },
+    },
+  );
+  expect(created.status()).toBe(201);
+  const body = await created.json();
+  expect(body.name).toBe("Mobile partner");
+  expect(body).not.toHaveProperty("creationInputHash");
+  const context = await request.get("/api/v1/mobile/account/money", {
+    headers,
+  });
+  expect(context.status()).toBe(200);
+  const payload = await context.json();
+  expect(JSON.stringify(payload)).not.toContain("passwordHash");
+  expect(JSON.stringify(payload)).not.toContain("creationInputHash");
+  expect(
+    (
+      await new AxeBuilder({ page }).include(".employees-content").analyze()
+    ).violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
 });
