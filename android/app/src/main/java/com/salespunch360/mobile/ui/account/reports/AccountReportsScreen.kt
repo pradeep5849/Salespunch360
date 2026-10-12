@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -27,7 +28,7 @@ import com.salespunch360.mobile.ui.account.accounting.Option
 import kotlinx.serialization.json.*
 
 @Composable
-fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountReportViewModel = viewModel(), initialQuery:String="") {
+fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountReportViewModel = viewModel(), initialQuery:String="", onNavigate:(String)->Unit={}) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     LaunchedEffect(initial,initialQuery) { vm.context(initialQuery); vm.choose(initial) }
@@ -89,7 +90,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
             LazyRow {
                 item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
-                items(accountReportRows(data)) { row -> Column { row.forEach { Text(it) } } }
+                itemsIndexed(accountReportRows(data)) { index, row -> val link=data.array("rowLinks").getOrNull(index)?.jsonPrimitive?.contentOrNull?.takeIf{it.startsWith("/workspace/account/money/capital/")};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }
             }
         }

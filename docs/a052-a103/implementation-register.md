@@ -4156,6 +4156,10 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
 
+**Owner history implementation:** Owner history added on web/Android with active/inactive identity, named bank/cash, all original transaction types, journal/reversal status and reason, date filters and bounded stable pagination. Owner correction controls and complete summary workflow remain.
+
+**Intermediate validation:** 23 owner-history/report tests, 2 desktop/mobile browser tests, Android compile/142 JVM tests, TypeScript/focused lint passed; final-head/device checks pending.
+
 ## A065-F04 — Owner report lacks agreed owner filter, period drawings, combined totals and drilldown
 
 **Title:** Owner report lacks agreed owner filter, period drawings, combined totals and drilldown
@@ -4190,7 +4194,7 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Owners drawing 5000 and 3000; total8000; unchanged capital; prior-period entries excluded from period draws but present in cumulative capital; reversals/corrections; owner/date/branch/export parity.
 
-**Current implementation status:** PARTIAL. Owner-history drilldown remains; final-head verification pending.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
@@ -4201,6 +4205,10 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 **Checkpoint work:** Company-validated owner filter, assigned-branch journal scope, opening capital/net period movement/closing capital/period and cumulative drawings/separate loans, combined totals, web/Android owner selectors and CSV/mobile export parity implemented. Owner-history drilldown remains.
 
 **Intermediate validation:** 22 focused tests, 2 desktop/mobile browser tests including CSV/mobile API/accessibility and Android compilation/142 JVM tests passed. Final-head validation pending.
+
+**Owner history implementation:** Owner Capital report owner filter, period calculations, combined totals and web/native drilldown into scoped owner history implemented. Export totals and names retained; final-head/device validation pending.
+
+**Intermediate validation:** 23 owner-history/report tests, 2 desktop/mobile browser tests, Android compile/142 JVM tests, TypeScript/focused lint passed; final-head/device checks pending.
 
 ## A065-F05 — Assets has no approved linked capital summary
 
@@ -4433,6 +4441,10 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 **Checkpoint work:** Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains.
 
 **Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
+
+**Owner history implementation:** Owner history validates real calendar dates, supports clear/retry recovery and native cancellation/stale-response protection. Identity/posting labelled forms and actionable funds recovery preserved; correction controls remain.
+
+**Intermediate validation:** 23 owner-history/report tests, 2 desktop/mobile browser tests, Android compile/142 JVM tests, TypeScript/focused lint passed; final-head/device checks pending.
 
 ## A065-F10 — Drawings cannot distinguish profit distributions from capital withdrawals
 

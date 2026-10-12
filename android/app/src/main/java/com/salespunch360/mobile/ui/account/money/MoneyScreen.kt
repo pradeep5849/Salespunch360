@@ -19,9 +19,9 @@ import com.salespunch360.mobile.account.*
 import kotlinx.serialization.json.*
 
 @Composable
-fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel()) {
+fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel(),initialOwnerId:String?=null) {
     val s=vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(initialMode){vm.show(initialMode)}
+    LaunchedEffect(initialMode,initialOwnerId){vm.show(initialMode);initialOwnerId?.let(vm::openOwnerHistory)}
     val caps=s.data["capabilities"]?.jsonObject
     fun can(key:String)=caps?.get(key)?.jsonPrimitive?.booleanOrNull==true
     val owners=s.data.array("owners")
@@ -46,7 +46,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
         LazyColumn{
             if(s.mode=="owners"){
                 items(owners){entry->val owner=entry.jsonObject
-                    ListItem(headlineContent={Text(owner.str("name"),fontWeight=FontWeight.Bold)},supportingContent={Text(moneyTypeLabel(owner.str("partyType"))+" · "+if(owner["isActive"]?.jsonPrimitive?.booleanOrNull!=false)"Active" else "Inactive")},trailingContent={if(can("manageOwners"))TextButton({vm.editOwner(owner)},enabled=!s.saving){Text("Edit")}})
+                    ListItem(headlineContent={Text(owner.str("name"),fontWeight=FontWeight.Bold)},supportingContent={Text(moneyTypeLabel(owner.str("partyType"))+" · "+if(owner["isActive"]?.jsonPrimitive?.booleanOrNull!=false)"Active" else "Inactive")},trailingContent={if(can("manageOwners"))TextButton({vm.editOwner(owner)},enabled=!s.saving){Text("Edit")}},modifier=Modifier.clickable(enabled=!s.saving){vm.openOwnerHistory(owner.str("id"))})
                 }
                 if(owners.isEmpty())item{Text("No owners or partners yet.")}
                 item{Text("Transaction history",fontWeight=FontWeight.Bold)}
@@ -61,6 +61,46 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
             }
             if(rows.isEmpty()&&!s.loading)item{Text("No transactions available.")}
         }
+    }
+    if (s.historyOwnerId != null) {
+        AlertDialog(
+            onDismissRequest = vm::closeOwnerHistory,
+            title = { Text(s.history?.get("owner")?.jsonObject?.str("name") ?: "Owner history") },
+            text = {
+                Column {
+                    OutlinedTextField(s.historyFrom, { vm.historyDates(it, s.historyTo) }, label = { Text("From (YYYY-MM-DD)") }, enabled = !s.historyLoading)
+                    OutlinedTextField(s.historyTo, { vm.historyDates(s.historyFrom, it) }, label = { Text("To (YYYY-MM-DD)") }, enabled = !s.historyLoading)
+                    TextButton({ vm.loadOwnerHistory(0) }, enabled = !s.historyLoading) { Text("Apply dates") }
+                    if (s.historyLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    s.historyError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    val historyRows = s.history?.array("items").orEmpty()
+                    if (!s.historyLoading && s.historyError == null && s.history != null && historyRows.isEmpty()) Text("No transactions match these dates.")
+                    LazyColumn(Modifier.heightIn(max = 280.dp)) {
+                        items(historyRows) { entry ->
+                            val row = entry.jsonObject
+                            ListItem(
+                                headlineContent = { Text(moneyTypeLabel(row.str("type"))) },
+                                supportingContent = {
+                                    Column {
+                                        Text(accountDate(row.str("transactionDate")) + " · " + row.str("moneyAccountName"))
+                                        Text("Status: " + row.str("journalStatus"))
+                                        if (row.str("reference").isNotBlank()) Text(row.str("reference"))
+                                        val reversal = row["reversal"] as? JsonObject
+                                        reversal?.let { Text("Reversed " + accountDate(it.str("date")) + ": " + it.str("reason")) }
+                                    }
+                                },
+                                trailingContent = { Text(accountMoney(row.str("amount"))) }
+                            )
+                        }
+                    }
+                    Row {
+                        if (s.historyOffset > 0) TextButton({ vm.loadOwnerHistory((s.historyOffset - 50).coerceAtLeast(0)) }, enabled = !s.historyLoading) { Text("Previous") }
+                        if (s.history?.get("hasMore")?.jsonPrimitive?.booleanOrNull == true) TextButton({ vm.loadOwnerHistory(s.historyOffset + 50) }, enabled = !s.historyLoading) { Text("Next") }
+                    }
+                }
+            },
+            confirmButton = { TextButton(vm::closeOwnerHistory) { Text("Close") } }
+        )
     }
     s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save)}
 }

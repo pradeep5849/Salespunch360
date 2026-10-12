@@ -163,7 +163,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
             state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"))
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId")?:android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(3)?.takeIf{it!="new"},initialCreate=android.net.Uri.parse(state.selectedPath).path?.endsWith("/projects/new")==true)
-            moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
+            moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding,initialOwnerId=android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(4))
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
             state.selectedPath.startsWith("/workspace/account/accounting/cost-centres")->ChartOfAccountsScreen(padding,true)
             state.selectedPath.startsWith("/workspace/account/accounting/new")->JournalScreen(padding=padding)
@@ -172,7 +172,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding,onNavigate=vm::select)
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
-            state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
+            state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
             utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding)
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select)
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}

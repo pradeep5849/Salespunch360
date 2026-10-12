@@ -1850,7 +1850,7 @@ test("A065 independent owner identity and capital/profit entries work without us
   page,
   request,
 }) => {
-  test.setTimeout(60000);
+  test.setTimeout(90000);
   await page.goto("/sign-in");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -1986,6 +1986,25 @@ test("A065 independent owner identity and capital/profit entries work without us
   );
   expect(exported.status()).toBe(200);
   expect(await exported.text()).toContain("Combined total");
+  await reportRow
+    .getByRole("link", { name: "Renamed browser partner" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Renamed browser partner", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("article")).toHaveCount(3);
+  await page.getByLabel("From", { exact: true }).fill("2026-10-11");
+  await page.getByLabel("To", { exact: true }).fill("2026-10-12");
+  await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+  await expect(
+    page.getByText("No transactions match these dates.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Clear dates", exact: true }).click();
+  await expect(page.locator("article")).toHaveCount(3);
+  await page
+    .getByRole("link", { name: "Back to Capital & Drawings", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/money\/capital$/);
   const previousModules = await db.accountSettings.findUniqueOrThrow({
     where: { companyId },
     select: { enabledModules: true },
@@ -1994,7 +2013,7 @@ test("A065 independent owner identity and capital/profit entries work without us
     where: { companyId },
     data: {
       enabledModules: [
-        ...new Set([...previousModules.enabledModules, "ASSETS"]),
+        ...new Set([...previousModules.enabledModules, "ASSETS" as const]),
       ],
     },
   });
@@ -2056,6 +2075,25 @@ test("A065 independent owner identity and capital/profit entries work without us
   const payload = await context.json();
   expect(JSON.stringify(payload)).not.toContain("passwordHash");
   expect(JSON.stringify(payload)).not.toContain("creationInputHash");
+  const mobileHistory = await request.get(
+    `/api/v1/mobile/account/money/owners/${owner.id}?from=2026-10-01&to=2026-10-12`,
+    { headers },
+  );
+  expect(mobileHistory.status()).toBe(200);
+  const historyBody = await mobileHistory.json();
+  expect(historyBody.items).toHaveLength(3);
+  expect(historyBody.owner.name).toBe("Renamed browser partner");
+  expect(JSON.stringify(historyBody)).not.toContain("creationInputHash");
+  const inaccessibleOwner = await request.get(
+    `/api/v1/mobile/account/money/owners/${randomUUID()}`,
+    { headers },
+  );
+  expect(inaccessibleOwner.status()).toBe(403);
+  const badHistoryDate = await request.get(
+    `/api/v1/mobile/account/money/owners/${owner.id}?from=2026-02-31`,
+    { headers },
+  );
+  expect(badHistoryDate.status()).toBe(400);
   const mobileCapital = await request.get(
     "/api/v1/mobile/account/money/owner-summary",
     { headers },

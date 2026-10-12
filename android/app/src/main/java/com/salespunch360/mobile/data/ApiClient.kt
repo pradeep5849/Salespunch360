@@ -114,6 +114,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun closeFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years/close","POST",payload.toString())).jsonObject
  suspend fun assetsPage(q:String="",status:String?=null,offset:Int=0)=json.parseToJsonElement(call("api/v1/mobile/account/assets?paged=1&offset=$offset&limit=50"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="&").takeIf{it!="&"}.orEmpty())).jsonObject
  suspend fun assets(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/assets"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun ownerHistory(id:String,from:String="",to:String="",offset:Int=0)=json.parseToJsonElement(call("api/v1/mobile/account/money/owners/${enc(id)}?from=${enc(from)}&to=${enc(to)}&offset=$offset")).jsonObject
  suspend fun ownerCapitalSummary()=json.parseToJsonElement(call("api/v1/mobile/account/money/owner-summary")).jsonObject
  suspend fun assetOptions()=json.parseToJsonElement(call("api/v1/mobile/account/assets/options")).jsonObject
  suspend fun asset(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/assets/${enc(id)}")).jsonObject

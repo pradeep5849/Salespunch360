@@ -53,6 +53,7 @@ export type ReportResult = {
   title: string;
   columns: string[];
   rows: Array<Array<string | number>>;
+  rowLinks?: string[];
   totals?: Array<string | number>;
   note?: string;
 };
@@ -835,6 +836,9 @@ export async function runFinancialReportForActor(
         "Loan",
       ],
       rows,
+      rowLinks: owners.map(
+        (owner) => `/workspace/account/money/capital/${owner.id}`,
+      ),
       totals: [
         "Combined total",
         ...Array.from({ length: 6 }, (_, i) =>

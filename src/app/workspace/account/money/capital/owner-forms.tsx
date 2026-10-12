@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -262,6 +263,9 @@ export function OwnerForms({
           owners.map((owner) => (
             <article key={owner.id}>
               <h3>{owner.name}</h3>
+              <Link href={`/workspace/account/money/capital/${owner.id}`}>
+                View {owner.name} history
+              </Link>
               <p>
                 {owner.partyType === "PARTNER" ? "Partner" : "Owner"} ·{" "}
                 {owner.isActive ? "Active" : "Inactive"}

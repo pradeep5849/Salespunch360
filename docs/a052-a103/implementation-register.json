@@ -10954,7 +10954,7 @@
       ],
       "checkpoint_work": {
         "status": "PARTIAL",
-        "summary": "Named owner cards, Add/Edit and capital/profit action selection implemented on web and Android. Full owner details/history/corrections and summary workflow remain."
+        "summary": "Named owner cards, Add/Edit and capital/profit action selection implemented on web and Android. Full owner details/history/corrections and summary workflow remain. Owner history added on web/Android with active/inactive identity, named bank/cash, all original transaction types, journal/reversal status and reason, date filters and bounded stable pagination. Owner correction controls and complete summary workflow remain."
       },
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
@@ -10962,7 +10962,8 @@
         "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
         "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
         "typescript_lint": "TypeScript and focused lint passed",
-        "final_head": "NOT RUN"
+        "final_head": "NOT RUN",
+        "owner_history": "23 owner-history/report tests passed; 2 desktop/mobile browser tests passed including detail/report drilldown, dates/clear, scoped mobile API, denial, invalid calendar dates; Android compile/142 JVM tests passed; TypeScript and focused lint passed. Final-head/device validation pending."
       }
     },
     {
@@ -11077,7 +11078,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -11086,15 +11087,16 @@
         "A065-F06"
       ],
       "checkpoint_work": {
-        "status": "PARTIAL",
-        "summary": "Company-validated owner filter, assigned-branch journal scope, opening capital/net period movement/closing capital/period and cumulative drawings/separate loans, combined totals, web/Android owner selectors and CSV/mobile export parity implemented. Owner-history drilldown remains."
+        "status": "IMPLEMENTED BUT NOT VERIFIED",
+        "summary": "Company-validated owner filter, assigned-branch journal scope, opening capital/net period movement/closing capital/period and cumulative drawings/separate loans, combined totals, web/Android owner selectors and CSV/mobile export parity implemented. Owner-history drilldown remains. Owner Capital report owner filter, period calculations, combined totals and web/native drilldown into scoped owner history implemented. Export totals and names retained; final-head/device validation pending."
       },
       "intermediate_validation": {
         "focused_tests": "22 passed, 0 failed, 0 skipped across 5 report/native-contract files",
         "browser": "2 passed desktop/mobile Chromium, selected owner, totals, CSV and mobile API, accessibility",
         "android": "compileDebugKotlin and 142 JVM tests passed",
         "typescript_lint": "TypeScript/focused lint passed before final browser rerun; final checkpoint head validation pending",
-        "final_head": "NOT RUN"
+        "final_head": "NOT RUN",
+        "owner_history": "23 owner-history/report tests passed; 2 desktop/mobile browser tests passed including detail/report drilldown, dates/clear, scoped mobile API, denial, invalid calendar dates; Android compile/142 JVM tests passed; TypeScript and focused lint passed. Final-head/device validation pending."
       }
     },
     {
@@ -11735,7 +11737,7 @@
       ],
       "checkpoint_work": {
         "status": "PARTIAL",
-        "summary": "Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains."
+        "summary": "Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains. Owner history validates real calendar dates, supports clear/retry recovery and native cancellation/stale-response protection. Identity/posting labelled forms and actionable funds recovery preserved; correction controls remain."
       },
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
@@ -11743,7 +11745,8 @@
         "android": "compileDebugKotlin/testDebugUnitTest successful; 142 JVM tests passed; device verification pending",
         "schema_upgrade": "Isolated legacy fixture upgrade passed linked/dangling identity, ledger IDs, original WITHDRAWAL and app-role preservation; transaction rolled back",
         "typescript_lint": "TypeScript and focused lint passed",
-        "final_head": "NOT RUN"
+        "final_head": "NOT RUN",
+        "owner_history": "23 owner-history/report tests passed; 2 desktop/mobile browser tests passed including detail/report drilldown, dates/clear, scoped mobile API, denial, invalid calendar dates; Android compile/142 JVM tests passed; TypeScript and focused lint passed. Final-head/device validation pending."
       }
     },
     {

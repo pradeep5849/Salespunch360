@@ -1,3 +1,4 @@
+import { ownerHistoryForActor } from "@/lib/account/owner-history";
 import { ownerCapitalSummaryForActor } from "@/lib/account/owner-capital-summary";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
@@ -172,4 +173,15 @@ export async function mobileOwnerCapitalSummary(u: MobileAppPrincipal) {
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
     throw new Error("MOBILE_FORBIDDEN");
   return ownerCapitalSummaryForActor(a);
+}
+
+export async function mobileOwnerHistory(
+  u: MobileAppPrincipal,
+  id: string,
+  filters: unknown,
+) {
+  const a = mobileAccountActor(u);
+  if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
+    throw new Error("MOBILE_FORBIDDEN");
+  return ownerHistoryForActor(a, id, filters);
 }
