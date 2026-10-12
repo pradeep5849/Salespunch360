@@ -30,6 +30,7 @@ async function loadExpensePage(
       status: query.status || undefined,
       type: query.type || undefined,
       categoryId: query.categoryId || undefined,
+      templateId: query.templateId || undefined,
       branchId:
         scoped.context.mode === "BRANCH" ? scoped.context.branchId : undefined,
       offset: query.offset ?? 0,
@@ -56,6 +57,7 @@ async function loadExpensePage(
         "status",
         "type",
         "categoryId",
+        "templateId",
         "branchId",
         "scope",
       ]) {
@@ -139,6 +141,20 @@ export default async function Page({
             ? "Company consolidated"
             : scoped.context.branchName}
         </p>
+        {query.templateId && (
+          <p>
+            Recurring bills for the selected schedule ·{" "}
+            <Link
+              href={
+                query.branchId
+                  ? `/workspace/account/expenses?branchId=${query.branchId}`
+                  : "/workspace/account/expenses"
+              }
+            >
+              All expenses
+            </Link>
+          </p>
+        )}
         <section aria-label="Recognized expense and income totals">
           <h2>Posted totals · all history</h2>
           <p>
@@ -156,6 +172,9 @@ export default async function Page({
           )}
           {query.scope && (
             <input type="hidden" name="scope" value={query.scope} />
+          )}
+          {query.templateId && (
+            <input type="hidden" name="templateId" value={query.templateId} />
           )}
           <label>
             Search expenses

@@ -9,6 +9,7 @@ export type ExpenseSummaryScope = {
 export type ExpenseSummaryFilters = {
   branchId?: string;
   categoryId?: string;
+  templateId?: string;
   status?: string;
   type?: string;
   q?: string;
@@ -51,6 +52,10 @@ export function expenseSummarySql(
     );
   if (filters.categoryId)
     conditions.push(Prisma.sql`e."categoryId" = ${filters.categoryId}::uuid`);
+  if (filters.templateId)
+    conditions.push(
+      Prisma.sql`e."occurrenceKey" LIKE ${filters.templateId + ":%"}`,
+    );
   if (filters.status)
     conditions.push(Prisma.sql`e.status::text = ${filters.status}`);
   if (filters.type) conditions.push(Prisma.sql`e.type::text = ${filters.type}`);

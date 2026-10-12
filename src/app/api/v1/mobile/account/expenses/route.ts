@@ -19,6 +19,7 @@ export async function GET(r: Request) {
         "status",
         "type",
         "categoryId",
+        "templateId",
         "branchId",
         "scope",
         "offset",

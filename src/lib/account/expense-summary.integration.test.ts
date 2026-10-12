@@ -108,6 +108,10 @@ async function summary(
     }
     await tx.$executeRaw`INSERT INTO journal_entries VALUES (${id(150)}::uuid,${company}::uuid,${branch}::uuid,'POSTED',${id(121)}::uuid)`;
     await tx.$executeRaw`INSERT INTO journal_lines VALUES (${company}::uuid,${id(150)}::uuid,${id(10)}::uuid,0,20.20),(${company}::uuid,${id(120)}::uuid,${id(12)}::uuid,1000,0),(${company}::uuid,${id(120)}::uuid,${id(13)}::uuid,0,1000)`;
+    await tx.$executeRawUnsafe(
+      'ALTER TABLE expense_transactions ADD COLUMN "occurrenceKey" text',
+    );
+    await tx.$executeRaw`UPDATE expense_transactions SET "occurrenceKey"=${id(70) + ":2026-10-01"} WHERE id IN (${id(20)}::uuid,${id(23)}::uuid)`;
     return expenseSummaryResult(
       await tx.$queryRaw<ExpenseSummaryRow[]>(
         expenseSummarySql(scope, filters),
@@ -118,6 +122,17 @@ async function summary(
 describe.skipIf(!url)(
   "A052 posted expense/income aggregate on isolated PostgreSQL",
   () => {
+    it("reconciles all matching recurring bills without including other schedules or branches", async () => {
+      expect(
+        await summary(
+          { companyId: company, branchIds: [branch] },
+          { templateId: id(70) },
+        ),
+      ).toMatchObject({ expense: "10.10", income: "0.00" });
+      expect(
+        await summary({ companyId: company }, { templateId: id(71) }),
+      ).toMatchObject({ expense: "0.00", income: "0.00" });
+    });
     it("reconciles exact P&L including reversal while excluding draft, tax assets and loan principal", async () => {
       const result = await summary({ companyId: company, branchIds: [branch] });
       expect(result).toMatchObject({

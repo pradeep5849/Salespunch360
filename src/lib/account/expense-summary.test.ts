@@ -38,3 +38,9 @@ describe("A052 expense aggregate bounds and precision", () => {
     expect(query.text).toContain('j."companyId" = e."companyId"');
   });
 });
+it("keeps recurring bill totals limited to the selected schedule", () => {
+  const templateId = "11111111-1111-4111-8111-111111111111";
+  const query = expenseSummarySql({ companyId: "company" }, { templateId });
+  expect(query.text).toContain('e."occurrenceKey" LIKE');
+  expect(query.values).toContain(templateId + ":%");
+});

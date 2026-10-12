@@ -13,7 +13,7 @@ import {
   SavePendingFields,
   SaveSubmitButton,
 } from "@/components/account/save-feedback";
-import { indiaDateText } from "@/lib/follow-up-tasks/date";
+import { indiaDateText, classifyDueDate } from "@/lib/follow-up-tasks/date";
 export default async function Page() {
   const [o, templates, expenses] = await Promise.all([
     expenseOptions(),
@@ -29,9 +29,9 @@ export default async function Page() {
           backHref="/workspace/account/expenses"
         />
         <p>
-          Generate each due occurrence once. It starts as a draft or awaits
-          approval according to your expense policy. Open the bill to approve
-          and post its payment.
+          Generate each due occurrence once. Open the unpaid bill to record its
+          actual payment date and account. Approval reviews the recorded payment
+          without posting it again.
         </p>
         {o.canCreateExpense && (
           <details>
@@ -61,9 +61,62 @@ export default async function Page() {
               {template.frequency.toLowerCase()} · {template.amount.toFixed(2)}{" "}
               · Next due {template.nextDueDate.toISOString().slice(0, 10)} ·{" "}
               {template.isActive ? "Active" : "Paused"}
+              {template.isActive &&
+                ` · ${classifyDueDate(template.nextDueDate).toLowerCase()}`}
             </p>
             {o.canCreateExpense && (
               <>
+                <details>
+                  <summary>Edit future schedule</summary>
+                  <ActionFeedbackForm action={recurringAction}>
+                    <input type="hidden" name="operation" value="edit" />
+                    <input type="hidden" name="id" value={template.id} />
+                    <input
+                      type="hidden"
+                      name="expectedUpdatedAt"
+                      value={template.updatedAt.toISOString()}
+                    />
+                    <label>
+                      Frequency
+                      <select
+                        name="frequency"
+                        defaultValue={template.frequency}
+                        required
+                      >
+                        {["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"].map(
+                          (frequency) => (
+                            <option key={frequency} value={frequency}>
+                              {frequency.toLowerCase()}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    <label>
+                      Next due date
+                      <input
+                        name="nextDueDate"
+                        type="date"
+                        defaultValue={template.nextDueDate
+                          .toISOString()
+                          .slice(0, 10)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Future bill amount
+                      <input
+                        name="amount"
+                        type="text"
+                        inputMode="decimal"
+                        defaultValue={template.amount.toFixed(2)}
+                        required
+                      />
+                    </label>
+                    <p>Existing bills and recorded payments stay unchanged.</p>
+                    <SaveSubmitButton>Save schedule changes</SaveSubmitButton>
+                  </ActionFeedbackForm>
+                </details>
                 <ActionFeedbackForm action={recurringAction}>
                   <input type="hidden" name="operation" value="active" />
                   <input type="hidden" name="id" value={template.id} />
@@ -119,6 +172,12 @@ export default async function Page() {
                 )}
               </>
             )}
+            <Link
+              href={`/workspace/account/expenses?templateId=${template.id}&branchId=${template.branchId}`}
+            >
+              View all bills for this schedule
+            </Link>
+            <h4>Recent bills</h4>
             <ul>
               {expenses
                 .filter((row) =>

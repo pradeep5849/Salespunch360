@@ -14,6 +14,8 @@ import {
   reverseExpense,
   saveExpenseCategory,
   transitionExpense,
+  payRecurringExpense,
+  updateRecurringTemplate,
 } from "@/lib/account/expenses";
 const raw = (fd: FormData) =>
   Object.fromEntries(
@@ -22,6 +24,20 @@ const raw = (fd: FormData) =>
         !key.startsWith("$ACTION_") && !["operation", "id"].includes(key),
     ),
   );
+export async function payRecurringExpenseAction(form: FormData) {
+  return accountAction(async () => {
+    const id = String(form.get("id"));
+    await payRecurringExpense(id, {
+      requestKey: form.get("requestKey"),
+      moneyAccountId: form.get("moneyAccountId"),
+      paymentDate: form.get("paymentDate"),
+    });
+    revalidatePath(`/workspace/account/expenses/${id}`);
+    revalidatePath("/workspace/account/expenses");
+    revalidatePath("/workspace/account/expenses/recurring");
+    return `/workspace/account/expenses/${id}`;
+  }, "Recurring expense payment recorded.");
+}
 export async function createExpenseAction(fd: FormData) {
   return accountAction(
     async () => {
@@ -103,6 +119,13 @@ export async function recurringAction(fd: FormData) {
         String(fd.get("id")),
         fd.get("isActive") === "true",
       );
+    else if (fd.get("operation") === "edit")
+      await updateRecurringTemplate(String(fd.get("id")), {
+        frequency: fd.get("frequency"),
+        amount: fd.get("amount"),
+        nextDueDate: fd.get("nextDueDate"),
+        expectedUpdatedAt: fd.get("expectedUpdatedAt"),
+      });
     else await createRecurringTemplate(raw(fd));
     revalidatePath("/workspace/account/expenses/recurring");
   }, "Recurring schedule saved.");

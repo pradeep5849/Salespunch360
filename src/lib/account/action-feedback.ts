@@ -8,6 +8,16 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  RECURRING_DUE_DATE_IMMUTABLE:
+    "A recurring bill keeps its original due date. Enter the actual payment date when marking it paid.",
+  RECURRING_SCHEDULE_CHANGED:
+    "This schedule changed. Refresh before editing it.",
+  RECURRING_OCCURRENCE_ALREADY_EXISTS:
+    "A bill already exists for that due date. Choose a different next due date.",
+  RECURRING_PAYMENT_DATE_REQUIRED:
+    "Record this recurring bill's payment with its actual payment date and account.",
+  RECURRING_BILL_NOT_PAYABLE:
+    "This recurring bill is already paid or cannot accept payment. Refresh the bill.",
   INVALID_EXPENSE_ITEM_PHOTO: "Select a valid image smaller than 5 MB.",
   EXPENSE_ITEM_NAME_EXISTS:
     "This expense item already exists. Select it from the catalogue.",

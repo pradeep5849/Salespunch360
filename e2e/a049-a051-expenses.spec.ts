@@ -3218,3 +3218,356 @@ test("A052 expense catalogue reuses company items, stores validated photos and r
     await db.company.delete({ where: { id: foreignCompany.id } });
   }
 });
+
+test("A053 late recurring payment preserves due date and posts once on actual payment date", async ({
+  request,
+}) => {
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Recurring paid regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const schedule = await db.recurringExpenseTemplate.create({
+    data: {
+      companyId,
+      branchId,
+      categoryId: expenseCategory,
+      frequency: "MONTHLY",
+      nextDueDate: new Date("2026-09-01"),
+      anchorDate: new Date("2026-09-01"),
+      amount: "80.25",
+      createdById: userId,
+    },
+  });
+  const generated = await request.patch(
+    `/api/v1/mobile/account/expenses/recurring/${schedule.id}`,
+    {
+      headers,
+      data: {
+        action: "GENERATE",
+        moneyAccountId: moneyId,
+        expectedDueDate: "2026-09-01",
+      },
+    },
+  );
+  expect(generated.status()).toBe(200);
+  const bill = await generated.json();
+  expect(bill.journalEntryId).toBeNull();
+  const payload = {
+    action: "PAY_RECURRING",
+    requestKey: randomUUID(),
+    moneyAccountId: moneyId,
+    paymentDate: "2026-10-12",
+  };
+  const responses = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      request.post(`/api/v1/mobile/account/expenses/${bill.id}/action`, {
+        headers,
+        data: payload,
+      }),
+    ),
+  );
+  for (const response of responses) expect(response.status()).toBe(200);
+  const paid = await db.expenseTransaction.findUniqueOrThrow({
+    where: { id: bill.id },
+  });
+  expect(paid.transactionDate.toISOString().slice(0, 10)).toBe("2026-09-01");
+  expect(paid.paidDate?.toISOString().slice(0, 10)).toBe("2026-10-12");
+  expect(paid.status).toBe("POSTED");
+  expect(paid.approvalReviewStatus).toBe("PENDING");
+  const journal = await db.journalEntry.findUniqueOrThrow({
+    where: { id: paid.journalEntryId! },
+    include: { lines: true },
+  });
+  expect(journal.entryDate.toISOString().slice(0, 10)).toBe("2026-10-12");
+  expect(
+    journal.lines
+      .find((line) => line.ledgerAccountId === cashLedger)
+      ?.credit.toFixed(2),
+  ).toBe("80.25");
+  expect(
+    await db.accountOperationalAudit.count({
+      where: {
+        companyId,
+        entityId: bill.id,
+        eventType: "RECURRING_EXPENSE_PAID",
+      },
+    }),
+  ).toBe(1);
+  const changed = await request.post(
+    `/api/v1/mobile/account/expenses/${bill.id}/action`,
+    { headers, data: { ...payload, paymentDate: "2026-10-13" } },
+  );
+  expect(changed.status()).toBe(409);
+  const filtered = await request.get(
+    `/api/v1/mobile/account/expenses?page=1&templateId=${schedule.id}&limit=1`,
+    { headers },
+  );
+  expect(filtered.status()).toBe(200);
+  const matching = await filtered.json();
+  expect(matching.total).toBe(1);
+  expect(matching.rows[0].id).toBe(bill.id);
+  expect(matching.summary.expense).toBe("80.25");
+});
+
+test("A052 accountant may record payment but cannot approve or reverse it; Data Entry remains denied", async ({
+  request,
+}) => {
+  const otherUser = await db.user.create({
+    data: {
+      companyId,
+      name: "Expense role fixture",
+      email: `${randomUUID()}@example.test`,
+      passwordHash: await hash(password),
+      role: "ACCOUNT_USER",
+      accountRole: "ACCOUNTANT",
+      accountAccessActive: true,
+      emailVerifiedAt: new Date(),
+    },
+  });
+  try {
+    const login = await request.post("/api/v1/mobile/auth/login", {
+      data: {
+        identifier: otherUser.email,
+        password,
+        deviceId: randomUUID(),
+        deviceName: "Expense accountant role",
+      },
+    });
+    expect(login.status()).toBe(200);
+    const headers = {
+      authorization: `Bearer ${(await login.json()).accessToken}`,
+    };
+    const created = await request.post("/api/v1/mobile/account/expenses", {
+      headers,
+      data: {
+        requestKey: randomUUID(),
+        recordAsPaid: true,
+        branchId,
+        categoryId: expenseCategory,
+        moneyAccountId: moneyId,
+        type: "OFFICE_EXPENSE",
+        transactionDate: "2026-10-12",
+        taxableAmount: "25.00",
+      },
+    });
+    expect(created.status()).toBe(201);
+    const expense = await created.json();
+    expect(expense.status).toBe("POSTED");
+    expect(
+      (
+        await request.post(
+          `/api/v1/mobile/account/expenses/${expense.id}/action`,
+          { headers, data: { action: "TRANSITION", status: "APPROVED" } },
+        )
+      ).status(),
+    ).toBe(403);
+    expect(
+      (
+        await request.post(
+          `/api/v1/mobile/account/expenses/${expense.id}/action`,
+          {
+            headers,
+            data: {
+              action: "REVERSE",
+              entryDate: "2026-10-12",
+              reason: "Forbidden reversal",
+            },
+          },
+        )
+      ).status(),
+    ).toBe(403);
+    expect(
+      (
+        await db.expenseTransaction.findUniqueOrThrow({
+          where: { id: expense.id },
+        })
+      ).approvalReviewStatus,
+    ).toBe("PENDING");
+    await db.user.update({
+      where: { id: otherUser.id },
+      data: { accountRole: "DATA_ENTRY" },
+    });
+    const deniedLogin = await request.post("/api/v1/mobile/auth/login", {
+      data: {
+        identifier: otherUser.email,
+        password,
+        deviceId: randomUUID(),
+        deviceName: "Expense Data Entry denial",
+      },
+    });
+    expect(deniedLogin.status()).toBe(200);
+    const deniedHeaders = {
+      authorization: `Bearer ${(await deniedLogin.json()).accessToken}`,
+    };
+    expect(
+      (
+        await request.get("/api/v1/mobile/account/expenses", {
+          headers: deniedHeaders,
+        })
+      ).status(),
+    ).toBe(403);
+    expect(
+      (
+        await request.post("/api/v1/mobile/account/expenses", {
+          headers: deniedHeaders,
+          data: {},
+        })
+      ).status(),
+    ).toBe(403);
+  } finally {
+    await db.mobileSession.deleteMany({ where: { userId: otherUser.id } });
+  }
+});
+
+test("A053 schedule editing rejects stale changes and preserves original creation retry identity", async ({
+  request,
+}) => {
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Recurring edit regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const input = {
+    branchId,
+    categoryId: expenseCategory,
+    frequency: "MONTHLY",
+    creationRequestKey: randomUUID(),
+    nextDueDate: "2026-11-01",
+    amount: "100.00",
+  };
+  const created = await request.post(
+    "/api/v1/mobile/account/expenses/recurring",
+    { headers, data: input },
+  );
+  expect(created.status()).toBe(201);
+  const schedule = await created.json();
+  const before = await db.expenseTransaction.count({ where: { companyId } });
+  const payload = {
+    action: "EDIT",
+    frequency: "QUARTERLY",
+    amount: "120.00",
+    nextDueDate: "2026-11-15",
+    expectedUpdatedAt: schedule.updatedAt,
+  };
+  const changed = await request.patch(
+    `/api/v1/mobile/account/expenses/recurring/${schedule.id}`,
+    { headers, data: payload },
+  );
+  expect(changed.status()).toBe(200);
+  const edited = await changed.json();
+  expect(edited.frequency).toBe("QUARTERLY");
+  expect(edited.amount).toBe("120");
+  expect(edited.anchorDate.slice(0, 10)).toBe("2026-11-15");
+  expect(
+    (
+      await request.patch(
+        `/api/v1/mobile/account/expenses/recurring/${schedule.id}`,
+        { headers, data: payload },
+      )
+    ).status(),
+  ).toBe(409);
+  const replay = await request.post(
+    "/api/v1/mobile/account/expenses/recurring",
+    { headers, data: input },
+  );
+  expect(replay.status()).toBe(201);
+  expect((await replay.json()).id).toBe(schedule.id);
+  expect(await db.expenseTransaction.count({ where: { companyId } })).toBe(
+    before,
+  );
+});
+
+test("A053 web payment control posts a late bill while retaining its original due date", async ({
+  page,
+  request,
+}) => {
+  const bill = await db.expenseTransaction.create({
+    data: {
+      companyId,
+      branchId,
+      categoryId: expenseCategory,
+      type: "OFFICE_EXPENSE",
+      status: "DRAFT",
+      transactionNumber: `UI-${randomUUID()}`,
+      transactionDate: new Date("2026-09-05"),
+      taxableAmount: "42.10",
+      taxRate: "0",
+      taxAmount: "0",
+      totalAmount: "42.10",
+      moneyAccountId: moneyId,
+      occurrenceKey: `${randomUUID()}:2026-09-05`,
+      createdById: userId,
+    },
+  });
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Recurring due-date guard",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const guard = await request.patch(
+    `/api/v1/mobile/account/expenses/${bill.id}`,
+    {
+      headers: { authorization: `Bearer ${(await login.json()).accessToken}` },
+      data: {
+        branchId,
+        categoryId: expenseCategory,
+        type: "OFFICE_EXPENSE",
+        moneyAccountId: moneyId,
+        transactionDate: "2026-09-06",
+        taxableAmount: "42.10",
+      },
+    },
+  );
+  expect(guard.status()).toBe(400);
+  expect((await guard.json()).error).toBe("RECURRING_DUE_DATE_IMMUTABLE");
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 15000 });
+  await page.goto(`/workspace/account/expenses/${bill.id}`);
+  await page.getByLabel("Payment date", { exact: true }).fill("2026-10-12");
+  await page.getByLabel("Paid from", { exact: true }).selectOption(moneyId);
+  await page
+    .getByRole("button", { name: "Mark recurring bill paid", exact: true })
+    .click();
+  await expect(page.getByText("Approval review", { exact: true })).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(
+    page.getByRole("button", { name: "Mark recurring bill paid", exact: true }),
+  ).toHaveCount(0, { timeout: 15000 });
+  const paid = await db.expenseTransaction.findUniqueOrThrow({
+    where: { id: bill.id },
+  });
+  expect(paid.status).toBe("POSTED");
+  expect(paid.transactionDate.toISOString().slice(0, 10)).toBe("2026-09-05");
+  expect(paid.paidDate?.toISOString().slice(0, 10)).toBe("2026-10-12");
+  const accessibility = await new AxeBuilder({ page })
+    .include(".employees-content")
+    .analyze();
+  expect(
+    accessibility.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+});

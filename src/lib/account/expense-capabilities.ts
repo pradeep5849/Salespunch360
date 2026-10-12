@@ -10,6 +10,7 @@ export function expenseCapabilities(
     status: ExpenseTransactionStatus;
     createdById: string;
     approvalReviewStatus?: ExpenseApprovalReviewStatus | null;
+    occurrenceKey?: string | null;
   },
 ) {
   const permissions = actor.accountRole
@@ -18,6 +19,10 @@ export function expenseCapabilities(
   const entry = permissions.includes("ACCOUNT_EXPENSE_ENTRY"),
     admin = actor.accountRole === "ACCOUNT_ADMIN";
   return {
+    payRecurring:
+      entry &&
+      !!expense.occurrenceKey &&
+      ["DRAFT", "PENDING_APPROVAL", "APPROVED"].includes(expense.status),
     edit:
       entry && expense.status === "DRAFT" && expense.createdById === actor.id,
     submit: entry && expense.status === "DRAFT",
@@ -34,6 +39,7 @@ export function expenseCapabilities(
           expense.approvalReviewStatus === "PENDING")),
     post:
       ["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(actor.accountRole ?? "") &&
+      !expense.occurrenceKey &&
       expense.status === "APPROVED",
     reverse: admin && expense.status === "POSTED",
     attach: entry,

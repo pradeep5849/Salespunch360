@@ -628,8 +628,13 @@ export async function updateExpenseForActor(
   raw: unknown,
 ) {
   await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
-  await scopedExpense(a, id, "DRAFT");
+  const current = await scopedExpense(a, id, "DRAFT");
   const d = expenseInput.parse(raw);
+  if (
+    current.occurrenceKey &&
+    d.transactionDate.getTime() !== current.transactionDate.getTime()
+  )
+    throw new Error("RECURRING_DUE_DATE_IMMUTABLE");
   const category = await validateExpenseRelations(a, d);
   const [branch, settings] = await Promise.all([
       db.branch.findFirst({
@@ -971,6 +976,8 @@ export async function postExpenseForActor(a: Actor, id: string) {
             where: { id: row.journalEntryId, companyId: a.companyId },
           });
         if (row.status !== "APPROVED") throw new Error("EXPENSE_NOT_APPROVED");
+        if (row.occurrenceKey)
+          throw new Error("RECURRING_PAYMENT_DATE_REQUIRED");
         return postExpenseInTx(tx, a, row);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -1039,12 +1046,101 @@ export async function reverseExpenseForActor(
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
+export const recurringPaymentInput = z
+  .object({
+    requestKey: z.string().uuid(),
+    moneyAccountId: z.string().uuid(),
+    paymentDate: z.string().date(),
+  })
+  .strict();
+export async function payRecurringExpenseForActor(
+  a: Actor,
+  id: string,
+  raw: unknown,
+) {
+  await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
+  const input = recurringPaymentInput.parse(raw);
+  const scope = await expenseRecordScope(a);
+  const hash = createHash("sha256")
+    .update(JSON.stringify({ id, ...input }))
+    .digest("hex");
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        const row = await tx.expenseTransaction.findFirst({
+          where: { id, ...scope },
+        });
+        if (!row) throw new AuthorizationError();
+        const replay = await tx.accountOperationalAudit.findFirst({
+          where: {
+            companyId: a.companyId,
+            eventType: "RECURRING_EXPENSE_PAID",
+            metadata: { path: ["requestKey"], equals: input.requestKey },
+          },
+        });
+        if (replay) {
+          const metadata = replay.metadata as { requestHash?: string } | null;
+          if (replay.entityId !== id || metadata?.requestHash !== hash)
+            throw new Error("IDEMPOTENCY_KEY_REUSED");
+          return row;
+        }
+        if (
+          !row.occurrenceKey ||
+          row.journalEntryId ||
+          !["DRAFT", "PENDING_APPROVAL", "APPROVED"].includes(row.status)
+        )
+          throw new Error("RECURRING_BILL_NOT_PAYABLE");
+        const paidDate = parseIndiaBusinessDate(input.paymentDate);
+        const relations = expenseInput.parse({
+          branchId: row.branchId,
+          projectId: row.projectId ?? undefined,
+          categoryId: row.categoryId,
+          type: row.type,
+          transactionDate: input.paymentDate,
+          moneyAccountId: input.moneyAccountId,
+          taxableAmount: row.taxableAmount.toFixed(2),
+          taxRate: row.taxRate.toString(),
+          cessRate: row.cessRate.toString(),
+          taxMode: row.taxMode,
+          taxCreditTreatment: row.taxCreditTreatment,
+        });
+        await validateExpenseRelations(a, relations, tx);
+        const reviewRequired = await approvalRequired(
+          tx,
+          a.companyId,
+          row.totalAmount,
+        );
+        const ready = await tx.expenseTransaction.update({
+          where: { id },
+          data: {
+            status: "APPROVED",
+            paidDate,
+            moneyAccountId: input.moneyAccountId,
+            approvalReviewStatus: reviewRequired ? "PENDING" : "NOT_REQUIRED",
+          },
+        });
+        await postExpenseInTx(tx, a, ready);
+        await audit(tx, a, "RECURRING_EXPENSE_PAID", "EXPENSE", id, {
+          requestKey: input.requestKey,
+          requestHash: hash,
+          dueDate: row.transactionDate.toISOString().slice(0, 10),
+          paymentDate: input.paymentDate,
+        });
+        return tx.expenseTransaction.findUniqueOrThrow({ where: { id } });
+      },
+      { isolationLevel: "Serializable" },
+    ),
+  );
+}
+
 export const expenseListQuerySchema = z
   .object({
     q: z.string().trim().max(160).optional(),
     status: z.nativeEnum(ExpenseTransactionStatus).optional(),
     type: z.nativeEnum(ExpenseTransactionType).optional(),
     categoryId: z.string().uuid().optional(),
+    templateId: z.string().uuid().optional(),
     branchId: z.string().uuid().optional(),
     offset: z.coerce.number().int().min(0).max(10000000).default(0),
     limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -1096,6 +1192,9 @@ export async function expensePageForActor(a: Actor, raw: unknown = {}) {
         ...(query.status ? { status: query.status } : {}),
         ...(query.type ? { type: query.type } : {}),
         ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+        ...(query.templateId
+          ? { occurrenceKey: { startsWith: query.templateId + ":" } }
+          : {}),
         ...(query.q
           ? {
               OR: [
@@ -1340,6 +1439,27 @@ const templateInput = z
     amount: money.refine((v) => new D(v).gt(0), "Amount must be positive"),
   })
   .strict();
+function recurringCreationHash(input: {
+  branchId: string;
+  projectId?: string | null;
+  categoryId: string;
+  frequency: RecurringFrequency;
+  amount: string | Prisma.Decimal;
+  nextDueDate: Date;
+}) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        branchId: input.branchId,
+        projectId: input.projectId ?? null,
+        categoryId: input.categoryId,
+        frequency: input.frequency,
+        amount: new D(input.amount).toFixed(2),
+        nextDueDate: input.nextDueDate.toISOString().slice(0, 10),
+      }),
+    )
+    .digest("hex");
+}
 export async function createRecurringTemplateForActor(a: Actor, raw: unknown) {
   await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
   const d = templateInput.parse(raw);
@@ -1395,15 +1515,31 @@ export async function createRecurringTemplateForActor(a: Actor, raw: unknown) {
           });
           if (existing) {
             if (!branchOk(a, existing.branchId)) throw new AuthorizationError();
-            if (
-              existing.branchId !== d.branchId ||
-              existing.projectId !== (d.projectId ?? null) ||
-              existing.categoryId !== d.categoryId ||
-              existing.frequency !== d.frequency ||
-              (existing.anchorDate ?? existing.nextDueDate).getTime() !==
-                d.nextDueDate.getTime() ||
-              !existing.amount.eq(d.amount)
-            )
+            const identities = await tx.accountOperationalAudit.findMany({
+              where: {
+                companyId: a.companyId,
+                entityId: existing.id,
+                eventType: {
+                  in: [
+                    "RECURRING_TEMPLATE_CREATED",
+                    "RECURRING_CREATION_IDENTITY_CAPTURED",
+                  ],
+                },
+              },
+              orderBy: { createdAt: "asc" },
+            });
+            const savedHash = identities
+              .map(
+                (event) =>
+                  (event.metadata as { requestHash?: string } | null)
+                    ?.requestHash,
+              )
+              .find(Boolean);
+            const legacyHash = recurringCreationHash({
+              ...existing,
+              nextDueDate: existing.anchorDate ?? existing.nextDueDate,
+            });
+            if ((savedHash ?? legacyHash) !== recurringCreationHash(d))
               throw new Error("IDEMPOTENCY_CONFLICT");
             return existing;
           }
@@ -1423,6 +1559,7 @@ export async function createRecurringTemplateForActor(a: Actor, raw: unknown) {
           "RECURRING_TEMPLATE_CREATED",
           "RECURRING_EXPENSE_TEMPLATE",
           row.id,
+          { requestHash: recurringCreationHash(d) },
         );
         return row;
       },
@@ -1599,45 +1736,173 @@ export async function setRecurringTemplateActive(
     isActive,
   );
 }
+function templateScope(a: Actor, scope: Prisma.ExpenseTransactionWhereInput) {
+  return {
+    companyId: a.companyId,
+    ...(scope.branchId
+      ? {
+          branchId:
+            scope.branchId as Prisma.RecurringExpenseTemplateWhereInput["branchId"],
+        }
+      : {}),
+    ...(scope.projectId
+      ? {
+          projectId:
+            scope.projectId as Prisma.RecurringExpenseTemplateWhereInput["projectId"],
+        }
+      : {}),
+  };
+}
 export async function setRecurringTemplateActiveForActor(
   a: Actor,
   id: string,
-  isActive: boolean,
+  rawActive: boolean,
 ) {
-  const scope = await expenseRecordScope(a);
-  return db.$transaction(async (tx) => {
-    const row = await tx.recurringExpenseTemplate.findFirst({
-      where: {
-        id,
-        companyId: a.companyId,
-        ...(scope.branchId
-          ? {
-              branchId:
-                scope.branchId as Prisma.RecurringExpenseTemplateWhereInput["branchId"],
-            }
-          : {}),
-        ...(scope.projectId
-          ? {
-              projectId:
-                scope.projectId as Prisma.RecurringExpenseTemplateWhereInput["projectId"],
-            }
-          : {}),
+  await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
+  const isActive = z.boolean().parse(rawActive);
+  const scope = templateScope(a, await expenseRecordScope(a));
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        const row = await tx.recurringExpenseTemplate.findFirst({
+          where: { id, ...scope },
+        });
+        if (!row) throw new AuthorizationError();
+        if (row.isActive === isActive) return;
+        await tx.recurringExpenseTemplate.update({
+          where: { id },
+          data: { isActive },
+        });
+        await audit(
+          tx,
+          a,
+          "RECURRING_TEMPLATE_UPDATED",
+          "RECURRING_EXPENSE_TEMPLATE",
+          id,
+          { isActive },
+        );
       },
-    });
-    if (!row) throw new AuthorizationError();
-    await tx.recurringExpenseTemplate.update({
-      where: { id },
-      data: { isActive },
-    });
-    await audit(
-      tx,
-      a,
-      "RECURRING_TEMPLATE_UPDATED",
-      "RECURRING_EXPENSE_TEMPLATE",
-      id,
-      { isActive },
-    );
-  });
+      { isolationLevel: "Serializable" },
+    ),
+  );
+}
+export const recurringTemplateEditInput = z
+  .object({
+    frequency: z.nativeEnum(RecurringFrequency),
+    amount: money.refine(
+      (value) => new D(value).gt(0),
+      "Amount must be positive",
+    ),
+    nextDueDate: z.string().date(),
+    expectedUpdatedAt: z.string().datetime(),
+  })
+  .strict();
+export async function updateRecurringTemplateForActor(
+  a: Actor,
+  id: string,
+  raw: unknown,
+) {
+  await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
+  const input = recurringTemplateEditInput.parse(raw);
+  const scope = templateScope(a, await expenseRecordScope(a));
+  const due = parseIndiaBusinessDate(input.nextDueDate);
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+        const current = await tx.recurringExpenseTemplate.findFirst({
+          where: { id, ...scope },
+        });
+        if (!current) throw new AuthorizationError();
+        if (current.updatedAt.toISOString() !== input.expectedUpdatedAt)
+          throw new Error("RECURRING_SCHEDULE_CHANGED");
+        if (
+          await tx.expenseTransaction.findFirst({
+            where: {
+              companyId: a.companyId,
+              occurrenceKey: recurringOccurrenceKey(id, due),
+            },
+          })
+        )
+          throw new Error("RECURRING_OCCURRENCE_ALREADY_EXISTS");
+        if (current.creationRequestKey) {
+          const identities = await tx.accountOperationalAudit.findMany({
+            where: {
+              companyId: a.companyId,
+              entityId: current.id,
+              eventType: {
+                in: [
+                  "RECURRING_TEMPLATE_CREATED",
+                  "RECURRING_CREATION_IDENTITY_CAPTURED",
+                ],
+              },
+            },
+          });
+          if (
+            !identities.some(
+              (event) =>
+                !!(event.metadata as { requestHash?: string } | null)
+                  ?.requestHash,
+            )
+          )
+            await audit(
+              tx,
+              a,
+              "RECURRING_CREATION_IDENTITY_CAPTURED",
+              "RECURRING_EXPENSE_TEMPLATE",
+              id,
+              {
+                requestHash: recurringCreationHash({
+                  ...current,
+                  nextDueDate: current.anchorDate ?? current.nextDueDate,
+                }),
+              },
+            );
+        }
+        const updated = await tx.recurringExpenseTemplate.update({
+          where: { id },
+          data: {
+            frequency: input.frequency,
+            amount: new D(input.amount),
+            nextDueDate: due,
+            ...(current.frequency !== input.frequency ||
+            current.nextDueDate.getTime() !== due.getTime()
+              ? { anchorDate: due }
+              : {}),
+          },
+        });
+        await audit(
+          tx,
+          a,
+          "RECURRING_SCHEDULE_EDITED",
+          "RECURRING_EXPENSE_TEMPLATE",
+          id,
+          {
+            before: {
+              frequency: current.frequency,
+              amount: current.amount.toFixed(2),
+              nextDueDate: current.nextDueDate.toISOString().slice(0, 10),
+            },
+            after: {
+              frequency: updated.frequency,
+              amount: updated.amount.toFixed(2),
+              nextDueDate: input.nextDueDate,
+            },
+          },
+        );
+        return updated;
+      },
+      { isolationLevel: "Serializable" },
+    ),
+  );
+}
+export async function updateRecurringTemplate(id: string, raw: unknown) {
+  return updateRecurringTemplateForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    id,
+    raw,
+  );
 }
 const allowedMime = new Set(["application/pdf", "image/jpeg", "image/png"]);
 export async function addExpenseAttachmentForActor(
@@ -1755,5 +2020,13 @@ export async function downloadExpenseAttachment(id: string) {
   return downloadExpenseAttachmentForActor(
     await actor("ACCOUNT_EXPENSE_VIEW"),
     id,
+  );
+}
+
+export async function payRecurringExpense(id: string, raw: unknown) {
+  return payRecurringExpenseForActor(
+    await actor("ACCOUNT_EXPENSE_ENTRY", true),
+    id,
+    raw,
   );
 }

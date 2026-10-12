@@ -3,6 +3,9 @@ import type { ExpenseTransactionStatus } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
+  payRecurringExpenseForActor,
+  updateRecurringTemplateForActor,
+  recurringTemplateEditInput,
   addExpenseAttachmentForActor,
   deactivateExpenseCategoryForActor,
   createExpenseForActor,
@@ -96,6 +99,18 @@ export async function mobileExpenseAction(
     entryDate?: string;
     reason?: string;
   };
+  if (d.action === "PAY_RECURRING") {
+    const input = raw as {
+      requestKey?: unknown;
+      moneyAccountId?: unknown;
+      paymentDate?: unknown;
+    };
+    return payRecurringExpenseForActor(permit(u, "ACCOUNT_EXPENSE_ENTRY"), id, {
+      requestKey: input.requestKey,
+      moneyAccountId: input.moneyAccountId,
+      paymentDate: input.paymentDate,
+    });
+  }
   if (d.action === "TRANSITION" && d.status) {
     const p = ["APPROVED", "REJECTED"].includes(d.status)
       ? "ACCOUNT_EXPENSE_APPROVE"
@@ -185,6 +200,11 @@ export async function mobileRecurringExpenseAction(
   await assertOperationalWrite(u.companyId);
   const a = permit(u, "ACCOUNT_EXPENSE_ENTRY");
   const input = recurringActionSchema.parse(raw);
+  if (input.action === "EDIT") {
+    const { action: _action, ...edit } = input;
+    void _action;
+    return updateRecurringTemplateForActor(a, id, edit);
+  }
   if (input.action === "ACTIVE") {
     await setRecurringTemplateActiveForActor(a, id, input.isActive);
     return { ok: true };
@@ -198,6 +218,7 @@ export async function mobileRecurringExpenseAction(
 }
 
 const recurringActionSchema = z.discriminatedUnion("action", [
+  recurringTemplateEditInput.extend({ action: z.literal("EDIT") }),
   z.object({ action: z.literal("ACTIVE"), isActive: z.boolean() }).strict(),
   z
     .object({

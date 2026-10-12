@@ -29,6 +29,7 @@ export type ExpenseValue = {
   projectId?: string | null;
   moneyAccountId?: string | null;
   transactionDate: string;
+  occurrenceKey?: string | null;
   taxableAmount: string;
   billedItems?: Line[] | null;
   additionalCharges?: string;
@@ -288,6 +289,7 @@ export function ExpenseEditor({
           <input
             type="date"
             name="transactionDate"
+            readOnly={!!x?.occurrenceKey}
             required
             defaultValue={
               x?.transactionDate.slice(0, 10) ??

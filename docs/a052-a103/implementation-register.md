@@ -341,7 +341,7 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 **Required tests:** Empty zero totals; mixed expense/income; drafts/posted/reversed/cancelled; category active/inactive history; precise decimals; branch/company/period scope; report reconciliation.
 
-**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final checkpoint-head validation remains pending.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -352,6 +352,9 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 Checkpoint recognized-summary progress: Added a permission/module/company/assigned-branch/project-scoped SQL aggregate of effective expense/income journal lines. Originals and reversals remain in recognized totals; draft journals, tax assets and loan principal are excluded. List rows/count/totals use one RepeatableRead snapshot and totals are independent of pagination. Web and Android list/category views show separate exact totals with explicit all-posted-history semantics, inactive-category history and category-search scope. Mobile paged list/category APIs return the same summary. Money formatting preserves exact decimal cents above the safe integer range and scientific notation while honoring currency/precision.
 
 Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases; 2714 web unit tests passed, 107 skipped, 0 failed; 6 desktop/mobile browser scenarios passed; Android compiled and 142 JVM tests passed; TypeScript/focused lint passed. These results do not replace final checkpoint-head validation. No migration required.
+
+Recurring/payment management slice: Extended scoped expense list and effective ledger aggregate with the same validated recurring-template filter. Recognized totals include all matching schedule bills while list retains stable paging; branch/company/project scope remains enforced.
+Intermediate verification:95 grouped tests;36 financial/unit tests including5 PostgreSQL cases;four schedule-edit/role API cases;two late-payment/filter API cases;two confirmed web payment/accessibility cases;Android compile/146 JVM tests pass. Final checkpoint-head validation pending.
 
 ## A052-F07 — Web empty list provides no empty-state explanation
 
@@ -704,6 +707,9 @@ Additional implementation: web/Android paid-save wiring and separate payment/rev
 Catalogue/reversal slice: Generic journal reversal now blocks expense-linked journals outside verified expense lifecycle; expense reversal cancels pending review metadata. Added locked-period atomic rollback, committed-retry-after-lock, invalid account/branch/category denial and exact reversal regression. Broader role/project/branch and final-head checks pending.
 Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/paid API browser checks; two catalogue API browser checks; Android146 JVM tests and compile; TypeScript and lint pass. Final-head verification remains pending.
 
+Recurring/payment management slice: Added independent Accountant/Data Entry API regressions: Accountants may record actual expense payment but cannot approve/reverse; Data Entry expense read/write remain denied. Recurring paid controls stay exclusive to generated bills; original due dates are immutable. Final-head and remaining financial-isolation checks still pending.
+Intermediate verification:95 grouped tests;36 financial/unit tests including5 PostgreSQL cases;four schedule-edit/role API cases;two late-payment/filter API cases;two confirmed web payment/accessibility cases;Android compile/146 JVM tests pass. Final checkpoint-head validation pending.
+
 ## A053-F01 — Web Create recurring expense fails on React action metadata
 
 **Title:** Web Create recurring expense fails on React action metadata
@@ -785,7 +791,7 @@ Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/pa
 
 **Required tests:** Create/list/edit/pause/stop schedules; upcoming/due/overdue; manual payment on-time/late; correct actual payment date/account; duplicate/concurrent/replayed paid request; approval and locked periods; branch/company permissions; reconcile expense, cash/bank and financial reports without duplicate recognition; equivalent Android/mobile-web/desktop behavior.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -799,6 +805,9 @@ Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/pa
 **Remaining work:** Schedule editing, complete manual payment date/account workflow, late/locked-period/concurrent payment tests and final-head verification remain pending.
 
 Latest approved business clarification: User confirmed already-paid expenses post immediately and later approval is review only; apply this to manual recurring-payment completion without duplicate posting.
+
+Recurring/payment management slice: Implemented manual recurring-bill payment using actual payment date/account while retaining original due date; company-serialized request replay prevents duplicate payment, approval remains review, and ordinary manual post cannot bypass actual-date entry. Added web/native payment controls, scoped paginated all-bills drilldown and matching ledger totals, due/upcoming/overdue indicators, optimistic future-schedule editing and serialized pause/resume. Existing bills and posted history are preserved. No new migration in this slice; uses paid-review fields from prior forward migration.
+Intermediate verification:95 grouped tests;36 financial/unit tests including5 PostgreSQL cases;four schedule-edit/role API cases;two late-payment/filter API cases;two confirmed web payment/accessibility cases;Android compile/146 JVM tests pass. Final checkpoint-head validation pending.
 
 ## A053-F03 — Project-linked recurrence generation bypasses Projects OFF
 
@@ -1022,7 +1031,7 @@ Latest approved business clarification: User confirmed already-paid expenses pos
 
 **Required tests:** Sequential/concurrent repeats and lost response; same key different payload; legitimate separate schedules.
 
-**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -1034,6 +1043,9 @@ Latest approved business clarification: User confirmed already-paid expenses pos
 **Checkpoint work:** Stable company-scoped creation UUID, company lock, Serializable retry and unique constraint prevent duplicate schedule creation; changed retry payload rejected.
 
 **Remaining work:** Final-head regression and original finding verification remain pending.
+
+Recurring/payment management slice: Preserved original recurring creation identity through immutable creation-audit hashes; legacy identity captured by a new audit event before first future edit. Creation retries after schedule edits return the existing schedule without resetting future dates/amounts.
+Intermediate verification:95 grouped tests;36 financial/unit tests including5 PostgreSQL cases;four schedule-edit/role API cases;two late-payment/filter API cases;two confirmed web payment/accessibility cases;Android compile/146 JVM tests pass. Final checkpoint-head validation pending.
 
 ## A053-F08 — Recurring web validation loses the form behind generic error
 
@@ -1163,7 +1175,7 @@ Latest approved business clarification: User confirmed already-paid expenses pos
 
 **Required tests:** Actor/template/before-after metadata; audit failure rolls back creation; replay does not duplicate audit.
 
-**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A053_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -1175,6 +1187,9 @@ Latest approved business clarification: User confirmed already-paid expenses pos
 **Checkpoint work:** Schedule creation and pause/resume write operational audit records.
 
 **Remaining work:** Final-head regression and original finding verification remain pending.
+
+Recurring/payment management slice: Recurring creation, future edits, pause/resume and paid occurrences are audited; original creation identity remains immutable. Unchanged pause/resume retries produce no duplicate audit event.
+Intermediate verification:95 grouped tests;36 financial/unit tests including5 PostgreSQL cases;four schedule-edit/role API cases;two late-payment/filter API cases;two confirmed web payment/accessibility cases;Android compile/146 JVM tests pass. Final checkpoint-head validation pending.
 
 ## A053-F11 — Recurring web form fields have no accessible labels
 

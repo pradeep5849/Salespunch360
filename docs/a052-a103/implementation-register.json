@@ -1452,7 +1452,9 @@
         "recognized_summary_slice": {
           "work": "Added a permission/module/company/assigned-branch/project-scoped SQL aggregate of effective expense/income journal lines. Originals and reversals remain in recognized totals; draft journals, tax assets and loan principal are excluded. List rows/count/totals use one RepeatableRead snapshot and totals are independent of pagination. Web and Android list/category views show separate exact totals with explicit all-posted-history semantics, inactive-category history and category-search scope. Mobile paged list/category APIs return the same summary. Money formatting preserves exact decimal cents above the safe integer range and scientific notation while honoring currency/precision.",
           "remaining": "Full checkpoint-head regression, native device/accessibility verification and final report/export reconciliation remain required."
-        }
+        },
+        "recurring_payment_management_slice": "Extended scoped expense list and effective ledger aggregate with the same validated recurring-template filter. Recognized totals include all matching schedule bills while list retains stable paging; branch/company/project scope remains enforced.",
+        "recurring_slice_evidence": "Intermediate evidence:95 grouped expense/recurrence/accounting tests passed;36 focused financial/unit tests passed including5 PostgreSQL temporary-table integration cases;four schedule-edit/role API tests passed;two late-payment/filter API tests passed;two confirmed web-payment/accessibility tests passed;Android compile and146 JVM tests passed after moving read-only home Gradle cache into writable workspace. TypeScript/focused lint checked separately. This is not final PR-head validation."
       },
       "intermediate_validation": {
         "recognized_summary_slice": {
@@ -2280,7 +2282,9 @@
         "intermediate_regression": "Broader Vitest run: 2737 passed,107 skipped,0 failed (421 files passed,9 skipped), after fixing whitespace-sensitive existing schema contract. Android146 passed,0 failure/error/skip. Four browser tests passed. Intermediate evidence only; final-head validation pending.",
         "catalogue_and_reversal_slice": "Generic journal reversal now blocks expense-linked journals outside verified expense lifecycle; expense reversal cancels pending review metadata. Added locked-period atomic rollback, committed-retry-after-lock, invalid account/branch/category denial and exact reversal regression. Broader role/project/branch and final-head checks pending.",
         "slice_validation": "Intermediate:44 focused guard/capability/feedback tests pass;3 catalogue/input/photo tests pass; four desktop/mobile entry+paid API checks pass;two catalogue photo/retry/company-isolation API checks pass; Android compile/JVM146 pass;TypeScript/focused lint pass. Broader unit suite in progress; exact final PR-head tests not run.",
-        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head."
+        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head.",
+        "recurring_payment_management_slice": "Added independent Accountant/Data Entry API regressions: Accountants may record actual expense payment but cannot approve/reverse; Data Entry expense read/write remain denied. Recurring paid controls stay exclusive to generated bills; original due dates are immutable. Final-head and remaining financial-isolation checks still pending.",
+        "recurring_slice_evidence": "Intermediate evidence:95 grouped expense/recurrence/accounting tests passed;36 focused financial/unit tests passed including5 PostgreSQL temporary-table integration cases;four schedule-edit/role API tests passed;two late-payment/filter API tests passed;two confirmed web-payment/accessibility tests passed;Android compile and146 JVM tests passed after moving read-only home Gradle cache into writable workspace. TypeScript/focused lint checked separately. This is not final PR-head validation."
       }
     },
     {
@@ -2521,7 +2525,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -2534,7 +2538,9 @@
         "work": "Web and native schedule registers, pause/resume, due generation, bill navigation and scoped GET/PATCH APIs implemented.",
         "remaining_work": "Schedule editing, complete manual payment date/account workflow, late/locked-period/concurrent payment tests and final-head verification remain pending.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
-        "approved_paid_expense_policy": "Already-paid save posts payment/expense immediately; later approval only reviews, with no duplicate journal/payment."
+        "approved_paid_expense_policy": "Already-paid save posts payment/expense immediately; later approval only reviews, with no duplicate journal/payment.",
+        "recurring_payment_management_slice": "Implemented manual recurring-bill payment using actual payment date/account while retaining original due date; company-serialized request replay prevents duplicate payment, approval remains review, and ordinary manual post cannot bypass actual-date entry. Added web/native payment controls, scoped paginated all-bills drilldown and matching ledger totals, due/upcoming/overdue indicators, optimistic future-schedule editing and serialized pause/resume. Existing bills and posted history are preserved. No new migration in this slice; uses paid-review fields from prior forward migration.",
+        "recurring_slice_evidence": "Intermediate evidence:95 grouped expense/recurrence/accounting tests passed;36 focused financial/unit tests passed including5 PostgreSQL temporary-table integration cases;four schedule-edit/role API tests passed;two late-payment/filter API tests passed;two confirmed web-payment/accessibility tests passed;Android compile and146 JVM tests passed after moving read-only home Gradle cache into writable workspace. TypeScript/focused lint checked separately. This is not final PR-head validation."
       }
     },
     {
@@ -3145,7 +3151,9 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Stable company-scoped creation UUID, company lock, Serializable retry and unique constraint prevent duplicate schedule creation; changed retry payload rejected.",
         "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "recurring_payment_management_slice": "Preserved original recurring creation identity through immutable creation-audit hashes; legacy identity captured by a new audit event before first future edit. Creation retries after schedule edits return the existing schedule without resetting future dates/amounts.",
+        "recurring_slice_evidence": "Intermediate evidence:95 grouped expense/recurrence/accounting tests passed;36 focused financial/unit tests passed including5 PostgreSQL temporary-table integration cases;four schedule-edit/role API tests passed;two late-payment/filter API tests passed;two confirmed web-payment/accessibility tests passed;Android compile and146 JVM tests passed after moving read-only home Gradle cache into writable workspace. TypeScript/focused lint checked separately. This is not final PR-head validation."
       }
     },
     {
@@ -3510,7 +3518,9 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Schedule creation and pause/resume write operational audit records.",
         "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "recurring_payment_management_slice": "Recurring creation, future edits, pause/resume and paid occurrences are audited; original creation identity remains immutable. Unchanged pause/resume retries produce no duplicate audit event.",
+        "recurring_slice_evidence": "Intermediate evidence:95 grouped expense/recurrence/accounting tests passed;36 focused financial/unit tests passed including5 PostgreSQL temporary-table integration cases;four schedule-edit/role API tests passed;two late-payment/filter API tests passed;two confirmed web-payment/accessibility tests passed;Android compile and146 JVM tests passed after moving read-only home Gradle cache into writable workspace. TypeScript/focused lint checked separately. This is not final PR-head validation."
       }
     },
     {

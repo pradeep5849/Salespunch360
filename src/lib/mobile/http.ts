@@ -50,6 +50,11 @@ export function mobileUnexpected(category: string, error: unknown) {
       { error: error.message, message: accountErrorMessage(error) },
       [
         "IDEMPOTENCY_KEY_REUSED",
+        "EXPENSE_REVIEW_RETRY_CONFLICT",
+        "INVALID_EXPENSE_REVIEW_TRANSITION",
+        "RECURRING_SCHEDULE_CHANGED",
+        "RECURRING_BILL_NOT_PAYABLE",
+        "RECURRING_OCCURRENCE_ALREADY_EXISTS",
         "ITEM_IDENTIFIER_EXISTS",
         "BUSINESS_CURRENCY_LOCKED",
         "EXPENSE_CATEGORY_NAME_EXISTS",

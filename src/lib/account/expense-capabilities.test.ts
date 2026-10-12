@@ -106,3 +106,24 @@ describe("expense lifecycle capabilities", () => {
     },
   );
 });
+it("restricts the explicit paid control to unpaid recurring bills", () => {
+  const actor = { id: "a", accountRole: "ACCOUNTANT" as const };
+  expect(
+    expenseCapabilities(actor, {
+      createdById: "a",
+      status: "DRAFT",
+      occurrenceKey: "schedule:2026-10-01",
+    }).payRecurring,
+  ).toBe(true);
+  expect(
+    expenseCapabilities(actor, { createdById: "a", status: "DRAFT" })
+      .payRecurring,
+  ).toBe(false);
+  expect(
+    expenseCapabilities(actor, {
+      createdById: "a",
+      status: "POSTED",
+      occurrenceKey: "schedule:2026-10-01",
+    }).payRecurring,
+  ).toBe(false);
+});

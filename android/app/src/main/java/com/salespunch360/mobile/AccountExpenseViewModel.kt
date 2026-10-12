@@ -9,14 +9,16 @@ import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
-data class ExpenseState(val recurringOpen:Boolean=false,val recurringRows:List<JsonObject> = emptyList(),val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val type:String?=null,val categoryId:String?=null,val summary:JsonObject?=null,val total:Int=0,val nextOffset:Int?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val requestKey:String=UUID.randomUUID().toString(),val error:String?=null,val message:String?=null,val newCategoryId:String?=null,val categoryOpen:Boolean=false,val downloaded:Pair<String,ByteArray>?=null)
+data class ExpenseState(val recurringTemplateId:String?=null,val recurringOpen:Boolean=false,val recurringRows:List<JsonObject> = emptyList(),val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val type:String?=null,val categoryId:String?=null,val summary:JsonObject?=null,val total:Int=0,val nextOffset:Int?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val requestKey:String=UUID.randomUUID().toString(),val error:String?=null,val message:String?=null,val newCategoryId:String?=null,val categoryOpen:Boolean=false,val downloaded:Pair<String,ByteArray>?=null)
 class AccountExpenseViewModel(app:Application):AndroidViewModel(app){
  private val api=ApiClient(SecureSession(app));private val _state=MutableStateFlow(ExpenseState());val state:StateFlow<ExpenseState> = _state
  private var loadJob:Job?=null;private var detailJob:Job?=null
  init{refresh()}
  fun refresh(){load(false)}
  private var contextQuery=""
- fun context(query:String){contextQuery=query;load(false)}
+ fun context(query:String){contextQuery=query;_state.value=_state.value.copy(recurringTemplateId=null);load(false)}
+ fun recurringBills(id:String,branchId:String){contextQuery="templateId=$id&branchId=$branchId";_state.value=_state.value.copy(recurringTemplateId=id,recurringOpen=false,query="",status=null,type=null,categoryId=null);load(false)}
+ fun clearRecurringBills(){contextQuery=contextQuery.split("&").filterNot{it.startsWith("templateId=")}.joinToString("&");_state.value=_state.value.copy(recurringTemplateId=null);load(false)}
  private fun load(debounce:Boolean,append:Boolean=false){
   if(append&&_state.value.loading)return
   loadJob?.cancel();val snapshot=_state.value;val offset=if(append)snapshot.nextOffset?:return else 0
@@ -45,6 +47,12 @@ class AccountExpenseViewModel(app:Application):AndroidViewModel(app){
  fun open(id:String){detailJob?.cancel();detailJob=viewModelScope.launch{try{_state.value=_state.value.copy(detail=api.expense(id))}catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}}}
  fun save(payload:JsonObject,saveNew:Boolean=false)=viewModelScope.launch{if(_state.value.saving)return@launch;_state.value=_state.value.copy(saving=true,error=null);try{val id=_state.value.editing?.get("id")?.jsonPrimitive?.contentOrNull;val p=JsonObject(payload.toMutableMap().apply{if(id==null)put("requestKey",JsonPrimitive(_state.value.requestKey))});val x=api.saveExpense(id,p);_state.value=_state.value.copy(saving=false,editing=if(saveNew)buildJsonObject{put("branchId",x.str("branchId"))}else null,requestKey=UUID.randomUUID().toString(),newCategoryId=null,message="${x.str("transactionNumber")} saved by the server.");if(!saveNew)open(x.str("id"));refresh()}catch(e:Exception){fail(e)}}
  fun action(id:String,action:String,status:String?=null,reason:String?=null,date:String?=null)=viewModelScope.launch{if(_state.value.saving)return@launch;_state.value=_state.value.copy(saving=true,error=null);try{api.expenseAction(id,buildJsonObject{put("action",action);status?.let{put("status",it)};reason?.let{put("reason",it)};date?.let{put("entryDate",it)}});_state.value=_state.value.copy(saving=false,message="Expense action confirmed by server.");open(id);refresh()}catch(e:Exception){fail(e)}}
+ fun payRecurring(id:String,payload:JsonObject)=viewModelScope.launch{
+  if(_state.value.saving)return@launch
+  _state.value=_state.value.copy(saving=true,error=null)
+  try{api.expenseAction(id,JsonObject(payload.toMutableMap().apply{put("action",JsonPrimitive("PAY_RECURRING"))}));_state.value=_state.value.copy(saving=false,message="Recurring payment confirmed by server.");open(id);refresh()}
+  catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}
+ }
  fun showCategory(v:Boolean){if(!_state.value.saving)_state.value=_state.value.copy(categoryOpen=v,error=null)}
  fun saveCategory(payload:JsonObject)=viewModelScope.launch{if(_state.value.saving)return@launch;_state.value=_state.value.copy(saving=true,error=null);try{val row=api.saveExpenseCategory(null,payload);val options=JsonObject(_state.value.options.toMutableMap().apply{put("categories",JsonArray(_state.value.options.array("categories").filter{it.str("id")!=row.str("id")}+row))});_state.value=_state.value.copy(saving=false,options=options,newCategoryId=row.str("id"),categoryOpen=false,message="Category saved. Entry values retained.")}catch(e:Exception){fail(e)}}
  // Scheduling is an explicit separate action after a saved expense, never launched alongside saving.
