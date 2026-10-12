@@ -134,6 +134,24 @@ export async function chequePageForActor(
     select: { id: true, name: true, type: true },
   });
   const names = new Map(accounts.map((account) => [account.id, account]));
+  const closedIds = rows
+    .filter((row) => Boolean(row.clearedDate))
+    .map((row) => row.id);
+  const closureNotes = closedIds.length
+    ? await db.$queryRaw<
+        Array<{ entityId: string; description: string | null }>
+      >(Prisma.sql`
+    SELECT DISTINCT ON ("entityId") "entityId", metadata->>'description' AS description
+    FROM account_operational_audits
+    WHERE "companyId"=${actor.companyId}::uuid AND "entityType"='CHEQUE'
+      AND "entityId" IN (${Prisma.join(closedIds.map((id) => Prisma.sql`${id}::uuid`))})
+      AND "eventType"='CHEQUE_FINANCIAL_ACTION' AND metadata->>'action'='CLOSE'
+    ORDER BY "entityId", (metadata->>'version')::bigint DESC NULLS LAST, "createdAt" DESC, id DESC
+  `)
+    : [];
+  const descriptions = new Map(
+    closureNotes.map((row) => [row.entityId, row.description]),
+  );
   return {
     canClose: canUsePermission(
       actor,
@@ -157,6 +175,7 @@ export async function chequePageForActor(
             }
           : null,
       moneyAccount: names.get(row.moneyAccountId) ?? null,
+      closureDescription: descriptions.get(row.id) ?? null,
     })),
     total,
     offset: query.offset,

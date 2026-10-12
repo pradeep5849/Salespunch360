@@ -15,12 +15,161 @@ const actionFields = {
   expectedVersion: z.number().int().min(0).max(2147483646),
   actionDate: z.string().date(),
 };
+const legacySourceInput = z
+  .object({
+    requestKey: z.string().uuid(),
+    expectedVersion: z.number().int().min(0).max(2147483646),
+    partyId: z.string().uuid(),
+    amount: z
+      .string()
+      .regex(/^\d{1,16}(\.\d{1,2})?$/)
+      .refine((value) => new Prisma.Decimal(value).gt(0)),
+    sourceDocumentId: z.string().uuid().optional(),
+  })
+  .strict();
+
+/** Explicitly complete an unposted legacy cheque; never synthesize a paid receipt. */
+export async function completeLegacyChequeSourceForActor(
+  a: ProjectActor,
+  id: string,
+  raw: unknown,
+) {
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
+    throw new AuthorizationError();
+  z.string().uuid().parse(id);
+  const input = legacySourceInput.parse(raw);
+  const hash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        id,
+        ...input,
+        amount: new Prisma.Decimal(input.amount).toFixed(2),
+      }),
+    )
+    .digest("hex");
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+          const row = await tx.cheque.findFirst({
+            where: { id, companyId: a.companyId },
+          });
+          if (!row) throw new AuthorizationError();
+          branchAllowed(a, row.branchId);
+          const prior = await tx.accountOperationalAudit.findFirst({
+            where: {
+              companyId: a.companyId,
+              eventType: "CHEQUE_SOURCE_COMPLETED",
+              metadata: { path: ["requestKey"], equals: input.requestKey },
+            },
+          });
+          if (prior) {
+            if (
+              prior.entityId !== id ||
+              (prior.metadata as { requestHash?: string })?.requestHash !== hash
+            )
+              throw new Error("IDEMPOTENCY_KEY_REUSED");
+            return row;
+          }
+          if (row.actionVersion !== input.expectedVersion)
+            throw new Error("CHEQUE_CHANGED");
+          if (
+            row.settlementId ||
+            row.journalEntryId ||
+            row.clearedDate ||
+            !["ISSUED", "RECEIVED"].includes(row.status)
+          )
+            throw new Error("LEGACY_CHEQUE_SOURCE_REQUIRED");
+          if (row.amount && !row.amount.eq(input.amount))
+            throw new Error("INVALID_CHEQUE_SOURCE");
+          const customer = row.status === "RECEIVED";
+          const party = customer
+            ? await tx.customer.findFirst({
+                where: {
+                  id: input.partyId,
+                  companyId: a.companyId,
+                  branchId: row.branchId,
+                  isActive: true,
+                  isAccountCustomer: true,
+                },
+                select: { name: true },
+              })
+            : await tx.vendor.findFirst({
+                where: {
+                  id: input.partyId,
+                  companyId: a.companyId,
+                  isActive: true,
+                },
+                select: { name: true },
+              });
+          if (!party) throw new AuthorizationError();
+          await tx.cheque.update({
+            where: { id },
+            data: { amount: input.amount, partyName: party.name.slice(0, 240) },
+          });
+          const source = await createSettlementForActor(
+            a,
+            {
+              idempotencyKey: `legacy-cheque:${id}:${input.requestKey}`,
+              branchId: row.branchId,
+              partyId: input.partyId,
+              type: customer
+                ? input.sourceDocumentId
+                  ? "CUSTOMER_RECEIPT"
+                  : "CUSTOMER_ADVANCE"
+                : input.sourceDocumentId
+                  ? "VENDOR_PAYMENT"
+                  : "VENDOR_ADVANCE",
+              paymentMode: "CHEQUE",
+              amount: input.amount,
+              moneyAccountId: row.moneyAccountId,
+              chequeNumber: row.chequeNumber,
+              chequeDate: row.chequeDate,
+              transactionDate: row.chequeDate,
+              reference: row.reference ?? undefined,
+              allocations: input.sourceDocumentId
+                ? [{ documentId: input.sourceDocumentId, amount: input.amount }]
+                : [],
+            },
+            tx,
+            { reuseChequeId: id },
+          );
+          const updated = await tx.cheque.update({
+            where: { id },
+            data: { actionVersion: { increment: 1 } },
+          });
+          await tx.accountOperationalAudit.create({
+            data: {
+              companyId: a.companyId,
+              actorUserId: a.id,
+              eventType: "CHEQUE_SOURCE_COMPLETED",
+              entityType: "CHEQUE",
+              entityId: id,
+              metadata: {
+                requestKey: input.requestKey,
+                requestHash: hash,
+                originalPartyName: row.partyName,
+                partyId: input.partyId,
+                amount: input.amount,
+                settlementId: source.id,
+              },
+            },
+          });
+          return updated;
+        },
+        { isolationLevel: "Serializable" },
+      ),
+    4,
+  );
+}
 export const chequeFinancialActionInput = z.discriminatedUnion("action", [
   z
     .object({
       ...actionFields,
       action: z.literal("CLOSE"),
       moneyAccountId: z.string().uuid().optional(),
+      description: z.string().trim().max(500).default(""),
     })
     .strict(),
   z
@@ -290,6 +439,9 @@ export async function chequeFinancialActionForActor(
                 version: updated.actionVersion,
                 settlementId: updated.settlementId,
                 ...(input.action !== "CLOSE" ? { reason: input.reason } : {}),
+                ...(input.action === "CLOSE"
+                  ? { description: input.description }
+                  : {}),
               },
             },
           });

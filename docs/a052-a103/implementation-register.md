@@ -4931,7 +4931,7 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 **Required tests:** Failure at reversal/status/audit boundaries; no partial side effect; commit-response loss/retry; reversible journal validation and locked period; complete audit trail.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -4978,7 +4978,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Deposit/cancel, clear/bounce, reopen/clear races; duplicate click/retry; state/journal/audit agreement; no double reversal or stale overwrite.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -8923,3 +8923,11 @@ Remaining: Native compilation/unit checks, native creation/destination/source na
 Latest intermediate evidence: 5 PostgreSQL cheque lifecycle tests, 64 shared-consumer tests, Android compile and 146 JVM tests passed; TypeScript, focused lint and Prisma validation passed. Local database has 114 applied migrations. Native entry/destination selection, legacy source completion, browser and final-head checks remain. A066 stays PARTIAL.
 
 Cheque follow-up evidence: 22 database/retry tests passed with sequential fixture files and concurrency inside tests; desktop/mobile-web cheque entry, cash closure and reopen both passed, including card AXE and no overflow. Android View Txn routes compiled and JVM tests passed. Explicit accessible selector names corrected. These remain intermediate checks; A066 is PARTIAL.
+
+### Cheque entry and legacy-source completion checkpoint
+
+Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.
+
+Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.
+
+Remaining: Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed.

@@ -103,6 +103,10 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun projectChangeOrder(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing","POST",payload.toString())).jsonObject
  suspend fun projectCosting(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/projects/${enc(id)}/costing")).jsonObject
  suspend fun saveProject(edit:Boolean,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/projects",if(edit)"PATCH" else "POST",payload.toString())).jsonObject
+ suspend fun createCheque(payload:JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/cheques","POST",payload.toString())).jsonObject
+ suspend fun completeChequeSource(id:String,payload:JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/cheques/${enc(id)}/source","POST",payload.toString())).jsonObject
+ suspend fun chequeEntryOptions(branchId:String,kind:String,offset:Int)=json.parseToJsonElement(call("api/v1/mobile/account/money/cheques/options?kind=${enc(kind)}&offset=$offset"+(if(branchId.isBlank())""else"&branchId=${enc(branchId)}"))).jsonObject
+ suspend fun chequeParties(branchId:String,direction:String,q:String,offset:Int)=json.parseToJsonElement(call("api/v1/mobile/account/money/cheques/parties?branchId=${enc(branchId)}&direction=${enc(direction)}&q=${enc(q)}&offset=$offset")).jsonObject
  suspend fun chequeFinancialAction(id:String,payload:JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/cheques/${enc(id)}/action","POST",payload.toString())).jsonObject
  suspend fun chequePage(q:String,tab:String,order:String,offset:Int,contextQuery:String):JsonObject {
   val context=android.net.Uri.parse("https://local.invalid/?$contextQuery")

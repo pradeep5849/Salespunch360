@@ -86,53 +86,37 @@ export async function saveChequeFinancialAction(fd: FormData) {
 }
 
 export async function searchChequeParties(rawInput: unknown) {
-  const { z } = await import("zod");
-  const { db } = await import("@/lib/db");
   const { requirePermissionForMutation, AuthorizationError } =
     await import("@/lib/auth/authorization");
-  const input = z
-    .object({
-      branchId: z.string().uuid(),
-      direction: z.enum(["RECEIVED", "ISSUED"]),
-      q: z.string().trim().max(160),
-      offset: z.number().int().min(0).max(1000000),
-    })
-    .strict()
-    .parse(rawInput);
+  const { searchChequePartiesForActor } =
+    await import("@/lib/account/cheque-parties");
   const actor = await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");
-  if (
-    !actor.companyId ||
-    (actor.branchAccessScope === "SELECTED_BRANCHES" &&
-      !actor.branchIds?.includes(input.branchId))
-  )
-    throw new AuthorizationError();
-  if (
-    !(await db.branch.findFirst({
-      where: { id: input.branchId, companyId: actor.companyId, isActive: true },
-      select: { id: true },
-    }))
-  )
-    throw new AuthorizationError();
-  const where = {
-    companyId: actor.companyId,
-    isActive: true,
-    name: { contains: input.q, mode: "insensitive" as const },
-  };
-  const rows =
-    input.direction === "RECEIVED"
-      ? await db.customer.findMany({
-          where: { ...where, branchId: input.branchId },
-          select: { id: true, name: true },
-          orderBy: [{ name: "asc" }, { id: "asc" }],
-          skip: input.offset,
-          take: 26,
-        })
-      : await db.vendor.findMany({
-          where,
-          select: { id: true, name: true },
-          orderBy: [{ name: "asc" }, { id: "asc" }],
-          skip: input.offset,
-          take: 26,
-        });
-  return { rows: rows.slice(0, 25), hasMore: rows.length > 25 };
+  if (!actor.companyId) throw new AuthorizationError();
+  return searchChequePartiesForActor(
+    { ...actor, companyId: actor.companyId },
+    rawInput,
+  );
+}
+
+export async function saveLegacyChequeSourceAction(fd: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  const { requirePermissionForMutation, AuthorizationError } =
+    await import("@/lib/auth/authorization");
+  const { completeLegacyChequeSourceForActor } =
+    await import("@/lib/account/cheque-finance");
+  return accountAction(async () => {
+    const actor = await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");
+    if (!actor.companyId) throw new AuthorizationError();
+    await completeLegacyChequeSourceForActor(
+      { ...actor, companyId: actor.companyId },
+      String(fd.get("id")),
+      {
+        partyId: String(fd.get("partyId")),
+        amount: String(fd.get("amount")),
+        requestKey: String(fd.get("requestKey")),
+        expectedVersion: Number(fd.get("expectedVersion")),
+      },
+    );
+    refresh();
+  }, "Cheque source details saved; payment remains pending closure");
 }

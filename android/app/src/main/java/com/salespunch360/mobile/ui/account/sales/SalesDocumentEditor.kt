@@ -543,7 +543,13 @@ private fun DirectSaleInvoiceEditor(
                 item{Row(verticalAlignment=Alignment.CenterVertically){Checkbox(draft.receivedEnabled,{onDraft(draft.copy(receivedEnabled=it))},enabled=!saving);Text("Received")}}
                 if(draft.receivedEnabled)item{OutlinedTextField(draft.receivedAmount,{onDraft(draft.copy(receivedAmount=it))},enabled=!saving,label={Text("Received Amount")},modifier=Modifier.fillMaxWidth())}
             }
-            item{SelectField("Payment Type",draft.paymentType,listOf("CASH" to "Cash","BANK" to "Bank")){onDraft(draft.copy(paymentType=it))}}
+            item{SelectField("Payment Type",draft.paymentType,listOf("CASH" to "Cash","BANK" to "Bank","CHEQUE" to "Cheque")){if(!saving)onDraft(draft.copy(paymentType=it))}}
+            if(draft.paymentType=="CHEQUE"&&draft.editingSourceId.isBlank()){
+                item{OutlinedTextField(draft.chequeNumber,{onDraft(draft.copy(chequeNumber=it.take(80)))},enabled=!saving,label={Text("Cheque number")},modifier=Modifier.fillMaxWidth())}
+                item{OutlinedTextField(draft.chequeDate,{onDraft(draft.copy(chequeDate=it))},enabled=!saving,label={Text("Cheque date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())}
+                item{OutlinedTextField(draft.paymentReference,{onDraft(draft.copy(paymentReference=it.take(160)))},enabled=!saving,label={Text("Payment reference")},modifier=Modifier.fillMaxWidth())}
+                item{Text("The invoice stays unpaid until this cheque is closed.")}
+            }
             item{
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                     Text("Total Amount",fontWeight=FontWeight.Bold)

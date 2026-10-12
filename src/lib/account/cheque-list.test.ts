@@ -5,6 +5,7 @@ const m = vi.hoisted(() => ({
   transaction: vi.fn(),
   branch: vi.fn(),
   accounts: vi.fn(),
+  closureNotes: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
   db: {
@@ -12,6 +13,7 @@ vi.mock("@/lib/db", () => ({
     branch: { findFirst: m.branch },
     moneyAccount: { findMany: m.accounts },
     $transaction: m.transaction,
+    $queryRaw: m.closureNotes,
   },
 }));
 import { chequePageForActor } from "./cheque-list";
@@ -38,6 +40,7 @@ describe("A066 authorized bounded cheque read", () => {
     ]);
     m.branch.mockResolvedValue({ id: branch });
     m.transaction.mockImplementation((queries) => Promise.all(queries));
+    m.closureNotes.mockResolvedValue([]);
   });
   it("defaults to Open and returns stable bounded paging with company-owned account metadata", async () => {
     const result = await chequePageForActor(actor);
@@ -95,6 +98,26 @@ describe("A066 authorized bounded cheque read", () => {
     const result = await chequePageForActor(actor, { tab: "ALL" });
     expect(m.rows.mock.calls[0][0].where.AND[1]).not.toHaveProperty("status");
     expect(result.nextOffset).toBeNull();
+  });
+  it("loads a closed cheque description through a company-scoped batch query", async () => {
+    m.rows.mockResolvedValue([
+      {
+        id: branch,
+        moneyAccountId: "bank",
+        status: "CLEARED",
+        clearedDate: new Date("2026-10-12"),
+      },
+    ]);
+    m.closureNotes.mockResolvedValue([
+      { entityId: branch, description: "Cash closure reference" },
+    ]);
+    const result = await chequePageForActor(actor, { tab: "CLOSED" });
+    expect(result.rows[0].closureDescription).toBe("Cash closure reference");
+    expect(m.closureNotes).toHaveBeenCalledOnce();
+    const query = m.closureNotes.mock.calls[0][0];
+    expect(query.values).toContain("tenant");
+    expect(query.values).toContain(branch);
+    expect(query.sql).toContain("DISTINCT ON");
   });
   it("rejects foreign or inactive selected branches before reading cheques", async () => {
     await expect(

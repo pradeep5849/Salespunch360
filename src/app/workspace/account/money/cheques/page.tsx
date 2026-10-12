@@ -14,6 +14,7 @@ import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { AccountDate } from "@/components/account/display-preferences";
 import { ChequeRecordForm } from "@/components/account/cheque-record-form";
+import { LegacyChequeSourceForm } from "@/components/account/legacy-cheque-source-form";
 import { ChequeFinancialActionForm } from "@/components/account/cheque-financial-action-form";
 import { ClientMoney } from "@/components/account/display-preferences";
 async function load(raw: Record<string, string | undefined>) {
@@ -149,7 +150,9 @@ export default async function Page({
             <summary>Record cheque</summary>
             <ChequeRecordForm
               branches={result.branches}
-              accounts={result.accounts.filter(account => account.type === "BANK")}
+              accounts={result.accounts.filter(
+                (account) => account.type === "BANK",
+              )}
             />
           </details>
         )}
@@ -208,9 +211,35 @@ export default async function Page({
                   financial actions are available.
                 </p>
               )}
+              {canWrite &&
+                !row.settlementId &&
+                !row.journalEntryId &&
+                !row.clearedDate &&
+                (row.status === "ISSUED" || row.status === "RECEIVED") && (
+                  <details>
+                    <summary>Complete source details</summary>
+                    <LegacyChequeSourceForm
+                      id={row.id}
+                      version={row.actionVersion}
+                      branchId={row.branchId}
+                      direction={row.status}
+                    />
+                  </details>
+                )}
               <p>Bank: {row.moneyAccount?.name ?? "Account unavailable"}</p>
-              {row.sourceDocument && <Link href={row.sourceDocument.type === "SALES_INVOICE" ? `/workspace/account/sales/${row.sourceDocument.id}` : `/workspace/account/transactions/${row.sourceDocument.id}`}>View Txn</Link>}
+              {row.sourceDocument && (
+                <Link
+                  href={
+                    row.sourceDocument.type === "SALES_INVOICE"
+                      ? `/workspace/account/sales/${row.sourceDocument.id}`
+                      : `/workspace/account/transactions/${row.sourceDocument.id}`
+                  }
+                >
+                  View Txn
+                </Link>
+              )}
               {row.reference && <p>Reference: {row.reference}</p>}
+              {row.closureDescription && <p>Description: {row.closureDescription}</p>}
               {row.clearedDate && (
                 <p>
                   Cleared: <AccountDate value={row.clearedDate.toISOString()} />

@@ -217,7 +217,44 @@ export async function mobileCreateCheque(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
   return createChequeForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
 }
-export async function mobileChequeFinancialAction(u: MobileAppPrincipal, id: string, raw: unknown) {
+export async function mobileChequeFinancialAction(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
   await write(u);
-  return chequeFinancialActionForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), id, raw);
+  return chequeFinancialActionForActor(
+    permit(u, "ACCOUNT_MONEY_ENTRY"),
+    id,
+    raw,
+  );
+}
+
+export async function mobileCompleteLegacyChequeSource(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await write(u);
+  const { completeLegacyChequeSourceForActor } =
+    await import("@/lib/account/cheque-finance");
+  return completeLegacyChequeSourceForActor(
+    permit(u, "ACCOUNT_MONEY_ENTRY"),
+    id,
+    raw,
+  );
+}
+
+export async function mobileChequeParties(u: MobileAppPrincipal, raw: unknown) {
+  const { searchChequePartiesForActor } =
+    await import("@/lib/account/cheque-parties");
+  return searchChequePartiesForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+export async function mobileChequeEntryOptions(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  const { chequeEntryOptionsForActor } =
+    await import("@/lib/account/cheque-entry-options");
+  return chequeEntryOptionsForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
 }

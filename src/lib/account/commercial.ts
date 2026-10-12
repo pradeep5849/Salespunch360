@@ -2500,6 +2500,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown, trans
   financialRole(actor);
   const d = settlementInput.parse(raw);
   if (d.paymentMode === "CHEQUE" && !d.chequeNumber) throw new Error("CHEQUE_NUMBER_REQUIRED");
+  if (d.paymentMode === "CHEQUE" && !new D(d.amount).gt(0)) throw new Error("CHEQUE_AMOUNT_REQUIRED");
   const requestHash = createHash("sha256").update(JSON.stringify({
     ...d, amount: new D(d.amount).toFixed(2),
     transactionDate: d.transactionDate.toISOString().slice(0,10),

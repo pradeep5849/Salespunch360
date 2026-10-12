@@ -3646,6 +3646,9 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   ).toBe("PENDING_CHEQUE");
   await card.getByLabel("Action date", { exact: true }).fill("2026-10-12");
   await card
+    .getByLabel("Description", { exact: true })
+    .fill("Cash closure reference");
+  await card
     .getByLabel("Payment account", { exact: true })
     .selectOption(moneyId);
   await card
@@ -3654,6 +3657,7 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await expect(card).not.toBeAttached({ timeout: 15000 });
   await page.getByRole("link", { name: "Closed", exact: true }).click();
   await expect(card).toContainText("CLEARED");
+  await expect(card).toContainText("Cash closure reference");
   await card
     .getByLabel("Cheque action", { exact: true })
     .selectOption("REOPEN");
@@ -3679,4 +3683,97 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("legacy cheque source completion saves explicit details without posting at this viewport", async ({
+  page,
+}) => {
+  await db.ledgerAccount.createMany({
+    data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
+    skipDuplicates: true,
+  });
+  const ledger = await db.ledgerAccount.findFirstOrThrow({
+    where: { companyId, systemKey: "BANK" },
+  });
+  const bank =
+    (await db.moneyAccount.findFirst({
+      where: { companyId, ledgerAccountId: ledger.id, type: "BANK" },
+    })) ??
+    (await db.moneyAccount.create({
+      data: {
+        companyId,
+        branchId,
+        type: "BANK",
+        name: "Legacy test bank",
+        ledgerAccountId: ledger.id,
+      },
+    }));
+  const party = await db.customer.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Legacy source customer",
+      isAccountCustomer: true,
+    },
+  });
+  const number = randomUUID().slice(0, 8);
+  const legacy = await db.cheque.create({
+    data: {
+      companyId,
+      branchId,
+      moneyAccountId: bank.id,
+      chequeNumber: number,
+      chequeDate: new Date("2026-10-10"),
+      partyName: "Unmapped legacy party",
+      status: "RECEIVED",
+    },
+  });
+  const journals = await db.journalEntry.count({ where: { companyId } });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/money/cheques");
+  const card = page.getByRole("article", { name: `Cheque ${number}` });
+  await card.getByText("Complete source details", { exact: true }).click();
+  await card
+    .getByLabel("Search original party", { exact: true })
+    .fill(party.name);
+  await card
+    .getByRole("button", { name: "Find original party", exact: true })
+    .click();
+  await expect(
+    card
+      .getByLabel("Original party", { exact: true })
+      .locator("option", { hasText: party.name }),
+  ).toBeAttached({ timeout: 15000 });
+  await card
+    .getByLabel("Original party", { exact: true })
+    .selectOption(party.id);
+  await card
+    .getByLabel("Original cheque amount", { exact: true })
+    .fill("50.00");
+  await card
+    .getByRole("button", { name: "Confirm source details", exact: true })
+    .click();
+  await expect(
+    card.getByRole("heading", { name: party.name, exact: true }),
+  ).toBeVisible({ timeout: 15000 });
+  const result = await db.cheque.findUniqueOrThrow({
+    where: { id: legacy.id },
+  });
+  expect(result.amount?.toFixed(2)).toBe("50.00");
+  expect(result.journalEntryId).toBeNull();
+  expect(
+    (
+      await db.accountSettlement.findUniqueOrThrow({
+        where: { id: result.settlementId! },
+      })
+    ).status,
+  ).toBe("PENDING_CHEQUE");
+  expect(await db.journalEntry.count({ where: { companyId } })).toBe(journals);
+  expect(
+    (await new AxeBuilder({ page }).include("article").analyze()).violations,
+  ).toEqual([]);
 });

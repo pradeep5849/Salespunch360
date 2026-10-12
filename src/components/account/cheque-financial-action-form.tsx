@@ -65,6 +65,10 @@ export function ChequeFinancialActionForm({
               ))}
             </select>
           </label>
+          <label>
+            Description
+            <textarea name="description" maxLength={500} />
+          </label>
           <p>Closing posts the payment and settles the allocated invoice.</p>
         </>
       ) : (

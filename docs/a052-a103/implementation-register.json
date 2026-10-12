@@ -12369,7 +12369,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -12459,6 +12461,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       },
       "intermediate_validation": {
@@ -12596,6 +12603,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       }
     },
@@ -12725,6 +12737,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       }
     },
@@ -12849,6 +12866,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       }
     },
@@ -12882,7 +12904,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -12974,6 +12998,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       },
       "intermediate_validation": {
@@ -13098,7 +13127,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -13114,6 +13143,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       }
     },
@@ -13223,7 +13257,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -13239,6 +13273,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       }
     },
@@ -13271,7 +13310,9 @@
         "JournalLine",
         "AccountSettlement",
         "CommercialDocument",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "SettlementAllocation",
+        "AdvanceApplication"
       ],
       "module_impact": "Core cheque/cash/bank accounting; no optional module bypass established. Preserve other money navigation.",
       "permission_impact": "Reads MONEY_VIEW, mutations MONEY_ENTRY; linked bounce also invokes JOURNAL_REVERSE. Explicit lifecycle policy needs coherent UI/API enforcement; company/assigned-branch predicates exist.",
@@ -13357,6 +13398,11 @@
             "A052",
             "A066"
           ]
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       },
       "intermediate_validation": {
@@ -13499,6 +13545,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       }
     },
@@ -13628,6 +13679,11 @@
           "work": "Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.",
           "tests": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
           "remaining": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation."
+        },
+        "entry_and_legacy_source_completion": {
+          "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
+          "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+          "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
         }
       },
       "intermediate_validation": {
@@ -21951,14 +22007,16 @@
     "cheque_payment_boundaries": {
       "status": "PARTIAL",
       "results": "Intermediate: 5 real PostgreSQL tests pass (concurrent closure, original retry after reopen, reclosure, advance undo, branch/version denial, currency lock, source-specific reversal protection, 1593.00 payment and changed retry identity); grouped 70 commercial/cheque tests pass; latest focused boundary/input group 32 pass; latest cheque list/API/input group 30 pass. TypeScript and focused lint pass. Android compile and 146 JVM tests pass, 0 failures/errors/skips. Not final-head verification.",
-      "limitations": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation.",
+      "limitations": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed.",
       "final_head_validation": false,
       "shared_consumer_regression": "7 files, 64 tests passed (project costing/material, opening balances, report boundaries, mobile transactions and currency/settings).",
       "schema_validation": "Prisma validate passed with isolated local database configuration; 114 migrations present and local database up to date. Initial validate lacked DIRECT_URL; rerun succeeded with local-only configuration.",
       "fault_and_concurrency_tests": "11 real PostgreSQL tests + 11 retry-policy unit tests passed (22 total), with serial test-file execution and concurrent race/retry requests inside the tests. Parallel cross-file fixture transactions hit PostgreSQL serializable conflicts; database fixture groups must execute sequentially while preserving internal concurrency assertions.",
       "source_navigation": "Single-invoice View Txn connected on web/native to saved sale/purchase; native compile and JVM tests passed after route hookup. Multi-invoice/advance and legacy source navigation remain partial.",
       "browser": "Desktop and Pixel5 mobile-web: 2 passed, authenticated entry -> pending advance -> confirmed cash closure -> reopen, posted source becomes REVERSED; card AXE and horizontal overflow assertions passed. Initial inaccessible exact selector corrected by explicit selector aria-labels. Not final-head verification.",
-      "source_native": "Android compileDebugKotlin and testDebugUnitTest passed after View Txn route hookup; native device/TalkBack not exercised."
+      "source_native": "Android compileDebugKotlin and testDebugUnitTest passed after View Txn route hookup; native device/TalkBack not exercised.",
+      "latest_entry_and_legacy_validation": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
+      "local_migrations": "115 local migrations applied; 20261012133000 validated without rewriting existing data. Production not modified."
     }
   },
   "approved_business_decisions": {

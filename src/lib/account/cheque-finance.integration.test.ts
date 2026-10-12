@@ -30,7 +30,10 @@ import {
   documentOutstandingInTx,
   applyAdvanceForActor,
 } from "./commercial";
-import { chequeFinancialActionForActor } from "./cheque-finance";
+import {
+  chequeFinancialActionForActor,
+  completeLegacyChequeSourceForActor,
+} from "./cheque-finance";
 import type { ProjectActor } from "./projects";
 const companyId = randomUUID(),
   branchId = randomUUID(),
@@ -281,9 +284,13 @@ describe.skipIf(!url)(
       expect(new Set(closed.map((row) => row.journalEntryId)).size).toBe(1);
       expect(await outstanding(doc.id)).toBe("0.00");
       expect(await bankEffect(cheque.id)).toBe(100);
-      await expect(reverseJournalForActor(actor, {
-        journalEntryId: closed[0].journalEntryId, entryDate: "2026-10-13", reason: "Generic reversal bypass",
-      })).rejects.toThrow("MANAGED_SETTLEMENT_REVERSAL_REQUIRED");
+      await expect(
+        reverseJournalForActor(actor, {
+          journalEntryId: closed[0].journalEntryId,
+          entryDate: "2026-10-13",
+          reason: "Generic reversal bypass",
+        }),
+      ).rejects.toThrow("MANAGED_SETTLEMENT_REVERSAL_REQUIRED");
       expect(await outstanding(doc.id)).toBe("0.00");
       const reopened = await chequeFinancialActionForActor(actor, cheque.id, {
         action: "REOPEN",
@@ -305,14 +312,23 @@ describe.skipIf(!url)(
       expect(await outstanding(doc.id)).toBe("100.00");
       expect(await bankEffect(cheque.id)).toBe(0);
       const reclosed = await chequeFinancialActionForActor(actor, cheque.id, {
-        action: "CLOSE", requestKey: randomUUID(), expectedVersion: 2,
-        actionDate: "2026-10-14", moneyAccountId: bankId,
+        action: "CLOSE",
+        requestKey: randomUUID(),
+        expectedVersion: 2,
+        actionDate: "2026-10-14",
+        moneyAccountId: bankId,
       });
       expect(reclosed.status).toBe("CLEARED");
       expect(reclosed.settlementId).not.toBe(receipt.id);
       expect(await outstanding(doc.id)).toBe("0.00");
       expect(await bankEffect(cheque.id)).toBe(100);
-      expect((await client.accountSettlement.findUniqueOrThrow({ where: { id: receipt.id } })).status).toBe("REVERSED");
+      expect(
+        (
+          await client.accountSettlement.findUniqueOrThrow({
+            where: { id: receipt.id },
+          })
+        ).status,
+      ).toBe("REVERSED");
     });
     it("reverses applications of a cleared advance when reopening its cheque", async () => {
       const doc = await invoice();
@@ -385,15 +401,94 @@ describe.skipIf(!url)(
     });
     it("preserves the full 1593.00 cheque amount and rejects changed retry content", async () => {
       const doc = await invoice("1593");
-      const input = { branchId, moneyAccountId: bankId, partyId: customerId, sourceDocumentId: doc.id,
-        amount: "1593.00", requestKey: randomUUID(), chequeNumber: randomUUID().slice(0, 8), chequeDate: "2026-10-10", status: "RECEIVED" };
+      const input = {
+        branchId,
+        moneyAccountId: bankId,
+        partyId: customerId,
+        sourceDocumentId: doc.id,
+        amount: "1593.00",
+        requestKey: randomUUID(),
+        chequeNumber: randomUUID().slice(0, 8),
+        chequeDate: "2026-10-10",
+        status: "RECEIVED",
+      };
       const cheque = await createChequeForActor(actor, input);
       expect((await createChequeForActor(actor, input)).id).toBe(cheque.id);
-      await expect(createChequeForActor(actor, { ...input, amount: "1592.00" })).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      await expect(
+        createChequeForActor(actor, { ...input, amount: "1592.00" }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
       expect(await outstanding(doc.id)).toBe("1593.00");
-      await chequeFinancialActionForActor(actor, cheque.id, { action: "CLOSE", requestKey: randomUUID(), expectedVersion: 0, actionDate: "2026-10-12" });
+      await chequeFinancialActionForActor(actor, cheque.id, {
+        action: "CLOSE",
+        requestKey: randomUUID(),
+        expectedVersion: 0,
+        actionDate: "2026-10-12",
+      });
       expect(await outstanding(doc.id)).toBe("0.00");
       expect(await bankEffect(cheque.id)).toBe(1593);
+    });
+    it("completes an unposted legacy source once without settling or posting until closure", async () => {
+      const doc = await invoice();
+      const legacy = await client.cheque.create({
+        data: {
+          companyId,
+          branchId,
+          moneyAccountId: bankId,
+          chequeNumber: randomUUID().slice(0, 8),
+          chequeDate: new Date("2026-10-10"),
+          partyName: "Legacy party text",
+          status: "RECEIVED",
+        },
+      });
+      const input = {
+        requestKey: randomUUID(),
+        expectedVersion: 0,
+        partyId: customerId,
+        amount: "100.00",
+        sourceDocumentId: doc.id,
+      };
+      await expect(
+        completeLegacyChequeSourceForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          legacy.id,
+          input,
+        ),
+      ).rejects.toThrow();
+      expect(
+        (await client.cheque.findUniqueOrThrow({ where: { id: legacy.id } }))
+          .amount,
+      ).toBeNull();
+      const completed = await completeLegacyChequeSourceForActor(
+        actor,
+        legacy.id,
+        input,
+      );
+      expect(completed.actionVersion).toBe(1);
+      expect(completed.amount?.toFixed(2)).toBe("100.00");
+      expect(
+        (await completeLegacyChequeSourceForActor(actor, legacy.id, input))
+          .settlementId,
+      ).toBe(completed.settlementId);
+      await expect(
+        completeLegacyChequeSourceForActor(actor, legacy.id, {
+          ...input,
+          amount: "99",
+        }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      expect(await bankEffect(legacy.id)).toBe(0);
+      expect(await outstanding(doc.id)).toBe("100.00");
+      await chequeFinancialActionForActor({ ...actor, accountRole: "ACCOUNTANT" }, legacy.id, {
+        action: "CLOSE",
+        requestKey: randomUUID(),
+        expectedVersion: 1,
+        actionDate: "2026-10-12",
+      });
+      expect(await outstanding(doc.id)).toBe("0.00");
+      expect(await bankEffect(legacy.id)).toBe(100);
     });
   },
 );
