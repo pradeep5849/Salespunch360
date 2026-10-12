@@ -6121,7 +6121,13 @@
         "A058-F03",
         "A058-F05",
         "A058-F06"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "PARTIAL",
+        "work": "User confirmed company saved HSN/SAC lookup. Web suggestions and Android searchable selector now use distinct active company product/service codes, with manual entry retained. Mobile options expose this catalogue only for item/service workflows when HSN/SAC is ON; no official classification data is represented. Explicit accessible web field label verified after initial locator failure.",
+        "remaining_work": "Scoped image attachment/camera/gallery handling remains unimplemented; final-head regression, native device selector and offline rendering verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A058-F05",
@@ -21291,6 +21297,15 @@
       "android": "142 JVM tests passed",
       "typescript": "passed",
       "lint": "passed",
+      "stage": "INTERMEDIATE ONLY"
+    },
+    "saved_hsn_codes": {
+      "unit": "3 passed",
+      "browser": "2 desktop/mobile Chromium tests passed: suggestions, manual entry persistence, mobile options and setting OFF",
+      "android": "compileDebugKotlin and 142 JVM tests passed",
+      "typescript": "passed after browser regression",
+      "lint": "passed",
+      "user_decision": "Search company saved HSN/SAC codes",
       "stage": "INTERMEDIATE ONLY"
     }
   }

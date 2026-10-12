@@ -48,6 +48,8 @@ fun AddItemScreen(
     var code by remember{mutableStateOf("")}
     var categoryId by remember{mutableStateOf<String?>(null)}
     var description by remember{mutableStateOf("")}
+    var hsnSearch by remember{mutableStateOf(false)}
+    var hsnQuery by remember{mutableStateOf("")}
     var hsn by remember{mutableStateOf("")}
     var salePrice by remember{mutableStateOf("")}
     var purchasePrice by remember{mutableStateOf("")}
@@ -103,6 +105,19 @@ fun AddItemScreen(
         if(primaryUnit==null&&enabled("itemUnits")&&defaultUnit.isNotBlank())primaryUnit=s.units.firstOrNull{it.name.equals(defaultUnit,true)||it.symbol.equals(defaultUnit,true)}?.id
     }
     val expanded=name.isNotBlank()
+    if(hsnSearch)AlertDialog(
+        onDismissRequest={hsnSearch=false},
+        title={Text("Saved HSN/SAC Codes")},
+        text={Column{
+            OutlinedTextField(hsnQuery,{hsnQuery=it},label={Text("Search saved codes")})
+            val matches=s.hsnCodes.filter{it.contains(hsnQuery,ignoreCase=true)}
+            if(matches.isEmpty())Text("No saved codes found. You can enter a code manually.")
+            LazyColumn(Modifier.heightIn(max=300.dp)){
+                items(matches){code->TextButton(onClick={hsn=code;hsnSearch=false}){Text(code)}}
+            }
+        }},
+        confirmButton={TextButton(onClick={hsnSearch=false}){Text("Close")}}
+    )
     Scaffold(
         containerColor=MaterialTheme.colorScheme.surface,
         topBar={
@@ -237,7 +252,7 @@ fun AddItemScreen(
                             {hsn=it},
                             label={Text("HSN/SAC Code")},
                             modifier=Modifier.fillMaxWidth(),
-                            trailingIcon={Icon(Icons.Default.Search,null)}
+                            trailingIcon={IconButton(onClick={hsnQuery=hsn;hsnSearch=true}){Icon(Icons.Default.Search,"Search saved HSN/SAC codes")}}
                         )
                     }
                 }

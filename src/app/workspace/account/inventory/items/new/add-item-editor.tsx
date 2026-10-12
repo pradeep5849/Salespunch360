@@ -23,6 +23,7 @@ type Props = {
   categories: Category[];
   settings: Record<string, unknown>;
   customFields?: CustomFieldDefinition[];
+  hsnCodes?: string[];
 };
 type HelpKey = "OPENING" | "PRICE" | "MIN" | null;
 const taxRates = ["0", "0.1", "0.25", "3", "5", "12", "18", "28"];
@@ -51,6 +52,7 @@ export function AddItemEditor({
   categories: initialCategories,
   settings,
   customFields = [],
+  hsnCodes = [],
   initialKind = "products",
 }: Props) {
   const customFieldRoot = useRef<HTMLDivElement>(null);
@@ -349,7 +351,14 @@ export function AddItemEditor({
                     value={hsn}
                     onChange={(e) => setHsn(e.target.value)}
                     placeholder="HSN/SAC Code"
+                    list="saved-hsn-codes"
+                    aria-label="HSN/SAC Code"
                   />
+                  <datalist id="saved-hsn-codes">
+                    {hsnCodes.map((code) => (
+                      <option key={code} value={code} />
+                    ))}
+                  </datalist>
                   <span className="field-icon" aria-hidden>
                     ⌕
                   </span>

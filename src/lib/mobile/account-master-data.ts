@@ -1,3 +1,4 @@
+import { savedHsnCodes } from "@/lib/account/saved-hsn-codes";
 import { saveCustomFieldValuesInTx } from "@/lib/account/custom-field-values";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -726,6 +727,11 @@ export async function mobileMasterOptions(
     branches,
     units,
     categories,
+    hsnCodes:
+      ["items", "services"].includes(kind) &&
+      resolveItemSettings(settings?.itemSettings).hsnSac
+        ? await savedHsnCodes(user.companyId)
+        : [],
     partySettings: resolvePartySettings(settings?.transactionDefaults),
     itemSettings: ["items", "services"].includes(kind)
       ? resolveItemSettings(settings?.itemSettings)

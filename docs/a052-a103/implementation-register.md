@@ -2255,13 +2255,16 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Image success/cancel/type/size/authorization; lookup search/select/product-versus-service; offline/error; persisted result/native/web parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A058_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A058_Findings.json, SalesPunch360_A058_Audit_Report.md.
 
 **Linked finding IDs:** A058-F03, A058-F05, A058-F06.
+
+Checkpoint HSN/SAC lookup: User confirmed company saved HSN/SAC lookup. Web suggestions and Android searchable selector now use distinct active company product/service codes, with manual entry retained. Mobile options expose this catalogue only for item/service workflows when HSN/SAC is ON; no official classification data is represented. Explicit accessible web field label verified after initial locator failure.
+Remaining: Scoped image attachment/camera/gallery handling remains unimplemented; final-head regression, native device selector and offline rendering verification remain pending.
 
 ## A058-F05 — Item creation does not consistently enforce company item settings
 

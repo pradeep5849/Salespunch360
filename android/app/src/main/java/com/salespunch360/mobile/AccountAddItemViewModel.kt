@@ -12,6 +12,7 @@ data class AddItemState(
     val loading:Boolean=true,
     val saving:Boolean=false,
     val configLoaded:Boolean=false,
+    val hsnCodes:List<String> = emptyList(),
     val units:List<AccountOption> = emptyList(),
     val categories:List<AccountOption> = emptyList(),
     val serviceCategories:List<AccountOption> = emptyList(),
@@ -31,7 +32,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
     fun load()=viewModelScope.launch{
         _state.value=_state.value.copy(loading=true,configLoaded=false,error=null)
         runCatching{api.accountMasterOptions("items") to api.accountMasterOptions("services")}.onSuccess{(products,services)->
-            _state.value=_state.value.copy(loading=false,configLoaded=true,units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
+            _state.value=_state.value.copy(loading=false,configLoaded=true,hsnCodes=(products.hsnCodes+services.hsnCodes).distinct().sorted(),units=products.units,categories=products.categories,serviceCategories=services.categories,itemSettings=products.itemSettings,error=null,productFields=products.partyCustomFields,serviceFields=services.partyCustomFields)
         }.onFailure{_state.value=_state.value.copy(loading=false,error="Unable to load item options.")}
     }
 

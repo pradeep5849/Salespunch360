@@ -1561,3 +1561,91 @@ test("A060 stock display preserves exact decimal totals and configured rounding"
     }
   }
 });
+
+test("A058 saved company HSN/SAC suggestions support manual entry and mobile options", async ({
+  page,
+  request,
+}) => {
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: { enabled: true, hsnSac: true } },
+  });
+  await db.accountProduct.create({
+    data: { companyId, name: "HSN suggestion product", hsnCode: "441231" },
+  });
+  await db.accountService.create({
+    data: {
+      companyId,
+      name: "SAC suggestion service",
+      sacCode: "998314",
+      sellingRate: "25",
+    },
+  });
+  await db.accountProduct.create({
+    data: {
+      companyId,
+      name: "Inactive HSN product",
+      hsnCode: "999999",
+      isActive: false,
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/items/new");
+  await page
+    .getByLabel("Item Name *", { exact: true })
+    .fill("Manual HSN product");
+  await expect(page.locator("#saved-hsn-codes option")).toHaveCount(2);
+  await expect(
+    page.locator('#saved-hsn-codes option[value="441231"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('#saved-hsn-codes option[value="998314"]'),
+  ).toHaveCount(1);
+  await page.getByLabel("HSN/SAC Code", { exact: true }).fill("123456");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await db.accountProduct.findFirst({
+            where: { companyId, name: "Manual HSN product" },
+          })
+        )?.hsnCode,
+    )
+    .toBe("123456");
+  const response = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "HSN regression",
+    },
+  });
+  expect(response.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await response.json()).accessToken}`,
+  };
+  const options = await request.get(
+    "/api/v1/mobile/account/master-data/items?view=options",
+    { headers },
+  );
+  expect(options.status()).toBe(200);
+  expect((await options.json()).hsnCodes).toEqual([
+    "123456",
+    "441231",
+    "998314",
+  ]);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: { enabled: true, hsnSac: false } },
+  });
+  const disabled = await request.get(
+    "/api/v1/mobile/account/master-data/items?view=options",
+    { headers },
+  );
+  expect((await disabled.json()).hsnCodes).toEqual([]);
+});
