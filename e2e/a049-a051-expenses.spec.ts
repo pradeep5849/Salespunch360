@@ -1,5 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import {
+  createCommercialDocumentForActor,
+  postCommercialDocumentForActor,
+  createSettlementForActor,
+  applyAdvanceForActor,
+} from "@/lib/account/commercial";
+import type { ProjectActor } from "@/lib/account/projects";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
@@ -139,9 +146,14 @@ test.afterAll(async () => {
       where: { companyId },
       data: { settlementId: null },
     });
+    await tx.advanceApplication.deleteMany({ where: { companyId } });
+    await tx.openingBalanceAllocation.deleteMany({ where: { companyId } });
+    await tx.settlementAllocation.deleteMany({ where: { companyId } });
     await tx.accountSettlement.deleteMany({ where: { companyId } });
     await tx.cheque.deleteMany({ where: { companyId } });
     await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+    await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
+    await tx.commercialDocument.deleteMany({ where: { companyId } });
   });
   await db.ownerTransaction.deleteMany({ where: { companyId } });
   await db.ownerFinancialAccount.deleteMany({ where: { companyId } });
@@ -3776,4 +3788,139 @@ test("legacy cheque source completion saves explicit details without posting at 
   expect(
     (await new AxeBuilder({ page }).include("article").analyze()).violations,
   ).toEqual([]);
+});
+
+test("sale details distinguish receipts, credits, advances and aggregate party balance at this viewport", async ({
+  page,
+}) => {
+  await db.ledgerAccount.createMany({
+    data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
+    skipDuplicates: true,
+  });
+  const party = await db.customer.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Sale detail browser customer",
+      isAccountCustomer: true,
+    },
+  });
+  const actor = {
+    id: userId,
+    companyId,
+    name: "Expense administrator",
+    email,
+    managerType: null,
+    salesRole: null,
+    role: "ACCOUNT_USER",
+    accountRole: "ACCOUNT_ADMIN",
+    isActive: true,
+    accountAccessActive: true,
+    salesAccessActive: false,
+    branchAccessScope: "ALL_BRANCHES",
+    branchIds: [],
+  } as ProjectActor;
+  async function sale(rate: string) {
+    const row = await createCommercialDocumentForActor(actor, {
+      type: "SALES_INVOICE",
+      branchId,
+      partyId: party.id,
+      issueDate: "2026-10-10",
+      idempotencyKey: randomUUID(),
+      lines: [
+        {
+          lineType: "CUSTOM",
+          itemName: "Detail service",
+          quantity: "1",
+          rate,
+          taxRate: "0",
+        },
+      ],
+    });
+    await postCommercialDocumentForActor(actor, { documentId: row.id });
+    return row;
+  }
+  const first = await sale("100"),
+    second = await sale("200");
+  await createSettlementForActor(actor, {
+    type: "CUSTOMER_RECEIPT",
+    branchId,
+    partyId: party.id,
+    paymentMode: "CASH",
+    moneyAccountId: moneyId,
+    amount: "40",
+    transactionDate: "2026-10-10",
+    idempotencyKey: randomUUID(),
+    allocations: [{ documentId: first.id, amount: "40" }],
+  });
+  const line = await db.commercialDocumentLine.findFirstOrThrow({
+    where: { companyId, documentId: first.id },
+  });
+  const credit = await createCommercialDocumentForActor(actor, {
+    type: "CREDIT_NOTE",
+    branchId,
+    partyId: party.id,
+    sourceDocumentId: first.id,
+    issueDate: "2026-10-10",
+    idempotencyKey: randomUUID(),
+    lines: [
+      {
+        lineType: "CUSTOM",
+        sourceCommercialLineId: line.id,
+        itemName: "Credit",
+        quantity: "1",
+        rate: "20",
+        taxRate: "0",
+      },
+    ],
+  });
+  await postCommercialDocumentForActor(actor, { documentId: credit.id });
+  const advance = await createSettlementForActor(actor, {
+    type: "CUSTOMER_ADVANCE",
+    branchId,
+    partyId: party.id,
+    paymentMode: "CASH",
+    moneyAccountId: moneyId,
+    amount: "50",
+    transactionDate: "2026-10-10",
+    idempotencyKey: randomUUID(),
+  });
+  await applyAdvanceForActor(actor, {
+    advanceId: advance.id,
+    documentId: second.id,
+    amount: "30",
+    applicationDate: "2026-10-10",
+    idempotencyKey: randomUUID(),
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto(`/workspace/account/sales/${first.id}`);
+  await expect(
+    page.getByText("Received", { exact: true }).locator(".."),
+  ).toContainText(/40\.00/);
+  await expect(
+    page.getByText("Credit adjustments", { exact: true }).locator(".."),
+  ).toContainText(/20\.00/);
+  await expect(
+    page.getByText("Balance Due", { exact: true }).locator(".."),
+  ).toContainText(/40\.00/);
+  await expect(page.getByText(/Party Balance:/)).toContainText(/190\.00/);
+  await page.goto(`/workspace/account/sales/${second.id}`);
+  await expect(
+    page.getByText("Received", { exact: true }).locator(".."),
+  ).toContainText(/0\.00/);
+  await expect(
+    page.getByText("Advance applied", { exact: true }).locator(".."),
+  ).toContainText(/30\.00/);
+  await expect(
+    page.getByText("Balance Due", { exact: true }).locator(".."),
+  ).toContainText(/170\.00/);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });

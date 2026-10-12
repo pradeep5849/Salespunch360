@@ -3105,11 +3105,13 @@ export async function listCommercialDocumentsForActor(actor: Actor) {
     orderBy: { createdAt: "desc" },
   });
 }
-export async function getCommercialDocumentForActor(actor: Actor, id: string) {
-  const row = await db.commercialDocument.findFirst({
+export async function getCommercialDocumentForActor(actor: Actor, id: string, transaction?: Prisma.TransactionClient) {
+  const reader = transaction ?? db;
+  const row = await reader.commercialDocument.findFirst({
     where: { id, companyId: actor.companyId, ...scope(actor) },
     include: {
       branch: true,
+      journalEntry: { select: { status: true } },
       project: true,
       sourcePurchaseOrder: true,
       lines: {
@@ -3124,11 +3126,11 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string) {
   });
   if (!row) throw new Error("NOT_FOUND");
   const [stockMovements, projectMaterialMovements] = await Promise.all([
-    db.stockMovement.findMany({
+    reader.stockMovement.findMany({
       where: { companyId: actor.companyId, sourceId: row.id },
       orderBy: { createdAt: "asc" },
     }),
-    db.projectMaterialMovement.findMany({
+    reader.projectMaterialMovement.findMany({
       where: { companyId: actor.companyId, purchaseDocumentId: row.id },
       orderBy: { createdAt: "asc" },
     }),
@@ -3136,11 +3138,11 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string) {
   const financial =
     row.status === "POSTED" &&
     ["SALES_INVOICE", "PURCHASE_BILL"].includes(row.type)
-      ? await db.$transaction((tx) =>
+      ? transaction ? await documentOutstandingInTx(transaction, actor.companyId, row.id) : await db.$transaction((tx) =>
           documentOutstandingInTx(tx, actor.companyId, row.id),
         )
       : null;
-  const customRows=row.type==="SALES_INVOICE"||row.type==="PURCHASE_BILL"?await db.customFieldValue.findMany({where:{companyId:actor.companyId,entityType:row.type,entityId:row.id,definition:{isActive:true}},include:{definition:{select:{fieldKey:true}}}}):[];
+  const customRows=row.type==="SALES_INVOICE"||row.type==="PURCHASE_BILL"?await reader.customFieldValue.findMany({where:{companyId:actor.companyId,entityType:row.type,entityId:row.id,definition:{isActive:true}},include:{definition:{select:{fieldKey:true}}}}):[];
   return { ...row, financial, stockMovements, projectMaterialMovements, customValues:Object.fromEntries(customRows.map(value=>[value.definition.fieldKey,value.value])) };
 }
 async function safeSalesInvoiceNumberingSeriesOptions(companyId: string) {

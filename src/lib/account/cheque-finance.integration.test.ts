@@ -20,8 +20,13 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
 import { saveBusinessCurrency } from "./business-currency";
-import { reverseJournalForActor } from "@/lib/accounting/service";
+import {
+  reverseJournalForActor,
+  postJournalInTx,
+} from "@/lib/accounting/service";
 import { createChequeForActor } from "./money";
+import { saleDetailForActor } from "./sale-detail";
+import { currentPartyBalanceForActor } from "./party-balance";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import {
   createCommercialDocumentForActor,
@@ -55,12 +60,12 @@ const actor = {
   branchIds: [branchId, otherBranch],
 } as ProjectActor;
 let bankLedger: string;
-async function invoice(amount = "100") {
+async function invoice(amount = "100", partyId: string = customerId) {
   const doc = await createCommercialDocumentForActor(actor, {
     type: "SALES_INVOICE",
     idempotencyKey: randomUUID(),
     branchId,
-    partyId: customerId,
+    partyId,
     issueDate: "2026-10-10",
     lines: [
       {
@@ -223,6 +228,7 @@ describe.skipIf(!url)(
           await tx.openingBalanceAllocation.deleteMany({
             where: { companyId },
           });
+          await tx.partyOpeningBalance.deleteMany({ where: { companyId } });
           await tx.settlementAllocation.deleteMany({ where: { companyId } });
           await tx.accountSettlement.deleteMany({ where: { companyId } });
           await tx.cheque.deleteMany({ where: { companyId } });
@@ -481,14 +487,154 @@ describe.skipIf(!url)(
       ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
       expect(await bankEffect(legacy.id)).toBe(0);
       expect(await outstanding(doc.id)).toBe("100.00");
-      await chequeFinancialActionForActor({ ...actor, accountRole: "ACCOUNTANT" }, legacy.id, {
-        action: "CLOSE",
-        requestKey: randomUUID(),
-        expectedVersion: 1,
-        actionDate: "2026-10-12",
-      });
+      await chequeFinancialActionForActor(
+        { ...actor, accountRole: "ACCOUNTANT" },
+        legacy.id,
+        {
+          action: "CLOSE",
+          requestKey: randomUUID(),
+          expectedVersion: 1,
+          actionDate: "2026-10-12",
+        },
+      );
       expect(await outstanding(doc.id)).toBe("0.00");
       expect(await bankEffect(legacy.id)).toBe(100);
+    });
+    it("projects cash, payment discounts, credits, advances and the complete party balance separately", async () => {
+      const party = await client.customer.create({
+        data: {
+          companyId,
+          branchId,
+          name: "Sale detail party",
+          isAccountCustomer: true,
+        },
+      });
+      const first = await invoice("100", party.id);
+      const second = await invoice("200", party.id);
+      const year = await client.financialYear.findFirstOrThrow({
+        where: { companyId },
+      });
+      const ar = await client.ledgerAccount.findFirstOrThrow({
+        where: { companyId, systemKey: "ACCOUNTS_RECEIVABLE" },
+      });
+      const equity = await client.ledgerAccount.findFirstOrThrow({
+        where: { companyId, systemKey: "OPENING_BALANCE_EQUITY" },
+      });
+      const opening = await client.$transaction((tx) =>
+        postJournalInTx(tx, actor, {
+          financialYearId: year.id,
+          branchId,
+          entryDate: "2026-10-10",
+          sourceType: "OPENING_BALANCE",
+          sourceId: randomUUID(),
+          lines: [
+            { ledgerAccountId: ar.id, debit: "80", credit: "0" },
+            { ledgerAccountId: equity.id, debit: "0", credit: "80" },
+          ],
+        }),
+      );
+      await client.partyOpeningBalance.create({
+        data: {
+          companyId,
+          branchId,
+          partyId: party.id,
+          partyType: "CUSTOMER",
+          partyName: party.name,
+          effectiveDate: new Date("2026-10-10"),
+          amount: "80",
+          journalEntryId: opening.id,
+          createdById: userId,
+        },
+      });
+      await client.accountSettings.update({
+        where: { companyId },
+        data: {
+          transactionDefaults: {
+            transactionPreferences: { discountDuringPayment: true },
+          },
+        },
+      });
+      await createSettlementForActor(actor, {
+        type: "CUSTOMER_RECEIPT",
+        idempotencyKey: randomUUID(),
+        branchId,
+        partyId: party.id,
+        paymentMode: "BANK",
+        moneyAccountId: bankId,
+        amount: "40.00",
+        transactionDate: "2026-10-10",
+        allocations: [
+          { documentId: first.id, amount: "50.00", discountAmount: "10.00" },
+        ],
+      });
+      const sourceLine = await client.commercialDocumentLine.findFirstOrThrow({ where: { companyId, documentId: first.id } });
+      const credit = await createCommercialDocumentForActor(actor, {
+        type: "CREDIT_NOTE",
+        idempotencyKey: randomUUID(),
+        branchId,
+        partyId: party.id,
+        sourceDocumentId: first.id,
+        issueDate: "2026-10-10",
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Credit adjustment",
+            sourceCommercialLineId: sourceLine.id,
+            quantity: "1",
+            rate: "20",
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: credit.id });
+      const advance = await createSettlementForActor(actor, {
+        type: "CUSTOMER_ADVANCE",
+        idempotencyKey: randomUUID(),
+        branchId,
+        partyId: party.id,
+        paymentMode: "BANK",
+        moneyAccountId: bankId,
+        amount: "50.00",
+        transactionDate: "2026-10-10",
+      });
+      await applyAdvanceForActor(actor, {
+        advanceId: advance.id,
+        documentId: second.id,
+        amount: "30.00",
+        applicationDate: "2026-10-10",
+        idempotencyKey: randomUUID(),
+      });
+      const details = await saleDetailForActor(actor, first.id);
+      expect(details.paymentSummary.received).toBe("40.00");
+      expect(details.paymentSummary.credits).toBe("20.00");
+      expect(details.paymentSummary.paymentDiscount).toBe("10.00");
+      expect(details.paymentSummary.outstanding).toBe("30.00");
+      expect(details.partyBalance).toBe("260.00");
+      expect(details.paymentSummary.canChange).toBe(false);
+      const advanced = await saleDetailForActor(actor, second.id);
+      expect(advanced.paymentSummary.received).toBe("0.00");
+      expect(advanced.paymentSummary.advanceApplied).toBe("30.00");
+      expect(advanced.paymentSummary.outstanding).toBe("170.00");
+      expect(
+        await currentPartyBalanceForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          party.id,
+        ),
+      ).toBe("0.00");
+      await expect(
+        saleDetailForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          first.id,
+        ),
+      ).rejects.toThrow();
     });
   },
 );

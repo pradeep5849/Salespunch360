@@ -8302,7 +8302,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Partial cash receipt; credit-only adjustment; mixed advance/credit; cancelled fully reversed invoice; party with multiple invoices.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Cash receipts, payment discounts, advances and credits separated; cancelled/draft status and zero posted due; saved charges/tax mode/cess/payment reference/state/notes shown.", "tests": "Mobile+desktop cash-discount and cancelled cases passed (4 of 6 corrected sales cases); credited-original display also passed in Edit Sale cases. TypeScript and targeted ESLint passed; advance UI fixture and native device checks not run.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -8386,7 +8386,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Cash receipts, payment discounts, advances and credits separated; cancelled/draft status and zero posted due; saved charges/tax mode/cess/payment reference/state/notes shown.", "tests": "Mobile+desktop cash-discount and cancelled cases passed (4 of 6 corrected sales cases); credited-original display also passed in Edit Sale cases. TypeScript and targeted ESLint passed; advance UI fixture and native device checks not run.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -8931,3 +8931,7 @@ Explicit unposted legacy-source completion links a confirmed party and positive 
 Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.
 
 Remaining: Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed.
+
+### A087 sale financial projection progress
+
+Consistent snapshot separates receipts, discounts, credits and applied advances, and computes scoped party balance with openings. Native exact decimals and cancelled/null financial handling are connected. Intermediate checks: 7 PostgreSQL tests, 47 grouped consumers, 2 browser viewports, Android compilation and 3 focused JVM tests passed. A087-F01/F03 are IMPLEMENTED BUT NOT VERIFIED; A087-F02 and A086 paid-correction dependencies remain partial. No final status or final-head claim.

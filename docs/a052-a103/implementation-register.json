@@ -20827,7 +20827,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -20844,6 +20844,11 @@
           ],
           "implementation_commit": "25bab1d2",
           "final_head_verified": false
+        },
+        "sale_financial_projection": {
+          "work": "Sale details read one RepeatableRead snapshot, separate effective cash receipts/payment discounts/credits/advance applications, and show scoped signed party balance including openings and advances. Native display uses exact decimal totals and handles null/cancelled financial data. Historical allocation counts prevent offering an amendment the current backend would reject.",
+          "tests": "7 isolated PostgreSQL tests passed including the new mixed receipt/discount/credit/advance/opening and assigned-branch projection; 47 related commercial/print/mobile tests passed; desktop and mobile-web detail tests 2 passed; Android compile and 3 focused sale-detail JVM regressions passed. TypeScript/lint passed. All intermediate.",
+          "remaining": "Final-head verification, expanded cancelled/reversed and company-isolation scenarios; paid amendment workflow remains linked to A086-F05 and A087-F02."
         }
       }
     },
@@ -20896,7 +20901,13 @@
       "shared_fix_links": [
         "A087-F01",
         "A087-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "sale_detail_fields_and_actions": {
+          "work": "State of Supply now displays a friendly retained code label, native rate label follows saved tax mode, and action eligibility uses stored payment/adjustment history rather than filtered receipt arrays.",
+          "remaining": "Shipping/attachment retention and complete paid-sale correction/share/menu behavior still pending; no completion claimed."
+        }
+      }
     },
     {
       "finding_id": "A087-F03",
@@ -20941,12 +20952,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A087-F02"
-      ]
+      ],
+      "checkpoint_work": {
+        "sale_financial_projection": {
+          "work": "Sale details read one RepeatableRead snapshot, separate effective cash receipts/payment discounts/credits/advance applications, and show scoped signed party balance including openings and advances. Native display uses exact decimal totals and handles null/cancelled financial data. Historical allocation counts prevent offering an amendment the current backend would reject.",
+          "tests": "7 isolated PostgreSQL tests passed including the new mixed receipt/discount/credit/advance/opening and assigned-branch projection; 47 related commercial/print/mobile tests passed; desktop and mobile-web detail tests 2 passed; Android compile and 3 focused sale-detail JVM regressions passed. TypeScript/lint passed. All intermediate.",
+          "remaining": "Final-head verification, expanded cancelled/reversed and company-isolation scenarios; paid amendment workflow remains linked to A086-F05 and A087-F02."
+        }
+      }
     },
     {
       "finding_id": "A088-F01",
@@ -21581,7 +21599,18 @@
         "A097-F01",
         "A097-F02",
         "A097-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "effective_payment_modes": {
+          "work": "Print data includes only effective settlement allocations and advance applications, excluding pending/reversed cheque payments from received amounts and payment modes.",
+          "shared_pages": [
+            "A066",
+            "A087",
+            "A097"
+          ],
+          "tests": "Related print-setting consumer regression passed; not final-head verification."
+        }
+      }
     },
     {
       "finding_id": "A097-F04",
@@ -22017,6 +22046,14 @@
       "source_native": "Android compileDebugKotlin and testDebugUnitTest passed after View Txn route hookup; native device/TalkBack not exercised.",
       "latest_entry_and_legacy_validation": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
       "local_migrations": "115 local migrations applied; 20261012133000 validated without rewriting existing data. Production not modified."
+    },
+    "sale_detail_projection": {
+      "status": "IMPLEMENTED BUT NOT VERIFIED",
+      "financial_tests": "7 passed, includes new mixed-transaction signed party-balance projection with opening balance and assigned-branch exclusion.",
+      "grouped_tests": "47 passed across 5 files.",
+      "browser": "2 passed: desktop and mobile-web cash/credit/advance/party balance display and width assertions.",
+      "android": "compileDebugKotlin and 3 focused SaleDetailTotalsTest cases passed, 0 failures/errors/skips.",
+      "limitations": "Final PR-head validation, further lifecycle/isolation coverage and linked paid amendment/retained-field work remain."
     }
   },
   "approved_business_decisions": {

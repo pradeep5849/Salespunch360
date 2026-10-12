@@ -1,3 +1,4 @@
+import { saleDetailForActor } from "@/lib/account/sale-detail";
 import { EFFECTIVE_SETTLEMENT } from "@/lib/account/settlement-policy";
 import { chequePaymentDetails } from "@/lib/account/cheque-payment-input";
 import { replacePostedSaleForActor, reversePostedSaleForActor } from "@/lib/account/sale-amendments";
@@ -113,10 +114,12 @@ export async function mobileSalesList(
   });
 }
 export async function mobileSalesDetail(user: MobileAppPrincipal, id: string) {
-  const row = await getCommercialDocumentForActor(
-    permit(user, "ACCOUNT_LEDGER_VIEW"),
-    id,
-  );
+  const actor = permit(user, "ACCOUNT_LEDGER_VIEW");
+  const header = await db.commercialDocument.findFirst({where:{id,companyId:actor.companyId,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:actor.branchIds??[]}}:{})},select:{type:true}});
+  if(!header)throw new Error("NOT_FOUND");
+  if(!SALES_TYPES.has(header.type))throw new Error("MOBILE_FORBIDDEN");
+  if(header.type!=="SALES_INVOICE")return getCommercialDocumentForActor(actor,id);
+  const row = await saleDetailForActor(actor,id);
   if (!SALES_TYPES.has(row.type)) throw new Error("MOBILE_FORBIDDEN");
   if(row.type!=="SALES_INVOICE")return row;
   const [settings,customer,company]=await Promise.all([db.accountSettings.findUnique({where:{companyId:row.companyId}}),row.customerId?db.customer.findFirst({where:{companyId:row.companyId,id:row.customerId},select:{phone:true}}):null,db.company.findUnique({where:{id:row.companyId},select:{primaryPhone:true}})]);
@@ -202,7 +205,7 @@ export async function mobileReplaceSale(user:MobileAppPrincipal,id:string,raw:un
   await assertOperationalWrite(user.companyId);
   const actor=permit(user,"ACCOUNT_JOURNAL_POST");
   const replacement=await replacePostedSaleForActor(actor,id,raw);
-  return getCommercialDocumentForActor(actor,replacement.id);
+  return mobileSalesDetail(user,replacement.id);
 }
 
 export async function mobileCustomerReceipt(
