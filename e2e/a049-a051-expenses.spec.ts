@@ -146,6 +146,7 @@ test.afterAll(async () => {
   });
   await db.customFieldValue.deleteMany({ where: { companyId } });
   await db.customFieldDefinition.deleteMany({ where: { companyId } });
+  await db.productPrice.deleteMany({ where: { companyId } });
   await db.accountProduct.deleteMany({ where: { companyId } });
   await db.accountService.deleteMany({ where: { companyId } });
   await db.accountCategory.deleteMany({ where: { companyId } });
@@ -2256,4 +2257,225 @@ test("A058 item save atomically records independent opening stock and native ret
       where: { companyId, name: "Denied opening" },
     }),
   ).toBe(0);
+});
+
+test("A057 price switches enforce web controls, direct API and assigned customer scope", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(90000);
+  const product = await db.accountProduct.create({
+    data: {
+      companyId,
+      name: "Price policy browser item",
+      code: `P-${randomUUID()}`,
+    },
+  });
+  const otherBranch = await db.branch.create({
+    data: { companyId, name: "Other price branch", code: `B-${randomUUID()}` },
+  });
+  const customer = await db.customer.create({
+      data: {
+        companyId,
+        branchId,
+        name: "Allowed price customer",
+        isAccountCustomer: true,
+      },
+    }),
+    otherCustomer = await db.customer.create({
+      data: {
+        companyId,
+        branchId: otherBranch.id,
+        name: "Other branch price customer",
+        isAccountCustomer: true,
+      },
+    });
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      itemSettings: {
+        enabled: true,
+        wholesalePrice: false,
+        partyWiseRate: false,
+      },
+    },
+  });
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Price policy regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  for (const [priceType, error] of [
+    ["WHOLESALE", "WHOLESALE_PRICING_DISABLED"],
+    ["CUSTOMER", "CUSTOMER_PRICING_DISABLED"],
+  ]) {
+    const response = await request.post(
+      "/api/v1/mobile/account/inventory/prices",
+      {
+        headers,
+        data: {
+          productId: product.id,
+          priceType,
+          rate: "10",
+          ...(priceType === "CUSTOMER" ? { customerId: customer.id } : {}),
+        },
+      },
+    );
+    expect(response.status()).toBe(400);
+    expect((await response.json()).error).toBe(error);
+  }
+  expect(
+    await db.productPrice.count({
+      where: { companyId, productId: product.id },
+    }),
+  ).toBe(0);
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      itemSettings: {
+        enabled: true,
+        wholesalePrice: true,
+        partyWiseRate: true,
+      },
+    },
+  });
+  const wholesale = await request.post(
+    "/api/v1/mobile/account/inventory/prices",
+    {
+      headers,
+      data: { productId: product.id, priceType: "WHOLESALE", rate: "10.1250" },
+    },
+  );
+  expect(wholesale.status()).toBe(201);
+  expect((await wholesale.json()).rate).toBe("10.13");
+  for (const target of [customer, otherCustomer]) {
+    const response = await request.post(
+      "/api/v1/mobile/account/inventory/prices",
+      {
+        headers,
+        data: {
+          productId: product.id,
+          priceType: "CUSTOMER",
+          customerId: target.id,
+          rate: "9.25",
+        },
+      },
+    );
+    expect(response.status()).toBe(201);
+  }
+  await db.user.update({
+    where: { id: userId },
+    data: { branchAccessScope: "SELECTED_BRANCHES" },
+  });
+  await db.userBranchAccess.create({ data: { userId, branchId } });
+  try {
+    const forbidden = await request.post(
+      "/api/v1/mobile/account/inventory/prices",
+      {
+        headers,
+        data: {
+          productId: product.id,
+          priceType: "CUSTOMER",
+          customerId: otherCustomer.id,
+          rate: "8",
+        },
+      },
+    );
+    expect(forbidden.status()).toBe(403);
+    const listed = await request.get(
+      "/api/v1/mobile/account/inventory/prices",
+      { headers },
+    );
+    expect(listed.status()).toBe(200);
+    expect(
+      (await listed.json()).some(
+        (row: { customerId?: string }) => row.customerId === otherCustomer.id,
+      ),
+    ).toBe(false);
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/);
+    await page.goto("/workspace/account/inventory/items");
+    const form = page.getByRole("form", {
+      name: "Price for Price policy browser item",
+      exact: true,
+    });
+    await expect(form).toBeVisible();
+    await form
+      .getByLabel("Price type", { exact: true })
+      .selectOption("CUSTOMER");
+    await expect(form.getByLabel("Customer", { exact: true })).toBeVisible();
+    expect(
+      await form
+        .getByLabel("Customer", { exact: true })
+        .locator("option")
+        .allTextContents(),
+    ).not.toContain("Other branch price customer");
+    await form
+      .getByLabel("Price type", { exact: true })
+      .selectOption("WHOLESALE");
+    await expect(form.getByLabel("Customer", { exact: true })).toHaveCount(0);
+    await form.getByLabel("Price rate", { exact: true }).fill("8.2");
+    await form.getByLabel("Effective from", { exact: true }).fill("2026-10-12");
+    await form.getByLabel("Effective to", { exact: true }).fill("2026-10-01");
+    await form.getByRole("button", { name: "Add price", exact: true }).click();
+    await expect(form.getByRole("alert")).toContainText(/start date/i);
+    await expect(form.getByLabel("Price rate", { exact: true })).toHaveValue(
+      "8.2",
+    );
+    await form.getByLabel("Effective to", { exact: true }).fill("2026-10-20");
+    await form.getByRole("button", { name: "Add price", exact: true }).click();
+    await expect(form.getByRole("status")).toContainText("Price saved");
+    expect(
+      await db.productPrice.count({
+        where: { companyId, productId: product.id },
+      }),
+    ).toBe(4);
+    await db.accountSettings.update({
+      where: { companyId },
+      data: {
+        itemSettings: {
+          enabled: true,
+          wholesalePrice: false,
+          partyWiseRate: false,
+        },
+      },
+    });
+    await page.reload();
+    await expect(
+      form.getByLabel("Price type", { exact: true }).locator("option"),
+    ).toHaveCount(1);
+    await expect(form.getByLabel("Customer", { exact: true })).toHaveCount(0);
+    expect(
+      await db.productPrice.count({
+        where: { companyId, productId: product.id },
+      }),
+    ).toBe(4);
+    expect(
+      (
+        await new AxeBuilder({ page }).include(".employees-content").analyze()
+      ).violations.filter((v) =>
+        ["critical", "serious"].includes(v.impact ?? ""),
+      ),
+    ).toEqual([]);
+  } finally {
+    await db.user.update({
+      where: { id: userId },
+      data: { branchAccessScope: "ALL_BRANCHES" },
+    });
+    await db.userBranchAccess.deleteMany({ where: { userId } });
+    await db.accountSettings.update({
+      where: { companyId },
+      data: { itemSettings: { enabled: true } },
+    });
+  }
 });

@@ -3989,14 +3989,37 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A054-F02",
         "A054-F04",
         "A054-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "price_policy_slice": {
+          "work": "Native price editor now includes enabled price types, customer selection, effective dates, inline errors and descriptive price rows with company money formatting. Shared price services enforce scope and settings.",
+          "remaining": "Other native inventory editor parity and device verification remain pending.",
+          "shared_fix_pages": [
+            "A054",
+            "A057",
+            "A090"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "price_policy_slice": {
+          "focused_tests": "25 passed",
+          "isolated_database_tests": "8 passed (6 item-opening and 2 pricing)",
+          "browser_tests": "4 passed desktop/mobile price and owner-history scenarios; precedes latest audit-snapshot and old-price scope changes",
+          "android": "compileDebugKotlin and 142 JVM tests passed; no device verification",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "web_unit_regression": "2705 passed; 103 skipped; 0 failed; 419 test files passed, 8 skipped",
+          "final_head_validation": "NOT RUN"
+        }
+      }
     },
     {
       "finding_id": "A054-F04",
@@ -5476,14 +5499,37 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A057-F02",
         "A057-F04",
         "A057-F05"
-      ]
+      ],
+      "checkpoint_work": {
+        "price_policy_slice": {
+          "work": "Wholesale/customer price writes and reads enforce company item switches, role and assigned-branch customer scope. Price validation, rounding, transactional audit snapshots and safe type changes are implemented. Web form preserves rejected input and reflects enabled types.",
+          "remaining": "MRP tax semantics await the requested business answer; authorized sale-price updates and commercial price consumption remain pending.",
+          "shared_fix_pages": [
+            "A054",
+            "A057",
+            "A090"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "price_policy_slice": {
+          "focused_tests": "25 passed",
+          "isolated_database_tests": "8 passed (6 item-opening and 2 pricing)",
+          "browser_tests": "4 passed desktop/mobile price and owner-history scenarios; precedes latest audit-snapshot and old-price scope changes",
+          "android": "compileDebugKotlin and 142 JVM tests passed; no device verification",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "web_unit_regression": "2705 passed; 103 skipped; 0 failed; 419 test files passed, 8 skipped",
+          "final_head_validation": "NOT RUN"
+        }
+      }
     },
     {
       "finding_id": "A057-F04",
@@ -20753,7 +20799,30 @@
       "shared_fix_links": [
         "A097-F01",
         "A097-F02"
-      ]
+      ],
+      "checkpoint_work": {
+        "price_policy_slice": {
+          "work": "Price lists use company currency and date preferences; owner capital history uses the existing date preference component.",
+          "remaining": "Other display consumers and final-head preference regression remain pending.",
+          "shared_fix_pages": [
+            "A054",
+            "A057",
+            "A090"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "price_policy_slice": {
+          "focused_tests": "25 passed",
+          "isolated_database_tests": "8 passed (6 item-opening and 2 pricing)",
+          "browser_tests": "4 passed desktop/mobile price and owner-history scenarios; precedes latest audit-snapshot and old-price scope changes",
+          "android": "compileDebugKotlin and 142 JVM tests passed; no device verification",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "web_unit_regression": "2705 passed; 103 skipped; 0 failed; 419 test files passed, 8 skipped",
+          "final_head_validation": "NOT RUN"
+        }
+      }
     },
     {
       "finding_id": "A095-F01",

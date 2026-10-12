@@ -1345,13 +1345,19 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Cross-platform warehouse/settings/batch dates/serial expiry/customer price workflows; denied roles and bad dates/customer scope.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A054_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A054_Findings.json, SalesPunch360_A054_Audit_Report.md.
 
 **Linked finding IDs:** A054-F02, A054-F04, A054-F05.
+
+Checkpoint pricing progress: Native price editor now includes enabled price types, customer selection, effective dates, inline errors and descriptive price rows with company money formatting. Shared price services enforce scope and settings.
+
+Intermediate validation: 25 focused tests, 8 isolated database tests, 4 desktop/mobile browser scenarios and 142 Android JVM tests passed; native compilation, TypeScript and focused lint passed. Web unit regression: 2705 passed, 103 skipped, 0 failed. Browser results precede the latest audit-snapshot/scope changes; all evidence remains intermediate.
+
+Remaining: Other native inventory editor parity and device verification remain pending. Final checkpoint-head validation remains required.
 
 ## A054-F04 — Shared forms lack accessible names and nest main landmarks
 
@@ -1998,13 +2004,19 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** MRP tax and authorized sale-price update end-to-end; disabled/enabled wholesale/customer price direct API requests; tax/report regressions.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A057_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A057_Findings.json, SalesPunch360_A057_Audit_Report.md.
 
 **Linked finding IDs:** A057-F02, A057-F04, A057-F05.
+
+Checkpoint pricing progress: Wholesale/customer price writes and reads enforce company item switches, role and assigned-branch customer scope. Price validation, rounding, transactional audit snapshots and safe type changes are implemented. Web form preserves rejected input and reflects enabled types.
+
+Intermediate validation: 25 focused tests, 8 isolated database tests, 4 desktop/mobile browser scenarios and 142 Android JVM tests passed; native compilation, TypeScript and focused lint passed. Web unit regression: 2705 passed, 103 skipped, 0 failed. Browser results precede the latest audit-snapshot/scope changes; all evidence remains intermediate.
+
+Remaining: MRP tax semantics await the requested business answer; authorized sale-price updates and commercial price consumption remain pending. Final checkpoint-head validation remains required.
 
 ## A057-F04 — Reference Item Settings drawer rows are inert or missing
 
@@ -8428,13 +8440,19 @@ Remaining: Expose matching transition capabilities in cheque UI/API/native route
 
 **Required tests:** USD/INR display; zero/four decimals; selected date format; supported language; exports; historical currency policy.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "General form/server/display/native source reviewed; own authenticated save, reload, isolation, currency/date/precision and unsaved navigation checks passed.", "tests": "Two own-page browser cases passed (mobile and desktop), among ten passing A090–A094 cases in the 12-case run (1.9m). Targeted unit results: 67/68 initially; affected module file 9/9 after stale mock correction. TypeScript and targeted ESLint passed.", "finding_status": null, "evidence": ["SalesPunch360_A090_General_Settings_Followup.md", "SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A090-A094_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Settings_Source_Findings.json, SalesPunch360_Settings_Source_Audit.md, SalesPunch360_A090-A094_Followup.md.
 
 **Linked finding IDs:** A097-F01, A097-F02.
+
+Checkpoint pricing progress: Price lists use company currency and date preferences; owner capital history uses the existing date preference component.
+
+Intermediate validation: 25 focused tests, 8 isolated database tests, 4 desktop/mobile browser scenarios and 142 Android JVM tests passed; native compilation, TypeScript and focused lint passed. Web unit regression: 2705 passed, 103 skipped, 0 failed. Browser results precede the latest audit-snapshot/scope changes; all evidence remains intermediate.
+
+Remaining: Other display consumers and final-head preference regression remain pending. Final checkpoint-head validation remains required.
 
 ## A095-F01 — Printed party date ignores saved format
 

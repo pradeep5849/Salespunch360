@@ -43,6 +43,7 @@ const actor = {
 };
 let currentActor: object = actor,
   failAudit = false;
+let failPriceAudit = false;
 vi.mock("@/lib/auth/authorization", () => ({
   AuthorizationError: class extends Error {},
   requirePermission: vi.fn(async () => currentActor),
@@ -71,10 +72,18 @@ vi.mock("@/lib/db", () => ({
                                   args: Parameters<typeof delegate.create>[0],
                                 ) => {
                                   if (
-                                    failAudit &&
-                                    args.data.eventType === "STOCK_OPENING"
+                                    (failAudit &&
+                                      args.data.eventType ===
+                                        "STOCK_OPENING") ||
+                                    (failPriceAudit &&
+                                      args.data.eventType ===
+                                        "PRODUCT_PRICE_CREATED")
                                   )
-                                    throw new Error("OPENING_AUDIT_FAILURE");
+                                    throw new Error(
+                                      failPriceAudit
+                                        ? "PRICE_AUDIT_FAILURE"
+                                        : "OPENING_AUDIT_FAILURE",
+                                    );
                                   return delegate.create(args);
                                 }
                               : delegate[method as keyof typeof delegate],
@@ -92,6 +101,7 @@ vi.mock("@/lib/db", () => ({
   ),
 }));
 import { createProduct } from "./service";
+import { createProductPriceForActor } from "./inventory";
 const input = (key = randomUUID(), quantity = "2.1250") => ({
   name: `Opening ${key}`,
   code: `P-${key}`,
@@ -152,6 +162,7 @@ describe.skipIf(!url)("A058 atomic item opening stock", () => {
   beforeEach(() => {
     currentActor = actor;
     failAudit = false;
+    failPriceAudit = false;
   });
   afterAll(async () => {
     if (url)
@@ -160,6 +171,7 @@ describe.skipIf(!url)("A058 atomic item opening stock", () => {
         await tx.stockMovement.deleteMany({ where: { companyId } });
         await tx.customFieldValue.deleteMany({ where: { companyId } });
         await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
+        await tx.productPrice.deleteMany({ where: { companyId } });
         await tx.accountProduct.deleteMany({ where: { companyId } });
         await tx.warehouse.deleteMany({ where: { companyId } });
         await tx.accountSettings.deleteMany({ where: { companyId } });
@@ -268,6 +280,90 @@ describe.skipIf(!url)("A058 atomic item opening stock", () => {
     expect(
       await client.stockMovement.count({
         where: { companyId, productId: row.id },
+      }),
+    ).toBe(0);
+  });
+  it("disabled price switches block direct writes and enabled rates are audited", async () => {
+    const product = await createProduct({
+      name: "Price policy item",
+      code: `PRICE-${randomUUID()}`,
+    });
+    await client.accountSettings.update({
+      where: { companyId },
+      data: {
+        itemSettings: {
+          enabled: true,
+          wholesalePrice: false,
+          partyWiseRate: false,
+        },
+      },
+    });
+    await expect(
+      createProductPriceForActor(actor, {
+        productId: product.id,
+        priceType: "WHOLESALE",
+        rate: "10",
+      }),
+    ).rejects.toThrow("WHOLESALE_PRICING_DISABLED");
+    await expect(
+      createProductPriceForActor(actor, {
+        productId: product.id,
+        customerId: randomUUID(),
+        priceType: "CUSTOMER",
+        rate: "10",
+      }),
+    ).rejects.toThrow("CUSTOMER_PRICING_DISABLED");
+    expect(
+      await client.productPrice.count({
+        where: { companyId, productId: product.id },
+      }),
+    ).toBe(0);
+    await client.accountSettings.update({
+      where: { companyId },
+      data: {
+        itemSettings: {
+          enabled: true,
+          wholesalePrice: true,
+          partyWiseRate: true,
+        },
+      },
+    });
+    const price = await createProductPriceForActor(actor, {
+      productId: product.id,
+      priceType: "WHOLESALE",
+      rate: "10.1250",
+    });
+    expect(price.rate.toString()).toBe("10.13");
+    expect(
+      await client.accountOperationalAudit.count({
+        where: {
+          companyId,
+          entityId: price.id,
+          eventType: "PRODUCT_PRICE_CREATED",
+        },
+      }),
+    ).toBe(1);
+  });
+  it("price audit failure rolls back the price record", async () => {
+    const product = await createProduct({
+      name: "Price rollback item",
+      code: `PRICE-${randomUUID()}`,
+    });
+    failPriceAudit = true;
+    try {
+      await expect(
+        createProductPriceForActor(actor, {
+          productId: product.id,
+          priceType: "WHOLESALE",
+          rate: "10",
+        }),
+      ).rejects.toThrow("PRICE_AUDIT_FAILURE");
+    } finally {
+      failPriceAudit = false;
+    }
+    expect(
+      await client.productPrice.count({
+        where: { companyId, productId: product.id },
       }),
     ).toBe(0);
   });

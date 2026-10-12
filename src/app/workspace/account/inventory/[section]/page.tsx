@@ -1,3 +1,6 @@
+import { AccountDate } from "@/components/account/display-preferences";
+import { Money } from "@/components/account/account-ui";
+import { ProductPriceForm } from "@/components/account/product-price-form";
 import { requirePermission } from "@/lib/auth/authorization";
 import { inventoryContext } from "@/lib/account/inventory-context";
 import type { ProjectActor } from "@/lib/account/projects";
@@ -19,22 +22,20 @@ import {
   batchAction,
   inventoryProductAction,
   openingAction,
-  priceAction,
   serialAction,
   transferAction,
   warehouseAction,
 } from "@/app/actions/inventory";
 const valid = new Set([
-    "items",
-    "warehouses",
-    "stock",
-    "opening",
-    "transfers",
-    "adjustments",
-    "low-stock",
-    "batches",
-  ]),
-  money = (x: { toFixed(n: number): string }) => x.toFixed(2);
+  "items",
+  "warehouses",
+  "stock",
+  "opening",
+  "transfers",
+  "adjustments",
+  "low-stock",
+  "batches",
+]);
 export default async function Page({
   params,
   searchParams,
@@ -174,35 +175,46 @@ export default async function Page({
               />
               <button>Save inventory settings</button>
             </form>
-            <form action={priceAction} className="stack">
-              <input type="hidden" name="productId" value={x.id} />
-              <select aria-label="Price type" name="priceType">
-                <option>RETAIL</option>
-                <option>WHOLESALE</option>
-                <option>CUSTOMER</option>
-              </select>
-              <select aria-label="Customer" name="customerId">
-                <option value="">No customer</option>
-                {o.customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                aria-label="Price rate"
-                name="rate"
-                type="number"
-                step="0.01"
-                required
-              />
-              <button>Add price</button>
-            </form>
+            <ProductPriceForm
+              productId={x.id}
+              productName={x.name}
+              wholesale={o.itemSettings.wholesalePrice}
+              partyWise={o.itemSettings.partyWiseRate}
+              customers={o.customers}
+            />
+
             {prices
               .filter((p) => p.productId === x.id && p.isActive)
               .map((p) => (
                 <p key={p.id}>
-                  {p.priceType}: {money(p.rate)}
+                  {p.priceType}: <Money value={p.rate.toString()} />
+                  {p.customerId && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      {o.customers.find(
+                        (customer) => customer.id === p.customerId,
+                      )?.name ?? "Unavailable customer"}
+                    </>
+                  )}
+                  {p.effectiveFrom && (
+                    <>
+                      {" "}
+                      · From{" "}
+                      <AccountDate
+                        value={p.effectiveFrom.toISOString().slice(0, 10)}
+                      />
+                    </>
+                  )}
+                  {p.effectiveTo && (
+                    <>
+                      {" "}
+                      · To{" "}
+                      <AccountDate
+                        value={p.effectiveTo.toISOString().slice(0, 10)}
+                      />
+                    </>
+                  )}
                 </p>
               ))}
           </article>

@@ -17,6 +17,11 @@ const messages: Record<string, string> = {
     "Opening stock requires an inventory-tracked item without batch or serial tracking.",
   OPENING_VALUE_OUT_OF_RANGE:
     "Opening stock value is too large. Check the quantity and price per unit.",
+  WHOLESALE_PRICING_DISABLED: "Wholesale pricing is disabled in Item Settings.",
+  CUSTOMER_PRICING_DISABLED: "Party-wise pricing is disabled in Item Settings.",
+  INVALID_PRICE_DATES:
+    "The price start date must be on or before its end date.",
+  PRICE_VALUE_OUT_OF_RANGE: "The price is too large. Enter a smaller amount.",
   INVALID_OWNER:
     "Choose an active app user from this business, or leave the user link empty.",
   OWNER_USER_ALREADY_LINKED:

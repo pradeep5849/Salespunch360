@@ -1,4 +1,5 @@
 "use server";
+import { accountAction } from "@/lib/account/action-feedback";
 import { revalidatePath } from "next/cache";
 import {
   createBatch,
@@ -49,6 +50,11 @@ export async function priceAction(f: FormData) {
     await updateProductPrice(id, raw(f, "operation", "id"));
   else await createProductPrice(raw(f, "operation", "id"));
   revalidatePath("/workspace/account/inventory/items");
+}
+export async function saveProductPriceAction(form: FormData) {
+  return accountAction(async () => {
+    await priceAction(form);
+  }, "Price saved");
 }
 export async function openingAction(f: FormData) {
   await recordOpeningStock(raw(f));

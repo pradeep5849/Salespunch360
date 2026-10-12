@@ -1,3 +1,4 @@
+import { AccountDate } from "@/components/account/display-preferences";
 import { z } from "zod";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -92,14 +93,15 @@ export default async function Page({
           <article key={row.id}>
             <h3>{names[row.type] ?? row.type}</h3>
             <p>
-              {row.transactionDate} · <Money value={row.amount} /> ·{" "}
-              {row.moneyAccountName}
+              <AccountDate value={row.transactionDate} /> ·{" "}
+              <Money value={row.amount} /> · {row.moneyAccountName}
             </p>
             {row.reference && <p>Reference: {row.reference}</p>}
             <p>Status: {row.journalStatus}</p>
             {row.reversal && (
               <p>
-                Reversed {row.reversal.date}: {row.reversal.reason}
+                Reversed <AccountDate value={row.reversal.date} />:{" "}
+                {row.reversal.reason}
               </p>
             )}
           </article>
