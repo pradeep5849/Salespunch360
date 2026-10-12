@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { formatStockQuantity } from "@/lib/account/quantity-display";
 import {
   useEffect,
   useMemo,
@@ -18,7 +19,7 @@ type Item = {
   category: string | null;
   salePrice: string;
   purchasePrice: string;
-  stock: number | null;
+  stock: string | null;
 };
 type Category = { id: string; name: string };
 const links: {
@@ -262,14 +263,14 @@ export function ItemsScreen({
                   <dt>{item.type === "PRODUCT" ? "In Stock" : "Type"}</dt>
                   <dd
                     className={
-                      item.stock !== null && item.stock < 0
+                      item.stock !== null && item.stock.startsWith("-")
                         ? "negative"
                         : undefined
                     }
                   >
                     {item.stock === null
                       ? "Service"
-                      : item.stock.toFixed(quantityDecimals)}
+                      : formatStockQuantity(item.stock, quantityDecimals)}
                   </dd>
                 </div>
               </dl>

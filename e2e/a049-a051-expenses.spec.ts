@@ -1477,3 +1477,87 @@ test("A058 item settings govern web controls and direct native creation without 
     ).value,
   ).toBe("Preserve me");
 });
+
+test("A060 stock display preserves exact decimal totals and configured rounding", async ({
+  page,
+}) => {
+  const positive = await db.accountProduct.create({
+    data: { companyId, name: "Exact quantity item", trackInventory: true },
+  });
+  const negative = await db.accountProduct.create({
+    data: { companyId, name: "Negative fraction item", trackInventory: true },
+  });
+  const stores = await Promise.all(
+    [0, 1].map((i) =>
+      db.warehouse.create({
+        data: {
+          companyId,
+          branchId,
+          name: `Quantity store ${i}`,
+          code: `Q-${i}`,
+        },
+      }),
+    ),
+  );
+  await db.stockMovement.createMany({
+    data: [
+      {
+        productId: positive.id,
+        warehouseId: stores[0].id,
+        movementType: "OPENING" as const,
+        quantity: "0.1",
+      },
+      {
+        productId: positive.id,
+        warehouseId: stores[1].id,
+        movementType: "OPENING" as const,
+        quantity: "0.905",
+      },
+      {
+        productId: negative.id,
+        warehouseId: stores[0].id,
+        movementType: "ADJUSTMENT_OUT" as const,
+        quantity: "0.001",
+      },
+    ].map((row) => ({
+      ...row,
+      companyId,
+      branchId,
+      unitCost: 0,
+      totalCost: 0,
+      sourceType: "QUANTITY_REGRESSION",
+      sourceId: randomUUID(),
+      movementDate: new Date("2026-10-09"),
+      createdById: userId,
+    })),
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  for (const [decimals, positiveText, negativeText] of [
+    [0, "1", "-0"],
+    [1, "1.0", "-0.0"],
+    [2, "1.01", "-0.00"],
+    [3, "1.005", "-0.001"],
+    [4, "1.0050", "-0.0010"],
+  ] as const) {
+    await db.accountSettings.update({
+      where: { companyId },
+      data: { itemSettings: { enabled: true, quantityDecimals: decimals } },
+    });
+    await page.goto(`/workspace/account/inventory?branchId=${branchId}`);
+    for (const [name, value] of [
+      ["Exact quantity item", positiveText],
+      ["Negative fraction item", negativeText],
+    ]) {
+      const card = page
+        .locator("article")
+        .filter({ has: page.getByRole("heading", { name, exact: true }) });
+      await expect(
+        card.locator("dl div").filter({ hasText: "In Stock" }).locator("dd"),
+      ).toHaveText(value);
+    }
+  }
+});

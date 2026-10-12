@@ -13,6 +13,8 @@ class StockQuantityDisplayTest {
     @Test fun zeroAndPositiveFractionUseStableDecimalNotation() {
         assertEquals("0.0000", formatStockQuantity(BigDecimal.ZERO, 4))
         assertEquals("0.125", formatStockQuantity(BigDecimal("0.125"), 3))
+        assertEquals("1.01", formatStockQuantity(BigDecimal("1.005"), 2))
+        assertEquals("100000000000000.00", formatStockQuantity(BigDecimal("99999999999999.995"), 2))
         assertEquals("1000000.00", formatStockQuantity(BigDecimal("1E+6"), 2))
     }
     @Test fun preservesNegativeSignWhenDisplayRoundsToZero() {

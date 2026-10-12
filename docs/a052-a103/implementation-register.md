@@ -2669,6 +2669,8 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Intermediate validation:** Desktop/mobile browser sheet/share regression passed (2 tests). Android compilation and 141 JVM tests passed (0 failures, 0 skips), including 3 new quantity-formatting tests and existing complete-page/error/stock-sum regressions. Final-head and native device verification pending.
 
+Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal precision through serialization; exact HALF_UP display matches Android at decimals 0–4, including ties, large quantities and negative zero. Nine focused unit tests and two authenticated desktop/mobile browser regressions passed; Android JVM suite passed. Final-head verification remains pending.
+
 ## A060-F06 — Filter/More Options sheets omit accessible modal behavior
 
 **Title:** Filter/More Options sheets omit accessible modal behavior

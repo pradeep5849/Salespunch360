@@ -7113,7 +7113,7 @@
       ],
       "checkpoint_work": {
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Android Items screen receives resolved company quantityDecimals from bootstrap; stock aggregation uses exact decimal quantities and display formats 0\u20134 decimals without mutating movement precision. Follow-up preserves the negative sign when a negative quantity rounds to zero; native/web precision parity still requires final-head validation.",
+        "work": "Android Items screen receives resolved company quantityDecimals from bootstrap; stock aggregation uses exact decimal quantities and display formats 0\u20134 decimals without mutating movement precision. Follow-up preserves the negative sign when a negative quantity rounds to zero; native/web precision parity still requires final-head validation. Web stock aggregation now retains Prisma Decimal precision through serialization; exact HALF_UP display matches Android at decimals 0\u20134, including ties, large quantities and negative zero. Nine focused unit tests and two authenticated desktop/mobile browser regressions passed; Android JVM suite passed.",
         "remaining_work": "Final-head regression and original finding verification pending; native device share/refresh rendering not yet verified.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
       }
@@ -21284,6 +21284,14 @@
         "skipped": 77
       },
       "final_head_validation": "NOT RUN; this intermediate unit run does not replace required final database/API/browser/device validation."
+    },
+    "quantity_precision": {
+      "unit": "9 passed",
+      "browser": "2 passed: desktop and mobile Chromium",
+      "android": "142 JVM tests passed",
+      "typescript": "passed",
+      "lint": "passed",
+      "stage": "INTERMEDIATE ONLY"
     }
   }
 }
