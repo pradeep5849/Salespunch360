@@ -9,7 +9,7 @@ import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
-data class ExpenseState(val recurringOpen:Boolean=false,val recurringRows:List<JsonObject> = emptyList(),val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val type:String?=null,val categoryId:String?=null,val total:Int=0,val nextOffset:Int?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val requestKey:String=UUID.randomUUID().toString(),val error:String?=null,val message:String?=null,val newCategoryId:String?=null,val categoryOpen:Boolean=false,val downloaded:Pair<String,ByteArray>?=null)
+data class ExpenseState(val recurringOpen:Boolean=false,val recurringRows:List<JsonObject> = emptyList(),val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val type:String?=null,val categoryId:String?=null,val summary:JsonObject?=null,val total:Int=0,val nextOffset:Int?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val requestKey:String=UUID.randomUUID().toString(),val error:String?=null,val message:String?=null,val newCategoryId:String?=null,val categoryOpen:Boolean=false,val downloaded:Pair<String,ByteArray>?=null)
 class AccountExpenseViewModel(app:Application):AndroidViewModel(app){
  private val api=ApiClient(SecureSession(app));private val _state=MutableStateFlow(ExpenseState());val state:StateFlow<ExpenseState> = _state
  private var loadJob:Job?=null;private var detailJob:Job?=null
@@ -27,7 +27,7 @@ class AccountExpenseViewModel(app:Application):AndroidViewModel(app){
     val o=api.expenseOptions()
     val result=api.expensePage(snapshot.query,snapshot.status,snapshot.type,snapshot.categoryId,offset,contextQuery)
     val rows=result["rows"]!!.jsonArray.map{it.jsonObject}
-    _state.value=_state.value.copy(loading=false,options=o,rows=if(append)(snapshot.rows+rows).distinctBy{it.str("id")}else rows,total=result["total"]!!.jsonPrimitive.int,nextOffset=result["nextOffset"]?.jsonPrimitive?.intOrNull,error=null)
+    _state.value=_state.value.copy(loading=false,options=o,rows=if(append)(snapshot.rows+rows).distinctBy{it.str("id")}else rows,summary=result["summary"] as? JsonObject,total=result["total"]!!.jsonPrimitive.int,nextOffset=result["nextOffset"]?.jsonPrimitive?.intOrNull,error=null)
    }catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}
   }
  }

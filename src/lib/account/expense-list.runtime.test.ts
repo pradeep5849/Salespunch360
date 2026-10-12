@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   rows: vi.fn(),
   count: vi.fn(),
+  summary: vi.fn(),
   transaction: vi.fn(),
   branches: vi.fn(),
   projects: vi.fn(),
@@ -12,6 +13,7 @@ vi.mock("@/lib/db", () => ({
     expenseTransaction: { findMany: m.rows, count: m.count },
     project: { findMany: m.projects },
     $transaction: m.transaction,
+    $queryRaw: m.summary,
   },
 }));
 vi.mock("@/lib/account/projects", () => ({
@@ -19,7 +21,7 @@ vi.mock("@/lib/account/projects", () => ({
   projectRecordScope: () => ({ companyId: "tenant" }),
 }));
 vi.mock("@/lib/account/modules", () => ({ requireAccountModules: m.module }));
-import { expensePageForActor } from "./expenses";
+import { expensePageForActor, expenseSummaryForActor } from "./expenses";
 import type { ProjectActor } from "./projects";
 const branch = "00000000-0000-4000-8000-000000000001";
 const actor = {
@@ -36,6 +38,7 @@ describe("A052 scoped database pagination", () => {
     m.module.mockResolvedValue(undefined);
     m.rows.mockResolvedValue([{ id: "row" }]);
     m.count.mockResolvedValue(205);
+    m.summary.mockResolvedValue([]);
     m.transaction.mockImplementation((queries) => Promise.all(queries));
     m.projects.mockResolvedValue([{ id: "assigned" }]);
   });
@@ -130,5 +133,44 @@ describe("A052 scoped database pagination", () => {
       type: { in: ["PROJECT_EXPENSE", "REIMBURSEMENT"] },
       projectId: { in: ["assigned"] },
     });
+  });
+  it("returns summary totals for all matching records, independently of pagination", async () => {
+    m.summary.mockResolvedValue([
+      {
+        categoryId: "category",
+        categoryName: "Inactive",
+        isActive: false,
+        expense: "12.34",
+        income: "0.00",
+      },
+    ]);
+    const result = await expensePageForActor(actor, { offset: 200 });
+    expect(result.summary).toMatchObject({
+      expense: "12.34",
+      income: "0.00",
+      categories: [{ isActive: false }],
+    });
+    const sql = m.summary.mock.calls[0][0];
+    expect(sql.values).toContain("tenant");
+    expect(sql.values).toContain(branch);
+    expect(sql.text).not.toMatch(/LIMIT|OFFSET/);
+  });
+  it("denies aggregate access when the Expenses module is OFF before any raw read", async () => {
+    m.module.mockRejectedValue(new Error("MODULE_DISABLED:EXPENSES"));
+    await expect(expenseSummaryForActor(actor)).rejects.toThrow(
+      "MODULE_DISABLED:EXPENSES",
+    );
+    expect(m.summary).not.toHaveBeenCalled();
+  });
+  it("denies inaccessible branch and unauthorized role on standalone category aggregate", async () => {
+    await expect(
+      expenseSummaryForActor(actor, {
+        branchId: "00000000-0000-4000-8000-000000000099",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      expenseSummaryForActor({ ...actor, accountRole: "DATA_ENTRY" }),
+    ).rejects.toThrow();
+    expect(m.summary).not.toHaveBeenCalled();
   });
 });

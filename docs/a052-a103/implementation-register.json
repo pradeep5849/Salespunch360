@@ -1321,7 +1321,10 @@
         "ExpenseTransaction",
         "ExpenseCategory",
         "Branch",
-        "User"
+        "User",
+        "JournalEntry",
+        "JournalLine",
+        "LedgerAccount"
       ],
       "module_impact": "EXPENSES is Basic Accounting core; Projects remains an optional dependency for Project Manager expense access.",
       "permission_impact": "ACCOUNT_EXPENSE_VIEW; existing mutation permissions must remain enforced.",
@@ -1395,14 +1398,32 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A052-F05",
         "A052-F07",
         "A052-F08"
-      ]
+      ],
+      "checkpoint_work": {
+        "recognized_summary_slice": {
+          "work": "Added a permission/module/company/assigned-branch/project-scoped SQL aggregate of effective expense/income journal lines. Originals and reversals remain in recognized totals; draft journals, tax assets and loan principal are excluded. List rows/count/totals use one RepeatableRead snapshot and totals are independent of pagination. Web and Android list/category views show separate exact totals with explicit all-posted-history semantics, inactive-category history and category-search scope. Mobile paged list/category APIs return the same summary. Money formatting preserves exact decimal cents above the safe integer range and scientific notation while honoring currency/precision.",
+          "remaining": "Full checkpoint-head regression, native device/accessibility verification and final report/export reconciliation remain required."
+        }
+      },
+      "intermediate_validation": {
+        "recognized_summary_slice": {
+          "focused_unit_service_and_isolated_database": "43 passed across 6 files, including 4 isolated PostgreSQL aggregate cases",
+          "web_unit_regression": "2714 passed; 107 skipped; 0 failed; 420 files passed and 9 skipped",
+          "browser_desktop_mobile": "6 passed, including exact 9007199254740991.01 posting/display/reversal, category and paged summaries, branch filters, module/permission denial and serious/critical accessibility checks",
+          "android": "compileDebugKotlin and 142 JVM tests passed (0 failure/error/skip); no device check",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "migration": "None required for read aggregate/display change",
+          "final_checkpoint_head": "NOT RUN"
+        }
+      }
     },
     {
       "finding_id": "A052-F07",
@@ -20809,6 +20830,10 @@
             "A057",
             "A090"
           ]
+        },
+        "exact_money_display": {
+          "work": "Shared currency formatting now rounds decimal text exactly, preserving large cents and scientific notation without a Number conversion; linked to A052-F06 totals.",
+          "remaining": "Other general-preference consumers and final checkpoint-head verification remain pending."
         }
       },
       "intermediate_validation": {
@@ -20821,6 +20846,16 @@
           "focused_lint": "PASS",
           "web_unit_regression": "2705 passed; 103 skipped; 0 failed; 419 test files passed, 8 skipped",
           "final_head_validation": "NOT RUN"
+        },
+        "exact_money_display": {
+          "focused_unit_service_and_isolated_database": "43 passed across 6 files, including 4 isolated PostgreSQL aggregate cases",
+          "web_unit_regression": "2714 passed; 107 skipped; 0 failed; 420 files passed and 9 skipped",
+          "browser_desktop_mobile": "6 passed, including exact 9007199254740991.01 posting/display/reversal, category and paged summaries, branch filters, module/permission denial and serious/critical accessibility checks",
+          "android": "compileDebugKotlin and 142 JVM tests passed (0 failure/error/skip); no device check",
+          "typescript": "PASS",
+          "focused_lint": "PASS",
+          "migration": "None required for read aggregate/display change",
+          "final_checkpoint_head": "NOT RUN"
         }
       }
     },

@@ -1,3 +1,4 @@
+import { ClientMoney } from "@/components/account/display-preferences";
 import Link from "next/link";
 import {
   ExpenseTransactionStatus,
@@ -72,6 +73,7 @@ async function loadExpensePage(
       branches,
       href,
       categories,
+      summary: data.summary,
     };
   } catch (error) {
     if (
@@ -131,6 +133,17 @@ export default async function Page({
             ? "Company consolidated"
             : scoped.context.branchName}
         </p>
+        <section aria-label="Recognized expense and income totals">
+          <h2>Posted totals · all history</h2>
+          <p>
+            Expense: <ClientMoney value={result.summary.expense} /> · Other
+            income: <ClientMoney value={result.summary.income} />
+          </p>
+          <p>
+            {result.summary.recognition} Totals apply to all matching
+            transactions, across every list page.
+          </p>
+        </section>
         <form method="get" className="expense-list-filters">
           {query.branchId && (
             <input type="hidden" name="branchId" value={query.branchId} />

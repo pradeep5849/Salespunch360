@@ -16,6 +16,7 @@ import {
   expenseCategoryOptionsForActor,
   getExpenseForActor,
   expensePageForActor,
+  expenseSummaryForActor,
   expenseListQuerySchema,
   postExpenseForActor,
   reverseExpenseForActor,
@@ -144,10 +145,12 @@ export async function mobileExpenseCategories(
   u: MobileAppPrincipal,
   q?: string | null,
 ) {
-  return expenseCategoryOptionsForActor(
-    permit(u, "ACCOUNT_EXPENSE_VIEW"),
-    q ?? "",
-  );
+  const actor = permit(u, "ACCOUNT_EXPENSE_VIEW");
+  const [options, summary] = await Promise.all([
+    expenseCategoryOptionsForActor(actor, q ?? ""),
+    expenseSummaryForActor(actor, {}, q ?? ""),
+  ]);
+  return { ...options, summary };
 }
 export async function mobileSaveExpenseCategory(
   u: MobileAppPrincipal,

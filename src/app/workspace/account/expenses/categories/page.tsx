@@ -1,6 +1,10 @@
+import { ClientMoney } from "@/components/account/display-preferences";
 import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
 import { categoryAction } from "@/app/actions/expenses";
-import { expenseCategoryOptionsForActor } from "@/lib/account/expenses";
+import {
+  expenseCategoryOptionsForActor,
+  expenseSummaryForActor,
+} from "@/lib/account/expenses";
 import { requirePermission } from "@/lib/auth/authorization";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { ExpenseCategoryForm } from "@/components/account/expense-category-form";
@@ -16,6 +20,14 @@ export default async function Page({
       { ...a, companyId: a.companyId! },
       q,
     );
+  const totals = await expenseSummaryForActor(
+    { ...a, companyId: a.companyId! },
+    {},
+    q,
+  );
+  const amounts = new Map(
+    totals.categories.map((row) => [row.categoryId, row]),
+  );
   return (
     <div className="employees-shell">
       <section className="employees-content">
@@ -30,6 +42,17 @@ export default async function Page({
           </label>
           <button>Search</button>
         </form>
+        <section aria-label="Category posted totals">
+          <h2>Posted totals · all accessible branches · all history</h2>
+          <p>
+            Expense: <ClientMoney value={totals.expense} /> · Other income:{" "}
+            <ClientMoney value={totals.income} />
+          </p>
+          <p>
+            {totals.recognition} Category search applies to these totals;
+            inactive categories retain their history.
+          </p>
+        </section>
         {o.canManage && (
           <details>
             <summary>Create category</summary>
@@ -47,6 +70,12 @@ export default async function Page({
         {o.categories.map((x) => (
           <article key={x.id}>
             <h2>{x.name}</h2>
+            <p>
+              Expense:{" "}
+              <ClientMoney value={amounts.get(x.id)?.expense ?? "0.00"} /> ·
+              Other income:{" "}
+              <ClientMoney value={amounts.get(x.id)?.income ?? "0.00"} />
+            </p>
             <p>
               {x.scope} · {x.isActive ? "Active" : "Inactive"}
             </p>

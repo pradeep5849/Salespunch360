@@ -1,3 +1,9 @@
+import {
+  expenseSummarySql,
+  expenseSummaryResult,
+  type ExpenseSummaryScope,
+  type ExpenseSummaryRow,
+} from "./expense-summary";
 import { nextRecurringDueDate } from "./recurrence";
 import {
   indiaDateText,
@@ -948,6 +954,37 @@ export const expenseListQuerySchema = z
     limit: z.coerce.number().int().min(1).max(200).default(50),
   })
   .strict();
+function expenseAggregateScope(
+  a: Actor,
+  recordScope: Prisma.ExpenseTransactionWhereInput,
+): ExpenseSummaryScope {
+  if (
+    recordScope.companyId !== a.companyId ||
+    Object.keys(recordScope).some(
+      (key) => !["companyId", "branchId", "projectId", "type"].includes(key),
+    )
+  )
+    throw new Error("UNSUPPORTED_EXPENSE_SUMMARY_SCOPE");
+  const scope: ExpenseSummaryScope = { companyId: a.companyId! };
+  for (const [field, target] of [
+    ["branchId", "branchIds"],
+    ["projectId", "projectIds"],
+    ["type", "types"],
+  ] as const) {
+    const filter = recordScope[field];
+    if (filter !== undefined) {
+      if (
+        !filter ||
+        typeof filter !== "object" ||
+        !("in" in filter) ||
+        !Array.isArray(filter.in)
+      )
+        throw new Error("UNSUPPORTED_EXPENSE_SUMMARY_SCOPE");
+      scope[target] = filter.in as string[];
+    }
+  }
+  return scope;
+}
 export async function expensePageForActor(a: Actor, raw: unknown = {}) {
   const query = expenseListQuerySchema.parse(raw);
   const scope = await expenseRecordScope(a);
@@ -976,7 +1013,7 @@ export async function expensePageForActor(a: Actor, raw: unknown = {}) {
       },
     ],
   };
-  const [rows, total] = await db.$transaction(
+  const [rows, total, summaryRows] = await db.$transaction(
     [
       db.expenseTransaction.findMany({
         where,
@@ -989,17 +1026,43 @@ export async function expensePageForActor(a: Actor, raw: unknown = {}) {
         take: query.limit,
       }),
       db.expenseTransaction.count({ where }),
+      db.$queryRaw<ExpenseSummaryRow[]>(
+        expenseSummarySql(expenseAggregateScope(a, scope), query),
+      ),
     ],
     { isolationLevel: "RepeatableRead" },
   );
   return {
     rows,
     total,
+    summary: expenseSummaryResult(summaryRows),
     offset: query.offset,
     limit: query.limit,
     nextOffset:
       query.offset + rows.length < total ? query.offset + rows.length : null,
   };
+}
+export async function expenseSummaryForActor(
+  a: Actor,
+  raw: unknown = {},
+  categorySearch?: string,
+) {
+  const query = expenseListQuerySchema.parse(raw);
+  const recordScope = await expenseRecordScope(a);
+  if (
+    query.branchId &&
+    !(await authorizedProjectBranchIds(a)).includes(query.branchId)
+  )
+    throw new AuthorizationError();
+  const scope = expenseAggregateScope(a, recordScope);
+  return expenseSummaryResult(
+    await db.$queryRaw<ExpenseSummaryRow[]>(
+      expenseSummarySql(scope, {
+        ...query,
+        categorySearch: categorySearch?.trim().slice(0, 160),
+      }),
+    ),
+  );
 }
 export async function listExpensesForActor(a: Actor, raw: unknown = {}) {
   return (await expensePageForActor(a, { limit: 200, ...(raw as object) }))

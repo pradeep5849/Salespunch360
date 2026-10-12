@@ -325,13 +325,17 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Empty zero totals; mixed expense/income; drafts/posted/reversed/cancelled; category active/inactive history; precise decimals; branch/company/period scope; report reconciliation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final checkpoint-head validation remains pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A052-F05, A052-F07, A052-F08.
+
+Checkpoint recognized-summary progress: Added a permission/module/company/assigned-branch/project-scoped SQL aggregate of effective expense/income journal lines. Originals and reversals remain in recognized totals; draft journals, tax assets and loan principal are excluded. List rows/count/totals use one RepeatableRead snapshot and totals are independent of pagination. Web and Android list/category views show separate exact totals with explicit all-posted-history semantics, inactive-category history and category-search scope. Mobile paged list/category APIs return the same summary. Money formatting preserves exact decimal cents above the safe integer range and scientific notation while honoring currency/precision.
+
+Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases; 2714 web unit tests passed, 107 skipped, 0 failed; 6 desktop/mobile browser scenarios passed; Android compiled and 142 JVM tests passed; TypeScript/focused lint passed. These results do not replace final checkpoint-head validation. No migration required.
 
 ## A052-F07 — Web empty list provides no empty-state explanation
 
@@ -8453,6 +8457,10 @@ Checkpoint pricing progress: Price lists use company currency and date preferenc
 Intermediate validation: 25 focused tests, 8 isolated database tests, 4 desktop/mobile browser scenarios and 142 Android JVM tests passed; native compilation, TypeScript and focused lint passed. Web unit regression: 2705 passed, 103 skipped, 0 failed. Browser results precede the latest audit-snapshot/scope changes; all evidence remains intermediate.
 
 Remaining: Other display consumers and final-head preference regression remain pending. Final checkpoint-head validation remains required.
+
+Checkpoint recognized-summary progress: Shared currency formatting preserves exact large cents/scientific notation, currency and configured precision. This fixes display of A052-F06 totals and other existing money consumers.
+
+Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases; 2714 web unit tests passed, 107 skipped, 0 failed; 6 desktop/mobile browser scenarios passed; Android compiled and 142 JVM tests passed; TypeScript/focused lint passed. These results do not replace final checkpoint-head validation. No migration required.
 
 ## A095-F01 — Printed party date ignores saved format
 

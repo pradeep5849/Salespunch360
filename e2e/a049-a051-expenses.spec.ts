@@ -297,6 +297,7 @@ test("expense inline category, Save & New, draft edit, rejection reason and deta
 });
 test("Other Income category eligibility, posting, reversal and direct tax validation are consistent", async ({
   request,
+  page,
 }) => {
   const login = await request.post("/api/v1/mobile/auth/login", {
     data: {
@@ -316,7 +317,7 @@ test("Other Income category eligibility, posting, reversal and direct tax valida
     moneyAccountId: moneyId,
     type: "OTHER_INCOME",
     transactionDate: "2026-10-09",
-    taxableAmount: "200",
+    taxableAmount: "9007199254740991.01",
     taxRate: "0",
     cessRate: "0",
   };
@@ -362,7 +363,64 @@ test("Other Income category eligibility, posting, reversal and direct tax valida
   });
   expect(
     lines.find((l) => l.ledgerAccountId === incomeLedger)?.credit.toFixed(2),
-  ).toBe("200.00");
+  ).toBe("9007199254740991.01");
+  const readSummary = async () => {
+    const response = await request.get(
+      `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}&categoryId=${incomeCategory}`,
+      { headers },
+    );
+    expect(response.status()).toBe(200);
+    return (await response.json()).summary;
+  };
+  expect(await readSummary()).toMatchObject({
+    expense: "0.00",
+    income: "9007199254740991.01",
+    period: "ALL_POSTED_HISTORY",
+  });
+  const categoryResponse = await request.get(
+    "/api/v1/mobile/account/expense-categories?q=Other%20receipts",
+    { headers },
+  );
+  expect(categoryResponse.status()).toBe(200);
+  expect((await categoryResponse.json()).summary).toMatchObject({
+    expense: "0.00",
+    income: "9007199254740991.01",
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto(
+    `/workspace/account/expenses?branchId=${branchId}&categoryId=${incomeCategory}`,
+  );
+  await expect(
+    page.getByRole("region", { name: "Recognized expense and income totals" }),
+  ).toContainText("9,00,71,99,25,47,40,991.01");
+  await page.goto("/workspace/account/expenses/categories?q=Other%20receipts");
+  await expect(
+    page.getByRole("region", { name: "Category posted totals" }),
+  ).toContainText("9,00,71,99,25,47,40,991.01");
+  const accessibility = await new AxeBuilder({ page })
+    .include(".employees-content")
+    .analyze();
+  expect(
+    accessibility.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  // Reauthenticate the mobile client after signing into the web client.
+  const refreshedLogin = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Income verification after web login",
+    },
+  });
+  expect(refreshedLogin.status()).toBe(200);
+  headers.authorization = `Bearer ${(await refreshedLogin.json()).accessToken}`;
+
   expect(
     (
       await request.post(`/api/v1/mobile/account/expenses/${row.id}/action`, {
@@ -383,6 +441,19 @@ test("Other Income category eligibility, posting, reversal and direct tax valida
   expect(d.status).toBe("REVERSED");
   expect(d.category.name).toBe("Other receipts");
   expect(d.capabilities.edit).toBe(false);
+  expect(await readSummary()).toMatchObject({
+    expense: "0.00",
+    income: "0.00",
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/expenses/categories?q=Other%20receipts");
+  await expect(
+    page.getByRole("region", { name: "Category posted totals" }),
+  ).toContainText("0.00");
 });
 
 test("A053 recurring schedules retain inputs, reject premature bills and replay the requested occurrence", async ({
@@ -1004,6 +1075,14 @@ test("A052 expenses search older rows before pagination and respect selected bra
   page,
   request,
 }) => {
+  const paginationCategory = await db.expenseCategory.create({
+    data: {
+      companyId,
+      name: `Pagination ${randomUUID()}`,
+      scope: "EXPENSE",
+      defaultLedgerAccountId: expenseLedger,
+    },
+  });
   const otherBranch = await db.branch.create({
     data: {
       companyId,
@@ -1015,7 +1094,7 @@ test("A052 expenses search older rows before pagination and respect selected bra
     data: Array.from({ length: 205 }, (_, i) => ({
       companyId,
       branchId,
-      categoryId: expenseCategory,
+      categoryId: paginationCategory.id,
       type: "OFFICE_EXPENSE",
       status: "DRAFT",
       transactionNumber: `PAGE-${String(i).padStart(3, "0")}`,
@@ -1030,7 +1109,7 @@ test("A052 expenses search older rows before pagination and respect selected bra
     data: {
       companyId,
       branchId: otherBranch.id,
-      categoryId: expenseCategory,
+      categoryId: paginationCategory.id,
       type: "OFFICE_EXPENSE",
       status: "DRAFT",
       transactionNumber: "OTHER-BRANCH",
@@ -1053,7 +1132,9 @@ test("A052 expenses search older rows before pagination and respect selected bra
       path: "/workspace/account",
     },
   ]);
-  await page.goto("/workspace/account/expenses");
+  await page.goto(
+    `/workspace/account/expenses?categoryId=${paginationCategory.id}`,
+  );
   await expect(
     page.getByRole("navigation", { name: "Expense pagination" }),
   ).toContainText("of 205 transactions");
@@ -1099,23 +1180,24 @@ test("A052 expenses search older rows before pagination and respect selected bra
     authorization: `Bearer ${(await login.json()).accessToken}`,
   };
   const first = await request.get(
-    `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}`,
+    `/api/v1/mobile/account/expenses?page=1&categoryId=${paginationCategory.id}&branchId=${branchId}`,
     { headers },
   );
   expect(first.status()).toBe(200);
   const firstData = await first.json();
   expect(firstData.rows.length).toBe(50);
   expect(firstData.total).toBe(205);
+  expect(firstData.summary).toMatchObject({ expense: "0.00", income: "0.00" });
   expect(firstData.nextOffset).toBe(50);
   const terminal = await request.get(
-    `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}&offset=200`,
+    `/api/v1/mobile/account/expenses?page=1&categoryId=${paginationCategory.id}&branchId=${branchId}&offset=200`,
     { headers },
   );
   const last = await terminal.json();
   expect(last.rows.length).toBe(5);
   expect(last.nextOffset).toBeNull();
   const older = await request.get(
-    `/api/v1/mobile/account/expenses?page=1&branchId=${branchId}&q=old-search-target&type=OFFICE_EXPENSE&status=DRAFT`,
+    `/api/v1/mobile/account/expenses?page=1&categoryId=${paginationCategory.id}&branchId=${branchId}&q=old-search-target&type=OFFICE_EXPENSE&status=DRAFT`,
     { headers },
   );
   const found = await older.json();
