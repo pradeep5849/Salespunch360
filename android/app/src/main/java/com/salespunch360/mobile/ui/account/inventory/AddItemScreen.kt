@@ -222,7 +222,7 @@ fun AddItemScreen(
                                     onClick={
                                         if(code.isBlank()){
                                             val prefix=if(service)"SER" else "ITEM"
-                                            code="$prefix-${System.currentTimeMillis().toString().takeLast(6)}"
+                                            code="$prefix-${java.util.UUID.randomUUID().toString().uppercase()}"
                                         }
                                     }
                                 ){Text("Assign Code")}

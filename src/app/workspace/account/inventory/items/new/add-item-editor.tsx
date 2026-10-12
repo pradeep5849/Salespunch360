@@ -1,4 +1,5 @@
 "use client";
+import { generateItemCode } from "@/lib/account/item-identifiers";
 import type { CustomFieldDefinition } from "@prisma/client";
 import { CustomFieldInput } from "@/components/account/custom-field-input";
 import { useRef } from "react";
@@ -147,10 +148,7 @@ export function AddItemEditor({
     setUnitTarget(null);
   }
   function assignCode() {
-    if (!code)
-      setCode(
-        `${kind === "products" ? "ITEM" : "SER"}-${Date.now().toString().slice(-6)}`,
-      );
+    if (!code) setCode(generateItemCode(kind));
   }
   function save() {
     if (!name.trim()) return;

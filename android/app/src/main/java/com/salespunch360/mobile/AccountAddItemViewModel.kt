@@ -102,6 +102,6 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         }.onSuccess{
             _state.value=_state.value.copy(saving=false)
             done()
-        }.onFailure{_state.value=_state.value.copy(saving=false,error="Item could not be saved.")}
+        }.onFailure{_state.value=_state.value.copy(saving=false,error=(it as? ApiException)?.serverMessage?:"Item could not be saved.")}
     }
 }

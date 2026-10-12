@@ -2388,13 +2388,16 @@ Remaining: Scoped image attachment/camera/gallery handling remains unimplemented
 
 **Required tests:** Concurrent Assign Code; clock repeat; unique product/service code handling; DB uniqueness and user feedback.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A058_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A058_Findings.json, SalesPunch360_A058_Audit_Report.md.
 
 **Linked finding IDs:** A058-F06, A058-F08.
+
+Checkpoint identifiers: Web and Android Assign Code now use complete random UUID identifiers with product/service prefixes instead of six timestamp digits. Manual nonblank codes are preserved. Existing scoped database uniqueness remains authoritative; web and mobile item create/edit translate code/barcode unique conflicts into actionable domain feedback, with mobile HTTP409 and bounded native feedback.
+Remaining: Final-head regression and native device entry/error rendering verification pending.
 
 ## A058-F08 — Add Item overlays and numeric validation lack complete accessible behavior
 

@@ -1,3 +1,4 @@
+import { rethrowItemIdentifierConflict } from "@/lib/account/item-identifiers";
 import { savedHsnCodes } from "@/lib/account/saved-hsn-codes";
 import { saveCustomFieldValuesInTx } from "@/lib/account/custom-field-values";
 import { Prisma } from "@prisma/client";
@@ -549,33 +550,35 @@ export async function saveMobileAccountMaster(
         ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
       };
     await validateMobileItemReferences(user.companyId, input, "SERVICE");
-    const row = await db.$transaction(async (tx) => {
-      const settings = await tx.accountSettings.findUnique({
-        where: { companyId: user.companyId },
-        select: { itemSettings: true },
-      });
-      const policy = resolveItemSettings(settings?.itemSettings);
-      if (!id) assertItemMasterCreation(policy, "SERVICE", input);
-      const row = id
-        ? await tx.accountService.findFirst({
-            where: { id, companyId: user.companyId },
-          })
-        : await tx.accountService.create({
-            data: { ...data, companyId: user.companyId },
-          });
-      if (!row) throw new Error("MOBILE_FORBIDDEN");
-      if (id) await tx.accountService.update({ where: { id: row.id }, data });
-      if (policy.customFields)
-        await saveCustomFieldValuesInTx(
-          tx,
-          user.companyId,
-          "SERVICE",
-          row.id,
-          input.customFields,
-          !!id,
-        );
-      return row;
-    });
+    const row = await db
+      .$transaction(async (tx) => {
+        const settings = await tx.accountSettings.findUnique({
+          where: { companyId: user.companyId },
+          select: { itemSettings: true },
+        });
+        const policy = resolveItemSettings(settings?.itemSettings);
+        if (!id) assertItemMasterCreation(policy, "SERVICE", input);
+        const row = id
+          ? await tx.accountService.findFirst({
+              where: { id, companyId: user.companyId },
+            })
+          : await tx.accountService.create({
+              data: { ...data, companyId: user.companyId },
+            });
+        if (!row) throw new Error("MOBILE_FORBIDDEN");
+        if (id) await tx.accountService.update({ where: { id: row.id }, data });
+        if (policy.customFields)
+          await saveCustomFieldValuesInTx(
+            tx,
+            user.companyId,
+            "SERVICE",
+            row.id,
+            input.customFields,
+            !!id,
+          );
+        return row;
+      })
+      .catch(rethrowItemIdentifierConflict);
     return id ? getMobileAccountMaster(user, kind, row.id) : row;
   }
   if (kind === "items") {
@@ -601,33 +604,35 @@ export async function saveMobileAccountMaster(
       lowStockThreshold: input.lowStockThreshold,
       ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
     };
-    const row = await db.$transaction(async (tx) => {
-      const settings = await tx.accountSettings.findUnique({
-        where: { companyId: user.companyId },
-        select: { itemSettings: true },
-      });
-      const policy = resolveItemSettings(settings?.itemSettings);
-      if (!id) assertItemMasterCreation(policy, "PRODUCT", input);
-      const row = id
-        ? await tx.accountProduct.findFirst({
-            where: { id, companyId: user.companyId },
-          })
-        : await tx.accountProduct.create({
-            data: { ...data, companyId: user.companyId },
-          });
-      if (!row) throw new Error("MOBILE_FORBIDDEN");
-      if (id) await tx.accountProduct.update({ where: { id: row.id }, data });
-      if (policy.customFields)
-        await saveCustomFieldValuesInTx(
-          tx,
-          user.companyId,
-          "PRODUCT",
-          row.id,
-          input.customFields,
-          !!id,
-        );
-      return row;
-    });
+    const row = await db
+      .$transaction(async (tx) => {
+        const settings = await tx.accountSettings.findUnique({
+          where: { companyId: user.companyId },
+          select: { itemSettings: true },
+        });
+        const policy = resolveItemSettings(settings?.itemSettings);
+        if (!id) assertItemMasterCreation(policy, "PRODUCT", input);
+        const row = id
+          ? await tx.accountProduct.findFirst({
+              where: { id, companyId: user.companyId },
+            })
+          : await tx.accountProduct.create({
+              data: { ...data, companyId: user.companyId },
+            });
+        if (!row) throw new Error("MOBILE_FORBIDDEN");
+        if (id) await tx.accountProduct.update({ where: { id: row.id }, data });
+        if (policy.customFields)
+          await saveCustomFieldValuesInTx(
+            tx,
+            user.companyId,
+            "PRODUCT",
+            row.id,
+            input.customFields,
+            !!id,
+          );
+        return row;
+      })
+      .catch(rethrowItemIdentifierConflict);
     return id ? getMobileAccountMaster(user, kind, row.id) : row;
   }
   const input = warehouseSchema.parse(raw);

@@ -6452,13 +6452,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A058-F06",
         "A058-F08"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+        "work": "Web and Android Assign Code now use complete random UUID identifiers with product/service prefixes instead of six timestamp digits. Manual nonblank codes are preserved. Existing scoped database uniqueness remains authoritative; web and mobile item create/edit translate code/barcode unique conflicts into actionable domain feedback, with mobile HTTP409 and bounded native feedback.",
+        "remaining_work": "Final-head regression and native device entry/error rendering verification pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A058-F08",
@@ -21306,6 +21312,14 @@
       "typescript": "passed after browser regression",
       "lint": "passed",
       "user_decision": "Search company saved HSN/SAC codes",
+      "stage": "INTERMEDIATE ONLY"
+    },
+    "item_identifiers": {
+      "unit": "22 tests passed across identifier, item creation policy and mobile reference suites",
+      "browser": "2 desktop/mobile Chromium tests passed: repeated clock, distinct generated identifiers, manual preservation, concurrent duplicate requests yield201/409 and one saved row",
+      "android": "compileDebugKotlin and142 JVM tests passed",
+      "typescript": "passed",
+      "lint": "passed",
       "stage": "INTERMEDIATE ONLY"
     }
   }

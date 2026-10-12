@@ -1649,3 +1649,65 @@ test("A058 saved company HSN/SAC suggestions support manual entry and mobile opt
   );
   expect((await disabled.json()).hsnCodes).toEqual([]);
 });
+
+test("A058 assigned item codes survive repeated clocks and concurrent duplicate saves", async ({
+  page,
+  request,
+}) => {
+  await db.accountSettings.update({
+    where: { companyId },
+    data: { itemSettings: { enabled: true } },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/inventory/items/new");
+  await page
+    .getByLabel("Item Name *", { exact: true })
+    .fill("Assigned code product");
+  await page.evaluate(() => {
+    Date.now = () => 123456;
+  });
+  await page.getByRole("button", { name: "Assign Code", exact: true }).click();
+  const field = page.getByPlaceholder("Item Code / Barcode", { exact: true });
+  const first = await field.inputValue();
+  expect(first).toMatch(/^ITEM-[A-F0-9-]{36}$/);
+  await field.fill("");
+  await page.getByRole("button", { name: "Assign Code", exact: true }).click();
+  expect(await field.inputValue()).not.toBe(first);
+  await field.fill("MANUAL-KEEP");
+  await page.getByRole("button", { name: "Assign Code", exact: true }).click();
+  await expect(field).toHaveValue("MANUAL-KEEP");
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Identifier regression",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const data = { name: "Concurrent identifier product", code: first };
+  const results = await Promise.all(
+    [1, 2].map(() =>
+      request.post("/api/v1/mobile/account/master-data/items", {
+        headers,
+        data,
+      }),
+    ),
+  );
+  expect(results.map((r) => r.status()).sort()).toEqual([201, 409]);
+  const rejected = results.find((r) => r.status() === 409)!;
+  expect(await rejected.json()).toMatchObject({
+    error: "ITEM_IDENTIFIER_EXISTS",
+    message: expect.stringContaining("already in use"),
+  });
+  expect(
+    await db.accountProduct.count({ where: { companyId, code: first } }),
+  ).toBe(1);
+});

@@ -1,3 +1,4 @@
+import { rethrowItemIdentifierConflict } from "./item-identifiers";
 import { assertInventoryAvailable } from "./inventory";
 import { z } from "zod";
 import { retrySerializable } from "./transaction-retry";
@@ -632,44 +633,46 @@ export async function createProduct(
     d = itemSchema.parse(raw);
   await assertInventoryAvailable(a);
   await refs(a.companyId!, d, "PRODUCT");
-  return db.$transaction(async (tx) => {
-    const settings = await tx.accountSettings.findUnique({
-      where: { companyId: a.companyId! },
-      select: { itemSettings: true },
-    });
-    const policy = resolveItemSettings(settings?.itemSettings);
-    assertItemMasterCreation(policy, "PRODUCT", {
-      ...d,
-      customFields: customValues,
-    });
-    const row = await tx.accountProduct.create({
-      data: {
-        companyId: a.companyId!,
-        name: d.name,
-        code: d.code,
-        categoryId: d.categoryId,
-        unitId: d.unitId,
-        description: d.description,
-        salePrice: d.sellingRate,
-        costPrice: d.cost,
-        taxRate: d.taxRate,
-        hsnCode: d.hsnSacCode,
-        barcode: d.barcode,
-        trackInventory: d.trackInventory,
-        trackingMode: d.trackInventory ? d.trackingMode : "NONE",
-        lowStockThreshold: d.lowStockThreshold,
-      },
-    });
-    if (policy.customFields)
-      await saveCustomFieldValuesInTx(
-        tx,
-        a.companyId!,
-        "PRODUCT",
-        row.id,
-        customValues,
-      );
-    return row;
-  });
+  return db
+    .$transaction(async (tx) => {
+      const settings = await tx.accountSettings.findUnique({
+        where: { companyId: a.companyId! },
+        select: { itemSettings: true },
+      });
+      const policy = resolveItemSettings(settings?.itemSettings);
+      assertItemMasterCreation(policy, "PRODUCT", {
+        ...d,
+        customFields: customValues,
+      });
+      const row = await tx.accountProduct.create({
+        data: {
+          companyId: a.companyId!,
+          name: d.name,
+          code: d.code,
+          categoryId: d.categoryId,
+          unitId: d.unitId,
+          description: d.description,
+          salePrice: d.sellingRate,
+          costPrice: d.cost,
+          taxRate: d.taxRate,
+          hsnCode: d.hsnSacCode,
+          barcode: d.barcode,
+          trackInventory: d.trackInventory,
+          trackingMode: d.trackInventory ? d.trackingMode : "NONE",
+          lowStockThreshold: d.lowStockThreshold,
+        },
+      });
+      if (policy.customFields)
+        await saveCustomFieldValuesInTx(
+          tx,
+          a.companyId!,
+          "PRODUCT",
+          row.id,
+          customValues,
+        );
+      return row;
+    })
+    .catch(rethrowItemIdentifierConflict);
 }
 export async function createService(
   raw: unknown,
@@ -679,40 +682,42 @@ export async function createService(
     d = itemSchema.parse(raw);
   await assertInventoryAvailable(a);
   await refs(a.companyId!, d, "SERVICE");
-  return db.$transaction(async (tx) => {
-    const settings = await tx.accountSettings.findUnique({
-      where: { companyId: a.companyId! },
-      select: { itemSettings: true },
-    });
-    const policy = resolveItemSettings(settings?.itemSettings);
-    assertItemMasterCreation(policy, "SERVICE", {
-      ...d,
-      customFields: customValues,
-    });
-    const row = await tx.accountService.create({
-      data: {
-        companyId: a.companyId!,
-        name: d.name,
-        code: d.code,
-        categoryId: d.categoryId,
-        unitId: d.unitId,
-        description: d.description,
-        sellingRate: d.sellingRate,
-        estimatedCost: d.cost,
-        taxRate: d.taxRate,
-        sacCode: d.hsnSacCode,
-      },
-    });
-    if (policy.customFields)
-      await saveCustomFieldValuesInTx(
-        tx,
-        a.companyId!,
-        "SERVICE",
-        row.id,
-        customValues,
-      );
-    return row;
-  });
+  return db
+    .$transaction(async (tx) => {
+      const settings = await tx.accountSettings.findUnique({
+        where: { companyId: a.companyId! },
+        select: { itemSettings: true },
+      });
+      const policy = resolveItemSettings(settings?.itemSettings);
+      assertItemMasterCreation(policy, "SERVICE", {
+        ...d,
+        customFields: customValues,
+      });
+      const row = await tx.accountService.create({
+        data: {
+          companyId: a.companyId!,
+          name: d.name,
+          code: d.code,
+          categoryId: d.categoryId,
+          unitId: d.unitId,
+          description: d.description,
+          sellingRate: d.sellingRate,
+          estimatedCost: d.cost,
+          taxRate: d.taxRate,
+          sacCode: d.hsnSacCode,
+        },
+      });
+      if (policy.customFields)
+        await saveCustomFieldValuesInTx(
+          tx,
+          a.companyId!,
+          "SERVICE",
+          row.id,
+          customValues,
+        );
+      return row;
+    })
+    .catch(rethrowItemIdentifierConflict);
 }
 export async function createWorkCategory(raw: unknown) {
   const a = await writeActor();

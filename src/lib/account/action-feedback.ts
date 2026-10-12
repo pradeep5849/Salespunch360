@@ -8,6 +8,8 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  ITEM_IDENTIFIER_EXISTS:
+    "This item code or barcode is already in use. Enter another code and try again.",
   IDEMPOTENCY_CONFLICT:
     "This request was already used with different details. Refresh before starting a new transaction.",
   RECURRING_NOT_DUE: "This recurring bill is not due yet.",
