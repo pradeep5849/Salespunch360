@@ -118,7 +118,13 @@ export default async function Page({
         <p>
           {canCreate && (
             <>
-              <Link href="/workspace/account/expenses/new">
+              <Link
+                href={
+                  scoped.context.mode === "BRANCH"
+                    ? `/workspace/account/expenses/new?branchId=${scoped.context.branchId}`
+                    : "/workspace/account/expenses/new?scope=all"
+                }
+              >
                 New transaction
               </Link>{" "}
               ·{" "}

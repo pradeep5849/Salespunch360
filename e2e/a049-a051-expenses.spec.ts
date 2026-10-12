@@ -131,6 +131,7 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   await db.mobileSession.deleteMany({ where: { userId } });
+  await db.cheque.deleteMany({ where: { companyId } });
   await db.ownerTransaction.deleteMany({ where: { companyId } });
   await db.ownerFinancialAccount.deleteMany({ where: { companyId } });
   await db.expenseAttachment.deleteMany({ where: { companyId } });
@@ -2613,4 +2614,300 @@ test("A057 price switches enforce web controls, direct API and assigned customer
       data: { itemSettings: { enabled: true } },
     });
   }
+});
+
+test("A066 cheque tabs, scoped search, date ordering and pagination preserve branch access", async ({
+  page,
+  request,
+}) => {
+  const chequeLedger = await db.ledgerAccount.create({
+    data: {
+      companyId,
+      code: "CHEQUE_READ",
+      name: "Cheque read bank ledger",
+      accountClass: "ASSET",
+      normalBalance: "DEBIT",
+    },
+  });
+  const chequeBank = await db.moneyAccount.create({
+    data: {
+      companyId,
+      branchId: null,
+      type: "BANK",
+      name: `Cheque bank ${randomUUID()}`,
+      ledgerAccountId: chequeLedger.id,
+    },
+  });
+  const other = await db.branch.create({
+    data: {
+      companyId,
+      name: "Other cheque branch",
+      code: `C-${randomUUID().slice(0, 6)}`,
+    },
+  });
+  await db.cheque.createMany({
+    data: [
+      ...Array.from({ length: 25 }, (_, i) => ({
+        companyId,
+        branchId,
+        moneyAccountId: chequeBank.id,
+        chequeNumber: `READ-${String(i).padStart(3, "0")}`,
+        partyName: `Received party ${i}`,
+        chequeDate: new Date(i === 24 ? "2026-01-01" : "2026-10-01"),
+        status: "RECEIVED" as const,
+        reference: i === 24 ? "oldest-cheque-target" : undefined,
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        companyId,
+        branchId,
+        moneyAccountId: chequeBank.id,
+        chequeNumber: `ISSUE-${i}`,
+        partyName: `Issued party ${i}`,
+        chequeDate: new Date("2026-10-01"),
+        status: "ISSUED" as const,
+      })),
+      ...Array.from({ length: 20 }, (_, i) => ({
+        companyId,
+        branchId,
+        moneyAccountId: chequeBank.id,
+        chequeNumber: `DEPOSIT-${i}`,
+        partyName: `Closed party ${i}`,
+        chequeDate: new Date("2026-10-01"),
+        status: "DEPOSITED" as const,
+      })),
+      ...(["CLEARED", "CLEARED", "BOUNCED", "CANCELLED"] as const).map(
+        (status, i) => ({
+          companyId,
+          branchId,
+          moneyAccountId: chequeBank.id,
+          chequeNumber: `TERMINAL-${i}`,
+          partyName: "Historical cheque",
+          chequeDate: new Date("2026-10-01"),
+          status,
+        }),
+      ),
+      {
+        companyId,
+        branchId: other.id,
+        moneyAccountId: chequeBank.id,
+        chequeNumber: "OTHER-CHEQUE-BRANCH",
+        partyName: "Other branch party",
+        chequeDate: new Date("2026-10-01"),
+        status: "RECEIVED" as const,
+      },
+    ],
+  });
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "Cheque read checks",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
+  const read = async (query: string) => {
+    const response = await request.get(
+      `/api/v1/mobile/account/money/cheques?branchId=${branchId}&${query}`,
+      { headers },
+    );
+    expect(response.status()).toBe(200);
+    return response.json();
+  };
+  const first = await read("");
+  expect(first.total).toBe(30);
+  expect(first.rows).toHaveLength(25);
+  expect(first.nextOffset).toBe(25);
+  expect(
+    first.rows.every((r: { branchId: string }) => r.branchId === branchId),
+  ).toBe(true);
+  const terminal = await read("offset=25");
+  expect(terminal.rows).toHaveLength(5);
+  expect(terminal.nextOffset).toBeNull();
+  expect((await read("tab=CLOSED")).total).toBe(24);
+  expect((await read("tab=ALL")).total).toBe(54);
+  const oldest = await read("order=asc");
+  expect(oldest.rows[0].chequeNumber).toBe("READ-024");
+  const searched = await read("q=oldest-cheque-target");
+  expect(searched.total).toBe(1);
+  expect(searched.rows[0].moneyAccount.name).toBe(chequeBank.name);
+  expect(
+    (
+      await request.get(
+        `/api/v1/mobile/account/money/cheques?branchId=${randomUUID()}`,
+        { headers },
+      )
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.get("/api/v1/mobile/account/money/cheques?tab=INVALID", {
+        headers,
+      })
+    ).status(),
+  ).toBe(400);
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 15000 });
+  await page.goto(`/workspace/account/money/cheques?branchId=${branchId}`);
+  await expect(
+    page.getByRole("navigation", { name: "Cheque pagination" }),
+  ).toContainText("of 30 cheques");
+  await expect(
+    page.getByText("OTHER-CHEQUE-BRANCH", { exact: false }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "Date order: newest first" }).click();
+  await expect(page.getByRole("article").first()).toContainText("READ-024");
+  await page
+    .getByRole("navigation", { name: "Cheque status tabs" })
+    .getByRole("link", { name: "Closed", exact: true })
+    .click();
+  await expect(
+    page.getByRole("navigation", { name: "Cheque pagination" }),
+  ).toContainText("of 24 cheques");
+  await page
+    .getByRole("navigation", { name: "Cheque status tabs" })
+    .getByRole("link", { name: "All", exact: true })
+    .click();
+  await expect(
+    page.getByRole("navigation", { name: "Cheque pagination" }),
+  ).toContainText("of 54 cheques");
+  await page
+    .getByLabel("Search cheques", { exact: true })
+    .fill("oldest-cheque-target");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Cheque pagination" }),
+  ).toContainText("of 1 cheques");
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Record cheque$/ })
+    .click();
+  await expect(page.getByLabel("Cheque number", { exact: true })).toBeVisible();
+  const accessibility = await new AxeBuilder({ page })
+    .include(".employees-content")
+    .analyze();
+  expect(
+    accessibility.violations.filter((v) =>
+      ["critical", "serious"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page
+    .getByLabel("Search cheques", { exact: true })
+    .fill("no-cheque-match");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "No cheques match this search",
+  );
+  await db.user.update({
+    where: { id: userId },
+    data: { branchAccessScope: "SELECTED_BRANCHES" },
+  });
+  await db.userBranchAccess.create({ data: { userId, branchId } });
+  try {
+    const scopedLogin = await request.post("/api/v1/mobile/auth/login", {
+      data: {
+        identifier: email,
+        password,
+        deviceId: randomUUID(),
+        deviceName: "Assigned cheque branch",
+      },
+    });
+    expect(scopedLogin.status()).toBe(200);
+    const scopedHeaders = {
+      authorization: `Bearer ${(await scopedLogin.json()).accessToken}`,
+    };
+    expect(
+      (
+        await request.get(
+          `/api/v1/mobile/account/money/cheques?branchId=${other.id}`,
+          { headers: scopedHeaders },
+        )
+      ).status(),
+    ).toBe(403);
+    expect(
+      (
+        await request.get("/api/v1/mobile/account/money/cheques?scope=all", {
+          headers: scopedHeaders,
+        })
+      ).status(),
+    ).toBe(403);
+  } finally {
+    await db.user.update({
+      where: { id: userId },
+      data: { branchAccessScope: "ALL_BRANCHES" },
+    });
+    await db.userBranchAccess.deleteMany({ where: { userId } });
+  }
+});
+
+test("A052 new expense carries the explicitly selected branch without silently using the primary branch", async ({
+  page,
+}) => {
+  const selected = await db.branch.create({
+    data: {
+      companyId,
+      name: "Selected expense entry branch",
+      code: `E-${randomUUID().slice(0, 6)}`,
+    },
+  });
+  const scopedLedger = await db.ledgerAccount.create({
+    data: {
+      companyId,
+      code: "EXPENSE_ENTRY_SCOPE",
+      name: "Scoped expense entry ledger",
+      accountClass: "ASSET",
+      normalBalance: "DEBIT",
+    },
+  });
+  const scopedAccount = await db.moneyAccount.create({
+    data: {
+      companyId,
+      type: "BANK",
+      name: "Scoped expense entry bank",
+      ledgerAccountId: scopedLedger.id,
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 15000 });
+  await page.goto(`/workspace/account/expenses?branchId=${selected.id}`);
+  await page
+    .getByRole("link", { name: "New transaction", exact: true })
+    .click();
+  await expect(page).toHaveURL(
+    new RegExp(`/expenses/new\\?branchId=${selected.id}`),
+  );
+  await expect(page.getByLabel("Branch", { exact: true })).toHaveValue(
+    selected.id,
+  );
+  await page
+    .getByLabel("Category", { exact: true })
+    .selectOption(expenseCategory);
+  await page
+    .getByLabel("Cash / bank account", { exact: true })
+    .selectOption(scopedAccount.id);
+  await page.getByLabel("Entered amount", { exact: true }).fill("10.25");
+  await page.getByLabel("Transaction date", { exact: true }).fill("2026-10-09");
+  await page.getByRole("button", { name: "Save & New", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/expenses/new\\?saved=.*&branchId=${selected.id}`),
+  );
+  await expect(page.getByLabel("Branch", { exact: true })).toHaveValue(
+    selected.id,
+  );
+  await expect(page.getByLabel("Entered amount", { exact: true })).toHaveValue(
+    "",
+  );
+  await page.goto(`/workspace/account/expenses/new?branchId=${randomUUID()}`);
+  await expect(page.getByRole("status")).toContainText(
+    "Expense entry unavailable",
+  );
 });

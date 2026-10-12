@@ -27,7 +27,7 @@ export async function createExpenseAction(fd: FormData) {
     const row = await createExpense(expenseFormInput(fd));
     revalidatePath("/workspace/account/expenses");
     return fd.get("saveMode") === "new"
-      ? `/workspace/account/expenses/new?saved=${row.id}`
+      ? `/workspace/account/expenses/new?saved=${row.id}&branchId=${row.branchId}`
       : `/workspace/account/expenses/${row.id}`;
   }, "Draft saved with server-calculated totals.");
 }

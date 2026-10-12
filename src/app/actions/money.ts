@@ -1,1 +1,63 @@
-"use server";import{revalidatePath}from"next/cache";import{createAndReceiveLoan,createCheque,createMoneyAccount,createMoneyTransfer,postLoanPayment,postOwnerTransaction,setupOwnerFinancialAccount,transitionCheque}from"@/lib/account/money";const raw=(fd:FormData)=>Object.fromEntries(fd.entries()),refresh=()=>revalidatePath("/workspace/account/money","layout");export async function moneyAccountAction(fd:FormData){await createMoneyAccount(raw(fd));refresh()}export async function transferAction(fd:FormData){await createMoneyTransfer(raw(fd));refresh()}export async function chequeAction(fd:FormData){if(fd.get("id"))await transitionCheque(String(fd.get("id")),String(fd.get("status")) as never,fd.get("clearedDate")?new Date(String(fd.get("clearedDate"))):undefined);else await createCheque(raw(fd));refresh()}export async function setupOwnerAction(fd:FormData){await setupOwnerFinancialAccount(String(fd.get("userId")),String(fd.get("branchId")));refresh()}export async function ownerTransactionAction(fd:FormData){await postOwnerTransaction(raw(fd));refresh()}export async function loanAction(fd:FormData){await createAndReceiveLoan(raw(fd));refresh()}export async function loanPaymentAction(fd:FormData){await postLoanPayment(raw(fd));refresh()}
+"use server";
+import { revalidatePath } from "next/cache";
+import {
+  createAndReceiveLoan,
+  createCheque,
+  createMoneyAccount,
+  createMoneyTransfer,
+  postLoanPayment,
+  postOwnerTransaction,
+  setupOwnerFinancialAccount,
+  transitionCheque,
+} from "@/lib/account/money";
+const raw = (fd: FormData) => Object.fromEntries(fd.entries()),
+  refresh = () => revalidatePath("/workspace/account/money", "layout");
+export async function moneyAccountAction(fd: FormData) {
+  await createMoneyAccount(raw(fd));
+  refresh();
+}
+export async function transferAction(fd: FormData) {
+  await createMoneyTransfer(raw(fd));
+  refresh();
+}
+export async function chequeAction(fd: FormData) {
+  if (fd.get("id"))
+    await transitionCheque(
+      String(fd.get("id")),
+      String(fd.get("status")) as never,
+      fd.get("clearedDate")
+        ? new Date(String(fd.get("clearedDate")))
+        : undefined,
+    );
+  else await createCheque(raw(fd));
+  refresh();
+}
+export async function setupOwnerAction(fd: FormData) {
+  await setupOwnerFinancialAccount(
+    String(fd.get("userId")),
+    String(fd.get("branchId")),
+  );
+  refresh();
+}
+export async function ownerTransactionAction(fd: FormData) {
+  await postOwnerTransaction(raw(fd));
+  refresh();
+}
+export async function loanAction(fd: FormData) {
+  await createAndReceiveLoan(raw(fd));
+  refresh();
+}
+export async function loanPaymentAction(fd: FormData) {
+  await postLoanPayment(raw(fd));
+  refresh();
+}
+
+export async function saveChequeAction(fd: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  return accountAction(
+    async () => {
+      await chequeAction(fd);
+    },
+    fd.get("id") ? "Cheque status updated" : "Cheque recorded",
+  );
+}

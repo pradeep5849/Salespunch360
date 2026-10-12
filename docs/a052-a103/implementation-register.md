@@ -141,7 +141,7 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Data Entry direct URL denied gracefully; Project Manager Projects OFF hidden/explicit blocked, ON assigned access works; Admin/Accountant unaffected; mobile API denial equivalent.
 
-**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -152,6 +152,14 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 **Checkpoint work:** Expected authorization/module denials render an explicit recoverable web page. Expense navigation now hides Project Manager access when Projects is disabled; server denial remains enforced.
 
 **Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
+
+Checkpoint cheque-read/branch progress: New expense entry checks entry permission, authorized branch context and Expenses module; expected denial renders recoverable feedback. Native permission/module denial clears stale list/options rather than retaining obsolete creation capabilities.
+
+Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios and 146 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier broad run: 2726 passed/107 skipped/0 failed, before final native and entry-scope additions. No device verification or new cheque financial posting in this slice.
+
+Remaining: Other original permission/module findings and final checkpoint-head validation remain governed by their saved scope.
+
+Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 ## A052-F03 — Web expense list ignores selected Account branch context
 
@@ -187,7 +195,7 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Two authorized branches: select A/B, verify rows/totals; assigned-only user denied B; consolidated Admin; company isolation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -198,6 +206,14 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 **Checkpoint work:** Web and paged mobile expense list resolve selected branch/all-branch context before scoped reads. Android forwards its route branch context; independent device/global-selector verification remains pending.
 
 **Intermediate validation:** 21 focused unit tests and 4 desktop/mobile browser tests passed; TypeScript and focused lint passed; Android compile and 138 JVM tests passed. Final-head and device verification pending.
+
+Checkpoint cheque-read/branch progress: Shared native branch-query helper carries selected Account branch/company context to expense and cheque lists while preserving explicit drill-down scope. Native expense creation defaults to that selected branch; stale rows are cleared on reload/permission denial. Web New transaction carries explicit scope, new entry defaults to the selected authorized branch, and Save & New keeps the saved branch on both clients.
+
+Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios and 146 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier broad run: 2726 passed/107 skipped/0 failed, before final native and entry-scope additions. No device verification or new cheque financial posting in this slice.
+
+Remaining: Remaining category/recurring and other linked native context consistency plus final checkpoint-head/device verification remain pending.
+
+Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 ## A052-F04 — Silent 200-row cap hides older transactions and makes Android search incomplete
 
@@ -579,6 +595,8 @@ Intermediate validation: 24 focused expense totals/input tests and 2 desktop/mob
 
 Remaining: Full supplied list/category/Items layout and connected reference parity remain pending; photo/reuse semantics affect the Items flow. Native device/keyboard/TalkBack and final checkpoint-head verification remain pending.
 
+Latest approved business clarification: User confirmed reusable company expense-item persistence; complete the Items view using that catalogue. Earlier pending-question notes are historical.
+
 ## A052-F12 — Reference Add Expense Item screen and item image action are missing
 
 **Title:** Reference Add Expense Item screen and item image action are missing
@@ -627,6 +645,8 @@ Intermediate validation: 24 focused expense totals/input tests and 2 desktop/mob
 
 Remaining: Photo capture/storage and any reusable item catalogue depend on the pending user persistence-semantics answer; image/security/API and final checkpoint-head/device verification remain pending.
 
+Latest approved business clarification: User confirmed: expense item name/photo must be a reusable company expense item. Complete catalogue/photo persistence and immutable billed-line snapshots; existing local entry is partial.
+
 ## A052-F13 — Regular paid-expense entry does not complete payment/accounting on save
 
 **Title:** Regular paid-expense entry does not complete payment/accounting on save
@@ -668,6 +688,8 @@ Remaining: Photo capture/storage and any reusable item catalogue depend on the p
 **Source reports:** SalesPunch360_A052_Findings.json, SalesPunch360_A052_Audit_Checkpoint.md, SalesPunch360_A053_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Latest approved business clarification: User confirmed: saving an already-paid expense posts payment/expense immediately; approval is a later review and must not post again. Implementation remains pending.
 
 ## A053-F01 — Web Create recurring expense fails on React action metadata
 
@@ -762,6 +784,8 @@ Remaining: Photo capture/storage and any reusable item catalogue depend on the p
 **Checkpoint work:** Web and native schedule registers, pause/resume, due generation, bill navigation and scoped GET/PATCH APIs implemented.
 
 **Remaining work:** Schedule editing, complete manual payment date/account workflow, late/locked-period/concurrent payment tests and final-head verification remain pending.
+
+Latest approved business clarification: User confirmed already-paid expenses post immediately and later approval is review only; apply this to manual recurring-payment completion without duplicate posting.
 
 ## A053-F03 — Project-linked recurrence generation bypasses Projects OFF
 
@@ -4644,13 +4668,21 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Open/Closed/All empty/populated; deposited card destination; dates/reference/source/amount; stable sorting and narrow screens.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint cheque-read/branch progress: Web Open/Closed/All tabs, scoped search, date-order toggle, bounded navigation, responsive cheque cards and clear empty/filter states are connected to real data.
+
+Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios and 146 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier broad run: 2726 passed/107 skipped/0 failed, before final native and entry-scope additions. No device verification or new cheque financial posting in this slice.
+
+Remaining: Amount/source identity, confirmed closure/destination rendering and complete supplied reference parity depend on remaining normalized cheque lifecycle work.
+
+Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 ## A066-F02 — Cheque records have no amount or normalized source-payment linkage
 
@@ -4815,13 +4847,21 @@ Remaining: Implement amount/source normalization, manual deposit/closure posting
 
 **Required tests:** Native navigation/list/filters/destination picker/deposit/reopen/view source; permission/entitlement denial; offline errors; no placeholder route.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint cheque-read/branch progress: Added MONEY_VIEW-scoped Cheques menu, native read destination/view model, authenticated mobile GET API, search/tabs/date order/load-more and loading/error/cancellation recovery. Selected branch/company context is carried to API reads.
+
+Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios and 146 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier broad run: 2726 passed/107 skipped/0 failed, before final native and entry-scope additions. No device verification or new cheque financial posting in this slice.
+
+Remaining: Native cheque writes/closure/reopen/source actions, amount rendering and device verification remain pending.
+
+Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 ## A066-F06 — Bounce reversal, cheque status and operational audit are not atomic
 
@@ -4947,13 +4987,21 @@ Remaining: Final-head regression; reopen/clear workflow race verification depend
 
 **Required tests:** Admin one branch/consolidated; assigned allowed/denied branches and foreign company; multiple pages and stable ordering; complete filter counts and scoped actions.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint cheque-read/branch progress: Dedicated company/assigned-branch/selected-context cheque query applies Open/Closed/All, literal search and stable date order before bounded database paging/count in RepeatableRead. Bank metadata is company-scoped and limited to returned rows, preserving inactive history. Web/native list use the dedicated read path; legacy money-context cheque payload is capped at 200.
+
+Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios and 146 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier broad run: 2726 passed/107 skipped/0 failed, before final native and entry-scope additions. No device verification or new cheque financial posting in this slice.
+
+Remaining: Final checkpoint-head isolation/performance regression and native device verification remain pending.
+
+Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 ## A066-F09 — Bounce handling requires journal-reversal permission beyond advertised money action capability
 
@@ -5034,13 +5082,21 @@ Remaining: Expose matching transition capabilities in cheque UI/API/native route
 
 **Required tests:** Keyboard/screen-reader names; issued/received/deposited valid choices; invalid-date/state/server/offline feedback; pending double-click guard; truthful success.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A066_Findings.json, SalesPunch360_A066_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint cheque-read/branch progress: Web recording/status forms now have labels, compatible bank selection, structured action feedback, pending controls and currently valid action choices; mutation permissions and reversal requirements affect controls.
+
+Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios and 146 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier broad run: 2726 passed/107 skipped/0 failed, before final native and entry-scope additions. No device verification or new cheque financial posting in this slice.
+
+Remaining: Finish accessible amount/source/closure/reopen controls and final checkpoint-head/device verification with normalized lifecycle work.
+
+Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 ## A067-F01 — Loan list and detail workflow missing
 

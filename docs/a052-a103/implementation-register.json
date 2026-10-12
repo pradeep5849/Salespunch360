@@ -949,7 +949,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -961,7 +961,28 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Expected authorization/module denials render an explicit recoverable web page. Expense navigation now hides Project Manager access when Projects is disabled; server denial remains enforced.",
         "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "cheque_read_and_branch_scope": {
+          "work": "New expense entry checks entry permission, authorized branch context and Expenses module; expected denial renders recoverable feedback. Native permission/module denial clears stale list/options rather than retaining obsolete creation capabilities.",
+          "remaining": "Other original permission/module findings and final checkpoint-head validation remain governed by their saved scope.",
+          "shared_pages": [
+            "A052",
+            "A066"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "cheque_read_and_branch_scope": {
+          "focused": "42 tests passed across cheque read/transitions, money routes, navigation and bootstrap contracts",
+          "web_regression": "2726 passed; 107 skipped; 0 failed; 421 test files passed, 9 skipped; run preceded final native navigation and expense-entry scope additions",
+          "browser": "4 desktop/mobile scenarios passed: cheque tabs/search/date/paging/assigned branch/denials/accessibility and selected-branch expense entry/Save & New/denied branch",
+          "android": "compileDebugKotlin and 146 JVM tests passed, 0 failures/errors/skips; no device/TalkBack verification",
+          "typescript": "PASS after data-loader refactor",
+          "focused_lint": "PASS after resolving react-hooks/error-boundaries in new expense entry; initial PASS was recorded prematurely and corrected.",
+          "financial_writes": "No new cheque receipt/closure accounting implemented in this read/UI slice",
+          "final_checkpoint_head": "NOT RUN",
+          "correction": "Moved data-loading try/catch outside JSX rendering in expense new page; no financial behavior changed."
+        }
       }
     },
     {
@@ -1069,7 +1090,28 @@
         "implementation_status": "PARTIAL",
         "work": "Web and paged mobile expense list resolve selected branch/all-branch context before scoped reads. Android forwards its route branch context; independent device/global-selector verification remains pending.",
         "remaining_work": "Final-head regression and original finding verification remain pending; Android device rendering not yet verified.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "cheque_read_and_branch_scope": {
+          "work": "Shared native branch-query helper carries selected Account branch/company context to expense and cheque lists while preserving explicit drill-down scope. Native expense creation defaults to that selected branch; stale rows are cleared on reload/permission denial. Web New transaction carries explicit scope, new entry defaults to the selected authorized branch, and Save & New keeps the saved branch on both clients.",
+          "remaining": "Remaining category/recurring and other linked native context consistency plus final checkpoint-head/device verification remain pending.",
+          "shared_pages": [
+            "A052",
+            "A066"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "cheque_read_and_branch_scope": {
+          "focused": "42 tests passed across cheque read/transitions, money routes, navigation and bootstrap contracts",
+          "web_regression": "2726 passed; 107 skipped; 0 failed; 421 test files passed, 9 skipped; run preceded final native navigation and expense-entry scope additions",
+          "browser": "4 desktop/mobile scenarios passed: cheque tabs/search/date/paging/assigned branch/denials/accessibility and selected-branch expense entry/Save & New/denied branch",
+          "android": "compileDebugKotlin and 146 JVM tests passed, 0 failures/errors/skips; no device/TalkBack verification",
+          "typescript": "PASS after data-loader refactor",
+          "focused_lint": "PASS after resolving react-hooks/error-boundaries in new expense entry; initial PASS was recorded prematurely and corrected.",
+          "financial_writes": "No new cheque receipt/closure accounting implemented in this read/UI slice",
+          "final_checkpoint_head": "NOT RUN",
+          "correction": "Moved data-loading try/catch outside JSX rendering in expense new page; no financial behavior changed."
+        }
       }
     },
     {
@@ -1964,7 +2006,7 @@
       "checkpoint_work": {
         "expense_item_entry_slice": {
           "work": "Android expense entry now uses a full-page, inset-aware scrolling form with fixed Cancel/Save & New/Save draft controls and retained unsaved-change confirmation. Linked item-entry name screen is full-page on Android and mobile web; existing desktop billed-line and category workflows remain available.",
-          "remaining": "Full supplied list/category/Items layout and connected reference parity remain pending; photo/reuse semantics affect the Items flow. Native device/keyboard/TalkBack and final checkpoint-head verification remain pending."
+          "remaining": "Complete supplied list/category/Items layout using approved reusable expense-item catalogue. Native device/keyboard/TalkBack and final checkpoint-head verification remain pending."
         }
       },
       "intermediate_validation": {
@@ -2080,8 +2122,9 @@
       "checkpoint_work": {
         "expense_item_entry_slice": {
           "work": "Added a dedicated local Add Expense Item name-entry state on web and Android. Required trimmed name, 240-character bound, Save/Cancel, keyboard Escape/back and focus restoration preserve existing billed-line quantities, rates, totals and the enclosing expense draft. No inventory or financial write occurs from local item entry.",
-          "remaining": "Photo capture/storage and any reusable item catalogue depend on the pending user persistence-semantics answer; image/security/API and final checkpoint-head/device verification remain pending."
-        }
+          "remaining": "Implement reusable company expense-item catalogue, photo capture/storage and safe billed-line snapshots; permission/image/security/API and final checkpoint-head/device verification remain pending."
+        },
+        "approved_item_persistence": "Reusable company expense-item catalogue with name/photo, selected into expense billed lines; existing local name-entry slice is partial."
       },
       "intermediate_validation": {
         "expense_item_entry_slice": {
@@ -2217,7 +2260,10 @@
       "implementation_status": "NOT STARTED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "approved_paid_expense_policy": "Already-paid save posts payment/expense immediately; later approval only reviews, with no duplicate journal/payment."
+      }
     },
     {
       "finding_id": "A053-F01",
@@ -2469,7 +2515,8 @@
         "implementation_status": "PARTIAL",
         "work": "Web and native schedule registers, pause/resume, due generation, bill navigation and scoped GET/PATCH APIs implemented.",
         "remaining_work": "Schedule editing, complete manual payment date/account workflow, late/locked-period/concurrent payment tests and final-head verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "approved_paid_expense_policy": "Already-paid save posts payment/expense immediately; later approval only reviews, with no duplicate journal/payment."
       }
     },
     {
@@ -12367,10 +12414,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "cheque_read_and_branch_scope": {
+          "work": "Web Open/Closed/All tabs, scoped search, date-order toggle, bounded navigation, responsive cheque cards and clear empty/filter states are connected to real data.",
+          "remaining": "Amount/source identity, confirmed closure/destination rendering and complete supplied reference parity depend on remaining normalized cheque lifecycle work.",
+          "shared_pages": [
+            "A052",
+            "A066"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "cheque_read_and_branch_scope": {
+          "focused": "42 tests passed across cheque read/transitions, money routes, navigation and bootstrap contracts",
+          "web_regression": "2726 passed; 107 skipped; 0 failed; 421 test files passed, 9 skipped; run preceded final native navigation and expense-entry scope additions",
+          "browser": "4 desktop/mobile scenarios passed: cheque tabs/search/date/paging/assigned branch/denials/accessibility and selected-branch expense entry/Save & New/denied branch",
+          "android": "compileDebugKotlin and 146 JVM tests passed, 0 failures/errors/skips; no device/TalkBack verification",
+          "typescript": "PASS after data-loader refactor",
+          "focused_lint": "PASS after resolving react-hooks/error-boundaries in new expense entry; initial PASS was recorded prematurely and corrected.",
+          "financial_writes": "No new cheque receipt/closure accounting implemented in this read/UI slice",
+          "final_checkpoint_head": "NOT RUN",
+          "correction": "Moved data-loading try/catch outside JSX rendering in expense new page; no financial behavior changed."
+        }
+      }
     },
     {
       "finding_id": "A066-F02",
@@ -12811,10 +12881,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "cheque_read_and_branch_scope": {
+          "work": "Added MONEY_VIEW-scoped Cheques menu, native read destination/view model, authenticated mobile GET API, search/tabs/date order/load-more and loading/error/cancellation recovery. Selected branch/company context is carried to API reads.",
+          "remaining": "Native cheque writes/closure/reopen/source actions, amount rendering and device verification remain pending.",
+          "shared_pages": [
+            "A052",
+            "A066"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "cheque_read_and_branch_scope": {
+          "focused": "42 tests passed across cheque read/transitions, money routes, navigation and bootstrap contracts",
+          "web_regression": "2726 passed; 107 skipped; 0 failed; 421 test files passed, 9 skipped; run preceded final native navigation and expense-entry scope additions",
+          "browser": "4 desktop/mobile scenarios passed: cheque tabs/search/date/paging/assigned branch/denials/accessibility and selected-branch expense entry/Save & New/denied branch",
+          "android": "compileDebugKotlin and 146 JVM tests passed, 0 failures/errors/skips; no device/TalkBack verification",
+          "typescript": "PASS after data-loader refactor",
+          "focused_lint": "PASS after resolving react-hooks/error-boundaries in new expense entry; initial PASS was recorded prematurely and corrected.",
+          "financial_writes": "No new cheque receipt/closure accounting implemented in this read/UI slice",
+          "final_checkpoint_head": "NOT RUN",
+          "correction": "Moved data-loading try/catch outside JSX rendering in expense new page; no financial behavior changed."
+        }
+      }
     },
     {
       "finding_id": "A066-F06",
@@ -13145,10 +13238,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "cheque_read_and_branch_scope": {
+          "work": "Dedicated company/assigned-branch/selected-context cheque query applies Open/Closed/All, literal search and stable date order before bounded database paging/count in RepeatableRead. Bank metadata is company-scoped and limited to returned rows, preserving inactive history. Web/native list use the dedicated read path; legacy money-context cheque payload is capped at 200.",
+          "remaining": "Final checkpoint-head isolation/performance regression and native device verification remain pending.",
+          "shared_pages": [
+            "A052",
+            "A066"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "cheque_read_and_branch_scope": {
+          "focused": "42 tests passed across cheque read/transitions, money routes, navigation and bootstrap contracts",
+          "web_regression": "2726 passed; 107 skipped; 0 failed; 421 test files passed, 9 skipped; run preceded final native navigation and expense-entry scope additions",
+          "browser": "4 desktop/mobile scenarios passed: cheque tabs/search/date/paging/assigned branch/denials/accessibility and selected-branch expense entry/Save & New/denied branch",
+          "android": "compileDebugKotlin and 146 JVM tests passed, 0 failures/errors/skips; no device/TalkBack verification",
+          "typescript": "PASS after data-loader refactor",
+          "focused_lint": "PASS after resolving react-hooks/error-boundaries in new expense entry; initial PASS was recorded prematurely and corrected.",
+          "financial_writes": "No new cheque receipt/closure accounting implemented in this read/UI slice",
+          "final_checkpoint_head": "NOT RUN",
+          "correction": "Moved data-loading try/catch outside JSX rendering in expense new page; no financial behavior changed."
+        }
+      }
     },
     {
       "finding_id": "A066-F09",
@@ -13367,10 +13483,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "cheque_read_and_branch_scope": {
+          "work": "Web recording/status forms now have labels, compatible bank selection, structured action feedback, pending controls and currently valid action choices; mutation permissions and reversal requirements affect controls.",
+          "remaining": "Finish accessible amount/source/closure/reopen controls and final checkpoint-head/device verification with normalized lifecycle work.",
+          "shared_pages": [
+            "A052",
+            "A066"
+          ]
+        }
+      },
+      "intermediate_validation": {
+        "cheque_read_and_branch_scope": {
+          "focused": "42 tests passed across cheque read/transitions, money routes, navigation and bootstrap contracts",
+          "web_regression": "2726 passed; 107 skipped; 0 failed; 421 test files passed, 9 skipped; run preceded final native navigation and expense-entry scope additions",
+          "browser": "4 desktop/mobile scenarios passed: cheque tabs/search/date/paging/assigned branch/denials/accessibility and selected-branch expense entry/Save & New/denied branch",
+          "android": "compileDebugKotlin and 146 JVM tests passed, 0 failures/errors/skips; no device/TalkBack verification",
+          "typescript": "PASS after data-loader refactor",
+          "focused_lint": "PASS after resolving react-hooks/error-boundaries in new expense entry; initial PASS was recorded prematurely and corrected.",
+          "financial_writes": "No new cheque receipt/closure accounting implemented in this read/UI slice",
+          "final_checkpoint_head": "NOT RUN",
+          "correction": "Moved data-loading try/catch outside JSX rendering in expense new page; no financial behavior changed."
+        }
+      }
     },
     {
       "finding_id": "A067-F01",
@@ -21654,6 +21793,24 @@
       "database": "6 owner/balance integration tests passed, including two added dashboard reversal/assigned-branch regressions",
       "typescript": "passed",
       "stage": "INTERMEDIATE ONLY"
+    }
+  },
+  "approved_business_decisions": {
+    "paid_expense_approval": {
+      "decision": "Post payment and expense immediately when an already-paid expense is saved; approval is a review and must not post again.",
+      "source": "Explicit user reply in this task on 2026-10-12",
+      "affected_findings": [
+        "A052-F13",
+        "A053-F02"
+      ]
+    },
+    "expense_item_persistence": {
+      "decision": "Save expense item name and photo as a reusable company expense item.",
+      "source": "Explicit user reply in this task on 2026-10-12",
+      "affected_findings": [
+        "A052-F11",
+        "A052-F12"
+      ]
     }
   }
 }

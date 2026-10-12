@@ -1194,7 +1194,8 @@ export async function listMoneyDataForActor(a: Actor) {
     dashboard: await moneyDashboardForActor(a),
     cheques: await db.cheque.findMany({
       where: { companyId: a.companyId, ...branchScope(a) },
-      orderBy: { chequeDate: "desc" },
+      orderBy: [{ chequeDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      take: 200,
     }),
     owners: await db.ownerFinancialAccount.findMany({
       select: {

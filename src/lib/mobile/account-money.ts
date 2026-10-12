@@ -1,3 +1,9 @@
+import {
+  chequePageForActor,
+  chequeListQuerySchema,
+} from "@/lib/account/cheque-list";
+import { resolveAccountBranchContext } from "@/lib/account/branch-context";
+import { z } from "zod";
 import { ownerHistoryForActor } from "@/lib/account/owner-history";
 import { ownerCapitalSummaryForActor } from "@/lib/account/owner-capital-summary";
 import { canUsePermission } from "@/lib/auth/permissions";
@@ -184,4 +190,23 @@ export async function mobileOwnerHistory(
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
     throw new Error("MOBILE_FORBIDDEN");
   return ownerHistoryForActor(a, id, filters);
+}
+
+export async function mobileChequePage(
+  u: MobileAppPrincipal,
+  raw: unknown = {},
+) {
+  const actor = permit(u, "ACCOUNT_MONEY_VIEW");
+  const { scope, ...query } = chequeListQuerySchema
+    .extend({ scope: z.literal("all").optional() })
+    .parse(raw);
+  const context = await resolveAccountBranchContext(actor, {
+    branchId: query.branchId,
+    scope,
+  });
+  return chequePageForActor(actor, {
+    ...query,
+    branchId:
+      context.context.mode === "BRANCH" ? context.context.branchId : undefined,
+  });
 }
