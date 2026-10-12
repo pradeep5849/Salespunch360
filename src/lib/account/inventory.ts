@@ -514,10 +514,10 @@ export async function updateInventoryProduct(productId: string, raw: unknown) {
     },
   });
 }
-export async function listInventoryProductsForActor(a: ProjectActor) {
+export async function listInventoryProductsForActor(a: ProjectActor, options: { includeInactive?: boolean } = {}) {
   await assertInventoryAvailable(a);
   return db.accountProduct.findMany({
-    where: { companyId: a.companyId, isActive: true },
+    where: { companyId: a.companyId, ...(options.includeInactive ? {} : { isActive: true }) },
     include: { unit: true, category: true },
     orderBy: { name: "asc" },
   });

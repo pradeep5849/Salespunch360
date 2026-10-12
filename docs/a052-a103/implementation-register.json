@@ -7556,10 +7556,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
+        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
+        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately. Full decimal-safe browser total aggregation remains open under A061-F07.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/workspace/account/inventory/stock-summary/page.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/lib/account/financial-reports.ts"
+        ]
+      }
     },
     {
       "finding_id": "A061-F02",
@@ -7656,10 +7669,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
+        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
+        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately. Full decimal-safe browser total aggregation remains open under A061-F07.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/workspace/account/inventory/stock-summary/page.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/lib/account/financial-reports.ts"
+        ]
+      }
     },
     {
       "finding_id": "A061-F03",
@@ -7760,10 +7786,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
+        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
+        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately. Full decimal-safe browser total aggregation remains open under A061-F07.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/workspace/account/inventory/stock-summary/page.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/lib/account/financial-reports.ts"
+        ]
+      }
     },
     {
       "finding_id": "A061-F04",
@@ -8058,10 +8097,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
+        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
+        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately. Full decimal-safe browser total aggregation remains open under A061-F07.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/workspace/account/inventory/stock-summary/page.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/lib/account/financial-reports.ts"
+        ]
+      }
     },
     {
       "finding_id": "A061-F07",
@@ -8160,10 +8212,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
+        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
+        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately. Full decimal-safe browser total aggregation remains open under A061-F07.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/workspace/account/inventory/stock-summary/page.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/lib/account/financial-reports.ts"
+        ]
+      }
     },
     {
       "finding_id": "A061-F08",
@@ -8258,10 +8323,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
+        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
+        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately. Full decimal-safe browser total aggregation remains open under A061-F07.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/workspace/account/inventory/stock-summary/page.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/lib/account/financial-reports.ts"
+        ]
+      }
     },
     {
       "finding_id": "A062-F01",
@@ -22148,6 +22226,31 @@
         "failures": 0,
         "skips": 0
       }
+    },
+    "stock_summary_shared_report": {
+      "unit_service_tests": {
+        "passed": 20,
+        "failed": 0,
+        "files": 5
+      },
+      "browser": {
+        "passed": 2,
+        "failed": 0,
+        "platforms": [
+          "desktop web",
+          "mobile web"
+        ],
+        "checks": [
+          "inactive stock history",
+          "scoped PDF/XLSX",
+          "unauthorized branch",
+          "invalid calendar date",
+          "decimal settings 0\u20134",
+          "labelled no-match reset"
+        ]
+      },
+      "final_head_verification": false,
+      "remaining": "Native summary, filter/share reference sheet, complete browser decimal-safe totals, final-head validation."
     }
   },
   "approved_business_decisions": {

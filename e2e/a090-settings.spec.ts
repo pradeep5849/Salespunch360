@@ -1313,3 +1313,27 @@ test("A089 definition editor creates Decimal fields and saves required print and
  const row=page.locator(".account-list > div").filter({hasText:key});await row.getByText("Edit field",{exact:true}).click();await row.getByLabel("Label",{exact:true}).fill("A089 decimal saved label");await row.getByLabel("Required",{exact:true}).uncheck();await row.getByLabel("Show in print",{exact:true}).uncheck();await row.getByLabel("Status",{exact:true}).selectOption("false");await row.getByRole("button",{name:"Save field",exact:true}).click();await expect(row.getByText("Saved successfully",{exact:true})).toBeVisible();
  expect(await db.customFieldDefinition.findUniqueOrThrow({where:{id:created.id}})).toMatchObject({label:"A089 decimal saved label",dataType:"DECIMAL",isRequired:false,isActive:false,validation:{showInPrint:false}});await page.reload();await expect(page.locator(".account-list > div").filter({hasText:key})).toContainText("INACTIVE");
 });
+
+test("A061 stock summary retains inactive history and scoped exports with strict dates",async({page})=>{
+ test.setTimeout(120000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["INVENTORY"],itemSettings:{...(original.itemSettings as object??{}),enabled:true}}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const warehouse=await db.warehouse.create({data:{companyId,branchId,name:"Stock summary history",code:`SUM-${randomUUID().slice(0,8)}`}});
+  const product=await db.accountProduct.create({data:{companyId,name:"A061 archived stock",trackInventory:true,costPrice:"10",lowStockThreshold:"2"}});
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"1.25",unitCost:"10",movementDate:"2026-10-10",sourceType:"OPENING",sourceId:randomUUID()});
+  await db.accountProduct.update({where:{id:product.id},data:{isActive:false}});
+  await signInSettings(page);await page.goto(`/workspace/account/inventory/stock-summary?branchId=${branchId}&asOf=2026-10-10`);
+  await page.getByRole("combobox",{name:"Item status"}).selectOption("false");await page.getByRole("textbox",{name:"Search stock"}).fill(product.name);
+  const card=page.locator("article.account-item-card").filter({has:page.getByRole("heading",{name:product.name,exact:true})});
+  await expect(card).toContainText("1.25");await expect(card).toContainText("12.50");
+  const href=await page.getByRole("link",{name:"Download stock summary Excel workbook"}).getAttribute("href");expect(href).toContain(`branchId=${branchId}`);
+  const response=await page.request.get(href!);expect(response.status()).toBe(200);const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await response.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain(product.name);expect(book.worksheets[0].getCell("D7").value).toBe("12.50");
+  for(const decimals of [0,1,2,3,4]){await db.accountSettings.update({where:{companyId},data:{displayDecimalPlaces:decimals}});const formatted=await page.request.get(href!);const precisionBook=new ExcelJS.Workbook();await precisionBook.xlsx.load(new Uint8Array(await formatted.body()).buffer);expect(precisionBook.worksheets[0].getCell("C7").value).toBe((decimals===0?"1":decimals===1?"1.3":(1.25).toFixed(decimals)));expect(precisionBook.worksheets[0].getCell("D7").value).toBe((decimals===0?"13":(12.5).toFixed(decimals)));}
+  const pdfHref=await page.getByRole("link",{name:"Download stock summary PDF"}).getAttribute("href");const pdf=await page.request.get(pdfHref!);expect(pdf.status()).toBe(200);expect((await pdf.body()).toString()).toContain("Branch:");
+  expect((await page.request.get("/api/account/inventory/stock-summary/xlsx?asOf=2026-02-30")).status()).toBe(400);
+  expect((await page.request.get(`/api/account/inventory/stock-summary/xlsx?branchId=${randomUUID()}`)).status()).toBe(403);
+  await page.getByRole("textbox",{name:"Search stock"}).fill("No matching archived item");await expect(page.getByRole("status")).toContainText("No stock items match");await page.getByRole("button",{name:"Reset filters"}).click();await expect(page.getByRole("textbox",{name:"Search stock"})).toHaveValue("");
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules,itemSettings:original.itemSettings??{},displayDecimalPlaces:original.displayDecimalPlaces}})}
+});

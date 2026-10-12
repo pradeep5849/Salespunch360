@@ -2848,13 +2848,15 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Active/inactive/all products, inactive products with stock history, filtered counts and exports.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 ## A061-F02 — Exports contain non-stock products excluded by the page
 
@@ -2890,13 +2892,15 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Mixed tracked/nontracked catalog; PDF/XLS row parity and counts for all filters.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 ## A061-F03 — Stock Summary bypasses selected branch context and Items disable setting
 
@@ -2932,13 +2936,15 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** All-branch Admin selects one branch; assigned user allowed/denied branch; company isolation; Items OFF page/API denial; export parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 ## A061-F04 — Reference filter interface and WhatsApp sharing are missing
 
@@ -3058,13 +3064,15 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Impossible dates, valid leap day, invalid leap day, malformed input, page/export date parity and recoverable errors.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 ## A061-F07 — Quantity display/export ignores company precision setting
 
@@ -3100,13 +3108,15 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Decimals0–4; fractional/negative/zero quantities; displayed and exported agreement.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 ## A061-F08 — Search lacks accessible name and empty results lack explanation
 
@@ -3142,13 +3152,15 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Accessible name; empty company vs no matches; keyboard reset and screen-reader results; narrow viewport.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 ## A062-F01 — Unit to Items assignment workflow is disabled
 
