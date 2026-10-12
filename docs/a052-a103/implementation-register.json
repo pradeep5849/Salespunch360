@@ -20778,7 +20778,18 @@
         "A086-F04",
         "A087-F02",
         "A087-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "cheque_settlement_visibility": {
+          "work": "Shared commercial document receipt/advance reads exclude pending cheque sources, reversed receipts and reversed applications. Sale input preserves CHEQUE and the preview leaves Balance Due unpaid until closure. Native sale entry parity and the original credit-note Received calculation remain separate pending verification.",
+          "shared_pages": [
+            "A066",
+            "A087"
+          ],
+          "implementation_commit": "25bab1d2",
+          "final_head_verified": false
+        }
+      }
     },
     {
       "finding_id": "A087-F02",
@@ -21138,6 +21149,16 @@
         "exact_money_display": {
           "work": "Shared currency formatting now rounds decimal text exactly, preserving large cents and scientific notation without a Number conversion; linked to A052-F06 totals.",
           "remaining": "Other general-preference consumers and final checkpoint-head verification remain pending."
+        },
+        "pending_payment_currency_history": {
+          "work": "Currency change lock now includes pending cheque settlements as well as effective journal history, preventing an unposted cheque amount from being relabelled into another currency. General and business-currency service use the same policy.",
+          "shared_pages": [
+            "A066",
+            "A090",
+            "A093"
+          ],
+          "implementation_commit": "25bab1d2",
+          "tests": "Currency lock confirmed in real local PostgreSQL; grouped currency/settings unit tests passed. Not final-head verification."
         }
       },
       "intermediate_validation": {
@@ -21933,7 +21954,11 @@
       "limitations": "Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation.",
       "final_head_validation": false,
       "shared_consumer_regression": "7 files, 64 tests passed (project costing/material, opening balances, report boundaries, mobile transactions and currency/settings).",
-      "schema_validation": "Prisma validate passed with isolated local database configuration; 114 migrations present and local database up to date. Initial validate lacked DIRECT_URL; rerun succeeded with local-only configuration."
+      "schema_validation": "Prisma validate passed with isolated local database configuration; 114 migrations present and local database up to date. Initial validate lacked DIRECT_URL; rerun succeeded with local-only configuration.",
+      "fault_and_concurrency_tests": "11 real PostgreSQL tests + 11 retry-policy unit tests passed (22 total), with serial test-file execution and concurrent race/retry requests inside the tests. Parallel cross-file fixture transactions hit PostgreSQL serializable conflicts; database fixture groups must execute sequentially while preserving internal concurrency assertions.",
+      "source_navigation": "Single-invoice View Txn connected on web/native to saved sale/purchase; native compile and JVM tests passed after route hookup. Multi-invoice/advance and legacy source navigation remain partial.",
+      "browser": "Desktop and Pixel5 mobile-web: 2 passed, authenticated entry -> pending advance -> confirmed cash closure -> reopen, posted source becomes REVERSED; card AXE and horizontal overflow assertions passed. Initial inaccessible exact selector corrected by explicit selector aria-labels. Not final-head verification.",
+      "source_native": "Android compileDebugKotlin and testDebugUnitTest passed after View Txn route hookup; native device/TalkBack not exercised."
     }
   },
   "approved_business_decisions": {

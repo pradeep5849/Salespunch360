@@ -25,6 +25,7 @@ export function ChequeFinancialActionForm({
       <label>
         Cheque action
         <select
+          aria-label="Cheque action"
           name="action"
           value={action}
           onChange={(event) => setAction(event.target.value)}
@@ -50,7 +51,12 @@ export function ChequeFinancialActionForm({
         <>
           <label>
             Payment account
-            <select name="moneyAccountId" required defaultValue="">
+            <select
+              aria-label="Payment account"
+              name="moneyAccountId"
+              required
+              defaultValue=""
+            >
               <option value="">Select account</option>
               {accounts.map((row) => (
                 <option key={row.id} value={row.id}>

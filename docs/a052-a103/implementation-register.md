@@ -8921,3 +8921,5 @@ Intermediate: 4 real PostgreSQL financial tests pass including concurrent close,
 Remaining: Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation.
 
 Latest intermediate evidence: 5 PostgreSQL cheque lifecycle tests, 64 shared-consumer tests, Android compile and 146 JVM tests passed; TypeScript, focused lint and Prisma validation passed. Local database has 114 applied migrations. Native entry/destination selection, legacy source completion, browser and final-head checks remain. A066 stays PARTIAL.
+
+Cheque follow-up evidence: 22 database/retry tests passed with sequential fixture files and concurrency inside tests; desktop/mobile-web cheque entry, cash closure and reopen both passed, including card AXE and no overflow. Android View Txn routes compiled and JVM tests passed. Explicit accessible selector names corrected. These remain intermediate checks; A066 is PARTIAL.

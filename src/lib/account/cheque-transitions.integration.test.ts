@@ -61,8 +61,10 @@ vi.mock("@/lib/db", () => ({
     },
   ),
 }));
-import { createChequeForActor, transitionChequeForActor } from "./money";
-import { postJournalInTx } from "@/lib/accounting/service";
+import { createChequeForActor } from "./money";
+import { chequeFinancialActionForActor } from "./cheque-finance";
+import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
+import type { ProjectActor } from "./projects";
 const companyId = randomUUID(),
   foreignCompanyId = randomUUID(),
   branchId = randomUUID(),
@@ -87,34 +89,50 @@ const actor = {
   branchAccessScope: "ALL_BRANCHES" as const,
   branchIds: [],
 };
-async function openCheque(journalEntryId?: string) {
+const customerId = randomUUID();
+const actionKeys = new Map<string, string>();
+async function transitionChequeForActor(
+  a: ProjectActor,
+  id: string,
+  to: string,
+  date: Date,
+) {
+  const row = await client.cheque.findUniqueOrThrow({ where: { id } });
+  const action =
+    to === "DEPOSITED" ? "CLOSE" : to === "BOUNCED" ? "BOUNCE" : "CANCEL";
+  const key = `${id}:${action}`;
+  if (!actionKeys.has(key)) actionKeys.set(key, randomUUID());
+  return chequeFinancialActionForActor(a, id, {
+    action,
+    requestKey: actionKeys.get(key),
+    expectedVersion: row.actionVersion,
+    actionDate: date.toISOString().slice(0, 10),
+    ...(action === "CLOSE" ? {} : { reason: "Checkpoint correction" }),
+  });
+}
+async function openCheque() {
   return createChequeForActor(actor, {
     branchId,
     moneyAccountId: accountId,
     chequeNumber: randomUUID(),
     chequeDate: date,
-    partyName: "Checkpoint customer",
+    partyId: customerId,
+    amount: "1593.00",
+    requestKey: randomUUID(),
     status: "RECEIVED",
-    journalEntryId,
   });
 }
 async function clearedCheque() {
-  const journal = await client.$transaction((tx) =>
-    postJournalInTx(tx, actor, {
-      financialYearId: yearId,
-      branchId,
-      entryDate: date,
-      sourceType: "CHEQUE_CHECKPOINT_TEST",
-      sourceId: randomUUID(),
-      lines: [
-        { ledgerAccountId: bankLedger, debit: "1593", credit: "0" },
-        { ledgerAccountId: receivableLedger, debit: "0", credit: "1593" },
-      ],
-    }),
+  const cheque = await openCheque();
+  const closed = await transitionChequeForActor(
+    actor,
+    cheque.id,
+    "DEPOSITED",
+    date,
   );
-  const cheque = await openCheque(journal.id);
-  await transitionChequeForActor(actor, cheque.id, "DEPOSITED", date);
-  await transitionChequeForActor(actor, cheque.id, "CLEARED", date);
+  const journal = await client.journalEntry.findUniqueOrThrow({
+    where: { id: closed.journalEntryId! },
+  });
   return { cheque, journal };
 }
 describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
@@ -151,6 +169,18 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
       },
     });
     await client.accountSettings.create({ data: { companyId } });
+    await client.customer.create({
+      data: {
+        id: customerId,
+        companyId,
+        branchId,
+        name: "Checkpoint customer",
+        isAccountCustomer: true,
+      },
+    });
+    await client.ledgerAccount.createMany({
+      data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
+    });
     await client.financialYear.create({
       data: {
         id: yearId,
@@ -166,7 +196,7 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
           id: bankLedger,
           companyId,
           code: "100",
-          name: "Bank",
+          name: "Checkpoint bank ledger",
           accountClass: "ASSET",
           normalBalance: "DEBIT",
         },
@@ -193,9 +223,18 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
   });
   afterAll(async () => {
     failAudit = null;
-    await client.cheque.deleteMany({ where: { companyId } });
     await client.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+      await tx.cheque.updateMany({
+        where: { companyId },
+        data: { settlementId: null },
+      });
+      await tx.accountSettlement.deleteMany({ where: { companyId } });
+      await tx.cheque.deleteMany({ where: { companyId } });
+    });
+    await client.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+      await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
       await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
       await tx.journalLine.deleteMany({ where: { companyId } });
       await tx.journalEntry.deleteMany({ where: { companyId } });
@@ -207,6 +246,7 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
     await client.ledgerAccount.deleteMany({ where: { companyId } });
     await client.financialYear.deleteMany({ where: { companyId } });
     await client.accountSettings.deleteMany({ where: { companyId } });
+    await client.customer.deleteMany({ where: { companyId } });
     await client.user.deleteMany({ where: { companyId } });
     await client.branch.deleteMany({ where: { companyId } });
     await client.company.deleteMany({
@@ -227,18 +267,18 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
         where: {
           companyId,
           entityId: cheque.id,
-          eventType: "CHEQUE_STATUS_CHANGED",
+          eventType: "CHEQUE_FINANCIAL_ACTION",
         },
       }),
     ).toBe(1);
-    expect(["DEPOSITED", "CANCELLED"]).toContain(
+    expect(["CLEARED", "CANCELLED"]).toContain(
       (await client.cheque.findUniqueOrThrow({ where: { id: cheque.id } }))
         .status,
     );
   });
   it("rolls back reversal and cheque status when operational audit fails", async () => {
     const { cheque, journal } = await clearedCheque();
-    failAudit = "CHEQUE_STATUS_CHANGED";
+    failAudit = "CHEQUE_FINANCIAL_ACTION";
     try {
       await expect(
         transitionChequeForActor(actor, cheque.id, "BOUNCED", date),
@@ -295,15 +335,15 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
         where: {
           companyId,
           entityId: cheque.id,
-          eventType: "CHEQUE_STATUS_CHANGED",
-          metadata: { path: ["to"], equals: "BOUNCED" },
+          eventType: "CHEQUE_FINANCIAL_ACTION",
+          metadata: { path: ["action"], equals: "BOUNCE" },
         },
       }),
     ).toBe(1);
   });
   it("rolls back creation on audit failure", async () => {
     const count = await client.cheque.count({ where: { companyId } });
-    failAudit = "CHEQUE_CREATED";
+    failAudit = "CHEQUE_PAYMENT_RECORDED";
     try {
       await expect(openCheque()).rejects.toThrow(
         "injected cheque audit failure",

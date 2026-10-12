@@ -100,6 +100,20 @@ export async function chequePageForActor(
     [
       db.cheque.findMany({
         where,
+        include: {
+          settlement: {
+            select: {
+              allocations: {
+                take: 2,
+                orderBy: { id: "asc" },
+                select: {
+                  documentId: true,
+                  document: { select: { type: true } },
+                },
+              },
+            },
+          },
+        },
         orderBy: [
           { chequeDate: query.order },
           { createdAt: query.order },
@@ -121,10 +135,27 @@ export async function chequePageForActor(
   });
   const names = new Map(accounts.map((account) => [account.id, account]));
   return {
-    canClose: canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"),
-    canCorrect: canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY") && canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_JOURNAL_REVERSE"),
+    canClose: canUsePermission(
+      actor,
+      "SALESPUNCH360_ACCOUNT",
+      "ACCOUNT_MONEY_ENTRY",
+    ),
+    canCorrect:
+      canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY") &&
+      canUsePermission(
+        actor,
+        "SALESPUNCH360_ACCOUNT",
+        "ACCOUNT_JOURNAL_REVERSE",
+      ),
     rows: rows.map((row) => ({
       ...row,
+      sourceDocument:
+        row.settlement?.allocations.length === 1
+          ? {
+              id: row.settlement.allocations[0].documentId,
+              type: row.settlement.allocations[0].document.type,
+            }
+          : null,
       moneyAccount: names.get(row.moneyAccountId) ?? null,
     })),
     total,

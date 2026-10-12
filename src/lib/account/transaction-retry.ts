@@ -36,6 +36,11 @@ export async function retrySerializable<T>(
         }
       }
       if (attempt >= attempts || !retryable) throw error;
+      // Give a competing financial transaction time to commit before taking
+      // another snapshot; immediate retries can repeatedly collide in a burst.
+      const delay =
+        Math.min(100, 10 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 20);
+      await new Promise<void>((resolve) => setTimeout(resolve, delay));
     }
   }
 }

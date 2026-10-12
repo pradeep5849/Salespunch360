@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { expect, test } from "@playwright/test";
@@ -132,7 +133,16 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   await db.mobileSession.deleteMany({ where: { userId } });
-  await db.cheque.deleteMany({ where: { companyId } });
+  await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+    await tx.cheque.updateMany({
+      where: { companyId },
+      data: { settlementId: null },
+    });
+    await tx.accountSettlement.deleteMany({ where: { companyId } });
+    await tx.cheque.deleteMany({ where: { companyId } });
+    await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+  });
   await db.ownerTransaction.deleteMany({ where: { companyId } });
   await db.ownerFinancialAccount.deleteMany({ where: { companyId } });
   await db.expenseItem.deleteMany({ where: { companyId } });
@@ -3570,4 +3580,103 @@ test("A053 web payment control posts a late bill while retaining its original du
       ["critical", "serious"].includes(v.impact ?? ""),
     ),
   ).toEqual([]);
+});
+
+test("cheque entry and confirmed cash closure/reopening work at this viewport", async ({
+  page,
+}) => {
+  await db.ledgerAccount.createMany({
+    data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
+    skipDuplicates: true,
+  });
+  const bankLedger = await db.ledgerAccount.findFirstOrThrow({
+    where: { companyId, systemKey: "BANK" },
+  });
+  const bank = await db.moneyAccount.create({
+    data: {
+      companyId,
+      branchId,
+      type: "BANK",
+      name: "Cheque test bank",
+      ledgerAccountId: bankLedger.id,
+    },
+  });
+  const party = await db.customer.create({
+    data: {
+      companyId,
+      branchId,
+      name: "Cheque test customer",
+      isAccountCustomer: true,
+    },
+  });
+  await page.goto("/sign-in");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account/);
+  await page.goto("/workspace/account/money/cheques");
+  await page.getByText("Record cheque", { exact: true }).first().click();
+  await page.getByLabel("Bank account", { exact: true }).selectOption(bank.id);
+  const number = randomUUID().slice(0, 8);
+  await page.getByLabel("Cheque number", { exact: true }).fill(number);
+  await page.getByLabel("Cheque date", { exact: true }).fill("2026-10-10");
+  await page.getByLabel("Search party", { exact: true }).fill(party.name);
+  await page.getByRole("button", { name: "Find parties", exact: true }).click();
+  await expect(
+    page
+      .getByLabel("Party", { exact: true })
+      .locator("option", { hasText: party.name }),
+  ).toBeAttached({ timeout: 15000 });
+  await page.getByLabel("Party", { exact: true }).selectOption(party.id);
+  await page.getByLabel("Amount", { exact: true }).fill("1593.00");
+  await page
+    .getByRole("button", { name: "Record cheque", exact: true })
+    .click();
+  const card = page.getByRole("article", { name: `Cheque ${number}` });
+  await expect(card).toBeVisible({ timeout: 15000 });
+  const recorded = await db.cheque.findFirstOrThrow({
+    where: { companyId, chequeNumber: number },
+  });
+  expect(
+    (
+      await db.accountSettlement.findUniqueOrThrow({
+        where: { id: recorded.settlementId! },
+      })
+    ).status,
+  ).toBe("PENDING_CHEQUE");
+  await card.getByLabel("Action date", { exact: true }).fill("2026-10-12");
+  await card
+    .getByLabel("Payment account", { exact: true })
+    .selectOption(moneyId);
+  await card
+    .getByRole("button", { name: "Confirm cheque action", exact: true })
+    .click();
+  await expect(card).not.toBeAttached({ timeout: 15000 });
+  await page.getByRole("link", { name: "Closed", exact: true }).click();
+  await expect(card).toContainText("CLEARED");
+  await card
+    .getByLabel("Cheque action", { exact: true })
+    .selectOption("REOPEN");
+  await card.getByLabel("Action date", { exact: true }).fill("2026-10-13");
+  await card.getByLabel("Reason", { exact: true }).fill("Undo closure");
+  await card
+    .getByRole("button", { name: "Confirm cheque action", exact: true })
+    .click();
+  await expect(card).not.toBeAttached({ timeout: 15000 });
+  await page.getByRole("link", { name: "Open", exact: true }).click();
+  await expect(card).toContainText("RECEIVED");
+  expect(
+    (
+      await db.accountSettlement.findUniqueOrThrow({
+        where: { id: recorded.settlementId! },
+      })
+    ).status,
+  ).toBe("REVERSED");
+  const axe = await new AxeBuilder({ page }).include("article").analyze();
+  expect(axe.violations).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });

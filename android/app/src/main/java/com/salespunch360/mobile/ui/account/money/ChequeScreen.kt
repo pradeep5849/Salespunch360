@@ -14,7 +14,7 @@ import com.salespunch360.mobile.ui.account.accountMoney
 import java.util.UUID
 import kotlinx.serialization.json.*
 
-@Composable fun ChequeScreen(padding:PaddingValues,initialQuery:String="",vm:ChequeViewModel=viewModel()) {
+@Composable fun ChequeScreen(padding:PaddingValues,initialQuery:String="",onNavigate:(String)->Unit={},vm:ChequeViewModel=viewModel()) {
  LaunchedEffect(initialQuery){vm.context(initialQuery)}
  var selected by remember { mutableStateOf<JsonObject?>(null) }
  var selectedAction by remember { mutableStateOf("CLOSE") }
@@ -34,6 +34,7 @@ import kotlinx.serialization.json.*
      Text("Amount: ${row["amount"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)} ?: "Not recorded"}")
      Text("Date: ${accountDate(row.str("chequeDate"))}")
      Text("Bank: ${(row["moneyAccount"] as? JsonObject)?.str("name") ?: "Account unavailable"}")
+     (row["sourceDocument"] as? JsonObject)?.let{source->TextButton({onNavigate(if(source.str("type")=="SALES_INVOICE")"/workspace/account/sales/${source.str("id")}"else"/workspace/account/purchases/${source.str("id")}")}){Text("View Txn")}}
      if(row["settlementId"]?.jsonPrimitive?.contentOrNull!=null){
       Row{if(state.canClose&&row.str("status") in listOf("ISSUED","RECEIVED"))TextButton({selected=row;selectedAction="CLOSE"},enabled=!state.saving){Text("Close cheque")}
        if(state.canCorrect&&row.str("status") in listOf("CLEARED","DEPOSITED","BOUNCED"))TextButton({selected=row;selectedAction="REOPEN"},enabled=!state.saving){Text("Re-open")}}

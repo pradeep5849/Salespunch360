@@ -19,8 +19,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
 @Composable
-fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
+fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
+    LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
     var initialEditorOpened by remember(initialType, initialProjectId) { mutableStateOf(false) }
     LaunchedEffect(initialType, initialProjectId, state.loading) {

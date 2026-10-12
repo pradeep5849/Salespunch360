@@ -49,6 +49,7 @@ export function ChequeRecordForm({
       <label>
         Branch
         <select
+          aria-label="Branch"
           name="branchId"
           required
           value={branch}
@@ -67,7 +68,13 @@ export function ChequeRecordForm({
       </label>
       <label>
         Bank account
-        <select name="moneyAccountId" required key={branch} defaultValue="">
+        <select
+          aria-label="Bank account"
+          name="moneyAccountId"
+          required
+          key={branch}
+          defaultValue=""
+        >
           <option value="">Select bank account</option>
           {compatible.map((row) => (
             <option key={row.id} value={row.id}>
@@ -90,6 +97,7 @@ export function ChequeRecordForm({
       <label>
         Direction
         <select
+          aria-label="Direction"
           name="status"
           value={direction}
           onChange={(event) => {
@@ -117,6 +125,7 @@ export function ChequeRecordForm({
       <label>
         Party
         <select
+          aria-label="Party"
           name="partyId"
           required
           key={`${branch}:${direction}`}
