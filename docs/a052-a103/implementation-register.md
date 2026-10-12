@@ -8058,6 +8058,8 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Linked finding IDs:** A086-F01, A086-F03, A086-F04.
 
+Checkpoint evidence: atomic source-bound amendment and reversal replay; full credit validates exact ledger/cost-centre offsets including charges and TDS/TCS. Focused PostgreSQL regression: 16 passed, 0 failed. Android compile and focused creation/edit-snapshot tests passed. Paid corrections and final-head validation remain pending; status stays PARTIAL.
+
 ## A086-F03 — Sale replacement loses retained invoice metadata
 
 **Title:** Sale replacement loses retained invoice metadata
@@ -8141,6 +8143,8 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 **Source reports:** SalesPunch360_Sale_Edit_Checkpoint_Findings.json, SalesPunch360_Sale_Edit_Checkpoint.md, SalesPunch360_A086-A089_Followup.md.
 
 **Linked finding IDs:** A086-F03, A086-F05, A086-F06, A087-F01.
+
+Checkpoint evidence: atomic source-bound amendment and reversal replay; full credit validates exact ledger/cost-centre offsets including charges and TDS/TCS. Focused PostgreSQL regression: 16 passed, 0 failed. Android compile and focused creation/edit-snapshot tests passed. Paid corrections and final-head validation remain pending; status stays PARTIAL.
 
 ## A086-F05 — Paid/advance/adjusted sales cannot be edited or deleted
 

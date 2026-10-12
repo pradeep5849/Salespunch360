@@ -20404,7 +20404,16 @@
         "A086-F01",
         "A086-F03",
         "A086-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "summary": "Atomic source-bound amendment request identity and durable replay; web/native retain the same request identity on retries. Full-sale reversal replays the existing credit. Paid-sale correction remains pending.",
+        "verification": "Intermediate: 16 focused PostgreSQL cheque/sale-correction and fault tests passed; 44 focused contract/request/action tests passed; Android compilation and focused creation-identity/edit-snapshot unit tests passed. Final-head validation pending. Shared Add Sale edit/reversal browser workflow: desktop and mobile, 2 passed. TypeScript and focused ESLint passed.",
+        "files": [
+          "src/lib/account/sale-amendments.ts",
+          "src/lib/account/cheque-finance.integration.test.ts",
+          "src/lib/account/cheque-transitions.integration.test.ts"
+        ]
+      }
     },
     {
       "finding_id": "A086-F03",
@@ -20586,7 +20595,16 @@
         "A086-F05",
         "A086-F06",
         "A087-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "summary": "Full credit preserves reverse charge, project attribution, freight, other charges, round-off and TDS/TCS; validates exact posted journal offsets by ledger and cost centre. Stock-specific final regression remains pending.",
+        "verification": "Intermediate: 16 focused PostgreSQL cheque/sale-correction and fault tests passed; 44 focused contract/request/action tests passed; Android compilation and focused creation-identity/edit-snapshot unit tests passed. Final-head validation pending. Shared Add Sale edit/reversal browser workflow: desktop and mobile, 2 passed. TypeScript and focused ESLint passed.",
+        "files": [
+          "src/lib/account/sale-amendments.ts",
+          "src/lib/account/cheque-finance.integration.test.ts",
+          "src/lib/account/cheque-transitions.integration.test.ts"
+        ]
+      }
     },
     {
       "finding_id": "A086-F05",
@@ -22054,6 +22072,25 @@
       "browser": "2 passed: desktop and mobile-web cash/credit/advance/party balance display and width assertions.",
       "android": "compileDebugKotlin and 3 focused SaleDetailTotalsTest cases passed, 0 failures/errors/skips.",
       "limitations": "Final PR-head validation, further lifecycle/isolation coverage and linked paid amendment/retained-field work remain."
+    },
+    "sale_correction_atomicity": {
+      "database_tests": {
+        "passed": 16,
+        "failed": 0,
+        "files": 2,
+        "log": "work/implementation-checkpoint/sale-correction-group-final.log"
+      },
+      "final_head_verification": false,
+      "remaining": "Paid corrections, complete source snapshots and final-head regression validation.",
+      "browser": {
+        "passed": 2,
+        "failed": 0,
+        "platforms": [
+          "desktop web",
+          "mobile web"
+        ],
+        "log": "work/implementation-checkpoint/sale-amendment-browser-final.log"
+      }
     }
   },
   "approved_business_decisions": {

@@ -10,6 +10,7 @@ export type AccountActionResult = {
 const messages: Record<string, string> = {
   CHEQUE_NUMBER_REQUIRED: "Enter the cheque number before recording this payment.",
   CHEQUE_AMOUNT_REQUIRED: "Enter a positive cheque amount. A payment discount alone does not require a cheque.",
+  SALE_LEDGER_SOURCE_REQUIRED: "This older Sale has no posted ledger source. Reconcile its original entries before correcting it.",
   CHEQUE_BANK_REQUIRED: "Add or select an active bank account before recording the cheque.",
   CHEQUE_NUMBER_EXISTS: "This cheque number is already recorded for the selected bank. Open the existing cheque.",
   CHEQUE_CHANGED: "This cheque changed. Refresh before closing or reopening it.",

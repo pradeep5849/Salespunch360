@@ -27,6 +27,10 @@ import {
 import { createChequeForActor } from "./money";
 import { saleDetailForActor } from "./sale-detail";
 import { currentPartyBalanceForActor } from "./party-balance";
+import {
+  reversePostedSaleForActor,
+  replacePostedSaleForActor,
+} from "./sale-amendments";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import {
   createCommercialDocumentForActor,
@@ -567,7 +571,9 @@ describe.skipIf(!url)(
           { documentId: first.id, amount: "50.00", discountAmount: "10.00" },
         ],
       });
-      const sourceLine = await client.commercialDocumentLine.findFirstOrThrow({ where: { companyId, documentId: first.id } });
+      const sourceLine = await client.commercialDocumentLine.findFirstOrThrow({
+        where: { companyId, documentId: first.id },
+      });
       const credit = await createCommercialDocumentForActor(actor, {
         type: "CREDIT_NOTE",
         idempotencyKey: randomUUID(),
@@ -635,6 +641,100 @@ describe.skipIf(!url)(
           first.id,
         ),
       ).rejects.toThrow();
+    });
+    it("fully offsets GST, cess, charges, round-off and withholding when correcting an unpaid sale", async () => {
+      await client.branch.update({
+        where: { id: branchId },
+        data: { gstStateCode: "29" },
+      });
+      const sale = await createCommercialDocumentForActor(actor, {
+        type: "SALES_INVOICE",
+        idempotencyKey: randomUUID(),
+        branchId,
+        partyId: customerId,
+        issueDate: "2026-10-10",
+        stateOfSupplyCode: "29",
+        freightAmount: "20",
+        otherChargesAmount: "10",
+        roundOffAmount: "-0.25",
+        tdsRate: "1",
+        tcsRate: "2",
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Full correction",
+            quantity: "1",
+            rate: "1000",
+            taxRate: "18",
+            cessRate: "5",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: sale.id });
+      const before = await client.commercialDocument.findUniqueOrThrow({
+        where: { id: sale.id },
+      });
+      const credit = await reversePostedSaleForActor(actor, sale.id);
+      expect((await reversePostedSaleForActor(actor, sale.id)).id).toBe(credit.id);
+      const corrected = await client.commercialDocument.findUniqueOrThrow({
+        where: { id: credit.id },
+      });
+      expect(corrected.tdsAmount.toFixed(2)).toBe(before.tdsAmount.toFixed(2));
+      expect(corrected.tcsAmount.toFixed(2)).toBe(before.tcsAmount.toFixed(2));
+      expect(await outstanding(sale.id)).toBe("0.00");
+      expect(
+        await client.commercialDocument.findUniqueOrThrow({
+          where: { id: sale.id },
+        }),
+      ).toEqual(before);
+    });
+    it("retries a committed sale amendment without creating another credit or replacement", async () => {
+      const sale = await invoice("120");
+      const request = {
+        idempotencyKey: randomUUID(),
+        branchId,
+        partyId: customerId,
+        issueDate: "2026-10-10",
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Amended service",
+            quantity: "1",
+            rate: "140",
+            taxRate: "0",
+          },
+        ],
+      };
+      const results = await Promise.all(
+        Array.from({ length: 3 }, () =>
+          replacePostedSaleForActor(actor, sale.id, request),
+        ),
+      );
+      expect(new Set(results.map((row) => row.id)).size).toBe(1);
+      expect(results.every((row) => row.status === "POSTED")).toBe(true);
+      expect(
+        await client.commercialDocument.count({
+          where: { companyId, sourceDocumentId: sale.id, type: "CREDIT_NOTE" },
+        }),
+      ).toBe(1);
+      await expect(
+        replacePostedSaleForActor(actor, sale.id, {
+          ...request,
+          notes: "Changed retry intent",
+        }),
+      ).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+      await expect(
+        replacePostedSaleForActor(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [otherBranch],
+          },
+          sale.id,
+          request,
+        ),
+      ).rejects.toThrow();
+      expect(await outstanding(results[0].id)).toBe("140.00");
     });
   },
 );

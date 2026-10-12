@@ -65,6 +65,11 @@ import { createChequeForActor } from "./money";
 import { chequeFinancialActionForActor } from "./cheque-finance";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import type { ProjectActor } from "./projects";
+import {
+  createCommercialDocumentForActor,
+  postCommercialDocumentForActor,
+} from "./commercial";
+import { replacePostedSaleForActor } from "./sale-amendments";
 const companyId = randomUUID(),
   foreignCompanyId = randomUUID(),
   branchId = randomUUID(),
@@ -229,12 +234,16 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
         where: { companyId },
         data: { settlementId: null },
       });
+      await tx.advanceApplication.deleteMany({ where: { companyId } });
+      await tx.settlementAllocation.deleteMany({ where: { companyId } });
       await tx.accountSettlement.deleteMany({ where: { companyId } });
       await tx.cheque.deleteMany({ where: { companyId } });
     });
     await client.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
       await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+      await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
+      await tx.commercialDocument.deleteMany({ where: { companyId } });
       await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
       await tx.journalLine.deleteMany({ where: { companyId } });
       await tx.journalEntry.deleteMany({ where: { companyId } });
@@ -400,5 +409,77 @@ describe.skipIf(!url)("A066 real database atomic cheque transitions", () => {
         })
       ).status,
     ).toBe("POSTED");
+  });
+  it("rolls back the entire sale correction when its final amendment audit fails", async () => {
+    const isolatedParty = await client.customer.create({
+      data: {
+        companyId,
+        branchId,
+        name: "Amendment rollback party",
+        isAccountCustomer: true,
+      },
+    });
+    const sale = await createCommercialDocumentForActor(actor, {
+      type: "SALES_INVOICE",
+      branchId,
+      partyId: isolatedParty.id,
+      issueDate: "2026-10-09",
+      idempotencyKey: randomUUID(),
+      lines: [
+        {
+          lineType: "CUSTOM",
+          itemName: "Atomic amendment",
+          quantity: "1",
+          rate: "120",
+          taxRate: "0",
+        },
+      ],
+    });
+    await postCommercialDocumentForActor(actor, { documentId: sale.id });
+    const before = await client.commercialDocument.findUniqueOrThrow({
+      where: { id: sale.id },
+    });
+    const journals = await client.journalEntry.count({ where: { companyId } });
+    const requestKey = randomUUID();
+    failAudit = "SALE_AMENDED";
+    try {
+      await expect(
+        replacePostedSaleForActor(actor, sale.id, {
+          idempotencyKey: requestKey,
+          branchId,
+          partyId: isolatedParty.id,
+          issueDate: "2026-10-09",
+          lines: [
+            {
+              lineType: "CUSTOM",
+              itemName: "Atomic amendment",
+              quantity: "1",
+              rate: "140",
+              taxRate: "0",
+            },
+          ],
+        }),
+      ).rejects.toThrow("injected cheque audit failure");
+    } finally {
+      failAudit = null;
+    }
+    expect(
+      await client.commercialDocument.findUniqueOrThrow({
+        where: { id: sale.id },
+      }),
+    ).toEqual(before);
+    expect(
+      await client.commercialDocument.count({
+        where: { companyId, sourceDocumentId: sale.id, type: "CREDIT_NOTE" },
+      }),
+    ).toBe(0);
+    expect(
+      await client.commercialDocument.count({
+        where: { companyId, creationRequestKey: requestKey },
+      }),
+    ).toBe(0);
+    expect(await client.journalEntry.count({ where: { companyId } })).toBe(
+      journals,
+    );
   });
 });
