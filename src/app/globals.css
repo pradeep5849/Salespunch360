@@ -744,3 +744,7 @@ body:has(.account-shell) > .workspace-header{display:none}
 .owner-list-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.owner-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;margin:20px 0}.owner-cards article{border:1px solid var(--account-border);border-radius:12px;padding:16px;background:#fff;overflow-wrap:anywhere}.owner-identity-form,.owner-entry-form{max-width:640px;padding:18px;border:1px solid var(--account-border);border-radius:12px;margin:20px 0}.owner-identity-form label,.owner-entry-form label{display:grid;gap:6px}.owner-identity-form input,.owner-identity-form textarea,.owner-entry-form input,.owner-entry-form select{max-width:100%}
 
 .report-table-scroll { max-width: 100%; overflow-x: auto; }
+
+.items-modal .account-stock-filters{padding:16px 22px}
+.account-stock-summary .items-filter-sheet footer button:first-child{color:#4b5563}
+.account-stock-summary .items-filter-sheet footer button:last-child{background:#cc123b}

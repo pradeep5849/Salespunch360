@@ -5,7 +5,10 @@ import {
   stockSummaryQuery,
   type StockSummaryQuery,
 } from "@/lib/account/stock-summary-report";
-import { requirePermission } from "@/lib/auth/authorization";
+import {
+  AuthorizationError,
+  requirePermission,
+} from "@/lib/auth/authorization";
 import type { ProjectActor } from "@/lib/account/projects";
 export const metadata = { title: "Stock Summary | SalesPunch360" };
 export default async function Page({
@@ -24,10 +27,24 @@ export default async function Page({
         </Link>
       </div>
     );
-  const report = await stockSummaryReportForActor(
-    (await requirePermission("ACCOUNT_STOCK")) as ProjectActor,
-    parsed.data,
-  );
+  let report: Awaited<ReturnType<typeof stockSummaryReportForActor>>;
+  try {
+    const actor = (await requirePermission("ACCOUNT_STOCK")) as ProjectActor;
+    report = await stockSummaryReportForActor(actor, parsed.data);
+  } catch (error) {
+    if (
+      error instanceof AuthorizationError ||
+      (error instanceof Error && error.message.startsWith("MODULE_DISABLED:"))
+    )
+      return (
+        <div role="alert">
+          Stock Summary is unavailable for your permissions, branch access or
+          Items settings.{" "}
+          <Link href="/workspace/account">Return to Account</Link>
+        </div>
+      );
+    throw error;
+  }
   const contextQuery =
     report.context.mode === "BRANCH"
       ? { branchId: report.context.branchId }
@@ -36,6 +53,7 @@ export default async function Page({
     <StockSummary
       asOf={report.query.asOf ?? ""}
       contextQuery={contextQuery}
+      initialFilters={report.query}
       rows={report.rows}
     />
   );

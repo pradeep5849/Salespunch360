@@ -6,7 +6,7 @@ import {
   stockDecimalSum,
 } from "@/lib/account/stock-display-decimal";
 import { ClientMoney, useDisplayPreferences } from "./display-preferences";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountIcon } from "./account-icons";
 type Row = {
@@ -23,17 +23,28 @@ export function StockSummary({
   rows,
   asOf,
   contextQuery = {},
+  initialFilters = {},
 }: {
   rows: Row[];
   asOf: string;
   contextQuery?: { branchId?: string; scope?: string };
+  initialFilters?: {
+    q?: string;
+    category?: string;
+    level?: string;
+    status?: string;
+  };
 }) {
   const router = useRouter();
   const display = useDisplayPreferences();
-  const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
-  const [level, setLevel] = useState("");
-  const [active, setActive] = useState("");
+  const [q, setQ] = useState(initialFilters.q ?? "");
+  const [category, setCategory] = useState(initialFilters.category ?? "");
+  const [level, setLevel] = useState(initialFilters.level ?? "");
+  const [active, setActive] = useState(initialFilters.status ?? "");
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [draft, setDraft] = useState({ category: "", level: "", active: "" });
+  const [sharing, setSharing] = useState(false),
+    [shareMessage, setShareMessage] = useState("");
   const filtered = useMemo(
     () =>
       rows.filter(
@@ -59,6 +70,40 @@ export function StockSummary({
       ...(active ? { status: active } : {}),
       ...(asOf ? { asOf } : {}),
     }).toString();
+  async function shareReport() {
+    if (sharing) return;
+    setSharing(true);
+    setShareMessage("");
+    try {
+      const response = await fetch(
+        `/api/account/inventory/stock-summary/pdf?${exportQuery}`,
+      );
+      if (!response.ok) throw new Error("EXPORT_FAILED");
+      const file = new File([await response.blob()], "stock-summary.pdf", {
+        type: "application/pdf",
+      });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Stock Summary" });
+        setShareMessage("Report handed to the sharing app.");
+      } else {
+        const url = URL.createObjectURL(file),
+          link = document.createElement("a");
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        setShareMessage("PDF downloaded. Attach it to your message manually.");
+      }
+    } catch (error) {
+      setShareMessage(
+        error instanceof DOMException && error.name === "AbortError"
+          ? "Sharing cancelled."
+          : "The report could not be shared. Try again.",
+      );
+    } finally {
+      setSharing(false);
+    }
+  }
   return (
     <div className="account-stock-summary">
       <header className="account-stock-header">
@@ -78,7 +123,11 @@ export function StockSummary({
         >
           Excel
         </a>
+        <button type="button" disabled={sharing} onClick={shareReport}>
+          {sharing ? "Preparing…" : "Share report"}
+        </button>
       </header>
+      {shareMessage && <p role="status">{shareMessage}</p>}
       <div className="account-compact-search">
         <AccountIcon name="search" />
         <input
@@ -94,7 +143,7 @@ export function StockSummary({
           e.preventDefault();
           const data = new FormData(e.currentTarget);
           router.push(
-            `/workspace/account/inventory/stock-summary?${new URLSearchParams({ ...contextQuery, ...(data.get("enabled") ? { asOf: String(data.get("asOf") ?? "") } : {}) }).toString()}`,
+            `/workspace/account/inventory/stock-summary?${new URLSearchParams({ ...contextQuery, ...(q ? { q } : {}), ...(category ? { category } : {}), ...(level ? { level } : {}), ...(active ? { status: active } : {}), ...(data.get("enabled") ? { asOf: String(data.get("asOf") ?? "") } : {}) }).toString()}`,
           );
         }}
       >
@@ -114,37 +163,95 @@ export function StockSummary({
         />
         <button>Apply</button>
       </form>
-      <div className="account-stock-filters">
-        <select
-          aria-label="Item category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="">All categories</option>
-          {categories.map((x) => (
-            <option key={x}>{x}</option>
-          ))}
-        </select>
-        <select
-          aria-label="Stock level"
-          value={level}
-          onChange={(e) => setLevel(e.target.value)}
-        >
-          <option value="">All stock levels</option>
-          <option value="available">Available</option>
-          <option value="low">Low stock</option>
-          <option value="negative">Negative</option>
-        </select>
-        <select
-          aria-label="Item status"
-          value={active}
-          onChange={(e) => setActive(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
-      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDraft({ category, level, active });
+          dialog.current?.showModal();
+        }}
+      >
+        Filters
+      </button>
+      <dialog
+        ref={dialog}
+        className="items-modal"
+        aria-labelledby="stock-filter-title"
+      >
+        <section className="items-filter-sheet">
+          <header>
+            <h2 id="stock-filter-title">Filter By</h2>
+            <button
+              type="button"
+              aria-label="Close stock filters"
+              onClick={() => dialog.current?.close()}
+            >
+              ×
+            </button>
+          </header>
+          <div className="account-stock-filters">
+            <select
+              aria-label="Item category"
+              value={draft.category}
+              onChange={(e) =>
+                setDraft((previous) => ({
+                  ...previous,
+                  category: e.target.value,
+                }))
+              }
+            >
+              <option value="">All categories</option>
+              {categories.map((x) => (
+                <option key={x}>{x}</option>
+              ))}
+            </select>
+            <select
+              aria-label="Stock level"
+              value={draft.level}
+              onChange={(e) =>
+                setDraft((previous) => ({ ...previous, level: e.target.value }))
+              }
+            >
+              <option value="">All stock levels</option>
+              <option value="available">Available</option>
+              <option value="low">Low stock</option>
+              <option value="negative">Negative</option>
+            </select>
+            <select
+              aria-label="Item status"
+              value={draft.active}
+              onChange={(e) =>
+                setDraft((previous) => ({
+                  ...previous,
+                  active: e.target.value,
+                }))
+              }
+            >
+              <option value="">All statuses</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+          <footer>
+            <button
+              type="button"
+              onClick={() => setDraft({ category: "", level: "", active: "" })}
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCategory(draft.category);
+                setLevel(draft.level);
+                setActive(draft.active);
+                dialog.current?.close();
+              }}
+            >
+              Apply filters
+            </button>
+          </footer>
+        </section>
+      </dialog>
       <div className="account-filter-chips">
         {[
           [category, setCategory],

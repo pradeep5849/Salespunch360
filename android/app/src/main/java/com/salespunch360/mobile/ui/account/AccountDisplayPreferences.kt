@@ -17,6 +17,7 @@ data class AccountDisplayPreferences(val currency:String="INR",val decimals:Int=
         formatter.currency=Currency.getInstance(currency)
         formatter.minimumFractionDigits=decimals
         formatter.maximumFractionDigits=decimals
+        formatter.roundingMode=java.math.RoundingMode.HALF_UP
         return formatter.format(amount)
     }
     fun date(value:String):String {

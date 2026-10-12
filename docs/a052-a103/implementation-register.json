@@ -7561,16 +7561,20 @@
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
-        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
-        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately.",
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
         "files": [
           "src/lib/account/stock-summary-report.ts",
-          "src/lib/account/inventory.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
           "src/components/account/stock-summary.tsx",
-          "src/app/workspace/account/inventory/stock-summary/page.tsx",
           "src/app/api/account/inventory/stock-summary/[format]/route.ts",
-          "src/lib/account/financial-reports.ts"
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
         ]
       }
     },
@@ -7674,16 +7678,20 @@
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
-        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
-        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately.",
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
         "files": [
           "src/lib/account/stock-summary-report.ts",
-          "src/lib/account/inventory.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
           "src/components/account/stock-summary.tsx",
-          "src/app/workspace/account/inventory/stock-summary/page.tsx",
           "src/app/api/account/inventory/stock-summary/[format]/route.ts",
-          "src/lib/account/financial-reports.ts"
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
         ]
       }
     },
@@ -7791,16 +7799,20 @@
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
-        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
-        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately.",
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
         "files": [
           "src/lib/account/stock-summary-report.ts",
-          "src/lib/account/inventory.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
           "src/components/account/stock-summary.tsx",
-          "src/app/workspace/account/inventory/stock-summary/page.tsx",
           "src/app/api/account/inventory/stock-summary/[format]/route.ts",
-          "src/lib/account/financial-reports.ts"
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
         ]
       }
     },
@@ -7897,10 +7909,27 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
+        ]
+      }
     },
     {
       "finding_id": "A061-F05",
@@ -7997,10 +8026,27 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
+        "files": [
+          "src/lib/account/stock-summary-report.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
+          "src/components/account/stock-summary.tsx",
+          "src/app/api/account/inventory/stock-summary/[format]/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
+        ]
+      }
     },
     {
       "finding_id": "A061-F06",
@@ -8102,16 +8148,20 @@
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
-        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
-        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately.",
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
         "files": [
           "src/lib/account/stock-summary-report.ts",
-          "src/lib/account/inventory.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
           "src/components/account/stock-summary.tsx",
-          "src/app/workspace/account/inventory/stock-summary/page.tsx",
           "src/app/api/account/inventory/stock-summary/[format]/route.ts",
-          "src/lib/account/financial-reports.ts"
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
         ]
       }
     },
@@ -8212,21 +8262,25 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states. Browser quantities, comparisons and total stock values now use exact decimal strings and scaled BigInt arithmetic without Number conversion.",
-        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending. Exact display checks: 25 focused decimal/report/display-preference tests passed; desktop/mobile 2 passed comparing on-screen and exported quantities for decimal settings 0\u20134.",
-        "remaining": "Native Stock Summary and final-head validation.",
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
         "files": [
           "src/lib/account/stock-summary-report.ts",
-          "src/lib/account/inventory.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
           "src/components/account/stock-summary.tsx",
-          "src/app/workspace/account/inventory/stock-summary/page.tsx",
           "src/app/api/account/inventory/stock-summary/[format]/route.ts",
-          "src/lib/account/financial-reports.ts"
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
         ]
       }
     },
@@ -8328,16 +8382,20 @@
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "summary": "Shared status-aware inventory-only report dataset for page and PDF/XLSX; explicit inventoryContext resolves company/assigned branch and module before reads; branch context retained through date/export navigation; strict calendar/filter validation; decimal aggregation, scoped PDF captions, company decimal settings and currency-labelled exports; labelled search/as-of inputs and recoverable empty/filter states.",
-        "verification": "Intermediate: 20 focused report/export/branch-context tests passed across 5 files; desktop/mobile browser 2 passed including inactive history, real PDF/XLSX, unauthorized branch rejection, invalid date and decimal settings 0\u20134. TypeScript and focused ESLint passed. Final-head regression pending.",
-        "remaining": "Final-head verification; native summary and reference filter/share sheet are tracked separately.",
+        "summary": "Shared authorized native/web stock-summary dataset and export service includes inactive and zero-stock inventory products, resolved branch/as-of context, strict filters, exact decimal totals and company display settings. Dedicated native summary offers filters/date/counts and PDF/XLSX manual sharing. Web uses an accessible draft/apply/reset/close filter sheet and scoped file sharing with cancellation/fallback feedback; Items OFF denies reads, optional modules OFF preserves core Inventory.",
+        "verification": "Intermediate checkpoint: 44 focused tests passed across 8 files; desktop/mobile browser 2 passed covering real native/web dataset parity, assigned-branch/company isolation, Items OFF, optional modules OFF, precision 0\u20134, filter cancellation, native-share API stub/cancellation/download fallback, AXE and overflow checks. Android compile and 10 focused stock/display tests passed. TypeScript and focused ESLint passed.",
+        "remaining": "Final implementation-head full validation; native physical-device/share-target/TalkBack verification is not available in this environment and must be reported as a test limitation if still unavailable.",
         "files": [
           "src/lib/account/stock-summary-report.ts",
-          "src/lib/account/inventory.ts",
+          "src/lib/account/stock-summary-export.ts",
+          "src/lib/account/stock-display-decimal.ts",
+          "src/lib/mobile/account-inventory.ts",
           "src/components/account/stock-summary.tsx",
-          "src/app/workspace/account/inventory/stock-summary/page.tsx",
           "src/app/api/account/inventory/stock-summary/[format]/route.ts",
-          "src/lib/account/financial-reports.ts"
+          "src/app/api/v1/mobile/account/inventory/stock-summary/route.ts",
+          "src/app/api/v1/mobile/account/inventory/stock-summary/[format]/route.ts",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountStockSummaryViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/StockSummaryScreen.kt"
         ]
       }
     },
@@ -22250,7 +22308,7 @@
         ]
       },
       "final_head_verification": false,
-      "remaining": "Native summary, filter/share reference sheet and final-head validation.",
+      "remaining": "Final-head full validation and native device/share-target/TalkBack limitation.",
       "decimal_display_tests": {
         "passed": 25,
         "failed": 0,
@@ -22259,6 +22317,36 @@
       "browser_exact_decimal": {
         "passed": 2,
         "failed": 0
+      },
+      "grouped_tests": {
+        "passed": 44,
+        "failed": 0,
+        "files": 8
+      },
+      "grouped_browser": {
+        "passed": 2,
+        "failed": 0,
+        "platforms": [
+          "desktop web",
+          "mobile web"
+        ],
+        "checks": [
+          "native/web dataset and real PDF parity",
+          "assigned branch/company isolation",
+          "Items OFF",
+          "optional modules OFF retains core Inventory",
+          "decimal display/export 0\u20134",
+          "filter apply/close cancellation",
+          "manual sharing/cancellation/download fallback",
+          "AXE",
+          "responsive overflow"
+        ]
+      },
+      "android": {
+        "compile": "PASS",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
       }
     }
   },

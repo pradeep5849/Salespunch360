@@ -2858,6 +2858,8 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
+
 ## A061-F02 — Exports contain non-stock products excluded by the page
 
 **Title:** Exports contain non-stock products excluded by the page
@@ -2901,6 +2903,8 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 **Linked finding IDs:** None explicitly linked.
 
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
+
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
 
 ## A061-F03 — Stock Summary bypasses selected branch context and Items disable setting
 
@@ -2946,6 +2950,8 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
+
 ## A061-F04 — Reference filter interface and WhatsApp sharing are missing
 
 **Title:** Reference filter interface and WhatsApp sharing are missing
@@ -2980,13 +2986,15 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 
 **Required tests:** Mobile reference comparison; apply/reset/close; category and uncategorized; WhatsApp available/unavailable/cancel; same report scope and filters.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
 
 ## A061-F05 — Android Stock Summary routes to generic inventory screen
 
@@ -3022,13 +3030,15 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 
 **Required tests:** Native navigation; totals aggregate warehouse balances by product; zero-stock products; filters/date/PDF/XLS/share; permissions, Items OFF and branch/company equality with web.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A061_Findings.json, SalesPunch360_A061_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
 
 ## A061-F06 — As-of date accepts impossible calendar values
 
@@ -3074,6 +3084,8 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
+
 ## A061-F07 — Quantity display/export ignores company precision setting
 
 **Title:** Quantity display/export ignores company precision setting
@@ -3108,7 +3120,7 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 
 **Required tests:** Decimals0–4; fractional/negative/zero quantities; displayed and exported agreement.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A061_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3119,6 +3131,8 @@ Checkpoint evidence: shared scoped status-aware page/export dataset, inactive hi
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
 
 Exact display follow-up: decimal-string and BigInt comparisons/aggregation replace Number conversions. 25 focused decimal/report/display tests passed; desktop/mobile 2 passed with quantity/export precision parity at 0–4. Native summary and final-head validation remain pending.
+
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
 
 ## A061-F08 — Search lacks accessible name and empty results lack explanation
 
@@ -3163,6 +3177,8 @@ Exact display follow-up: decimal-string and BigInt comparisons/aggregation repla
 **Linked finding IDs:** None explicitly linked.
 
 Checkpoint evidence: shared scoped status-aware page/export dataset, inactive history and strict dates; company decimal export settings 0–4. Focused tests: 20 passed; desktop/mobile browser: 2 passed. Native summary/share sheet and browser total precision remain tracked separately. Final-head verification pending.
+
+Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX service; accessible web filter sheet and scoped manual sharing/cancel/download fallback. 44 focused tests, desktop/mobile browser 2, Android compile and 10 focused tests passed. Items OFF denied; optional modules OFF retains core Inventory. Final-head validation pending; native device/share-target/TalkBack remains a verification limitation.
 
 ## A062-F01 — Unit to Items assignment workflow is disabled
 

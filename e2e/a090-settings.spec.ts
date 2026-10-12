@@ -1,3 +1,5 @@
+import AxeBuilder from "@axe-core/playwright";
+import {mobileStockSummary,mobileStockSummaryExport} from "../src/lib/mobile/account-inventory";
 import {reversePostedSaleForActor} from "../src/lib/account/sale-amendments";
 import {setupOwnerFinancialAccountForActor,postOwnerTransactionForActor} from "../src/lib/account/money";
 import {runFinancialReportForActor} from "../src/lib/account/reports/service";
@@ -1324,16 +1326,33 @@ test("A061 stock summary retains inactive history and scoped exports with strict
   const product=await db.accountProduct.create({data:{companyId,name:"A061 archived stock",trackInventory:true,costPrice:"10",lowStockThreshold:"2"}});
   await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"1.25",unitCost:"10",movementDate:"2026-10-10",sourceType:"OPENING",sourceId:randomUUID()});
   await db.accountProduct.update({where:{id:product.id},data:{isActive:false}});
+  const principal={...actor,productEdition:"SALESPUNCH360_ACCOUNT" as const,authorizedWorkspaces:["ACCOUNT" as const]};
+  const native=await mobileStockSummary(principal,{branchId,asOf:"2026-10-10",q:product.name,status:"false"});expect(native.filtered).toHaveLength(1);expect(native.filtered[0]).toMatchObject({id:product.id,quantity:"1.25",value:"12.5",active:false});
+  expect((await PDFDocument.load(await mobileStockSummaryExport(principal,{branchId,asOf:"2026-10-10",q:product.name,status:"false"},"pdf"))).getPageCount()).toBeGreaterThan(0);
+  await expect(mobileStockSummary({...principal,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},{branchId})).rejects.toThrow();
+  await expect(mobileStockSummary({...principal,companyId:otherCompanyId},{branchId})).rejects.toThrow();
+
   await signInSettings(page);await page.goto(`/workspace/account/inventory/stock-summary?branchId=${branchId}&asOf=2026-10-10`);
-  await page.getByRole("combobox",{name:"Item status"}).selectOption("false");await page.getByRole("textbox",{name:"Search stock"}).fill(product.name);
+  await page.getByRole("button",{name:"Filters",exact:true}).click();expect((await new AxeBuilder({page}).include(".account-stock-summary").analyze()).violations).toEqual([]);await page.getByRole("combobox",{name:"Item status"}).selectOption("false");await page.getByRole("button",{name:"Apply filters",exact:true}).click();await page.getByRole("textbox",{name:"Search stock"}).fill(product.name);
   const card=page.locator("article.account-item-card").filter({has:page.getByRole("heading",{name:product.name,exact:true})});
   await expect(card).toContainText("1.25");await expect(card).toContainText("12.50");
   const href=await page.getByRole("link",{name:"Download stock summary Excel workbook"}).getAttribute("href");expect(href).toContain(`branchId=${branchId}`);
+  await page.getByRole("button",{name:"Filters",exact:true}).click();await page.getByRole("combobox",{name:"Item status"}).selectOption("true");await page.keyboard.press("Escape");expect(await page.getByRole("link",{name:"Download stock summary Excel workbook"}).getAttribute("href")).toContain("status=false");
+
   const response=await page.request.get(href!);expect(response.status()).toBe(200);const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await response.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain(product.name);expect(book.worksheets[0].getCell("D7").value).toBe("12.50");
   for(const decimals of [0,1,2,3,4]){await db.accountSettings.update({where:{companyId},data:{displayDecimalPlaces:decimals}});await page.reload();await expect(card.locator("dl div").filter({has:page.getByText("Stock quantity",{exact:true})}).locator("dd")).toHaveText(decimals===0?"1":decimals===1?"1.3":(1.25).toFixed(decimals));const formatted=await page.request.get(href!);const precisionBook=new ExcelJS.Workbook();await precisionBook.xlsx.load(new Uint8Array(await formatted.body()).buffer);expect(precisionBook.worksheets[0].getCell("C7").value).toBe((decimals===0?"1":decimals===1?"1.3":(1.25).toFixed(decimals)));expect(precisionBook.worksheets[0].getCell("D7").value).toBe((decimals===0?"13":(12.5).toFixed(decimals)));}
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   const pdfHref=await page.getByRole("link",{name:"Download stock summary PDF"}).getAttribute("href");const pdf=await page.request.get(pdfHref!);expect(pdf.status()).toBe(200);expect((await pdf.body()).toString()).toContain("Branch:");
   expect((await page.request.get("/api/account/inventory/stock-summary/xlsx?asOf=2026-02-30")).status()).toBe(400);
   expect((await page.request.get(`/api/account/inventory/stock-summary/xlsx?branchId=${randomUUID()}`)).status()).toBe(403);
-  await page.getByRole("textbox",{name:"Search stock"}).fill("No matching archived item");await expect(page.getByRole("status")).toContainText("No stock items match");await page.getByRole("button",{name:"Reset filters"}).click();await expect(page.getByRole("textbox",{name:"Search stock"})).toHaveValue("");
+  await page.getByRole("textbox",{name:"Search stock"}).fill(product.name);
+  await page.evaluate(()=>{Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});Object.defineProperty(navigator,"share",{configurable:true,value:async()=>{throw new DOMException("Cancelled","AbortError")}})});await page.getByRole("button",{name:"Share report",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Sharing cancelled."})).toBeVisible();
+  await page.evaluate(()=>{Object.defineProperty(navigator,"share",{configurable:true,value:async(data:ShareData)=>{Object.defineProperty(window,"stockSharedPdf",{configurable:true,value:await data.files![0].text()})}})});await page.getByRole("button",{name:"Share report",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Report handed"})).toBeVisible();expect(await page.evaluate(()=>(window as unknown as Window & {stockSharedPdf:string}).stockSharedPdf)).toContain(product.name);
+  await page.evaluate(()=>{Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>false})});const downloadEvent=page.waitForEvent("download");await page.getByRole("button",{name:"Share report",exact:true}).click();expect((await downloadEvent).suggestedFilename()).toBe("stock-summary.pdf");await expect(page.getByRole("status").filter({hasText:"PDF downloaded"})).toBeVisible();
+  await page.getByRole("textbox",{name:"Search stock"}).fill("No matching archived item");await expect(page.getByRole("status").filter({hasText:"No stock items match"})).toBeVisible();await page.getByRole("button",{name:"Reset filters"}).click();await expect(page.getByRole("textbox",{name:"Search stock"})).toHaveValue("");
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});
+  await expect(mobileStockSummary(principal,{branchId})).rejects.toThrow();expect((await page.request.get(href!)).status()).toBe(403);
+  await page.goto(`/workspace/account/inventory/stock-summary?branchId=${branchId}`);await expect(page.getByRole("alert").filter({hasText:"Stock Summary is unavailable"})).toBeVisible();await page.getByRole("link",{name:"Return to Account",exact:true}).click();
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true},enabledModules:[]}});expect((await mobileStockSummary(principal,{branchId,q:product.name})).filtered.map(row=>row.id)).toEqual([product.id]);expect((await page.request.get(href!)).status()).toBe(200);
  }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules,itemSettings:original.itemSettings??{},displayDecimalPlaces:original.displayDecimalPlaces}})}
 });
