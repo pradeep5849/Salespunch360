@@ -3516,13 +3516,16 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Empty bank, populated bank/cash, opening balance, receipt/payment, both transfer directions, adjustment, pagination and cross-company/branch rejection; displayed history reconciles to balance.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint dashboard reconciliation: Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.
+Remaining: Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.
 
 ## A064-F03 — Opening balance and As On date cannot initialize a money account
 
@@ -3914,13 +3917,16 @@ Checkpoint precision follow-up: Web stock aggregation now retains Prisma Decimal
 
 **Required tests:** Shared account postings in two branches; restricted single branch and Admin selected branch/consolidation; branch-owned account; genuine company-wide authorized total; no unauthorized detail disclosure.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+Checkpoint dashboard reconciliation: Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.
+Remaining: Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.
 
 ## A064-F12 — Account edit and deactivation have no operational audit and can diverge from linked ledger identity
 

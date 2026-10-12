@@ -53,7 +53,7 @@ vi.mock("@/lib/db", () => ({
     },
   ),
 }));
-import { postOwnerTransactionForActor } from "./money";
+import { moneyDashboardForActor, postOwnerTransactionForActor } from "./money";
 import {
   postJournalInTx,
   reverseJournalForActor,
@@ -273,6 +273,53 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("30.00");
     await postOwnerTransactionForActor(actor, raw(bank.id, "WITHDRAWAL", "30"));
     expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("0.00");
+  });
+  it("money dashboard agrees with effective reversed journal balances", async () => {
+    const bank = await account();
+    const investment = await postOwnerTransactionForActor(
+      actor,
+      raw(bank.id, "INVESTMENT", "100"),
+    );
+    await reverseJournalForActor(actor, {
+      journalEntryId: investment.journalEntryId,
+      entryDate: date,
+      reason: "Dashboard reversal test",
+    });
+    await postOwnerTransactionForActor(actor, raw(bank.id, "INVESTMENT", "30"));
+    const dashboard = await moneyDashboardForActor(actor);
+    expect(
+      dashboard.accounts.find((row) => row.id === bank.id)?.balance.toFixed(2),
+    ).toBe("30.00");
+  });
+  it("shared account display includes only journals in assigned branches", async () => {
+    const second = await client.branch.create({
+      data: { companyId, name: "Other", code: "OTHER" },
+    });
+    const bank = await account();
+    await client.moneyAccount.update({
+      where: { id: bank.id },
+      data: { branchId: null },
+    });
+    await postOwnerTransactionForActor(
+      actor,
+      raw(bank.id, "INVESTMENT", "100"),
+    );
+    await postOwnerTransactionForActor(actor, {
+      ...raw(bank.id, "INVESTMENT", "200"),
+      branchId: second.id,
+    });
+    const restricted = await moneyDashboardForActor({
+      ...actor,
+      branchAccessScope: "SELECTED_BRANCHES",
+      branchIds: [branchId],
+    });
+    expect(
+      restricted.accounts.find((row) => row.id === bank.id)?.balance.toFixed(2),
+    ).toBe("100.00");
+    const all = await moneyDashboardForActor(actor);
+    expect(
+      all.accounts.find((row) => row.id === bank.id)?.balance.toFixed(2),
+    ).toBe("300.00");
   });
   it("reads funds after another journal writer releases the company posting lock", async () => {
     const bank = await account(),

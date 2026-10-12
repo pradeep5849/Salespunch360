@@ -1,3 +1,4 @@
+import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { retrySerializable } from "./transaction-retry";
 import {
   ChequeStatus,
@@ -194,7 +195,10 @@ export async function moneyDashboardForActor(a: Actor) {
       where: {
         companyId: a.companyId,
         ledgerAccountId: { in: ids },
-        journalEntry: { status: "POSTED" },
+        journalEntry: {
+          status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
+          ...branchScope(a),
+        },
       },
       _sum: { debit: true, credit: true },
     }),
@@ -681,7 +685,9 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
               where: {
                 companyId: a.companyId,
                 ledgerAccountId: moneyAccount.ledgerAccountId,
-                journalEntry: { status: { in: ["POSTED", "REVERSED"] } },
+                journalEntry: {
+                  status: { in: [...LEDGER_EFFECTIVE_JOURNAL_STATUSES] },
+                },
               },
               _sum: { debit: true, credit: true },
             });

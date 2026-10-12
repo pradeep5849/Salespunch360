@@ -9191,10 +9191,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation_status": "PARTIAL",
+        "work": "Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.",
+        "remaining_work": "Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A064-F03",
@@ -10332,10 +10338,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation_status": "PARTIAL",
+        "work": "Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.",
+        "remaining_work": "Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+      }
     },
     {
       "finding_id": "A064-F12",
@@ -21374,6 +21386,11 @@
       "focused_unit": "36 tests passed across4 files",
       "lint": "passed",
       "migration": "none required",
+      "stage": "INTERMEDIATE ONLY"
+    },
+    "money_dashboard_reconciliation": {
+      "database": "6 owner/balance integration tests passed, including two added dashboard reversal/assigned-branch regressions",
+      "typescript": "passed",
       "stage": "INTERMEDIATE ONLY"
     }
   }
