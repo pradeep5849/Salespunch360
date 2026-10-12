@@ -38,7 +38,8 @@ describe("B6-B12 unified Account acceptance contracts", () => {
       "Cancel",
       "Save",
       "Add Item Settings",
-      "Service Reminders · Coming Soon",
+      "Service Reminders",
+      "/workspace/account/settings/reminders/service",
       "/workspace/account/inventory/item-settings",
     ])
       expect(item).toContain(x);
