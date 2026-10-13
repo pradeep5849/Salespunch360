@@ -1,3 +1,4 @@
+import {createPdfTextLayout} from "@/lib/pdf/text-layout";
 import sharp from "sharp";
 import {PDFDocument,StandardFonts,rgb,type PDFPage} from "pdf-lib";
 import {Prisma,type PrintPaperSize} from "@prisma/client";
@@ -19,7 +20,10 @@ const columns=(doc:AccountPrintDocument,thermal:boolean)=>{
 const amount=(doc:AccountPrintDocument,value:string)=>{
  const decimal=new Prisma.Decimal(value);const digits=yes(doc,"amountDecimal")?(doc.decimalPlaces??2):0;
  const rounded=decimal.toFixed(digits);
- return yes(doc,"amountGrouping")?new Intl.NumberFormat(text(doc,"amountWordsFormat","INDIAN")==="INTERNATIONAL"?"en-US":"en-IN",{minimumFractionDigits:digits,maximumFractionDigits:digits}).format(Number(rounded)):rounded;
+ if(!yes(doc,"amountGrouping"))return rounded;
+ const [whole,fraction]=rounded.split(".");
+ const grouped=new Intl.NumberFormat(text(doc,"amountWordsFormat","INDIAN")==="INTERNATIONAL"?"en-US":"en-IN").format(BigInt(whole));
+ return `${whole.startsWith("-")&&BigInt(whole)===BigInt(0)?"-":""}${grouped}${fraction===undefined?"":"."+fraction}`;
 };
 const units=["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
 function words(v:number,indian:boolean):string {
@@ -61,15 +65,19 @@ export function renderAccountPrintHtml(doc:AccountPrintDocument,paper:PrintPaper
 }
 export async function renderAccountPrintPdf(doc:AccountPrintDocument,paper:PrintPaperSize="A4"){
  const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica),bold=await pdf.embedFont(StandardFonts.HelveticaBold),g=geometry(doc,paper),[width,height]=g.dimensions,margin=g.thermal?12:36,bodySize=g.thermal?8:size(text(doc,"printTextSize","MEDIUM"))-2;
- let page:PDFPage,y=0;const ascii=(value:string)=>value.replace(/[^\x20-\x7e]/g,"?");
+ const layout=await createPdfTextLayout(pdf,"ACCOUNT_PDF_UNSUPPORTED_CHARACTER",{regular:font,bold});
+ const accent=color(doc),accentRgb=rgb(parseInt(accent.slice(1,3),16)/255,parseInt(accent.slice(3,5),16)/255,parseInt(accent.slice(5,7),16)/255);
+ let page:PDFPage,y=0,renderingHeader=false;
  const draw=(value:string,fontSize=bodySize,strong=false)=>{
-  const f=strong?bold:font,max=width-margin*2;let pending=ascii(value);
-  while(pending.length){let end=pending.length;while(end>1&&f.widthOfTextAtSize(pending.slice(0,end),fontSize)>max)end--;if(end<pending.length){const space=pending.lastIndexOf(" ",end);if(space>0)end=space;}if(y<margin+25)newPage();page.drawText(pending.slice(0,end),{x:margin,y,size:fontSize,font:f,color:rgb(.05,.10,.19)});y-=fontSize+6;pending=pending.slice(end).trimStart();}
+  for(const line of layout.lines(value,fontSize,width-margin*2,strong)){
+   if(y<margin+25){if(renderingHeader){page=pdf.addPage(g.dimensions);y=height-margin;}else newPage();}
+   let x=margin;for(const run of layout.runs(line,strong)){page.drawText(run.text,{x,y,size:fontSize,font:run.font,color:strong?accentRgb:rgb(.05,.10,.19)});x+=run.font.widthOfTextAtSize(run.text,fontSize);}y-=fontSize+6;
+  }
  };
- const newPage=()=>{page=pdf.addPage(g.dimensions);y=height-margin-number(doc,"topSpace")*4;if(pdf.getPageCount()!==1){if(yes(doc,"repeatHeader")){draw(doc.company,size(text(doc,"companyNameTextSize","LARGE"))+4,true);draw(`${doc.title} ${doc.number}`,bodySize+3,true);}return;}if(pdf.getPageCount()===1){draw(doc.company,size(text(doc,"companyNameTextSize","LARGE"))+4,true);if(doc.companyAddress)draw(doc.companyAddress);if(doc.companyGstin)draw(`GSTIN ${doc.companyGstin}`);if(doc.companyPhone||doc.companyEmail)draw([doc.companyPhone,doc.companyEmail].filter(Boolean).join(" | "));draw(`${doc.title} ${doc.number}`,bodySize+3,true);draw(`${doc.date} | ${doc.branch} | ${doc.party}`);if(doc.gstin)draw(`Party GSTIN ${doc.gstin}`);if(doc.shippingAddress)draw(`Shipping: ${doc.shippingAddress}`);for(const field of doc.partyFields??[])draw(`${field.label}: ${field.value}`);if(yes(doc,"originalDuplicate",false))draw("Original / Duplicate");}};
+ const newPage=()=>{renderingHeader=true;try{page=pdf.addPage(g.dimensions);y=height-margin-number(doc,"topSpace")*4;if(pdf.getPageCount()!==1){if(yes(doc,"repeatHeader")){draw(doc.company,size(text(doc,"companyNameTextSize","LARGE"))+4,true);draw(`${doc.title} ${doc.number}`,bodySize+3,true);}return;}if(pdf.getPageCount()===1){draw(doc.company,size(text(doc,"companyNameTextSize","LARGE"))+4,true);if(doc.companyAddress)draw(doc.companyAddress);if(doc.companyGstin)draw(`GSTIN ${doc.companyGstin}`);if(doc.companyPhone||doc.companyEmail)draw([doc.companyPhone,doc.companyEmail].filter(Boolean).join(" | "));draw(`${doc.title} ${doc.number}`,bodySize+3,true);draw(`${doc.date} | ${doc.branch} | ${doc.party}`);if(doc.gstin)draw(`Party GSTIN ${doc.gstin}`);if(doc.shippingAddress)draw(`Shipping: ${doc.shippingAddress}`);for(const field of doc.partyFields??[])draw(`${field.label}: ${field.value}`);if(yes(doc,"originalDuplicate",false))draw("Original / Duplicate");}}finally{renderingHeader=false;}};
  const image=async(url:string,maxWidth:number,maxHeight:number)=>{const png=await sharp(Buffer.from(url.split(",")[1]??"","base64")).png().toBuffer(),embedded=await pdf.embedPng(png),scale=Math.min(maxWidth/embedded.width,maxHeight/embedded.height,1),h=embedded.height*scale;if(y-h<margin+25)newPage();page.drawImage(embedded,{x:margin,y:y-h,width:embedded.width*scale,height:h});y-=h+10;};
  newPage();if(doc.logoDataUrl)await image(doc.logoDataUrl,Math.min(150,width-margin*2),54);
- const cols=columns(doc,g.thermal);draw(cols.join(" | "),bodySize,true);for(const row of doc.lines){draw(cols.map(column=>cell(doc,row,column)).join(" | "));if(row.hsn)draw(`HSN/SAC ${row.hsn}`,bodySize-1);}
+ const cols=columns(doc,g.thermal);draw(cols.join(" | "),bodySize,true);for(const row of doc.lines){draw(cols.map(column=>cell(doc,row,column)).join(" | "));if(cols.includes("ITEM")&&row.hsn)draw(`HSN/SAC ${row.hsn}`,bodySize-1);}
  for(let i=doc.lines.length;i<number(doc,"minRows");i++)draw("____________________________");
  if(yes(doc,"expandTable"))y=Math.min(y,height*.45);
  for(const [label,value] of totals(doc))draw(`${label} ${value}`,bodySize,label==="Grand total");draw(amountWords(doc));if(doc.paymentMode)draw(`Payment mode: ${doc.paymentMode}`);if(doc.bankDetails)draw(`Bank: ${doc.bankDetails}`);if(doc.upiQrDataUrl){await image(doc.upiQrDataUrl,72,72);draw("Scan to pay by UPI");}else if(doc.upiUri)draw(`UPI payment: ${doc.upiUri}`,bodySize-1);if(doc.terms)for(const paragraph of doc.terms.split("\n"))draw(paragraph,bodySize-1);if(yes(doc,"receivedBy"))draw("Received by: __________________");if(yes(doc,"deliveredBy"))draw("Delivered by: __________________");if(doc.signatureDataUrl)await image(doc.signatureDataUrl,180,70);if(doc.authorizedSignatory)draw(`Authorized signatory: ${doc.authorizedSignatory}`);if(yes(doc,"acknowledgement"))draw("Acknowledgement: __________________");

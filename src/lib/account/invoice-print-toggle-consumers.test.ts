@@ -39,3 +39,27 @@ describe("invoice print toggle consumers",()=>{
   for(let index=1;index<=pdf.getPageCount();index++)expect(content.includes(`<${Buffer.from(`${index} / ${pdf.getPageCount()}`).toString("hex")}>`)).toBe(enabled);
  });
 });
+
+it("retains Unicode invoice text and exact large amounts in PDF and HTML",async()=>{
+ const {extractPdfText}=await import("../../../tests/helpers/pdf-text");
+ const document={...invoice,company:"José Café",party:"अजय सेवा ಕನ್ನಡ",total:"9999999999999999.99",printOptions:{amountGrouping:true,amountWordsFormat:"INTERNATIONAL",theme:"MODERN"}};
+ const {text}=await extractPdfText(await renderAccountPrintPdf(document));
+ for(const value of ["José Café","अजय","सेवा","ಕನ್ನಡ","9,999,999,999,999,999.99"])expect(text).toContain(value);
+ expect(renderAccountPrintHtml(document)).toContain("9,999,999,999,999,999.99");
+});
+
+it("uses the configured theme in PDF and hides HSN with an omitted item column",async()=>{
+ const document={...invoice,lines:[{...invoice.lines[0],hsn:"HSN-PRIVATE"}],printOptions:{theme:"MODERN",itemTableColumns:"QTY,AMOUNT"}};
+ const pdf=await PDFDocument.load(await renderAccountPrintPdf(document));
+ const content=pdf.context.enumerateIndirectObjects().flatMap(([,object])=>object instanceof PDFRawStream&&object.dict.get(PDFName.of("Filter"))?[Buffer.from(decodePDFRawStream(object).decode()).toString()]:[]).join("\n");
+ expect(content).toContain("0.058823529411764705 0.4627450980392157 0.43137254901960786 rg");
+ const {extractPdfText}=await import("../../../tests/helpers/pdf-text");
+ expect((await extractPdfText(await renderAccountPrintPdf(document))).text).not.toContain("HSN-PRIVATE");
+ expect(renderAccountPrintHtml(document)).not.toContain("HSN-PRIVATE");
+});
+it("paginates unusually long first-page headers without recursively repeating them",async()=>{
+ const {extractPdfText}=await import("../../../tests/helpers/pdf-text");
+ const document={...invoice,companyAddress:Array.from({length:120},(_,i)=>`Address line ${i}`).join("\n"),printOptions:{repeatHeader:true}};
+ const {text,pages}=await extractPdfText(await renderAccountPrintPdf(document));
+ expect(pages).toBeGreaterThan(2);expect(text).toContain("Address line 119");expect(text).toContain("Grand total");
+});

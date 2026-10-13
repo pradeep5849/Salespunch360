@@ -9181,3 +9181,7 @@ Estimate list and native cards implemented; A083-F01 stays PARTIAL while Convert
 ### A062 unit setup/assignment checkpoint — 2026-10-13
 
 Atomic product/service assignment and inline units work on web/native with scoped APIs, quantity-history guards and coordinated stock/document locks. Independent concurrency, settings/permission, complete pagination and accessible pending-state regressions passed. 91 DB/financial + 75 focused service/API tests passed; Android compile and 4 JVM tests passed; 4 desktop/mobile-web checks passed after correcting dialog contrast. TypeScript/ESLint passed (the earlier concurrent dev-type file race was superseded). No migration. A062-F02 remains PARTIAL: transaction conversion/factor snapshots/value application still pending. Totals: 124 implemented but not verified, 67 partial, 8 not started. Final statuses remain pending.
+
+### A097-F01 — renderer continuation
+
+Shared Unicode layout preserves invoice/quotation customer text; exact amount grouping, PDF theme and HSN parity, safe long-header pagination. Grouped tests 67/67 and expanded invoice renderer tests 11/11 passed; TypeScript and targeted lint passed. Status remains PARTIAL pending remaining output matrix/final-head verification.
