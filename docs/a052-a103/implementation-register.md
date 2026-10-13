@@ -5978,7 +5978,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Duplicate draft versus posted source; access restrictions; fresh identity; edits independent of source; no duplicate financial posting.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9253,3 +9253,5 @@ A071-F01 image continuation: Authorized PDF-to-PNG rendering retains all pages; 
 ### A071 sharing and native card implementation
 
 A071-F01 and A071-F03 are IMPLEMENTED BUT NOT VERIFIED. Android all-page images/PDF, scoped FileProvider sharing, saved default, errors, refreshed Home, authoritative payment labels and accessible card menus implemented. Focused Home/share tests 19/19; Android compile + 3 JVM tests; desktop/mobile browser and authenticated mobile API preference tests 2/2 (31.8s) passed. Initial compile import/test-session ordering failures corrected. Production worker, physical device/PdfRenderer/chooser/TalkBack/font-scale and final-head checks remain pending.
+
+A071-F02 web continuation: New Sale Duplicate retains editable snapshot values but no original identity/payment/posting/stock-assignment links. Desktop/mobile financial browser tests 2/2 (30.1s), focused units and clean TypeScript/lint passed. No write on opening; explicit Save creates a new unpaid invoice, paid source remains settled. Native workflow and final-head checks pending; status PARTIAL.

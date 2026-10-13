@@ -586,6 +586,7 @@ export function AccountMobileHome({
             )}
             {sheet === "actions" && active && (
               <div className="account-more-grid">
+                {active.type==="SALES_INVOICE"&&canCreateSale&&<Link href={`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${active.id}`}>Duplicate</Link>}
                 {active.type === "SALES_INVOICE" &&
                   active.status === "POSTED" && (
                     <>

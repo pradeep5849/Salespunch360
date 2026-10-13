@@ -1722,3 +1722,20 @@ test("A071 Home shares the selected PDF, honors saved default and reports failur
  await page.route(`**/api/account/print/SALES_ORDER/${id}?format=pdf`,route=>route.fulfill({status:200,contentType:"application/pdf",body:multiBytes}));
  await page.getByRole("button",{name:"Share as Image",exact:true}).click();await expect(page.getByRole("button",{name:"Download page 1",exact:true})).toBeVisible();await expect(page.getByRole("button",{name:"Download page 2",exact:true})).toBeVisible();
 });
+
+test("A071 Duplicate opens an independent new Sale without copying its payment or posting on open",async({page})=>{
+ test.setTimeout(120_000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CUSTOMER_RECEIPTS","INVENTORY"]}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Duplicate verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ const source=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,billingName:"Original billing",issueDate:"2026-10-11",lines:[{lineType:"CUSTOM",itemName:"Duplicate verification",quantity:"1",rate:"100",taxRate:"0"}]});
+ await postCommercialDocumentForActor(actor,{documentId:source.id});
+ await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"100",transactionDate:"2026-10-11",allocations:[{documentId:source.id,amount:"100"}]});
+ const counts=async()=>({documents:await db.commercialDocument.count({where:{companyId}}),journals:await db.journalEntry.count({where:{companyId}}),allocations:await db.settlementAllocation.count({where:{document:{companyId}}})});
+ const before=await counts();await signInSettings(page);await page.goto("/workspace/account?q=Print%20fixture%20customer");await page.getByRole("button",{name:"More",exact:true}).click();await page.getByRole("link",{name:"Duplicate",exact:true}).click();await expect(page).toHaveURL(new RegExp(`duplicateId=${source.id}`),{timeout:20000});await expect(page.getByText("Duplicate verification",{exact:true})).toBeVisible();expect(await counts()).toEqual(before);
+ const billing=page.getByLabel(/Billing Name/);await expect(billing).toHaveValue("Original billing");await billing.fill("Copy billing");expect((await db.commercialDocument.findUniqueOrThrow({where:{id:source.id}})).billingName).toBe("Original billing");
+ await page.getByRole("button",{name:"Save",exact:true}).click();await expect.poll(async()=>await db.commercialDocument.count({where:{companyId}})).toBe(before.documents+1);
+ const copy=await db.commercialDocument.findFirstOrThrow({where:{companyId,billingName:"Copy billing"},include:{allocations:true,advanceApplications:true,lines:true}});expect(copy.id).not.toBe(source.id);expect(copy.documentNumber).not.toBe(source.documentNumber);expect(copy.allocations).toHaveLength(0);expect(copy.advanceApplications).toHaveLength(0);expect(copy.lines[0].id).not.toBe((await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}})).id);expect((await db.$transaction(tx=>documentOutstandingInTx(tx,companyId,copy.id))).outstanding.toString()).toBe("100");expect((await db.$transaction(tx=>documentOutstandingInTx(tx,companyId,source.id))).outstanding.toString()).toBe("0");
+ const missing=await page.request.get(`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${randomUUID()}`);expect(missing.status()).toBe(404);
+});
