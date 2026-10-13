@@ -3703,6 +3703,12 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Linked finding IDs:** None explicitly linked.
 
+**Checkpoint work:** Signed exact-decimal opening amount/calendar date and explicit posting branch; ACCOUNT_OPENING_BALANCE guard; account, asset ledger, OBE Equity journal and audits in one transaction; request hash includes opening intent; replay and serialized posting; web/native entry fields. No new migration. Existing manual-journal workflow permits active posting OBE.
+
+**Intermediate validation:** 25 grouped money tests passed; latest 8 PostgreSQL tests passed including concurrent opening replay, negative bank opening, denied role/branch, calendar validation, locked-period atomic rollback and manual OBE clearing. Desktop/mobile Chromium 2 passed including Axe form checks. Android compile, TypeScript and focused ESLint passed. Intermediate evidence only.
+
+**Remaining:** Final-head checkpoint validation and physical Android UI verification; no final_status assigned.
+
 ## A064-F04 — Bank form metadata and per-account invoice printing preferences are missing
 
 **Title:** Bank form metadata and per-account invoice printing preferences are missing

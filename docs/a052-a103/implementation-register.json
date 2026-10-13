@@ -9786,11 +9786,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "pending_business_clarification": "Requested accounting offset policy: Opening Balance Equity for opening amounts with user-selected adjustment ledger, or owner/partner capital for both. No dependent financial posting implementation is authorized by an inferred answer; unrelated work continues."
+      "business_decision": "Approved 2026-10-13: Opening Balance Equity for opening amounts; reason/ledger selection for Add/Reduce Cash. See approved_business_decisions.money_openings_adjustments.",
+      "checkpoint_work": {
+        "implementation": "Signed exact-decimal opening amount/calendar date and explicit posting branch; ACCOUNT_OPENING_BALANCE guard; account, asset ledger, OBE Equity journal and audits in one transaction; request hash includes opening intent; replay and serialized posting; web/native entry fields. No new migration. Existing manual-journal workflow permits active posting OBE.",
+        "tests": "25 grouped money tests passed; latest 8 PostgreSQL tests passed including concurrent opening replay, negative bank opening, denied role/branch, calendar validation, locked-period atomic rollback and manual OBE clearing. Desktop/mobile Chromium 2 passed including Axe form checks. Android compile, TypeScript and focused ESLint passed. Intermediate evidence only.",
+        "remaining": "Final-head checkpoint validation and physical Android UI verification; no final_status assigned."
+      }
     },
     {
       "finding_id": "A064-F04",
@@ -10018,7 +10023,7 @@
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "pending_business_clarification": "Requested accounting offset policy: Opening Balance Equity for opening amounts with user-selected adjustment ledger, or owner/partner capital for both. No dependent financial posting implementation is authorized by an inferred answer; unrelated work continues."
+      "business_decision": "Approved 2026-10-13: Opening Balance Equity for opening amounts; reason/ledger selection for Add/Reduce Cash. See approved_business_decisions.money_openings_adjustments."
     },
     {
       "finding_id": "A064-F06",
@@ -22622,6 +22627,15 @@
         "A066-F07",
         "A066-F09"
       ]
+    },
+    "money_openings_adjustments": {
+      "decision": "Use Opening Balance Equity for bank/cash opening amounts; user selects the reason/ledger for Add/Reduce Cash adjustments. Preserve transfer and owner-capital accounting semantics.",
+      "source": "Explicit user reply on 2026-10-13: Use this proposed approach, following the opening/adjustment explanation.",
+      "affected_findings": [
+        "A064-F03",
+        "A064-F05"
+      ],
+      "obe_rules": "OBE is Equity alongside Retained Earnings; account creation and balanced opening journal commit atomically; authorized manual journals may clear OBE to Retained Earnings or Owner Capital. Explicit user instruction 2026-10-13."
     }
   }
 }

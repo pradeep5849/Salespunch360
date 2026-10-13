@@ -42,6 +42,9 @@ function FocusErrors() {
   const bankError = useAccountFieldError("bankName"),
     numberError = useAccountFieldError("accountNumberMasked"),
     ifscError = useAccountFieldError("ifsc");
+  const openingError = useAccountFieldError("openingBalance"),
+    dateError = useAccountFieldError("openingDate"),
+    openingBranchError = useAccountFieldError("openingBranchId");
   const ref = useRef<HTMLSpanElement>(null);
   const { pending } = useFormStatus();
   useEffect(() => {
@@ -52,7 +55,10 @@ function FocusErrors() {
         typeError ||
         bankError ||
         numberError ||
-        ifscError)
+        ifscError ||
+        openingError ||
+        dateError ||
+        openingBranchError)
     )
       ref.current
         ?.closest("form")
@@ -66,6 +72,9 @@ function FocusErrors() {
     bankError,
     numberError,
     ifscError,
+    openingError,
+    dateError,
+    openingBranchError,
   ]);
   return <span ref={ref} />;
 }
@@ -142,6 +151,31 @@ export function MoneyAccountForm({
           maxLength={40}
         />
         <Field name="ifsc" label="IFSC" maxLength={20} />
+        <Field
+          name="openingBalance"
+          label="Starting balance (optional)"
+          maxLength={20}
+        />
+        <label>
+          As on date
+          <input type="date" name="openingDate" aria-label="As on date" />
+          <AccountFieldError name="openingDate" />
+        </label>
+        <Choice
+          name="openingBranchId"
+          label="Opening journal branch (for company-wide accounts)"
+        >
+          <option value="">Use account branch</option>
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
+        </Choice>
+        <p>
+          A non-zero starting balance posts against Opening Balance Equity.
+          Select its date and branch.
+        </p>
       </SavePendingFields>
       <SaveSubmitButton>Create account and asset ledger</SaveSubmitButton>
     </ActionFeedbackForm>

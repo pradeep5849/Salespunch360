@@ -122,6 +122,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var email by remember{mutableStateOf(selected?.str("email").orEmpty())}
     var address by remember{mutableStateOf(selected?.str("address").orEmpty())}
     var active by remember{mutableStateOf(selected?.get("isActive")?.jsonPrimitive?.booleanOrNull?:true)}
+    var openingBranch by remember{mutableStateOf("")}
     var amount by remember{mutableStateOf("")}
     var interest by remember{mutableStateOf("0")}
     var charges by remember{mutableStateOf("0")}
@@ -148,7 +149,13 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             }else if(kind=="accounts"){
                 item{OutlinedTextField(name,{name=it},label={Text("Account name")},enabled=!saving)}
                 item{if(selected==null)PickText("Account type",type,listOf("CASH","BANK","PETTY_CASH"),enabled=!saving){type=it}else Text("Account type: ${moneyTypeLabel(type)} (cannot be changed)")}
-                if(selected==null)item{Pick("Branch (optional)",branch,data.array("branches"),enabled=!saving){branch=it}}
+                if(selected==null){
+                    item{Pick("Branch (optional)",branch,data.array("branches"),enabled=!saving){branch=it}}
+                    item{OutlinedTextField(amount,{amount=it},label={Text("Starting balance (optional)")},enabled=!saving)}
+                    item{OutlinedTextField(date,{date=it},label={Text("As on date (YYYY-MM-DD)")},enabled=!saving)}
+                    if(branch.isBlank())item{Pick("Opening journal branch",openingBranch,data.array("branches"),enabled=!saving){openingBranch=it}}
+                    item{Text("A non-zero starting balance posts against Opening Balance Equity.")}
+                }
             }else{
                 item{Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it}}
                 if(kind=="transfers"){
@@ -176,7 +183,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     },confirmButton={Button(enabled=!saving&&valid,onClick={save(kind,buildJsonObject{
         when{
             identity->{put("name",name);put("partyType",type);put("phone",phone);put("email",email);put("address",address);if(kind=="owner-setup"){owner.takeIf{it.isNotBlank()}?.let{put("userId",it)};put("branchId",branch);put("creationRequestKey",requestKey)}else put("isActive",active)}
-            kind=="accounts"->{put("name",name);if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)}}}
+            kind=="accounts"->{put("name",name);if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
                 "transfers"->{put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
                 "owners"->{put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}

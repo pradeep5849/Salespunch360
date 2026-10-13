@@ -1381,14 +1381,18 @@ test("A062 units preserve concurrent rules, paginate native choices and show saf
 
 test("A064 money account form labels and company-wide creation provide feedback",async({page})=>{
  test.setTimeout(120000);
+ if(!await db.financialYear.findFirst({where:{companyId,isActive:true,startDate:{lte:new Date("2026-10-13")},endDate:{gte:new Date("2026-10-13")}}}))await db.financialYear.create({data:{companyId,name:"Opening balance browser year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
  await signInSettings(page);await page.goto("/workspace/account/money/accounts");
  const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create account and asset ledger",exact:true})});
  const initialKey=await form.locator("input[name=creationRequestKey]").inputValue();
  await form.getByLabel("Account display name",{exact:true}).fill(" ");await form.getByRole("button",{name:"Create account and asset ledger",exact:true}).click();await expect(form.locator("#name-error")).toBeVisible();await expect(form.getByLabel("Account display name",{exact:true})).toBeFocused();await expect(form.locator("input[name=creationRequestKey]")).toHaveValue(initialKey);
  await form.getByLabel("Account display name",{exact:true}).fill("A064 Accessible Bank");await form.getByLabel("Account type",{exact:true}).selectOption("BANK");await form.getByLabel("Branch",{exact:true}).selectOption("");await form.getByLabel("Bank name",{exact:true}).fill("A064 Test Bank");await form.getByLabel("Masked account number",{exact:true}).fill("****6543");await form.getByLabel("IFSC",{exact:true}).fill("TEST0001234");
+ await form.getByLabel("Starting balance (optional)",{exact:true}).fill("1000.00");await form.getByLabel("As on date",{exact:true}).fill("2026-10-13");await form.getByLabel("Opening journal branch (for company-wide accounts)",{exact:true}).selectOption(branchId);
  expect((await new AxeBuilder({page}).include("form").analyze()).violations).toEqual([]);
  await form.getByRole("button",{name:"Create account and asset ledger",exact:true}).click();await expect(form.getByRole("status")).toContainText("Money account created",{timeout:20000});
  const account=await db.moneyAccount.findFirstOrThrow({where:{companyId,name:"A064 Accessible Bank"}});expect(account.branchId).toBeNull();expect(account.creationRequestKey).toBe(initialKey);await expect(form.locator("input[name=creationRequestKey]")).not.toHaveValue(initialKey);expect(await db.ledgerAccount.findUniqueOrThrow({where:{id:account.ledgerAccountId}})).toMatchObject({name:account.name,companyId});
+ const opening=await db.journalEntry.findFirstOrThrow({where:{companyId,sourceId:account.id,postingPurpose:"MONEY_ACCOUNT_OPENING"},include:{lines:true}});expect(opening.lines.find(line=>line.ledgerAccountId===account.ledgerAccountId)?.debit.toFixed(2)).toBe("1000.00");const obe=await db.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});expect(obe.accountClass).toBe("EQUITY");expect(opening.lines.find(line=>line.ledgerAccountId===obe.id)?.credit.toFixed(2)).toBe("1000.00");
+
 });
 
 

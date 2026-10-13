@@ -1,4 +1,4 @@
-import {moneyReadContext} from "./money-context";
+import { moneyReadContext } from "./money-context";
 import { createSettlementForActor } from "./commercial";
 import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
@@ -143,9 +143,76 @@ async function allocateMoneyLedgerCodeInTx(
   return allocateDocumentNumberInTx(tx, { companyId, seriesId: series.id });
 }
 export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
-  const { creationRequestKey, ...d } = accountInput
-    .extend({ creationRequestKey: z.string().uuid().optional() })
+  const {
+    creationRequestKey,
+    openingBalance,
+    openingDate,
+    openingBranchId,
+    ...d
+  } = accountInput
+    .extend({
+      creationRequestKey: z.string().uuid().optional(),
+      openingBalance: z
+        .preprocess(
+          (v) => (v === "" || v == null ? "0" : v),
+          z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/),
+        )
+        .default("0"),
+      openingDate: z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .refine(
+            (v) =>
+              !Number.isNaN(Date.parse(v)) &&
+              new Date(v).toISOString().slice(0, 10) === v,
+            "Valid calendar date required",
+          )
+          .optional(),
+      ),
+      openingBranchId: z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z.string().uuid().optional(),
+      ),
+    })
+    .superRefine((v, c) => {
+      if (!new D(v.openingBalance).isZero()) {
+        if (!v.creationRequestKey)
+          c.addIssue({
+            code: "custom",
+            path: ["creationRequestKey"],
+            message: "Opening balances require a retry key",
+          });
+        if (!v.openingDate)
+          c.addIssue({
+            code: "custom",
+            path: ["openingDate"],
+            message: "Opening balance date required",
+          });
+        if (!v.branchId && !v.openingBranchId)
+          c.addIssue({
+            code: "custom",
+            path: ["openingBranchId"],
+            message: "Select the opening journal branch",
+          });
+        if (v.branchId && v.openingBranchId && v.branchId !== v.openingBranchId)
+          c.addIssue({
+            code: "custom",
+            path: ["openingBranchId"],
+            message: "Opening branch must match the account branch",
+          });
+      }
+    })
     .parse(raw);
+  const openingAmount = new D(openingBalance);
+  const hasOpening = !openingAmount.isZero();
+  if (
+    hasOpening &&
+    !canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_OPENING_BALANCE")
+  )
+    throw new AuthorizationError();
+  if (hasOpening) branchOk(a, (d.branchId ?? openingBranchId)!);
   if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
     throw new AuthorizationError();
   const creationRequestHash = creationRequestKey
@@ -158,6 +225,13 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
             bankName: d.bankName ?? "",
             accountNumberMasked: d.accountNumberMasked ?? "",
             ifsc: d.ifsc ?? "",
+            ...(hasOpening
+              ? {
+                  openingBalance: openingAmount.toFixed(2),
+                  openingDate,
+                  openingBranchId: d.branchId ?? openingBranchId,
+                }
+              : {}),
           }),
         )
         .digest("hex")
@@ -167,6 +241,8 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
     () =>
       db.$transaction(
         async (tx) => {
+          if (hasOpening)
+            await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":money-ledger-code"}))`;
           if (creationRequestKey) {
             await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":money-create:" + creationRequestKey}))`;
@@ -208,10 +284,74 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
                 ledgerAccountId: ledger.id,
               },
             });
+          if (hasOpening) {
+            const journalBranch = (d.branchId ?? openingBranchId)!;
+            const date = new Date(openingDate!);
+            const fy = await context(tx, a, journalBranch, date);
+            let equity = await tx.ledgerAccount.findFirst({
+              where: {
+                companyId: a.companyId,
+                systemKey: "OPENING_BALANCE_EQUITY",
+              },
+            });
+            if (!equity)
+              equity = await tx.ledgerAccount.create({
+                data: {
+                  companyId: a.companyId,
+                  code: "3300",
+                  name: "Opening Balance Equity",
+                  accountClass: "EQUITY",
+                  normalBalance: "CREDIT",
+                  systemKey: "OPENING_BALANCE_EQUITY",
+                  isSystem: true,
+                  allowPosting: true,
+                },
+              });
+            if (
+              equity.accountClass !== "EQUITY" ||
+              equity.normalBalance !== "CREDIT" ||
+              !equity.isActive ||
+              !equity.allowPosting
+            )
+              throw new Error("INVALID_OPENING_BALANCE_EQUITY");
+            const amount = openingAmount.abs().toFixed(2);
+            await postJournalInTx(
+              tx,
+              a,
+              {
+                financialYearId: fy.id,
+                branchId: journalBranch,
+                entryDate: date,
+                sourceType: "OPENING_BALANCE",
+                sourceId: row.id,
+                postingPurpose: "MONEY_ACCOUNT_OPENING",
+                narration: "Opening balance",
+                lines: [
+                  {
+                    ledgerAccountId: ledger.id,
+                    debit: openingAmount.isPositive() ? amount : "0",
+                    credit: openingAmount.isNegative() ? amount : "0",
+                    description: "Opening balance",
+                  },
+                  {
+                    ledgerAccountId: equity.id,
+                    debit: openingAmount.isNegative() ? amount : "0",
+                    credit: openingAmount.isPositive() ? amount : "0",
+                    description: "Opening balance offset",
+                  },
+                ],
+              },
+              "OPENING_BALANCE_POSTED",
+            );
+          }
           await audit(tx, a, "MONEY_ACCOUNT_CREATED", "MONEY_ACCOUNT", row.id);
           return row;
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+        {
+          isolationLevel: hasOpening
+            ? Prisma.TransactionIsolationLevel.Serializable
+            : Prisma.TransactionIsolationLevel.ReadCommitted,
+        },
       ),
     3,
     creationRequestKey ? ["companyId", "creationRequestKey"] : undefined,
@@ -346,7 +486,8 @@ export async function moneyDashboardForActor(a: Actor) {
       where: { companyId: a.companyId, status: "ACTIVE", ...branchScope(a) },
     }),
     advances: await db.accountSettlement.findMany({
-      where: { ...EFFECTIVE_SETTLEMENT,
+      where: {
+        ...EFFECTIVE_SETTLEMENT,
         companyId: a.companyId,
         type: { in: ["CUSTOMER_ADVANCE", "VENDOR_ADVANCE"] },
         ...branchScope(a),
@@ -463,28 +604,58 @@ export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
     ["companyId", "idempotencyKey"],
   );
 }
-const chequeInput = z.object({
-  branchId: z.string().uuid(), moneyAccountId: z.string().uuid(),
-  partyId: z.string().uuid(), sourceDocumentId: z.string().uuid().optional(),
-  amount: money.refine(value => new D(value).gt(0), "Amount must be positive"),
-  requestKey: z.string().uuid(), chequeNumber: z.string().trim().min(1).max(80),
-  chequeDate: z.coerce.date(), status: z.nativeEnum(ChequeStatus),
-  reference: z.string().max(160).optional(),
-}).strict();
+const chequeInput = z
+  .object({
+    branchId: z.string().uuid(),
+    moneyAccountId: z.string().uuid(),
+    partyId: z.string().uuid(),
+    sourceDocumentId: z.string().uuid().optional(),
+    amount: money.refine(
+      (value) => new D(value).gt(0),
+      "Amount must be positive",
+    ),
+    requestKey: z.string().uuid(),
+    chequeNumber: z.string().trim().min(1).max(80),
+    chequeDate: z.coerce.date(),
+    status: z.nativeEnum(ChequeStatus),
+    reference: z.string().max(160).optional(),
+  })
+  .strict();
 export async function createChequeForActor(a: Actor, raw: unknown) {
-  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY")) throw new AuthorizationError();
-  const status = z.nativeEnum(ChequeStatus).parse((raw as { status?: unknown }).status);
-  if (!["ISSUED", "RECEIVED"].includes(status)) throw new Error("INVALID_CHEQUE_INITIAL_STATUS");
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
+    throw new AuthorizationError();
+  const status = z
+    .nativeEnum(ChequeStatus)
+    .parse((raw as { status?: unknown }).status);
+  if (!["ISSUED", "RECEIVED"].includes(status))
+    throw new Error("INVALID_CHEQUE_INITIAL_STATUS");
   const d = chequeInput.parse(raw);
   const customer = d.status === "RECEIVED";
   const source = await createSettlementForActor(a, {
-    idempotencyKey: d.requestKey, branchId: d.branchId, partyId: d.partyId,
-    type: customer ? (d.sourceDocumentId ? "CUSTOMER_RECEIPT" : "CUSTOMER_ADVANCE") : (d.sourceDocumentId ? "VENDOR_PAYMENT" : "VENDOR_ADVANCE"),
-    moneyAccountId: d.moneyAccountId, paymentMode: "CHEQUE", amount: d.amount,
-    chequeNumber: d.chequeNumber, chequeDate: d.chequeDate, transactionDate: d.chequeDate, reference: d.reference,
-    allocations: d.sourceDocumentId ? [{ documentId: d.sourceDocumentId, amount: d.amount }] : [],
+    idempotencyKey: d.requestKey,
+    branchId: d.branchId,
+    partyId: d.partyId,
+    type: customer
+      ? d.sourceDocumentId
+        ? "CUSTOMER_RECEIPT"
+        : "CUSTOMER_ADVANCE"
+      : d.sourceDocumentId
+        ? "VENDOR_PAYMENT"
+        : "VENDOR_ADVANCE",
+    moneyAccountId: d.moneyAccountId,
+    paymentMode: "CHEQUE",
+    amount: d.amount,
+    chequeNumber: d.chequeNumber,
+    chequeDate: d.chequeDate,
+    transactionDate: d.chequeDate,
+    reference: d.reference,
+    allocations: d.sourceDocumentId
+      ? [{ documentId: d.sourceDocumentId, amount: d.amount }]
+      : [],
   });
-  return db.cheque.findFirstOrThrow({ where: { companyId: a.companyId, id: source.chequeId! } });
+  return db.cheque.findFirstOrThrow({
+    where: { companyId: a.companyId, id: source.chequeId! },
+  });
 }
 export async function createCheque(raw: unknown) {
   return createChequeForActor(await actor("ACCOUNT_MONEY_ENTRY", true), raw);
@@ -528,8 +699,10 @@ export async function transitionChequeForActor(
           return row;
         }
         // Legacy metadata transitions cannot post or undo a receipt without a normalized source and action identity.
-        if (row.settlementId) throw new Error("CHEQUE_FINANCIAL_ACTION_REQUIRED");
-        if (row.journalEntryId || ["DEPOSITED", "CLEARED"].includes(to)) throw new Error("LEGACY_CHEQUE_SOURCE_REQUIRED");
+        if (row.settlementId)
+          throw new Error("CHEQUE_FINANCIAL_ACTION_REQUIRED");
+        if (row.journalEntryId || ["DEPOSITED", "CLEARED"].includes(to))
+          throw new Error("LEGACY_CHEQUE_SOURCE_REQUIRED");
         const allowed: Record<ChequeStatus, ChequeStatus[]> = {
           ISSUED: ["CLEARED", "BOUNCED", "CANCELLED"],
           RECEIVED: ["DEPOSITED", "CANCELLED"],
@@ -1296,9 +1469,15 @@ export async function deactivateMoneyAccount(id: string) {
     id,
   );
 }
-export async function moneyDashboard(query:unknown={}) {
-  const scope=await moneyReadContext(await actor("ACCOUNT_MONEY_VIEW"),query);
-  return {...await moneyDashboardForActor(scope.actor),branchContext:scope.context};
+export async function moneyDashboard(query: unknown = {}) {
+  const scope = await moneyReadContext(
+    await actor("ACCOUNT_MONEY_VIEW"),
+    query,
+  );
+  return {
+    ...(await moneyDashboardForActor(scope.actor)),
+    branchContext: scope.context,
+  };
 }
 export async function createMoneyTransfer(raw: unknown) {
   return createMoneyTransferForActor(
@@ -1321,9 +1500,15 @@ export async function createAndReceiveLoan(raw: unknown) {
 export async function postLoanPayment(raw: unknown) {
   return postLoanPaymentForActor(await actor("ACCOUNT_LOAN_ADMIN", true), raw);
 }
-export async function listMoneyData(query:unknown={}) {
-  const scope=await moneyReadContext(await actor("ACCOUNT_MONEY_VIEW"),query);
-  return {...await listMoneyDataForActor(scope.actor),branchContext:scope.context};
+export async function listMoneyData(query: unknown = {}) {
+  const scope = await moneyReadContext(
+    await actor("ACCOUNT_MONEY_VIEW"),
+    query,
+  );
+  return {
+    ...(await listMoneyDataForActor(scope.actor)),
+    branchContext: scope.context,
+  };
 }
 
 export async function setupOwnerFinancialAccount(
