@@ -15,3 +15,13 @@ fun moneyAccountRowsForMode(rows: List<JsonElement>, mode: String): List<JsonEle
     "accounts" -> rows
     else -> emptyList()
 }
+
+/** UI preferences are separate from the validated financial scope request. */
+fun moneyContextQuery(query: String): String = query.split('&').filter {
+    it.substringBefore('=') in listOf("branchId", "scope")
+}.joinToString("&")
+fun moneyAccountInitialType(mode: String, query: String): String {
+    if (mode == "cash-in-hand") return "CASH"
+    val requested = query.split('&').firstOrNull { it.substringBefore('=') == "type" }?.substringAfter('=')
+    return if (mode == "accounts" && requested in listOf("CASH", "PETTY_CASH")) requested!! else "BANK"
+}

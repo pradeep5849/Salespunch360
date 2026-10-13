@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { moneyReadContext } from "@/lib/account/money-context";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import {
@@ -11,15 +13,36 @@ import { WorkspacePageHeader } from "@/components/workspace/workspace-page-heade
 import { ClientMoney } from "./display-preferences";
 export async function MoneyAccountDirectory({
   type,
+  query = {},
 }: {
   type: "BANK" | "CASH";
+  query?: { branchId?: string; scope?: string };
 }) {
   const actor = await requirePermission("ACCOUNT_MONEY_VIEW");
   if (!actor.companyId) throw new AuthorizationError();
-  const data = await moneyDashboardForActor({
-    ...actor,
-    companyId: actor.companyId,
-  } as ProjectActor);
+  let scoped;
+  try {
+    scoped = await moneyReadContext(
+      { ...actor, companyId: actor.companyId } as ProjectActor,
+      query,
+    );
+  } catch (error) {
+    if (error instanceof AuthorizationError || error instanceof z.ZodError)
+      return (
+        <section className="employees-content">
+          <p role="alert">
+            Money accounts are unavailable for the requested branch or scope.
+          </p>
+          <Link href="/workspace/account/money">Return to Cash & Bank</Link>
+        </section>
+      );
+    throw error;
+  }
+  const data = await moneyDashboardForActor(scoped.actor);
+  const scopeQuery =
+    scoped.context.mode === "COMPANY"
+      ? "scope=all"
+      : `branchId=${scoped.context.branchId}`;
   const rows = data.accounts.filter((row) => row.type === type),
     total = rows.reduce(
       (sum, row) => sum.add(row.balance),
@@ -31,27 +54,33 @@ export async function MoneyAccountDirectory({
       <section className="employees-content">
         <WorkspacePageHeader
           title={title}
-          backHref="/workspace/account/money"
+          backHref={`/workspace/account/money?${scopeQuery}`}
         />
         <nav aria-label="Cash and bank sections">
           <Link
-            href="/workspace/account/money/bank-accounts"
+            href={`/workspace/account/money/bank-accounts?${scopeQuery}`}
             aria-current={type === "BANK" ? "page" : undefined}
           >
             Bank Accounts
           </Link>
           {" · "}
           <Link
-            href="/workspace/account/money/cash-in-hand"
+            href={`/workspace/account/money/cash-in-hand?${scopeQuery}`}
             aria-current={type === "CASH" ? "page" : undefined}
           >
             Cash In-Hand
           </Link>
           {" · "}
-          <Link href="/workspace/account/money/accounts">
+          <Link href={`/workspace/account/money/accounts?${scopeQuery}`}>
             All money accounts
           </Link>
         </nav>
+        <p>
+          Scope:{" "}
+          {scoped.context.mode === "COMPANY"
+            ? "All company branches"
+            : scoped.context.branchName}
+        </p>
         <p>
           Total balance: <ClientMoney value={total.toFixed()} />
         </p>
@@ -60,7 +89,9 @@ export async function MoneyAccountDirectory({
           "SALESPUNCH360_ACCOUNT",
           "ACCOUNT_MONEY_ENTRY",
         ) && (
-          <Link href={`/workspace/account/money/accounts?type=${type}`}>
+          <Link
+            href={`/workspace/account/money/accounts?type=${type}&${scopeQuery}`}
+          >
             {type === "BANK" ? "Add bank account" : "Add cash account"}
           </Link>
         )}

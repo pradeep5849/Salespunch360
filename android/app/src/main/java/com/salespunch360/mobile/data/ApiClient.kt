@@ -115,7 +115,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
   val query=buildList{add("offset=$offset");add("tab=${enc(tab)}");add("order=${enc(order)}");if(q.isNotBlank())add("q=${enc(q)}");listOf("branchId","scope").forEach{key->context.getQueryParameter(key)?.let{add("$key=${enc(it)}")}}}.joinToString("&")
   return json.parseToJsonElement(call("api/v1/mobile/account/money/cheques?$query")).jsonObject
  }
- suspend fun moneyContext()=json.parseToJsonElement(call("api/v1/mobile/account/money")).jsonObject
+ suspend fun moneyContext(query:String=""):JsonObject {val scope=com.salespunch360.mobile.account.moneyContextQuery(query);return json.parseToJsonElement(call("api/v1/mobile/account/money${if(scope.isBlank())""else"?$scope"}")).jsonObject}
  suspend fun saveMoneyAccount(id:String?,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/money/accounts${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())
  suspend fun disableMoneyAccount(id:String)=call("api/v1/mobile/account/money/accounts/${enc(id)}","DELETE")
  suspend fun moneyAction(kind:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/${enc(kind)}","POST",payload.toString()))

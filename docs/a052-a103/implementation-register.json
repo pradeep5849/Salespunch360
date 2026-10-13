@@ -9789,7 +9789,8 @@
       "implementation_status": "NOT STARTED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "pending_business_clarification": "Requested accounting offset policy: Opening Balance Equity for opening amounts with user-selected adjustment ledger, or owner/partner capital for both. No dependent financial posting implementation is authorized by an inferred answer; unrelated work continues."
     },
     {
       "finding_id": "A064-F04",
@@ -10016,7 +10017,8 @@
       "implementation_status": "NOT STARTED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "pending_business_clarification": "Requested accounting offset policy: Opening Balance Equity for opening amounts with user-selected adjustment ledger, or owner/partner capital for both. No dependent financial posting implementation is authorized by an inferred answer; unrelated work continues."
     },
     {
       "finding_id": "A064-F06",
@@ -10507,6 +10509,14 @@
             "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
           ],
           "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
+        },
+        "ledger_numbering_dependency": {
+          "summary": "Two-branch integration exposed branch-local money ledger numbers colliding with company-unique ledger codes. Money account creation now serializes company-wide allocation, initializes/advances a nullable-branch global series above existing MA codes, preserves historical codes, and holds replay/master/audit writes atomically. Uses ReadCommitted with the company/request locks so retries read committed outcomes after waiting; posted financial transactions retain their existing isolation.",
+          "verification": "Covered by concurrent creation/replay, legacy MA-000123 preservation and two-branch real posting/context tests in the 27-test group, plus grouped browser account/transfer checks.",
+          "affected_findings": [
+            "A064-F09",
+            "A064-F11"
+          ]
         }
       }
     },
@@ -10853,7 +10863,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -10861,7 +10871,28 @@
         "implementation_status": "PARTIAL",
         "work": "Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.",
         "remaining_work": "Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "selected_context_slice": {
+          "summary": "Shared validated money read context drives web dashboard/account/bank/cash/transfer pages and native money API. Shared account balances aggregate effective journals only in the requested authorized branch, or approved Admin company consolidation; branch-specific accounts outside that context are excluded. Scope captions and navigation preserve context; web expected scope errors recover and API denies unauthorized/malformed scope. Native carries bootstrap/drill-down scope, cancels stale loads, separates entry-type preferences from API scope and retains correct Add Cash defaults.",
+          "verification": "Intermediate 27 focused tests across 4 files passed (7 real PostgreSQL tests plus API/error/no-store tests); grouped desktop/mobile browser 8 passed including actual branch \u221210/\u221220 and company \u221230 balances, native bearer API parity, foreign/assigned-branch denial, Accountant consolidation denial, malformed scope and account/transfer regressions. Android compile and 11 focused account/branch tests passed. TypeScript and focused ESLint passed.",
+          "remaining": "Final-head complete validation and native physical-device verification remain. Account-specific history remains A064-F02; this slice does not claim that finding complete.",
+          "files": [
+            "src/lib/account/money-context.ts",
+            "src/lib/account/money.ts",
+            "src/lib/mobile/account-money.ts",
+            "src/app/api/v1/mobile/account/money/route.ts",
+            "src/app/api/v1/mobile/account/money/money-context.test.ts",
+            "src/components/account/money-account-directory.tsx",
+            "src/components/account/money-read-unavailable.tsx",
+            "src/app/workspace/account/money/page.tsx",
+            "src/app/workspace/account/money/accounts/page.tsx",
+            "src/app/workspace/account/money/transfers/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt"
+          ]
+        }
       }
     },
     {

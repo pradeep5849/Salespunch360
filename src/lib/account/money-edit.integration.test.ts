@@ -1,3 +1,4 @@
+import { moneyReadContext } from "./money-context";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
@@ -17,6 +18,8 @@ vi.mock("@/lib/db", () => ({
   db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
 }));
 import {
+  createMoneyTransferForActor,
+  moneyDashboardForActor,
   createMoneyAccountForActor,
   updateMoneyAccountForActor,
   deactivateMoneyAccountForActor,
@@ -69,6 +72,15 @@ describe.skipIf(!url)(
       await client.branch.create({
         data: { id: branchId, companyId, name: "Money branch", code: "MONEY" },
       });
+      await client.ledgerAccount.create({
+        data: {
+          companyId,
+          code: "MA-000123",
+          name: "Legacy retained money code",
+          accountClass: "ASSET",
+          normalBalance: "DEBIT",
+        },
+      });
       const ledger = await client.ledgerAccount.create({
         data: {
           companyId,
@@ -97,6 +109,11 @@ describe.skipIf(!url)(
       await client.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
         await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
+        await tx.moneyTransfer.deleteMany({ where: { companyId } });
+        await tx.journalLine.deleteMany({ where: { companyId } });
+        await tx.journalEntry.deleteMany({ where: { companyId } });
+        await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
+        await tx.financialYear.deleteMany({ where: { companyId } });
         await tx.moneyAccount.deleteMany({ where: { companyId } });
         await tx.ledgerAccount.deleteMany({ where: { companyId } });
         await tx.user.deleteMany({ where: { companyId } });
@@ -118,6 +135,19 @@ describe.skipIf(!url)(
         createMoneyAccountForActor(actor, input),
       ]);
       expect(second.id).toBe(first.id);
+      const createdLedger = await client.ledgerAccount.findUniqueOrThrow({
+        where: { id: first.ledgerAccountId },
+      });
+      expect(BigInt(createdLedger.code.slice(3))).toBeGreaterThan(BigInt(123));
+      expect(
+        await client.numberingSeries.count({
+          where: {
+            companyId,
+            branchId: null,
+            seriesKey: "MONEY_LEDGER_GLOBAL",
+          },
+        }),
+      ).toBe(1);
       expect(
         await client.moneyAccount.count({
           where: { companyId, creationRequestKey: input.creationRequestKey },
@@ -154,10 +184,14 @@ describe.skipIf(!url)(
         ).name,
       ).toBe(input.name);
     });
-    it("retains legacy account rows without inventing creation identities",async()=>{
-    expect(await client.moneyAccount.findUniqueOrThrow({where:{id:accountId}})).toMatchObject({creationRequestKey:null,creationRequestHash:null});
-  });
-  it("renames the linked ledger atomically and records before/after without posting", async () => {
+    it("retains legacy account rows without inventing creation identities", async () => {
+      expect(
+        await client.moneyAccount.findUniqueOrThrow({
+          where: { id: accountId },
+        }),
+      ).toMatchObject({ creationRequestKey: null, creationRequestHash: null });
+    });
+    it("renames the linked ledger atomically and records before/after without posting", async () => {
       await updateMoneyAccountForActor(actor, accountId, {
         name: "Renamed bank",
         bankName: "Updated bank",
@@ -249,6 +283,100 @@ describe.skipIf(!url)(
         isActive: true,
         allowPosting: true,
       });
+    });
+    it("scopes shared-account balances to an authorized selected branch or Admin consolidation", async () => {
+      const secondBranch = randomUUID();
+      await client.branch.create({
+        data: {
+          id: secondBranch,
+          companyId,
+          name: "Second money branch",
+          code: "MONEY2",
+        },
+      });
+      await client.financialYear.create({
+        data: {
+          companyId,
+          name: "Money context year",
+          startDate: new Date("2026-01-01"),
+          endDate: new Date("2026-12-31"),
+        },
+      });
+      const shared = await createMoneyAccountForActor(actor, {
+        type: "BANK",
+        name: "Context shared bank",
+        creationRequestKey: randomUUID(),
+      });
+      const cash1 = await createMoneyAccountForActor(actor, {
+        type: "CASH",
+        name: "Context cash one",
+        branchId,
+        creationRequestKey: randomUUID(),
+      });
+      const cash2 = await createMoneyAccountForActor(actor, {
+        type: "CASH",
+        name: "Context cash two",
+        branchId: secondBranch,
+        creationRequestKey: randomUUID(),
+      });
+      await createMoneyTransferForActor(actor, {
+        branchId,
+        sourceAccountId: shared.id,
+        destinationAccountId: cash1.id,
+        amount: "10",
+        transferDate: "2026-10-13",
+        idempotencyKey: randomUUID(),
+      });
+      await createMoneyTransferForActor(actor, {
+        branchId: secondBranch,
+        sourceAccountId: shared.id,
+        destinationAccountId: cash2.id,
+        amount: "20",
+        transferDate: "2026-10-13",
+        idempotencyKey: randomUUID(),
+      });
+      const branchOne = await moneyReadContext(actor, { branchId }),
+        branchTwo = await moneyReadContext(actor, { branchId: secondBranch }),
+        all = await moneyReadContext(actor, { scope: "all" });
+      const first = await moneyDashboardForActor(branchOne.actor),
+        second = await moneyDashboardForActor(branchTwo.actor),
+        combined = await moneyDashboardForActor(all.actor);
+      expect(
+        first.accounts.find((row) => row.id === shared.id)?.balance.toFixed(2),
+      ).toBe("-10.00");
+      expect(
+        second.accounts.find((row) => row.id === shared.id)?.balance.toFixed(2),
+      ).toBe("-20.00");
+      expect(
+        combined.accounts
+          .find((row) => row.id === shared.id)
+          ?.balance.toFixed(2),
+      ).toBe("-30.00");
+      expect(first.accounts.some((row) => row.id === cash2.id)).toBe(false);
+      expect(second.accounts.some((row) => row.id === cash1.id)).toBe(false);
+      const restricted = {
+        ...actor,
+        branchAccessScope: "SELECTED_BRANCHES" as const,
+        branchIds: [branchId],
+      };
+      await expect(
+        moneyReadContext(restricted, { branchId: secondBranch }),
+      ).rejects.toThrow();
+      await expect(
+        moneyReadContext(restricted, { scope: "all" }),
+      ).rejects.toThrow();
+      await expect(
+        moneyReadContext(
+          { ...actor, accountRole: "ACCOUNTANT" },
+          { scope: "all" },
+        ),
+      ).rejects.toThrow();
+      await expect(
+        moneyReadContext({ ...actor, companyId: otherCompany }, { branchId }),
+      ).rejects.toThrow();
+      await expect(
+        moneyReadContext(actor, { branchId, scope: "all" }),
+      ).rejects.toThrow();
     });
   },
 );

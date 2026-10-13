@@ -3974,6 +3974,8 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Creation retry slice:** Web/native stable creation identity with company-scoped payload validation and atomic replay prevents duplicate accounts/asset ledgers; additive nullable migration preserves legacy rows. Intermediate 23 focused tests, Android compile plus 3 tests, desktop/mobile browser 2, Prisma validate/local migrate and TypeScript/ESLint passed. Final-head validation/migration rehearsal remain.
 
+**Ledger numbering dependency:** Company-wide locked money-ledger allocation preserves historical MA codes and prevents branch-local series collisions. Concurrent replay and two-branch real posting tests passed in the 27-test group; linked to A064-F11.
+
 ## A064-F10 — Transfer idempotency replay bypasses branch authorization and payload equivalence
 
 **Title:** Transfer idempotency replay bypasses branch authorization and payload equivalence
@@ -4055,7 +4057,7 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Shared account postings in two branches; restricted single branch and Admin selected branch/consolidation; branch-owned account; genuine company-wide authorized total; no unauthorized detail disclosure.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -4065,6 +4067,8 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 Checkpoint dashboard reconciliation: Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.
 Remaining: Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.
+
+**Selected context slice:** Web/native money reads, scope captions/navigation and shared-account balances follow validated branch/company context. Intermediate focused tests 27, grouped desktop/mobile browser 8 (including real bearer API role/branch checks), Android compile plus 11 tests and TypeScript/ESLint passed. Account history remains A064-F02; final-head validation pending.
 
 ## A064-F12 — Account edit and deactivation have no operational audit and can diverge from linked ledger identity
 

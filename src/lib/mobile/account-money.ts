@@ -1,3 +1,4 @@
+import {moneyReadContext} from "@/lib/account/money-context";
 import { chequeFinancialActionForActor } from "@/lib/account/cheque-finance";
 import {
   chequePageForActor,
@@ -38,8 +39,9 @@ function permit(
 }
 const write = async (u: MobileAppPrincipal) =>
   assertOperationalWrite(u.companyId);
-export async function mobileMoneyContext(u: MobileAppPrincipal) {
-  const a = permit(u, "ACCOUNT_MONEY_VIEW"),
+export async function mobileMoneyContext(u: MobileAppPrincipal,query:unknown={}) {
+  const readScope=await moneyReadContext(permit(u,"ACCOUNT_MONEY_VIEW"),query);
+  const a = readScope.actor,
     data = await listMoneyDataForActor(a),
     scope =
       a.branchAccessScope === "SELECTED_BRANCHES"
@@ -74,6 +76,7 @@ export async function mobileMoneyContext(u: MobileAppPrincipal) {
   );
   return {
     ...data,
+    branchContext:readScope.context,
     owners: data.owners.map((x) => ({
       ...x,
       name: x.name || users.find((u) => u.id === x.userId)?.name || "Owner",

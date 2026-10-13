@@ -1,3 +1,7 @@
+import {
+  isMoneyReadScopeError,
+  MoneyReadUnavailable,
+} from "@/components/account/money-read-unavailable";
 import { randomUUID } from "node:crypto";
 import { MoneyAccountForm } from "@/components/account/money-account-form";
 import { listMoneyData } from "@/lib/account/money";
@@ -5,7 +9,7 @@ import { WorkspacePageHeader } from "@/components/workspace/workspace-page-heade
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; branchId?: string; scope?: string }>;
 }) {
   const query = await searchParams,
     initialType =
@@ -14,7 +18,13 @@ export default async function Page({
         : query.type === "PETTY_CASH"
           ? "PETTY_CASH"
           : "BANK";
-  const d = await listMoneyData();
+  let d: Awaited<ReturnType<typeof listMoneyData>>;
+  try {
+    d = await listMoneyData({ branchId: query.branchId, scope: query.scope });
+  } catch (error) {
+    if (isMoneyReadScopeError(error)) return <MoneyReadUnavailable />;
+    throw error;
+  }
   return (
     <main className="employees-shell">
       <section className="employees-content">
@@ -31,6 +41,12 @@ export default async function Page({
         ) : (
           <p>Creating money accounts requires Money Entry permission.</p>
         )}
+        <p>
+          Scope:{" "}
+          {d.branchContext.mode === "COMPANY"
+            ? "All company branches"
+            : d.branchContext.branchName}
+        </p>
         <ul>
           {d.dashboard.accounts.map((x) => (
             <li key={x.id}>

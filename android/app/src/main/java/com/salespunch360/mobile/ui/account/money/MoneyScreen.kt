@@ -19,9 +19,9 @@ import com.salespunch360.mobile.account.*
 import kotlinx.serialization.json.*
 
 @Composable
-fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel(),initialOwnerId:String?=null) {
+fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel(),initialOwnerId:String?=null,initialQuery:String="") {
     val s=vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(initialMode,initialOwnerId){vm.show(initialMode);initialOwnerId?.let(vm::openOwnerHistory)}
+    LaunchedEffect(initialMode,initialOwnerId,initialQuery){vm.show(initialMode,initialQuery);initialOwnerId?.let(vm::openOwnerHistory)}
     val caps=s.data["capabilities"]?.jsonObject
     fun can(key:String)=caps?.get(key)?.jsonPrimitive?.booleanOrNull==true
     val owners=s.data.array("owners")
@@ -36,11 +36,12 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
     }
     val canCreate=when(s.mode){"owners"->can("postOwnerTransactions");"loans"->can("manageLoans");else->can("postMoneyEntries")}
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)){
+        s.data["branchContext"]?.jsonObject?.let{context->Text("Scope: "+if(context.str("mode")=="COMPANY")"All company branches"else context.str("branchName"))}
         LazyRow{items(listOf("bank-accounts","cash-in-hand","accounts","transfers","owners","loans")){mode->FilterChip(s.mode==mode,{if(!s.saving)vm.show(mode)},{Text(when(mode){"bank-accounts"->"Bank Accounts";"cash-in-hand"->"Cash In-Hand";"accounts"->"All accounts";"owners"->"Capital & drawings";else->mode.replaceFirstChar{it.uppercase()}})})}}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
             IconButton(vm::load,enabled=!s.saving){Icon(Icons.Default.Refresh,"Refresh")}
             if(s.mode=="owners"&&can("manageOwners"))TextButton({vm.create("owner-setup")},enabled=!s.saving){Text("Add owner / partner")}
-            if(canCreate)FilledIconButton({vm.create(if(accountMode)"accounts"else s.mode)},enabled=!s.saving){Icon(Icons.Default.Add,"New transaction")}
+            if(canCreate)FilledIconButton({vm.create(if(accountMode)"accounts"else s.mode)},enabled=!s.saving&&!s.loading){Icon(Icons.Default.Add,"New transaction")}
         }
         if(s.loading)LinearProgressIndicator(Modifier.fillMaxWidth())
         s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
@@ -103,7 +104,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
             confirmButton = { TextButton(vm::closeOwnerHistory) { Text("Close") } }
         )
     }
-    s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save,initialAccountType=if(s.mode=="cash-in-hand")"CASH"else"BANK")}
+    s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save,initialAccountType=moneyAccountInitialType(s.mode,initialQuery))}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

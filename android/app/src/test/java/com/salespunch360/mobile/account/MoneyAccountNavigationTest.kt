@@ -18,4 +18,17 @@ class MoneyAccountNavigationTest {
         assertNull(moneyAccountListMode("/workspace/account/money/accounts-unrelated"))
         assertNull(moneyAccountListMode("/workspace/account/money/loans"))
     }
+    @Test fun sendsOnlyBranchScopeWhileRetainingEntryTypePreference() {
+        val query="type=CASH&branchId=selected&search=bank"
+        assertEquals("branchId=selected",moneyContextQuery(query))
+        assertEquals("CASH",moneyAccountInitialType("accounts",query))
+        assertEquals("CASH",moneyAccountInitialType("cash-in-hand","scope=all"))
+        assertEquals("BANK",moneyAccountInitialType("bank-accounts","type=CASH"))
+        assertEquals("PETTY_CASH",moneyAccountInitialType("accounts","type=PETTY_CASH&scope=all"))
+    }
+    @Test fun preservesAmbiguousScopeForServerRejection() {
+        assertEquals("branchId=selected&scope=all",moneyContextQuery("branchId=selected&type=BANK&scope=all"))
+        assertEquals("",moneyContextQuery("type=CASH"))
+    }
+
 }

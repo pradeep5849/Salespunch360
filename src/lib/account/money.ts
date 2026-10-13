@@ -1,3 +1,4 @@
+import {moneyReadContext} from "./money-context";
 import { createSettlementForActor } from "./commercial";
 import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
@@ -108,6 +109,39 @@ const accountInput = z.object({
   accountNumberMasked: z.string().max(40).optional(),
   ifsc: z.string().max(20).optional(),
 });
+async function allocateMoneyLedgerCodeInTx(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+) {
+  // Ledger codes belong to a company even when the money account belongs to a branch.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId + ":money-ledger-code"}))`;
+  const [maximum] = await tx.$queryRaw<
+    Array<{ next: Prisma.Decimal }>
+  >`SELECT (COALESCE(MAX(SUBSTRING(code FROM 4)::numeric),0)+1)::numeric AS next FROM ledger_accounts WHERE "companyId"=${companyId}::uuid AND code ~ '^MA-[0-9]+$'`;
+  const next = BigInt(maximum.next.toFixed(0));
+  if (next > BigInt("9223372036854775807"))
+    throw new Error("MONEY_LEDGER_NUMBER_EXHAUSTED");
+  let series = await tx.numberingSeries.findFirst({
+    where: { companyId, branchId: null, seriesKey: "MONEY_LEDGER_GLOBAL" },
+  });
+  if (!series)
+    series = await tx.numberingSeries.create({
+      data: {
+        companyId,
+        branchId: null,
+        seriesKey: "MONEY_LEDGER_GLOBAL",
+        prefix: "MA-",
+        padding: 6,
+        nextSequence: next,
+      },
+    });
+  else if (series.nextSequence < next)
+    series = await tx.numberingSeries.update({
+      where: { id: series.id },
+      data: { nextSequence: next },
+    });
+  return allocateDocumentNumberInTx(tx, { companyId, seriesId: series.id });
+}
 export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
   const { creationRequestKey, ...d } = accountInput
     .extend({ creationRequestKey: z.string().uuid().optional() })
@@ -133,6 +167,7 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
     () =>
       db.$transaction(
         async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":money-ledger-code"}))`;
           if (creationRequestKey) {
             await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":money-create:" + creationRequestKey}))`;
             const existing = await tx.moneyAccount.findFirst({
@@ -152,25 +187,7 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
             }))
           )
             throw new Error("INVALID_BRANCH");
-          const code = await allocateDocumentNumberInTx(tx, {
-              companyId: a.companyId,
-              branchId:
-                d.branchId ??
-                (
-                  await tx.branch.findFirstOrThrow({
-                    where: {
-                      companyId: a.companyId,
-                      isActive: true,
-                      ...(a.branchAccessScope === "SELECTED_BRANCHES"
-                        ? { id: { in: a.branchIds ?? [] } }
-                        : {}),
-                    },
-                    orderBy: { createdAt: "asc" },
-                  })
-                ).id,
-              seriesKey: "MONEY_LEDGER",
-              defaults: { prefix: "MA-", padding: 6 },
-            }),
+          const code = await allocateMoneyLedgerCodeInTx(tx, a.companyId),
             ledger = await tx.ledgerAccount.create({
               data: {
                 companyId: a.companyId,
@@ -194,7 +211,7 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
           await audit(tx, a, "MONEY_ACCOUNT_CREATED", "MONEY_ACCOUNT", row.id);
           return row;
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
       ),
     3,
     creationRequestKey ? ["companyId", "creationRequestKey"] : undefined,
@@ -1279,8 +1296,9 @@ export async function deactivateMoneyAccount(id: string) {
     id,
   );
 }
-export async function moneyDashboard() {
-  return moneyDashboardForActor(await actor("ACCOUNT_MONEY_VIEW"));
+export async function moneyDashboard(query:unknown={}) {
+  const scope=await moneyReadContext(await actor("ACCOUNT_MONEY_VIEW"),query);
+  return {...await moneyDashboardForActor(scope.actor),branchContext:scope.context};
 }
 export async function createMoneyTransfer(raw: unknown) {
   return createMoneyTransferForActor(
@@ -1303,8 +1321,9 @@ export async function createAndReceiveLoan(raw: unknown) {
 export async function postLoanPayment(raw: unknown) {
   return postLoanPaymentForActor(await actor("ACCOUNT_LOAN_ADMIN", true), raw);
 }
-export async function listMoneyData() {
-  return listMoneyDataForActor(await actor("ACCOUNT_MONEY_VIEW"));
+export async function listMoneyData(query:unknown={}) {
+  const scope=await moneyReadContext(await actor("ACCOUNT_MONEY_VIEW"),query);
+  return {...await listMoneyDataForActor(scope.actor),branchContext:scope.context};
 }
 
 export async function setupOwnerFinancialAccount(
