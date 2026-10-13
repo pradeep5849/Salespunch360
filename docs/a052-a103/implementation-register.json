@@ -4164,6 +4164,11 @@
             "A057",
             "A090"
           ]
+        },
+        "native_tracking_dates": {
+          "implementation": "Android batch editor now accepts optional manufactured/expiry dates and serial editor optional expiry; fields are carried to existing protected shared APIs. Shared date schemas reject impossible calendar strings/timestamps instead of Date coercion rollover; valid Date callers retained and server expiry-before-manufactured guard preserved.",
+          "tests": "14 focused input/inventory/native-contract tests passed; one real PostgreSQL persistence/calendar/tracking/unknown-record guard test passed (29 unrelated filtered skips); Android compile, TypeScript and focused lint passed.",
+          "remaining": "Warehouse create/deactivate and product settings/native UI original scope, actual-device interaction and final-head regression remain pending; finding remains PARTIAL."
         }
       },
       "intermediate_validation": {

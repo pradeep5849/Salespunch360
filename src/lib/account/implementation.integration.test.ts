@@ -36,6 +36,7 @@ import {
   updateExpenseForActor,
   getExpenseForActor,
 } from "./expenses";
+import { createBatchForActor, registerSerialNumberForActor } from "./inventory";
 import { runFinancialReportForActor } from "./reports/service";
 import {
   postJournalInTx,
@@ -256,6 +257,28 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     });
     expect(await client.expenseTransaction.count({where:{companyId,creationRequestKey:requestKey}})).toBe(0);
     expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+  });
+  it("A054 batch and serial dates persist with company/tracking and calendar guards", async () => {
+    const batchProduct=randomUUID(),serialProduct=randomUUID();
+    await client.accountProduct.createMany({data:[{id:batchProduct,companyId,name:"Batch dates",trackInventory:true,trackingMode:"BATCH"},{id:serialProduct,companyId,name:"Serial dates",trackInventory:true,trackingMode:"SERIAL"}]});
+    try {
+      const batch=await createBatchForActor(actor,{productId:batchProduct,batchNumber:"B-DATES",manufacturedDate:"2026-10-01",expiryDate:"2027-10-01"});
+      const serial=await registerSerialNumberForActor(actor,{productId:serialProduct,serialNumber:"S-DATES",expiryDate:"2027-10-01"});
+      expect(batch.manufacturedDate?.toISOString().slice(0,10)).toBe("2026-10-01");
+      expect(batch.expiryDate?.toISOString().slice(0,10)).toBe("2027-10-01");
+      expect(serial.expiryDate?.toISOString().slice(0,10)).toBe("2027-10-01");
+      await expect(createBatchForActor(actor,{productId:batchProduct,batchNumber:"BAD-DATE",manufacturedDate:"2026-02-30"})).rejects.toThrow();
+      await expect(createBatchForActor(actor,{productId:batchProduct,batchNumber:"BAD-RANGE",manufacturedDate:"2027-10-01",expiryDate:"2026-10-01"})).rejects.toThrow("INVALID_EXPIRY");
+      await expect(registerSerialNumberForActor(actor,{productId:serialProduct,serialNumber:"BAD-DATE",expiryDate:"2026-02-30"})).rejects.toThrow();
+      await expect(createBatchForActor(actor,{productId:randomUUID(),batchNumber:"FOREIGN"})).rejects.toThrow();
+      await expect(registerSerialNumberForActor(actor,{productId:batchProduct,serialNumber:"WRONG-MODE"})).rejects.toThrow();
+      expect(await client.inventoryBatch.count({where:{companyId,productId:batchProduct}})).toBe(1);
+      expect(await client.inventorySerialNumber.count({where:{companyId,productId:serialProduct}})).toBe(1);
+    } finally {
+      await client.inventoryBatch.deleteMany({where:{companyId,productId:batchProduct}});
+      await client.inventorySerialNumber.deleteMany({where:{companyId,productId:serialProduct}});
+      await client.accountProduct.deleteMany({where:{companyId,id:{in:[batchProduct,serialProduct]}}});
+    }
   });
   it("allocates company-unique asset numbers across branches", async () => {
     const first = await createAssetForActor(actor, input(branchA)),

@@ -1439,6 +1439,8 @@ Intermediate validation: 25 focused tests, 8 isolated database tests, 4 desktop/
 
 Remaining: Other native inventory editor parity and device verification remain pending. Final checkpoint-head validation remains required.
 
+**Native tracking date continuation:** Batch manufactured/expiry and serial expiry inputs are wired to the protected API. Shared real-calendar validation rejects rollover dates; valid Date callers and range guard retained. 14 focused tests and 1 PostgreSQL persistence/guard test passed (29 unrelated filtered skips); Android compile, TypeScript and focused lint passed. Warehouse/product-setting scope, device interaction and final-head verification remain pending; PARTIAL retained.
+
 ## A054-F04 — Shared forms lack accessible names and nest main landmarks
 
 **Title:** Shared forms lack accessible names and nest main landmarks

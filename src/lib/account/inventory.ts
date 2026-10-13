@@ -1,3 +1,4 @@
+import { inventoryBatchInput, inventorySerialInput } from "./inventory-tracking-input";
 import { ACCOUNT_ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import { Prisma, StockMovementType } from "@prisma/client";
 import { z } from "zod";
@@ -527,15 +528,7 @@ export async function listInventoryProducts() {
 }
 export async function createBatchForActor(a: ProjectActor, raw: unknown) {
   await assertInventoryAvailable(a);
-  const d = z
-      .object({
-        productId: z.string().uuid(),
-        batchNumber: z.string().trim().min(1).max(100),
-        manufacturedDate: z.coerce.date().optional(),
-        expiryDate: z.coerce.date().optional(),
-      })
-      .strict()
-      .parse(raw),
+  const d = inventoryBatchInput.parse(raw),
     p = await db.accountProduct.findFirst({
       where: {
         id: d.productId,
@@ -568,14 +561,7 @@ export async function registerSerialNumberForActor(
   raw: unknown,
 ) {
   await assertInventoryAvailable(a);
-  const d = z
-      .object({
-        productId: z.string().uuid(),
-        serialNumber: z.string().trim().min(1).max(160),
-        expiryDate: z.coerce.date().optional(),
-      })
-      .strict()
-      .parse(raw),
+  const d = inventorySerialInput.parse(raw),
     p = await db.accountProduct.findFirst({
       where: {
         id: d.productId,
