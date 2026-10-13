@@ -26,12 +26,13 @@ const amount=(doc:AccountPrintDocument,value:string)=>{
  return `${whole.startsWith("-")&&BigInt(whole)===BigInt(0)?"-":""}${grouped}${fraction===undefined?"":"."+fraction}`;
 };
 const units=["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
-function words(v:number,indian:boolean):string {
- if(v<20)return units[v];if(v<100)return ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"][Math.floor(v/10)]+(v%10?" "+words(v%10,indian):"");
- const groups=indian?[[10000000,"crore"],[100000,"lakh"],[1000,"thousand"],[100,"hundred"]] as const:[[1000000000,"billion"],[1000000,"million"],[1000,"thousand"],[100,"hundred"]] as const;
- for(const [factor,name] of groups)if(v>=factor)return words(Math.floor(v/factor),indian)+" "+name+(v%factor?" "+words(v%factor,indian):"");return "";
+function words(v:bigint,indian:boolean):string {
+ if(v<BigInt(20))return units[Number(v)];
+ if(v<BigInt(100))return ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"][Number(v/BigInt(10))]+(v%BigInt(10)?" "+words(v%BigInt(10),indian):"");
+ const groups=indian?[["10000000","crore"],["100000","lakh"],["1000","thousand"],["100","hundred"]]:[["1000000000000000000","quintillion"],["1000000000000000","quadrillion"],["1000000000000","trillion"],["1000000000","billion"],["1000000","million"],["1000","thousand"],["100","hundred"]];
+ for(const [raw,name] of groups){const factor=BigInt(raw);if(v>=factor)return words(v/factor,indian)+" "+name+(v%factor?" "+words(v%factor,indian):"");}return "";
 }
-function amountWords(doc:AccountPrintDocument){const n=new Prisma.Decimal(doc.payableAmount??doc.total).abs().toDecimalPlaces(2).toFixed(2),[whole,fraction]=n.split(".");if(Number(whole)>Number.MAX_SAFE_INTEGER)return n;return `${new Prisma.Decimal(doc.payableAmount??doc.total).lt(0)?"minus ":""}${words(Number(whole),text(doc,"amountWordsFormat","INDIAN")!=="INTERNATIONAL")} ${doc.currency??"INR"}${Number(fraction)?" and "+words(Number(fraction),false)+" hundredths":""} only`;}
+function amountWords(doc:AccountPrintDocument){const decimal=new Prisma.Decimal(doc.payableAmount??doc.total),[whole,fraction]=decimal.abs().toDecimalPlaces(2).toFixed(2).split(".");return `${decimal.lt(0)?"minus ":""}${words(BigInt(whole),text(doc,"amountWordsFormat","INDIAN")!=="INTERNATIONAL")} ${doc.currency??"INR"}${BigInt(fraction)?" and "+words(BigInt(fraction),false)+" hundredths":""} only`;}
 function cell(doc:AccountPrintDocument,row:AccountPrintDocument["lines"][number],column:string){
  return column==="ITEM"?row.description+(yes(doc,"printDescription")&&row.detail?" — "+row.detail:""):column==="QTY"?row.quantity:amount(doc,column==="RATE"?row.rate:column==="TAXABLE"?row.taxable:column==="TAX"?row.tax:row.total);
 }

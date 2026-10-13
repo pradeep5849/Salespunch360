@@ -65,3 +65,5 @@ it("paginates unusually long first-page headers without recursively repeating th
 });
 
 it("rejects unsupported glyphs rather than silently replacing them",async()=>{await expect(renderAccountPrintPdf({...invoice,party:"Unsupported 🦄"})).rejects.toThrow("ACCOUNT_PDF_UNSUPPORTED_CHARACTER");expect(renderAccountPrintHtml({...invoice,party:"Unsupported 🦄"})).toContain("Unsupported 🦄")});
+
+it("keeps large amount words and negative fractional grouping exact",()=>{const html=renderAccountPrintHtml({...invoice,total:"-0.99",printOptions:{amountGrouping:true,amountWordsFormat:"INTERNATIONAL"}});expect(html).toContain("-0.99");expect(html).toContain("minus zero INR and ninety nine hundredths only");const large=renderAccountPrintHtml({...invoice,total:"9999999999999999.99",printOptions:{amountWordsFormat:"INTERNATIONAL"}});expect(large).toContain("nine quadrillion");expect(large).toContain("ninety nine hundredths only");});
