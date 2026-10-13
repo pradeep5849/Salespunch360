@@ -1377,3 +1377,14 @@ test("A062 units preserve concurrent rules, paginate native choices and show saf
   await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemUnits:false}}});await expect(listMobileAccountMaster(principal,"units",{})).rejects.toThrow();await expect(saveMobileUnitConversion(principal,{baseUnitId:ids[0],secondaryUnitId:ids[1],rate:"2"})).rejects.toThrow();await page.reload();await expect(page.getByRole("alert").filter({hasText:"Units are unavailable"})).toBeVisible();
  }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:original.itemSettings??{}}})}
 });
+
+test("A064 money account form labels and company-wide creation provide feedback",async({page})=>{
+ test.setTimeout(120000);
+ await signInSettings(page);await page.goto("/workspace/account/money/accounts");
+ const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create account and asset ledger",exact:true})});
+ await form.getByLabel("Account display name",{exact:true}).fill(" ");await form.getByRole("button",{name:"Create account and asset ledger",exact:true}).click();await expect(form.locator("#name-error")).toBeVisible();await expect(form.getByLabel("Account display name",{exact:true})).toBeFocused();
+ await form.getByLabel("Account display name",{exact:true}).fill("A064 Accessible Bank");await form.getByLabel("Account type",{exact:true}).selectOption("BANK");await form.getByLabel("Branch",{exact:true}).selectOption("");await form.getByLabel("Bank name",{exact:true}).fill("A064 Test Bank");await form.getByLabel("Masked account number",{exact:true}).fill("****6543");await form.getByLabel("IFSC",{exact:true}).fill("TEST0001234");
+ expect((await new AxeBuilder({page}).include("form").analyze()).violations).toEqual([]);
+ await form.getByRole("button",{name:"Create account and asset ledger",exact:true}).click();await expect(form.getByRole("status")).toContainText("Money account created",{timeout:20000});
+ const account=await db.moneyAccount.findFirstOrThrow({where:{companyId,name:"A064 Accessible Bank"}});expect(account.branchId).toBeNull();expect(await db.ledgerAccount.findUniqueOrThrow({where:{id:account.ledgerAccountId}})).toMatchObject({name:account.name,companyId});
+});

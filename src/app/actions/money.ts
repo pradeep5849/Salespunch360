@@ -120,3 +120,8 @@ export async function saveLegacyChequeSourceAction(fd: FormData) {
     refresh();
   }, "Cheque source details saved; payment remains pending closure");
 }
+
+export async function saveMoneyAccountAction(fd: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  return accountAction(async () => { await moneyAccountAction(fd); }, "Money account created");
+}

@@ -4138,13 +4138,15 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Accessible names, keyboard navigation, empty/invalid field messages, server/network error in open editor, preserved input, pending state and safe recovery.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Accessible pending web money-account creation with structured error/success and failing-field focus; company-wide blank branch validated. Desktop/mobile browser 2 passed including AXE and real account/ledger creation. Other money forms and stable creation retry identity remain; final-head validation pending.
 
 ## A065-F01 — Owners must currently be admin users rather than independent owner/partner records
 

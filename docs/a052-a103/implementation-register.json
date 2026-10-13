@@ -11028,10 +11028,21 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Web money-account creation now uses explicit stable accessible names, bounds, disabled pending fields/button, structured action errors/success, retained inputs and failing-field focus. Existing company-wide blank branch normalization verified through real browser creation.",
+        "verification": "Intermediate desktop/mobile browser 2 passed: whitespace-name server validation, accessible error association/focus, AXE, company-wide account plus linked asset ledger creation and success feedback. TypeScript and focused ESLint passed.",
+        "remaining": "Remaining money forms, broader keyboard/error paths and stable creation retry identity tracked with A064-F09; final-head validation still required.",
+        "files": [
+          "src/components/account/money-account-form.tsx",
+          "src/app/workspace/account/money/accounts/page.tsx",
+          "src/app/actions/money.ts",
+          "e2e/a090-settings.spec.ts"
+        ]
+      }
     },
     {
       "finding_id": "A065-F01",
