@@ -9157,3 +9157,7 @@ Remaining: Full supplied reference parity, multi-invoice/advance View Txn destin
 ### A087 sale financial projection progress
 
 Consistent snapshot separates receipts, discounts, credits and applied advances, and computes scoped party balance with openings. Native exact decimals and cancelled/null financial handling are connected. Intermediate checks: 7 PostgreSQL tests, 47 grouped consumers, 2 browser viewports, Android compilation and 3 focused JVM tests passed. A087-F01/F03 are IMPLEMENTED BUT NOT VERIFIED; A087-F02 and A086 paid-correction dependencies remain partial. No final status or final-head claim.
+
+### A067-F04 interim repayment validation — 2026-10-13
+
+Repayment principal ceiling uses effective posted liability ledger balances. A corrected liability of 60 rejects a principal payment of 61 without payment/journal writes. Focused money integration: 18 passed; TypeScript passed. Top-up/cancellation/archive remain pending; final-head verification remains pending.

@@ -148,6 +148,18 @@ describe.skipIf(!url)(
       await expect(loanHistoryForActor({...actor,companyId:otherCompany},loan.id,{branchId})).rejects.toThrow();
       await expect(loanHistoryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},loan.id,{branchId})).rejects.toThrow();
     });
+    it("rejects principal above the corrected posted liability without writing a payment",async()=>{
+      const {postJournalForActor}=await import("@/lib/accounting/service");
+      const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      const account=await client.moneyAccount.findUniqueOrThrow({where:{id:source.moneyAccountId}});
+      const fy=await client.financialYear.findFirstOrThrow({where:{companyId,name:"Loan statement year"}});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Corrected liability",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:account.id,idempotencyKey:randomUUID()});
+      await postJournalForActor(actor,{financialYearId:fy.id,branchId,entryDate:"2032-01-02",sourceType:"MANUAL_JOURNAL",sourceId:randomUUID(),lines:[{ledgerAccountId:loan.liabilityLedgerId,debit:"40",credit:"0"},{ledgerAccountId:account.ledgerAccountId,debit:"0",credit:"40"}]});
+      const before=await client.journalEntry.count({where:{companyId}});
+      await expect(postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-03",principal:"61",interest:"0",charges:"0",idempotencyKey:randomUUID()})).rejects.toThrow("PRINCIPAL_EXCEEDS_OUTSTANDING");
+      expect(await client.loanPayment.count({where:{companyId,loanId:loan.id}})).toBe(0);
+      expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+    });
     it("persists independent loan identity and rejects changed metadata on retry",async()=>{
       const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
       expect(source.displayName).toBeNull();expect(source.loanAccountNumber).toBeNull();expect(source.durationMonths).toBeNull();

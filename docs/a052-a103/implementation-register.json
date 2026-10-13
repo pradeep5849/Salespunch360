@@ -14704,6 +14704,11 @@
         {
           "work": "Completed web/native prefilled metadata editing and return-to-detail flow, authenticated PATCH endpoint, optimistic version and stable request history. Creation fingerprints preserve original request equivalence after edits; direct loan write/replay services enforce Loan Admin permission. Posted receipt fields and operation audit history are protected by new DB guards. Backup snapshot includes loanOperation records. Top-up/cancel/archive remain pending.",
           "tests": "26 focused loan metadata/replay/input tests and 6 focused service/API tests passed. 17 grouped PostgreSQL regressions passed, including concurrent same-key replay, stale/altered edits, actor/company/branch denials, original receipt preservation, DB immutable-history rejection and audit rollback. 4 desktop/mobile-web workflow/permission tests passed (45.7s); native compilation, TypeScript and targeted ESLint passed. Migration 121 locally applied. Final-head/device checks not yet run."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Repayment principal validation now uses effective posted/reversed liability ledger balance rather than original principal minus payment records, so posted corrections affect the payment ceiling. Top-up/cancellation/archive remain pending.",
+          "tests": "money-edit.integration.test.ts: 18 passed, including corrected liability overpayment rejection without writes; tsc --noEmit passed. Interim validation only."
         }
       ]
     },

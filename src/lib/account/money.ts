@@ -1344,14 +1344,14 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
               },
             });
           if (!moneyAccount) throw new Error("INVALID_MONEY_ACCOUNT");
-          const paid = await tx.loanPayment.aggregate({
-              where: { companyId: a.companyId, loanId: loan.id },
-              _sum: { principal: true },
+          const paid = await tx.journalLine.aggregate({
+              where: { companyId: a.companyId, ledgerAccountId: loan.liabilityLedgerId, journalEntry: {companyId:a.companyId,branchId:loan.branchId,status:{in:["POSTED","REVERSED"]}} },
+              _sum: { debit: true, credit: true },
             }),
             principal = new D(d.principal),
             interest = new D(d.interest),
             charges = new D(d.charges),
-            outstanding = loan.principal.sub(paid._sum.principal ?? 0);
+            outstanding = new D(paid._sum.credit ?? 0).sub(paid._sum.debit ?? 0);
           if (principal.gt(outstanding))
             throw new Error("PRINCIPAL_EXCEEDS_OUTSTANDING");
           const expense = accounts[0]?.id;
