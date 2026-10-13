@@ -161,6 +161,8 @@ Remaining: Other original permission/module findings and final checkpoint-head v
 
 Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
+**Expense/Home context continuation:** Resolved branch/company context is retained by filters, pagination and empty-state creation. Desktop/mobile branch/consolidation and Data Entry denial checks passed; remaining original role/isolation coverage and final-head validation are pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
+
 ## A052-F03 — Web expense list ignores selected Account branch context
 
 **Title:** Web expense list ignores selected Account branch context
@@ -214,6 +216,8 @@ Intermediate validation: 42 focused tests, 4 desktop/mobile browser scenarios an
 Remaining: Remaining category/recurring and other linked native context consistency plus final checkpoint-head/device verification remain pending.
 
 Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
+
+**Expense/Home context continuation:** Resolved branch/company context is retained by filters, pagination and empty-state creation. Desktop/mobile branch/consolidation and Data Entry denial checks passed; remaining original role/isolation coverage and final-head validation are pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
 
 ## A052-F04 — Silent 200-row cap hides older transactions and makes Android search incomplete
 
@@ -6068,13 +6072,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Payment-In/Out, expenses and estimate filters with actual records; mixed category selection; empty results without UUID error; branch/permission/module checks.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A071_Findings.json, SalesPunch360_A071_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Expense/Home context continuation:** Noncommercial-only filters now use an empty UUID set, preserving tenant/branch/search scope; five new query regressions passed. Real noncommercial data sources remain pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
 
 ## A071-F06 — Submitting Home search loses filter and explicit branch query
 

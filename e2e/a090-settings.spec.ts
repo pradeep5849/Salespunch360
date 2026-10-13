@@ -1526,3 +1526,35 @@ test("A071 New Party creates Account-only customers in the selected branch and e
   await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});await page.goto(`/workspace/account?tab=parties&branchId=${branch}`);await expect(page.getByRole("link",{name:"+ New Party",exact:true})).toHaveCount(0);await page.goto(`/workspace/account/customers/new?branchId=${branch}`);await expect(page.getByRole("alert").filter({hasText:"not available to your role"})).toBeVisible();await expect(page.getByRole("button",{name:"Create party",exact:true})).toHaveCount(0);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.customFieldValue.deleteMany({where:{companyId,definitionId:fieldId}});await db.customFieldDefinition.delete({where:{id:fieldId}});await db.customer.deleteMany({where:{companyId,name}});await db.branch.deleteMany({where:{id:{in:[branch,foreign]}}})}
 });
+
+test("A052 expense list preserves explicit branch filters and safely denies Data Entry", async ({page}) => {
+ test.setTimeout(120000);
+ const second=randomUUID(), category=randomUUID(), ledger=randomUUID(), ids=[randomUUID(),randomUUID()];
+ await db.branch.create({data:{id:second,companyId,name:"Expense second branch",code:"A052-SECOND"}});
+ await db.ledgerAccount.create({data:{id:ledger,companyId,code:"A052-SCOPE",name:"Expense scope fixture",accountClass:"EXPENSE",normalBalance:"DEBIT",allowPosting:true}});
+ await db.expenseCategory.create({data:{id:category,companyId,name:"Expense scope category",scope:"EXPENSE",defaultLedgerAccountId:ledger}});
+ await db.expenseTransaction.createMany({data:ids.map((id,i)=>({id,companyId,branchId:i?second:branchId,categoryId:category,type:"OFFICE_EXPENSE" as const,status:"DRAFT" as const,transactionNumber:`A052-SCOPE-${i}`,transactionDate:new Date("2026-10-13"),taxableAmount:"10",totalAmount:"10",createdById:userId}))});
+ try {
+  await signInSettings(page);
+  await page.goto(`/workspace/account/expenses?branchId=${second}`);
+  await expect(page.getByRole("link",{name:"A052-SCOPE-1",exact:true})).toBeVisible();
+  await expect(page.getByRole("link",{name:"A052-SCOPE-0",exact:true})).toHaveCount(0);
+  await page.getByLabel("Search expenses",{exact:true}).fill("no-matching-expense");
+  await page.getByRole("button",{name:"Apply filters",exact:true}).click();
+  await expect(page).toHaveURL(new RegExp(`branchId=${second}`));
+  await expect(page.getByRole("link",{name:"Add an expense",exact:true})).toHaveAttribute("href",`/workspace/account/expenses/new?branchId=${second}`);
+  await page.goto("/workspace/account/expenses?scope=all");
+  await expect(page.getByRole("link",{name:"A052-SCOPE-0",exact:true})).toBeVisible();
+  await expect(page.getByRole("link",{name:"A052-SCOPE-1",exact:true})).toBeVisible();
+  await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});
+  await page.goto("/workspace/account/expenses");
+  await expect(page.getByRole("heading",{name:"Expenses access unavailable",exact:true})).toBeVisible();
+  await expect(page.getByRole("link",{name:/A052-SCOPE/})).toHaveCount(0);
+ } finally {
+  await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});
+  await db.expenseTransaction.deleteMany({where:{id:{in:ids},companyId}});
+  await db.expenseCategory.delete({where:{id:category}});
+  await db.ledgerAccount.delete({where:{id:ledger}});
+  await db.branch.delete({where:{id:second}});
+ }
+});

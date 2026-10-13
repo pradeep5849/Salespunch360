@@ -50,6 +50,9 @@ async function loadExpensePage(
         "ACCOUNT_EXPENSE_ENTRY",
       );
     const branches = new Map(scoped.branches.map((b) => [b.id, b.name]));
+    const scopeQuery = scoped.context.mode === "BRANCH"
+      ? `branchId=${scoped.context.branchId}`
+      : "scope=all";
     const href = (offset: number) => {
       const params = new URLSearchParams();
       for (const key of [
@@ -63,6 +66,7 @@ async function loadExpensePage(
       ]) {
         if (query[key]) params.set(key, query[key]!);
       }
+      for (const [key, value] of new URLSearchParams(scopeQuery)) params.set(key, value);
       params.set("offset", String(offset));
       return `/workspace/account/expenses?${params}`;
     };
@@ -75,6 +79,7 @@ async function loadExpensePage(
       branches,
       href,
       categories,
+      scopeQuery,
       summary: data.summary,
     };
   } catch (error) {
@@ -109,7 +114,7 @@ export default async function Page({
         <Link href="/workspace/account/expenses">Reset expense filters</Link>
       </section>
     );
-  const { data, query, scoped, canCreate, branches, href, categories } = result;
+  const { data, query, scoped, canCreate, branches, href, categories, scopeQuery } = result;
   return (
     <div className="employees-shell">
       <section className="employees-content">
@@ -167,11 +172,10 @@ export default async function Page({
           </p>
         </section>
         <form method="get" className="expense-list-filters">
-          {query.branchId && (
-            <input type="hidden" name="branchId" value={query.branchId} />
-          )}
-          {query.scope && (
-            <input type="hidden" name="scope" value={query.scope} />
+          {scoped.context.mode === "BRANCH" ? (
+            <input type="hidden" name="branchId" value={scoped.context.branchId} />
+          ) : (
+            <input type="hidden" name="scope" value="all" />
           )}
           {query.templateId && (
             <input type="hidden" name="templateId" value={query.templateId} />
@@ -226,7 +230,7 @@ export default async function Page({
             {canCreate && (
               <>
                 {" "}
-                <Link href="/workspace/account/expenses/new">
+                <Link href={`/workspace/account/expenses/new?${scopeQuery}`}>
                   Add an expense
                 </Link>
                 .

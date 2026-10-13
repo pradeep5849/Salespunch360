@@ -969,6 +969,11 @@
             "A052",
             "A066"
           ]
+        },
+        "expense_context_regression": {
+          "implementation": "Expense GET filters and pagination normalize the resolved authorized branch/company context; empty-state Add Expense retains it. Expected Data Entry denial preserves a recoverable page.",
+          "tests": "19 focused tests passed across Home query/filter and scoped expense list; TypeScript and focused lint passed; 2 desktop/mobile browser tests passed (27.2s).",
+          "remaining": "Project Manager Projects ON/OFF, assigned-user exclusion, cross-company browser regression and final-head verification remain pending; no final closure inferred."
         }
       },
       "intermediate_validation": {
@@ -1098,6 +1103,11 @@
             "A052",
             "A066"
           ]
+        },
+        "expense_context_regression": {
+          "implementation": "Expense GET filters and pagination normalize the resolved authorized branch/company context; empty-state Add Expense retains it. Expected Data Entry denial preserves a recoverable page.",
+          "tests": "19 focused tests passed across Home query/filter and scoped expense list; TypeScript and focused lint passed; 2 desktop/mobile browser tests passed (27.2s).",
+          "remaining": "Project Manager Projects ON/OFF, assigned-user exclusion, cross-company browser regression and final-head verification remain pending; no final closure inferred."
         }
       },
       "intermediate_validation": {
@@ -16417,10 +16427,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Replaced invalid UUID sentinel with an empty UUID set for noncommercial-only selections; retained company/branch and search predicates.",
+        "tests": "Five new query regressions passed (receipts, payments, expense, estimate and mixed filter), with 19 grouped tests passing; TypeScript and focused lint passed.",
+        "remaining": "Implement real authorized noncommercial transaction data sources and their web/native regression coverage. Final-head validation pending."
+      }
     },
     {
       "finding_id": "A071-F06",

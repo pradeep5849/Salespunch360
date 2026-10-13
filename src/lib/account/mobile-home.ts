@@ -31,7 +31,7 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
     ...scopes.document,
     NOT: { type: "SALES_INVOICE", status: "DRAFT" },
     ...((types.length || q) ? { AND: [
-      ...(types.length ? [{ OR: documentFilters.length ? documentFilters : [{ id: { equals: "__no_commercial_document__" } }] }] : []),
+      ...(types.length ? [{ OR: documentFilters.length ? documentFilters : [{ id: { in: [] } }] }] : []),
       ...(q ? [{ OR: [
         { partyName: { contains: q, mode: "insensitive" as const } },
         { documentNumber: { contains: q, mode: "insensitive" as const } },
