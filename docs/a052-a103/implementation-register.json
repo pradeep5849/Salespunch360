@@ -16367,7 +16367,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -16375,6 +16375,10 @@
         {
           "work": "Home Sale More now exposes Duplicate for users permitted to create sales. New Sale loads an explicit whitelist draft from an authorized company/branch source, with fresh identity/date, independent custom values, no journal/payment/advance/return links and cleared batch/serial assignments. Original paid documents remain immutable; only explicit Save creates/posts the new sale. Invalid/unavailable sources return 404. Added accessible Billing Name input labeling. Native duplication remains pending.",
           "tests": "11/11 grouped duplicate/Add/Edit Sale unit tests passed; strengthened 4/4 duplicate snapshot tests passed. Desktop/mobile financial browser checks 2/2 passed (30.1s): opening does not change document/journal/allocation counts, edits do not change source, explicit Save creates a new unpaid invoice while paid source stays settled, missing source 404. Initial cold-route timeout and missing Billing Name accessible label corrected. Clean TypeScript and targeted lint passed after browser stopped. Final-head/role/module/foreign branch regression and native duplication remain pending."
+        },
+        {
+          "work": "Android Home Duplicate opens the native new-sale form from the existing authorized source-detail API, clears edit/source IDs, received/payment/cheque fields, return/batch/serial assignments and old dates, and resets creation idempotency identity. Entry permission and authorized active branch are enforced; unavailable project association is cleared for review. Added retry for failed copy loading. Corrected initial filter startup so it cannot cancel the option load required to open new/duplicate Sale. Existing edit flow retained.",
+          "tests": "Android compile and focused SaleDuplicateTest (3) plus SalesEditSnapshotTest (4) passed: 7 tests, 0 failure/error/skip; build 1m41s. Initial Home permission-list declaration order failed compile, corrected before successful run. Home/filter/duplicate grouped tests 15/15 passed; old whitespace assertions and obsolete tab implementation assertion replaced with formatting-tolerant checks and rendered branch-preserving/reset query-link checks. Clean TypeScript and targeted lint passed. Earlier paid-source desktop/mobile test 2/2 remains evidence. Final-head role/module/branch/company regression and physical-device navigation remain pending."
         }
       ]
     },

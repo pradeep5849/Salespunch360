@@ -44,3 +44,10 @@ private fun savedSaleTaxRate(doc:JsonObject,key:String):String {
  val amount=doc.str(key).toBigDecimalOrNull()?:java.math.BigDecimal.ZERO
  return if(taxable.signum()>0)amount.multiply(java.math.BigDecimal("100")).divide(taxable,6,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() else "0"
 }
+
+fun duplicateSavedSaleDraft(doc:JsonObject,date:String=java.time.LocalDate.now().toString()):SalesEditorDraft{
+    require(doc.str("type")=="SALES_INVOICE"){"Only Sale invoices can be duplicated here."}
+    val source=savedSaleEditorDraft(doc)
+    require(source.customerId.isNotBlank()&&source.branchId.isNotBlank()){"The original customer or branch is unavailable."}
+    return source.copy(editingSourceId="",sourceDocumentId="",issueDate=date,dueDate="",customerPoNumber="",customerPoDate="",ewayBillNumber="",transactionTime="",roundOffAmount="0",receivedEnabled=false,receivedInFull=false,receivedAmount="",paymentReference="",chequeNumber="",chequeDate="",lines=source.lines.map{it.copy(originalLineId="",batchId="",serialNumberId="",sourceCommercialLineId="",stockReturnQuantity="0",purchaseAllocations=emptyList())})
+}

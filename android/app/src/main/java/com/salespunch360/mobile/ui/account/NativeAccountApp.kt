@@ -201,7 +201,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))
-            sales!=null->AccountSalesScreen(sales,padding,vm::select,initialProjectId=queryValue(state.selectedPath,"projectId"),projectMode=queryValue(state.selectedPath,"project")!=null||queryValue(state.selectedPath,"projectId")!=null)
+            sales!=null->AccountSalesScreen(sales,padding,vm::select,initialDuplicateId=queryValue(state.selectedPath,"duplicateId"),initialProjectId=queryValue(state.selectedPath,"projectId"),projectMode=queryValue(state.selectedPath,"project")!=null||queryValue(state.selectedPath,"projectId")!=null)
             masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding,initialCreate=state.selectedPath.substringBefore("?")=="/workspace/account/customers/new",canCreate=masterKind(state.selectedPath)!="customers"||"ACCOUNT_ACCOUNTS" in account?.effectivePermissions.orEmpty(),initialBranchId=android.net.Uri.parse(state.selectedPath).getQueryParameter("branchId")?:account?.branch?.branchId,onCreated={branch->vm.setHomePartyMode(true);if(branch!=null&&account?.branch?.mode!="COMPANY"&&branch!=account?.branch?.branchId)vm.selectBranch(branch,false)else{vm.searchHome("");vm.select(ACCOUNT_HOME)}},onCancel={vm.back()})
             else->NativeDestinationNotice(Modifier.padding(padding),titleFor(state.selectedPath,navigation))
         }
@@ -246,6 +246,7 @@ private fun AccountHomeScreen(
     initialPartyMode:Boolean=false,onPartyMode:(Boolean)->Unit={},initialQuery:String=""
 ){
     val context=LocalContext.current
+    val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
     val shareScope=rememberCoroutineScope()
     var transactionMenu by remember{mutableStateOf<com.salespunch360.mobile.data.AccountHomeTransaction?>(null)}
     var sharePending by remember{mutableStateOf(false)}
@@ -259,6 +260,7 @@ private fun AccountHomeScreen(
     if(shareChoice!=null)ModalBottomSheet(onDismissRequest={shareChoice=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){Text("Share transaction",style=MaterialTheme.typography.titleLarge);TextButton(onClick={shareChoice?.let{export(it,true)}}){Text("Share as Image")};TextButton(onClick={shareChoice?.let{export(it,false)}}){Text("Share as PDF")}}}
     transactionMenu?.let{tx->ModalBottomSheet(onDismissRequest={transactionMenu=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){
         Text("${tx.documentNumber} · More",style=MaterialTheme.typography.titleLarge)
+        if(tx.type=="SALES_INVOICE"&&all.any{it.href=="/workspace/account/transactions/new?type=SALES_INVOICE"})TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${tx.id}")}){Text("Duplicate")}
         if(tx.type=="SALES_INVOICE"&&tx.status=="POSTED"){
             TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${tx.id}")}){Text("Return")}
             TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=DELIVERY_CHALLAN&sourceDocumentId=${tx.id}")}){Text("Delivery Challan")}
@@ -268,7 +270,6 @@ private fun AccountHomeScreen(
         TextButton(enabled=false,onClick={}){Text("Generate e-Invoice · Coming later")}
     }}}
     if(shareError!=null)AlertDialog(onDismissRequest={shareError=null},title={Text("Could not share document")},text={Text(shareError.orEmpty())},confirmButton={TextButton(onClick={shareError=null}){Text("OK")}})
-    val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
     var partyMode by rememberSaveable(initialPartyMode){mutableStateOf(initialPartyMode)}
     var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
     var filterOpen by rememberSaveable{mutableStateOf(false)}
