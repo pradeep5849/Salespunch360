@@ -5657,7 +5657,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Reverse partial/full EMI; restore outstanding and ACTIVE after full EMI reversal; reversal retry; receipt with subsequent payments; journal/liability versus statement reconciliation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -9165,3 +9165,7 @@ Repayment principal ceiling uses effective posted liability ledger balances. A c
 ### A067-F04 lifecycle implementation — 2026-10-13
 
 Immutable top-up receipts, untouched-receipt cancellation, zero-balance archive/restore, web forms, mobile API and Android management are implemented. Original receipt/principal remains immutable. Cancellation is denied with financial activity or insufficient funds. Interim validation: 22 financial integration, 47 grouped runtime, 8 route/metadata tests passed; 2 desktop/mobile-web checks passed; Android compile, TypeScript and ESLint passed. A067-F04 is IMPLEMENTED BUT NOT VERIFIED pending final-head validation/device limitations. Register totals: 114 implemented but not verified; 75 partial; 10 not started. No findings have final status yet.
+
+### A067 shared liability safeguards — 2026-10-13
+
+Ambiguous shared legacy loan ledgers remain unknown and cannot be repaid/top-upped/cancelled as individual loans. Aggregate cents use exact minor-unit summation. 23 focused financial integration and 32 grouped runtime tests passed; TypeScript/ESLint passed. A067-F09 is implemented pending final-head verification. Latest native explanatory text awaits grouped compile. Totals: 115 implemented but not verified, 74 partial, 10 not started; final statuses remain pending.

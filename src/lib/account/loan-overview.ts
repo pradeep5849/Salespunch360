@@ -1,3 +1,4 @@
+import {sumPersistedMoney} from "./money-sum";
 import {Prisma,LoanStatus} from "@prisma/client";
 import {z} from "zod";
 import {db} from "@/lib/db";
@@ -20,9 +21,9 @@ export async function loanOverviewForActor(actor:ProjectActor,raw:unknown={}) {
    SELECT x.id,COALESCE(SUM(l.credit-l.debit),0) AS balance,COUNT(DISTINCT j.id) AS journals
    FROM loans x JOIN journal_lines l ON l."companyId"=x."companyId" AND l."ledgerAccountId"=x."liabilityLedgerId"
    JOIN journal_entries j ON j.id=l."journalEntryId" AND j."companyId"=x."companyId" AND j."branchId"=x."branchId"
-   WHERE x."companyId"=${actor.companyId}::uuid AND x.id IN (${Prisma.join(matching.map(x=>Prisma.sql`${x.id}::uuid`))}) AND j.status IN ('POSTED','REVERSED') GROUP BY x.id`):[];
+   WHERE x."companyId"=${actor.companyId}::uuid AND x.id IN (${Prisma.join(matching.map(x=>Prisma.sql`${x.id}::uuid`))}) AND j.status IN ('POSTED','REVERSED') AND NOT EXISTS (SELECT 1 FROM loans other WHERE other."companyId"=x."companyId" AND other."branchId"=x."branchId" AND other."liabilityLedgerId"=x."liabilityLedgerId" AND other.id<>x.id) GROUP BY x.id`):[];
   const byId=new Map(balances.map(row=>[row.id,row]));
-  const outstanding=balances.reduce((sum,row)=>sum.add(row.balance),new Prisma.Decimal(0));
-  return {rows:rows.map(row=>({...row,outstanding:byId.get(row.id)?.balance.toString()??null})),total,outstanding:outstanding.toString(),unpostedBalanceCount:matching.length-balances.length,offset:f.offset,limit:f.limit,nextOffset:f.offset+rows.length<total?f.offset+rows.length:null,branchContext:resolved.context};
+  const outstanding=sumPersistedMoney(balances.map(row=>row.balance));
+  return {rows:rows.map(row=>({...row,outstanding:byId.get(row.id)?.balance.toString()??null})),total,outstanding:new Prisma.Decimal(outstanding).toString(),unpostedBalanceCount:matching.length-balances.length,offset:f.offset,limit:f.limit,nextOffset:f.offset+rows.length<total?f.offset+rows.length:null,branchContext:resolved.context};
  },{isolationLevel:"RepeatableRead"});
 }

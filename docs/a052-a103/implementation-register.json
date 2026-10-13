@@ -14309,6 +14309,11 @@
         {
           "date": "2026-10-13",
           "work": "Related A067-F04 lifecycle slice supplies archive filters, company-first financial locking, immutable operation retries and controlled receipt reversal. Generic receipt/payment/top-up reversals tested; original finding remains subject to independent complete final-head verification."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Shared legacy loan ledger balances are unknown/excluded rather than counted for each loan; repayments, top-ups and cancellation reject ambiguous ownership. Scoped history returns an explanatory state. Exact minor-unit summation retains cents for large aggregate balances.",
+          "tests": "23 isolated financial tests passed including legacy duplicate ledger, company/branch/mutation guards; 32 grouped money sum, overview/history/accounting runtime tests passed; TypeScript and ESLint passed. Android compile at lifecycle head passed; newest native shared-ledger explanatory text awaits grouped/final compile."
         }
       ]
     },
@@ -14727,6 +14732,11 @@
           "date": "2026-10-13",
           "work": "Implemented immutable top-up receipts (original principal preserved), versioned scoped retries, guarded receipt cancellation/reversal, zero-principal archive/restore, web detail forms and archive filtering, authenticated mobile endpoints, and native management form. Cancellation requires untouched financial history and sufficient funds; shared legacy liability ledgers fail safely. Loan repayments now take the company lock before the loan lock, advance versions, and exclude archived loans. Generic top-up reversals remain blocked. No new migration in this slice; uses additive migration 121.",
           "tests": "22 isolated financial integration tests passed; 47 grouped loan/read/replay/accounting runtime tests passed after fixing the explicit lifecycle guard; 8 metadata/mobile route tests passed; desktop + mobile-web top-up/rejected-cancellation/accessibility: 2 passed; Android compile passed; TypeScript and ESLint passed. Final-head checkpoint regression and physical Android verification pending."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Shared legacy loan ledger balances are unknown/excluded rather than counted for each loan; repayments, top-ups and cancellation reject ambiguous ownership. Scoped history returns an explanatory state. Exact minor-unit summation retains cents for large aggregate balances.",
+          "tests": "23 isolated financial tests passed including legacy duplicate ledger, company/branch/mutation guards; 32 grouped money sum, overview/history/accounting runtime tests passed; TypeScript and ESLint passed. Android compile at lifecycle head passed; newest native shared-ledger explanatory text awaits grouped/final compile."
         }
       ]
     },
@@ -15399,7 +15409,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -15416,6 +15426,11 @@
         {
           "date": "2026-10-13",
           "work": "Related A067-F04 lifecycle slice supplies archive filters, company-first financial locking, immutable operation retries and controlled receipt reversal. Generic receipt/payment/top-up reversals tested; original finding remains subject to independent complete final-head verification."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Shared legacy loan ledger balances are unknown/excluded rather than counted for each loan; repayments, top-ups and cancellation reject ambiguous ownership. Scoped history returns an explanatory state. Exact minor-unit summation retains cents for large aggregate balances.",
+          "tests": "23 isolated financial tests passed including legacy duplicate ledger, company/branch/mutation guards; 32 grouped money sum, overview/history/accounting runtime tests passed; TypeScript and ESLint passed. Android compile at lifecycle head passed; newest native shared-ledger explanatory text awaits grouped/final compile."
         }
       ]
     },

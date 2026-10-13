@@ -13,6 +13,7 @@ export async function loanHistoryForActor(actor:ProjectActor,id:string,raw:unkno
  return db.$transaction(async tx=>{
   const loan=await tx.loan.findFirst({where:{id,companyId:actor.companyId,...(resolved.context.mode==="BRANCH"?{branchId:resolved.context.branchId}:{})}});
   if(!loan)throw new AuthorizationError();
+  if(await tx.loan.count({where:{companyId:actor.companyId,branchId:loan.branchId,liabilityLedgerId:loan.liabilityLedgerId}})>1)return {loan,branchContext:resolved.context,total:0,offset:f.offset,limit:f.limit,outstanding:null,nextOffset:null,rows:[] as Array<{id:string;entryDate:Date;journalNumber:string;sourceType:string;status:string;narration:string|null;debit:string;credit:string;balance:string;payment:string|null}>,ambiguousBalance:true};
   const base=Prisma.sql`SELECT j.id,j."entryDate",j."createdAt",j."journalNumber",j."sourceType",j.status,j.narration,
    COALESCE(SUM(l.debit) FILTER (WHERE l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid),0) AS debit,
    COALESCE(SUM(l.credit) FILTER (WHERE l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid),0) AS credit,
@@ -23,6 +24,6 @@ export async function loanHistoryForActor(actor:ProjectActor,id:string,raw:unkno
    GROUP BY j.id HAVING BOOL_OR(l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid) OR COUNT(p.id)>0`;
   const rows=await tx.$queryRaw<Row[]>(Prisma.sql`WITH postings AS (${base}),balances AS (SELECT *,SUM(credit-debit) OVER (ORDER BY "entryDate","createdAt",id) AS balance FROM postings) SELECT * FROM balances ORDER BY "entryDate","createdAt",id LIMIT ${f.limit} OFFSET ${f.offset}`);
   const [stats]=await tx.$queryRaw<Array<{total:bigint;balance:Prisma.Decimal;liabilityPostings:bigint}>>(Prisma.sql`WITH postings AS (${base}) SELECT COUNT(*) AS total,COALESCE(SUM(credit-debit),0) AS balance,COUNT(*) FILTER(WHERE debit<>0 OR credit<>0) AS "liabilityPostings" FROM postings`);
-  return {loan,branchContext:resolved.context,total:Number(stats.total),offset:f.offset,limit:f.limit,outstanding:stats.liabilityPostings>BigInt(0)?stats.balance.toString():null,nextOffset:f.offset+rows.length<Number(stats.total)?f.offset+rows.length:null,rows:rows.map(row=>({...row,debit:row.debit.toString(),credit:row.credit.toString(),balance:row.balance.toString(),payment:row.payment?.toString()??null}))};
+  return {loan,branchContext:resolved.context,ambiguousBalance:false,total:Number(stats.total),offset:f.offset,limit:f.limit,outstanding:stats.liabilityPostings>BigInt(0)?stats.balance.toString():null,nextOffset:f.offset+rows.length<Number(stats.total)?f.offset+rows.length:null,rows:rows.map(row=>({...row,debit:row.debit.toString(),credit:row.credit.toString(),balance:row.balance.toString(),payment:row.payment?.toString()??null}))};
  },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
 }

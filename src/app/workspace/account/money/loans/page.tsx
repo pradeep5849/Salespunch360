@@ -23,7 +23,7 @@ export default async function Page({searchParams}:{searchParams:Promise<{branchI
           <h2>Loans</h2>
           <p>Scope: {overview.branchContext.mode==="BRANCH"?overview.branchContext.branchName:"Company consolidated"}</p>
           <p>{overview.total} matching loans · Effective posted outstanding: <ClientMoney value={overview.outstanding} /></p>
-          {overview.unpostedBalanceCount>0&&<p role="status">{overview.unpostedBalanceCount} loan records have no posted liability balance. Their starting balance must be established before it can be included.</p>}
+          {overview.unpostedBalanceCount>0&&<p role="status">{overview.unpostedBalanceCount} loan records have no established individual liability balance. Unposted or shared legacy balances must be resolved before they can be included.</p>}
           <form method="get" className="stack">
             {overview.branchContext.mode==="BRANCH"?<input type="hidden" name="branchId" value={overview.branchContext.branchId}/>:<input type="hidden" name="scope" value="all"/>}
             <label>Search loans<input name="q" defaultValue={query.q??""} maxLength={160}/></label>

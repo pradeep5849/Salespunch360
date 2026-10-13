@@ -211,6 +211,19 @@ describe.skipIf(!url)(
       await postJournalForActor(actor,{financialYearId:fy.id,branchId,entryDate:"2032-01-02",sourceType:"MANUAL_JOURNAL",sourceId:randomUUID(),lines:[{ledgerAccountId:expense.id,debit:"90",credit:"0"},{ledgerAccountId:account.ledgerAccountId,debit:"0",credit:"90"}]});
       const before=await client.journalEntry.count({where:{companyId}});await expect(changeLoanLifecycleForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,action:"CANCEL",operationDate:"2032-01-03",reason:"Correction requested"})).rejects.toThrow("INSUFFICIENT_FUNDS");expect((await client.loan.findUniqueOrThrow({where:{id:loan.id}})).status).toBe("ACTIVE");expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
     });
+    it("does not double-count or mutate a shared legacy loan liability ledger",async()=>{
+      const {loanOverviewForActor}=await import("./loan-overview");const {loanHistoryForActor}=await import("./loan-history");const {topUpLoanForActor,changeLoanLifecycleForActor}=await import("./loan-operations");
+      const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Ambiguous legacy loan",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:source.moneyAccountId,idempotencyKey:randomUUID()});
+      const duplicate=await client.loan.create({data:{companyId,branchId,lender:"Ambiguous legacy loan duplicate",loanType:"TERM",principal:"100",startDate:loan.startDate,moneyAccountId:loan.moneyAccountId,liabilityLedgerId:loan.liabilityLedgerId}});
+      try{
+       const overview=await loanOverviewForActor(actor,{branchId,q:"Ambiguous legacy loan"});expect(overview.total).toBe(2);expect(overview.outstanding).toBe("0");expect(overview.unpostedBalanceCount).toBe(2);expect(overview.rows.every(x=>x.outstanding===null)).toBe(true);
+       expect(await loanHistoryForActor(actor,loan.id,{branchId})).toMatchObject({outstanding:null,ambiguousBalance:true,rows:[]});
+       await expect(postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:loan.moneyAccountId,paymentDate:"2032-01-02",principal:"10",interest:"0",charges:"0",idempotencyKey:randomUUID()})).rejects.toThrow("LOAN_BALANCE_AMBIGUOUS");
+       await expect(topUpLoanForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,amount:"10",operationDate:"2032-01-02",moneyAccountId:loan.moneyAccountId})).rejects.toThrow("LOAN_BALANCE_AMBIGUOUS");
+       await expect(changeLoanLifecycleForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,action:"CANCEL",operationDate:"2032-01-02",reason:"Correct record"})).rejects.toThrow("LOAN_BALANCE_AMBIGUOUS");
+      }finally{await client.loan.delete({where:{id:duplicate.id}});}
+    });
     it("persists independent loan identity and rejects changed metadata on retry",async()=>{
       const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
       expect(source.displayName).toBeNull();expect(source.loanAccountNumber).toBeNull();expect(source.durationMonths).toBeNull();

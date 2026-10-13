@@ -1329,6 +1329,7 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
             where: { id: d.loanId, companyId: a.companyId, status: "ACTIVE", archivedAt:null },
           });
           if (!loan) throw new Error("INVALID_LOAN");
+          if(await tx.loan.count({where:{companyId:a.companyId,branchId:loan.branchId,liabilityLedgerId:loan.liabilityLedgerId}})>1)throw new Error("LOAN_BALANCE_AMBIGUOUS");
           const fy = await context(tx, a, loan.branchId, d.paymentDate),
             moneyAccount = await tx.moneyAccount.findFirst({
               where: {
