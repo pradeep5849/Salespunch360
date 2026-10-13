@@ -162,7 +162,9 @@ export function AccountMobileHome({
   searchScope = {},
   canCreateParty = false,
   canCreateSale = false,
+  shareAs = "ASK",
 }: {
+  shareAs?: "ASK"|"PDF";
   searchScope?: { branchId?: string; scope?: "all" };
   canCreateParty?: boolean;
   canCreateSale?: boolean;
@@ -241,16 +243,14 @@ export function AccountMobileHome({
           },
           { label: "Show All", icon: "grid", action: () => setSheet("more") },
         ];
-  const pdfUrl = active
-    ? `/api/account/print/${active.type}/${active.id}?format=pdf`
-    : "";
-  const sharePdf = async () => {
-    if (!active||sharePending) return;
+  const sharePdf = async (selected:Transaction|null=active) => {
+    if (!selected||sharePending) return;
+    const pdfUrl=`/api/account/print/${selected.type}/${selected.id}?format=pdf`;
     setSharePending(true);setShareError(null);
     try{
-    const file=await preparePrintPdf(pdfUrl,active.documentNumber);
+    const file=await preparePrintPdf(pdfUrl,selected.documentNumber);
     if (navigator.share && navigator.canShare?.({ files: [file] }))
-      await navigator.share({ files: [file], title: active.documentNumber });
+      await navigator.share({ files: [file], title: selected.documentNumber });
     else {
       const url = URL.createObjectURL(file),
         link = document.createElement("a");
@@ -259,7 +259,7 @@ export function AccountMobileHome({
       link.click();
       setTimeout(()=>URL.revokeObjectURL(url),1000);
     }
-    }catch(error){if(!isShareCancellation(error))setShareError({id:active.id,message:error instanceof Error?error.message:"Could not share this document. Please try again."});}finally{setSharePending(false);}
+    }catch(error){if(!isShareCancellation(error))setShareError({id:selected.id,message:error instanceof Error?error.message:"Could not share this document. Please try again."});}finally{setSharePending(false);}
   };
   return (
     <div className="account-mobile-home">
@@ -421,6 +421,7 @@ export function AccountMobileHome({
                     onClick={() => {
                       setActive(tx);
                       setSheet("share");
+                      if(shareAs==="PDF")void sharePdf(tx);
                     }}
                   >
                     <AccountIcon name="share" />
@@ -568,7 +569,7 @@ export function AccountMobileHome({
                 <button disabled>
                   Share as Image<small>Coming later</small>
                 </button>
-                <button disabled={sharePending} onClick={sharePdf}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
+                <button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
               </div>
             )}
             {sheet === "actions" && active && (
@@ -597,7 +598,7 @@ export function AccountMobileHome({
                 >
                   Payment History
                 </Link>
-                <button disabled={sharePending} onClick={sharePdf}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
+                <button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
                 <button disabled>
                   Generate e-Invoice<small>Coming later</small>
                 </button>

@@ -1,3 +1,4 @@
+import {db} from "@/lib/db";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { AccountMobileHome } from "@/components/account/account-mobile-home";
 import { requireAccountWorkspace } from "@/lib/auth/authorization";
@@ -30,8 +31,11 @@ export default async function Page({
       q: query.q,
       types: query.types?.split(","),
     });
+  const settings=await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true}});
+  const defaults=settings?.transactionDefaults as {transactionPreferences?:{shareAs?:unknown}}|null;
   return (
     <AccountMobileHome
+      shareAs={defaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"}
       tab={tab}
       transactions={data.transactions}
       parties={data.parties}

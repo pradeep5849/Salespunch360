@@ -16237,6 +16237,10 @@
         {
           "work": "Replaced error-reset effect with document-scoped sharing errors, avoiding stale failures on another selected transaction.",
           "tests": "Initial slice lint failed for synchronous state reset; corrected clean targeted lint and TypeScript passed. Five focused sharing tests remain passing evidence, not final-head verification."
+        },
+        {
+          "work": "Web Home reads the current company transaction sharing preference and invokes PDF preparation for the clicked transaction when PDF is the saved default. ASK retains the chooser. Invalid/missing legacy values safely default to ASK. No preference write or extra permission is introduced.",
+          "tests": "TypeScript and targeted lint passed. Browser preference round-trip/native default/image verification still pending; finding remains PARTIAL."
         }
       ]
     },
