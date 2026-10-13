@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 const url = process.env.ACCOUNT_INTEGRATION_DATABASE_URL;
 if (url && !["localhost", "127.0.0.1"].includes(new URL(url).hostname))
   throw new Error("Integration tests require an isolated local database");
@@ -200,6 +200,62 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     await client.branch.deleteMany({ where: { companyId } });
     await client.company.deleteMany({ where: { id: companyId } });
     await client.$disconnect();
+  });
+  it("A052 paid entry posts once immediately while approval remains a review", async () => {
+    await client.accountSettings.update({where:{companyId},data:{expenseApprovalRequired:true,expenseApprovalThreshold:"0"}});
+    const request={branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-09",taxableAmount:"25",recordAsPaid:true,requestKey:randomUUID()};
+    let createdId:string|undefined;
+    try {
+      const rows=await Promise.all([createExpenseForActor({...actor,accountRole:"ACCOUNTANT"},request),createExpenseForActor({...actor,accountRole:"ACCOUNTANT"},request)]);
+      createdId=rows[0].id;
+      expect(rows[0].id).toBe(rows[1].id);
+      expect(rows[0]).toMatchObject({status:"POSTED",approvalReviewStatus:"PENDING"});
+      expect(rows[0].paidDate?.toISOString().slice(0,10)).toBe("2026-10-09");
+      const journals=await client.journalEntry.findMany({where:{companyId,sourceId:rows[0].id},include:{lines:true}});
+      expect(journals).toHaveLength(1);
+      expect(journals[0].lines.find(line=>line.ledgerAccountId===cashId)?.credit.toFixed(2)).toBe("25.00");
+      expect(journals[0].lines.find(line=>line.ledgerAccountId===expenseId)?.debit.toFixed(2)).toBe("25.00");
+      await expect(transitionExpenseForActor({...actor,accountRole:"ACCOUNTANT"},rows[0].id,"REJECTED","Review denied")).rejects.toThrow();
+      await transitionExpenseForActor(actor,rows[0].id,"REJECTED","Receipt needs correction");
+      expect(await client.expenseTransaction.findUniqueOrThrow({where:{id:rows[0].id}})).toMatchObject({status:"POSTED",approvalReviewStatus:"REJECTED",journalEntryId:journals[0].id});
+      expect(await client.journalEntry.count({where:{companyId,sourceId:rows[0].id}})).toBe(1);
+      expect((await createExpenseForActor({...actor,accountRole:"ACCOUNTANT"},request)).id).toBe(rows[0].id);
+      await expect(createExpenseForActor(actor,{...request,taxableAmount:"26"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    } finally {
+      // Remove only this isolated fixture so later cash-flow tests retain their own baseline.
+      if(createdId) {
+        await client.$transaction(async tx=>{
+          await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+          const journals=await tx.journalEntry.findMany({where:{companyId,sourceId:createdId},select:{id:true}});
+          const journalIds=journals.map(j=>j.id);
+          await tx.expenseTransaction.deleteMany({where:{companyId,id:createdId}});
+          await tx.accountingAuditEvent.deleteMany({where:{companyId,entityId:{in:journalIds}}});
+          await tx.journalLine.deleteMany({where:{companyId,journalEntryId:{in:journalIds}}});
+          await tx.journalEntry.deleteMany({where:{companyId,id:{in:journalIds}}});
+          await tx.accountOperationalAudit.deleteMany({where:{companyId,entityId:createdId}});
+        });
+      }
+      await client.accountSettings.update({where:{companyId},data:{expenseApprovalRequired:false}});
+    }
+  });
+  it("A052 paid entry rolls back missing, inaccessible and wrong-branch payment accounts", async () => {
+    const request={branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-09",taxableAmount:"25",recordAsPaid:true};
+    for(const override of [{moneyAccountId:undefined},{moneyAccountId:randomUUID()},{branchId:branchB}]) {
+      const requestKey=randomUUID();
+      await expect(createExpenseForActor(actor,{...request,...override,requestKey})).rejects.toThrow();
+      expect(await client.expenseTransaction.count({where:{companyId,creationRequestKey:requestKey}})).toBe(0);
+    }
+    const requestKey=randomUUID();
+    await expect(createExpenseForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchB]},{...request,requestKey})).rejects.toThrow();
+    expect(await client.expenseTransaction.count({where:{companyId,creationRequestKey:requestKey}})).toBe(0);
+  });
+  it("A052 paid entry rolls back its journal and expense when posting audit fails", async () => {
+    const requestKey=randomUUID(),before=await client.journalEntry.count({where:{companyId}});
+    await rejectAudit("EXPENSE_POSTED",async()=>{
+      await expect(createExpenseForActor(actor,{branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-09",taxableAmount:"25",recordAsPaid:true,requestKey})).rejects.toThrow();
+    });
+    expect(await client.expenseTransaction.count({where:{companyId,creationRequestKey:requestKey}})).toBe(0);
+    expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
   });
   it("allocates company-unique asset numbers across branches", async () => {
     const first = await createAssetForActor(actor, input(branchA)),
@@ -538,7 +594,7 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
       to: "2026-10-10",
       branchId: branchA,
     });
-    expect(r.rows.find((x) => x[0] === "Operating")?.[1]).toBe("-21.00");
+    expect(new Prisma.Decimal(r.rows.find((x) => x[0] === "Operating")![1]).equals("-21")).toBe(true);
     const other = await runFinancialReportForActor(actor, "cash-flow", {
       from: "2026-10-09",
       to: "2026-10-10",
@@ -919,6 +975,12 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     await expect(
       postJournalForActor(actor, { ...request, sourceId: randomUUID() }),
     ).rejects.toThrow("PERIOD_LOCKED");
+  });
+  it("A052 paid entry honors the closed period without leaving an expense or journal", async () => {
+    const requestKey=randomUUID(),before=await client.journalEntry.count({where:{companyId}});
+    await expect(createExpenseForActor(actor,{branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-09",taxableAmount:"25",recordAsPaid:true,requestKey})).rejects.toThrow("PERIOD_LOCKED");
+    expect(await client.expenseTransaction.count({where:{companyId,creationRequestKey:requestKey}})).toBe(0);
+    expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
   });
   it("discovers older journals beyond 100 with stable scoped history pages", async () => {
     for (let i = 0; i < 105; i++)

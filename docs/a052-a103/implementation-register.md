@@ -720,6 +720,8 @@ Intermediate checks: 44 focused tests; three catalogue unit tests; four entry/pa
 Recurring/payment management slice: Added independent Accountant/Data Entry API regressions: Accountants may record actual expense payment but cannot approve/reverse; Data Entry expense read/write remain denied. Recurring paid controls stay exclusive to generated bills; original due dates are immutable. Final-head and remaining financial-isolation checks still pending.
 Intermediate verification:95 grouped tests;36 financial/unit tests including5 PostgreSQL cases;four schedule-edit/role API cases;two late-payment/filter API cases;two confirmed web payment/accessibility cases;Android compile/146 JVM tests pass. Final checkpoint-head validation pending.
 
+**Independent paid-entry verification:** 29 grouped PostgreSQL financial tests passed (0 failed, 0 skipped), including concurrent retry, immediate cash/expense posting, approval-as-review rejection without reversal, invalid account/branch denial, posting-audit rollback and closed-period rollback. TypeScript/focused lint passed. Full tenant fixture, web/native flow and final-head checks remain pending; status remains PARTIAL.
+
 ## A053-F01 — Web Create recurring expense fails on React action metadata
 
 **Title:** Web Create recurring expense fails on React action metadata
