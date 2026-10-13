@@ -14280,6 +14280,10 @@
         {
           "work": "Added scoped web loan detail and chronological paginated statement, including fee-only payments and reversal journals. Full-history running balances precede pagination. Native parity, export and final-head verification remain pending.",
           "tests": "7 focused overview/history tests passed; isolated PostgreSQL financial regression passed (1 passed, 10 filtered skips), checking 100000 minus 2000 = 98000, 2550 EMI total, fee-only entry and company/branch denial. Node22 TypeScript and targeted ESLint passed."
+        },
+        {
+          "work": "Authenticated no-store mobile overview/history endpoints and Android scoped loan search/pagination, effective outstanding balance and loan statement with retry, fee totals and full-history balances.",
+          "tests": "13 focused service/API tests passed; grouped isolated PostgreSQL money/loan regressions 12 passed, 0 failed, 0 skipped, including 204 real posted entries. Node22 TypeScript, targeted ESLint and Android compileDebugKotlin passed. Browser, export, physical-device and final-head checks remain pending."
         }
       ]
     },

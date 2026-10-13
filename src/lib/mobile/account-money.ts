@@ -1,3 +1,5 @@
+import {loanOverviewForActor} from "@/lib/account/loan-overview";
+import {loanHistoryForActor} from "@/lib/account/loan-history";
 import {
   moneyAdjustmentOptionsForActor,
   postMoneyAdjustmentForActor,
@@ -296,3 +298,6 @@ export async function mobileMoneyAdjustment(
   await write(u);
   return postMoneyAdjustmentForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
 }
+
+export async function mobileLoanOverview(u:MobileAppPrincipal,query:unknown={}) { return loanOverviewForActor(permit(u,"ACCOUNT_MONEY_VIEW"),query); }
+export async function mobileLoanHistory(u:MobileAppPrincipal,id:string,query:unknown={}) { return loanHistoryForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id,query); }

@@ -144,6 +144,13 @@ describe.skipIf(!url)(
       await expect(loanHistoryForActor({...actor,companyId:otherCompany},loan.id,{branchId})).rejects.toThrow();
       await expect(loanHistoryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},loan.id,{branchId})).rejects.toThrow();
     });
+    it("keeps real posted running balances beyond 200 statement entries",async()=>{
+      const {loanHistoryForActor}=await import("./loan-history");
+      const loan=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      for(let n=0;n<201;n++)await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:loan.moneyAccountId,paymentDate:"2032-01-04",principal:"0",interest:"0",charges:"1",idempotencyKey:randomUUID()});
+      const history=await loanHistoryForActor(actor,loan.id,{branchId,offset:200,limit:2});
+      expect(history.total).toBe(204);expect(history.rows).toHaveLength(2);expect(history.rows.every(row=>row.balance==="98000")).toBe(true);expect(history.outstanding).toBe("98000");expect(history.nextOffset).toBe(202);
+    });
     it("replays concurrent creation without a second account, ledger or audit", async () => {
       const input = {
         type: "BANK",
@@ -213,6 +220,7 @@ describe.skipIf(!url)(
       ).toMatchObject({ creationRequestKey: null, creationRequestHash: null });
     });
     it("renames the linked ledger atomically and records before/after without posting", async () => {
+      const journalsBefore=await client.journalEntry.count({where:{companyId}});
       await updateMoneyAccountForActor(actor, accountId, {
         name: "Renamed bank",
         bankName: "Updated bank",
@@ -231,7 +239,7 @@ describe.skipIf(!url)(
         before: { name: "Original bank", isActive: true },
         after: { name: "Renamed bank", isActive: true },
       });
-      expect(await client.journalEntry.count({ where: { companyId } })).toBe(0);
+      expect(await client.journalEntry.count({ where: { companyId } })).toBe(journalsBefore);
     });
     it("rolls back account and ledger when the audit write fails", async () => {
       await expect(

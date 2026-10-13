@@ -5296,6 +5296,8 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Additional checkpoint work:** Web detail and chronological paginated statement include fee-only payments and correcting reversals. Seven focused tests and one isolated PostgreSQL financial regression passed (10 unrelated tests filtered); TypeScript and targeted ESLint passed. Native parity, export, browser and final-head verification remain pending.
 
+**Mobile checkpoint work:** Authenticated no-store overview/history endpoints and Android scoped search, pagination, effective outstanding and statement/retry UI. Thirteen focused tests and twelve grouped PostgreSQL financial tests passed (including 204 actual postings); TypeScript, targeted ESLint and Android compilation passed. Browser/export/device/final-head verification remains pending.
+
 ## A067-F02 — Loan identity and terms do not capture reference fields
 
 **Title:** Loan identity and terms do not capture reference fields
