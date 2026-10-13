@@ -16241,6 +16241,10 @@
         {
           "work": "Web Home reads the current company transaction sharing preference and invokes PDF preparation for the clicked transaction when PDF is the saved default. ASK retains the chooser. Invalid/missing legacy values safely default to ASK. No preference write or extra permission is introduced.",
           "tests": "TypeScript and targeted lint passed. Browser preference round-trip/native default/image verification still pending; finding remains PARTIAL."
+        },
+        {
+          "work": "Added independent desktop/mobile-web verification of Home PDF default, ASK chooser, selected document download, denied sharing, retained retry, and share cancellation.",
+          "tests": "2/2 desktop/mobile browser tests passed (26.3s) on isolated local database. Initial broad alert assertion matched Next route announcer, corrected by scoping to dialog. TypeScript and targeted lint passed after dev server stopped. Image export/native preference are still pending; finding PARTIAL."
         }
       ]
     },

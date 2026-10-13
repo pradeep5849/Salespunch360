@@ -9245,3 +9245,5 @@ Shared Unicode layout preserves invoice/quotation customer text; exact amount gr
 Home PDF sharing rejects failed/non-PDF/empty output, reports errors, supports cancellation and prevents repeat clicks while preparing. Five focused tests, TypeScript and lint passed. Image sharing and saved default remain pending; status PARTIAL.
 
 A071-F01 validation correction: initial lint rejected a synchronous state-reset effect after the sharing commit. Replaced it with document-scoped error state. Clean targeted lint and full TypeScript then passed; no final-head verification claim.
+
+A071-F01 browser continuation: Desktop and mobile-web PDF default/ASK/error/retry/cancel checks passed 2/2 (26.3s) after scoping the assertion away from Next route announcer. Image sharing/native defaults remain pending.
