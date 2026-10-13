@@ -14792,7 +14792,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -14804,6 +14804,10 @@
         {
           "work": "EMI exact decimal totals and persisted optional description implemented in shared service and web/native forms; additive migration 119 locally applied. Validation in progress.",
           "tests": "Implementation validation in progress; no final-head result claimed."
+        },
+        {
+          "work": "Exact minor-unit web total and BigDecimal native total; optional EMI description saved on LoanPayment and journal narration; normalized replay includes description. Active compatible account choices and statement descriptions/totals. Additive migration 119 preserves prior rows.",
+          "tests": "40 grouped focused/real PostgreSQL regressions passed; 3 mobile domain-error tests passed; 4 desktop/mobile-web workflow/permission/accessibility checks passed (46.0s). Android compilation and 2 exact-total JVM tests passed; final native validation/accessibility compile passed. Node22 TypeScript, targeted ESLint, Prisma validation/generation and isolated migration 119 deploy passed. Final-head suite/build/rehearsal and physical-device checks remain pending."
         }
       ]
     },
@@ -14932,12 +14936,18 @@
         "A067-F07",
         "A067-F08"
       ],
-      "checkpoint_work": {
-        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Blank optional loan rate/maturity values normalize to undefined; matching retry with blank values passes.",
-        "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
-      }
+      "checkpoint_work": [
+        {
+          "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+          "work": "Blank optional loan rate/maturity values normalize to undefined; matching retry with blank values passes.",
+          "remaining_work": "Final-head regression and original finding verification remain pending.",
+          "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        },
+        {
+          "work": "Independent web loan creation with blank optional interest/maturity fields; typed feedback preserves invalid inputs.",
+          "tests": "4 desktop/mobile-web workflow/permission checks and 40 grouped service/financial regressions passed. Final-head validation pending."
+        }
+      ]
     },
     {
       "finding_id": "A067-F07",
@@ -15451,7 +15461,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -15463,6 +15473,10 @@
         {
           "work": "Web loan forms now use associated labels, typed field/action errors, pending controls and retained draft values. Permission-gated mutation forms and branch-compatible account choices. Native total/description fields added; accessibility/device validation pending.",
           "tests": "Implementation validation in progress; no final-head result claimed."
+        },
+        {
+          "work": "Explicit accessible names, unique field-error references, typed retained web feedback, pending controls and mutation permission gating. No nested main. Native positive-amount/duration validation and polite total/failure announcements. Overpayment feedback retains input and permits corrected retry.",
+          "tests": "40 grouped focused/real PostgreSQL regressions passed; 3 mobile domain-error tests passed; 4 desktop/mobile-web workflow/permission/accessibility checks passed (46.0s). Android compilation and 2 exact-total JVM tests passed; final native validation/accessibility compile passed. Node22 TypeScript, targeted ESLint, Prisma validation/generation and isolated migration 119 deploy passed. Final-head suite/build/rehearsal and physical-device checks remain pending."
         }
       ]
     },
