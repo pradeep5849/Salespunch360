@@ -65,7 +65,7 @@ export function renderAccountPrintHtml(doc:AccountPrintDocument,paper:PrintPaper
 }
 export async function renderAccountPrintPdf(doc:AccountPrintDocument,paper:PrintPaperSize="A4"){
  const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica),bold=await pdf.embedFont(StandardFonts.HelveticaBold),g=geometry(doc,paper),[width,height]=g.dimensions,margin=g.thermal?12:36,bodySize=g.thermal?8:size(text(doc,"printTextSize","MEDIUM"))-2;
- const layout=await createPdfTextLayout(pdf,"ACCOUNT_PDF_UNSUPPORTED_CHARACTER",{regular:font,bold});
+ const layout=await createPdfTextLayout(pdf,"ACCOUNT_PDF_UNSUPPORTED_CHARACTER",{regular:font,bold},/[^\x00-\x7f]/.test(JSON.stringify(doc)));
  const accent=color(doc),accentRgb=rgb(parseInt(accent.slice(1,3),16)/255,parseInt(accent.slice(3,5),16)/255,parseInt(accent.slice(5,7),16)/255);
  let page:PDFPage,y=0,renderingHeader=false;
  const draw=(value:string,fontSize=bodySize,strong=false)=>{

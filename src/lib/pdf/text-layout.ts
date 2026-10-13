@@ -49,9 +49,9 @@ function wrappedLines(text:string,fonts:FontChoice[],size:number,maxWidth:number
   }
   return result;
 }
-export async function createPdfTextLayout(pdf:PDFDocument,unsupportedError:string,standard?:{regular:PDFFont;bold:PDFFont}) {
+export async function createPdfTextLayout(pdf:PDFDocument,unsupportedError:string,standard?:{regular:PDFFont;bold:PDFFont},loadFallback=true) {
  pdf.registerFontkit(fontkit);
- const fallback=await Promise.all((await fontData()).map(async bytes=>{const font=await pdf.embedFont(bytes,{subset:true});return {font,characters:new Set(font.getCharacterSet())};}));
+ const fallback=loadFallback?await Promise.all((await fontData()).map(async bytes=>{const font=await pdf.embedFont(bytes,{subset:true});return {font,characters:new Set(font.getCharacterSet())};})):[];
  const choices=(font?:PDFFont)=>font?[{font,characters:new Set(font.getCharacterSet())},...fallback]:fallback;
  const regular=choices(standard?.regular),bold=choices(standard?.bold);
  return {runs:(text:string,strong=false)=>runs(text,strong?bold:regular,unsupportedError),lines:(text:string,size:number,maxWidth:number,strong=false)=>wrappedLines(text,strong?bold:regular,size,maxWidth,unsupportedError)};

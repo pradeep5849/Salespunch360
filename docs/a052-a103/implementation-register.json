@@ -22367,6 +22367,10 @@
         {
           "work": "Unsupported PDF glyphs now return a private 422 response with an HTML-print fallback; customer text is never silently replaced. Authorization errors remain unswallowed.",
           "tests": "16/16 targeted renderer and print API tests passed; TypeScript and targeted lint passed. Final-head validation pending."
+        },
+        {
+          "work": "ASCII-only invoices retain the lightweight standard-font path; Unicode fallback assets are loaded only when invoice text requires them. Quotation Unicode rendering remains unchanged.",
+          "tests": "17/17 invoice/quotation parsed PDF regression tests passed; targeted lint and TypeScript passed. Final-head verification pending."
         }
       ]
     },
