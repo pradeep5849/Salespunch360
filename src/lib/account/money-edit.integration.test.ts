@@ -18,6 +18,8 @@ vi.mock("@/lib/db", () => ({
   db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
 }));
 import {
+  createAndReceiveLoanForActor,
+  postLoanPaymentForActor,
   createMoneyTransferForActor,
   moneyDashboardForActor,
   createMoneyAccountForActor,
@@ -110,6 +112,8 @@ describe.skipIf(!url)(
         await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
         await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
         await tx.moneyTransfer.deleteMany({ where: { companyId } });
+        await tx.loanPayment.deleteMany({where:{companyId}});
+        await tx.loan.deleteMany({where:{companyId}});
         await tx.journalLine.deleteMany({ where: { companyId } });
         await tx.journalEntry.deleteMany({ where: { companyId } });
         await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
@@ -122,6 +126,23 @@ describe.skipIf(!url)(
         await tx.company.deleteMany({ where: { id: companyId } });
       });
       await client.$disconnect();
+    });
+    it("reads posted loan outstanding and includes fee-only payments in its scoped statement", async () => {
+      const {loanHistoryForActor}=await import("./loan-history");
+      const {loanOverviewForActor}=await import("./loan-overview");
+      await client.financialYear.create({data:{companyId,name:"Loan statement year",startDate:new Date("2032-01-01"),endDate:new Date("2032-12-31")}});
+      const account=await createMoneyAccountForActor(actor,{type:"BANK",name:"Loan bank",branchId,creationRequestKey:randomUUID()});
+      await client.ledgerAccount.create({data:{companyId,code:"LOAN-INTEREST",name:"Interest expense",accountClass:"EXPENSE",normalBalance:"DEBIT",systemKey:"GENERAL_EXPENSES"}});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Statement lender",loanType:"TERM",principal:"100000",startDate:"2032-01-01",moneyAccountId:account.id,idempotencyKey:randomUUID()});
+      await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-02",principal:"2000",interest:"550",charges:"0",idempotencyKey:randomUUID()});
+      await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-03",principal:"0",interest:"0",charges:"100",idempotencyKey:randomUUID()});
+      const overview=await loanOverviewForActor(actor,{branchId,q:"Statement lender"});
+      expect(overview.rows[0].outstanding).toBe("98000");expect(overview.outstanding).toBe("98000");
+      const history=await loanHistoryForActor(actor,loan.id,{branchId,limit:2});
+      expect(history.total).toBe(3);expect(history.outstanding).toBe("98000");expect(history.rows[1].payment).toBe("2550");expect(history.nextOffset).toBe(2);
+      const next=await loanHistoryForActor(actor,loan.id,{branchId,offset:2});expect(next.rows[0].payment).toBe("100");expect(next.rows[0].balance).toBe("98000");
+      await expect(loanHistoryForActor({...actor,companyId:otherCompany},loan.id,{branchId})).rejects.toThrow();
+      await expect(loanHistoryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},loan.id,{branchId})).rejects.toThrow();
     });
     it("replays concurrent creation without a second account, ledger or audit", async () => {
       const input = {

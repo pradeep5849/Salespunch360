@@ -14276,6 +14276,10 @@
             "src/app/workspace/account/money/loans/page.tsx"
           ],
           "tests": "4 focused loan overview tests passed; Node22 TypeScript and targeted ESLint passed. Real database/browser/native and final-head validation remain pending."
+        },
+        {
+          "work": "Added scoped web loan detail and chronological paginated statement, including fee-only payments and reversal journals. Full-history running balances precede pagination. Native parity, export and final-head verification remain pending.",
+          "tests": "7 focused overview/history tests passed; isolated PostgreSQL financial regression passed (1 passed, 10 filtered skips), checking 100000 minus 2000 = 98000, 2550 EMI total, fee-only entry and company/branch denial. Node22 TypeScript and targeted ESLint passed."
         }
       ]
     },
