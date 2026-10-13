@@ -155,7 +155,7 @@ fun NativeAccountAuthenticatedApp(
         val sales=salesType(state.selectedPath)
         val purchase=purchaseType(state.selectedPath)
         when{
-            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
+            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf,initialPartyMode=state.homePartyMode,onPartyMode=vm::setHomePartyMode,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding,vm::select)
             state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding,account,state.refreshing,{id,all->vm.selectBranch(id,all)}){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
@@ -198,7 +198,7 @@ fun NativeAccountAuthenticatedApp(
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))
             sales!=null->AccountSalesScreen(sales,padding,vm::select,initialProjectId=queryValue(state.selectedPath,"projectId"),projectMode=queryValue(state.selectedPath,"project")!=null||queryValue(state.selectedPath,"projectId")!=null)
-            masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding)
+            masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding,initialCreate=state.selectedPath.substringBefore("?")=="/workspace/account/customers/new",canCreate=masterKind(state.selectedPath)!="customers"||"ACCOUNT_ACCOUNTS" in account?.effectivePermissions.orEmpty(),initialBranchId=android.net.Uri.parse(state.selectedPath).getQueryParameter("branchId")?:account?.branch?.branchId,onCreated={branch->vm.setHomePartyMode(true);if(branch!=null&&account?.branch?.mode!="COMPANY"&&branch!=account?.branch?.branchId)vm.selectBranch(branch,false)else{vm.searchHome("");vm.select(ACCOUNT_HOME)}},onCancel={vm.back()})
             else->NativeDestinationNotice(Modifier.padding(padding),titleFor(state.selectedPath,navigation))
         }
     }
@@ -238,11 +238,12 @@ private fun AccountHomeScreen(
     padding:PaddingValues,
     navigate:(String)->Unit,
     search:(String,Set<String>)->Unit,
-    pdf:(String,String,(ByteArray)->Unit)->Unit
+    pdf:(String,String,(ByteArray)->Unit)->Unit,
+    initialPartyMode:Boolean=false,onPartyMode:(Boolean)->Unit={},initialQuery:String=""
 ){
     val context=LocalContext.current
     val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
-    var partyMode by rememberSaveable{mutableStateOf(false)}
+    var partyMode by rememberSaveable(initialPartyMode){mutableStateOf(initialPartyMode)}
     var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
     var filterOpen by rememberSaveable{mutableStateOf(false)}
     var addLauncherOpen by rememberSaveable{mutableStateOf(false)}
@@ -265,7 +266,7 @@ private fun AccountHomeScreen(
 
     Box(Modifier.fillMaxSize().padding(padding)){
         LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,top=16.dp,end=16.dp,bottom=92.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-            item{AccountSegmentedTabs(partyMode){next->partyMode=next;query="";search("",emptySet())}}
+            item{AccountSegmentedTabs(partyMode){next->partyMode=next;onPartyMode(next);query="";search("",emptySet())}}
             item{
                 ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -304,8 +305,8 @@ private fun AccountHomeScreen(
                 items(home?.parties.orEmpty(),key={it.id}){party->ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${accountDate(party.lastActivity)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}}
             }
         }
-        AnimatedVisibility(visible=floatingVisible,modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
-            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"New Party" else "New Sale")})
+        AnimatedVisibility(visible=floatingVisible&&(if(partyMode)all.any{it.href=="/workspace/account/customers"}else all.any{it.href=="/workspace/account/transactions/new?type=SALES_INVOICE"}),modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
+            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers/new?${com.salespunch360.mobile.account.moneyContextQuery(initialQuery)}" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"New Party" else "New Sale")})
         }
     }
     if(filterOpen)ModalBottomSheet(onDismissRequest={filterOpen=false},dragHandle=null){
@@ -482,7 +483,7 @@ private fun titleFor(path:String,groups:List<AccountNavigationGroup>)=
     if(path==ACCOUNT_HOME)"Home" else if(path==ACCOUNT_DASHBOARD)"Dashboard" else groups.flatMap{it.items+it.children.flatMap{child->child.items}}.firstOrNull{path.startsWith(it.href.substringBefore('?'))}?.label?:"Account"
 
 private fun masterKind(path:String)=when{
-    path=="/workspace/account/customers"->"customers"
+    path.substringBefore("?") in setOf("/workspace/account/customers","/workspace/account/customers/new")->"customers"
     path=="/workspace/account/vendors"->"vendors"
     path=="/workspace/account/inventory/items"->"items"
     path=="/workspace/account/inventory/warehouses"->"warehouses"

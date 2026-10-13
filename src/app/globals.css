@@ -754,3 +754,6 @@ body:has(.account-shell) > .workspace-header{display:none}
 
 /* A071 Home tabs retain ordinary navigation before client hydration. */
 .account-main .account-segmented a[role=tab]{min-height:44px;display:grid;place-items:center;border:0;border-radius:10px;background:transparent;color:var(--account-muted);font-size:14px;font-weight:600;text-decoration:none}.account-main .account-segmented a[aria-selected=true]{background:var(--account-primary);color:#fff}
+
+/* Keep shared save messages readable inside Account paragraph styles. */
+.account-main .account-save-feedback,.account-main .account-form .account-save-feedback{color:#fff}

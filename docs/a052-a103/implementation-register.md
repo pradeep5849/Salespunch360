@@ -6018,13 +6018,21 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Account-only admin/user with allowed creation; no Sales access; branch preservation; new party appears on Home; denied role.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A071_Findings.json, SalesPunch360_A071_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** New Account-only web party route/action/form with explicit authorized branch and atomic customer/custom-value creation; GST/shipping settings respected; Home creation links hide without Account permission and carry scope. Added scoped Account party directory landing. Native New Party opens authorized creation directly, preserves Home party mode, cancels stale master loads and returns/refreshes Home after success.
+
+**Intermediate validation:** 8 focused party/master tests passed. Desktop/mobile Chromium 2 passed against PostgreSQL: Account-only creation, explicit branch, required-field rollback, required Boolean false persistence, forged foreign branch rejection/draft retention, new party on Home and scoped directory, denied Project Manager and zero Axe violations including failed-save feedback. Latest Android compile, TypeScript and focused ESLint passed. Intermediate only.
+
+**Remaining:** Final checkpoint-head regression; physical native creation/back/retry UI not verified.
+
+**Shared mapping:** Shared feedback contrast also maps to A064-F13, A065-F09 and A067-F10 without closing those findings.
 
 ## A071-F05 — Accepted noncommercial Home filters lack matching data sources
 

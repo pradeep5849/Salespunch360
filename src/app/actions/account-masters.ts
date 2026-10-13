@@ -226,3 +226,23 @@ export async function saveUnitConversionAction(raw: {
     return { ok: false as const, message: accountErrorMessage(error) };
   }
 }
+
+export async function saveNewAccountPartyAction(form: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  const { z } = await import("zod");
+  return accountAction(async () => {
+    const branchId = z.string().uuid().parse(form.get("branchId"));
+    const customValues = Object.fromEntries(
+      [...form.entries()]
+        .filter(([key]) => key.startsWith("custom_"))
+        .map(([key, value]) => [key.slice(7), value]),
+    );
+    await createPartyWithCustomValues(
+      "customers",
+      Object.fromEntries(form.entries()),
+      customValues,
+      branchId,
+    );
+    revalidatePath("/workspace/account");
+  }, "Account party created");
+}

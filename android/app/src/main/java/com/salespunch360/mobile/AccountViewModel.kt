@@ -22,6 +22,7 @@ data class AccountUiState(
     val bootstrap:AccountBootstrap?=null,
     val dashboard:AccountDashboard?=null,
     val home:AccountHome?=null,
+    val homePartyMode:Boolean=false,
     val homeQuery:String="",
     val homeTypes:Set<String> = emptySet(),
     val selectedPath:String=ACCOUNT_ROOT,
@@ -77,6 +78,7 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
 
  fun resetNavigation(){history.clear();_state.value=_state.value.copy(selectedPath=ACCOUNT_ROOT)}
 
+ fun setHomePartyMode(party:Boolean){_state.value=_state.value.copy(homePartyMode=party)}
  fun searchHome(query:String=_state.value.homeQuery,types:Set<String> = _state.value.homeTypes)=viewModelScope.launch{
   _state.value=_state.value.copy(homeQuery=query,homeTypes=types,refreshing=true,error=null)
   try{val branch=_state.value.bootstrap?.branch;val home=api.accountHome(query,types,branch?.branchId,branch?.mode=="COMPANY");_state.value=_state.value.copy(home=home,refreshing=false)}catch(error:Exception){_state.value=_state.value.copy(refreshing=false,error=message(error))}

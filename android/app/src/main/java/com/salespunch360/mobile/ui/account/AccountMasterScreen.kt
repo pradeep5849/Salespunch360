@@ -24,10 +24,32 @@ import kotlinx.serialization.json.putJsonObject
 import kotlinx.serialization.json.put
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AccountMasterScreen(kind:String,contentPadding:PaddingValues,vm:AccountMasterViewModel=viewModel()){
- LaunchedEffect(kind){vm.open(kind)};val state=vm.state.collectAsStateWithLifecycle().value
- Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal=16.dp)){MutationFeedback(state.message,state.error,vm::clearFeedback);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(state.query,{vm.search(it)},label={Text("Search")},singleLine=true,modifier=Modifier.weight(1f));IconButton(vm::refresh){Icon(Icons.Default.Refresh,"Refresh")};FilledIconButton({vm.edit(AccountMasterRecord(id="",name="",branchId=state.options.branches.firstOrNull()?.id))}){Icon(Icons.Default.Add,"Create")}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("true" to "Active","false" to "Inactive","all" to "All").forEach{(value,label)->FilterChip(state.active==value,{vm.filter(value)},{Text(label)})}};if(state.loading)LinearProgressIndicator(Modifier.fillMaxWidth());LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){if(!state.loading&&state.records.isEmpty())item{Text("No ${kind.replace('-',' ')} found.",modifier=Modifier.padding(24.dp))};items(state.records,key={it.id}){record->ElevatedCard(Modifier.fillMaxWidth().clickable{vm.detail(record)}){ListItem(headlineContent={Text(record.name,fontWeight=FontWeight.SemiBold)},supportingContent={Text(summary(kind,record))},trailingContent={IconButton({vm.edit(record)}){Icon(Icons.Default.Edit,"Edit ${record.name}")}})}}}}
- state.editing?.let{MasterEditor(kind,it,state.options,state.saving,{vm.edit(null)},vm::save)};state.selected?.let{PartyDetail(it,vm::closeDetail){vm.edit(it.record)}}
+@Composable fun AccountMasterScreen(kind:String,contentPadding:PaddingValues,vm:AccountMasterViewModel=viewModel(),initialCreate:Boolean=false,canCreate:Boolean=true,initialBranchId:String?=null,onCreated:(String?)->Unit={},onCancel:()->Unit={}){
+ LaunchedEffect(kind,initialCreate,initialBranchId){vm.open(kind);if(initialCreate&&canCreate)vm.beginCreate(initialBranchId)}
+ val state=vm.state.collectAsStateWithLifecycle().value
+ LaunchedEffect(state.message,initialCreate){if(initialCreate&&state.message=="Saved successfully."&&vm.state.value.message==state.message)onCreated(state.createdBranchId)}
+ Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal=16.dp)){
+  MutationFeedback(state.message,state.error,vm::clearFeedback)
+  if(initialCreate){
+   Text("New Party",style=MaterialTheme.typography.headlineSmall)
+   if(!canCreate)Text("Account party creation is not available to your role.")
+   Row{TextButton(onCancel,enabled=!state.saving){Text("Return to Home")};if(state.error!=null&&canCreate)TextButton(vm::refresh,enabled=!state.loading&&!state.saving){Text("Retry")}}
+  }else{
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    OutlinedTextField(state.query,{vm.search(it)},label={Text("Search")},singleLine=true,modifier=Modifier.weight(1f))
+    IconButton(vm::refresh,enabled=!state.saving){Icon(Icons.Default.Refresh,"Refresh")}
+    FilledIconButton({vm.edit(AccountMasterRecord(id="",name="",branchId=state.options.branches.firstOrNull()?.id))},enabled=canCreate&&!state.loading&&!state.saving){Icon(Icons.Default.Add,"Create")}
+   }
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("true" to "Active","false" to "Inactive","all" to "All").forEach{(value,label)->FilterChip(state.active==value,{vm.filter(value)},{Text(label)})}}
+  }
+  if(state.loading)LinearProgressIndicator(Modifier.fillMaxWidth())
+  if(!initialCreate)LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+   if(!state.loading&&state.error==null&&state.records.isEmpty())item{Text("No ${kind.replace('-',' ')} found.",modifier=Modifier.padding(24.dp))}
+   items(state.records,key={it.id}){record->ElevatedCard(Modifier.fillMaxWidth().clickable{vm.detail(record)}){ListItem(headlineContent={Text(record.name,fontWeight=FontWeight.SemiBold)},supportingContent={Text(summary(kind,record))},trailingContent={IconButton({vm.edit(record)},enabled=canCreate&&!state.saving){Icon(Icons.Default.Edit,"Edit ${record.name}")}})}}
+  }
+ }
+ state.editing?.let{MasterEditor(kind,it,state.options,state.saving,{if(!state.saving){vm.edit(null);if(initialCreate)onCancel()}},vm::save)}
+ state.selected?.let{PartyDetail(it,vm::closeDetail){vm.edit(it.record)}}
 }
 
 @Composable private fun ErrorCard(message:String,retry:()->Unit){Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Row(Modifier.padding(12.dp)){Text(message,Modifier.weight(1f));TextButton(retry){Text("Retry")}}}}

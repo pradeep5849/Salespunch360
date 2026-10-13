@@ -1,3 +1,4 @@
+import {resolveAccountBranchContext} from "./branch-context";
 import {
   assertUnitAccess,
   saveUnitForActor,
@@ -97,11 +98,16 @@ const masterKinds = new Set([
 ]);
 export async function accountMasterOverview(
   master: string,
-  raw: { q?: string; page?: string | number } = {},
+  raw: { q?: string; page?: string | number;branchId?:string;scope?:string } = {},
 ) {
   if (!masterKinds.has(master)) throw new Error("INVALID_MASTER_TYPE");
-  const a = await readActor(),
-    companyId = a.companyId!,
+  let a = await readActor();
+  if(master==="customers"&&(raw.branchId||raw.scope)){
+    const query=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional()}).refine(v=>!(v.branchId&&v.scope)).parse({branchId:raw.branchId,scope:raw.scope});
+    const resolved=await resolveAccountBranchContext({...a,companyId:a.companyId!},query);
+    a={...a,branchAccessScope:resolved.context.mode==="BRANCH"?"SELECTED_BRANCHES":"ALL_BRANCHES",branchIds:resolved.context.mode==="BRANCH"?[resolved.context.branchId]:[]};
+  }
+  const companyId = a.companyId!,
     q = (raw.q ?? "").trim().slice(0, 100),
     parsedPage = Number(raw.page ?? 1),
     page =
@@ -308,9 +314,11 @@ export async function createPartyWithCustomValues(
   kind: "customers" | "vendors",
   raw: unknown,
   customValues: Record<string, unknown>,
+  explicitBranchId?: string,
 ) {
   const a = await writeActor(),
     d = partySchema.parse(raw);
+  if(explicitBranchId){z.string().uuid().parse(explicitBranchId);if(a.branchAccessScope==="SELECTED_BRANCHES"&&!a.branchIds?.includes(explicitBranchId))throw new AuthorizationError();}
   return db.$transaction(async (tx) => {
     const data = {
       companyId: a.companyId!,
@@ -331,7 +339,7 @@ export async function createPartyWithCustomValues(
         where: {
           companyId: a.companyId!,
           isActive: true,
-          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+          ...(explicitBranchId?{id:explicitBranchId}:a.branchAccessScope === "SELECTED_BRANCHES"
             ? { id: { in: a.branchIds ?? [] } }
             : {}),
         },

@@ -1,3 +1,4 @@
+import { canUsePermission } from "@/lib/auth/permissions";
 import { AccountMobileHome } from "@/components/account/account-mobile-home";
 import { requireAccountWorkspace } from "@/lib/auth/authorization";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
@@ -35,6 +36,16 @@ export default async function Page({
       transactions={data.transactions}
       parties={data.parties}
       q={data.q}
+      canCreateParty={canUsePermission(
+        actor,
+        "SALESPUNCH360_ACCOUNT",
+        "ACCOUNT_ACCOUNTS",
+      )}
+      canCreateSale={canUsePermission(
+        actor,
+        "SALESPUNCH360_ACCOUNT",
+        "ACCOUNT_SALES_ENTRY",
+      )}
       selectedTypes={data.types}
       searchScope={
         resolved.context.mode === "COMPANY"

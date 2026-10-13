@@ -159,8 +159,12 @@ export function AccountMobileHome({
   q,
   selectedTypes,
   searchScope = {},
+  canCreateParty = false,
+  canCreateSale = false,
 }: {
   searchScope?: { branchId?: string; scope?: "all" };
+  canCreateParty?: boolean;
+  canCreateSale?: boolean;
   tab: "transactions" | "parties";
   transactions: Transaction[];
   parties: Party[];
@@ -189,10 +193,11 @@ export function AccountMobileHome({
       clearTimeout(timer);
     };
   }, []);
+  const scopeParams = new URLSearchParams();
+  if (searchScope.branchId) scopeParams.set("branchId", searchScope.branchId);
+  if (searchScope.scope) scopeParams.set("scope", searchScope.scope);
   const tabHref = (target: "transactions" | "parties") => {
-    const next = new URLSearchParams();
-    if (searchScope.branchId) next.set("branchId", searchScope.branchId);
-    if (searchScope.scope) next.set("scope", searchScope.scope);
+    const next = new URLSearchParams(scopeParams);
     if (target === "parties") next.set("tab", "parties");
     return `${pathname}?${next}`;
   };
@@ -445,7 +450,7 @@ export function AccountMobileHome({
             parties.map((party) => (
               <Link
                 className="account-party-card"
-                href={`/workspace/account/customers?q=${encodeURIComponent(party.name)}`}
+                href={`/workspace/account/customers?${scopeParams}&q=${encodeURIComponent(party.name)}`}
                 key={party.id}
               >
                 <span>
@@ -470,18 +475,20 @@ export function AccountMobileHome({
           )}
         </section>
       )}
-      <Link
-        className={`account-floating-action${floatingVisible ? "" : " is-hidden"}`}
-        aria-hidden={!floatingVisible}
-        tabIndex={floatingVisible ? 0 : -1}
-        href={
-          tab === "transactions"
-            ? "/workspace/account/transactions/new?type=SALES_INVOICE"
-            : "/workspace/customers/new"
-        }
-      >
-        {tab === "transactions" ? "+ Add New Sale" : "+ New Party"}
-      </Link>
+      {(tab === "parties" ? canCreateParty : canCreateSale) && (
+        <Link
+          className={`account-floating-action${floatingVisible ? "" : " is-hidden"}`}
+          aria-hidden={!floatingVisible}
+          tabIndex={floatingVisible ? 0 : -1}
+          href={
+            tab === "transactions"
+              ? "/workspace/account/transactions/new?type=SALES_INVOICE"
+              : `/workspace/account/customers/new?${scopeParams}`
+          }
+        >
+          {tab === "transactions" ? "+ Add New Sale" : "+ New Party"}
+        </Link>
+      )}
       {sheet && (
         <div
           className="account-sheet-overlay"

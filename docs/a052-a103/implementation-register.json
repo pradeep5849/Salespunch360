@@ -11132,7 +11132,9 @@
       "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": [],
+      "shared_fix_links": [
+        "A071-F04"
+      ],
       "checkpoint_work": {
         "summary": "Web money-account creation now uses explicit stable accessible names, bounds, disabled pending fields/button, structured action errors/success, retained inputs and failing-field focus. Existing company-wide blank branch normalization verified through real browser creation.",
         "verification": "Intermediate desktop/mobile browser 2 passed: whitespace-name server validation, accessible error association/focus, AXE, company-wide account plus linked asset ledger creation and success feedback. TypeScript and focused ESLint passed.",
@@ -11172,7 +11174,8 @@
             "e2e/a090-settings.spec.ts"
           ]
         }
-      }
+      },
+      "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change."
     },
     {
       "finding_id": "A065-F01",
@@ -12334,7 +12337,8 @@
       "shared_fix_links": [
         "A065-F08",
         "A065-F10",
-        "A065-F12"
+        "A065-F12",
+        "A071-F04"
       ],
       "checkpoint_work": {
         "status": "PARTIAL",
@@ -12348,7 +12352,8 @@
         "typescript_lint": "TypeScript and focused lint passed",
         "final_head": "NOT RUN",
         "owner_history": "23 owner-history/report tests passed; 2 desktop/mobile browser tests passed including detail/report drilldown, dates/clear, scoped mobile API, denial, invalid calendar dates; Android compile/142 JVM tests passed; TypeScript and focused lint passed. Final-head/device validation pending."
-      }
+      },
+      "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change."
     },
     {
       "finding_id": "A065-F10",
@@ -15375,8 +15380,10 @@
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
-        "A067-F09"
-      ]
+        "A067-F09",
+        "A071-F04"
+      ],
+      "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change."
     },
     {
       "finding_id": "A070-F01",
@@ -16288,10 +16295,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [
+        "A064-F13",
+        "A065-F09",
+        "A067-F10"
+      ],
+      "checkpoint_work": {
+        "implementation": "New Account-only web party route/action/form with explicit authorized branch and atomic customer/custom-value creation; GST/shipping settings respected; Home creation links hide without Account permission and carry scope. Added scoped Account party directory landing. Native New Party opens authorized creation directly, preserves Home party mode, cancels stale master loads and returns/refreshes Home after success.",
+        "tests": "8 focused party/master tests passed. Desktop/mobile Chromium 2 passed against PostgreSQL: Account-only creation, explicit branch, required-field rollback, required Boolean false persistence, forged foreign branch rejection/draft retention, new party on Home and scoped directory, denied Project Manager and zero Axe violations including failed-save feedback. Latest Android compile, TypeScript and focused ESLint passed. Intermediate only.",
+        "remaining": "Final checkpoint-head regression; physical native creation/back/retry UI not verified."
+      }
     },
     {
       "finding_id": "A071-F05",
