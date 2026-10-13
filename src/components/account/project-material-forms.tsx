@@ -246,7 +246,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
                               <option key={x.id} value={x.id}>
                                 {x.batchNumber}
                                 {x.expiryDate
-                                  ? ` · expires ${x.expiryDate.slice(0, 10)}`
+                                  ? ` · expires ${formatCalendarDate(x.expiryDate, preferences)}`
                                   : ""}
                               </option>
                             ))}
@@ -269,7 +269,7 @@ export function ProjectMaterialForms({ context: c }: { context: Context }) {
                               <option key={x.id} value={x.id}>
                                 {x.serialNumber}
                                 {x.expiryDate
-                                  ? ` · expires ${x.expiryDate.slice(0, 10)}`
+                                  ? ` · expires ${formatCalendarDate(x.expiryDate, preferences)}`
                                   : ""}
                               </option>
                             ))}

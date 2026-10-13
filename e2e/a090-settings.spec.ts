@@ -119,6 +119,7 @@ test.afterAll(async () => {
     await tx.purchaseLineAllocation.deleteMany({where:{companyId}});
     await tx.commercialDocumentLine.deleteMany({where:{companyId}});
     await tx.commercialDocument.deleteMany({where:{companyId}});
+    await tx.projectChangeOrder.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
     await tx.moneyTransfer.deleteMany({where:{companyId}});
     await tx.journalLine.deleteMany({where:{companyId}});
@@ -1028,6 +1029,7 @@ test("A072 costing groups preserve scope final-state rules and saved display pre
     expect(costing.metrics.contractRevenueBase.toString()).toBe("123.45");
     expect(costing.metrics.finalProfit).toBeNull();
     await expect(loadProjectCostingForActor({...actor,companyId:otherCompanyId},project.id)).rejects.toThrow();
+    await createChangeOrderForActor(actor,{projectId:project.id,title:"Formatted additional work",valueDelta:"12.34",estimatedCostDelta:"5.67"});
     await signInSettings(page);
     await page.goto(`/workspace/account/projects/${project.id}/costing`);
     for (const title of ["Contract and revenue","Costs and materials","Payments and outstanding","Profit"])
@@ -1035,6 +1037,7 @@ test("A072 costing groups preserve scope final-state rules and saved display pre
     await expect(page.getByText("Final Profit",{exact:true})).toHaveCount(0);
     await expect(page.getByRole("region",{name:"Contract and revenue",exact:true})).toContainText("$123.450");
     await expect(page.getByRole("region",{name:"Profit",exact:true})).toContainText("0.00%");
+    await expect(page.getByText("DRAFT · Value $12.340 · Cost $5.670",{exact:true})).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
     await page.getByText("Additional work/package analysis",{exact:true}).click();
     // Unassigned work may be represented by a synthetic row; the section must remain usable.
@@ -1214,12 +1217,12 @@ test("A078 project dashboard renders empty state totals statuses and module-awar
   expect(dashboard.metrics.received.toString()).toBe(before.metrics.received.toString());expect(dashboard.metrics.outstanding.toString()).toBe(before.metrics.outstanding.toString());
   await page.reload();
   const summary=page.getByRole("region",{name:"Project summary"});
-  await expect(summary.locator("article").filter({hasText:"Total Project Value"})).toContainText(`$${before.metrics.totalProjectValue.add("600").toFixed(3)}`);
+  await expect(summary.locator("article").filter({hasText:"Total Project Value"})).toContainText(new Intl.NumberFormat("en-IN",{style:"currency",currency:"USD",minimumFractionDigits:3,maximumFractionDigits:3}).format(before.metrics.totalProjectValue.add("600").toNumber()));
   await expect(summary.locator("article").filter({hasText:"Active Projects"})).toContainText(String(before.metrics.activeProjects+1));
   await expect(summary.locator("article").filter({hasText:"Projects Closed"})).toContainText(String(before.metrics.projectsClosed+1));
   await expect(page.locator(`a[href="/workspace/account/projects/${closed.id}"]`)).toContainText("Closed");
   await page.locator(`a[href="/workspace/account/projects/${active.id}"]`).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${active.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${active.id}$`),{timeout:20000});
   await db.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","SALES"]}});
   await page.goto("/workspace/account/projects");
   await expect(page.getByRole("link",{name:"Project Invoice",exact:true})).toHaveAttribute("href","/workspace/account/transactions/new?type=SALES_INVOICE&project=select");

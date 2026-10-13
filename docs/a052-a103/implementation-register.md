@@ -6218,13 +6218,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Grouped costing summaries, saved display preferences, conditional final profit, percentage margin, package empty state and native costing formatting implemented.", "tests": "2 browser checks within final 10-check Project run; 31 costing/display tests; TypeScript/lint and Android compile passed.", "finding_status": null, "evidence": ["SalesPunch360_A072_Source_Checkpoint.md", "SalesPunch360_A072_Project_Retention_and_Cleanup.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A072-F02, A073-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A072-F02 — Supporting costing rows ignore saved display preferences
 
@@ -6260,13 +6262,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Grouped costing summaries, saved display preferences, conditional final profit, percentage margin, package empty state and native costing formatting implemented.", "tests": "2 browser checks within final 10-check Project run; 31 costing/display tests; TypeScript/lint and Android compile passed.", "finding_status": null, "evidence": ["SalesPunch360_A072_Source_Checkpoint.md", "SalesPunch360_A072_Project_Retention_and_Cleanup.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A072-F01, A073-F01, A074-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A073-F01 — Project edit lacks retained mutation feedback
 
@@ -6302,13 +6306,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Edit action now returns structured feedback, retains invalid input, disables pending Save and navigates after successful save.", "tests": "2 browser checks within final 10-check Project run; 56 related Project tests; TypeScript/lint passed.", "finding_status": null, "evidence": ["SalesPunch360_A073_Project_Edit_Workflow.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A072-F02, A074-F01, A075-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A074-F01 — Project detail amounts ignore display preferences
 
@@ -6344,13 +6350,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Project value, supporting budget/history amounts and payments connected to display preferences. Final service billing, rollback on missing service, repeat-close safety, tenant isolation and final report restrictions audited.", "tests": "2 browser checks within final 10-check Project run verified final invoice posting once and USD/three-decimal project value; 56 related tests passed.", "finding_status": null, "evidence": ["SalesPunch360_A074_Project_Details_Coverage.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A073-F01, A075-F01, A076-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A075-F01 — Profit/loss shortcut targets a missing anchor
 
@@ -6386,13 +6394,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Actions hub audited for selection, mutable scope and costing capability. Existing report link now lands on the implemented profit section.", "tests": "2 browser checks within final 10-check Project run verified selection, report navigation, module-off visibility and closed-project exclusion.", "finding_status": null, "evidence": ["SalesPunch360_A075-A078_Project_Workflow_Coverage.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md.
 
 **Linked finding IDs:** A074-F01, A076-F01, A076-F02.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A076-F01 — Project material page lacks Back destination
 
@@ -6428,13 +6438,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Completed source/approved-workflow review of movement choices, scoped lineage, quantity guards, inventory tracking, immutable history and retry behavior. Added correct back navigation and saved currency/date formatting.", "tests": "2 authenticated browser cases passed (12.9s): rejection retains input; valid consumption posts; original-cost transfer/return; duplicate requests; changed-key rejection and foreign-tenant rejection. 34 related unit/contract tests in 12 files previously passed.", "finding_status": null, "evidence": ["SalesPunch360_A075-A078_Project_Workflow_Coverage.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md", "SalesPunch360_A076-A078_Audit_Closure.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md, SalesPunch360_A076-A078_Audit_Closure.md.
 
 **Linked finding IDs:** A075-F01, A076-F02, A078-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A076-F02 — Material history ignores saved currency/date settings
 
@@ -6470,13 +6482,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Completed source/approved-workflow review of movement choices, scoped lineage, quantity guards, inventory tracking, immutable history and retry behavior. Added correct back navigation and saved currency/date formatting.", "tests": "2 authenticated browser cases passed (12.9s): rejection retains input; valid consumption posts; original-cost transfer/return; duplicate requests; changed-key rejection and foreign-tenant rejection. 34 related unit/contract tests in 12 files previously passed.", "finding_status": null, "evidence": ["SalesPunch360_A075-A078_Project_Workflow_Coverage.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md", "SalesPunch360_A076-A078_Audit_Closure.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md, SalesPunch360_A076-A078_Audit_Closure.md.
 
 **Linked finding IDs:** A076-F01, A078-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A078-F01 — View All project action opens a different destination
 
@@ -6512,13 +6526,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Completed page-specific dashboard/list audit: aggregate definitions, posted payment scope, statuses, empty state, stored currency/precision, card navigation and shortcut capabilities. Project Actions label now aligned on web and Android.", "tests": "2 dedicated authenticated browser cases passed (26.8s), including empty state, three statuses, totals, core Sales policy, display and navigation. TypeScript passed; Android compile passed (37s), warnings only. Previously recorded dashboard unit tests passed.", "finding_status": null, "evidence": ["SalesPunch360_A075-A078_Project_Workflow_Coverage.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md", "SalesPunch360_A076-A078_Audit_Closure.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md, SalesPunch360_A076-A078_Audit_Closure.md.
 
 **Linked finding IDs:** A076-F02, A078-F02.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A078-F02 — Project dashboard summaries/status/module navigation require correction
 
@@ -6554,13 +6570,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Completed page-specific dashboard/list audit: aggregate definitions, posted payment scope, statuses, empty state, stored currency/precision, card navigation and shortcut capabilities. Project Actions label now aligned on web and Android.", "tests": "2 dedicated authenticated browser cases passed (26.8s), including empty state, three statuses, totals, core Sales policy, display and navigation. TypeScript passed; Android compile passed (37s), warnings only. Previously recorded dashboard unit tests passed.", "finding_status": null, "evidence": ["SalesPunch360_A075-A078_Project_Workflow_Coverage.md", "SalesPunch360_A072-A078_Resumed_Audit_Checkpoint.md", "SalesPunch360_A076-A078_Audit_Closure.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A076-A078_Audit_Closure.md.
 
 **Linked finding IDs:** A078-F01.
+
+**Independent Project verification:** Original scoped implementation verified; remaining web/native change-order/supporting monetary/date formatting completed, preserving quantities and IDs. 37 focused tests + 41 PostgreSQL Project workflow/financial tests passed; desktop/mobile cases cover costing, edit retention, parent/profit/action navigation, material postings and dashboard summaries. Earlier fixture grouping/cleanup/cold-navigation failures corrected, dashboard independently 2 passed (46.2s). Android compile +3 field-classification JVM tests, TypeScript and focused lint passed. Final-head regression and physical Android interaction remain pending.
 
 ## A079-F01 — Android edit/revision maps line fields into wrong constructor positions
 

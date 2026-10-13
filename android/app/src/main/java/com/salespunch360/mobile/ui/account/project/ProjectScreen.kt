@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.project
 
+import com.salespunch360.mobile.ui.account.accountDate
 import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -327,7 +328,7 @@ private fun ProjectDetail(
                         val row = element.jsonObject
                         Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                             Text("${row.str("changeOrderNumber")} · ${row.str("title")}")
-                            Text("${row.str("status")} · Value ${row.str("valueDelta")} · Estimated cost ${row.str("estimatedCostDelta")}")
+                            Text("${row.str("status")} · Value ${accountMoney(row.str("valueDelta"))} · Estimated cost ${accountMoney(row.str("estimatedCostDelta"))}")
                             if (canEdit && row.str("status")=="DRAFT") {
                                 Row { TextButton(onClick={editChange(row)},enabled=!saving){Text("Edit draft")};TextButton(onClick={transitionChange(row.str("id"),"PENDING_APPROVAL")},enabled=!saving){Text("Submit")} }
                             }
@@ -354,7 +355,13 @@ private fun ProjectDetail(
                             val record = element.jsonObject
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 record.entries.filter { it.key != "id" && it.value != JsonNull }.forEach { (field, value) ->
-                                    Text("${field.replace(Regex("([A-Z])"), " $1")}: ${value.jsonPrimitive.content}")
+                                    val raw = value.jsonPrimitive.content
+                                    val displayed = when(projectReportFieldType(field)) {
+                                        ProjectReportFieldType.MONEY -> accountMoney(raw)
+                                        ProjectReportFieldType.DATE -> accountDate(raw)
+                                        ProjectReportFieldType.TEXT -> raw
+                                    }
+                                    Text("${field.replace(Regex("([A-Z])"), " $1")}: $displayed")
                                 }
                             }
                         }
@@ -367,9 +374,9 @@ private fun ProjectDetail(
                         ListItem(
                             headlineContent = { Text(row.str("name")) },
                             supportingContent = {
-                                Text("Revenue ${row.str("actualRevenue")} · Cost ${row.str("actualCost")}")
+                                Text("Revenue ${accountMoney(row.str("actualRevenue"))} · Cost ${accountMoney(row.str("actualCost"))}")
                             },
-                            trailingContent = { Text("Profit ${row.str("profit")}") },
+                            trailingContent = { Text("Profit ${accountMoney(row.str("profit"))}") },
                         )
                     }
                 }

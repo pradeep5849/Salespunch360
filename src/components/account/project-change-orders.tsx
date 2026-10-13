@@ -1,4 +1,5 @@
 "use client";
+import { ClientMoney } from "./display-preferences";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
@@ -27,7 +28,7 @@ export function ProjectChangeOrders({projectId, changes, canEdit, canApprove, ac
       <Save>Create draft</Save>
     </ActionFeedbackForm>}
     {changes.map(row => <article key={row.id} className="account-card stack"><b>{row.changeOrderNumber} · {row.title}</b>
-      <p>{row.status} · Value {row.valueDelta} · Cost {row.estimatedCostDelta}</p>
+      <p>{row.status} · Value <ClientMoney value={row.valueDelta} /> · Cost <ClientMoney value={row.estimatedCostDelta} /></p>
       {canEdit && row.status === "DRAFT" && <>
         <details><summary>Edit draft</summary><ActionFeedbackForm action={changeOrderAction} className="stack" onSuccess={success}>
           <input type="hidden" name="operation" value="edit" /><input type="hidden" name="projectId" value={projectId} />

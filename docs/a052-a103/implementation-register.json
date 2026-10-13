@@ -16742,13 +16742,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A072-F02",
         "A073-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A072-F02",
@@ -16794,14 +16800,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A072-F01",
         "A073-F01",
         "A074-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A073-F01",
@@ -16846,14 +16858,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A072-F02",
         "A074-F01",
         "A075-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A074-F01",
@@ -16898,14 +16916,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A073-F01",
         "A075-F01",
         "A076-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A075-F01",
@@ -16950,14 +16974,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A074-F01",
         "A076-F01",
         "A076-F02"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A076-F01",
@@ -17009,14 +17039,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A075-F01",
         "A076-F02",
         "A078-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A076-F02",
@@ -17068,13 +17104,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A076-F01",
         "A078-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A078-F01",
@@ -17126,13 +17168,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A076-F02",
         "A078-F02"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A078-F02",
@@ -17178,12 +17226,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A078-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Independently verified previously saved Project changes against original scope: grouped/final-state costing, retained edit feedback, saved detail/material preferences, parent/profit/action destinations, authorized dashboard totals/status/module navigation. Completed remaining change-order money and material expiry captions on web and supporting row/change-order/package formatting on Android; quantities/percentages/identifiers remain unchanged.",
+        "tests": "37 focused Project permission/module/material/costing/dashboard tests passed; 41 real PostgreSQL Project workflow/financial/isolation tests passed. Browser evidence: initial grouped run 10 passed with 2 dashboard fixture assertions failing; affected formatting cases subsequently passed (5 passed, 1 cold mobile navigation timeout), then dashboard independently 2 passed in 46.2s. Targeted Android compile +3 ProjectReportField JVM tests passed; TypeScript/focused lint passed.",
+        "remaining": "Final implementation-head grouped/full regression and physical Android interaction remain pending. No final status assigned.",
+        "fixture_corrections": "Manual advance scenario explicitly disables auto linking only during its invoice posting and restores defaults; financial assertions retained. Dashboard assertion respects grouping, cold route allowance extended; newly created draft change-order fixture cleaned within isolated tenant."
+      }
     },
     {
       "finding_id": "A079-F01",

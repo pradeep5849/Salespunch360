@@ -5,7 +5,7 @@ const url = process.env.ACCOUNT_INTEGRATION_DATABASE_URL;
 if (
   url &&
   (!["localhost", "127.0.0.1"].includes(new URL(url).hostname) ||
-    !new URL(url).pathname.endsWith("_test"))
+    !(new URL(url).pathname.endsWith("_test") || new URL(url).pathname.endsWith("_ci")))
 )
   throw new Error("Local isolated test database required");
 const client = new PrismaClient({
@@ -1074,7 +1074,15 @@ describe.skipIf(!url)(
         ],
       });
       invoiceId = doc.id;
-      await postCommercialDocumentForActor(actor, { documentId: doc.id });
+      // The following test deliberately verifies manual advance application.
+      const originalDefaults=(await client.accountSettings.findUniqueOrThrow({where:{companyId}})).transactionDefaults;
+      const defaults=originalDefaults && typeof originalDefaults==="object" && !Array.isArray(originalDefaults) ? originalDefaults : {};
+      await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{...defaults,transactionPreferences:{linkPayments:false}}}});
+      try {
+        await postCommercialDocumentForActor(actor, { documentId: doc.id });
+      } finally {
+        await client.accountSettings.update({where:{companyId},data:{transactionDefaults:originalDefaults??Prisma.DbNull}});
+      }
       expect(
         (
           await documentOutstandingsBatch(companyId, [
