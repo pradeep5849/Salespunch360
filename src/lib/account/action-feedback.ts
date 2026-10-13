@@ -8,6 +8,7 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  UNIT_HAS_TRANSACTION_HISTORY:"This item already has stock or document quantities. Its base unit cannot be changed; use a conversion instead.",
   INSUFFICIENT_FUNDS:"The receipt account does not have enough posted funds to reverse this loan receipt.",
   LOAN_BALANCE_AMBIGUOUS:"This legacy loan shares its liability ledger with another loan. Separate their opening balances before changing financial history.",
   LOAN_HAS_FINANCIAL_ACTIVITY:"This loan has payments, top-ups, or corrections. Resolve those transactions before cancelling its receipt.",

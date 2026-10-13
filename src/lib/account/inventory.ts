@@ -121,6 +121,7 @@ export async function createStockMovementForActor(
   const d = movement.parse(raw);
   return db.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.warehouseId}:${d.productId}`}))`;
       const [w, p, settings] = await Promise.all([
         warehouse(tx, a, d.warehouseId),
@@ -225,6 +226,7 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
     throw new Error("SAME_WAREHOUSE");
   return db.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.productId}:${[d.sourceWarehouseId, d.destinationWarehouseId].sort().join(":")}`}))`;
       const [source, destination, p, settings] = await Promise.all([
           warehouse(tx, a, d.sourceWarehouseId),

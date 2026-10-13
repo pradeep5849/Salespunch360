@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.inventory
 
+import com.salespunch360.mobile.account.validUnitConversionRate
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -80,22 +82,27 @@ fun UnitsManagementScreen(
     var add by remember{mutableStateOf(false)}
     var name by remember{mutableStateOf("")}
     var symbol by remember{mutableStateOf("")}
+    var assignment by remember{mutableStateOf(false)}
+    if(assignment){UnitAssignmentScreen(s,vm){if(!s.saving){assignment=false;vm.closeAssignment()}};return}
     var conversion by remember{mutableStateOf(false)}
     var base by remember{mutableStateOf("")}
     var secondary by remember{mutableStateOf("")}
     var rate by remember{mutableStateOf("1")}
     val rows=if(s.error!=null)emptyList()else s.units.filter{"${it.name} ${it.symbol.orEmpty()}".contains(q,true)}
+    val savingNow by rememberUpdatedState(s.saving)
+    val sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true,confirmValueChange={!savingNow})
+    BackHandler(enabled=conversion){if(!s.saving)conversion=false}
     if(conversion){
         Scaffold(
-            topBar={TopAppBar(title={Text("Set Conversion")},navigationIcon={IconButton(onClick={conversion=false}){Icon(Icons.Default.ArrowBack,"Back")}})},
-            bottomBar={Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={conversion=false},Modifier.weight(1f).height(56.dp)){Text("Cancel")};Button(onClick={vm.saveConversion(base,secondary,rate){conversion=false}},enabled=base.isNotBlank()&&secondary.isNotBlank()&&base!=secondary&&(rate.toDoubleOrNull()?:0.0)>0&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text("Save")}}}
+            topBar={TopAppBar(title={Text("Set Conversion")},navigationIcon={IconButton(onClick={conversion=false},enabled=!s.saving){Icon(Icons.Default.ArrowBack,"Back")}})},
+            bottomBar={Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={conversion=false},Modifier.weight(1f).height(56.dp),enabled=!s.saving){Text("Cancel")};Button(onClick={vm.saveConversion(base,secondary,rate){conversion=false}},enabled=base.isNotBlank()&&secondary.isNotBlank()&&base!=secondary&&validUnitConversionRate(rate)&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text("Save")}}}
         ){padding->
             Column(Modifier.fillMaxSize().padding(padding).padding(20.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
                 if(s.loading||s.saving)LinearProgressIndicator(Modifier.fillMaxWidth())
                 s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
-                UnitPicker("Base unit",base,s.units){base=it}
-                UnitPicker("Secondary unit",secondary,s.units){secondary=it}
-                OutlinedTextField(rate,{rate=it},label={Text("Conversion Rate")},modifier=Modifier.fillMaxWidth())
+                UnitPicker("Base unit",base,s.units,enabled=!s.saving){base=it}
+                UnitPicker("Secondary unit",secondary,s.units,enabled=!s.saving){secondary=it}
+                OutlinedTextField(rate,{rate=it},enabled=!s.saving,label={Text("Conversion Rate")},isError=rate.isNotBlank()&&!validUnitConversionRate(rate),supportingText={if(rate.isNotBlank()&&!validUnitConversionRate(rate))Text("Enter a positive rate with up to 14 whole and 4 decimal digits.")},modifier=Modifier.fillMaxWidth())
                 Text("ⓘ 1 ${s.units.firstOrNull{it.id==base}?.name?.uppercase()?:"BASE"} = ${rate.ifBlank{"0"}} ${s.units.firstOrNull{it.id==secondary}?.name?.uppercase()?:"SECONDARY"}")
             }
         }
@@ -107,11 +114,12 @@ fun UnitsManagementScreen(
     ){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(bottom=96.dp)){
             item{TabRow(selectedTabIndex=3){listOf("Products" to "/workspace/account/inventory/catalog?type=PRODUCT","Services" to "/workspace/account/inventory/catalog?type=SERVICE","Categories" to "/workspace/account/inventory/categories","Units" to "/workspace/account/inventory/units").forEachIndexed{index,(title,path)->Tab(selected=index==3,onClick={if(index!=3)navigate(path)},text={Text(title)})}}}
+            s.message?.let{message->item{Text(message,Modifier.padding(16.dp))}}
             if(s.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
             s.error?.let{message->item{Column(Modifier.padding(16.dp)){Text(message,color=MaterialTheme.colorScheme.error);TextButton(onClick={vm.refreshUnits()}){Text("Retry")}}}}
             if(!s.loading&&s.error==null&&rows.isEmpty())item{Text(if(s.units.isEmpty())"No units have been added yet." else "No units match your search.",Modifier.padding(16.dp))}
             item{OutlinedTextField(q,{q=it},label={Text("Search Unit")},leadingIcon={Icon(Icons.Default.Search,null)},modifier=Modifier.fillMaxWidth().padding(16.dp))}
-            item{Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){FilledTonalButton(onClick={base=s.units.getOrNull(0)?.id.orEmpty();secondary=s.units.getOrNull(1)?.id.orEmpty();rate="1";vm.clearError();conversion=true},modifier=Modifier.weight(1f)){Text("Set Conversion")};FilledTonalButton(onClick={},enabled=false,modifier=Modifier.weight(1f)){Text("Unit to Items")}}}
+            item{Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){FilledTonalButton(onClick={base=s.units.getOrNull(0)?.id.orEmpty();secondary=s.units.getOrNull(1)?.id.orEmpty();rate="1";vm.clearError();conversion=true},modifier=Modifier.weight(1f)){Text("Set Conversion")};FilledTonalButton(onClick={vm.clearError();assignment=true},enabled=!s.saving&&!s.loading,modifier=Modifier.weight(1f)){Text("Unit to Items")}}}
             items(rows,key={it.id}){u->
                 ListItem(
                     headlineContent={Text(u.name.uppercase(),fontWeight=FontWeight.SemiBold)},
@@ -129,13 +137,13 @@ fun UnitsManagementScreen(
             }
         }
     }
-    if(add)ModalBottomSheet(onDismissRequest={add=false}){
+    if(add)ModalBottomSheet(onDismissRequest={if(!s.saving)add=false},sheetState=sheetState){
         Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(if(edit==null)"Add Unit" else "Edit Unit",style=MaterialTheme.typography.headlineSmall);IconButton(onClick={add=false}){Icon(Icons.Default.Close,"Close")}}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(if(edit==null)"Add Unit" else "Edit Unit",style=MaterialTheme.typography.headlineSmall);IconButton(onClick={add=false},enabled=!s.saving){Icon(Icons.Default.Close,"Close")}}
             s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             OutlinedTextField(name,{if(it.length<=80)name=it},enabled=!s.saving,label={Text("Full Unit Name")},modifier=Modifier.fillMaxWidth())
             OutlinedTextField(symbol,{if(it.length<=20)symbol=it},enabled=!s.saving,label={Text("Short Name")},modifier=Modifier.fillMaxWidth())
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={add=false},Modifier.weight(1f).height(56.dp)){Text("Cancel")};Button(onClick={vm.saveUnit(edit?.id,name,symbol){add=false}},enabled=name.isNotBlank()&&symbol.isNotBlank()&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text("Save")}}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={add=false},Modifier.weight(1f).height(56.dp),enabled=!s.saving){Text("Cancel")};Button(onClick={vm.saveUnit(edit?.id,name,symbol){add=false}},enabled=name.isNotBlank()&&symbol.isNotBlank()&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text("Save")}}
         }
     }
 }
@@ -182,10 +190,10 @@ private fun RadioChoice(label:String,selected:Boolean,onClick:()->Unit){Row(vert
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UnitPicker(label:String,value:String,units:List<AccountMasterRecord>,onChange:(String)->Unit){
+private fun UnitPicker(label:String,value:String,units:List<AccountMasterRecord>,enabled:Boolean=true,onChange:(String)->Unit){
     var open by remember{mutableStateOf(false)}
-    ExposedDropdownMenuBox(expanded=open,onExpandedChange={open=it}){
-        OutlinedTextField(units.firstOrNull{it.id==value}?.name.orEmpty(),{},readOnly=true,label={Text(label)},modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),trailingIcon={ExposedDropdownMenuDefaults.TrailingIcon(open)})
-        ExposedDropdownMenu(expanded=open,onDismissRequest={open=false}){units.forEach{u->DropdownMenuItem({Text(u.name.uppercase())},{onChange(u.id);open=false})}}
+    ExposedDropdownMenuBox(expanded=open&&enabled,onExpandedChange={if(enabled)open=it}){
+        OutlinedTextField(units.firstOrNull{it.id==value}?.name.orEmpty(),{},readOnly=true,enabled=enabled,label={Text(label)},modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),trailingIcon={ExposedDropdownMenuDefaults.TrailingIcon(open)})
+        ExposedDropdownMenu(expanded=open&&enabled,onDismissRequest={open=false}){units.forEach{u->DropdownMenuItem({Text(u.name.uppercase())},{onChange(u.id);open=false})}}
     }
 }

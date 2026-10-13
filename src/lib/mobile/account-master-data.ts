@@ -1,3 +1,4 @@
+import {assertItemUnitChangeInTx,assignUnitToItemsForActor,unitAssignmentOptionsForActor} from "@/lib/account/unit-assignment";
 import {
   assertUnitAccess,
   saveUnitForActor,
@@ -560,6 +561,7 @@ export async function saveMobileAccountMaster(
     await validateMobileItemReferences(user.companyId, input, "SERVICE");
     const row = await db
       .$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR UPDATE`;
         const settings = await tx.accountSettings.findUnique({
           where: { companyId: user.companyId },
           select: { itemSettings: true },
@@ -574,7 +576,7 @@ export async function saveMobileAccountMaster(
               data: { ...data, companyId: user.companyId },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) await tx.accountService.update({ where: { id: row.id }, data });
+        if (id) {if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);}await tx.accountService.update({ where: { id: row.id }, data });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,
@@ -620,6 +622,7 @@ export async function saveMobileAccountMaster(
     };
     const row = await db
       .$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR UPDATE`;
         if (!id && extras.creationRequestKey) {
           await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR UPDATE`;
           await validateItemOpeningScopeInTx(
@@ -671,7 +674,7 @@ export async function saveMobileAccountMaster(
               },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) await tx.accountProduct.update({ where: { id: row.id }, data });
+        if (id) {if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);}await tx.accountProduct.update({ where: { id: row.id }, data });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,
@@ -876,3 +879,6 @@ export async function saveMobileUnitConversion(
   const result = await saveUnitConversionForActor(principal, raw);
   return { ok: true, conversion: result.conversion };
 }
+
+export async function mobileAssignUnitToItems(user:MobileAppPrincipal,raw:unknown){const principal=actor(user,"units",true);await assertOperationalWrite(user.companyId);return assignUnitToItemsForActor(principal,raw);}
+export async function mobileUnitAssignmentOptions(user:MobileAppPrincipal,raw:unknown){return unitAssignmentOptionsForActor(actor(user,"units",false),raw);}

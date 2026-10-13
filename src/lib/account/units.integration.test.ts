@@ -21,6 +21,8 @@ import {
   saveUnitForActor,
   saveUnitConversionForActor,
 } from "./units";
+import {assignUnitToItemsForActor,unitAssignmentOptionsForActor} from "./unit-assignment";
+import {createQuotationForActor} from "@/lib/quotations/service";
 import { updateItemSettingsForActor } from "./settings";
 import type { ProjectActor } from "./projects";
 const companyId = randomUUID(),
@@ -106,6 +108,7 @@ describe.skipIf(!url)(
         await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
         await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
         await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
+        await tx.quotationAuditEvent.deleteMany({where:{companyId}});await tx.quotationLine.deleteMany({where:{companyId}});await tx.quotationRevision.deleteMany({where:{companyId}});await tx.quotationDocument.deleteMany({where:{companyId}});await tx.accountProduct.deleteMany({where:{companyId}});await tx.accountService.deleteMany({where:{companyId}});await tx.customer.deleteMany({where:{companyId}});await tx.numberingSeries.deleteMany({where:{companyId}});await tx.branch.deleteMany({where:{companyId}});
         await tx.accountUnit.deleteMany({
           where: { companyId: { in: [companyId, otherCompany] } },
         });
@@ -256,6 +259,24 @@ describe.skipIf(!url)(
           itemUnits: true,
         });
       }
+    });
+
+    it("assigns product/service units atomically and replays inline creation without extra definitions or audits",async()=>{
+      const products=await Promise.all(["Assignment A","Assignment B"].map(name=>client.accountProduct.create({data:{companyId,name,salePrice:"100"}})));
+      const request={kind:"PRODUCT",itemIds:products.map(row=>row.id),newUnit:{name:"Inline assignment unit",symbol:"IAU"}};
+      const results=await Promise.all([assignUnitToItemsForActor(actor,request),assignUnitToItemsForActor(actor,request)]);expect(results[0].units.find(row=>row.name==="Inline assignment unit")?.id).toBe(results[1].units.find(row=>row.name==="Inline assignment unit")?.id);
+      const unit=await client.accountUnit.findFirstOrThrow({where:{companyId,symbol:"IAU"}});expect(await client.accountUnit.count({where:{companyId,name:"Inline assignment unit"}})).toBe(1);expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"ITEM_UNITS_ASSIGNED"}})).toBe(1);expect((await client.accountProduct.findMany({where:{companyId,id:{in:request.itemIds}}})).every(row=>row.unitId===unit.id)).toBe(true);
+      const service=await client.accountService.create({data:{companyId,name:"Assignment service"}});expect(await assignUnitToItemsForActor(actor,{kind:"SERVICE",itemIds:[service.id],unitId:unit.id})).toMatchObject({count:1,changedCount:1});
+      expect((await unitAssignmentOptionsForActor(actor,{kind:"PRODUCT",q:"Assignment",limit:1})).nextOffset).toBe(1);expect((await unitAssignmentOptionsForActor(actor,{kind:"PRODUCT",q:"Assignment",offset:1,limit:1})).items).toHaveLength(1);
+      const fresh=await client.accountProduct.create({data:{companyId,name:"Assignment rollback"}});const before=await client.accountUnit.count({where:{companyId}});
+      await expect(assignUnitToItemsForActor(actor,{kind:"PRODUCT",itemIds:[fresh.id,randomUUID()],newUnit:{name:"Must roll back inline",symbol:"FAIL-INLINE"}})).rejects.toThrow();expect(await client.accountUnit.count({where:{companyId}})).toBe(before);expect((await client.accountProduct.findUniqueOrThrow({where:{id:fresh.id}})).unitId).toBeNull();
+      await expect(assignUnitToItemsForActor({...actor,accountRole:"DATA_ENTRY"},{kind:"PRODUCT",itemIds:[fresh.id],unitId:unit.id})).rejects.toThrow();await expect(assignUnitToItemsForActor(actor,{kind:"PRODUCT",itemIds:[fresh.id],unitId:foreignUnit})).rejects.toThrow("INVALID_UNIT");
+    });
+    it("cannot relabel historical quotation quantities and rolls back the whole assignment",async()=>{
+      const branchId=randomUUID(),customerId=randomUUID();await client.branch.create({data:{id:branchId,companyId,name:"Unit history branch",code:"HISTORY",isPrimary:true}});await client.customer.create({data:{id:customerId,companyId,branchId,name:"Unit history customer",isAccountCustomer:true}});
+      const recorded=await client.accountProduct.create({data:{companyId,name:"Recorded quantity product",unitId:units[0],salePrice:"100"}}),fresh=await client.accountProduct.create({data:{companyId,name:"Fresh quantity product"}});
+      const quotation=await createQuotationForActor(actor,{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",lines:[{lineType:"PRODUCT",sourceId:recorded.id,quantity:"2",rate:"100"}]});const before=await client.quotationLine.findFirstOrThrow({where:{companyId,productId:recorded.id}});
+      await expect(assignUnitToItemsForActor(actor,{kind:"PRODUCT",itemIds:[recorded.id,fresh.id],unitId:units[1]})).rejects.toThrow("UNIT_HAS_TRANSACTION_HISTORY");expect((await client.accountProduct.findUniqueOrThrow({where:{id:fresh.id}})).unitId).toBeNull();expect((await client.accountProduct.findUniqueOrThrow({where:{id:recorded.id}})).unitId).toBe(units[0]);expect(await client.quotationLine.findUniqueOrThrow({where:{id:before.id}})).toEqual(before);expect(before.unitId).toBe(units[0]);expect(before.quantity.toString()).toBe("2");expect((await client.quotationRevision.findUniqueOrThrow({where:{id:before.revisionId}})).documentId).toBe(quotation.id);
     });
   },
 );

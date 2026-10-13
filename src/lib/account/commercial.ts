@@ -8,7 +8,6 @@ import {applyTransactionDefaults} from "./transaction-defaults";
 import { inAccountTransaction } from "./transaction-scope";
 import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { commercialCreationHash } from "./commercial-request-identity";
-import { retrySerializable } from "./transaction-retry";
 import { projectPurchaseReturnsInTx } from "./project-purchase-returns";
 import {
   CommercialAuditEventType,
@@ -815,6 +814,7 @@ export async function createCommercialDocumentForActor(
     );
   return inAccountTransaction(transaction,
       async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId}::uuid FOR UPDATE`;
         const [branch, settings] = await Promise.all([
           tx.branch.findFirst({
             where: {

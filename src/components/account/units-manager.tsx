@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import {UnitAssignmentDialog} from "./unit-assignment-dialog";
+import {validUnitConversionRate} from "@/lib/account/unit-conversion-rate";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   createAccountUnitAction,
@@ -20,6 +22,8 @@ export function UnitsManager({
   conversions: Conv[];
 }) {
   const [units, setUnits] = useState(initial),
+    [assignmentOpen,setAssignmentOpen]=useState(false),
+    [assignmentMessage,setAssignmentMessage]=useState(""),
     [q, setQ] = useState(""),
     [open, setOpen] = useState(false),
     [edit, setEdit] = useState<Unit | null>(null),
@@ -109,7 +113,7 @@ export function UnitsManager({
       !base ||
       !secondary ||
       base === secondary ||
-      !(Number(rate) > 0)
+      !validUnitConversionRate(rate)
     )
       return;
     setError("");
@@ -186,10 +190,12 @@ export function UnitsManager({
         >
           Set Conversion
         </button>
-        <button disabled title="Unit to Items">
+        <button disabled={pending} onClick={()=>{setAssignmentMessage("");setAssignmentOpen(true);}} title="Unit to Items">
           Unit to Items
         </button>
       </div>
+      {assignmentMessage&&<p role="status">{assignmentMessage}</p>}
+      {assignmentOpen&&<UnitAssignmentDialog units={units} onClose={()=>setAssignmentOpen(false)} onSaved={(changed,count)=>{setUnits(old=>{const next=old.map(unit=>changed.find(row=>row.id===unit.id)??unit);return [...next,...changed.filter(unit=>!old.some(row=>row.id===unit.id))];});setAssignmentMessage(`Assigned unit to ${count} items.`);}}/>}
       {visible.length === 0 && (
         <p role="status">
           {units.length === 0
@@ -300,7 +306,7 @@ export function UnitsManager({
         <div className="conversion-body">
           <label>
             Base unit
-            <select aria-label="Base unit" value={base} onChange={(e) => setBase(e.target.value)}>
+            <select disabled={pending} aria-label="Base unit" value={base} onChange={(e) => setBase(e.target.value)}>
               {units.map((u) => (
                 <option value={u.id} key={u.id}>
                   {u.name.toUpperCase()}
@@ -312,6 +318,7 @@ export function UnitsManager({
             Secondary unit
             <select
               aria-label="Secondary unit"
+              disabled={pending}
               value={secondary}
               onChange={(e) => setSecondary(e.target.value)}
             >
@@ -326,6 +333,9 @@ export function UnitsManager({
             Conversion Rate
             <input
               aria-label="Conversion Rate"
+              aria-invalid={!!rate&&!validUnitConversionRate(rate)}
+              aria-describedby={rate&&!validUnitConversionRate(rate)?"unit-conversion-rate-error":undefined}
+              disabled={pending}
               type="number"
               min=".0001"
               step=".0001"
@@ -333,6 +343,7 @@ export function UnitsManager({
               onChange={(e) => setRate(e.target.value)}
             />
           </label>
+          {rate&&!validUnitConversionRate(rate)&&<p id="unit-conversion-rate-error" role="status">Enter a positive rate with up to 14 whole and 4 decimal digits.</p>}
           {error && <p role="alert">{error}</p>}
           <p>
             ⓘ 1 {units.find((x) => x.id === base)?.name.toUpperCase() ?? "BASE"}{" "}
@@ -342,13 +353,13 @@ export function UnitsManager({
           </p>
         </div>
         <footer className="manager-bottom-actions">
-          <button onClick={() => setConversionOpen(false)}>Cancel</button>
+          <button disabled={pending} onClick={() => setConversionOpen(false)}>Cancel</button>
           <button
             disabled={
               !base ||
               !secondary ||
               base === secondary ||
-              !(Number(rate) > 0) ||
+              !validUnitConversionRate(rate) ||
               pending
             }
             onClick={saveConversion}

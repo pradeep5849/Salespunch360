@@ -8452,7 +8452,11 @@
       "affected_files": [
         "src/components/account/units-manager.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "src/lib/account/unit-assignment.ts",
+        "src/components/account/unit-assignment-dialog.tsx",
+        "src/app/api/v1/mobile/account/unit-assignment/route.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/UnitAssignmentScreen.kt"
       ],
       "affected_services_apis_actions": [
         "Units page",
@@ -8538,26 +8542,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Unit to Items now supports scoped atomic product/service assignment, inline unit reuse/creation, paginated search and retained selections. Quantity history blocks base-unit changes, including master editor updates. Company locks coordinate stock/document creation with assignment; bulk history queries are bounded. Web/native async controls prevent dismissal/editing during save; exact bounded rate validation and accessible dialog styles added. Existing concurrency/settings/permission, full native pagination and navigation fixes independently verified. No schema change or migration.",
+          "tests": "91 grouped isolated PostgreSQL financial/database tests passed across unit, item opening, implementation, project workflow and quotation cases; 75 focused API/service/input/scope tests passed; Android compilation and 4 focused JVM tests passed (0 failures/errors/skips). Desktop/mobile-web unit control regression 2 passed and assignment/inline creation/history rejection/axe 2 passed after fixing dialog label/button contrast. TypeScript and ESLint passed; an earlier concurrent dev type-generation race was superseded by clean TypeScript after browser stopped. Final-head validation/physical Android checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A062-F02",
@@ -8666,22 +8677,28 @@
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Assignment and immutable-base-history guards are implemented. Existing conversion rules remain stored; transaction-level secondary-unit resolution, historical factor snapshots and quantity/value application remain pending. This finding is NOT closed by unit setup tests."
+        }
+      ]
     },
     {
       "finding_id": "A062-F03",
@@ -8696,7 +8713,11 @@
       "affected_files": [
         "src/lib/account/service.ts",
         "src/lib/mobile/account-master-data.ts",
-        "src/lib/account/settings.ts"
+        "src/lib/account/settings.ts",
+        "src/lib/account/unit-assignment.ts",
+        "src/components/account/unit-assignment-dialog.tsx",
+        "src/app/api/v1/mobile/account/unit-assignment/route.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/UnitAssignmentScreen.kt"
       ],
       "affected_services_apis_actions": [
         "Units page",
@@ -8782,26 +8803,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Unit to Items now supports scoped atomic product/service assignment, inline unit reuse/creation, paginated search and retained selections. Quantity history blocks base-unit changes, including master editor updates. Company locks coordinate stock/document creation with assignment; bulk history queries are bounded. Web/native async controls prevent dismissal/editing during save; exact bounded rate validation and accessible dialog styles added. Existing concurrency/settings/permission, full native pagination and navigation fixes independently verified. No schema change or migration.",
+          "tests": "91 grouped isolated PostgreSQL financial/database tests passed across unit, item opening, implementation, project workflow and quotation cases; 75 focused API/service/input/scope tests passed; Android compilation and 4 focused JVM tests passed (0 failures/errors/skips). Desktop/mobile-web unit control regression 2 passed and assignment/inline creation/history rejection/axe 2 passed after fixing dialog label/button contrast. TypeScript and ESLint passed; an earlier concurrent dev type-generation race was superseded by clean TypeScript after browser stopped. Final-head validation/physical Android checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A062-F04",
@@ -8817,7 +8845,11 @@
         "src/app/workspace/account/inventory/units/page.tsx",
         "src/lib/account/service.ts",
         "src/lib/mobile/account-master-data.ts",
-        "src/lib/auth/permissions.ts"
+        "src/lib/auth/permissions.ts",
+        "src/lib/account/unit-assignment.ts",
+        "src/components/account/unit-assignment-dialog.tsx",
+        "src/app/api/v1/mobile/account/unit-assignment/route.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/UnitAssignmentScreen.kt"
       ],
       "affected_services_apis_actions": [
         "Units page",
@@ -8904,26 +8936,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Unit to Items now supports scoped atomic product/service assignment, inline unit reuse/creation, paginated search and retained selections. Quantity history blocks base-unit changes, including master editor updates. Company locks coordinate stock/document creation with assignment; bulk history queries are bounded. Web/native async controls prevent dismissal/editing during save; exact bounded rate validation and accessible dialog styles added. Existing concurrency/settings/permission, full native pagination and navigation fixes independently verified. No schema change or migration.",
+          "tests": "91 grouped isolated PostgreSQL financial/database tests passed across unit, item opening, implementation, project workflow and quotation cases; 75 focused API/service/input/scope tests passed; Android compilation and 4 focused JVM tests passed (0 failures/errors/skips). Desktop/mobile-web unit control regression 2 passed and assignment/inline creation/history rejection/axe 2 passed after fixing dialog label/button contrast. TypeScript and ESLint passed; an earlier concurrent dev type-generation race was superseded by clean TypeScript after browser stopped. Final-head validation/physical Android checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A062-F05",
@@ -8939,7 +8978,11 @@
         "src/components/account/units-manager.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-        "src/lib/account/validation.ts"
+        "src/lib/account/validation.ts",
+        "src/lib/account/unit-assignment.ts",
+        "src/components/account/unit-assignment-dialog.tsx",
+        "src/app/api/v1/mobile/account/unit-assignment/route.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/UnitAssignmentScreen.kt"
       ],
       "affected_services_apis_actions": [
         "Units page",
@@ -9026,26 +9069,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Unit to Items now supports scoped atomic product/service assignment, inline unit reuse/creation, paginated search and retained selections. Quantity history blocks base-unit changes, including master editor updates. Company locks coordinate stock/document creation with assignment; bulk history queries are bounded. Web/native async controls prevent dismissal/editing during save; exact bounded rate validation and accessible dialog styles added. Existing concurrency/settings/permission, full native pagination and navigation fixes independently verified. No schema change or migration.",
+          "tests": "91 grouped isolated PostgreSQL financial/database tests passed across unit, item opening, implementation, project workflow and quotation cases; 75 focused API/service/input/scope tests passed; Android compilation and 4 focused JVM tests passed (0 failures/errors/skips). Desktop/mobile-web unit control regression 2 passed and assignment/inline creation/history rejection/axe 2 passed after fixing dialog label/button contrast. TypeScript and ESLint passed; an earlier concurrent dev type-generation race was superseded by clean TypeScript after browser stopped. Final-head validation/physical Android checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A062-F06",
@@ -9060,7 +9110,11 @@
       "affected_files": [
         "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
         "src/lib/mobile/account-master-data.ts",
-        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt",
+        "src/lib/account/unit-assignment.ts",
+        "src/components/account/unit-assignment-dialog.tsx",
+        "src/app/api/v1/mobile/account/unit-assignment/route.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/UnitAssignmentScreen.kt"
       ],
       "affected_services_apis_actions": [
         "Units page",
@@ -9146,26 +9200,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Unit to Items now supports scoped atomic product/service assignment, inline unit reuse/creation, paginated search and retained selections. Quantity history blocks base-unit changes, including master editor updates. Company locks coordinate stock/document creation with assignment; bulk history queries are bounded. Web/native async controls prevent dismissal/editing during save; exact bounded rate validation and accessible dialog styles added. Existing concurrency/settings/permission, full native pagination and navigation fixes independently verified. No schema change or migration.",
+          "tests": "91 grouped isolated PostgreSQL financial/database tests passed across unit, item opening, implementation, project workflow and quotation cases; 75 focused API/service/input/scope tests passed; Android compilation and 4 focused JVM tests passed (0 failures/errors/skips). Desktop/mobile-web unit control regression 2 passed and assignment/inline creation/history rejection/axe 2 passed after fixing dialog label/button contrast. TypeScript and ESLint passed; an earlier concurrent dev type-generation race was superseded by clean TypeScript after browser stopped. Final-head validation/physical Android checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A062-F07",
@@ -9179,7 +9240,11 @@
       "root_cause": "Standalone manager and custom overlays omit shared reference navigation/semantics.",
       "affected_files": [
         "src/components/account/units-manager.tsx",
-        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt",
+        "src/lib/account/unit-assignment.ts",
+        "src/components/account/unit-assignment-dialog.tsx",
+        "src/app/api/v1/mobile/account/unit-assignment/route.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/UnitAssignmentScreen.kt"
       ],
       "affected_services_apis_actions": [
         "Units page",
@@ -9264,26 +9329,33 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
-        "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
-        "files": [
-          "src/lib/account/units.ts",
-          "src/lib/account/units.integration.test.ts",
-          "src/lib/account/service.ts",
-          "src/lib/mobile/account-master-data.ts",
-          "src/app/actions/account-masters.ts",
-          "src/components/account/units-manager.tsx",
-          "src/app/workspace/account/inventory/units/page.tsx",
-          "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
-          "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
-        ]
-      }
+      "checkpoint_work": [
+        {
+          "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
+          "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+          "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
+          "files": [
+            "src/lib/account/units.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/service.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/app/actions/account-masters.ts",
+            "src/components/account/units-manager.tsx",
+            "src/app/workspace/account/inventory/units/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ItemManagementViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemManagementScreens.kt"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Unit to Items now supports scoped atomic product/service assignment, inline unit reuse/creation, paginated search and retained selections. Quantity history blocks base-unit changes, including master editor updates. Company locks coordinate stock/document creation with assignment; bulk history queries are bounded. Web/native async controls prevent dismissal/editing during save; exact bounded rate validation and accessible dialog styles added. Existing concurrency/settings/permission, full native pagination and navigation fixes independently verified. No schema change or migration.",
+          "tests": "91 grouped isolated PostgreSQL financial/database tests passed across unit, item opening, implementation, project workflow and quotation cases; 75 focused API/service/input/scope tests passed; Android compilation and 4 focused JVM tests passed (0 failures/errors/skips). Desktop/mobile-web unit control regression 2 passed and assignment/inline creation/history rejection/axe 2 passed after fixing dialog label/button contrast. TypeScript and ESLint passed; an earlier concurrent dev type-generation race was superseded by clean TypeScript after browser stopped. Final-head validation/physical Android checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A063-F01",

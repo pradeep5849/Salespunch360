@@ -140,3 +140,5 @@ internal fun visiblePricingRoles(structure:TeamStructure)=if(structure==TeamStru
 @Serializable data class AccountDashboardVisibility(val sales:Boolean=false,val purchases:Boolean=false,val expenses:Boolean=false,val projects:Boolean=false,val inventory:Boolean=false)
 @Serializable data class AccountDashboardLinks(val reports:String?=null,val expenseReport:String?=null,val cashBank:String?=null,val items:String?=null,val lowStock:String?=null)
 @Serializable data class AccountLowStockPreview(val productId:String,val name:String,val warehouse:String,val quantity:String)
+
+@Serializable data class UnitAssignmentPage(val items:List<AccountMasterRecord> = emptyList(),val offset:Int=0,val nextOffset:Int?=null)

@@ -13,6 +13,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
 data class ItemManagementState(
+    val assignmentKind:String?=null,
+    val assignmentQuery:String="",
+    val assignmentOffset:Int=0,
+    val assignmentItems:List<AccountMasterRecord> = emptyList(),
+    val assignmentLoading:Boolean=false,
+    val assignmentNext:Int?=null,
+    val assignmentError:String?=null,
+    val message:String?=null,
     val loading:Boolean=false,
     val saving:Boolean=false,
     val units:List<AccountMasterRecord> = emptyList(),
@@ -31,6 +39,8 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     private val api=ApiClient(SecureSession(app))
     private val _state=MutableStateFlow(ItemManagementState())
     val state:StateFlow<ItemManagementState> = _state
+    private var assignmentJob:Job?=null
+    private var assignmentGeneration=0L
     private var loadJob:Job?=null
     private var loadGeneration=0L
     init{refresh()}
@@ -60,6 +70,10 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
             if(generation==loadGeneration)_state.value=_state.value.copy(loading=false,units=units,unitConversions=options.unitConversions,error=null)
         }catch(e:CancellationException){throw e}catch(e:Exception){if(generation==loadGeneration)fail(e)}}
     }
+    fun loadAssignment(kind:String,q:String,offset:Int){assignmentJob?.cancel();val generation=++assignmentGeneration;_state.value=_state.value.copy(assignmentLoading=true,assignmentError=null,assignmentKind=kind,assignmentQuery=q,assignmentOffset=offset);assignmentJob=viewModelScope.launch{try{val page=api.unitAssignmentOptions(kind,q,offset);val rows=page.items;if(generation==assignmentGeneration)_state.value=_state.value.copy(assignmentItems=rows,assignmentLoading=false,assignmentNext=page.nextOffset)}catch(e:CancellationException){throw e}catch(e:Exception){if(generation==assignmentGeneration)_state.value=_state.value.copy(assignmentLoading=false,assignmentItems=emptyList(),assignmentNext=null,assignmentError=(e as? ApiException)?.serverMessage?:"Items could not be loaded. Reconnect and retry.")}}}
+    fun closeAssignment(){assignmentJob?.cancel();assignmentGeneration++;_state.value=_state.value.copy(assignmentKind=null,assignmentItems=emptyList(),assignmentLoading=false,assignmentError=null)}
+    fun assignUnits(payload:JsonObject,done:()->Unit)=viewModelScope.launch{if(_state.value.saving)return@launch;_state.value=_state.value.copy(saving=true,assignmentError=null);try{val result=api.assignUnits(payload);val expected=payload["itemIds"]?.jsonArray?.size?:0;require(result["count"]?.jsonPrimitive?.intOrNull==expected){"Assignment could not be confirmed"};_state.value=_state.value.copy(saving=false,message="Assigned unit to $expected items.");refreshUnits();done()}catch(e:CancellationException){throw e}catch(e:Exception){_state.value=_state.value.copy(saving=false,assignmentError=(e as? ApiException)?.serverMessage?:"Assignment could not be saved. Reconnect and retry.")}}
+
     fun clearError(){_state.value=_state.value.copy(error=null)}
 
     private suspend fun loadAll(kind:String,active:String):List<AccountMasterRecord>{
@@ -97,7 +111,7 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
 
     fun saveConversion(base:String,secondary:String,rate:String,done:()->Unit)=viewModelScope.launch{
         if(_state.value.saving)return@launch
-        if(base.isBlank()||secondary.isBlank()||base==secondary||!Regex("[0-9]{1,14}(\\.[0-9]{1,4})?").matches(rate)||(rate.toBigDecimalOrNull()?.signum()?:0)<=0){_state.value=_state.value.copy(error="Choose different units and a positive rate with at most four decimal places.");return@launch}
+        if(base.isBlank()||secondary.isBlank()||base==secondary||!com.salespunch360.mobile.account.validUnitConversionRate(rate)){_state.value=_state.value.copy(error="Choose different units and a positive rate with at most four decimal places.");return@launch}
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{api.saveUnitConversion(base,secondary,rate)}
             .onSuccess{_state.value=_state.value.copy(saving=false);refreshUnits();done()}

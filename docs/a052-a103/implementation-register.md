@@ -3232,7 +3232,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Selection/search by name/code, Back/Cancel/Next, inline add, primary/secondary rules; atomic multiple-item save; foreign IDs; history preservation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3320,7 +3320,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Concurrent different-pair writes; same-pair conflict; concurrent setting update; no lost values; rollback; duplicate retry.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3364,7 +3364,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Admin/Accountant/Data Entry/Project Manager direct requests; Items OFF/units OFF; allowed and denied roles; company isolation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3408,7 +3408,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Duplicate name/symbol, overlength, invalid rate, foreign unit, offline/load fail/save fail, retry, no false success/empty.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3452,7 +3452,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** More than200 units; late name/short-name matches; picker choice; loading failures and company isolation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3496,7 +3496,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Mobile reference comparison; all tabs/back/settings; keyboard/focus/Escape; accessible field/button names; long lists and small screens.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9177,3 +9177,7 @@ Latest clarification implemented as separate owner capital and posted company as
 ### A083 / A089 / A097 focused checkpoint — 2026-10-13
 
 Estimate list and native cards implemented; A083-F01 stays PARTIAL while Convert destination/balance semantics are pending. 55 quotation tests, 3 DB integration and 2 desktop/mobile-web list checks passed; Android compile passed. Independently verified prior A089-F01 Decimal editing and A097-F02 filtered setting persistence: 4 desktop/mobile-web checks and 22 grouped unit tests passed. Both findings now implemented pending final-head verification. Totals: 118 implemented but not verified, 73 partial, 8 not started. Final statuses remain pending.
+
+### A062 unit setup/assignment checkpoint — 2026-10-13
+
+Atomic product/service assignment and inline units work on web/native with scoped APIs, quantity-history guards and coordinated stock/document locks. Independent concurrency, settings/permission, complete pagination and accessible pending-state regressions passed. 91 DB/financial + 75 focused service/API tests passed; Android compile and 4 JVM tests passed; 4 desktop/mobile-web checks passed after correcting dialog contrast. TypeScript/ESLint passed (the earlier concurrent dev-type file race was superseded). No migration. A062-F02 remains PARTIAL: transaction conversion/factor snapshots/value application still pending. Totals: 124 implemented but not verified, 67 partial, 8 not started. Final statuses remain pending.

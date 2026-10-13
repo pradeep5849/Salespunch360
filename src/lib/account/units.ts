@@ -1,3 +1,4 @@
+import {validUnitConversionRate} from "./unit-conversion-rate";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -85,7 +86,7 @@ export const unitConversionInput = z
       .union([z.string(), z.number()])
       .transform(String)
       .pipe(z.string().regex(/^\d{1,14}(?:\.\d{1,4})?$/))
-      .refine((value) => new Prisma.Decimal(value).gt(0)),
+      .refine(validUnitConversionRate),
   })
   .strict()
   .refine((input) => input.baseUnitId !== input.secondaryUnitId);

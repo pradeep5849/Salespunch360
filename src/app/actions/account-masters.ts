@@ -246,3 +246,6 @@ export async function saveNewAccountPartyAction(form: FormData) {
     revalidatePath("/workspace/account");
   }, "Account party created");
 }
+
+export async function unitAssignmentOptionsAction(raw:unknown){try{const {requirePermission}=await import("@/lib/auth/authorization");const {unitAssignmentOptionsForActor}=await import("@/lib/account/unit-assignment");const actor=await requirePermission("ACCOUNT_STOCK");return {ok:true as const,page:await unitAssignmentOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,raw)};}catch(error){return {ok:false as const,message:accountErrorMessage(error)};}}
+export async function assignUnitToItemsAction(raw:unknown){try{const {requirePermissionForMutation}=await import("@/lib/auth/authorization");const {assignUnitToItemsForActor}=await import("@/lib/account/unit-assignment");const actor=await requirePermissionForMutation("ACCOUNT_STOCK");const result=await assignUnitToItemsForActor(actor as import("@/lib/account/projects").ProjectActor,raw);revalidatePath("/workspace/account/inventory","layout");return {ok:true as const,...result};}catch(error){return {ok:false as const,message:accountErrorMessage(error)};}}
