@@ -91,7 +91,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 if(draft.id==null) {
                 item { SelectField("Type", draft.documentType, listOf("QUOTATION" to "Quotation", "ESTIMATE" to "Estimate", "BOQ" to "BOQ")) { vm.editDraft(draft.copy(documentType = it)) } }
                 item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { vm.editDraft(draft.copy(branchId = it, customerId = "")) } }
-                item { SelectField("Customer", draft.customerId, state.customers.map { it.id to it.name }) { vm.editDraft(draft.copy(customerId = it)) } }
+                item { SelectField("Customer", draft.customerId, state.customers.filter { it.branchId==draft.branchId }.map { it.id to it.name }) { vm.editDraft(draft.copy(customerId = it)) } }
                 } else {
                     item { Text("Type: ${draft.documentType}") }
                     item { Text("Branch: ${state.branches.firstOrNull{it.id==draft.branchId}?.name?:draft.branchId}") }

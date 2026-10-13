@@ -140,7 +140,7 @@ export async function quotationEditorOptionsForActor(actor: Actor) {
   const company = await db.company.findUniqueOrThrow({ where: { id: actor.companyId! }, select: { productEdition: true } });
   const [branches, customers, products, services, workPackages, units] = await Promise.all([
     db.branch.findMany({ where: scopedBranchWhere(actor), select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
-    db.customer.findMany({ where: { companyId: actor.companyId!, isActive: true, isAccountCustomer: true, ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {}) }, select: { id: true, name: true, contactPerson: true }, orderBy: { name: "asc" } }),
+    db.customer.findMany({ where: { companyId: actor.companyId!, isActive: true, isAccountCustomer: true, ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {}) }, select: { id: true, name: true, contactPerson: true, branchId: true }, orderBy: { name: "asc" } }),
     db.accountProduct.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, salePrice: true, ...(canCost ? { costPrice: true } : {}), taxRate: true, description: true } }),
     db.accountService.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, sellingRate: true, ...(canCost ? { estimatedCost: true } : {}), taxRate: true, description: true } }),
     db.workPackage.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, sellingRate: true, ...(canCost ? { estimatedCost: true } : {}), description: true } }),

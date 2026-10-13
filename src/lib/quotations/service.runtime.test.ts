@@ -27,6 +27,10 @@ describe("A3 service runtime create and authorization",()=>{
 describe("Account Customer Branch options",()=>{
  it("scopes selected-Branch options and returns only the authorized query result",async()=>{const own={id:ID,name:"Branch A",contactPerson:null};m.auth.mockResolvedValue(actor("ACCOUNT_ADMIN",{branchAccessScope:"SELECTED_BRANCHES",branchIds:[B]}));m.customers.mockResolvedValue([own]);const result=await quotationEditorOptions();expect(result.customers).toEqual([own]);expect(m.customers).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:C,isActive:true,isAccountCustomer:true,branchId:{in:[B]}}}))});
  it("cannot include another Branch through a crafted selector",async()=>{m.auth.mockResolvedValue(actor("ACCOUNT_ADMIN",{branchAccessScope:"SELECTED_BRANCHES",branchIds:[B]}));await quotationEditorOptions();expect(m.customers.mock.calls[0][0].where.branchId).toEqual({in:[B]})});
+ it("includes safe branch identity in customer choices for client-side branch selection",async()=>{
+  await quotationEditorOptions();
+  expect(m.customers.mock.calls[0][0].select).toEqual({id:true,name:true,contactPerson:true,branchId:true});
+ });
  it("retains all company Account customers for ALL_BRANCHES",async()=>{const rows=[{id:ID,name:"A"},{id:R,name:"B"}];m.customers.mockResolvedValue(rows);const result=await quotationEditorOptions();expect(result.customers).toEqual(rows);expect(m.customers.mock.calls[0][0].where).toEqual({companyId:C,isActive:true,isAccountCustomer:true})});
 });
 describe("Plus Lead boundary",()=>{

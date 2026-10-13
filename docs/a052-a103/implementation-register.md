@@ -7102,6 +7102,8 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Linked finding IDs:** A082-F01, A082-F03, A082-F04.
 
+**Branch selector continuation:** Safe customer branch IDs returned; web/native customer choices filtered by selected branch, and web branch changes clear party/lead selection. Existing server scope/private-cost guards retained. 48 service tests +2 desktop/mobile draft/reset/scope tests (25.8s), Android compile, clean Node22 TypeScript and focused lint passed. Other saved-party/item/purchase-price/native and final-head checks remain pending; PARTIAL retained.
+
 ## A082-F03 — No reference live totals, rounding or inclusive/exclusive tax mode
 
 **Title:** No reference live totals, rounding or inclusive/exclusive tax mode

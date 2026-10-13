@@ -18417,7 +18417,12 @@
         "A082-F01",
         "A082-F03",
         "A082-F04"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Quotation customer option DTO now includes safe branch identity. Web/native customer lists filter to the selected branch; web branch changes clear the selected customer/lead. Existing server branch/company/party checks and cost-field exclusion retained.",
+        "tests": "48 shared quotation service tests passed; 2 desktop/mobile tests passed (25.8s) for branch switch/reset, correct draft persistence and server rejection of mismatched party; Android compile, clean Node22 TypeScript and focused lint passed.",
+        "remaining": "Other original saved-party/item selection, purchase-price display/native interaction and final-head validation remain pending; PARTIAL retained."
+      }
     },
     {
       "finding_id": "A082-F03",

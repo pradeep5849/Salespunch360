@@ -1580,3 +1580,28 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   await db.branch.delete({where:{id:second}});
  }
 });
+
+test("A082 quotation creation filters and resets customers when branch changes",async({page})=>{
+ test.setTimeout(120000);
+ const second=randomUUID(),secondCustomer=randomUUID();
+ await db.branch.create({data:{id:second,companyId,name:"Quotation second branch",code:"A082-SECOND"}});
+ await db.customer.create({data:{id:secondCustomer,companyId,branchId:second,name:"Quotation second customer",isAccountCustomer:true}});
+ await signInSettings(page);
+ await page.goto("/workspace/account/quotations/new");
+ const identity=page.getByRole("group",{name:"Document",exact:true});
+ const branch=identity.getByRole("combobox",{name:"Branch",exact:true}),customer=identity.getByRole("combobox",{name:"Customer",exact:true});
+ await branch.selectOption(branchId);await customer.selectOption(customerId);
+ await branch.selectOption(second);
+ await expect(customer).toHaveValue("");
+ await expect(customer.locator(`option[value="${customerId}"]`)).toHaveCount(0);
+ await expect(customer.locator(`option[value="${secondCustomer}"]`)).toHaveCount(1);
+ await customer.selectOption(secondCustomer);
+ await page.getByRole("textbox",{name:"Item name",exact:true}).fill("Branch selection check");
+ await page.getByRole("spinbutton",{name:"Rate",exact:true}).fill("10");
+ await page.getByRole("button",{name:"Save draft",exact:true}).click();
+ await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+(?:\?.*)?$/,{timeout:20000});
+ const created=await db.quotationDocument.findFirstOrThrow({where:{companyId,branchId:second,customerId:secondCustomer}});
+ expect(created.status).toBe("DRAFT");
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ await expect(createQuotationForActor(actor,{branchId:second,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",lines:[{lineType:"CUSTOM",itemName:"Wrong branch",quantity:"1",rate:"1"}]})).rejects.toThrow("INVALID_CUSTOMER");
+});
