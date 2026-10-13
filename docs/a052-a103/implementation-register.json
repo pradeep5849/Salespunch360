@@ -10911,10 +10911,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Web/native shared money-account edit and deactivation now authorize Money Entry and company/branch scope, serialize changes, retain immutable account type/branch, synchronize linked ledger display name, and atomically audit before/after. Repeat deactivation does not duplicate audit. Ledger posting identity and historical journals are preserved.",
+        "verification": "Intermediate: 21 focused tests across 3 files passed, including 4 real PostgreSQL account edit/deactivation tests covering atomic audit rollback, linked ledger rename, company/branch/role rejection and deactivation replay; TypeScript and focused ESLint passed. No browser/native UI change or new migration.",
+        "remaining": "Final-head complete regression/platform validation remains; existing money-form UI findings are separately tracked and not marked fixed by this service change.",
+        "files": [
+          "src/lib/account/money.ts",
+          "src/lib/account/money-edit.integration.test.ts"
+        ]
+      }
     },
     {
       "finding_id": "A064-F13",

@@ -18,7 +18,7 @@ import {
 } from "@/lib/auth/authorization";
 import { allocateDocumentNumberInTx } from "./numbering";
 import { canUsePermission } from "@/lib/auth/permissions";
-import { postJournalInTx, reverseJournalInTx } from "@/lib/accounting/service";
+import { postJournalInTx } from "@/lib/accounting/service";
 import type { ProjectActor } from "./projects";
 const D = Prisma.Decimal,
   Z = new D(0),
@@ -159,27 +159,90 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
+function moneyAccountAuditSnapshot(row: {
+  name: string;
+  bankName: string | null;
+  accountNumberMasked: string | null;
+  ifsc: string | null;
+  isActive: boolean;
+  ledgerAccountId: string;
+  branchId: string | null;
+}) {
+  return {
+    name: row.name,
+    bankName: row.bankName,
+    accountNumberMasked: row.accountNumberMasked,
+    ifsc: row.ifsc,
+    isActive: row.isActive,
+    ledgerAccountId: row.ledgerAccountId,
+    branchId: row.branchId,
+  };
+}
+async function mutateMoneyAccountForActor(
+  a: Actor,
+  id: string,
+  data: Prisma.MoneyAccountUpdateInput,
+  eventType: string,
+) {
+  z.string().uuid().parse(id);
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
+    throw new AuthorizationError();
+  return retrySerializable(() =>
+    db.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":money-account:" + id}))`;
+        const before = await tx.moneyAccount.findFirst({
+          where: {
+            id,
+            companyId: a.companyId,
+            ...manageableMoneyAccountScope(a),
+          },
+        });
+        if (!before) throw new AuthorizationError();
+        const after = await tx.moneyAccount.update({
+          where: { id: before.id },
+          data,
+        });
+        if (before.name !== after.name) {
+          const changed = await tx.ledgerAccount.updateMany({
+            where: { id: before.ledgerAccountId, companyId: a.companyId },
+            data: { name: after.name },
+          });
+          if (changed.count !== 1)
+            throw new Error("INVALID_MONEY_ACCOUNT_LEDGER");
+        }
+        if (
+          JSON.stringify(moneyAccountAuditSnapshot(before)) !==
+          JSON.stringify(moneyAccountAuditSnapshot(after))
+        )
+          await audit(tx, a, eventType, "MONEY_ACCOUNT", id, {
+            before: moneyAccountAuditSnapshot(before),
+            after: moneyAccountAuditSnapshot(after),
+          });
+        return after;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
+}
 export async function updateMoneyAccountForActor(
   a: Actor,
   id: string,
   raw: unknown,
 ) {
-  const d = accountInput
-      .partial()
-      .omit({ type: true, branchId: true })
-      .parse(raw),
-    changed = await db.moneyAccount.updateMany({
-      where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
-      data: d,
-    });
-  if (changed.count !== 1) throw new AuthorizationError();
+  const data = accountInput
+    .partial()
+    .omit({ type: true, branchId: true })
+    .parse(raw);
+  return mutateMoneyAccountForActor(a, id, data, "MONEY_ACCOUNT_UPDATED");
 }
 export async function deactivateMoneyAccountForActor(a: Actor, id: string) {
-  const changed = await db.moneyAccount.updateMany({
-    where: { id, companyId: a.companyId, ...manageableMoneyAccountScope(a) },
-    data: { isActive: false },
-  });
-  if (changed.count !== 1) throw new AuthorizationError();
+  return mutateMoneyAccountForActor(
+    a,
+    id,
+    { isActive: false },
+    "MONEY_ACCOUNT_DEACTIVATED",
+  );
 }
 export async function moneyDashboardForActor(a: Actor) {
   const accounts = await db.moneyAccount.findMany({

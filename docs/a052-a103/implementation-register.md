@@ -4094,13 +4094,15 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Rename/deactivate authorized account, foreign account/branch denial, audit rollback, consistent account/ledger/report names, retained history and inactive transfer rejection.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Atomic authorized account/ledger rename and before/after audit; deactivation audit once on retry, ledger retained. 21 focused tests passed across 3 files including 4 real PostgreSQL tests; TypeScript and focused ESLint passed. Final-head validation remains.
 
 ## A064-F13 — Money forms lack accessible web labels and actionable mutation feedback
 
