@@ -9247,3 +9247,5 @@ Home PDF sharing rejects failed/non-PDF/empty output, reports errors, supports c
 A071-F01 validation correction: initial lint rejected a synchronous state-reset effect after the sharing commit. Replaced it with document-scoped error state. Clean targeted lint and full TypeScript then passed; no final-head verification claim.
 
 A071-F01 browser continuation: Desktop and mobile-web PDF default/ASK/error/retry/cancel checks passed 2/2 (26.3s) after scoping the assertion away from Next route announcer. Image sharing/native defaults remain pending.
+
+A071-F01 image continuation: Authorized PDF-to-PNG rendering retains all pages; browser file sharing and per-page downloads implemented. Desktop/mobile browser run saved passed; focused share/image cleanup tests 9/9 passed, TypeScript/lint passed. Runtime PDF.js remains pinned 6.4.299. Native image sharing and production worker validation pending; status PARTIAL.

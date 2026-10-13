@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {printPdfPageImages} from "./print-page-images";
 import {preparePrintPdf,isShareCancellation} from "./share-print-file";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -180,6 +181,7 @@ export function AccountMobileHome({
   const [sheet, setSheet] = useState<
     "add" | "more" | "filter" | "share" | "actions" | null
   >(null);
+  const [imageDownloads,setImageDownloads]=useState<{id:string;files:File[]}|null>(null);
   const [sharePending,setSharePending]=useState(false);
   const [shareError,setShareError]=useState<{id:string;message:string}|null>(null);
   const [active, setActive] = useState<Transaction | null>(null);
@@ -243,6 +245,17 @@ export function AccountMobileHome({
           },
           { label: "Show All", icon: "grid", action: () => setSheet("more") },
         ];
+  const downloadFile=(file:File)=>{const url=URL.createObjectURL(file),link=document.createElement("a");link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  const shareImages=async()=>{
+   if(!active||sharePending)return;
+   setSharePending(true);setShareError(null);setImageDownloads(null);
+   try{
+    const files=await printPdfPageImages(await preparePrintPdf(`/api/account/print/${active.type}/${active.id}?format=pdf`,active.documentNumber));
+    if(navigator.share&&navigator.canShare?.({files}))await navigator.share({files,title:active.documentNumber});
+    else if(files.length===1)downloadFile(files[0]);
+    else setImageDownloads({id:active.id,files});
+   }catch(error){if(!isShareCancellation(error))setShareError({id:active.id,message:error instanceof Error?error.message:"Could not share images. Please try PDF instead."});}finally{setSharePending(false);}
+  };
   const sharePdf = async (selected:Transaction|null=active) => {
     if (!selected||sharePending) return;
     const pdfUrl=`/api/account/print/${selected.type}/${selected.id}?format=pdf`;
@@ -563,12 +576,11 @@ export function AccountMobileHome({
                 )}
               </div>
             )}
+            {imageDownloads?.id===active?.id&&imageDownloads&&<div><p>Download each page image:</p>{imageDownloads.files.map((file,index)=><button key={file.name} onClick={()=>downloadFile(file)}>Download page {index+1}</button>)}</div>}
             {shareError?.id===active?.id&&shareError&&<p role="alert">{shareError.message}</p>}
             {sheet === "share" && (
               <div className="account-more-grid">
-                <button disabled>
-                  Share as Image<small>Coming later</small>
-                </button>
+                <button disabled={sharePending} onClick={()=>void shareImages()}>{sharePending?"Preparing…":"Share as Image"}</button>
                 <button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
               </div>
             )}

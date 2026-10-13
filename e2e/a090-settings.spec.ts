@@ -1711,4 +1711,10 @@ test("A071 Home shares the selected PDF, honors saved default and reports failur
  await page.unroute(`**/api/account/print/SALES_ORDER/${id}?format=pdf`);
  await page.evaluate(()=>{Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});Object.defineProperty(navigator,"share",{configurable:true,value:()=>Promise.reject(new DOMException("Cancelled","AbortError"))});});
  await page.getByRole("button",{name:"Share as PDF",exact:true}).click();await expect(page.getByRole("button",{name:"Share as PDF",exact:true})).toBeEnabled();await expect(page.getByRole("dialog").getByRole("alert")).toHaveCount(0);
+ await page.evaluate(()=>{Object.defineProperty(navigator,"share",{configurable:true,value:undefined});});
+ const imageDownload=page.waitForEvent("download");await page.getByRole("button",{name:"Share as Image",exact:true}).click();const image=await imageDownload;expect(image.suggestedFilename()).toBe("HOME-SHARE-71.png");
+ const path=await image.path();expect(path).toBeTruthy();const {readFile}=await import("node:fs/promises");const bytes=await readFile(path!);expect(bytes.subarray(1,4).toString()).toBe("PNG");expect(bytes.length).toBeGreaterThan(1000);
+ const multi=await PDFDocument.create();multi.addPage([300,400]).drawText("Image page one");multi.addPage([300,400]).drawText("Image page two");const multiBytes=Buffer.from(await multi.save());
+ await page.route(`**/api/account/print/SALES_ORDER/${id}?format=pdf`,route=>route.fulfill({status:200,contentType:"application/pdf",body:multiBytes}));
+ await page.getByRole("button",{name:"Share as Image",exact:true}).click();await expect(page.getByRole("button",{name:"Download page 1",exact:true})).toBeVisible();await expect(page.getByRole("button",{name:"Download page 2",exact:true})).toBeVisible();
 });

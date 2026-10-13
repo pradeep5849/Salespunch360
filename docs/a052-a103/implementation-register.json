@@ -16245,6 +16245,10 @@
         {
           "work": "Added independent desktop/mobile-web verification of Home PDF default, ASK chooser, selected document download, denied sharing, retained retry, and share cancellation.",
           "tests": "2/2 desktop/mobile browser tests passed (26.3s) on isolated local database. Initial broad alert assertion matched Next route announcer, corrected by scoping to dialog. TypeScript and targeted lint passed after dev server stopped. Image export/native preference are still pending; finding PARTIAL."
+        },
+        {
+          "work": "Web Home now rasterizes the same authorized PDF into PNGs, preserving every page; supports native browser file sharing or single-image download and per-page download buttons for multi-page fallback. PDF.js pinned existing version moved from dev to runtime dependency; webpack supplies its worker locally. Explicit PDF fallback for documents over 50 pages, no cropped/partial exports. Canvas/PDF resources are cleaned on success and failure.",
+          "tests": "Latest desktop/mobile Playwright image/PDF sharing run saved passed with no failed tests (last-run newer than test source; session output interrupted by new user turn). 9/9 focused preparation/image lifecycle tests passed. TypeScript and targeted lint passed. Native image sharing and production build/worker validation remain pending. Finding remains PARTIAL."
         }
       ]
     },
