@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {preparePrintPdf,isShareCancellation} from "./share-print-file";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AccountDate } from "./display-preferences";
@@ -177,7 +178,10 @@ export function AccountMobileHome({
   const [sheet, setSheet] = useState<
     "add" | "more" | "filter" | "share" | "actions" | null
   >(null);
+  const [sharePending,setSharePending]=useState(false);
+  const [shareError,setShareError]=useState("");
   const [active, setActive] = useState<Transaction | null>(null);
+  useEffect(()=>{setShareError("");},[active?.id]);
   const [draftTypes, setDraftTypes] = useState(selectedTypes);
   const [floatingVisible, setFloatingVisible] = useState(true);
   useEffect(() => {
@@ -242,14 +246,10 @@ export function AccountMobileHome({
     ? `/api/account/print/${active.type}/${active.id}?format=pdf`
     : "";
   const sharePdf = async () => {
-    if (!active) return;
-    const response = await fetch(pdfUrl);
-    if (!response.ok) return;
-    const file = new File(
-      [await response.blob()],
-      `${active.documentNumber}.pdf`,
-      { type: "application/pdf" },
-    );
+    if (!active||sharePending) return;
+    setSharePending(true);setShareError("");
+    try{
+    const file=await preparePrintPdf(pdfUrl,active.documentNumber);
     if (navigator.share && navigator.canShare?.({ files: [file] }))
       await navigator.share({ files: [file], title: active.documentNumber });
     else {
@@ -258,8 +258,9 @@ export function AccountMobileHome({
       link.href = url;
       link.download = file.name;
       link.click();
-      URL.revokeObjectURL(url);
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
     }
+    }catch(error){if(!isShareCancellation(error))setShareError(error instanceof Error?error.message:"Could not share this document. Please try again.");}finally{setSharePending(false);}
   };
   return (
     <div className="account-mobile-home">
@@ -562,12 +563,13 @@ export function AccountMobileHome({
                 )}
               </div>
             )}
+            {shareError&&<p role="alert">{shareError}</p>}
             {sheet === "share" && (
               <div className="account-more-grid">
                 <button disabled>
                   Share as Image<small>Coming later</small>
                 </button>
-                <button onClick={sharePdf}>Share as PDF</button>
+                <button disabled={sharePending} onClick={sharePdf}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
               </div>
             )}
             {sheet === "actions" && active && (
@@ -596,7 +598,7 @@ export function AccountMobileHome({
                 >
                   Payment History
                 </Link>
-                <button onClick={sharePdf}>Share as PDF</button>
+                <button disabled={sharePending} onClick={sharePdf}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
                 <button disabled>
                   Generate e-Invoice<small>Coming later</small>
                 </button>

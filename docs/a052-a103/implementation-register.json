@@ -16225,10 +16225,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Home PDF sharing now checks server status/content type/nonempty output, retains permission enforcement, reports actionable errors, disables repeat clicks while preparing, sanitizes filenames and treats user share cancellation without false success/error. Download object URLs remain available until the download starts. Image export and persisted share default remain unimplemented.",
+          "tests": "5/5 focused sharing tests passed; TypeScript and targeted lint passed. Home browser/native/image/default preference tests remain pending."
+        }
+      ]
     },
     {
       "finding_id": "A071-F02",

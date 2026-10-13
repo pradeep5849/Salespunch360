@@ -9184,4 +9184,62 @@ Atomic product/service assignment and inline units work on web/native with scope
 
 ### A097-F01 — renderer continuation
 
+Shared Unicode layout preserves invoice/quotation customer text; exact amount grouping, PDF theme and HSN parity, safe long-header pagination. Grouped tests 67/67 and expanded invoice renderer tests 11/11 passed; TypeScript and targeted lint passed. Status remains PARTIAL pending remaining output matrix/final-head verification.### Intermediate shared regression validation — item creation policy
+
+Full unit suite: 2631 passed, 0 failed, 77 skipped (408 passing files, 5 skipped). Initial 23 failures resolved by supplying custom-field-definition fixtures and updating stale Project Actions/native expense context/manual messaging source contracts. Financial/branch assertions preserved. This is intermediate evidence; final-head validation remains outstanding.
+
+### Intermediate cheque payment boundary progress
+
+Normalized pending cheque payment/source identity; manual atomic closure, application-aware reversal/reopening and reclosure with immutable reversed history. Web entry uses scoped paged party identity search, amount and UUID retry key; financial web action and mobile create/action endpoints carry version/retry/date. Add Sale now preserves CHEQUE details and unpaid preview; native Close/Re-Open controls are in progress. Legacy arbitrary journal transitions are blocked.
+
+Intermediate: 4 real PostgreSQL financial tests pass including concurrent close, reopen, late original retry, reclose, advance undo and branch/version denial; 4 mobile route tests pass; grouped 70 commercial/cheque tests pass; corrected legacy gateway group 28 pass. Not final-head verification.
+
+Remaining: Native compilation/unit checks, native creation/destination/source navigation, legacy source linking, browser verification, full sale and vendor/CASH/locked-period regressions and final-head validation.
+
+Latest intermediate evidence: 5 PostgreSQL cheque lifecycle tests, 64 shared-consumer tests, Android compile and 146 JVM tests passed; TypeScript, focused lint and Prisma validation passed. Local database has 114 applied migrations. Native entry/destination selection, legacy source completion, browser and final-head checks remain. A066 stays PARTIAL.
+
+Cheque follow-up evidence: 22 database/retry tests passed with sequential fixture files and concurrency inside tests; desktop/mobile-web cheque entry, cash closure and reopen both passed, including card AXE and no overflow. Android View Txn routes compiled and JVM tests passed. Explicit accessible selector names corrected. These remain intermediate checks; A066 is PARTIAL.
+
+### Cheque entry and legacy-source completion checkpoint
+
+Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.
+
+Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.
+
+Remaining: Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed.
+
+### A087 sale financial projection progress
+
+Consistent snapshot separates receipts, discounts, credits and applied advances, and computes scoped party balance with openings. Native exact decimals and cancelled/null financial handling are connected. Intermediate checks: 7 PostgreSQL tests, 47 grouped consumers, 2 browser viewports, Android compilation and 3 focused JVM tests passed. A087-F01/F03 are IMPLEMENTED BUT NOT VERIFIED; A087-F02 and A086 paid-correction dependencies remain partial. No final status or final-head claim.
+
+### A067-F04 interim repayment validation — 2026-10-13
+
+Repayment principal ceiling uses effective posted liability ledger balances. A corrected liability of 60 rejects a principal payment of 61 without payment/journal writes. Focused money integration: 18 passed; TypeScript passed. Top-up/cancellation/archive remain pending; final-head verification remains pending.
+
+### A067-F04 lifecycle implementation — 2026-10-13
+
+Immutable top-up receipts, untouched-receipt cancellation, zero-balance archive/restore, web forms, mobile API and Android management are implemented. Original receipt/principal remains immutable. Cancellation is denied with financial activity or insufficient funds. Interim validation: 22 financial integration, 47 grouped runtime, 8 route/metadata tests passed; 2 desktop/mobile-web checks passed; Android compile, TypeScript and ESLint passed. A067-F04 is IMPLEMENTED BUT NOT VERIFIED pending final-head validation/device limitations. Register totals: 114 implemented but not verified; 75 partial; 10 not started. No findings have final status yet.
+
+### A067 shared liability safeguards — 2026-10-13
+
+Ambiguous shared legacy loan ledgers remain unknown and cannot be repaid/top-upped/cancelled as individual loans. Aggregate cents use exact minor-unit summation. 23 focused financial integration and 32 grouped runtime tests passed; TypeScript/ESLint passed. A067-F09 is implemented pending final-head verification. Latest native explanatory text awaits grouped compile. Totals: 115 implemented but not verified, 74 partial, 10 not started; final statuses remain pending.
+
+### A065-F11 posted assets summary — 2026-10-13
+
+Latest clarification implemented as separate owner capital and posted company asset book value, with no invented funding attribution/custom metric. 13 financial integration and 7 unit tests passed; Balance Sheet parity verified; desktop and mobile-web passed after correcting the mobile cold-start sign-in timeout. Android compile, TypeScript/ESLint passed. No migration. Totals: 116 implemented but not verified, 74 partial, 9 not started; no final finding closures yet.
+
+### A083 / A089 / A097 focused checkpoint — 2026-10-13
+
+Estimate list and native cards implemented; A083-F01 stays PARTIAL while Convert destination/balance semantics are pending. 55 quotation tests, 3 DB integration and 2 desktop/mobile-web list checks passed; Android compile passed. Independently verified prior A089-F01 Decimal editing and A097-F02 filtered setting persistence: 4 desktop/mobile-web checks and 22 grouped unit tests passed. Both findings now implemented pending final-head verification. Totals: 118 implemented but not verified, 73 partial, 8 not started. Final statuses remain pending.
+
+### A062 unit setup/assignment checkpoint — 2026-10-13
+
+Atomic product/service assignment and inline units work on web/native with scoped APIs, quantity-history guards and coordinated stock/document locks. Independent concurrency, settings/permission, complete pagination and accessible pending-state regressions passed. 91 DB/financial + 75 focused service/API tests passed; Android compile and 4 JVM tests passed; 4 desktop/mobile-web checks passed after correcting dialog contrast. TypeScript/ESLint passed (the earlier concurrent dev-type file race was superseded). No migration. A062-F02 remains PARTIAL: transaction conversion/factor snapshots/value application still pending. Totals: 124 implemented but not verified, 67 partial, 8 not started. Final statuses remain pending.
+
+### A097-F01 — renderer continuation
+
 Shared Unicode layout preserves invoice/quotation customer text; exact amount grouping, PDF theme and HSN parity, safe long-header pagination. Grouped tests 67/67 and expanded invoice renderer tests 11/11 passed; TypeScript and targeted lint passed. Status remains PARTIAL pending remaining output matrix/final-head verification.
+
+### A071-F01 — sharing continuation
+
+Home PDF sharing rejects failed/non-PDF/empty output, reports errors, supports cancellation and prevents repeat clicks while preparing. Five focused tests, TypeScript and lint passed. Image sharing and saved default remain pending; status PARTIAL.
