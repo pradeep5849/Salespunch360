@@ -1,10 +1,11 @@
 package com.salespunch360.mobile.ui.account
 
 import kotlinx.serialization.json.*
+import kotlinx.coroutines.launch
+import com.salespunch360.mobile.account.prepareDocumentShare
+import com.salespunch360.mobile.account.launchDocumentShare
 import android.content.Intent
 import android.net.Uri
-import java.io.File
-import androidx.core.content.FileProvider
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
@@ -32,6 +33,9 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -238,10 +242,32 @@ private fun AccountHomeScreen(
     padding:PaddingValues,
     navigate:(String)->Unit,
     search:(String,Set<String>)->Unit,
-    pdf:(String,String,(ByteArray)->Unit)->Unit,
+    pdf:(String,String,(ByteArray)->Unit,(String)->Unit)->Unit,
     initialPartyMode:Boolean=false,onPartyMode:(Boolean)->Unit={},initialQuery:String=""
 ){
     val context=LocalContext.current
+    val shareScope=rememberCoroutineScope()
+    var transactionMenu by remember{mutableStateOf<com.salespunch360.mobile.data.AccountHomeTransaction?>(null)}
+    var sharePending by remember{mutableStateOf(false)}
+    var shareError by remember{mutableStateOf<String?>(null)}
+    var shareChoice by remember{mutableStateOf<com.salespunch360.mobile.data.AccountHomeTransaction?>(null)}
+    fun export(tx:com.salespunch360.mobile.data.AccountHomeTransaction,images:Boolean){
+        if(sharePending)return
+        sharePending=true;shareError=null;shareChoice=null
+        pdf(tx.type,tx.id,{bytes->shareScope.launch{try{val files=prepareDocumentShare(context,tx.documentNumber,bytes,images);launchDocumentShare(context,files,images)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){shareError=error.message?:"Sharing failed. Please try again."}finally{sharePending=false}}},{error->sharePending=false;shareError=error})
+    }
+    if(shareChoice!=null)ModalBottomSheet(onDismissRequest={shareChoice=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){Text("Share transaction",style=MaterialTheme.typography.titleLarge);TextButton(onClick={shareChoice?.let{export(it,true)}}){Text("Share as Image")};TextButton(onClick={shareChoice?.let{export(it,false)}}){Text("Share as PDF")}}}
+    transactionMenu?.let{tx->ModalBottomSheet(onDismissRequest={transactionMenu=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){
+        Text("${tx.documentNumber} · More",style=MaterialTheme.typography.titleLarge)
+        if(tx.type=="SALES_INVOICE"&&tx.status=="POSTED"){
+            TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${tx.id}")}){Text("Return")}
+            TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=DELIVERY_CHALLAN&sourceDocumentId=${tx.id}")}){Text("Delivery Challan")}
+        }
+        TextButton(onClick={transactionMenu=null;navigate(if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")}){Text("Payment History")}
+        TextButton(enabled=!sharePending,onClick={transactionMenu=null;export(tx,false)}){Text("Share as PDF")}
+        TextButton(enabled=false,onClick={}){Text("Generate e-Invoice · Coming later")}
+    }}}
+    if(shareError!=null)AlertDialog(onDismissRequest={shareError=null},title={Text("Could not share document")},text={Text(shareError.orEmpty())},confirmButton={TextButton(onClick={shareError=null}){Text("OK")}})
     val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
     var partyMode by rememberSaveable(initialPartyMode){mutableStateOf(initialPartyMode)}
     var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
@@ -293,11 +319,18 @@ private fun AccountHomeScreen(
             if(!partyMode){
                 items(home?.transactions.orEmpty(),key={it.id}){tx->
                     ElevatedCard(Modifier.fillMaxWidth()){
-                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(tx.partyName,fontWeight=FontWeight.SemiBold);AssistChip(onClick={},label={Text(tx.status.replace('_',' '))})}
-                            Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(accountDate(tx.issueDate),style=MaterialTheme.typography.bodySmall)
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total ${formatMetric(tx.grandTotal,"MONEY")}");Text("Balance ${formatMetric(tx.balanceDue,"MONEY")}")}
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"View / print PDF")}}){Text("Print")};TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"Share transaction")}}){Text("Share")};TextButton(onClick={navigate("/workspace/account/transactions/${tx.id}")}){Text("More")}}
+                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+                            Row(Modifier.fillMaxWidth().clickable{navigate(if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")},horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                                    Text(tx.partyName,fontWeight=FontWeight.SemiBold)
+                                    val paid=tx.type=="SALES_INVOICE"&&tx.paymentStatus=="PAID"
+                                    Surface(shape=RoundedCornerShape(4.dp),color=if(paid)Color(0xFFDCFCE7)else Color(0xFFFFEDD5)){Text(com.salespunch360.mobile.account.homePaymentLabel(tx.type,tx.status,tx.paymentStatus),Modifier.padding(horizontal=6.dp,vertical=3.dp),color=if(paid)Color(0xFF166534)else Color(0xFF9A3412),style=MaterialTheme.typography.labelSmall)}
+                                }
+                                Column(Modifier.weight(1f),horizontalAlignment=Alignment.End){Text("#${tx.documentNumber}",fontWeight=FontWeight.SemiBold);Text(accountDate(tx.issueDate),style=MaterialTheme.typography.bodySmall)}
+                            }
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Column{Text("Amount",style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.grandTotal,"MONEY"))};Column(horizontalAlignment=Alignment.End){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.balanceDue,"MONEY"))}}
+                            HorizontalDivider()
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){IconButton(enabled=!sharePending,onClick={export(tx,false)}){Icon(Icons.Default.Print,"Print ${tx.documentNumber}")};IconButton(enabled=!sharePending,onClick={if(home?.shareAs=="PDF")export(tx,false)else shareChoice=tx}){Icon(Icons.Default.Share,"Share ${tx.documentNumber}")};IconButton(onClick={transactionMenu=tx}){Icon(Icons.Default.MoreVert,"More ${tx.documentNumber}")}}
                         }
                     }
                 }
@@ -333,11 +366,6 @@ private val launcherGroups=listOf(
         item{Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Add Transaction",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close")}}}
         launcherGroups.forEach{group->item{Text(group.first.uppercase(),Modifier.padding(horizontal=16.dp,vertical=10.dp),style=MaterialTheme.typography.labelMedium,color=Color(0xFF64748B),fontWeight=FontWeight.Bold)};items(group.second.chunked(3)){row->Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{entry->Surface(Modifier.weight(1f).heightIn(min=96.dp).clickable(enabled=entry.path!=null){entry.path?.let(navigate)},shape=RoundedCornerShape(12.dp),border=androidx.compose.foundation.BorderStroke(1.dp,Color(0xFFE2E8F0)),color=Color.White){Column(Modifier.fillMaxSize().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Surface(shape=RoundedCornerShape(10.dp),color=Color(0xFFEFF6FF)){Icon(Icons.Default.Add,null,Modifier.padding(9.dp),tint=Color(0xFF2563EB))};Spacer(Modifier.height(5.dp));Text(entry.label,style=MaterialTheme.typography.labelMedium,maxLines=2);if(entry.path==null)Text("Coming Soon",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))}}};repeat(3-row.size){Spacer(Modifier.weight(1f))}}}}
     }}
-}
-private fun sharePdf(context:android.content.Context,number:String,bytes:ByteArray,title:String){
-    val file = File(context.cacheDir, "$number.pdf").also { it.writeBytes(bytes) }
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),title))
 }
 
 @Composable

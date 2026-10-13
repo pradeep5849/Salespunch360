@@ -16135,7 +16135,10 @@
         "src/app/globals.css",
         "src/app/workspace/customers/new/page.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
-        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/DocumentSharing.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountViewModel.kt",
+        "src/lib/mobile/account.ts"
       ],
       "affected_services_apis_actions": [
         "Account Home web and shared accountMobileHomeData",
@@ -16225,7 +16228,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -16249,6 +16252,10 @@
         {
           "work": "Web Home now rasterizes the same authorized PDF into PNGs, preserving every page; supports native browser file sharing or single-image download and per-page download buttons for multi-page fallback. PDF.js pinned existing version moved from dev to runtime dependency; webpack supplies its worker locally. Explicit PDF fallback for documents over 50 pages, no cropped/partial exports. Canvas/PDF resources are cleaned on success and failure.",
           "tests": "Latest desktop/mobile Playwright image/PDF sharing run saved passed with no failed tests (last-run newer than test source; session output interrupted by new user turn). 9/9 focused preparation/image lifecycle tests passed. TypeScript and targeted lint passed. Native image sharing and production build/worker validation remain pending. Finding remains PARTIAL."
+        },
+        {
+          "work": "Android Home shares authorized PDF or every page as PNG through a narrowly permitted FileProvider cache directory and multi-file read grants. Uses saved company PDF/ASK preference from scoped mobile Home API, handles download/render/chooser errors and refreshes Home on return. Cards deserialize authoritative paymentStatus, render paid/partial/unpaid labels with document/date/amount/balance, accessible icon actions and a More sheet instead of redirecting More to details. No financial writes or DB changes.",
+          "tests": "Android compileDebugKotlin and focused DocumentSharingTest passed (3 tests, 0 failures/errors/skips; build 1m48s). Initial missing shared Intent import corrected before successful compile. Grouped Home/share tests 19/19 passed. Desktop/mobile browser PDF/image/multi-page/failure/cancel plus authenticated mobile preference checks 2/2 passed (31.8s); initial test token predated sign-in session rotation, corrected issuance order without weakening auth. TypeScript and targeted lint passed after browser stopped. Final-head regression, production worker build and physical-device chooser/PdfRenderer/TalkBack/font-scale remain pending."
         }
       ]
     },
@@ -16383,7 +16390,10 @@
         "src/app/globals.css",
         "src/app/workspace/customers/new/page.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
-        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/DocumentSharing.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountViewModel.kt",
+        "src/lib/mobile/account.ts"
       ],
       "affected_services_apis_actions": [
         "Account Home web and shared accountMobileHomeData",
@@ -16473,10 +16483,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Android Home shares authorized PDF or every page as PNG through a narrowly permitted FileProvider cache directory and multi-file read grants. Uses saved company PDF/ASK preference from scoped mobile Home API, handles download/render/chooser errors and refreshes Home on return. Cards deserialize authoritative paymentStatus, render paid/partial/unpaid labels with document/date/amount/balance, accessible icon actions and a More sheet instead of redirecting More to details. No financial writes or DB changes.",
+          "tests": "Android compileDebugKotlin and focused DocumentSharingTest passed (3 tests, 0 failures/errors/skips; build 1m48s). Initial missing shared Intent import corrected before successful compile. Grouped Home/share tests 19/19 passed. Desktop/mobile browser PDF/image/multi-page/failure/cancel plus authenticated mobile preference checks 2/2 passed (31.8s); initial test token predated sign-in session rotation, corrected issuance order without weakening auth. TypeScript and targeted lint passed after browser stopped. Final-head regression, production worker build and physical-device chooser/PdfRenderer/TalkBack/font-scale remain pending."
+        }
+      ]
     },
     {
       "finding_id": "A071-F04",

@@ -1703,10 +1703,14 @@ test("A071 Home shares the selected PDF, honors saved default and reports failur
  test.setTimeout(120_000);
  const id=randomUUID();await db.commercialDocument.create({data:{id,companyId,branchId,type:"SALES_ORDER",status:"DRAFT",documentNumber:"HOME-SHARE-71",customerId,partyId:customerId,partyName:"Home share fixture",issueDate:new Date("2026-10-11"),subtotal:"100",taxableTotal:"100",taxTotal:"0",grandTotal:"100",balanceDue:"100",createdById:userId}});
  const setDefault=async(shareAs:string)=>{const row=await db.accountSettings.findUniqueOrThrow({where:{companyId}});const defaults=row.transactionDefaults as Record<string,unknown>|null;await db.accountSettings.update({where:{companyId},data:{transactionDefaults:{...defaults,transactionPreferences:{shareAs}}}})};
- await setDefault("PDF");await signInSettings(page);await page.goto("/workspace/account?q=Home%20share%20fixture");
+ await setDefault("PDF");await signInSettings(page);
+ const mobileToken=createSessionToken(),mobileUser=await db.user.findUniqueOrThrow({where:{id:userId}});
+ await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(mobileToken),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:mobileUser.sessionVersion}});
+ const mobileHeaders={authorization:`Bearer ${mobileToken}`};
+ const pdfDefault=await page.request.get("/api/v1/mobile/account/home",{headers:mobileHeaders});expect(pdfDefault.status()).toBe(200);expect((await pdfDefault.json()).shareAs).toBe("PDF");await page.goto("/workspace/account?q=Home%20share%20fixture");
  await page.evaluate(()=>{Object.defineProperty(navigator,"share",{configurable:true,value:undefined});});
  const download=page.waitForEvent("download");await page.getByRole("button",{name:"Share",exact:true}).click();expect((await download).suggestedFilename()).toBe("HOME-SHARE-71.pdf");
- await setDefault("ASK");await page.reload();let requests=0;await page.route(`**/api/account/print/SALES_ORDER/${id}?format=pdf`,async route=>{requests++;await route.fulfill({status:403,contentType:"text/plain",body:"Forbidden"})});
+ await setDefault("ASK");const askDefault=await page.request.get("/api/v1/mobile/account/home",{headers:mobileHeaders});expect(askDefault.status()).toBe(200);expect((await askDefault.json()).shareAs).toBe("ASK");await page.reload();let requests=0;await page.route(`**/api/account/print/SALES_ORDER/${id}?format=pdf`,async route=>{requests++;await route.fulfill({status:403,contentType:"text/plain",body:"Forbidden"})});
  await page.getByRole("button",{name:"Share",exact:true}).click();expect(requests).toBe(0);await page.getByRole("button",{name:"Share as PDF",exact:true}).click();await expect(page.getByRole("dialog").getByRole("alert")).toContainText("permission");expect(requests).toBe(1);await expect(page.getByRole("button",{name:"Share as PDF",exact:true})).toBeEnabled();
  await page.unroute(`**/api/account/print/SALES_ORDER/${id}?format=pdf`);
  await page.evaluate(()=>{Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});Object.defineProperty(navigator,"share",{configurable:true,value:()=>Promise.reject(new DOMException("Cancelled","AbortError"))});});

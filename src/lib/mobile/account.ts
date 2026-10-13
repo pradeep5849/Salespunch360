@@ -254,5 +254,7 @@ export async function mobileAccountHome(
   if (!canUsePermission(actor, user.productEdition, "ACCOUNT_LEDGER_VIEW"))
     throw new Error("MOBILE_FORBIDDEN");
   const branch = await resolveAccountBranchContext(actor, input);
-  return accountMobileHomeData(actor, branch.context, input);
+  const settings=await db.accountSettings.findUnique({where:{companyId:actor.companyId},select:{transactionDefaults:true}});
+  const defaults=settings?.transactionDefaults as {transactionPreferences?:{shareAs?:unknown}}|null;
+  return {...await accountMobileHomeData(actor, branch.context, input),shareAs:defaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"};
 }

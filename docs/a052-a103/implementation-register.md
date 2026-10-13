@@ -5936,7 +5936,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Image/PDF content and permissions; default round trip/settings change; native share/download fallback; cancellation and error.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -6020,7 +6020,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Paid/part-paid/unpaid/cancelled; long party names; document/date alignment; icon actions; sheets and server authorization.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9249,3 +9249,7 @@ A071-F01 validation correction: initial lint rejected a synchronous state-reset 
 A071-F01 browser continuation: Desktop and mobile-web PDF default/ASK/error/retry/cancel checks passed 2/2 (26.3s) after scoping the assertion away from Next route announcer. Image sharing/native defaults remain pending.
 
 A071-F01 image continuation: Authorized PDF-to-PNG rendering retains all pages; browser file sharing and per-page downloads implemented. Desktop/mobile browser run saved passed; focused share/image cleanup tests 9/9 passed, TypeScript/lint passed. Runtime PDF.js remains pinned 6.4.299. Native image sharing and production worker validation pending; status PARTIAL.
+
+### A071 sharing and native card implementation
+
+A071-F01 and A071-F03 are IMPLEMENTED BUT NOT VERIFIED. Android all-page images/PDF, scoped FileProvider sharing, saved default, errors, refreshed Home, authoritative payment labels and accessible card menus implemented. Focused Home/share tests 19/19; Android compile + 3 JVM tests; desktop/mobile browser and authenticated mobile API preference tests 2/2 (31.8s) passed. Initial compile import/test-session ordering failures corrected. Production worker, physical device/PdfRenderer/chooser/TalkBack/font-scale and final-head checks remain pending.

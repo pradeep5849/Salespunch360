@@ -59,6 +59,7 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
   history+=current
   if(history.size>60)history.removeAt(0)
   _state.value=_state.value.copy(selectedPath=path)
+  if(path==ACCOUNT_ROOT)searchHome()
  }
 
  fun back():Boolean{
@@ -66,8 +67,8 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
   if(current in listOf("/workspace/account/settings/general","/workspace/account/settings/multi-currency","/workspace/account/settings/modules","/workspace/branches","/workspace/account/settings/multi-branch"))refreshDisplayPreferences()
   val previous=if(history.isNotEmpty())history.removeAt(history.lastIndex) else null
   return when{
-   previous!=null->{_state.value=_state.value.copy(selectedPath=previous);true}
-   current!=ACCOUNT_ROOT->{_state.value=_state.value.copy(selectedPath=ACCOUNT_ROOT);true}
+   previous!=null->{_state.value=_state.value.copy(selectedPath=previous);if(previous==ACCOUNT_ROOT)searchHome();true}
+   current!=ACCOUNT_ROOT->{_state.value=_state.value.copy(selectedPath=ACCOUNT_ROOT);searchHome();true}
    else->false
   }
  }
@@ -84,7 +85,10 @@ class AccountViewModel(app:Application):AndroidViewModel(app){
   try{val branch=_state.value.bootstrap?.branch;val home=api.accountHome(query,types,branch?.branchId,branch?.mode=="COMPANY");_state.value=_state.value.copy(home=home,refreshing=false)}catch(error:Exception){_state.value=_state.value.copy(refreshing=false,error=message(error))}
  }
 
- fun downloadDocumentPdf(type:String,id:String,onReady:(ByteArray)->Unit)=viewModelScope.launch{try{onReady(api.accountDocumentPdf(type,id))}catch(error:Exception){_state.value=_state.value.copy(error=message(error))}}
+ fun downloadDocumentPdf(type:String,id:String,onReady:(ByteArray)->Unit,onFailure:(String)->Unit)=viewModelScope.launch{
+  val branch=_state.value.bootstrap?.branch
+  try{val bytes=api.accountDocumentPdf(type,id);if(branch!=_state.value.bootstrap?.branch){onFailure("Business context changed. Please retry.");return@launch};onReady(bytes)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){val text=message(error);_state.value=_state.value.copy(error=text);onFailure(text)}
+ }
 
  fun retry(){val failed=failedBranchSelection;if(failed!=null)selectBranch(failed.first,failed.second)else load(true)}
  fun selectBranch(branchId:String?,companyWide:Boolean)=viewModelScope.launch{
