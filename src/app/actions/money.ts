@@ -151,3 +151,6 @@ export async function saveMoneyAdjustmentAction(fd: FormData) {
     refresh();
   }, "Account adjustment posted");
 }
+
+export async function saveLoanAction(fd:FormData) {const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(()=>loanAction(fd),"Loan received");}
+export async function saveLoanPaymentAction(fd:FormData) {const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(()=>loanPaymentAction(fd),"Loan payment posted");}

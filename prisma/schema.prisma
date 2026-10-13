@@ -3187,6 +3187,7 @@ model LoanPayment {
   paymentDate    DateTime @db.Date
   principal      Decimal  @db.Decimal(18, 2)
   interest       Decimal  @db.Decimal(18, 2)
+  description    String?  @db.VarChar(2000)
   charges        Decimal  @default(0) @db.Decimal(18, 2)
   idempotencyKey String   @db.VarChar(160)
   journalEntryId String   @db.Uuid

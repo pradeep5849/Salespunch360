@@ -134,12 +134,14 @@ describe.skipIf(!url)(
       const account=await createMoneyAccountForActor(actor,{type:"BANK",name:"Loan bank",branchId,creationRequestKey:randomUUID()});
       await client.ledgerAccount.create({data:{companyId,code:"LOAN-INTEREST",name:"Interest expense",accountClass:"EXPENSE",normalBalance:"DEBIT",systemKey:"GENERAL_EXPENSES"}});
       const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Statement lender",loanType:"TERM",principal:"100000",startDate:"2032-01-01",moneyAccountId:account.id,idempotencyKey:randomUUID()});
-      await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-02",principal:"2000",interest:"550",charges:"0",idempotencyKey:randomUUID()});
+      await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-02",principal:"2000",interest:"550",charges:"0",description:"October EMI",idempotencyKey:randomUUID()});
       await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-03",principal:"0",interest:"0",charges:"100",idempotencyKey:randomUUID()});
       const overview=await loanOverviewForActor(actor,{branchId,q:"Statement lender"});
       expect(overview.rows[0].outstanding).toBe("98000");expect(overview.outstanding).toBe("98000");
       const history=await loanHistoryForActor(actor,loan.id,{branchId,limit:2});
-      expect(history.total).toBe(3);expect(history.outstanding).toBe("98000");expect(history.rows[1].payment).toBe("2550");expect(history.nextOffset).toBe(2);
+      expect(history.total).toBe(3);expect(history.outstanding).toBe("98000");expect(history.rows[1].payment).toBe("2550");expect(history.rows[1].narration).toBe("October EMI");expect(history.nextOffset).toBe(2);
+      const payment=await client.loanPayment.findFirstOrThrow({where:{companyId,loanId:loan.id,description:"October EMI"}});expect(payment.description).toBe("October EMI");
+      await expect(postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:account.id,paymentDate:"2032-01-02",principal:"2000",interest:"550",charges:"0",description:"Changed EMI",idempotencyKey:payment.idempotencyKey})).rejects.toThrow("IDEMPOTENCY_CONFLICT");
       const next=await loanHistoryForActor(actor,loan.id,{branchId,offset:2});expect(next.rows[0].payment).toBe("100");expect(next.rows[0].balance).toBe("98000");
       await expect(loanHistoryForActor({...actor,companyId:otherCompany},loan.id,{branchId})).rejects.toThrow();
       await expect(loanHistoryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},loan.id,{branchId})).rejects.toThrow();

@@ -5,7 +5,7 @@ import {AuthorizationError} from "@/lib/auth/authorization";
 import {moneyReadContext} from "./money-context";
 import type {ProjectActor} from "./projects";
 const query=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional(),offset:z.coerce.number().int().min(0).max(1000000).default(0),limit:z.coerce.number().int().min(1).max(100).default(50)}).strict();
-type Row={id:string;entryDate:Date;journalNumber:string;sourceType:string;status:string;debit:Prisma.Decimal;credit:Prisma.Decimal;balance:Prisma.Decimal;payment:Prisma.Decimal|null};
+type Row={id:string;entryDate:Date;journalNumber:string;sourceType:string;status:string;narration:string|null;debit:Prisma.Decimal;credit:Prisma.Decimal;balance:Prisma.Decimal;payment:Prisma.Decimal|null};
 /** Include fee-only payments and correcting reversal journals, with balances
  * computed over the full history before pagination. */
 export async function loanHistoryForActor(actor:ProjectActor,id:string,raw:unknown={}){
@@ -13,7 +13,7 @@ export async function loanHistoryForActor(actor:ProjectActor,id:string,raw:unkno
  return db.$transaction(async tx=>{
   const loan=await tx.loan.findFirst({where:{id,companyId:actor.companyId,...(resolved.context.mode==="BRANCH"?{branchId:resolved.context.branchId}:{})}});
   if(!loan)throw new AuthorizationError();
-  const base=Prisma.sql`SELECT j.id,j."entryDate",j."createdAt",j."journalNumber",j."sourceType",j.status,
+  const base=Prisma.sql`SELECT j.id,j."entryDate",j."createdAt",j."journalNumber",j."sourceType",j.status,j.narration,
    COALESCE(SUM(l.debit) FILTER (WHERE l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid),0) AS debit,
    COALESCE(SUM(l.credit) FILTER (WHERE l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid),0) AS credit,
    MAX(p.principal+p.interest+p.charges) AS payment

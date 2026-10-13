@@ -5460,13 +5460,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Decimal totals including charges; note round trip; zero interest; principal ceiling; invalid/inactive/other-branch account rejected.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F04, A067-F06, A067-F07.
+**Checkpoint work in progress:** EMI totals/descriptions and accessible retained web loan form feedback implemented; focused financial/browser/native validation in progress. No final-head verification claimed.
+
 
 ## A067-F06 — Blank optional web fields reject fresh loan creation
 
@@ -5690,13 +5692,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Keyboard/screen-reader use; narrow screens; invalid date/amount/principal ceiling; save feedback and preserved draft.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F09.
+**Checkpoint work in progress:** EMI totals/descriptions and accessible retained web loan form feedback implemented; focused financial/browser/native validation in progress. No final-head verification claimed.
+
 
 ## A070-F01 — Sales notifications need compact elegant presentation
 

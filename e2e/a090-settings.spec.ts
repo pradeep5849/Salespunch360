@@ -1609,9 +1609,11 @@ test("A082 quotation creation filters and resets customers when branch changes",
 });
 
 test("A067 loan identity creation opens scoped detail and ledger statement",async({page})=>{
+ test.setTimeout(90000);
  const {createMoneyAccountForActor}=await import("../src/lib/account/money");
  const actor={id:userId,name:"Admin",email,companyId,role:"COMPANY_ADMIN",accountRole:"ACCOUNT_ADMIN",salesRole:"PRIMARY_ADMIN",isActive:true,accountAccessActive:true,salesAccessActive:true,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor;
  await db.financialYear.create({data:{companyId,name:"Loan browser year",startDate:new Date("2032-01-01"),endDate:new Date("2032-12-31")}});
+ await db.ledgerAccount.create({data:{companyId,code:"A067-EXP",name:"Loan expenses",accountClass:"EXPENSE",normalBalance:"DEBIT",systemKey:"GENERAL_EXPENSES"}});
  const account=await createMoneyAccountForActor(actor,{branchId,type:"BANK",name:"A067 Loan Bank",creationRequestKey:randomUUID()});
  await signInSettings(page);await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
  const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create and receive loan",exact:true})});
@@ -1620,4 +1622,21 @@ test("A067 loan identity creation opens scoped detail and ledger statement",asyn
  await expect.poll(()=>db.loan.count({where:{companyId,loanAccountNumber:"A067-ACCOUNT"}}),{timeout:20000}).toBe(1);
  await page.getByLabel("Search loans").fill("A067-ACCOUNT");await page.getByRole("button",{name:"Apply loan filters"}).click();await page.getByRole("link",{name:"A067 Project loan · TERM"}).click();
  await expect(page.locator("dl")).toContainText("Working capital",{timeout:20000});await expect(page.locator("dl")).toContainText("A067-ACCOUNT");await expect(page.locator("dl")).toContainText("60");await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("LOAN RECEIPT");await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("1,00,000.00");expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);
+ await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);const paymentForm=page.locator("form").filter({has:page.getByRole("button",{name:"Post EMI/payment",exact:true})});const loan=await db.loan.findFirstOrThrow({where:{companyId,loanAccountNumber:"A067-ACCOUNT"}});
+ await paymentForm.getByLabel("Loan to repay",{exact:true}).selectOption(loan.id);await paymentForm.getByLabel("Payment account",{exact:true}).selectOption(account.id);await paymentForm.getByLabel("Payment date",{exact:true}).fill("2032-01-02");await paymentForm.getByLabel("Principal paid",{exact:true}).fill("100001");await paymentForm.getByLabel("Interest paid",{exact:true}).fill("550");await paymentForm.getByLabel("Payment description",{exact:true}).fill("October EMI");await paymentForm.getByRole("button",{name:"Post EMI/payment"}).click();await expect(paymentForm.getByRole("alert")).toContainText("cannot exceed",{timeout:20000});await expect(paymentForm.getByLabel("Payment description",{exact:true})).toHaveValue("October EMI");
+ await paymentForm.getByLabel("Principal paid",{exact:true}).fill("2000");await expect(paymentForm.getByRole("status").filter({hasText:"Payment total"})).toContainText("2,550.00");await paymentForm.getByRole("button",{name:"Post EMI/payment"}).click();await expect(paymentForm.getByRole("status").filter({hasText:"Loan payment posted"})).toBeVisible({timeout:20000});expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);
+ await page.getByRole("link",{name:"A067 Project loan · TERM"}).click();await expect(page.locator("dl")).toContainText("98,000.00",{timeout:20000});await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("October EMI");await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("2,550.00");
+
+});
+
+test("A067 loan readers see balances without receipt or EMI mutation controls",async({page})=>{
+ await signInSettings(page);
+ try{
+  await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNTANT"}});
+  await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
+  await expect(page.getByRole("heading",{name:"Loans & EMI",exact:true})).toBeVisible({timeout:20000});
+  await expect(page.getByRole("button",{name:"Create and receive loan",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Post EMI/payment",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("textbox",{name:"Search loans",exact:true})).toBeVisible();
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});}
 });

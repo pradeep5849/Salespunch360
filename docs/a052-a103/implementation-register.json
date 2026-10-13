@@ -14792,13 +14792,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A067-F04",
         "A067-F06",
         "A067-F07"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "EMI exact decimal totals and persisted optional description implemented in shared service and web/native forms; additive migration 119 locally applied. Validation in progress.",
+          "tests": "Implementation validation in progress; no final-head result claimed."
+        }
       ]
     },
     {
@@ -15445,14 +15451,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A067-F09",
         "A071-F04"
       ],
-      "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change."
+      "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change.",
+      "checkpoint_work": [
+        {
+          "work": "Web loan forms now use associated labels, typed field/action errors, pending controls and retained draft values. Permission-gated mutation forms and branch-compatible account choices. Native total/description fields added; accessibility/device validation pending.",
+          "tests": "Implementation validation in progress; no final-head result claimed."
+        }
+      ]
     },
     {
       "finding_id": "A070-F01",

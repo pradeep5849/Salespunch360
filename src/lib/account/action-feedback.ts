@@ -8,6 +8,9 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_LOAN:"Select an active loan from this business and branch.",
+  PRINCIPAL_EXCEEDS_OUTSTANDING:"Principal paid cannot exceed the outstanding principal. Check the amount.",
+  INTEREST_LEDGER_MISSING:"Set up the general expense ledger before recording interest or charges.",
   CHEQUE_NUMBER_REQUIRED:
     "Enter the cheque number before recording this payment.",
   CHEQUE_AMOUNT_REQUIRED:

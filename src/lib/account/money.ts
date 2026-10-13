@@ -1265,7 +1265,8 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
     ["companyId", "idempotencyKey"],
   );
 }
-const paymentInput = z.object({
+export const paymentInput = z.object({
+  description:z.string().trim().max(2000).transform(v=>v||undefined).optional(),
   loanId: z.string().uuid(),
   moneyAccountId: z.string().uuid(),
   paymentDate: z.coerce.date(),
@@ -1299,7 +1300,8 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
               existing.paymentDate.getTime() !== d.paymentDate.getTime() ||
               !existing.principal.eq(d.principal) ||
               !existing.interest.eq(d.interest) ||
-              !existing.charges.eq(d.charges)
+              !existing.charges.eq(d.charges) ||
+              (existing.description??"") !== (d.description??"")
             )
               throw new Error("IDEMPOTENCY_CONFLICT");
             return existing;
@@ -1352,6 +1354,7 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
               financialYearId: fy.id,
               branchId: loan.branchId,
               entryDate: d.paymentDate,
+              narration:d.description,
               sourceType: "LOAN_PAYMENT",
               sourceId: id,
               postingPurpose: "PRIMARY",
