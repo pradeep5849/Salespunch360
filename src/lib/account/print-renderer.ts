@@ -10,7 +10,7 @@ const text=(doc:AccountPrintDocument,key:string,fallback="")=>typeof doc.printOp
 const number=(doc:AccountPrintDocument,key:string,fallback=0)=>typeof doc.printOptions?.[key]==="number"?doc.printOptions[key] as number:fallback;
 const size=(value:string)=>value==="SMALL"?10:value==="LARGE"?16:13;
 const color=(doc:AccountPrintDocument)=>{
- const theme=text(doc,"theme","REGULAR");return /^#[0-9a-f]{6}$/i.test(theme)?theme:({MODERN:"#0f766e",CLASSIC:"#4338ca",REGULAR:"#0b1930"}[theme.toUpperCase()]??"#0b1930");
+ const theme=text(doc,"theme","REGULAR");return /^#[0-9a-f]{6}$/i.test(theme)?theme:({MODERN:"#0f766e",CLASSIC:"#4338ca",MINIMAL:"#374151",REGULAR:"#0b1930"}[theme.toUpperCase()]??"#0b1930");
 };
 const columns=(doc:AccountPrintDocument,thermal:boolean)=>{
  const known=["ITEM","QTY","RATE","TAXABLE","TAX","AMOUNT"];

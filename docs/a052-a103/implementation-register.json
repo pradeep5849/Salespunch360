@@ -22379,6 +22379,10 @@
         {
           "work": "Amount-in-words uses exact BigInt whole/fraction values instead of falling back to numeric text above the JavaScript safe integer limit. International scale names extend through quintillion; negative fractional amounts retain their sign and exact cents.",
           "tests": "22/22 grouped invoice and quotation print regressions passed, including large amount words and negative fractions. TypeScript and targeted lint passed. Final-head verification pending."
+        },
+        {
+          "work": "Invoice print settings reject unsupported theme names and unknown/empty table columns rather than saving ineffective preferences. Regular/Modern/Classic/Minimal and hex accents are supported in both outputs; Minimal has an explicit color. Web inputs explain accepted values. Shared server validation covers native saves without changing stored data.",
+          "tests": "35/35 focused print-option/settings-workflow/renderer tests passed; targeted lint and TypeScript passed. Native/browser preference round-trip and final-head validation remain pending."
         }
       ]
     },

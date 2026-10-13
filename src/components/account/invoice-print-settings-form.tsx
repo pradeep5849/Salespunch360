@@ -19,7 +19,7 @@ export function InvoicePrintSettingsForm({values,action,banks=[]}:Props){
  const[printer,setPrinter]=useState(defaults.printer),[topSpace,setTopSpace]=useState(defaults.topSpace),[minRows,setMinRows]=useState(defaults.minRows),[search,setSearch]=useState("");
  const rows=(items:ReactNode[])=>items.filter(Boolean);
  const toggle=(name:string,label:string,checked:boolean,info=true)=><label className={styles.row} data-search={label.toLowerCase()}><span>{label}{info&&<i title={label}>i</i>}</span><input className={styles.switch} name={name} type="checkbox" defaultChecked={checked}/></label>;
- const nav=(label:string,name:string,value:string,placeholder:string)=><label className={styles.navRow} data-search={label.toLowerCase()}><span>{label}<i>i</i></span><input name={name} defaultValue={value} placeholder={placeholder}/><b>›</b></label>;
+ const nav=(label:string,name:string,value:string,placeholder:string)=><label className={styles.navRow} data-search={label.toLowerCase()}><span>{label}<i>i</i></span><input name={name} defaultValue={value} placeholder={placeholder} title={name==="theme"?"Regular, Modern, Classic, Minimal, or a hex color (for example #0f766e)":name==="itemTableColumns"?"Comma-separated ITEM, QTY, RATE, TAXABLE, TAX, AMOUNT":undefined}/><b>›</b></label>;
  const section=(title:string,items:ReactNode[])=>{
   const query=search.trim().toLowerCase();
   const matches=(item:ReactNode)=>!query||(isValidElement<SearchableProps>(item)&&String(item.props["data-search"]??"").includes(query));
