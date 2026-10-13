@@ -179,9 +179,8 @@ export function AccountMobileHome({
     "add" | "more" | "filter" | "share" | "actions" | null
   >(null);
   const [sharePending,setSharePending]=useState(false);
-  const [shareError,setShareError]=useState("");
+  const [shareError,setShareError]=useState<{id:string;message:string}|null>(null);
   const [active, setActive] = useState<Transaction | null>(null);
-  useEffect(()=>{setShareError("");},[active?.id]);
   const [draftTypes, setDraftTypes] = useState(selectedTypes);
   const [floatingVisible, setFloatingVisible] = useState(true);
   useEffect(() => {
@@ -247,7 +246,7 @@ export function AccountMobileHome({
     : "";
   const sharePdf = async () => {
     if (!active||sharePending) return;
-    setSharePending(true);setShareError("");
+    setSharePending(true);setShareError(null);
     try{
     const file=await preparePrintPdf(pdfUrl,active.documentNumber);
     if (navigator.share && navigator.canShare?.({ files: [file] }))
@@ -260,7 +259,7 @@ export function AccountMobileHome({
       link.click();
       setTimeout(()=>URL.revokeObjectURL(url),1000);
     }
-    }catch(error){if(!isShareCancellation(error))setShareError(error instanceof Error?error.message:"Could not share this document. Please try again.");}finally{setSharePending(false);}
+    }catch(error){if(!isShareCancellation(error))setShareError({id:active.id,message:error instanceof Error?error.message:"Could not share this document. Please try again."});}finally{setSharePending(false);}
   };
   return (
     <div className="account-mobile-home">
@@ -563,7 +562,7 @@ export function AccountMobileHome({
                 )}
               </div>
             )}
-            {shareError&&<p role="alert">{shareError}</p>}
+            {shareError?.id===active?.id&&shareError&&<p role="alert">{shareError.message}</p>}
             {sheet === "share" && (
               <div className="account-more-grid">
                 <button disabled>

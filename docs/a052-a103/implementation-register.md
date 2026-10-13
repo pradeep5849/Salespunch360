@@ -5936,7 +5936,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Image/PDF content and permissions; default round trip/settings change; native share/download fallback; cancellation and error.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9243,3 +9243,5 @@ Shared Unicode layout preserves invoice/quotation customer text; exact amount gr
 ### A071-F01 — sharing continuation
 
 Home PDF sharing rejects failed/non-PDF/empty output, reports errors, supports cancellation and prevents repeat clicks while preparing. Five focused tests, TypeScript and lint passed. Image sharing and saved default remain pending; status PARTIAL.
+
+A071-F01 validation correction: initial lint rejected a synchronous state-reset effect after the sharing commit. Replaced it with document-scoped error state. Clean targeted lint and full TypeScript then passed; no final-head verification claim.
