@@ -24,14 +24,24 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(AdministrationState())
     val state = _state.asStateFlow()
 
-    fun load(mode: String) {
+    private var contextQuery=""
+    private var notificationOffset=0
+    private var loadGeneration=0L
+    private var loadJob:kotlinx.coroutines.Job?=null
+    fun notificationsPage(offset:Int){notificationOffset=offset.coerceAtLeast(0);load("notifications")}
+    fun load(mode: String,query:String?=null) {
+        if(query!=null&&query!=contextQuery){contextQuery=query;notificationOffset=0;_state.value=_state.value.copy(data=JsonObject(emptyMap()))}
+        loadJob?.cancel()
+        val generation=++loadGeneration
+        val selectedQuery=contextQuery
+        val offset=notificationOffset
         _state.value = _state.value.copy(mode = mode, loading = true, error = null)
-        viewModelScope.launch {
+        loadJob=viewModelScope.launch {
             runCatching {
                 when (mode) {
                     "users" -> api.accountUsers()
                     "settings", "backup-settings", "transaction-defaults", "business-currency", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings", "reminders", "payment-reminders", "payment-reminder-message", "service-reminders", "tax-settings", "tax-list" -> api.accountAdministration("settings")
-                    "notifications" -> api.accountAdministration("notifications")
+                    "notifications" -> api.accountAdministration("notifications",listOf(com.salespunch360.mobile.account.moneyContextQuery(selectedQuery),"offset=$offset").filter{it.isNotBlank()}.joinToString("&"))
                     "tax-reports" -> api.accountTax(
                         mapOf(
                             "from" to java.time.LocalDate.now().withDayOfYear(1).toString(),
@@ -41,9 +51,10 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
                     else -> api.accountUtility(mode)
                 }
             }.onSuccess {
-                _state.value = _state.value.copy(loading = false, data = it)
+                if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, data = it)
             }.onFailure {
-                _state.value = _state.value.copy(loading = false, error = it.message ?: "Unable to load")
+                if(it is kotlinx.coroutines.CancellationException)throw it
+                if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, error = it.message ?: "Unable to load")
             }
         }
     }
@@ -51,7 +62,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     fun completeServiceReminder(lineId:String){
         if(_state.value.loading)return
         _state.value=_state.value.copy(loading=true,error=null)
-        viewModelScope.launch{runCatching{api.saveAccountAdministration("notifications","complete-service",buildJsonObject{put("lineId",lineId)})}.onSuccess{load("notifications")}.onFailure{_state.value=_state.value.copy(loading=false,error=(it as? ApiException)?.serverMessage?:"Unable to complete service reminder")}}
+        viewModelScope.launch{runCatching{api.saveAccountAdministration("notifications","complete-service",buildJsonObject{put("lineId",lineId);com.salespunch360.mobile.account.moneyContextQuery(contextQuery).split('&').filter{it.contains('=')}.forEach{part->put(part.substringBefore('='),part.substringAfter('='))}})}.onSuccess{load("notifications")}.onFailure{_state.value=_state.value.copy(loading=false,error=(it as? ApiException)?.serverMessage?:"Unable to complete service reminder")}}
     }
 
     fun saveUser(payload: JsonObject) {

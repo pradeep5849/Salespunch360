@@ -151,7 +151,7 @@ async function assertExpenseAccess(
 }
 const branchOk = (a: Actor, id: string) =>
   a.branchAccessScope !== "SELECTED_BRANCHES" || a.branchIds?.includes(id);
-async function expenseRecordScope(
+export async function expenseRecordScope(
   a: Actor,
 ): Promise<Prisma.ExpenseTransactionWhereInput> {
   await assertExpenseAccess(a);

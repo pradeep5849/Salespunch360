@@ -1,3 +1,4 @@
+import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
 import { updateQuickItemSettingForActor } from "@/lib/account/item-settings-quick";
 import {
   updatePartySettingsForActor,
@@ -239,32 +240,27 @@ export async function mobileSaveSettings(
   }
   throw new Error("INVALID_SECTION");
 }
-export async function mobileNotifications(u: MobileAppPrincipal) {
+export async function mobileNotifications(
+  u: MobileAppPrincipal,
+  query: unknown = {},
+) {
   const a = actor(u, "ACCOUNT_DASHBOARD");
-  const rows = await db.expenseTransaction.findMany({
-    where: {
-      companyId: a.companyId,
-      status: "PENDING_APPROVAL",
-      ...(a.branchAccessScope === "SELECTED_BRANCHES"
-        ? { branchId: { in: a.branchIds ?? [] } }
-        : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      transactionNumber: true,
-      reference: true,
-      createdAt: true,
-      totalAmount: true,
-      status: true,
-      branchId: true,
-    },
-  });
-  return [
-    ...rows.map((x) => ({ ...x, type: "EXPENSE_APPROVAL", isRead: false })),
-    ...(await dueServiceReminders(a)).map((x) => ({ ...x, isRead: false })),
-    ...(await duePaymentReminders(a)).map((x) => ({ ...x, isRead: false })),
+  const alerts = await pendingExpenseAlertsForActor(a, query);
+  const rows = [
+    ...alerts.rows.map((x) => ({
+      ...x,
+      type: "EXPENSE_APPROVAL",
+      isRead: false,
+      navigationTarget: `/workspace/account/expenses/${x.id}`,
+    })),
+    ...(await dueServiceReminders(alerts.scopedActor)).map((x) => ({
+      ...x,
+      isRead: false,
+    })),
+    ...(await duePaymentReminders(alerts.scopedActor)).map((x) => ({
+      ...x,
+      isRead: false,
+    })),
     ...(a.accountRole === "ACCOUNT_ADMIN" &&
     (await backupReminderDue(a.companyId))
       ? [
@@ -278,6 +274,14 @@ export async function mobileNotifications(u: MobileAppPrincipal) {
         ]
       : []),
   ];
+  return {
+    rows,
+    expenseTotal: alerts.total,
+    expenseOffset: alerts.offset,
+    expenseLimit: alerts.limit,
+    hasMoreExpenses: alerts.hasMore,
+    branchContext: alerts.branchContext,
+  };
 }
 export async function mobileTax(
   u: MobileAppPrincipal,
@@ -519,6 +523,18 @@ export async function mobileCompleteServiceReminder(
 ) {
   const a = actor(u, "ACCOUNT_DASHBOARD");
   await assertOperationalWrite(a.companyId);
-  const input = z.object({ lineId: z.string().uuid() }).strict().parse(raw);
-  return completeServiceReminder(a, input.lineId);
+  const input = z
+    .object({
+      lineId: z.string().uuid(),
+      branchId: z.string().uuid().optional(),
+      scope: z.literal("all").optional(),
+    })
+    .strict()
+    .parse(raw);
+  const alerts = await pendingExpenseAlertsForActor(
+    a,
+    { branchId: input.branchId, scope: input.scope },
+    true,
+  );
+  return completeServiceReminder(alerts.scopedActor, input.lineId);
 }

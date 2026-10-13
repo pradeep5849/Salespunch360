@@ -5790,13 +5790,19 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Dashboard-only role; no expense-view/approve; module disabled; allowed reviewer; badge/list parity; no unauthorized details.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A070_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A070_Findings.json, SalesPunch360_A070_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared expense-alert query uses dashboard plus expense-view/module gates and original database-authoritative expense/project/branch access intersected with selected context. Badge and web/native lists share exact total; includes posted expenses awaiting review, stable createdAt/id ordering and paginated rows. Native propagates selected context, cancels stale reads, preserves scope for completion and exposes paging; unauthorized Data Entry receives no expense records.
+
+**Intermediate validation:** 25 focused tests across 5 files passed; desktop/mobile Chromium 2 passed against actual PostgreSQL fixtures with 101 tied-timestamp alerts across 3 pages, selected branch A/B/company counts, native bootstrap badge parity, native list paging, Data Entry nondisclosure and excluded-branch denial. Android compile, TypeScript and focused lint passed. Intermediate only.
+
+**Remaining:** Final checkpoint-head regression; physical native pagination/switch/error UI remains unverified. Notifications tab/layout parity is separately A070-F02.
 
 ## A070-F04 — Account notification list and badge use different branch contexts
 
@@ -5832,13 +5838,19 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Selected branch A/B/all allowed; empty assigned scope; badge/count reconciliation; 101+ alerts; tied timestamps.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A070_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A070_Findings.json, SalesPunch360_A070_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared expense-alert query uses dashboard plus expense-view/module gates and original database-authoritative expense/project/branch access intersected with selected context. Badge and web/native lists share exact total; includes posted expenses awaiting review, stable createdAt/id ordering and paginated rows. Native propagates selected context, cancels stale reads, preserves scope for completion and exposes paging; unauthorized Data Entry receives no expense records.
+
+**Intermediate validation:** 25 focused tests across 5 files passed; desktop/mobile Chromium 2 passed against actual PostgreSQL fixtures with 101 tied-timestamp alerts across 3 pages, selected branch A/B/company counts, native bootstrap badge parity, native list paging, Data Entry nondisclosure and excluded-branch denial. Android compile, TypeScript and focused lint passed. Intermediate only.
+
+**Remaining:** Final checkpoint-head regression; physical native pagination/switch/error UI remains unverified. Notifications tab/layout parity is separately A070-F02.
 
 ## A071-F01 — Share as Image and default sharing preference missing
 

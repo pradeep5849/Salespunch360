@@ -1,3 +1,5 @@
+import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
+import type { ProjectActor } from "@/lib/account/projects";
 import { DisplayPreferencesProvider } from "@/components/account/display-preferences";
 import { resolveDisplayPreferences } from "@/lib/account/display-preferences";
 import "./reference-parity.css";
@@ -52,17 +54,15 @@ export default async function Layout({
       webWorkspaceContext(actor),
     ],
   );
-  const filter =
-    branch.context.mode === "BRANCH"
-      ? { branchId: branch.context.branchId }
-      : {};
-  const pendingExpenses = await db.expenseTransaction.count({
-    where: {
-      companyId: actor.companyId,
-      status: "PENDING_APPROVAL",
-      ...filter,
-    },
-  });
+  const pendingExpenses = (
+    await pendingExpenseAlertsForActor(
+      { ...actor, companyId: actor.companyId! } as ProjectActor,
+      branch.context.mode === "COMPANY"
+        ? { scope: "all" }
+        : { branchId: branch.context.branchId },
+      true,
+    )
+  ).total;
   const navigation = buildAccountNavigation(
     actor,
     company.productEdition,

@@ -1,3 +1,5 @@
+import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
+import type { ProjectActor } from "@/lib/account/projects";
 import { resolveDisplayPreferences } from "@/lib/account/display-preferences";
 import { dashboardLinks } from "@/lib/account/dashboard-links";
 import type { AccountModule } from "@prisma/client";
@@ -60,19 +62,15 @@ export async function mobileAccountBootstrap(
       },
     }),
   ]);
-  const filter =
-    branch.context.mode === "BRANCH"
-      ? { branchId: branch.context.branchId }
-      : {};
-  const pendingExpenseApprovals = modules.includes("EXPENSES")
-    ? await db.expenseTransaction.count({
-        where: {
-          companyId: actor.companyId,
-          status: "PENDING_APPROVAL",
-          ...filter,
-        },
-      })
-    : 0;
+  const pendingExpenseApprovals = (
+    await pendingExpenseAlertsForActor(
+      actor as ProjectActor,
+      branch.context.mode === "COMPANY"
+        ? { scope: "all" }
+        : { branchId: branch.context.branchId },
+      true,
+    )
+  ).total;
   return {
     user: { id: actor.id, name: actor.name, accountRole: actor.accountRole },
     company: { name: company.name },

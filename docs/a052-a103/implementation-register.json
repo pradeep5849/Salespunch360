@@ -15709,10 +15709,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Shared expense-alert query uses dashboard plus expense-view/module gates and original database-authoritative expense/project/branch access intersected with selected context. Badge and web/native lists share exact total; includes posted expenses awaiting review, stable createdAt/id ordering and paginated rows. Native propagates selected context, cancels stale reads, preserves scope for completion and exposes paging; unauthorized Data Entry receives no expense records.",
+        "tests": "25 focused tests across 5 files passed; desktop/mobile Chromium 2 passed against actual PostgreSQL fixtures with 101 tied-timestamp alerts across 3 pages, selected branch A/B/company counts, native bootstrap badge parity, native list paging, Data Entry nondisclosure and excluded-branch denial. Android compile, TypeScript and focused lint passed. Intermediate only.",
+        "remaining": "Final checkpoint-head regression; physical native pagination/switch/error UI remains unverified. Notifications tab/layout parity is separately A070-F02."
+      }
     },
     {
       "finding_id": "A070-F04",
@@ -15821,10 +15826,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Shared expense-alert query uses dashboard plus expense-view/module gates and original database-authoritative expense/project/branch access intersected with selected context. Badge and web/native lists share exact total; includes posted expenses awaiting review, stable createdAt/id ordering and paginated rows. Native propagates selected context, cancels stale reads, preserves scope for completion and exposes paging; unauthorized Data Entry receives no expense records.",
+        "tests": "25 focused tests across 5 files passed; desktop/mobile Chromium 2 passed against actual PostgreSQL fixtures with 101 tied-timestamp alerts across 3 pages, selected branch A/B/company counts, native bootstrap badge parity, native list paging, Data Entry nondisclosure and excluded-branch denial. Android compile, TypeScript and focused lint passed. Intermediate only.",
+        "remaining": "Final checkpoint-head regression; physical native pagination/switch/error UI remains unverified. Notifications tab/layout parity is separately A070-F02."
+      }
     },
     {
       "finding_id": "A071-F01",

@@ -177,7 +177,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
             utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding)
-            adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select)
+            adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
