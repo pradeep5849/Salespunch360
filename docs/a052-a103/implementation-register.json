@@ -18882,12 +18882,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A082-F01",
         "A083-F02"
+      ],
+      "checkpoint_work": [
+        {
+          "date": "2026-10-13",
+          "work": "Implemented estimate list cards, explicit complete lifecycle groups, bounded server-side party/number search and paging, illustrated empty/no-result states, Add Estimate preselection, permission-gated creation, native cards/group search with cancellation-aware debounce. Convert and balance semantics await the requested destination clarification; no financial conversion guessed.",
+          "tests": "55 focused quotation/filter/capability tests and 3 database integration tests passed (search corpus >200, pagination, cost redaction, assigned branch/company scope, core-product availability). Desktop + mobile-web list/empty/search/creation/axe/overflow: 2 passed after correcting document-type labeling and contrast; test waits for selected-filter navigation. Android compile, TypeScript/ESLint passed. Physical device/final-head validation pending."
+        }
       ]
     },
     {
@@ -21862,11 +21869,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A089-F02"
+      ],
+      "checkpoint_work": [
+        {
+          "date": "2026-10-13",
+          "work": "Independently verified the existing Decimal option against the original finding. Create/edit/deactivate preserves the chosen DECIMAL type and required/print metadata; no closure inferred from shared settings work.",
+          "tests": "22 grouped custom-field/typed-input/mobile-feedback/print-setting tests passed; independent Decimal definition browser check passed on desktop and mobile-web. Native custom-field type selector includes DECIMAL and current grouped Android compile passed; final-head and physical device validation pending."
+        }
       ]
     },
     {
@@ -22347,7 +22361,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -22355,6 +22369,13 @@
         "A097-F03",
         "A097-F04",
         "A100-F01"
+      ],
+      "checkpoint_work": [
+        {
+          "date": "2026-10-13",
+          "work": "Independently verified that searched-out controls remain mounted/submitted and hidden values survive filtered saves, clearing search, regular/thermal switching and full saves. Existing implementation preserved.",
+          "tests": "Independent desktop/mobile-web hidden-print-preference check: 2 passed. Covered false/true booleans, terms/signature strings, numeric spacing/minimum rows, theme/orientation, page size and printer changes. 22 grouped field/print-setting tests passed; final-head validation pending."
+        }
       ]
     },
     {

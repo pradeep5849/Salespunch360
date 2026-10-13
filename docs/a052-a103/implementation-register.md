@@ -7248,7 +7248,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Empty/populated/search/no-results; status group mapping; date/amount formatting; desktop/mobile/Android parity and accessibility.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
@@ -8692,7 +8692,7 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own source audit complete for definition editor, typed values, access/used-definition protections and offered consumers; Decimal web selector and creation bounds corrected.", "tests": "14 offered-consumer browser cases passed; 18 validation tests across four files passed (1.33s); new definition-editor test initially selected the wrong form, corrected rerun pending. TypeScript and targeted ESLint passed. Corrected definition editor passed 2 browser cases (12.8s), including saved Decimal/Required/Show in print/Active states.", "finding_status": null, "evidence": ["SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -8954,7 +8954,7 @@ Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases;
 
 **Required tests:** Search one field/save; clear search; nonmatching booleans/strings/numbers retained; regular/thermal switch; full form save.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Invoice Print own form/schema/action/native view, HTML/PDF preferences and data-loading consumers reviewed. Search keeps hidden controls mounted. All 27 booleans retain both values. Added payment modes from actual receipt/advance allocations; replaced native enum text entry with choices and capped top space at 20.", "tests": "Own toggle persistence passed 2 browser cases among the 8-case run (52.4s). Payment mode shows CASH and hides when disabled in 2 further browser cases (28.5s). Print-related tests included in 81/81 seven-file unit run (1.31s). Android compileDebugKotlin passed (36s); TypeScript and targeted ESLint passed.", "finding_status": null, "evidence": ["SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A095-A103_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9173,3 +9173,7 @@ Ambiguous shared legacy loan ledgers remain unknown and cannot be repaid/top-upp
 ### A065-F11 posted assets summary — 2026-10-13
 
 Latest clarification implemented as separate owner capital and posted company asset book value, with no invented funding attribution/custom metric. 13 financial integration and 7 unit tests passed; Balance Sheet parity verified; desktop and mobile-web passed after correcting the mobile cold-start sign-in timeout. Android compile, TypeScript/ESLint passed. No migration. Totals: 116 implemented but not verified, 74 partial, 9 not started; no final finding closures yet.
+
+### A083 / A089 / A097 focused checkpoint — 2026-10-13
+
+Estimate list and native cards implemented; A083-F01 stays PARTIAL while Convert destination/balance semantics are pending. 55 quotation tests, 3 DB integration and 2 desktop/mobile-web list checks passed; Android compile passed. Independently verified prior A089-F01 Decimal editing and A097-F02 filtered setting persistence: 4 desktop/mobile-web checks and 22 grouped unit tests passed. Both findings now implemented pending final-head verification. Totals: 118 implemented but not verified, 73 partial, 8 not started. Final statuses remain pending.

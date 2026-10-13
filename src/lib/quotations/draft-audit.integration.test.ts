@@ -5,7 +5,7 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
-import {createQuotationForActor,updateQuotationDraftForActor,getQuotationForActor} from "./service";
+import {createQuotationForActor,updateQuotationDraftForActor,getQuotationForActor,listQuotationsForActor,transitionQuotationForActor} from "./service";
 const companyId=randomUUID(),branchId=randomUUID(),userId=randomUUID(),customerId=randomUUID();
 let actor:Parameters<typeof createQuotationForActor>[0];
 const input={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",lines:[{lineType:"CUSTOM",itemName:"Original line",quantity:"1",rate:"100",internalUnitCost:"25"}],notes:"Original note"};
@@ -23,7 +23,7 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
    await tx.quotationAuditEvent.deleteMany({where:{companyId}});
    await tx.quotationPaymentSchedule.deleteMany({where:{companyId}});await tx.quotationAdjustment.deleteMany({where:{companyId}});await tx.quotationLine.deleteMany({where:{companyId}});await tx.quotationRevision.deleteMany({where:{companyId}});await tx.quotationDocument.deleteMany({where:{companyId}});
   });
-  await client.numberingSeries.deleteMany({where:{companyId}});await client.customer.deleteMany({where:{companyId}});await client.user.deleteMany({where:{companyId}});await client.branch.deleteMany({where:{companyId}});await client.company.delete({where:{id:companyId}});await client.$disconnect();
+  await client.accountSettings.deleteMany({where:{companyId}});await client.numberingSeries.deleteMany({where:{companyId}});await client.customer.deleteMany({where:{companyId}});await client.user.deleteMany({where:{companyId}});await client.branch.deleteMany({where:{companyId}});await client.company.delete({where:{id:companyId}});await client.$disconnect();
  });
  it("appends a safe immutable event and atomically rolls back replacement when audit insertion fails",async()=>{
   const document=await createQuotationForActor(actor,input);
@@ -41,4 +41,24 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   expect(after.revisions[0].id).toBe(before.revisions[0].id);expect(after.revisions[0].notes).toBe("Edited note");expect(after.revisions[0].lines[0].itemName).toBe("Original line");
   expect(await client.quotationAuditEvent.count({where:{companyId,documentId:document.id,eventType:"DRAFT_UPDATED"}})).toBe(1);
  });
+ it("filters estimate groups/search before paging and preserves branch, company, costs and module isolation",async()=>{
+  const second=randomUUID(),secondCustomer=randomUUID();await client.branch.create({data:{id:second,companyId,name:"Other branch",code:"B"}});await client.customer.create({data:{id:secondCustomer,companyId,branchId:second,name:"Other branch customer",isAccountCustomer:true}});
+  const closed=await createQuotationForActor(actor,{...input,documentType:"ESTIMATE"});await transitionQuotationForActor(actor,closed.id,"CANCELLED");await createQuotationForActor(actor,{...input,branchId:second,customerId:secondCustomer});
+  const scoped={...actor,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[branchId]};
+  const open=await listQuotationsForActor(scoped,{q:"fixture CUSTOMER",status:"OPEN"});expect(open).toHaveLength(1);expect(open[0].status).toBe("DRAFT");
+  const closedRows=await listQuotationsForActor(scoped,{status:"CLOSED"});expect(closedRows.map(row=>row.id)).toEqual([closed.id]);
+  expect(await listQuotationsForActor(scoped,{q:"no matching party"})).toEqual([]);expect(await listQuotationsForActor({...scoped,branchIds:[]})).toEqual([]);await expect(listQuotationsForActor({...actor,companyId:randomUUID()})).rejects.toThrow("MODULE_DISABLED:QUOTATIONS_BOQ");
+  const first=await listQuotationsForActor(scoped,{limit:1}),next=await listQuotationsForActor(scoped,{limit:1,offset:1});expect(first[0].id).not.toBe(next[0].id);
+  expect(JSON.stringify(await listQuotationsForActor({...scoped,accountRole:"DATA_ENTRY"}))).not.toMatch(/internalCostTotal|expectedProfit|expectedMarginPercent/);
+  await client.accountSettings.create({data:{companyId,enabledModules:[]}});expect(await listQuotationsForActor(actor)).toHaveLength(3);
+  await client.company.update({where:{id:companyId},data:{productEdition:"SALESPUNCH360"}});try{await expect(listQuotationsForActor(actor)).rejects.toThrow("MODULE_DISABLED:QUOTATIONS_BOQ");}finally{await client.company.update({where:{id:companyId},data:{productEdition:"SALESPUNCH360_ACCOUNT"}});}
+ });
+
+ it("searches the full corpus while providing deterministic bounded pages",async()=>{
+  const ids=Array.from({length:201},()=>randomUUID());await client.quotationDocument.createMany({data:ids.map((id,index)=>({id,companyId,branchId,documentType:"ESTIMATE" as const,documentNumber:`PAGE-${index}`,createdById:userId,customerId,updatedAt:new Date(1700000000000+index)}))});
+  await client.quotationRevision.createMany({data:ids.map((id,index)=>({companyId,documentId:id,revisionNumber:0,issueDate:new Date("2026-10-13"),customerName:index===0?"Oldest unique party":"Paged party",grandTotal:"100"}))});
+  expect((await listQuotationsForActor(actor,{q:"Oldest unique party"})).map(row=>row.id)).toEqual([ids[0]]);
+  const page=await listQuotationsForActor(actor,{q:"Paged party",limit:51});expect(page).toHaveLength(51);expect((await listQuotationsForActor(actor,{q:"Paged party",limit:51,offset:50}))[0].id).toBe(page[50].id);
+ });
+
 });

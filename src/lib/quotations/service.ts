@@ -1,3 +1,4 @@
+import {quotationListFilter} from "./list-filter";
 import { quotationActionCapabilities } from "./action-capabilities";
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma, type QuotationStatus } from "@prisma/client";
@@ -114,7 +115,7 @@ export async function updateQuotationDraftForActor(actor: Actor, id: string, raw
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
-export async function listQuotationsForActor(actor: Actor) { await requireAccountModules(actor,"QUOTATIONS_BOQ"); const documents = await db.quotationDocument.findMany({ where: { companyId: actor.companyId!, ...documentScope(actor) }, include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } }, orderBy: { updatedAt: "desc" } }); return canViewQuotationCost(actor) ? documents : documents.map(document => ({ ...document, revisions: document.revisions.map(revision => ({ ...revision, internalCostTotal: undefined, expectedProfit: undefined, expectedMarginPercent: undefined })) })); }
+export async function listQuotationsForActor(actor: Actor,raw:unknown={}) { await requireAccountModules(actor,"QUOTATIONS_BOQ"); const {query,where}=quotationListFilter(raw); const documents = await db.quotationDocument.findMany({ where: { companyId: actor.companyId!, ...documentScope(actor), ...where }, include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } }, orderBy: [{ updatedAt: "desc" },{id:"desc"}],skip:query.offset,take:query.limit }); return canViewQuotationCost(actor) ? documents : documents.map(document => ({ ...document, revisions: document.revisions.map(revision => ({ ...revision, internalCostTotal: undefined, expectedProfit: undefined, expectedMarginPercent: undefined })) })); }
 export async function getQuotationForActor(actor: Actor, id: string) { await requireAccountModules(actor,"QUOTATIONS_BOQ"); const document = await loadDocument(db, actor, id); const capabilities = { canCost: canViewQuotationCost(actor), ...quotationActionCapabilities(actor, document.status) }; if (capabilities.canCost) return { ...document, capabilities }; return { ...document, capabilities, revisions: document.revisions.map(revision => { const { internalCostTotal: _cost, expectedProfit: _profit, expectedMarginPercent: _margin, ...safeRevision } = revision; void _cost; void _profit; void _margin; return { ...safeRevision, lines: revision.lines.map(line => { const { internalUnitCost: _unitCost, internalCostTotal: _lineCost, ...safeLine } = line; void _unitCost; void _lineCost; return safeLine; }) }; }) }; }
 export const quotationTransitions: Record<QuotationStatus, QuotationStatus[]> = { DRAFT: ["PENDING_APPROVAL", "CANCELLED"], PENDING_APPROVAL: ["APPROVED", "REJECTED", "CANCELLED"], APPROVED: ["SENT", "ACCEPTED", "DECLINED", "CANCELLED"], REJECTED: [], SENT: ["ACCEPTED", "DECLINED", "EXPIRED", "CANCELLED"], ACCEPTED: [], DECLINED: [], EXPIRED: [], CANCELLED: [] };
 export const shouldAutoCreateProject=(edition:string,sourceLeadId:string|null,status:QuotationStatus)=>edition==="SALESPUNCH360_PLUS"&&Boolean(sourceLeadId)&&status==="ACCEPTED";
@@ -151,13 +152,13 @@ export async function quotationEditorOptionsForActor(actor: Actor) {
   const safeProducts = products.map(item => { if (canCost) return item; const { costPrice: _cost, ...safe } = item as typeof item & { costPrice?: unknown }; void _cost; return safe; });
   const safeServices = services.map(item => { if (canCost) return item; const { estimatedCost: _cost, ...safe } = item as typeof item & { estimatedCost?: unknown }; void _cost; return safe; });
   const safeWorkPackages = workPackages.map(item => { if (canCost) return item; const { estimatedCost: _cost, ...safe } = item as typeof item & { estimatedCost?: unknown }; void _cost; return safe; });
-  return { customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost };
+  return { customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
 }
 
 export async function createQuotation(raw:unknown){return createQuotationForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT"),raw)}
 export async function createQuotationRevision(id:string,raw:unknown){return createQuotationRevisionForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT"),id,raw)}
 export async function updateQuotationDraft(id:string,raw:unknown){return updateQuotationDraftForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT"),id,raw)}
-export async function listQuotations(){return listQuotationsForActor(await requirePermission("ACCOUNT_QUOTATION_VIEW"))}
+export async function listQuotations(raw:unknown={}){return listQuotationsForActor(await requirePermission("ACCOUNT_QUOTATION_VIEW"),raw)}
 export async function getQuotation(id:string){return getQuotationForActor(await requirePermission("ACCOUNT_QUOTATION_VIEW"),id)}
 export async function transitionQuotation(id:string,to:QuotationStatus,note?:string){const permission=to==="APPROVED"||to==="REJECTED"?"ACCOUNT_QUOTATION_APPROVE":to==="SENT"?"ACCOUNT_QUOTATION_SHARE":"ACCOUNT_QUOTATION_EDIT";return transitionQuotationForActor(await requirePermissionForMutation(permission),id,to,note)}
 export async function createShare(id:string,expiresAt?:Date){return createQuotationShareForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_SHARE"),id,expiresAt)}

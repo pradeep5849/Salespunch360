@@ -9,6 +9,11 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.serialization.json.*
 
 data class QuotationDraft(
@@ -37,10 +42,12 @@ data class QuotationRow(
     val customer: String,
     val status: String,
     val total: String,
-    val revision: Int
+    val revision: Int,
+    val issueDate:String=""
 )
 
 data class QuotationState(
+    val canCreate:Boolean=false,
     val customFields:List<JsonObject> = emptyList(),
     val loading: Boolean = true,
     val saving: Boolean = false,
@@ -67,16 +74,19 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<QuotationState> = _state
 
     private var detailTarget:String?=null
+    private var listJob:Job?=null
 
     init {
         refresh()
     }
 
-    fun refresh() = viewModelScope.launch {
+    fun refresh(){loadList(0)}
+    private fun loadList(waitMillis:Long){listJob?.cancel();val query=_state.value.query;val status=_state.value.status;listJob=viewModelScope.launch {
+        if(waitMillis>0)delay(waitMillis)
         _state.value = _state.value.copy(loading = true, error = null)
         try {
             val options = api.quotationOptions()
-            val rows = api.quotations(_state.value.query, _state.value.status)
+            val rows = api.quotations(query, status)
                 .map { it.jsonObject }
                 .map {
                     val revision = it.array("revisions").firstOrNull()
@@ -87,11 +97,14 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                         revision?.str("customerName").orEmpty(),
                         it.str("status"),
                         revision?.str("grandTotal").orEmpty(),
-                        it.str("currentRevisionNumber").toIntOrNull() ?: 0
+                        it.str("currentRevisionNumber").toIntOrNull() ?: 0,
+                        revision?.str("issueDate").orEmpty()
                     )
                 }
 
+            currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
+                canCreate=options["canCreate"]?.jsonPrimitive?.booleanOrNull==true,
                 loading = false,
                 rows = rows,
                 customFields=options.array("customFields"),
@@ -102,20 +115,22 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                 workPackages = options.array("workPackages").map { it.option("sellingRate") },
                 units = options.array("units").map { it.option() }
             )
-        } catch (e: Exception) {
+        } catch(e:CancellationException){throw e} catch (e: Exception) {
             fail(e)
         }
-    }
+    }}
 
     fun search(query: String) {
         _state.value = _state.value.copy(query = query)
-        refresh()
+        loadList(250)
     }
 
     fun filter(status: String?) {
         _state.value = _state.value.copy(status = status)
         refresh()
     }
+
+    fun createEstimate(){if(!_state.value.canCreate||_state.value.saving)return;val current=_state.value;_state.value=current.copy(draft=QuotationDraft(branchId=current.branches.firstOrNull()?.id.orEmpty(),documentType="ESTIMATE"))}
 
     fun create() {
         val current = _state.value

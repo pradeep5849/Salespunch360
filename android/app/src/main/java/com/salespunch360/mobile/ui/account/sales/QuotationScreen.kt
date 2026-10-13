@@ -1,6 +1,7 @@
 package com.salespunch360.mobile.ui.account.sales
 
 import com.salespunch360.mobile.ui.account.accountMoney
+import com.salespunch360.mobile.ui.account.accountDate
 import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -50,31 +52,35 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
         }
     }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+        Text("Estimate Details",style=MaterialTheme.typography.headlineSmall)
         Row {
-            OutlinedTextField(state.query, vm::search, label = { Text("Search quotations") }, modifier = Modifier.weight(1f))
+            OutlinedTextField(state.query, vm::search, label = { Text("Search estimates") }, modifier = Modifier.weight(1f))
             IconButton(onClick = vm::refresh) { Icon(Icons.Default.Refresh, "Refresh") }
-            FilledIconButton(onClick = vm::create) { Icon(Icons.Default.Add, "New quotation") }
+            if(state.canCreate)FilledIconButton(onClick = vm::createEstimate,enabled=!state.saving) { Icon(Icons.Default.Add, "Add Estimate") }
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             item { FilterChip(state.status == null, { vm.filter(null) }, { Text("All") }) }
-            items(listOf("DRAFT", "PENDING_APPROVAL", "APPROVED", "SENT", "ACCEPTED", "REJECTED", "DECLINED", "EXPIRED", "CANCELLED")) { status ->
-                FilterChip(state.status == status, { vm.filter(status) }, { Text(status.replace('_', ' ')) })
+            items(listOf("OPEN", "CLOSED")) { status ->
+                FilterChip(state.status == status, { vm.filter(status) }, { Text(status.lowercase().replaceFirstChar{it.uppercase()}) })
             }
         }
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.message?.let { Text(it) }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error);TextButton(vm::retry,enabled=!state.saving){Text("Retry loading")} }
-        LazyColumn {
+        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            if(!state.loading&&state.error==null&&state.rows.isEmpty())item{Column(Modifier.fillMaxWidth().padding(vertical=40.dp),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally){Icon(Icons.Default.Description,null,Modifier.size(96.dp),tint=MaterialTheme.colorScheme.primary);Text(if(state.query.isNotBlank()||state.status!=null)"No matching estimates"else "No estimates yet",style=MaterialTheme.typography.titleLarge);Text(if(state.query.isNotBlank()||state.status!=null)"Try another party name, number or status."else "Create an estimate for your next sale.");if(state.canCreate)Button(vm::createEstimate,enabled=!state.saving){Text("Add Estimate")}}}
             items(state.rows, key = { it.id }) { quotation ->
-                ListItem(
-                    headlineContent = { Text(quotation.number, fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text("${quotation.customer} · ${quotation.type} · R${quotation.revision}") },
-                    trailingContent = { Column { Text(accountMoney(quotation.total)); Text(quotation.status) } },
-                    modifier = Modifier.clickable { vm.open(quotation.id) }
-                )
+                ElevatedCard(onClick={vm.open(quotation.id)},modifier=Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.customer.ifBlank{"Customer not provided"},fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text(accountMoney(quotation.total),fontWeight=FontWeight.Bold)}
+                        Text("${quotation.type} · ${quotation.number} · R${quotation.revision}")
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.status.replace('_',' '));Text(accountDate(quotation.issueDate))}
+                    }
+                }
             }
         }
     }
+
     state.draft?.let { QuotationEditor(it, state, vm) }
     state.detail?.let { QuotationDetail(it, vm) }
 }
