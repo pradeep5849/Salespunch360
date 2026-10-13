@@ -22353,6 +22353,10 @@
         {
           "work": "Invoice PDF shares measured grapheme-safe Unicode font layout with the existing quotation renderer. Preserves Hindi/Kannada/accented customer content instead of question marks, exact BigInt grouping without Number precision loss, configured PDF theme accents and ITEM-dependent HSN parity. Long first-page headers paginate without recursive repeated headers. Prior ASCII font output and quotation customer DTO privacy preserved.",
           "tests": "67/67 grouped invoice settings/print coverage/quotation PDF tests passed; expanded 11/11 invoice renderer tests passed including parsed Unicode/large values, theme/HSN and long-header pagination. TypeScript and targeted ESLint passed. Final-head/browser/physical printer verification remains pending."
+        },
+        {
+          "work": "Unsupported PDF glyphs now return a private 422 response with an HTML-print fallback; customer text is never silently replaced. Authorization errors remain unswallowed.",
+          "tests": "16/16 targeted renderer and print API tests passed; TypeScript and targeted lint passed. Final-head validation pending."
         }
       ]
     },

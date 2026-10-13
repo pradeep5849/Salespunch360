@@ -63,3 +63,5 @@ it("paginates unusually long first-page headers without recursively repeating th
  const {text,pages}=await extractPdfText(await renderAccountPrintPdf(document));
  expect(pages).toBeGreaterThan(2);expect(text).toContain("Address line 119");expect(text).toContain("Grand total");
 });
+
+it("rejects unsupported glyphs rather than silently replacing them",async()=>{await expect(renderAccountPrintPdf({...invoice,party:"Unsupported 🦄"})).rejects.toThrow("ACCOUNT_PDF_UNSUPPORTED_CHARACTER");expect(renderAccountPrintHtml({...invoice,party:"Unsupported 🦄"})).toContain("Unsupported 🦄")});
