@@ -109,54 +109,95 @@ const accountInput = z.object({
   ifsc: z.string().max(20).optional(),
 });
 export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
-  const d = accountInput.parse(raw);
-  if (d.branchId) branchOk(a, d.branchId);
-  return db.$transaction(
-    async (tx) => {
-      if (
-        d.branchId &&
-        !(await tx.branch.findFirst({
-          where: { id: d.branchId, companyId: a.companyId, isActive: true },
-        }))
-      )
-        throw new Error("INVALID_BRANCH");
-      const code = await allocateDocumentNumberInTx(tx, {
-          companyId: a.companyId,
-          branchId:
-            d.branchId ??
-            (
-              await tx.branch.findFirstOrThrow({
-                where: {
-                  companyId: a.companyId,
-                  isActive: true,
-                  ...(a.branchAccessScope === "SELECTED_BRANCHES"
-                    ? { id: { in: a.branchIds ?? [] } }
-                    : {}),
-                },
-                orderBy: { createdAt: "asc" },
-              })
-            ).id,
-          seriesKey: "MONEY_LEDGER",
-          defaults: { prefix: "MA-", padding: 6 },
-        }),
-        ledger = await tx.ledgerAccount.create({
-          data: {
-            companyId: a.companyId,
-            code,
+  const { creationRequestKey, ...d } = accountInput
+    .extend({ creationRequestKey: z.string().uuid().optional() })
+    .parse(raw);
+  if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
+    throw new AuthorizationError();
+  const creationRequestHash = creationRequestKey
+    ? createHash("sha256")
+        .update(
+          JSON.stringify({
+            type: d.type,
             name: d.name,
-            accountClass: "ASSET",
-            normalBalance: "DEBIT",
-            isSystem: false,
-            allowPosting: true,
-          },
-        }),
-        row = await tx.moneyAccount.create({
-          data: { ...d, companyId: a.companyId, ledgerAccountId: ledger.id },
-        });
-      await audit(tx, a, "MONEY_ACCOUNT_CREATED", "MONEY_ACCOUNT", row.id);
-      return row;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+            branchId: d.branchId ?? null,
+            bankName: d.bankName ?? "",
+            accountNumberMasked: d.accountNumberMasked ?? "",
+            ifsc: d.ifsc ?? "",
+          }),
+        )
+        .digest("hex")
+    : undefined;
+  if (d.branchId) branchOk(a, d.branchId);
+  return retrySerializable(
+    () =>
+      db.$transaction(
+        async (tx) => {
+          if (creationRequestKey) {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":money-create:" + creationRequestKey}))`;
+            const existing = await tx.moneyAccount.findFirst({
+              where: { companyId: a.companyId, creationRequestKey },
+            });
+            if (existing) {
+              if (existing.branchId) branchOk(a, existing.branchId);
+              if (existing.creationRequestHash !== creationRequestHash)
+                throw new Error("IDEMPOTENCY_CONFLICT");
+              return existing;
+            }
+          }
+          if (
+            d.branchId &&
+            !(await tx.branch.findFirst({
+              where: { id: d.branchId, companyId: a.companyId, isActive: true },
+            }))
+          )
+            throw new Error("INVALID_BRANCH");
+          const code = await allocateDocumentNumberInTx(tx, {
+              companyId: a.companyId,
+              branchId:
+                d.branchId ??
+                (
+                  await tx.branch.findFirstOrThrow({
+                    where: {
+                      companyId: a.companyId,
+                      isActive: true,
+                      ...(a.branchAccessScope === "SELECTED_BRANCHES"
+                        ? { id: { in: a.branchIds ?? [] } }
+                        : {}),
+                    },
+                    orderBy: { createdAt: "asc" },
+                  })
+                ).id,
+              seriesKey: "MONEY_LEDGER",
+              defaults: { prefix: "MA-", padding: 6 },
+            }),
+            ledger = await tx.ledgerAccount.create({
+              data: {
+                companyId: a.companyId,
+                code,
+                name: d.name,
+                accountClass: "ASSET",
+                normalBalance: "DEBIT",
+                isSystem: false,
+                allowPosting: true,
+              },
+            }),
+            row = await tx.moneyAccount.create({
+              data: {
+                ...d,
+                creationRequestKey,
+                creationRequestHash,
+                companyId: a.companyId,
+                ledgerAccountId: ledger.id,
+              },
+            });
+          await audit(tx, a, "MONEY_ACCOUNT_CREATED", "MONEY_ACCOUNT", row.id);
+          return row;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    3,
+    creationRequestKey ? ["companyId", "creationRequestKey"] : undefined,
   );
 }
 function moneyAccountAuditSnapshot(row: {

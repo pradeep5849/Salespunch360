@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveMoneyAccountAction } from "@/app/actions/money";
 import {
@@ -96,11 +96,19 @@ function Choice({
 }
 export function MoneyAccountForm({
   branches,
+  creationRequestKey,
 }: {
   branches: Array<{ id: string; name: string }>;
+  creationRequestKey: string;
 }) {
+  const [requestKey, setRequestKey] = useState(creationRequestKey);
   return (
-    <ActionFeedbackForm action={saveMoneyAccountAction} className="stack">
+    <ActionFeedbackForm
+      action={saveMoneyAccountAction}
+      className="stack"
+      onSuccess={() => setRequestKey(crypto.randomUUID())}
+    >
+      <input type="hidden" name="creationRequestKey" value={requestKey} />
       <FocusErrors />
       <SavePendingFields>
         <Choice name="type" label="Account type">

@@ -3861,7 +3861,7 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Untouched default Company-wide, explicit authorized branch, foreign/inactive branch, missing branch and malformed UUID; persistence and no partial ledger on rejection.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -3873,6 +3873,8 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 **Checkpoint work:** Blank optional company-wide account branch normalizes to undefined.
 
 **Remaining work:** Independent account creation browser/API regression and final-head verification remain pending.
+
+**Creation retry slice:** Web/native stable creation identity with company-scoped payload validation and atomic replay prevents duplicate accounts/asset ledgers; additive nullable migration preserves legacy rows. Intermediate 23 focused tests, Android compile plus 3 tests, desktop/mobile browser 2, Prisma validate/local migrate and TypeScript/ESLint passed. Final-head validation/migration rehearsal remain.
 
 ## A064-F08 — Android account type options contradict the server and edit is silently ignored
 
@@ -3967,6 +3969,8 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 **Checkpoint work:** Native money editor retains one request key for retries and disables confirmation/dismissal while saving; ViewModel rejects concurrent submission.
 
 **Remaining work:** Final-head regression and original finding verification remain pending.
+
+**Creation retry slice:** Web/native stable creation identity with company-scoped payload validation and atomic replay prevents duplicate accounts/asset ledgers; additive nullable migration preserves legacy rows. Intermediate 23 focused tests, Android compile plus 3 tests, desktop/mobile browser 2, Prisma validate/local migrate and TypeScript/ESLint passed. Final-head validation/migration rehearsal remain.
 
 ## A064-F10 — Transfer idempotency replay bypasses branch authorization and payload equivalence
 
@@ -4147,6 +4151,8 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 **Linked finding IDs:** None explicitly linked.
 
 **Checkpoint work:** Accessible pending web money-account creation with structured error/success and failing-field focus; company-wide blank branch validated. Desktop/mobile browser 2 passed including AXE and real account/ledger creation. Other money forms and stable creation retry identity remain; final-head validation pending.
+
+**Creation retry slice:** Web/native stable creation identity with company-scoped payload validation and atomic replay prevents duplicate accounts/asset ledgers; additive nullable migration preserves legacy rows. Intermediate 23 focused tests, Android compile plus 3 tests, desktop/mobile browser 2, Prisma validate/local migrate and TypeScript/ESLint passed. Final-head validation/migration rehearsal remain.
 
 ## A065-F01 — Owners must currently be admin users rather than independent owner/partner records
 

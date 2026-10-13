@@ -10203,7 +10203,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -10211,7 +10211,23 @@
         "implementation_status": "PARTIAL",
         "work": "Blank optional company-wide account branch normalizes to undefined.",
         "remaining_work": "Independent account creation browser/API regression and final-head verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "creation_retry_slice": {
+          "summary": "Web/native account creation retains one UUID across failed/ambiguous retries; shared company-scoped payload hash, transaction lock and uniqueness replay return the original account before allocating another asset ledger. Payload changes and excluded-branch replay are rejected. Nullable additive migration retains legacy rows. Web validation and successful company-wide creation verified.",
+          "verification": "Intermediate: 23 focused tests across 3 files passed (6 real PostgreSQL tests including concurrent creation, legacy rows and audit rollback); Android compile and 3 MoneyAccountRequest tests passed; desktop/mobile browser 2 passed with AXE, field-error focus, key retention and key rotation. Prisma generate/validate and migration deploy to isolated test database passed. TypeScript and focused ESLint passed.",
+          "files": [
+            "src/lib/account/money.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/money-account-form.tsx",
+            "src/app/workspace/account/money/accounts/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/MoneyAccountRequest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/MoneyAccountRequestTest.kt",
+            "prisma/schema.prisma",
+            "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
+          ],
+          "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
+        }
       }
     },
     {
@@ -10455,7 +10471,23 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Native money editor retains one request key for retries and disables confirmation/dismissal while saving; ViewModel rejects concurrent submission.",
         "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "creation_retry_slice": {
+          "summary": "Web/native account creation retains one UUID across failed/ambiguous retries; shared company-scoped payload hash, transaction lock and uniqueness replay return the original account before allocating another asset ledger. Payload changes and excluded-branch replay are rejected. Nullable additive migration retains legacy rows. Web validation and successful company-wide creation verified.",
+          "verification": "Intermediate: 23 focused tests across 3 files passed (6 real PostgreSQL tests including concurrent creation, legacy rows and audit rollback); Android compile and 3 MoneyAccountRequest tests passed; desktop/mobile browser 2 passed with AXE, field-error focus, key retention and key rotation. Prisma generate/validate and migration deploy to isolated test database passed. TypeScript and focused ESLint passed.",
+          "files": [
+            "src/lib/account/money.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/money-account-form.tsx",
+            "src/app/workspace/account/money/accounts/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/MoneyAccountRequest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/MoneyAccountRequestTest.kt",
+            "prisma/schema.prisma",
+            "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
+          ],
+          "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
+        }
       }
     },
     {
@@ -11041,7 +11073,23 @@
           "src/app/workspace/account/money/accounts/page.tsx",
           "src/app/actions/money.ts",
           "e2e/a090-settings.spec.ts"
-        ]
+        ],
+        "creation_retry_slice": {
+          "summary": "Web/native account creation retains one UUID across failed/ambiguous retries; shared company-scoped payload hash, transaction lock and uniqueness replay return the original account before allocating another asset ledger. Payload changes and excluded-branch replay are rejected. Nullable additive migration retains legacy rows. Web validation and successful company-wide creation verified.",
+          "verification": "Intermediate: 23 focused tests across 3 files passed (6 real PostgreSQL tests including concurrent creation, legacy rows and audit rollback); Android compile and 3 MoneyAccountRequest tests passed; desktop/mobile browser 2 passed with AXE, field-error focus, key retention and key rotation. Prisma generate/validate and migration deploy to isolated test database passed. TypeScript and focused ESLint passed.",
+          "files": [
+            "src/lib/account/money.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/money-account-form.tsx",
+            "src/app/workspace/account/money/accounts/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/MoneyAccountRequest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/MoneyAccountRequestTest.kt",
+            "prisma/schema.prisma",
+            "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
+          ],
+          "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
+        }
       }
     },
     {

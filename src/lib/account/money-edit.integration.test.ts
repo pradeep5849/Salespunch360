@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({
   db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
 }));
 import {
+  createMoneyAccountForActor,
   updateMoneyAccountForActor,
   deactivateMoneyAccountForActor,
 } from "./money";
@@ -65,8 +66,10 @@ describe.skipIf(!url)(
           accountAccessActive: true,
         },
       });
-      await client.branch.create({data:{id:branchId,companyId,name:"Money branch",code:"MONEY"}});
-    const ledger = await client.ledgerAccount.create({
+      await client.branch.create({
+        data: { id: branchId, companyId, name: "Money branch", code: "MONEY" },
+      });
+      const ledger = await client.ledgerAccount.create({
         data: {
           companyId,
           code: "EDIT-BANK",
@@ -97,12 +100,64 @@ describe.skipIf(!url)(
         await tx.moneyAccount.deleteMany({ where: { companyId } });
         await tx.ledgerAccount.deleteMany({ where: { companyId } });
         await tx.user.deleteMany({ where: { companyId } });
-        await tx.branch.deleteMany({where:{companyId}});
-      await tx.company.deleteMany({ where: { id: companyId } });
+        await tx.numberingSeries.deleteMany({ where: { companyId } });
+        await tx.branch.deleteMany({ where: { companyId } });
+        await tx.company.deleteMany({ where: { id: companyId } });
       });
       await client.$disconnect();
     });
-    it("renames the linked ledger atomically and records before/after without posting", async () => {
+    it("replays concurrent creation without a second account, ledger or audit", async () => {
+      const input = {
+        type: "BANK",
+        name: "Retry-safe bank",
+        branchId,
+        creationRequestKey: randomUUID(),
+      };
+      const [first, second] = await Promise.all([
+        createMoneyAccountForActor(actor, input),
+        createMoneyAccountForActor(actor, input),
+      ]);
+      expect(second.id).toBe(first.id);
+      expect(
+        await client.moneyAccount.count({
+          where: { companyId, creationRequestKey: input.creationRequestKey },
+        }),
+      ).toBe(1);
+      expect(
+        await client.ledgerAccount.count({
+          where: { companyId, name: input.name },
+        }),
+      ).toBe(1);
+      expect(
+        await client.accountOperationalAudit.count({
+          where: {
+            companyId,
+            entityId: first.id,
+            eventType: "MONEY_ACCOUNT_CREATED",
+          },
+        }),
+      ).toBe(1);
+      await expect(
+        createMoneyAccountForActor(actor, { ...input, name: "Changed intent" }),
+      ).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+      await expect(
+        createMoneyAccountForActor(
+          { ...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [] },
+          input,
+        ),
+      ).rejects.toThrow();
+      expect(
+        (
+          await client.moneyAccount.findUniqueOrThrow({
+            where: { id: first.id },
+          })
+        ).name,
+      ).toBe(input.name);
+    });
+    it("retains legacy account rows without inventing creation identities",async()=>{
+    expect(await client.moneyAccount.findUniqueOrThrow({where:{id:accountId}})).toMatchObject({creationRequestKey:null,creationRequestHash:null});
+  });
+  it("renames the linked ledger atomically and records before/after without posting", async () => {
       await updateMoneyAccountForActor(actor, accountId, {
         name: "Renamed bank",
         bankName: "Updated bank",

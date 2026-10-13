@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { MoneyAccountForm } from "@/components/account/money-account-form";
 import { listMoneyData } from "@/lib/account/money";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
@@ -10,7 +11,10 @@ export default async function Page() {
           title="Money Accounts"
           backHref="/workspace/account/money"
         />
-        <MoneyAccountForm branches={d.branches} />
+        <MoneyAccountForm
+          branches={d.branches}
+          creationRequestKey={randomUUID()}
+        />
         <ul>
           {d.dashboard.accounts.map((x) => (
             <li key={x.id}>

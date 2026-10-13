@@ -3062,6 +3062,8 @@ model MoneyAccount {
   type                MoneyAccountType
   name                String           @db.VarChar(160)
   ledgerAccountId     String           @db.Uuid
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.VarChar(64)
   bankName            String?          @db.VarChar(160)
   accountNumberMasked String?          @db.VarChar(40)
   ifsc                String?          @db.VarChar(20)
@@ -3069,6 +3071,7 @@ model MoneyAccount {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, ledgerAccountId])
   @@index([companyId, type, isActive])
