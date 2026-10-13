@@ -5706,13 +5706,19 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Narrow mobile web, Android font scaling, long body/title, unread/read, Open, Mark read/all, empty/loading/error.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A070_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A070_Findings.json, SalesPunch360_A070_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Compact web/native Sales rows with restrained spacing, full wrapping title/body/time, readable timestamp contrast, unread state and existing read/open actions. Web actions retain >=44px targets; native exposes explicit Mark read alongside supported navigation.
+
+**Intermediate validation:** 4 Sales notification policy tests and Android compilation passed. Desktop/mobile browser checks passed: short row <190px, >=44px actions, full long text without overflow, zero Axe violations, read/read-all updates and other-recipient isolation. TypeScript/lint passed. Intermediate evidence only.
+
+**Remaining:** Final checkpoint-head regression; physical Android font scaling and TalkBack not verified.
 
 ## A070-F02 — Account Notifications does not match reference tabs and empty screen
 
@@ -6096,13 +6102,19 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Search after selecting filters and branch; clear query; tab changes; browser back/forward; no scope expansion.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A071_Findings.json, SalesPunch360_A071_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Home search submits normalized selected types and validated branch/company context. Keyed search fields restore normalized values through history; Home tabs use real navigation links retaining scope and clearing tab-specific filters. Filter draft refreshes on open without cascading state effects.
+
+**Intermediate validation:** Desktop/mobile browser checks passed for search/clear, deduplicated supported filters, explicit branch and consolidation scope, party/transaction tab changes and back/forward. TypeScript and focused lint passed. Intermediate evidence only.
+
+**Remaining:** Final checkpoint-head regression; this does not close other Home filter/data-source findings.
 
 ## A071-F07 — Party Home layout differs from supplied shared-list design
 

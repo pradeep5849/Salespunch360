@@ -15485,10 +15485,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Compact web/native Sales rows with restrained spacing, full wrapping title/body/time, readable timestamp contrast, unread state and existing read/open actions. Web actions retain >=44px targets; native exposes explicit Mark read alongside supported navigation.",
+        "tests": "4 Sales notification policy tests and Android compilation passed. Desktop/mobile browser checks passed: short row <190px, >=44px actions, full long text without overflow, zero Axe violations, read/read-all updates and other-recipient isolation. TypeScript/lint passed. Intermediate evidence only.",
+        "remaining": "Final checkpoint-head regression; physical Android font scaling and TalkBack not verified."
+      }
     },
     {
       "finding_id": "A070-F02",
@@ -16509,10 +16514,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Home search submits normalized selected types and validated branch/company context. Keyed search fields restore normalized values through history; Home tabs use real navigation links retaining scope and clearing tab-specific filters. Filter draft refreshes on open without cascading state effects.",
+        "tests": "Desktop/mobile browser checks passed for search/clear, deduplicated supported filters, explicit branch and consolidation scope, party/transaction tab changes and back/forward. TypeScript and focused lint passed. Intermediate evidence only.",
+        "remaining": "Final checkpoint-head regression; this does not close other Home filter/data-source findings."
+      }
     },
     {
       "finding_id": "A071-F07",
@@ -22664,6 +22674,11 @@
         "A064-F05"
       ],
       "obe_rules": "OBE is Equity alongside Retained Earnings; account creation and balanced opening journal commit atomically; authorized manual journals may clear OBE to Retained Earnings or Owner Capital. Explicit user instruction 2026-10-13."
+    },
+    "pending_notifications_tab_clarification": {
+      "finding": "A070-F02",
+      "question": "All Transactions means only transaction notifications/alerts or all authorized business transactions?",
+      "status": "Awaiting user reply; other checkpoint work continues."
     }
   }
 }
