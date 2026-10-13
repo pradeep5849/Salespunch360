@@ -1539,6 +1539,13 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   await page.goto(`/workspace/account/expenses?branchId=${second}`);
   await expect(page.getByRole("link",{name:"A052-SCOPE-1",exact:true})).toBeVisible();
   await expect(page.getByRole("link",{name:"A052-SCOPE-0",exact:true})).toHaveCount(0);
+  await page.getByRole("link",{name:"Categories",exact:true}).click();
+  await expect(page).toHaveURL(new RegExp(`categories\\?branchId=${second}`));
+  await expect(page.getByRole("heading",{name:"Posted totals · Expense second branch · all history",exact:true})).toBeVisible();
+  await page.getByLabel("Search categories",{exact:true}).fill("Expense scope");
+  await page.getByRole("button",{name:"Search",exact:true}).click();
+  await expect(page).toHaveURL(new RegExp(`branchId=${second}`));
+  await page.goto(`/workspace/account/expenses?branchId=${second}`);
   await page.getByLabel("Search expenses",{exact:true}).fill("no-matching-expense");
   await page.getByRole("button",{name:"Apply filters",exact:true}).click();
   await expect(page).toHaveURL(new RegExp(`branchId=${second}`));

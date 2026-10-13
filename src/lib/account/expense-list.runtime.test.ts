@@ -134,6 +134,19 @@ describe("A052 scoped database pagination", () => {
       projectId: { in: ["assigned"] },
     });
   });
+  it("denies Project Manager Projects OFF before transaction reads", async () => {
+    m.module.mockImplementation(async (_actor, key) => {
+      if (key === "PROJECTS") throw new Error("MODULE_DISABLED:PROJECTS");
+    });
+    await expect(expensePageForActor({ ...actor, accountRole: "PROJECT_MANAGER" })).rejects.toThrow("MODULE_DISABLED:PROJECTS");
+    expect(m.rows).not.toHaveBeenCalled();
+    expect(m.count).not.toHaveBeenCalled();
+    expect(m.summary).not.toHaveBeenCalled();
+  });
+  it("retains Accountant expense access within its assigned branch", async () => {
+    await expensePageForActor({ ...actor, accountRole: "ACCOUNTANT" }, { branchId: branch });
+    expect(m.rows.mock.calls[0][0].where.AND[0]).toEqual({ companyId: "tenant", branchId: { in: [branch] } });
+  });
   it("returns summary totals for all matching records, independently of pagination", async () => {
     m.summary.mockResolvedValue([
       {

@@ -1,3 +1,4 @@
+import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { ClientMoney } from "@/components/account/display-preferences";
 import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
 import { categoryAction } from "@/app/actions/expenses";
@@ -12,17 +13,20 @@ import { SaveSubmitButton } from "@/components/account/save-feedback";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; branchId?: string; scope?: string }>;
 }) {
-  const { q = "" } = await searchParams,
+  const { q = "", branchId, scope } = await searchParams,
     a = await requirePermission("ACCOUNT_EXPENSE_VIEW"),
     o = await expenseCategoryOptionsForActor(
       { ...a, companyId: a.companyId! },
       q,
     );
+  const scoped = await resolveAccountBranchContext({ ...a, companyId: a.companyId! }, { branchId, scope });
+  const scopedBranch = scoped.context.mode === "BRANCH" ? scoped.context.branchId : undefined;
+  const scopeQuery = scopedBranch ? `branchId=${scopedBranch}` : "scope=all";
   const totals = await expenseSummaryForActor(
     { ...a, companyId: a.companyId! },
-    {},
+    { branchId: scopedBranch },
     q,
   );
   const amounts = new Map(
@@ -33,9 +37,10 @@ export default async function Page({
       <section className="employees-content">
         <WorkspacePageHeader
           title="Expense / Income Categories"
-          backHref="/workspace/account/expenses"
+          backHref={`/workspace/account/expenses?${scopeQuery}`}
         />
         <form method="get" className="stack">
+          {scopedBranch ? <input type="hidden" name="branchId" value={scopedBranch} /> : <input type="hidden" name="scope" value="all" />}
           <label>
             Search categories
             <input name="q" defaultValue={q} maxLength={160} />
@@ -43,7 +48,7 @@ export default async function Page({
           <button>Search</button>
         </form>
         <section aria-label="Category posted totals">
-          <h2>Posted totals · all accessible branches · all history</h2>
+          <h2>Posted totals · {scoped.context.mode === "COMPANY" ? "Company consolidated" : scoped.context.branchName} · all history</h2>
           <p>
             Expense: <ClientMoney value={totals.expense} /> · Other income:{" "}
             <ClientMoney value={totals.income} />

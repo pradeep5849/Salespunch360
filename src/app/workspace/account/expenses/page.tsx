@@ -137,7 +137,7 @@ export default async function Page({
               ·{" "}
             </>
           )}
-          <Link href="/workspace/account/expenses/categories">Categories</Link>{" "}
+          <Link href={`/workspace/account/expenses/categories?${scopeQuery}`}>Categories</Link>{" "}
           · <Link href="/workspace/account/expenses/recurring">Recurring</Link>
         </p>
         <p>

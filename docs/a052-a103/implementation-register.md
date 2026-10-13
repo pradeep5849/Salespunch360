@@ -219,6 +219,8 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 **Expense/Home context continuation:** Resolved branch/company context is retained by filters, pagination and empty-state creation. Desktop/mobile branch/consolidation and Data Entry denial checks passed; remaining original role/isolation coverage and final-head validation are pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
 
+**Category context continuation:** Web category totals/search/back now retain the resolved selected branch/company context. Two desktop/mobile regressions and 35 grouped permission/capability/API tests passed, with TypeScript and focused lint. Native category context propagation and final-head verification remain pending.
+
 ## A052-F04 — Silent 200-row cap hides older transactions and makes Android search incomplete
 
 **Title:** Silent 200-row cap hides older transactions and makes Android search incomplete
