@@ -6616,13 +6616,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Native create→open→edit and new revision with tax/discount/custom units; payload identity assertions against original values.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Original quotation source/reference review and later custom-field work. Fixed Date-object rendering in shared Edit Draft/New Revision calendar controls.", "tests": "2 authenticated quotation browser checks passed (20.3 seconds); TypeScript and targeted lint passed. Does not close other findings.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md", "SalesPunch360_A079_A081_Date_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md.
 
 **Linked finding IDs:** A079-F02, A079-F03, A082-F04.
+
+**Draft/revision continuation:** Named native mapping and safe metadata/supporting-row preservation independently checked; web date preloads verified. Draft replacements now append immutable DRAFT_UPDATED safe count notes atomically and update parent ordering timestamp. Native saved identity selectors/state are locked; confirmed saves clear the form before loading fresh detail and expose reload retry. 46 service tests +1 PostgreSQL audit/rollback test +2 desktop/mobile edit/revision tests (50.9s) passed; Android compile +6 JVM codec/identity tests, Node22 TypeScript/lint, Prisma generate/validate/local migration deployment passed. Additive migration `20261013020000_quotation_draft_edit_audit` applied only locally (117 migrations); final-head/deployment rehearsal/physical Android checks remain pending.
 
 ## A079-F02 — Android save cannot preserve existing adjustments, schedules and line metadata
 
@@ -6658,13 +6660,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Web-created quote with fixed/taxable charges, schedule, specification, custom unit/cost→native no-op edit and revision; totals and hidden costs unchanged.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Original quotation source/reference review and later custom-field work. Fixed Date-object rendering in shared Edit Draft/New Revision calendar controls.", "tests": "2 authenticated quotation browser checks passed (20.3 seconds); TypeScript and targeted lint passed. Does not close other findings.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md", "SalesPunch360_A079_A081_Date_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A081_Revision_Followup.md, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md.
 
 **Linked finding IDs:** A079-F01, A079-F03, A079-F04.
+
+**Draft/revision continuation:** Named native mapping and safe metadata/supporting-row preservation independently checked; web date preloads verified. Draft replacements now append immutable DRAFT_UPDATED safe count notes atomically and update parent ordering timestamp. Native saved identity selectors/state are locked; confirmed saves clear the form before loading fresh detail and expose reload retry. 46 service tests +1 PostgreSQL audit/rollback test +2 desktop/mobile edit/revision tests (50.9s) passed; Android compile +6 JVM codec/identity tests, Node22 TypeScript/lint, Prisma generate/validate/local migration deployment passed. Additive migration `20261013020000_quotation_draft_edit_audit` applied only locally (117 migrations); final-head/deployment rehearsal/physical Android checks remain pending.
 
 ## A079-F03 — Web edit and revision date controls use invalid Date string formatting
 
@@ -6700,13 +6704,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Persisted issue/validity date preload, unchanged save, changed date and new revision across timezones.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Original quotation source/reference review and later custom-field work. Fixed Date-object rendering in shared Edit Draft/New Revision calendar controls.", "tests": "2 authenticated quotation browser checks passed (20.3 seconds); TypeScript and targeted lint passed. Does not close other findings.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md", "SalesPunch360_A079_A081_Date_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A081_Revision_Followup.md, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md, SalesPunch360_A079_A081_Date_Followup.md.
 
 **Linked finding IDs:** A079-F02, A079-F04, A080-F01.
+
+**Draft/revision continuation:** Named native mapping and safe metadata/supporting-row preservation independently checked; web date preloads verified. Draft replacements now append immutable DRAFT_UPDATED safe count notes atomically and update parent ordering timestamp. Native saved identity selectors/state are locked; confirmed saves clear the form before loading fresh detail and expose reload retry. 46 service tests +1 PostgreSQL audit/rollback test +2 desktop/mobile edit/revision tests (50.9s) passed; Android compile +6 JVM codec/identity tests, Node22 TypeScript/lint, Prisma generate/validate/local migration deployment passed. Additive migration `20261013020000_quotation_draft_edit_audit` applied only locally (117 migrations); final-head/deployment rehearsal/physical Android checks remain pending.
 
 ## A079-F04 — Draft edits have no quotation audit event
 
@@ -6742,13 +6748,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Successful edit creates one event; failed transaction creates none; company/actor/revision attribution.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Original quotation source/reference review and later custom-field work. Fixed Date-object rendering in shared Edit Draft/New Revision calendar controls.", "tests": "2 authenticated quotation browser checks passed (20.3 seconds); TypeScript and targeted lint passed. Does not close other findings.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md", "SalesPunch360_A079_A081_Date_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md.
 
 **Linked finding IDs:** A079-F03, A080-F01, A080-F02.
+
+**Draft/revision continuation:** Named native mapping and safe metadata/supporting-row preservation independently checked; web date preloads verified. Draft replacements now append immutable DRAFT_UPDATED safe count notes atomically and update parent ordering timestamp. Native saved identity selectors/state are locked; confirmed saves clear the form before loading fresh detail and expose reload retry. 46 service tests +1 PostgreSQL audit/rollback test +2 desktop/mobile edit/revision tests (50.9s) passed; Android compile +6 JVM codec/identity tests, Node22 TypeScript/lint, Prisma generate/validate/local migration deployment passed. Additive migration `20261013020000_quotation_draft_edit_audit` applied only locally (117 migrations); final-head/deployment rehearsal/physical Android checks remain pending.
 
 ## A080-F01 — Reference themed preview, print and colour settings are missing
 
@@ -6954,13 +6962,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Completed page-specific revision review of web preload, locked identity, structured save feedback, source/tenant scope, lifecycle concurrency guards, original revision/share retention and native load/save mapping. Shared calendar inputs fixed earlier; native save now preserves saved supporting rows, line IDs, units/specifications and custom fields; item replacement clears inherited metadata and deletion keeps metadata aligned.", "tests": "2 authenticated browser cases passed (39.3s): actual New Revision Save, locked identity, line prices/cost/units/specification, charges/schedules, original revision/public-share retention, second-revision and foreign-tenant rejection. Four Kotlin round-trip tests passed (0 failed/errors/skipped), Gradle successful (43s); TypeScript final passed.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md", "SalesPunch360_A079_A081_Date_Followup.md", "SalesPunch360_A081_Revision_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A081_Revision_Followup.md.
 
 **Linked finding IDs:** A081-F02.
+
+**Draft/revision continuation:** Named native mapping and safe metadata/supporting-row preservation independently checked; web date preloads verified. Draft replacements now append immutable DRAFT_UPDATED safe count notes atomically and update parent ordering timestamp. Native saved identity selectors/state are locked; confirmed saves clear the form before loading fresh detail and expose reload retry. 46 service tests +1 PostgreSQL audit/rollback test +2 desktop/mobile edit/revision tests (50.9s) passed; Android compile +6 JVM codec/identity tests, Node22 TypeScript/lint, Prisma generate/validate/local migration deployment passed. Additive migration `20261013020000_quotation_draft_edit_audit` applied only locally (117 migrations); final-head/deployment rehearsal/physical Android checks remain pending.
 
 ## A081-F02 — Native quotation detail stays stale after save
 
@@ -6996,13 +7006,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Completed page-specific revision review of web preload, locked identity, structured save feedback, source/tenant scope, lifecycle concurrency guards, original revision/share retention and native load/save mapping. Shared calendar inputs fixed earlier; native save now preserves saved supporting rows, line IDs, units/specifications and custom fields; item replacement clears inherited metadata and deletion keeps metadata aligned.", "tests": "2 authenticated browser cases passed (39.3s): actual New Revision Save, locked identity, line prices/cost/units/specification, charges/schedules, original revision/public-share retention, second-revision and foreign-tenant rejection. Four Kotlin round-trip tests passed (0 failed/errors/skipped), Gradle successful (43s); TypeScript final passed.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md", "SalesPunch360_A079_A081_Date_Followup.md", "SalesPunch360_A081_Revision_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A081_Revision_Followup.md.
 
 **Linked finding IDs:** A079-F02, A079-F03.
+
+**Draft/revision continuation:** Named native mapping and safe metadata/supporting-row preservation independently checked; web date preloads verified. Draft replacements now append immutable DRAFT_UPDATED safe count notes atomically and update parent ordering timestamp. Native saved identity selectors/state are locked; confirmed saves clear the form before loading fresh detail and expose reload retry. 46 service tests +1 PostgreSQL audit/rollback test +2 desktop/mobile edit/revision tests (50.9s) passed; Android compile +6 JVM codec/identity tests, Node22 TypeScript/lint, Prisma generate/validate/local migration deployment passed. Additive migration `20261013020000_quotation_draft_edit_audit` applied only locally (117 migrations); final-head/deployment rehearsal/physical Android checks remain pending.
 
 ## A082-F01 — Creation layout and reference metadata/attachment controls are incomplete
 

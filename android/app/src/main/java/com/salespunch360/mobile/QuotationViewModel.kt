@@ -66,6 +66,8 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(QuotationState())
     val state: StateFlow<QuotationState> = _state
 
+    private var detailTarget:String?=null
+
     init {
         refresh()
     }
@@ -123,10 +125,13 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun editDraft(draft: QuotationDraft) {
-        _state.value = _state.value.copy(draft = draft)
+        if(_state.value.saving)return
+        val previous=_state.value.draft
+        _state.value = _state.value.copy(draft = previous?.let{editedQuotationDraft(it,draft)}?:draft)
     }
 
     fun closeDraft() {
+        if(_state.value.saving)return
         _state.value = _state.value.copy(draft = null)
     }
 
@@ -147,48 +152,42 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     private fun payload(draft: QuotationDraft) = quotationDraftPayload(draft)
 
     fun save() {
+        if(_state.value.saving)return
         val draft = _state.value.draft ?: return
+        _state.value = _state.value.copy(saving = true,error=null)
         viewModelScope.launch {
-            _state.value = _state.value.copy(saving = true)
             try {
                 val id = draft.id
-                if (id == null) {
-                    val created = api.createQuotation(payload(draft))
-                    open(created.str("id"))
-                } else if (draft.revision) {
-                    api.quotationAction(
-                        id,
-                        buildJsonObject {
-                            put("action", "REVISE")
-                            put("document", payload(draft))
-                        }
-                    )
+                val savedId = if (id == null) {
+                    api.createQuotation(payload(draft)).str("id")
                 } else {
-                    api.updateQuotation(id, payload(draft))
+                    if(draft.revision)api.quotationAction(id,buildJsonObject { put("action","REVISE");put("document",payload(draft)) })
+                    else api.updateQuotation(id,payload(draft))
+                    id
                 }
-
-                _state.value = _state.value.copy(
-                    saving = false,
-                    draft = null,
-                    message = "Quotation saved with server totals."
-                )
+                // The write is confirmed. A failed detail reload must never retain
+                // this form as an unsaved revision that could be submitted again.
+                _state.value = _state.value.copy(saving=false,draft=null,detail=null,message="Quotation saved with server totals.")
+                open(savedId)
                 refresh()
-            } catch (e: Exception) {
-                fail(e)
-            }
+            } catch(e:Exception) { fail(e) }
         }
     }
 
-    fun open(id: String) = viewModelScope.launch {
-        _state.value = _state.value.copy(loading = true)
-        try {
-            _state.value = _state.value.copy(loading = false, detail = api.quotation(id))
-        } catch (e: Exception) {
-            fail(e)
+    fun open(id:String) {
+        detailTarget=id
+        viewModelScope.launch {
+            _state.value=_state.value.copy(loading=true,error=null)
+            try {
+                val detail=api.quotation(id)
+                if(detailTarget==id)_state.value=_state.value.copy(loading=false,detail=detail)
+            } catch(e:Exception) {if(detailTarget==id)fail(e)}
         }
     }
+    fun retry() {detailTarget?.let{open(it)}?:refresh()}
 
     fun close() {
+        detailTarget=null
         _state.value = _state.value.copy(detail = null)
     }
 

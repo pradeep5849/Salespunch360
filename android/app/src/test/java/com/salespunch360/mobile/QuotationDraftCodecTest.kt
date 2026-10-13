@@ -50,4 +50,16 @@ class QuotationDraftCodecTest {
         assertEquals("Second",remaining.lines.single().itemName)
         assertEquals("second",quotationDraftPayload(remaining)["lines"]!!.jsonArray.single().jsonObject["existingLineId"]!!.jsonPrimitive.content)
     }
+    @Test fun existingQuotationIdentityCannotBeChangedByEditingFields() {
+        val prior=QuotationDraft(id="saved",revision=true,branchId="branch-a",customerId="party-a",documentType="BOQ")
+        val changed=editedQuotationDraft(prior,prior.copy(id="forged",revision=false,branchId="branch-b",customerId="party-b",documentType="ESTIMATE",notes="Edited note"))
+        assertEquals("saved",changed.id);assertTrue(changed.revision)
+        assertEquals("branch-a",changed.branchId);assertEquals("party-a",changed.customerId);assertEquals("BOQ",changed.documentType)
+        assertEquals("Edited note",changed.notes)
+    }
+    @Test fun newQuotationIdentityRemainsSelectable() {
+        val prior=QuotationDraft()
+        val changed=editedQuotationDraft(prior,prior.copy(branchId="branch-b",customerId="party-b",documentType="ESTIMATE"))
+        assertEquals("branch-b",changed.branchId);assertEquals("party-b",changed.customerId);assertEquals("ESTIMATE",changed.documentType)
+    }
 }

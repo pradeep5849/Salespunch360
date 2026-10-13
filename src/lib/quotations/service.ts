@@ -102,7 +102,14 @@ export async function updateQuotationDraftForActor(actor: Actor, id: string, raw
     await tx.quotationAdjustment.deleteMany({ where: { revisionId: old.id } });
     await tx.quotationLine.deleteMany({ where: { revisionId: old.id } });
     await tx.quotationRevision.delete({ where: { id: old.id } });
-    return createRevisionRows(actor, id, old.revisionNumber, replacementInput, await partySnapshot(actor, input, tx), tx, prior);
+    const replacement = await createRevisionRows(actor, id, old.revisionNumber, replacementInput, await partySnapshot(actor, input, tx), tx, prior);
+    await tx.quotationAuditEvent.create({ data: {
+      companyId: actor.companyId!, documentId: id, actorId: actor.id,
+      eventType: "DRAFT_UPDATED", revisionNumber: old.revisionNumber,
+      note: `Draft saved: ${replacementInput.lines.length} lines; ${replacementInput.adjustments.length} adjustments; ${replacementInput.paymentSchedule.length} payment schedule entries.`,
+    } });
+    await tx.quotationDocument.updateMany({ where: { id, companyId: actor.companyId!, status: "DRAFT" }, data: { updatedAt: new Date() } });
+    return replacement;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 

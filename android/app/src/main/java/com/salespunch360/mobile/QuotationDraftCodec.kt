@@ -83,3 +83,6 @@ internal fun quotationDraftPayload(draft: QuotationDraft) = buildJsonObject {
     put("adjustments", JsonArray(draft.adjustments.map { it.selected(adjustmentKeys) }))
     put("paymentSchedule", JsonArray(draft.paymentSchedule.map { it.selected(scheduleKeys) }))
 }
+
+internal fun editedQuotationDraft(previous:QuotationDraft, replacement:QuotationDraft):QuotationDraft =
+    if(previous.id==null) replacement else replacement.copy(id=previous.id,revision=previous.revision,branchId=previous.branchId,customerId=previous.customerId,documentType=previous.documentType)

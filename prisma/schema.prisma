@@ -584,6 +584,7 @@ enum QuotationValueType {
 }
 
 enum QuotationAuditEventType {
+  DRAFT_UPDATED
   CREATED
   REVISION_CREATED
   SUBMITTED_FOR_APPROVAL

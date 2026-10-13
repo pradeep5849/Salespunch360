@@ -62,7 +62,8 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
             }
         }
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        state.message?.let { Text(it) }
+        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error);TextButton(vm::retry,enabled=!state.saving){Text("Retry loading")} }
         LazyColumn {
             items(state.rows, key = { it.id }) { quotation ->
                 ListItem(
@@ -87,9 +88,15 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
         dismissButton = { TextButton(onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if(draft.id==null) {
                 item { SelectField("Type", draft.documentType, listOf("QUOTATION" to "Quotation", "ESTIMATE" to "Estimate", "BOQ" to "BOQ")) { vm.editDraft(draft.copy(documentType = it)) } }
                 item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { vm.editDraft(draft.copy(branchId = it, customerId = "")) } }
                 item { SelectField("Customer", draft.customerId, state.customers.map { it.id to it.name }) { vm.editDraft(draft.copy(customerId = it)) } }
+                } else {
+                    item { Text("Type: ${draft.documentType}") }
+                    item { Text("Branch: ${state.branches.firstOrNull{it.id==draft.branchId}?.name?:draft.branchId}") }
+                    item { Text("Customer: ${state.customers.firstOrNull{it.id==draft.customerId}?.name?:state.detail?.array("revisions")?.firstOrNull()?.str("customerName").orEmpty()}") }
+                }
                 item { OutlinedTextField(draft.issueDate, { vm.editDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date") }) }
                 item { OutlinedTextField(draft.validUntil, { vm.editDraft(draft.copy(validUntil = it)) }, label = { Text("Valid until") }) }
                 itemsIndexed(draft.lines) { index, line -> QuotationLine(index, line, state, vm) }
