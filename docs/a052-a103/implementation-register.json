@@ -9342,10 +9342,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Shared navigation accepts effective Items flag from web menu/layout and mobile bootstrap; native menu connects authorized branch choices and conditional company consolidation to selectBranch, preserves context on refresh, prevents overlapping switches and supports retry of failed selection.",
+        "tests": "28 focused navigation tests, 2 desktop/mobile browser cases and Android compilation plus 4 focused branch-choice JVM tests passed. Browser covers actual Items OFF/ON web menu and native bootstrap, inactive/excluded branches and denied Accountant consolidation. TypeScript and focused lint passed. Intermediate only.",
+        "remaining": "Final checkpoint-head regression; physical native branch switching/failure UI remains a device verification limitation."
+      }
     },
     {
       "finding_id": "A063-F02",
@@ -9444,10 +9449,15 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "implementation": "Shared navigation accepts effective Items flag from web menu/layout and mobile bootstrap; native menu connects authorized branch choices and conditional company consolidation to selectBranch, preserves context on refresh, prevents overlapping switches and supports retry of failed selection.",
+        "tests": "28 focused navigation tests, 2 desktop/mobile browser cases and Android compilation plus 4 focused branch-choice JVM tests passed. Browser covers actual Items OFF/ON web menu and native bootstrap, inactive/excluded branches and denied Accountant consolidation. TypeScript and focused lint passed. Intermediate only.",
+        "remaining": "Final checkpoint-head regression; physical native branch switching/failure UI remains a device verification limitation."
+      }
     },
     {
       "finding_id": "A064-F01",

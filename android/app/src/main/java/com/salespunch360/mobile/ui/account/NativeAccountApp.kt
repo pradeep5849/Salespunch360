@@ -150,14 +150,14 @@ fun NativeAccountAuthenticatedApp(
             )
         }},
         bottomBar={if(rootChrome)AccountBottomBar(bottom,state.selectedPath,vm::select)},
-        snackbarHost={state.error?.let{Snackbar{Row{Text(it,Modifier.weight(1f));TextButton(onClick={vm.load(true)}){Text("Retry")}}}}}
+        snackbarHost={state.error?.let{Snackbar{Row{Text(it,Modifier.weight(1f));TextButton(onClick=vm::retry){Text("Retry")}}}}}
     ){padding->
         val sales=salesType(state.selectedPath)
         val purchase=purchaseType(state.selectedPath)
         when{
             state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
             state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding,vm::select)
-            state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
+            state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding,account,state.refreshing,{id,all->vm.selectBranch(id,all)}){href->openAccountPath(context,href,vm::select)}
             state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
             state.selectedPath.startsWith("/workspace/account/sales/")->AccountSalesScreen(null,padding,vm::select,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment)
             state.selectedPath.startsWith("/workspace/account/purchases/")->PurchaseScreen(null,padding,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment)
@@ -354,7 +354,7 @@ private fun AccountSegmentedTabs(partyMode:Boolean,onChange:(Boolean)->Unit){
 }
 
 @Composable
-private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:PaddingValues,open:(String)->Unit){
+private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:PaddingValues,account:com.salespunch360.mobile.data.AccountBootstrap?,switching:Boolean,onBranch:(String?,Boolean)->Unit,open:(String)->Unit){
     var reportsOpen by rememberSaveable{mutableStateOf(false)}
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -364,6 +364,11 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
         item(key="account-menu-header"){
             Text("Menu",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
             Text("All Account modules available to your role.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(account!=null&&account.availableBranches.size>1){
+            item(key="account-branch-header"){Text("Branch",style=MaterialTheme.typography.titleMedium);if(switching)LinearProgressIndicator(Modifier.fillMaxWidth())}
+            items(account.availableBranches,key={"branch-${it.id}"}){branch->FilterChip(selected=account.branch.mode=="BRANCH"&&account.branch.branchId==branch.id,onClick={onBranch(branch.id,false)},label={Text(branch.name)},enabled=!switching,modifier=Modifier.fillMaxWidth())}
+            if(account.canConsolidate)item(key="account-all-branches"){FilterChip(selected=account.branch.mode=="COMPANY",onClick={onBranch(null,true)},label={Text("All Branches")},enabled=!switching,modifier=Modifier.fillMaxWidth())}
         }
         groups.forEachIndexed{groupIndex,group->
             val rows=group.items+group.children.flatMap{it.items}

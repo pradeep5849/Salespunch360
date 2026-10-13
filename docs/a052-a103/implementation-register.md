@@ -3522,13 +3522,19 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Items ON/OFF menu and native bootstrap; direct URL/API rejection; allowed roles; preserve other core accounting navigation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A063_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A063_Findings.json, SalesPunch360_A063_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared navigation accepts effective Items flag from web menu/layout and mobile bootstrap; native menu connects authorized branch choices and conditional company consolidation to selectBranch, preserves context on refresh, prevents overlapping switches and supports retry of failed selection.
+
+**Intermediate validation:** 28 focused navigation tests, 2 desktop/mobile browser cases and Android compilation plus 4 focused branch-choice JVM tests passed. Browser covers actual Items OFF/ON web menu and native bootstrap, inactive/excluded branches and denied Accountant consolidation. TypeScript and focused lint passed. Intermediate only.
+
+**Remaining:** Final checkpoint-head regression; physical native branch switching/failure UI remains a device verification limitation.
 
 ## A063-F02 — Android menu has no usable branch-context selector
 
@@ -3564,13 +3570,19 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Multiple branches; permitted All Branches; denied/foreign/inactive branch; dashboard/home reload; back/context persistence; failure preserves prior context.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A063_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A063_Findings.json, SalesPunch360_A063_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared navigation accepts effective Items flag from web menu/layout and mobile bootstrap; native menu connects authorized branch choices and conditional company consolidation to selectBranch, preserves context on refresh, prevents overlapping switches and supports retry of failed selection.
+
+**Intermediate validation:** 28 focused navigation tests, 2 desktop/mobile browser cases and Android compilation plus 4 focused branch-choice JVM tests passed. Browser covers actual Items OFF/ON web menu and native bootstrap, inactive/excluded branches and denied Accountant consolidation. TypeScript and focused lint passed. Intermediate only.
+
+**Remaining:** Final checkpoint-head regression; physical native branch switching/failure UI remains a device verification limitation.
 
 ## A064-F01 — Bank Accounts and Cash In-Hand navigation and list views remain combined
 

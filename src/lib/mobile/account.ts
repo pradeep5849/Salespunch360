@@ -1,4 +1,4 @@
-import {resolveDisplayPreferences} from "@/lib/account/display-preferences";
+import { resolveDisplayPreferences } from "@/lib/account/display-preferences";
 import { dashboardLinks } from "@/lib/account/dashboard-links";
 import type { AccountModule } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -51,7 +51,13 @@ export async function mobileAccountBootstrap(
     effectiveEntitlement(actor.companyId),
     db.accountSettings.findUnique({
       where: { companyId: actor.companyId },
-      select: { itemSettings: true, appLanguage: true, baseCurrency: true, displayDecimalPlaces: true, dateFormat: true },
+      select: {
+        itemSettings: true,
+        appLanguage: true,
+        baseCurrency: true,
+        displayDecimalPlaces: true,
+        dateFormat: true,
+      },
     }),
   ]);
   const filter =
@@ -88,6 +94,8 @@ export async function mobileAccountBootstrap(
       actor,
       company.productEdition,
       modules,
+      (settings?.itemSettings as { enabled?: boolean } | null)?.enabled !==
+        false,
     ).map((group) => ({
       label: group.label,
       items: group.items,

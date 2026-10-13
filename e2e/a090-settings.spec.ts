@@ -1445,3 +1445,21 @@ test("A064 shared account balances follow validated branch context on web and na
  await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNTANT"}});expect((await page.request.get("/api/v1/mobile/account/money?scope=all",{headers})).status()).toBe(403);await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN",branchAccessScope:"SELECTED_BRANCHES"}});await db.userBranchAccess.create({data:{userId,branchId}});expect((await page.request.get(`/api/v1/mobile/account/money?branchId=${second}`,{headers})).status()).toBe(403);expect((await page.request.get(`/api/v1/mobile/account/money?branchId=${branchId}`,{headers})).status()).toBe(200);
  }finally{await db.userBranchAccess.deleteMany({where:{userId,branchId}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN",branchAccessScope:"ALL_BRANCHES"}});await db.branch.delete({where:{id:foreign}})}
 });
+
+test("A063 menu and native bootstrap honor Items OFF and authorized branch choices",async({page})=>{
+ test.setTimeout(120000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ const second=randomUUID(),inactive=randomUUID();
+ await db.branch.createMany({data:[{id:second,companyId,name:"A063 Second Branch",code:"A063-SECOND"},{id:inactive,companyId,name:"A063 Inactive Branch",code:"A063-INACTIVE",isActive:false}]});
+ try{
+  const {mobileAccountBootstrap}=await import("@/lib/mobile/account");
+  const user=await db.user.findUniqueOrThrow({where:{id:userId}});
+  const principal={...user,companyId,branchIds:[],productEdition:"SALESPUNCH360_ACCOUNT" as const,authorizedWorkspaces:["ACCOUNT" as const]};
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{...(original.itemSettings as object??{}),enabled:false}}});
+  await signInSettings(page);await page.goto("/workspace/account/menu");await expect(page.getByRole("heading",{name:"Inventory",exact:true})).toHaveCount(0);await expect(page.getByRole("heading",{name:"Cash & Bank",exact:true})).toBeVisible();await expect(page.getByRole("button",{name:"A063 Second Branch",exact:false})).toBeVisible();await expect(page.getByRole("button",{name:"A063 Inactive Branch",exact:false})).toHaveCount(0);
+  const native=await mobileAccountBootstrap(principal,{branchId});expect(native.navigation.some(g=>g.label==="Inventory")).toBe(false);expect(native.availableBranches.map(b=>b.id)).toContain(second);expect(native.availableBranches.map(b=>b.id)).not.toContain(inactive);expect(native.canConsolidate).toBe(true);
+  expect((await mobileAccountBootstrap(principal,{scope:"all"})).branch.mode).toBe("COMPANY");
+  await expect(mobileAccountBootstrap({...principal,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchId]},{branchId:second})).rejects.toThrow();await expect(mobileAccountBootstrap({...principal,accountRole:"ACCOUNTANT"},{scope:"all"})).rejects.toThrow();await expect(mobileAccountBootstrap(principal,{branchId:inactive})).rejects.toThrow();
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{...(original.itemSettings as object??{}),enabled:true}}});await page.reload();await expect(page.getByRole("heading",{name:"Inventory",exact:true})).toBeVisible();expect((await mobileAccountBootstrap(principal,{branchId})).navigation.some(g=>g.label==="Inventory")).toBe(true);
+ }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:original.itemSettings??{}}});await db.branch.deleteMany({where:{id:{in:[second,inactive]},companyId}})}
+});
