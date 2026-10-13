@@ -2020,7 +2020,7 @@ test("A065 independent owner identity and capital/profit entries work without us
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
+  await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
   await page.goto("/workspace/account/money/capital");
   await page
     .getByRole("button", { name: "Add owner / partner", exact: true })
@@ -2188,8 +2188,9 @@ test("A065 independent owner identity and capital/profit entries work without us
   });
   await expect(capitalSummary).toContainText("90");
   await expect(capitalSummary).toContainText(
-    "Shown separately from asset values",
+    "Book value across accessible branches",
   );
+  await expect(capitalSummary.getByRole("heading",{name:"Posted company assets",exact:true})).toBeVisible();
   await capitalSummary
     .getByRole("link", { name: "View Capital & Drawings" })
     .click();

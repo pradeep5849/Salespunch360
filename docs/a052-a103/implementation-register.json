@@ -12561,7 +12561,12 @@
         "src/lib/account/assets.ts",
         "src/app/workspace/account/assets/page.tsx",
         "src/lib/account/money.ts",
-        "src/lib/account/reports/service.ts"
+        "src/lib/account/reports/service.ts",
+        "src/lib/account/owner-capital-summary.ts",
+        "src/lib/account/owner-capital-summary.test.ts",
+        "src/lib/account/owner-funds.integration.test.ts",
+        "src/app/workspace/account/assets/owner-capital-summary.tsx",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/accounting/AssetScreen.kt"
       ],
       "affected_services_apis_actions": [
         "setupOwnerAction / ownerTransactionAction",
@@ -12665,11 +12670,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F12"
+      ],
+      "checkpoint_work": [
+        {
+          "date": "2026-10-13",
+          "work": "Latest clarification implemented: owner capital and posted company assets are separate metrics. Company assets derive from effective ASSET-class ledger debit/credit book balances under company/assigned-branch scope, in the same repeatable-read snapshot as capital. Unposted/duplicate registry rows do not add value. Web Assets and Capital screens, shared mobile owner-summary DTO and native Assets card display the distinct amounts. No custom capital-plus-purchases figure; no new DB model or migration.",
+          "tests": "13 owner financial integration tests passed, including exact 80000 capital + 20000 profit =100000 posted assets; asset purchase/duplicate registry non-duplication; 3000 capital return, profit drawing preserves capital; empty branch and company isolation; Balance Sheet parity. 7 capital/exact-sum unit tests passed. Desktop browser passed; mobile first hit cold-start 5s sign-in timeout, then passed after 20s assertion. Android grouped compile, TypeScript and ESLint passed. Physical device/final-head validation pending."
+        }
       ]
     },
     {

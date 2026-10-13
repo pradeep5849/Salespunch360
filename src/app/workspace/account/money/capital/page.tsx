@@ -1,3 +1,4 @@
+import {OwnerCapitalSummary} from "../../assets/owner-capital-summary";
 import { listMoneyData } from "@/lib/account/money";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { OwnerForms } from "./owner-forms";
@@ -10,6 +11,7 @@ export default async function Page() {
           title="Capital & Drawings"
           backHref="/workspace/account/money"
         />
+        <OwnerCapitalSummary showLink={false}/>
         <OwnerForms
           owners={data.owners}
           users={data.users}

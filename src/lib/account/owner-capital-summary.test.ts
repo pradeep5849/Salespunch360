@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 const calls = vi.hoisted(() => ({ owners: vi.fn(), aggregate: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   db: {
+    $transaction:async(fn:(tx:unknown)=>unknown)=>fn({ownerFinancialAccount:{findMany:calls.owners},journalLine:{aggregate:calls.aggregate}}),
     ownerFinancialAccount: { findMany: calls.owners },
     journalLine: { aggregate: calls.aggregate },
   },
@@ -34,6 +35,7 @@ it("returns only owner capital without adding drawings or asset value and retain
   expect(await ownerCapitalSummaryForActor(actor)).toEqual({
     ownerCount: 1,
     capital: "90.00",
+    companyAssets:"-90.00",
   });
   expect(calls.owners).toHaveBeenCalledWith({
     where: { companyId: "company" },
@@ -43,6 +45,7 @@ it("returns only owner capital without adding drawings or asset value and retain
     companyId: "company",
     ledgerAccountId: { in: ["capital"] },
     journalEntry: {
+      companyId:"company",
       status: { in: ["POSTED", "REVERSED"] },
       branchId: { in: ["branch"] },
     },
@@ -54,6 +57,7 @@ it("returns zero for no owners and null ledger sums", async () => {
   expect(await ownerCapitalSummaryForActor(actor)).toEqual({
     ownerCount: 0,
     capital: "0.00",
+    companyAssets:"0.00",
   });
 });
 it("rejects money-view denied roles before reading financing balances", async () => {
@@ -67,4 +71,10 @@ it("an empty assigned branch set cannot broaden to all-company balances", async 
   expect(calls.aggregate.mock.calls[0][0].where.journalEntry.branchId).toEqual({
     in: [],
   });
+});
+
+it("derives company assets from asset-class postings independently of owner equity",async()=>{
+ calls.aggregate.mockResolvedValueOnce({_sum:{credit:new Prisma.Decimal("80000"),debit:new Prisma.Decimal(0)}}).mockResolvedValueOnce({_sum:{debit:new Prisma.Decimal("120000"),credit:new Prisma.Decimal("20000")}});
+ expect(await ownerCapitalSummaryForActor(actor)).toMatchObject({capital:"80000.00",companyAssets:"100000.00"});
+ expect(calls.aggregate.mock.calls[1][0].where).toEqual({companyId:"company",ledgerAccount:{companyId:"company",accountClass:"ASSET"},journalEntry:{companyId:"company",status:{in:["POSTED","REVERSED"]},branchId:{in:["branch"]}}});
 });

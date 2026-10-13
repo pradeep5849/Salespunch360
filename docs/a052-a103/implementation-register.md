@@ -4728,7 +4728,7 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Remaining owner capital80000 plus profit-funded asset20000 gives100000; capital-funded purchase does not increase metric again; duplicate asset import/purchase link counted once; partial funding validation; capital withdrawal3000 reduces metric3000; profit drawing preserves owner component; correction, authorization, branch/company/report parity.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
@@ -9169,3 +9169,7 @@ Immutable top-up receipts, untouched-receipt cancellation, zero-balance archive/
 ### A067 shared liability safeguards — 2026-10-13
 
 Ambiguous shared legacy loan ledgers remain unknown and cannot be repaid/top-upped/cancelled as individual loans. Aggregate cents use exact minor-unit summation. 23 focused financial integration and 32 grouped runtime tests passed; TypeScript/ESLint passed. A067-F09 is implemented pending final-head verification. Latest native explanatory text awaits grouped compile. Totals: 115 implemented but not verified, 74 partial, 10 not started; final statuses remain pending.
+
+### A065-F11 posted assets summary — 2026-10-13
+
+Latest clarification implemented as separate owner capital and posted company asset book value, with no invented funding attribution/custom metric. 13 financial integration and 7 unit tests passed; Balance Sheet parity verified; desktop and mobile-web passed after correcting the mobile cold-start sign-in timeout. Android compile, TypeScript/ESLint passed. No migration. Totals: 116 implemented but not verified, 74 partial, 9 not started; no final finding closures yet.

@@ -569,4 +569,26 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     await rejected;
     expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("40.00");
   });
+  it("keeps posted company assets separate from capital without double-counting asset purchases or imported records",async()=>{
+    const {ownerCapitalSummaryForActor}=await import("./owner-capital-summary");
+    const bank=await account();const before=await ownerCapitalSummaryForActor(actor);
+    await postOwnerTransactionForActor(actor,raw(bank.id,"INVESTMENT","80000"));
+    const income=await client.ledgerAccount.create({data:{companyId,code:randomUUID().slice(0,20),name:"Profit income",accountClass:"INCOME",normalBalance:"CREDIT"}});
+    const fixed=await client.ledgerAccount.create({data:{companyId,code:randomUUID().slice(0,20),name:"Funded equipment",accountClass:"ASSET",normalBalance:"DEBIT"}});
+    const post=(lines:Array<{ledgerAccountId:string;debit:string;credit:string}>)=>client.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:yearId,branchId,entryDate:date,sourceType:"MANUAL_JOURNAL",sourceId:randomUUID(),lines}));
+    await post([{ledgerAccountId:bank.ledgerAccountId,debit:"20000",credit:"0"},{ledgerAccountId:income.id,debit:"0",credit:"20000"}]);
+    await post([{ledgerAccountId:fixed.id,debit:"50000",credit:"0"},{ledgerAccountId:bank.ledgerAccountId,debit:"0",credit:"50000"}]);
+    let summary=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(summary.companyAssets).sub(before.companyAssets).toFixed(2)).toBe("100000.00");expect(new Prisma.Decimal(summary.capital).sub(before.capital).toFixed(2)).toBe("80000.00");
+    const registryIds:string[]=[];try{
+      for(let index=0;index<2;index++)registryIds.push((await client.asset.create({data:{companyId,branchId,assetNumber:randomUUID(),name:"Imported duplicate equipment",assetType:"EQUIPMENT",purchaseDate:date,purchaseValue:"50000",assetLedgerId:fixed.id,createdById:userId}})).id);
+      expect(await ownerCapitalSummaryForActor(actor)).toEqual(summary);
+    }finally{await client.asset.deleteMany({where:{id:{in:registryIds},companyId}});}
+    await postOwnerTransactionForActor(actor,{...raw(bank.id,"WITHDRAWAL","3000"),type:"CAPITAL_WITHDRAWAL"});summary=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(summary.companyAssets).sub(before.companyAssets).toFixed(2)).toBe("97000.00");expect(new Prisma.Decimal(summary.capital).sub(before.capital).toFixed(2)).toBe("77000.00");
+    await postOwnerTransactionForActor(actor,{...raw(bank.id,"WITHDRAWAL","1000"),type:"PROFIT_DISTRIBUTION"});const after=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(after.companyAssets).sub(summary.companyAssets).toFixed(2)).toBe("-1000.00");expect(after.capital).toBe(summary.capital);
+    const {runFinancialReportForActor}=await import("./reports/service");const report=await runFinancialReportForActor(actor,"balance-sheet",{scope:"all",from:"2026-01-01",to:"2026-12-31"});expect(new Prisma.Decimal(String(report.rows.find(row=>row[0]==="Assets")?.[1])).eq(after.companyAssets)).toBe(true);
+    expect(await ownerCapitalSummaryForActor({...actor,companyId:randomUUID()})).toMatchObject({companyAssets:"0.00",capital:"0.00",ownerCount:0});
+    expect((await ownerCapitalSummaryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]})).companyAssets).toBe("0.00");
+    await expect(ownerCapitalSummaryForActor({...actor,accountRole:"DATA_ENTRY"})).rejects.toThrow();
+  });
+
 });
