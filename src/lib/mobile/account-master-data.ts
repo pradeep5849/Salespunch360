@@ -1,3 +1,8 @@
+import {
+  assertUnitAccess,
+  saveUnitForActor,
+  saveUnitConversionForActor,
+} from "@/lib/account/units";
 import { EFFECTIVE_SETTLEMENT } from "../account/settlement-policy";
 import {
   itemCreationExtras,
@@ -14,7 +19,6 @@ import { db } from "@/lib/db";
 import {
   partySchema,
   itemSchema,
-  unitSchema,
   categorySchema,
 } from "@/lib/account/validation";
 import { canUsePermission } from "@/lib/auth/permissions";
@@ -183,7 +187,7 @@ export async function listMobileAccountMaster(
       skip: offset,
     });
   if (kind === "units") {
-    await requireInventory(user);
+    await assertUnitAccess(actor(user, "units"));
     return db.accountUnit.findMany({
       where: {
         companyId: user.companyId,
@@ -360,7 +364,8 @@ export async function getMobileAccountMaster(
       },
     }),
     db.accountSettlement.findMany({
-      where: { ...EFFECTIVE_SETTLEMENT,
+      where: {
+        ...EFFECTIVE_SETTLEMENT,
         companyId: user.companyId,
         ...party,
         ...(kind === "customers" ? branchFilter(user) : {}),
@@ -518,19 +523,8 @@ export async function saveMobileAccountMaster(
     return getMobileAccountMaster(user, kind, entityId!);
   }
   await requireInventory(user);
-  if (kind === "units") {
-    const input = unitSchema.parse(raw);
-    if (!id)
-      return db.accountUnit.create({
-        data: { companyId: user.companyId, ...input },
-      });
-    const changed = await db.accountUnit.updateMany({
-      where: { id, companyId: user.companyId },
-      data: input,
-    });
-    if (changed.count !== 1) throw new Error("MOBILE_FORBIDDEN");
-    return getMobileAccountMaster(user, kind, id);
-  }
+  if (kind === "units")
+    return saveUnitForActor(actor(user, "units", true), raw, id);
   if (kind === "categories") {
     const input = categorySchema.parse(raw);
     if (!id)
@@ -741,6 +735,7 @@ export async function mobileMasterOptions(
   kind: MasterKind = "customers",
 ) {
   actor(user, kind);
+  if (kind === "units") await assertUnitAccess(actor(user, "units"));
   if (["warehouses", "items", "services", "units", "categories"].includes(kind))
     await requireInventory(user);
   const [branches, units, categories, settings, partyCustomFields] =
@@ -813,6 +808,11 @@ export async function mobileMasterOptions(
           })
         : [],
     units,
+    unitConversions:
+      kind === "units"
+        ? ((settings?.itemSettings as Prisma.JsonObject | null)
+            ?.unitConversions ?? [])
+        : [],
     categories,
     canManageItemSettings: user.accountRole === "ACCOUNT_ADMIN",
     hsnCodes:
@@ -870,57 +870,8 @@ export async function saveMobileUnitConversion(
   user: MobileAppPrincipal,
   raw: unknown,
 ) {
-  actor(user, "units", true);
+  const principal = actor(user, "units", true);
   await assertOperationalWrite(user.companyId);
-  await requireInventory(user);
-  const input = z
-    .object({
-      baseUnitId: z.string().uuid(),
-      secondaryUnitId: z.string().uuid(),
-      rate: z.coerce.number().positive(),
-    })
-    .parse(raw);
-  if (input.baseUnitId === input.secondaryUnitId)
-    throw new Error("INVALID_INPUT");
-  if (
-    (await db.accountUnit.count({
-      where: {
-        companyId: user.companyId,
-        id: { in: [input.baseUnitId, input.secondaryUnitId] },
-        isActive: true,
-      },
-    })) !== 2
-  )
-    throw new Error("INVALID_INPUT");
-  const settings = await db.accountSettings.findUnique({
-    where: { companyId: user.companyId },
-    select: { itemSettings: true },
-  });
-  const current = (settings?.itemSettings ?? {}) as Record<string, unknown>;
-  const conversions = Array.isArray(current.unitConversions)
-    ? current.unitConversions.filter(
-        (x): x is Record<string, unknown> =>
-          Boolean(x) && typeof x === "object",
-      )
-    : [];
-  const next = [
-    ...conversions.filter(
-      (x) =>
-        !(
-          x.baseUnitId === input.baseUnitId &&
-          x.secondaryUnitId === input.secondaryUnitId
-        ),
-    ),
-    input,
-  ];
-  const itemSettings = {
-    ...current,
-    unitConversions: next,
-  } as Prisma.InputJsonObject;
-  await db.accountSettings.upsert({
-    where: { companyId: user.companyId },
-    create: { companyId: user.companyId, itemSettings },
-    update: { itemSettings },
-  });
-  return { ok: true, conversion: input };
+  const result = await saveUnitConversionForActor(principal, raw);
+  return { ok: true, conversion: result.conversion };
 }

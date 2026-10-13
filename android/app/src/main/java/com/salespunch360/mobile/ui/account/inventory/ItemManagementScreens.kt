@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.ItemManagementViewModel
 import com.salespunch360.mobile.data.AccountMasterRecord
 import kotlinx.serialization.json.jsonObject
@@ -73,6 +74,7 @@ fun UnitsManagementScreen(
     vm:ItemManagementViewModel=viewModel()
 ){
     val s=vm.state.collectAsStateWithLifecycle().value
+    LaunchedEffect(Unit){vm.refreshUnits()}
     var q by remember{mutableStateOf("")}
     var edit by remember{mutableStateOf<AccountMasterRecord?>(null)}
     var add by remember{mutableStateOf(false)}
@@ -82,13 +84,15 @@ fun UnitsManagementScreen(
     var base by remember{mutableStateOf("")}
     var secondary by remember{mutableStateOf("")}
     var rate by remember{mutableStateOf("1")}
-    val rows=s.units.filter{"${it.name} ${it.symbol.orEmpty()}".contains(q,true)}
+    val rows=if(s.error!=null)emptyList()else s.units.filter{"${it.name} ${it.symbol.orEmpty()}".contains(q,true)}
     if(conversion){
         Scaffold(
             topBar={TopAppBar(title={Text("Set Conversion")},navigationIcon={IconButton(onClick={conversion=false}){Icon(Icons.Default.ArrowBack,"Back")}})},
             bottomBar={Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={conversion=false},Modifier.weight(1f).height(56.dp)){Text("Cancel")};Button(onClick={vm.saveConversion(base,secondary,rate){conversion=false}},enabled=base.isNotBlank()&&secondary.isNotBlank()&&base!=secondary&&(rate.toDoubleOrNull()?:0.0)>0&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text("Save")}}}
         ){padding->
             Column(Modifier.fillMaxSize().padding(padding).padding(20.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
+                if(s.loading||s.saving)LinearProgressIndicator(Modifier.fillMaxWidth())
+                s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
                 UnitPicker("Base unit",base,s.units){base=it}
                 UnitPicker("Secondary unit",secondary,s.units){secondary=it}
                 OutlinedTextField(rate,{rate=it},label={Text("Conversion Rate")},modifier=Modifier.fillMaxWidth())
@@ -99,16 +103,27 @@ fun UnitsManagementScreen(
     }
     Scaffold(
         topBar={TopAppBar(title={Text("Units")},navigationIcon={IconButton(onClick=back){Icon(Icons.Default.ArrowBack,"Back")}},actions={IconButton(onClick={navigate("/workspace/account/inventory/item-settings")}){Icon(Icons.Default.Settings,"Item settings")}})},
-        floatingActionButton={ExtendedFloatingActionButton(onClick={edit=null;name="";symbol="";add=true},icon={Icon(Icons.Default.Add,null)},text={Text("Add Unit")})}
+        floatingActionButton={ExtendedFloatingActionButton(onClick={edit=null;name="";symbol="";vm.clearError();add=true},icon={Icon(Icons.Default.Add,null)},text={Text("Add Unit")})}
     ){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(bottom=96.dp)){
-            item{OutlinedTextField(q,{q=it},placeholder={Text("Search Unit")},leadingIcon={Icon(Icons.Default.Search,null)},modifier=Modifier.fillMaxWidth().padding(16.dp))}
-            item{Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){FilledTonalButton(onClick={base=s.units.getOrNull(0)?.id.orEmpty();secondary=s.units.getOrNull(1)?.id.orEmpty();rate="1";conversion=true},modifier=Modifier.weight(1f)){Text("Set Conversion")};FilledTonalButton(onClick={},enabled=false,modifier=Modifier.weight(1f)){Text("Unit to Items")}}}
+            item{TabRow(selectedTabIndex=3){listOf("Products" to "/workspace/account/inventory/catalog?type=PRODUCT","Services" to "/workspace/account/inventory/catalog?type=SERVICE","Categories" to "/workspace/account/inventory/categories","Units" to "/workspace/account/inventory/units").forEachIndexed{index,(title,path)->Tab(selected=index==3,onClick={if(index!=3)navigate(path)},text={Text(title)})}}}
+            if(s.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
+            s.error?.let{message->item{Column(Modifier.padding(16.dp)){Text(message,color=MaterialTheme.colorScheme.error);TextButton(onClick={vm.refreshUnits()}){Text("Retry")}}}}
+            if(!s.loading&&s.error==null&&rows.isEmpty())item{Text(if(s.units.isEmpty())"No units have been added yet." else "No units match your search.",Modifier.padding(16.dp))}
+            item{OutlinedTextField(q,{q=it},label={Text("Search Unit")},leadingIcon={Icon(Icons.Default.Search,null)},modifier=Modifier.fillMaxWidth().padding(16.dp))}
+            item{Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){FilledTonalButton(onClick={base=s.units.getOrNull(0)?.id.orEmpty();secondary=s.units.getOrNull(1)?.id.orEmpty();rate="1";vm.clearError();conversion=true},modifier=Modifier.weight(1f)){Text("Set Conversion")};FilledTonalButton(onClick={},enabled=false,modifier=Modifier.weight(1f)){Text("Unit to Items")}}}
             items(rows,key={it.id}){u->
                 ListItem(
                     headlineContent={Text(u.name.uppercase(),fontWeight=FontWeight.SemiBold)},
-                    supportingContent={Text(u.symbol.orEmpty())},
-                    trailingContent={IconButton(onClick={edit=u;name=u.name;symbol=u.symbol.orEmpty();add=true}){Icon(Icons.Default.Edit,"Edit")}}
+                    supportingContent={
+                        Column{
+                            Text(u.symbol.orEmpty())
+                            s.unitConversions.filter{it.str("baseUnitId")==u.id}.forEach{rule->
+                                Text("1 ${u.symbol.orEmpty()} = ${rule.str("rate")} ${s.units.firstOrNull{it.id==rule.str("secondaryUnitId")}?.symbol.orEmpty()}")
+                            }
+                        }
+                    },
+                    trailingContent={IconButton(onClick={edit=u;name=u.name;symbol=u.symbol.orEmpty();vm.clearError();add=true}){Icon(Icons.Default.Edit,"Edit")}}
                 )
                 HorizontalDivider()
             }
@@ -117,8 +132,9 @@ fun UnitsManagementScreen(
     if(add)ModalBottomSheet(onDismissRequest={add=false}){
         Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(if(edit==null)"Add Unit" else "Edit Unit",style=MaterialTheme.typography.headlineSmall);IconButton(onClick={add=false}){Icon(Icons.Default.Close,"Close")}}
-            OutlinedTextField(name,{name=it},placeholder={Text("Enter Full Unit Name")},modifier=Modifier.fillMaxWidth())
-            OutlinedTextField(symbol,{symbol=it},placeholder={Text("Short Name")},modifier=Modifier.fillMaxWidth())
+            s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+            OutlinedTextField(name,{if(it.length<=80)name=it},enabled=!s.saving,label={Text("Full Unit Name")},modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(symbol,{if(it.length<=20)symbol=it},enabled=!s.saving,label={Text("Short Name")},modifier=Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){OutlinedButton(onClick={add=false},Modifier.weight(1f).height(56.dp)){Text("Cancel")};Button(onClick={vm.saveUnit(edit?.id,name,symbol){add=false}},enabled=name.isNotBlank()&&symbol.isNotBlank()&&!s.saving,modifier=Modifier.weight(1f).height(56.dp)){Text("Save")}}
         }
     }

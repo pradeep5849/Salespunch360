@@ -1,4 +1,10 @@
 import {
+  assertUnitAccess,
+  saveUnitForActor,
+  saveUnitConversionForActor,
+} from "./units";
+import type { ProjectActor } from "./projects";
+import {
   itemCreationExtras,
   itemCreationHash,
   saveItemOpeningInTx,
@@ -17,6 +23,7 @@ import {
   requirePermissionForMutation,
 } from "@/lib/auth/authorization";
 import {
+  unitSchema,
   categorySchema,
   currencySchema,
   customFieldSchema,
@@ -24,7 +31,6 @@ import {
   itemSchema,
   numberingSeriesSchema,
   partySchema,
-  unitSchema,
   workCategorySchema,
   workPackageSchema,
 } from "./validation";
@@ -103,6 +109,7 @@ export async function accountMasterOverview(
         ? Math.floor(parsedPage)
         : 1,
     skip = (page - 1) * MASTER_PAGE_SIZE;
+  if (master === "units") await assertUnitAccess(a as ProjectActor);
   const nameWhere = q
     ? { name: { contains: q, mode: "insensitive" as const } }
     : {};
@@ -263,7 +270,11 @@ export async function accountMasterOverview(
     canCreate:
       !!a.accountRole &&
       ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(
-        master === "financial-years" ? "ACCOUNT_SETTINGS" : "ACCOUNT_ACCOUNTS",
+        master === "financial-years"
+          ? "ACCOUNT_SETTINGS"
+          : master === "units"
+            ? "ACCOUNT_STOCK"
+            : "ACCOUNT_ACCOUNTS",
       ),
     accountSettings,
     partySettings: resolvePartySettings(accountSettings?.transactionDefaults),
@@ -387,10 +398,10 @@ export async function createFinancialYearForActor(
   );
 }
 export async function createUnit(raw: unknown) {
-  const a = await writeActor();
-  return db.accountUnit.create({
-    data: { companyId: a.companyId!, ...unitSchema.parse(raw) },
-  });
+  return saveUnitForActor(
+    (await requirePermissionForMutation("ACCOUNT_STOCK")) as ProjectActor,
+    unitSchema.parse(raw),
+  );
 }
 export async function createCategory(raw: unknown) {
   const a = await writeActor();
@@ -401,16 +412,11 @@ export async function createCategory(raw: unknown) {
 }
 
 export async function updateUnit(id: string, raw: unknown) {
-  const a = await writeActor(),
-    d = unitSchema.parse(raw);
-  const row = await db.accountUnit.updateMany({
-    where: { id, companyId: a.companyId! },
-    data: d,
-  });
-  if (row.count !== 1) throw new AuthorizationError();
-  return db.accountUnit.findFirstOrThrow({
-    where: { id, companyId: a.companyId! },
-  });
+  return saveUnitForActor(
+    (await requirePermissionForMutation("ACCOUNT_STOCK")) as ProjectActor,
+    raw,
+    id,
+  );
 }
 export async function setItemsActive(
   kind: "products" | "services",
@@ -467,54 +473,12 @@ export async function saveUnitConversion(raw: {
   secondaryUnitId: string;
   rate: string;
 }) {
-  const a = await requirePermissionForMutation("ACCOUNT_STOCK");
-  const rate = Number(raw.rate);
-  if (
-    !raw.baseUnitId ||
-    !raw.secondaryUnitId ||
-    raw.baseUnitId === raw.secondaryUnitId ||
-    !Number.isFinite(rate) ||
-    rate <= 0
-  )
-    throw new Error("INVALID_UNIT_CONVERSION");
-  const units = await db.accountUnit.count({
-    where: {
-      companyId: a.companyId!,
-      id: { in: [raw.baseUnitId, raw.secondaryUnitId] },
-      isActive: true,
-    },
-  });
-  if (units !== 2) throw new Error("INVALID_UNIT");
-  const settings = await db.accountSettings.findUnique({
-    where: { companyId: a.companyId! },
-    select: { itemSettings: true },
-  });
-  const current = (settings?.itemSettings ?? {}) as Record<string, unknown>;
-  const conversions = Array.isArray(current.unitConversions)
-    ? current.unitConversions.filter(
-        (x): x is Record<string, unknown> =>
-          Boolean(x) && typeof x === "object",
-      )
-    : [];
-  const next = [
-    ...conversions.filter(
-      (x) =>
-        !(
-          x.baseUnitId === raw.baseUnitId &&
-          x.secondaryUnitId === raw.secondaryUnitId
-        ),
-    ),
-    { baseUnitId: raw.baseUnitId, secondaryUnitId: raw.secondaryUnitId, rate },
-  ];
-  const itemSettings = {
-    ...current,
-    unitConversions: next,
-  } as Prisma.InputJsonObject;
-  return db.accountSettings.upsert({
-    where: { companyId: a.companyId! },
-    create: { companyId: a.companyId!, itemSettings },
-    update: { itemSettings },
-  });
+  return (
+    await saveUnitConversionForActor(
+      (await requirePermissionForMutation("ACCOUNT_STOCK")) as ProjectActor,
+      raw,
+    )
+  ).settings;
 }
 export async function createVendor(raw: unknown) {
   const a = await writeActor(),

@@ -101,9 +101,19 @@ export async function createAccountUnitAction(raw: {
   name: string;
   symbol: string;
 }) {
-  const row = await createUnit(raw);
-  revalidatePath("/workspace/account/inventory/items/new");
-  return { id: row.id, name: row.name, symbol: row.symbol };
+  try {
+    const row = await createUnit(raw);
+    revalidatePath("/workspace/account/inventory/items/new");
+    revalidatePath("/workspace/account/inventory/units");
+    return {
+      ok: true as const,
+      id: row.id,
+      name: row.name,
+      symbol: row.symbol,
+    };
+  } catch (error) {
+    return { ok: false as const, message: accountErrorMessage(error) };
+  }
 }
 export async function createAccountCategoryAction(raw: {
   name: string;
@@ -178,10 +188,19 @@ export async function updateAccountUnitAction(
   id: string,
   raw: { name: string; symbol: string },
 ) {
-  const row = await updateUnit(id, raw);
-  revalidatePath("/workspace/account/inventory/units");
-  revalidatePath("/workspace/account/inventory/items/new");
-  return { id: row.id, name: row.name, symbol: row.symbol };
+  try {
+    const row = await updateUnit(id, raw);
+    revalidatePath("/workspace/account/inventory/units");
+    revalidatePath("/workspace/account/inventory/items/new");
+    return {
+      ok: true as const,
+      id: row.id,
+      name: row.name,
+      symbol: row.symbol,
+    };
+  } catch (error) {
+    return { ok: false as const, message: accountErrorMessage(error) };
+  }
 }
 export async function setItemsActiveAction(
   kind: "products" | "services",
@@ -199,7 +218,11 @@ export async function saveUnitConversionAction(raw: {
   secondaryUnitId: string;
   rate: string;
 }) {
-  await saveUnitConversion(raw);
-  revalidatePath("/workspace/account/inventory/units");
-  return { ok: true };
+  try {
+    await saveUnitConversion(raw);
+    revalidatePath("/workspace/account/inventory/units");
+    return { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, message: accountErrorMessage(error) };
+  }
 }

@@ -9,7 +9,7 @@ import {mobileSaveAsset,mobileAssetDetail} from "../src/lib/mobile/account-accou
 import {mobileCreateProject,mobileProjectOptions,mobileUpdateProject} from "../src/lib/mobile/account-projects";
 import {createSimpleProjectForActor} from "../src/lib/account/project-simple-workflow";
 import {updateProjectForActor,projectDashboardForActor,type ProjectActor} from "../src/lib/account/projects";
-import {saveMobileAccountMaster} from "../src/lib/mobile/account-master-data";
+import {saveMobileAccountMaster,saveMobileUnitConversion,listMobileAccountMaster} from "../src/lib/mobile/account-master-data";
 import {createStockMovementForActor} from "../src/lib/account/inventory";
 import {mobileCreateSales,mobileReplaceSale,mobileDeleteSale} from "../src/lib/mobile/account-transactions";
 import {createAccountBackupForActor} from "../src/lib/account/utilities";
@@ -144,6 +144,7 @@ test.afterAll(async () => {
   await db.warehouse.deleteMany({where:{companyId}});
   await db.accountProduct.deleteMany({where:{companyId}});
   await db.accountService.deleteMany({where:{companyId}});
+  await db.accountUnit.deleteMany({where:{companyId}});
   await db.customFieldValue.deleteMany({where:{companyId}});
   await db.customFieldDefinition.deleteMany({where:{companyId}});
   await db.ownerFinancialAccount.deleteMany({where:{companyId}});
@@ -1355,4 +1356,24 @@ test("A061 stock summary retains inactive history and scoped exports with strict
   await page.goto(`/workspace/account/inventory/stock-summary?branchId=${branchId}`);await expect(page.getByRole("alert").filter({hasText:"Stock Summary is unavailable"})).toBeVisible();await page.getByRole("link",{name:"Return to Account",exact:true}).click();
   await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true},enabledModules:[]}});expect((await mobileStockSummary(principal,{branchId,q:product.name})).filtered.map(row=>row.id)).toEqual([product.id]);expect((await page.request.get(href!)).status()).toBe(200);
  }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules,itemSettings:original.itemSettings??{},displayDecimalPlaces:original.displayDecimalPlaces}})}
+});
+
+
+test("A062 units preserve concurrent rules, paginate native choices and show safe save feedback",async({page})=>{
+ test.setTimeout(150000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{...(original.itemSettings as object??{}),enabled:true,itemUnits:true}}});
+  const ids:string[]=Array.from({length:205},()=>randomUUID());await db.accountUnit.createMany({data:ids.map((id,index)=>({id,companyId,name:`A062 Unit ${String(index).padStart(3,"0")}`,symbol:`AU${index}`}))});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const principal={...actor,productEdition:"SALESPUNCH360_ACCOUNT" as const,authorizedWorkspaces:["ACCOUNT" as const]};
+  const nativeUnits=[];for(let offset=0;;offset+=200){const rows=await listMobileAccountMaster(principal,"units",{active:"true",offset});nativeUnits.push(...rows);if(rows.length<200)break;}expect(nativeUnits.map(row=>row.id)).toContain(ids[204]);
+  await Promise.all([saveMobileUnitConversion(principal,{baseUnitId:ids[0],secondaryUnitId:ids[1],rate:"12"}),saveMobileUnitConversion(principal,{baseUnitId:ids[2],secondaryUnitId:ids[3],rate:"24"})]);
+  const rules=((await db.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings as {unitConversions:Array<{baseUnitId:string;rate:string}>}).unitConversions;expect(rules.filter(row=>[ids[0],ids[2]].includes(row.baseUnitId))).toHaveLength(2);
+  await signInSettings(page);await page.goto("/workspace/account/inventory/units");await expect(page.getByRole("navigation",{name:"Items sections"})).toContainText("ProductsServicesCategoriesUnits");await page.getByRole("textbox",{name:"Search Unit"}).fill("A062 Unit 204");await expect(page.locator(".unit-list").getByText("A062 UNIT 204",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Add Unit",exact:false}).click();const editor=page.getByRole("dialog",{name:"Add Unit",exact:true});await expect(editor.getByRole("textbox",{name:"Full Unit Name"})).toBeFocused();expect((await new AxeBuilder({page}).include(".items-manager-page").analyze()).violations).toEqual([]);await page.keyboard.press("Escape");await expect(editor).not.toBeVisible();await page.getByRole("button",{name:"Add Unit",exact:false}).click();await editor.getByRole("textbox",{name:"Full Unit Name"}).fill("A062 Unit 000");await editor.getByRole("textbox",{name:"Short Name"}).fill("NEW-A062");await editor.getByRole("button",{name:"Save",exact:true}).click();await expect(editor.getByRole("alert")).toContainText("already exists");await expect(editor.getByRole("textbox",{name:"Short Name"})).toHaveValue("NEW-A062");
+  await editor.getByRole("textbox",{name:"Full Unit Name"}).fill("A062 Created Unit");await editor.getByRole("button",{name:"Save",exact:true}).click();await expect(editor).not.toBeVisible();expect(await db.accountUnit.count({where:{companyId,name:"A062 Created Unit",symbol:"NEW-A062"}})).toBe(1);
+  await page.getByRole("button",{name:"Set Conversion",exact:true}).click();const conversion=page.getByRole("dialog",{name:"Set Conversion",exact:true});await conversion.getByLabel("Base unit",{exact:true}).selectOption(ids[0]);await conversion.getByLabel("Secondary unit",{exact:true}).selectOption(ids[204]);await conversion.getByLabel("Conversion Rate",{exact:true}).fill("1.25");await conversion.getByRole("button",{name:"Save",exact:true}).click();await expect(conversion).not.toBeVisible();expect(((await db.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings as {unitConversions:Array<{secondaryUnitId:string;rate:string}>}).unitConversions.find(row=>row.secondaryUnitId===ids[204])?.rate).toBe("1.25");
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemUnits:false}}});await expect(listMobileAccountMaster(principal,"units",{})).rejects.toThrow();await expect(saveMobileUnitConversion(principal,{baseUnitId:ids[0],secondaryUnitId:ids[1],rate:"2"})).rejects.toThrow();await page.reload();await expect(page.getByRole("alert").filter({hasText:"Units are unavailable"})).toBeVisible();
+ }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:original.itemSettings??{}}})}
 });

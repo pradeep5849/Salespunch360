@@ -748,3 +748,6 @@ body:has(.account-shell) > .workspace-header{display:none}
 .items-modal .account-stock-filters{padding:16px 22px}
 .account-stock-summary .items-filter-sheet footer button:first-child{color:#4b5563}
 .account-stock-summary .items-filter-sheet footer button:last-child{background:#cc123b}
+.units-conversion[open]{display:flex;flex-direction:column;inset:0;width:100%;max-width:none;height:100dvh;max-height:none;margin:0;border-radius:0}
+.units-conversion .conversion-body{flex:1;overflow:auto;padding-bottom:110px}
+.items-manager-page .manager-sheet-actions button:first-child{color:#4b5563}

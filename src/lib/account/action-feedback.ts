@@ -122,6 +122,11 @@ const messages: Record<string, string> = {
     "The original Project material receipt is missing. Review the purchase history before returning it.",
   ITEMS_DISABLED: "Items are disabled in General settings.",
   SERVICES_DISABLED: "Service items are disabled in Item settings.",
+  UNIT_NAME_OR_SYMBOL_EXISTS:
+    "A unit with this name or short name already exists.",
+  INVALID_UNIT: "Select active units belonging to this company.",
+  INVALID_UNIT_CONVERSION:
+    "Choose different units and a positive conversion rate with at most four decimal places.",
   ITEM_UNITS_DISABLED: "Item units are disabled in Item settings.",
   ITEM_CATEGORY_DISABLED: "Item categories are disabled in Item settings.",
   ITEM_DESCRIPTION_DISABLED: "Item descriptions are disabled in Item settings.",

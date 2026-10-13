@@ -3214,13 +3214,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Selection/search by name/code, Back/Cancel/Next, inline add, primary/secondary rules; atomic multiple-item save; foreign IDs; history preservation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F02 — Saved conversion rules have no business application
 
@@ -3256,13 +3258,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Save/reload on web/native; one bundle=10 pieces; secondary-unit purchase/sale/return quantity and value; reverse conversion; no duplicate cost; unchanged historical documents.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F03 — Concurrent conversion saves can overwrite other rules/settings
 
@@ -3298,13 +3302,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Concurrent different-pair writes; same-pair conflict; concurrent setting update; no lost values; rollback; duplicate retry.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F04 — Unit entry points do not consistently enforce item settings or permissions
 
@@ -3340,13 +3346,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Admin/Accountant/Data Entry/Project Manager direct requests; Items OFF/units OFF; allowed and denied roles; company isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F05 — Unit and conversion errors/loading are hidden from users
 
@@ -3382,13 +3390,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Duplicate name/symbol, overlength, invalid rate, foreign unit, offline/load fail/save fail, retry, no false success/empty.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F06 — Android unit search and pickers omit records after first 200
 
@@ -3424,13 +3434,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** More than200 units; late name/short-name matches; picker choice; loading failures and company isolation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F07 — Units interface lacks reference navigation and accessible web controls
 
@@ -3466,13 +3478,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Mobile reference comparison; all tabs/back/settings; keyboard/focus/Escape; accessible field/button names; long lists and small screens.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A062_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A062_Findings.json, SalesPunch360_A062_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A063-F01 — Menu ignores the disabled Items setting
 

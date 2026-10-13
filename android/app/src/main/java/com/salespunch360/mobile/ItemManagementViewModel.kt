@@ -8,12 +8,16 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
 data class ItemManagementState(
     val loading:Boolean=false,
     val saving:Boolean=false,
     val units:List<AccountMasterRecord> = emptyList(),
+    val unitConversions:List<JsonObject> = emptyList(),
+    val unitMode:Boolean=false,
     val categories:List<AccountMasterRecord> = emptyList(),
     val items:List<AccountMasterRecord> = emptyList(),
     val services:List<AccountMasterRecord> = emptyList(),
@@ -27,31 +31,48 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     private val api=ApiClient(SecureSession(app))
     private val _state=MutableStateFlow(ItemManagementState())
     val state:StateFlow<ItemManagementState> = _state
+    private var loadJob:Job?=null
+    private var loadGeneration=0L
     init{refresh()}
 
-    fun refresh()=viewModelScope.launch{
-        _state.value=_state.value.copy(loading=true,error=null,stockLoaded=false,catalogLoaded=false)
-        try{
-            val units=loadAll("units","true")
+    fun refresh(){
+        loadJob?.cancel();val generation=++loadGeneration
+        _state.value=_state.value.copy(loading=true,error=null,stockLoaded=false,catalogLoaded=false,unitMode=false)
+        loadJob=viewModelScope.launch{try{
+            val options=api.accountMasterOptions("items")
+            val units=if(options.itemSettings["itemUnits"]?.jsonPrimitive?.booleanOrNull!=false)loadAll("units","true")else emptyList()
             val categories=loadAll("categories","true")
             val items=loadAll("items","all")
             val services=loadAll("services","all")
+            if(generation!=loadGeneration)return@launch
             _state.value=_state.value.copy(units=units,categories=categories,items=items,services=services,catalogLoaded=true)
             val stock=api.inventoryStock().map{it.jsonObject}
             com.salespunch360.mobile.account.productStockTotals(stock)
-            _state.value=_state.value.copy(loading=false,units=units,categories=categories,items=items,services=services,stock=stock,stockLoaded=true,error=null)
-        }catch(e:Exception){fail(e)}
+            if(generation==loadGeneration)_state.value=_state.value.copy(loading=false,stock=stock,stockLoaded=true,error=null)
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(generation==loadGeneration)fail(e)}}
     }
+    fun refreshUnits(){
+        loadJob?.cancel();val generation=++loadGeneration
+        _state.value=_state.value.copy(loading=true,error=null,unitMode=true)
+        loadJob=viewModelScope.launch{try{
+            val options=api.accountMasterOptions("units")
+            val units=loadAll("units","true")
+            if(generation==loadGeneration)_state.value=_state.value.copy(loading=false,units=units,unitConversions=options.unitConversions,error=null)
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(generation==loadGeneration)fail(e)}}
+    }
+    fun clearError(){_state.value=_state.value.copy(error=null)}
 
     private suspend fun loadAll(kind:String,active:String):List<AccountMasterRecord>{
         return com.salespunch360.mobile.account.loadMasterPages { offset->api.accountMasterList(kind,"",active,offset=offset) }.distinctBy{it.id}
     }
 
     fun saveUnit(id:String?,name:String,symbol:String,done:()->Unit)=viewModelScope.launch{
+        if(_state.value.saving)return@launch
+        if(name.trim().length !in 1..80||symbol.trim().length !in 1..20){_state.value=_state.value.copy(error="Enter a unit name from 1 to 80 characters and short name from 1 to 20 characters.");return@launch}
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{
             api.saveAccountMaster("units",id,buildJsonObject{put("name",name.trim());put("symbol",symbol.trim())})
-        }.onSuccess{_state.value=_state.value.copy(saving=false);refresh();done()}.onFailure{fail(it as Exception)}
+        }.onSuccess{_state.value=_state.value.copy(saving=false);refreshUnits();done()}.onFailure{fail(it as Exception)}
     }
 
     fun saveCategory(name:String,done:()->Unit)=viewModelScope.launch{
@@ -75,9 +96,11 @@ class ItemManagementViewModel(app:Application):AndroidViewModel(app){
     }
 
     fun saveConversion(base:String,secondary:String,rate:String,done:()->Unit)=viewModelScope.launch{
+        if(_state.value.saving)return@launch
+        if(base.isBlank()||secondary.isBlank()||base==secondary||!Regex("[0-9]{1,14}(\\.[0-9]{1,4})?").matches(rate)||(rate.toBigDecimalOrNull()?.signum()?:0)<=0){_state.value=_state.value.copy(error="Choose different units and a positive rate with at most four decimal places.");return@launch}
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{api.saveUnitConversion(base,secondary,rate)}
-            .onSuccess{_state.value=_state.value.copy(saving=false);done()}
+            .onSuccess{_state.value=_state.value.copy(saving=false);refreshUnits();done()}
             .onFailure{fail(it as Exception)}
     }
 

@@ -92,6 +92,7 @@ export function AddItemEditor({
     [categories, setCategories] = useState(initialCategories),
     mutation = useSaveMutation(),
     pending = transitionPending || mutation.pending;
+  const [unitError, setUnitError] = useState("");
   const [unitPage, setUnitPage] = useState(false),
     [unitTarget, setUnitTarget] = useState<"PRIMARY" | "SECONDARY" | null>(
       null,
@@ -249,16 +250,25 @@ export function AddItemEditor({
   }
   function createUnitNow() {
     if (!newUnitName.trim() || !newUnitSymbol.trim()) return;
+    setUnitError("");
     startTransition(async () => {
-      const row = await createAccountUnitAction({
-        name: newUnitName.trim(),
-        symbol: newUnitSymbol.trim(),
-      });
-      setUnits((old) => [...old, row]);
-      setUnitDraftPrimary(row.id);
-      setNewUnitName("");
-      setNewUnitSymbol("");
-      setAddUnitOpen(false);
+      try {
+        const row = await createAccountUnitAction({
+          name: newUnitName.trim(),
+          symbol: newUnitSymbol.trim(),
+        });
+        if (!row.ok) {
+          setUnitError(row.message);
+          return;
+        }
+        setUnits((old) => [...old, row]);
+        setUnitDraftPrimary(row.id);
+        setNewUnitName("");
+        setNewUnitSymbol("");
+        setAddUnitOpen(false);
+      } catch {
+        setUnitError("The unit could not be saved. Retry when connected.");
+      }
     });
   }
   function createCategoryNow() {
@@ -835,6 +845,7 @@ export function AddItemEditor({
                 onChange={(e) => setNewUnitSymbol(e.target.value)}
               />
             </label>
+            {unitError && <p role="alert">{unitError}</p>}
             <div className="dialog-actions">
               <button onClick={() => setAddUnitOpen(false)}>Cancel</button>
               <button
