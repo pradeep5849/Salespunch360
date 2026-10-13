@@ -5284,13 +5284,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** 100000 principal less 2000 paid displays 98000; totals across loans; empty/search/detail/statement; history beyond 200.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F02, A067-F03.
+
+**Checkpoint work:** Scoped paginated web loan list/search/status and ledger-derived totals across all matching loans; unposted legacy balances flagged as unknown. Four focused tests, Node22 TypeScript and targeted ESLint passed. Detail/statement, Android parity, real database/browser and final-head verification remain pending.
 
 ## A067-F02 — Loan identity and terms do not capture reference fields
 

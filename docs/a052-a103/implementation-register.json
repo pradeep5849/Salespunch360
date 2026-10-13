@@ -14260,12 +14260,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A067-F02",
         "A067-F03"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Scoped paginated web loan list with search/status and posted liability outstanding totals across all matching loans; unknown unposted legacy balances are explicitly flagged. Detail/statement and native parity remain pending.",
+          "files": [
+            "src/lib/account/loan-overview.ts",
+            "src/lib/account/loan-overview.test.ts",
+            "src/app/workspace/account/money/loans/page.tsx"
+          ],
+          "tests": "4 focused loan overview tests passed; Node22 TypeScript and targeted ESLint passed. Real database/browser/native and final-head validation remain pending."
+        }
       ]
     },
     {
