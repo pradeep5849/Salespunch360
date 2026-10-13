@@ -1,4 +1,4 @@
-import {editLoanMetadataForActor} from "@/lib/account/loan-operations";
+import {editLoanMetadataForActor,topUpLoanForActor,changeLoanLifecycleForActor} from "@/lib/account/loan-operations";
 import {loanOverviewForActor} from "@/lib/account/loan-overview";
 import {loanHistoryForActor} from "@/lib/account/loan-history";
 import {
@@ -304,3 +304,6 @@ export async function mobileLoanOverview(u:MobileAppPrincipal,query:unknown={}) 
 export async function mobileLoanHistory(u:MobileAppPrincipal,id:string,query:unknown={}) { return loanHistoryForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id,query); }
 
 export async function mobileEditLoanMetadata(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return editLoanMetadataForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
+
+export async function mobileTopUpLoan(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return topUpLoanForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
+export async function mobileChangeLoanLifecycle(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return changeLoanLifecycleForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}

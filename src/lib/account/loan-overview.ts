@@ -3,13 +3,13 @@ import {z} from "zod";
 import {db} from "@/lib/db";
 import {moneyReadContext} from "./money-context";
 import type {ProjectActor} from "./projects";
-const input=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional(),q:z.string().trim().max(160).optional(),status:z.preprocess(v=>v===""?undefined:v,z.nativeEnum(LoanStatus).optional()),offset:z.coerce.number().int().min(0).max(1000000).default(0),limit:z.coerce.number().int().min(1).max(100).default(50)}).strict();
+const input=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional(),q:z.string().trim().max(160).optional(),archived:z.enum(["","active","archived"]).optional(),status:z.preprocess(v=>v===""?undefined:v,z.nativeEnum(LoanStatus).optional()),offset:z.coerce.number().int().min(0).max(1000000).default(0),limit:z.coerce.number().int().min(1).max(100).default(50)}).strict();
 /** Debt balances come from effective posted liability lines, never the latest
  * payment page. A legacy record without any posted liability remains unknown. */
 export async function loanOverviewForActor(actor:ProjectActor,raw:unknown={}) {
  const f=input.parse(raw),resolved=await moneyReadContext(actor,{...(f.branchId?{branchId:f.branchId}:{}),...(f.scope?{scope:f.scope}:{})});
  const branch=resolved.context.mode==="BRANCH"?resolved.context.branchId:undefined;
- const where:Prisma.LoanWhereInput={companyId:actor.companyId,...(branch?{branchId:branch}:{}),...(f.status?{status:f.status}:{}),...(f.q?{OR:[{displayName:{contains:f.q,mode:"insensitive"}},{loanAccountNumber:{contains:f.q,mode:"insensitive"}},{lender:{contains:f.q,mode:"insensitive"}},{loanType:{contains:f.q,mode:"insensitive"}},{reference:{contains:f.q,mode:"insensitive"}}]}:{})};
+ const where:Prisma.LoanWhereInput={companyId:actor.companyId,...(f.archived==="active"?{archivedAt:null}:f.archived==="archived"?{archivedAt:{not:null}}:{}),...(branch?{branchId:branch}:{}),...(f.status?{status:f.status}:{}),...(f.q?{OR:[{displayName:{contains:f.q,mode:"insensitive"}},{loanAccountNumber:{contains:f.q,mode:"insensitive"}},{lender:{contains:f.q,mode:"insensitive"}},{loanType:{contains:f.q,mode:"insensitive"}},{reference:{contains:f.q,mode:"insensitive"}}]}:{})};
  return db.$transaction(async tx=>{
   const [rows,total,matching]=await Promise.all([
    tx.loan.findMany({where,orderBy:[{startDate:"desc"},{createdAt:"desc"},{id:"desc"}],take:f.limit,skip:f.offset}),

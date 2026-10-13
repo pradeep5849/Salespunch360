@@ -160,6 +160,57 @@ describe.skipIf(!url)(
       expect(await client.loanPayment.count({where:{companyId,loanId:loan.id}})).toBe(0);
       expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
     });
+    it("posts one top-up under concurrent retries, preserves original principal, and increases the repayment ceiling",async()=>{
+      const {topUpLoanForActor}=await import("./loan-operations");
+      const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Top-up test",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:source.moneyAccountId,idempotencyKey:randomUUID()});
+      const request={requestKey:randomUUID(),expectedVersion:loan.version,amount:"50",operationDate:"2032-01-02",moneyAccountId:source.moneyAccountId,description:"Additional borrowing"};
+      const [first,second]=await Promise.all([topUpLoanForActor(actor,loan.id,request),topUpLoanForActor(actor,loan.id,request)]);
+      expect(first.id).toBe(second.id);expect(await client.journalEntry.count({where:{companyId,sourceType:"LOAN_TOP_UP",sourceId:first.id}})).toBe(1);
+      const saved=await client.loan.findUniqueOrThrow({where:{id:loan.id}});expect(saved.principal.toString()).toBe("100");expect(saved.version).toBe(1);expect(saved.receivedJournalId).toBe(loan.receivedJournalId);
+      await expect(topUpLoanForActor(actor,loan.id,{...request,amount:"51"})).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+      await expect(topUpLoanForActor(actor,loan.id,{...request,requestKey:randomUUID()})).rejects.toThrow("LOAN_CHANGED");
+      for(const principal of [{...actor,accountRole:"ACCOUNTANT" as const},{...actor,companyId:otherCompany},{...actor,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[]}])await expect(topUpLoanForActor(principal,loan.id,request)).rejects.toThrow();
+      await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:source.moneyAccountId,paymentDate:"2032-01-03",principal:"150",interest:"0",charges:"0",idempotencyKey:randomUUID()});
+      expect((await client.loan.findUniqueOrThrow({where:{id:loan.id}})).status).toBe("PAID_OFF");
+    });
+    it("cancels only untouched receipts, retains history, and archives/restores zero-balance loans",async()=>{
+      const {changeLoanLifecycleForActor}=await import("./loan-operations");
+      const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Cancellation test",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:source.moneyAccountId,idempotencyKey:randomUUID()});
+      const request={requestKey:randomUUID(),expectedVersion:loan.version,action:"CANCEL",operationDate:"2032-01-02",reason:"Created in error"};
+      for(const denied of [{...actor,accountRole:"ACCOUNTANT" as const},{...actor,companyId:otherCompany},{...actor,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[]},{...actor,accountAccessActive:false}])await expect(changeLoanLifecycleForActor(denied,loan.id,request)).rejects.toThrow();
+      const [first,second]=await Promise.all([changeLoanLifecycleForActor(actor,loan.id,request),changeLoanLifecycleForActor(actor,loan.id,request)]);expect(first.id).toBe(second.id);
+      const saved=await client.loan.findUniqueOrThrow({where:{id:loan.id}});expect(saved.status).toBe("CANCELLED");expect(saved.receivedJournalId).toBe(loan.receivedJournalId);expect((await client.journalEntry.findUniqueOrThrow({where:{id:loan.receivedJournalId!}})).status).toBe("REVERSED");
+      const {loanHistoryForActor}=await import("./loan-history");expect((await loanHistoryForActor(actor,loan.id,{branchId})).outstanding).toBe("0");
+      await changeLoanLifecycleForActor(actor,loan.id,{...request,requestKey:randomUUID(),expectedVersion:saved.version,action:"ARCHIVE"});const archived=await client.loan.findUniqueOrThrow({where:{id:loan.id}});expect(archived.archivedAt).not.toBeNull();
+      await changeLoanLifecycleForActor(actor,loan.id,{...request,requestKey:randomUUID(),expectedVersion:archived.version,action:"RESTORE"});expect((await client.loan.findUniqueOrThrow({where:{id:loan.id}})).archivedAt).toBeNull();
+      const busy=await client.loan.findUniqueOrThrow({where:{id:source.id}});
+      await expect(changeLoanLifecycleForActor(actor,busy.id,{...request,requestKey:randomUUID(),expectedVersion:busy.version})).rejects.toThrow("LOAN_HAS_FINANCIAL_ACTIVITY");
+      await expect(changeLoanLifecycleForActor(actor,busy.id,{...request,requestKey:randomUUID(),expectedVersion:busy.version,action:"ARCHIVE"})).rejects.toThrow("LOAN_ARCHIVE_REQUIRES_ZERO_BALANCE");
+    });
+    it("rejects invalid/locked top-ups and rolls back receipts when operational audit fails",async()=>{
+      const {topUpLoanForActor}=await import("./loan-operations");const loan=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      const request={requestKey:randomUUID(),expectedVersion:loan.version,amount:"50",operationDate:"2032-01-04",moneyAccountId:loan.moneyAccountId};
+      const before=await client.journalEntry.count({where:{companyId}});
+      await expect(topUpLoanForActor(actor,loan.id,{...request,operationDate:"2031-12-31"})).rejects.toThrow("INVALID_LOAN_DATE");
+      await expect(topUpLoanForActor(actor,loan.id,{...request,moneyAccountId:randomUUID()})).rejects.toThrow("INVALID_MONEY_ACCOUNT");
+      await expect(topUpLoanForActor({...actor,accountAccessActive:false},loan.id,request)).rejects.toThrow();
+      const fy=await client.financialYear.findFirstOrThrow({where:{companyId,name:"Loan statement year"}});
+      await client.financialYear.update({where:{id:fy.id},data:{status:"CLOSED"}});try{await expect(topUpLoanForActor(actor,loan.id,request)).rejects.toThrow("INVALID_FINANCIAL_YEAR");}finally{await client.financialYear.update({where:{id:fy.id},data:{status:"OPEN"}});}
+      const suffix=randomUUID().replaceAll("-","");const fn=`topup_audit_${suffix}`,trigger=`topup_audit_trigger_${suffix}`;
+      await client.$executeRawUnsafe(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."companyId"='${companyId}'::uuid AND NEW."eventType"='LOAN_TOP_UP_POSTED' THEN RAISE EXCEPTION 'test topup audit failure'; END IF; RETURN NEW; END $$`);
+      await client.$executeRawUnsafe(`CREATE TRIGGER ${trigger} BEFORE INSERT ON account_operational_audits FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+      try{await expect(topUpLoanForActor(actor,loan.id,request)).rejects.toThrow();expect((await client.loan.findUniqueOrThrow({where:{id:loan.id}})).version).toBe(loan.version);expect(await client.loanOperation.count({where:{companyId,requestKey:request.requestKey}})).toBe(0);expect(await client.journalEntry.count({where:{companyId}})).toBe(before);}finally{await client.$executeRawUnsafe(`DROP TRIGGER ${trigger} ON account_operational_audits`);await client.$executeRawUnsafe(`DROP FUNCTION ${fn}()`);}
+    });
+    it("prevents receipt cancellation after its account funds have been spent",async()=>{
+      const {changeLoanLifecycleForActor}=await import("./loan-operations");const {postJournalForActor}=await import("@/lib/accounting/service");
+      const account=await createMoneyAccountForActor(actor,{branchId,type:"BANK",name:"Spent loan receipt",creationRequestKey:randomUUID()});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Spent receipt",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:account.id,idempotencyKey:randomUUID()});
+      const fy=await client.financialYear.findFirstOrThrow({where:{companyId,name:"Loan statement year"}});const expense=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"GENERAL_EXPENSES"}});
+      await postJournalForActor(actor,{financialYearId:fy.id,branchId,entryDate:"2032-01-02",sourceType:"MANUAL_JOURNAL",sourceId:randomUUID(),lines:[{ledgerAccountId:expense.id,debit:"90",credit:"0"},{ledgerAccountId:account.ledgerAccountId,debit:"0",credit:"90"}]});
+      const before=await client.journalEntry.count({where:{companyId}});await expect(changeLoanLifecycleForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,action:"CANCEL",operationDate:"2032-01-03",reason:"Correction requested"})).rejects.toThrow("INSUFFICIENT_FUNDS");expect((await client.loan.findUniqueOrThrow({where:{id:loan.id}})).status).toBe("ACTIVE");expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+    });
     it("persists independent loan identity and rejects changed metadata on retry",async()=>{
       const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
       expect(source.displayName).toBeNull();expect(source.loanAccountNumber).toBeNull();expect(source.durationMonths).toBeNull();

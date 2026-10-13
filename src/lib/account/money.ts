@@ -1301,6 +1301,7 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
     () =>
       db.$transaction(
         async (tx) => {
+          await tx.$queryRaw`SELECT id FROM companies WHERE id=${a.companyId}::uuid FOR UPDATE`;
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"loan-payment:" + a.companyId + ":" + d.idempotencyKey}))`;
           const existing = await tx.loanPayment.findFirst({
             where: { companyId: a.companyId, idempotencyKey: d.idempotencyKey },
@@ -1325,7 +1326,7 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
           }
           await tx.$queryRaw`SELECT "id" FROM "loans" WHERE "id"=${d.loanId}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
           const loan = await tx.loan.findFirst({
-            where: { id: d.loanId, companyId: a.companyId, status: "ACTIVE" },
+            where: { id: d.loanId, companyId: a.companyId, status: "ACTIVE", archivedAt:null },
           });
           if (!loan) throw new Error("INVALID_LOAN");
           const fy = await context(tx, a, loan.branchId, d.paymentDate),
@@ -1394,10 +1395,9 @@ export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
                 journalEntryId: journal.id,
               },
             });
-          if (principal.eq(outstanding))
-            await tx.loan.update({
+          await tx.loan.update({
               where: { id: loan.id },
-              data: { status: "PAID_OFF" },
+              data: {version:{increment:1},...(principal.eq(outstanding)?{status:"PAID_OFF" as const}:{})},
             });
           await audit(tx, a, "LOAN_PAYMENT_POSTED", "LOAN_PAYMENT", id, {
             journalEntryId: journal.id,

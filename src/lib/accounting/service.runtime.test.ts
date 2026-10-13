@@ -351,7 +351,7 @@ it("rejects altered manual replay rather than returning a different financial re
   expect(m.create).not.toHaveBeenCalled();
 });
 
-it.each(["LOAN_RECEIPT", "LOAN_PAYMENT"])(
+it.each(["LOAN_RECEIPT", "LOAN_PAYMENT", "LOAN_TOP_UP"])(
   "A067-F09 blocks generic %s reversal without changing its loan or journal",
   async (sourceType) => {
     m.findJournal.mockResolvedValue({

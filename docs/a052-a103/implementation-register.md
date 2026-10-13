@@ -5424,7 +5424,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Top-up increases outstanding and selected receipt account once; edit preserves journals; cancellation permissions, paid loan and historical receipts/payments.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -9161,3 +9161,7 @@ Consistent snapshot separates receipts, discounts, credits and applied advances,
 ### A067-F04 interim repayment validation — 2026-10-13
 
 Repayment principal ceiling uses effective posted liability ledger balances. A corrected liability of 60 rejects a principal payment of 61 without payment/journal writes. Focused money integration: 18 passed; TypeScript passed. Top-up/cancellation/archive remain pending; final-head verification remains pending.
+
+### A067-F04 lifecycle implementation — 2026-10-13
+
+Immutable top-up receipts, untouched-receipt cancellation, zero-balance archive/restore, web forms, mobile API and Android management are implemented. Original receipt/principal remains immutable. Cancellation is denied with financial activity or insufficient funds. Interim validation: 22 financial integration, 47 grouped runtime, 8 route/metadata tests passed; 2 desktop/mobile-web checks passed; Android compile, TypeScript and ESLint passed. A067-F04 is IMPLEMENTED BUT NOT VERIFIED pending final-head validation/device limitations. Register totals: 114 implemented but not verified; 75 partial; 10 not started. No findings have final status yet.

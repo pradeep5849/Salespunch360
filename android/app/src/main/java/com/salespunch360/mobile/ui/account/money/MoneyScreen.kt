@@ -67,7 +67,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                 val title=if(s.mode=="owners")ownerNames[row.str("ownerFinancialAccountId")]?:"Owner" else row.str("name").ifBlank{row.str("displayName").ifBlank{row.str("lender").ifBlank{moneyTypeLabel(row.str("type"))}}}
                 ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference")).filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{
                     if(s.mode=="loans")Text(row["outstanding"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)}?:"Balance not established")else Text(accountMoney(row.str("balance").ifBlank{row.str("amount").ifBlank{row.str("principal")}}))
-                    if(s.mode=="loans"&&can("manageLoans")&&row.str("status")=="ACTIVE")TextButton({vm.loanPayment(row)},enabled=!s.saving){Text("Repay")}
+                    if(s.mode=="loans"&&can("manageLoans")&&row.str("status")=="ACTIVE"&&row["archivedAt"]?.jsonPrimitive?.contentOrNull==null)TextButton({vm.loanPayment(row)},enabled=!s.saving){Text("Repay")}
                     if(accountMode&&can("postMoneyEntries"))TextButton({vm.editAccount(row)},enabled=!s.saving){Text("Edit")}
                     if(accountMode&&can("postMoneyEntries")&&row["isActive"]?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.disableAccount(row.str("id"))},enabled=!s.saving){Text("Deactivate")}
                 }},modifier=if(accountMode)Modifier.clickable(enabled=!s.saving){vm.openMoneyHistory(row.str("id"))}else if(s.mode=="loans")Modifier.clickable(enabled=!s.saving){vm.openLoanHistory(row.str("id"))}else Modifier)
@@ -114,7 +114,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                     }
                 }
             },
-            confirmButton = { Row { if(s.historyIsLoan&&can("manageLoans"))s.history?.get("loan")?.jsonObject?.let{loan->TextButton({vm.editLoanMetadata(loan)},enabled=!s.saving&&!s.historyLoading){Text("Edit loan details")}};if(s.historyIsAccount&&can("postMoneyEntries"))s.history?.get("account")?.jsonObject?.takeIf{it["isActive"]?.jsonPrimitive?.booleanOrNull==true}?.let{row->TextButton({vm.adjustAccount(row)}){Text("Add / Reduce")}};TextButton(vm::closeOwnerHistory) { Text("Close") } } }
+            confirmButton = { Row { if(s.historyIsLoan&&can("manageLoans"))s.history?.get("loan")?.jsonObject?.let{loan->TextButton({vm.manageLoan(loan)},enabled=!s.saving&&!s.historyLoading){Text("Manage loan")};TextButton({vm.editLoanMetadata(loan)},enabled=!s.saving&&!s.historyLoading){Text("Edit loan details")}};if(s.historyIsAccount&&can("postMoneyEntries"))s.history?.get("account")?.jsonObject?.takeIf{it["isActive"]?.jsonPrimitive?.booleanOrNull==true}?.let{row->TextButton({vm.adjustAccount(row)}){Text("Add / Reduce")}};TextButton(vm::closeOwnerHistory) { Text("Close") } } }
         )
     }
     s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save,initialAccountType=moneyAccountInitialType(s.mode,initialQuery))}
@@ -124,7 +124,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
 @Composable
 private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:Boolean,error:String?,close:()->Unit,save:(String,JsonObject)->Unit,initialAccountType:String="BANK"){
     val requestKey=remember{java.util.UUID.randomUUID().toString()}
-    var branch by remember{mutableStateOf(if(kind=="loan-payments")selected?.str("branchId").orEmpty()else "")}
+    var branch by remember{mutableStateOf(if(kind in listOf("loan-payments","loan-operations"))selected?.str("branchId").orEmpty()else "")}
     var source by remember{mutableStateOf("")}
     var destination by remember{mutableStateOf("")}
     var owner by remember{mutableStateOf("")}
@@ -137,6 +137,8 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var active by remember{mutableStateOf(selected?.get("isActive")?.jsonPrimitive?.booleanOrNull?:true)}
     var offsetLedger by remember{mutableStateOf("")}
     var adjustmentReason by remember{mutableStateOf("")}
+    val loanArchived=selected?.get("archivedAt")?.jsonPrimitive?.contentOrNull!=null
+    var loanAction by remember{mutableStateOf(if(loanArchived)"RESTORE"else if(selected?.str("status")=="CANCELLED")"ARCHIVE"else "TOP_UP")}
     var direction by remember{mutableStateOf("ADD")}
     var openingBranch by remember{mutableStateOf("")}
     var amount by remember{mutableStateOf("")}
@@ -158,11 +160,12 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var charges by remember{mutableStateOf("0")}
     var date by remember{mutableStateOf(java.time.LocalDate.now().toString())}
     var reference by remember{mutableStateOf("")}
-    val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("loans","loan-payments")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
+    val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("loans","loan-payments","loan-operations")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
     val bankErrors=bankMetadataErrors(bankName,accountHolder,bankBranch,bankIfsc,bankUpi,printQr)
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
         kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
+        kind=="loan-operations"->date.isNotBlank()&&(if(loanAction=="TOP_UP")source.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1 else adjustmentReason.trim().length in 3..1000)
         kind=="loan-edit"->loanName.length<=240&&loanNumber.length<=160&&loanDescription.length<=2000&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loans"->source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(amount,interest,charges)?.signum()==1
@@ -171,7 +174,16 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     }
     AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(kind=="loan-edit")"Edit loan details"else if(identity)"Owner / partner" else kind.replace('-',' ').replaceFirstChar{it.uppercase()})},text={
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
-            if(kind=="loan-edit"){
+            if(kind=="loan-operations"){
+                item{Text("Cancellation reverses an untouched receipt. Archiving requires zero posted principal and preserves history.")}
+                item{PickText("Loan action",loanAction,if(loanArchived)listOf("RESTORE")else if(selected?.str("status")=="CANCELLED")listOf("ARCHIVE")else if(selected?.str("status")=="PAID_OFF")listOf("TOP_UP","ARCHIVE")else listOf("TOP_UP","CANCEL","ARCHIVE"),enabled=!saving){loanAction=it}}
+                item{OutlinedTextField(date,{date=it},label={Text("Transaction date (YYYY-MM-DD)")},enabled=!saving)}
+                if(loanAction=="TOP_UP"){
+                    item{Pick("Receive into account",source,accounts,enabled=!saving){source=it}}
+                    item{OutlinedTextField(amount,{amount=it},label={Text("Top-up amount")},enabled=!saving)}
+                    item{OutlinedTextField(loanDescription,{loanDescription=it},label={Text("Description")},enabled=!saving)}
+                }else item{OutlinedTextField(adjustmentReason,{adjustmentReason=it},label={Text("Reason")},enabled=!saving)}
+            }else if(kind=="loan-edit"){
                 item{OutlinedTextField(loanName,{loanName=it},label={Text("Loan name")},enabled=!saving)}
                 item{OutlinedTextField(loanNumber,{loanNumber=it},label={Text("Loan account number")},enabled=!saving)}
                 item{OutlinedTextField(loanDescription,{loanDescription=it},label={Text("Description")},enabled=!saving)}
@@ -247,6 +259,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
         }
     },confirmButton={Button(enabled=!saving&&valid,onClick={save(kind,buildJsonObject{
         when{
+            kind=="loan-operations"->{put("requestKey",requestKey);put("expectedVersion",selected?.get("version")?.jsonPrimitive?.intOrNull?:0);put("action",loanAction);put("operationDate",date);if(loanAction=="TOP_UP"){put("amount",amount);put("moneyAccountId",source);put("description",loanDescription)}else put("reason",adjustmentReason)}
             kind=="loan-edit"->{put("requestKey",requestKey);put("expectedVersion",selected?.get("version")?.jsonPrimitive?.intOrNull?:0);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration)}
             identity->{put("name",name);put("partyType",type);put("phone",phone);put("email",email);put("address",address);if(kind=="owner-setup"){owner.takeIf{it.isNotBlank()}?.let{put("userId",it)};put("branchId",branch);put("creationRequestKey",requestKey)}else put("isActive",active)}
             kind=="adjustments"->{put("moneyAccountId",selected?.str("id").orEmpty());put("branchId",branch);put("direction",direction);put("offsetLedgerId",offsetLedger);put("amount",amount);put("date",date);put("reason",adjustmentReason);put("idempotencyKey",requestKey)}

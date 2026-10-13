@@ -14305,6 +14305,10 @@
         {
           "work": "Independently exercised web loan creation-to-detail navigation and statement on both browser sizes.",
           "tests": "2 desktop/mobile-web tests passed, including detail accessibility scan. Final-head/device and remaining reference-layout parity pending."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Related A067-F04 lifecycle slice supplies archive filters, company-first financial locking, immutable operation retries and controlled receipt reversal. Generic receipt/payment/top-up reversals tested; original finding remains subject to independent complete final-head verification."
         }
       ]
     },
@@ -14588,14 +14592,23 @@
         "src/lib/account/loan-operations.ts",
         "src/lib/account/loan-fingerprint.ts",
         "src/components/account/loan-metadata-form.tsx",
-        "src/app/api/v1/mobile/account/money/loans/[id]/route.ts"
+        "src/app/api/v1/mobile/account/money/loans/[id]/route.ts",
+        "src/components/account/loan-lifecycle-forms.tsx",
+        "src/app/api/v1/mobile/account/money/loans/[id]/top-up/route.ts",
+        "src/app/api/v1/mobile/account/money/loans/[id]/lifecycle/route.ts"
       ],
       "affected_services_apis_actions": [
         "loanAction / loanPaymentAction",
         "createAndReceiveLoanForActor / postLoanPaymentForActor",
         "listMoneyDataForActor / mobile money context",
         "mobileLoan / mobileLoanPayment",
-        "generic journal reversal"
+        "generic journal reversal",
+        "topUpLoanForActor",
+        "changeLoanLifecycleForActor",
+        "saveLoanTopUpAction",
+        "saveLoanLifecycleAction",
+        "mobileTopUpLoan",
+        "mobileChangeLoanLifecycle"
       ],
       "affected_models": [
         "Loan",
@@ -14688,7 +14701,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -14709,6 +14722,11 @@
           "date": "2026-10-13",
           "work": "Repayment principal validation now uses effective posted/reversed liability ledger balance rather than original principal minus payment records, so posted corrections affect the payment ceiling. Top-up/cancellation/archive remain pending.",
           "tests": "money-edit.integration.test.ts: 18 passed, including corrected liability overpayment rejection without writes; tsc --noEmit passed. Interim validation only."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Implemented immutable top-up receipts (original principal preserved), versioned scoped retries, guarded receipt cancellation/reversal, zero-principal archive/restore, web detail forms and archive filtering, authenticated mobile endpoints, and native management form. Cancellation requires untouched financial history and sufficient funds; shared legacy liability ledgers fail safely. Loan repayments now take the company lock before the loan lock, advance versions, and exclude archived loans. Generic top-up reversals remain blocked. No new migration in this slice; uses additive migration 121.",
+          "tests": "22 isolated financial integration tests passed; 47 grouped loan/read/replay/accounting runtime tests passed after fixing the explicit lifecycle guard; 8 metadata/mobile route tests passed; desktop + mobile-web top-up/rejected-cancellation/accessibility: 2 passed; Android compile passed; TypeScript and ESLint passed. Final-head checkpoint regression and physical Android verification pending."
         }
       ]
     },
@@ -15125,6 +15143,10 @@
         {
           "work": "Creation request fingerprints remain stable through metadata edits; explicit Loan Admin service permission also applies before replay.",
           "tests": "Independently verified original create replay after metadata edit and role/branch/company denials in focused/PostgreSQL checks. Final-head verification pending."
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Related A067-F04 lifecycle slice supplies archive filters, company-first financial locking, immutable operation retries and controlled receipt reversal. Generic receipt/payment/top-up reversals tested; original finding remains subject to independent complete final-head verification."
         }
       ]
     },
@@ -15384,12 +15406,18 @@
         "A067-F08",
         "A067-F10"
       ],
-      "checkpoint_work": {
-        "implementation_status": "PARTIAL",
-        "work": "Generic LOAN_RECEIPT/LOAN_PAYMENT journal reversal is blocked before writes, an explicitly permitted fix strategy in the original finding; two focused regressions pass.",
-        "remaining_work": "Check any already-reversed legacy loan rows and reconcile effective outstanding/history where required; final-head ledger/API regressions remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
-      }
+      "checkpoint_work": [
+        {
+          "implementation_status": "PARTIAL",
+          "work": "Generic LOAN_RECEIPT/LOAN_PAYMENT journal reversal is blocked before writes, an explicitly permitted fix strategy in the original finding; two focused regressions pass.",
+          "remaining_work": "Check any already-reversed legacy loan rows and reconcile effective outstanding/history where required; final-head ledger/API regressions remain pending.",
+          "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        },
+        {
+          "date": "2026-10-13",
+          "work": "Related A067-F04 lifecycle slice supplies archive filters, company-first financial locking, immutable operation retries and controlled receipt reversal. Generic receipt/payment/top-up reversals tested; original finding remains subject to independent complete final-head verification."
+        }
+      ]
     },
     {
       "finding_id": "A067-F10",

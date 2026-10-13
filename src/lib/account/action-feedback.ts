@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INSUFFICIENT_FUNDS:"The receipt account does not have enough posted funds to reverse this loan receipt.",
+  LOAN_BALANCE_AMBIGUOUS:"This legacy loan shares its liability ledger with another loan. Separate their opening balances before changing financial history.",
+  LOAN_HAS_FINANCIAL_ACTIVITY:"This loan has payments, top-ups, or corrections. Resolve those transactions before cancelling its receipt.",
+  LOAN_ARCHIVE_REQUIRES_ZERO_BALANCE:"Only a loan with zero posted principal can be archived.",
+  LOAN_NOT_ARCHIVED:"This loan is not archived. Reload its latest details.",
+  INVALID_LOAN_DATE:"The transaction date cannot precede the original loan date.",
   LOAN_CHANGED:"This loan changed. Reload its latest details before saving again.",
   BANK_ACCOUNT_NOT_AVAILABLE:"Select an active bank account available to your branch.",
   BANK_UPI_REQUIRED:"Enter a valid UPI ID before enabling the payment QR on invoices.",

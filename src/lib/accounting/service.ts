@@ -357,6 +357,7 @@ export async function reverseJournalInTx(
     expenseId?: string;
     settlementId?: string;
     advanceApplicationId?: string;
+    loanReceiptId?: string;
   },
 ) {
   const d = reversalSchema.parse(raw);
@@ -373,7 +374,7 @@ export async function reverseJournalInTx(
   if (!original) throw new Error("JOURNAL_NOT_REVERSIBLE");
   // Loan balances are managed by the loan lifecycle. A generic journal reversal
   // cannot change its principal/status and must never detach the two records.
-  if (["LOAN_RECEIPT", "LOAN_PAYMENT"].includes(original.sourceType))
+  if (["LOAN_RECEIPT", "LOAN_PAYMENT", "LOAN_TOP_UP"].includes(original.sourceType) && !(original.sourceType === "LOAN_RECEIPT" && !!sourceLifecycle?.loanReceiptId && sourceLifecycle.loanReceiptId === original.sourceId))
     throw new Error("MANAGED_LOAN_REVERSAL_NOT_SUPPORTED");
   if (
     [
