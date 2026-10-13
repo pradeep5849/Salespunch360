@@ -14284,6 +14284,10 @@
         {
           "work": "Authenticated no-store mobile overview/history endpoints and Android scoped loan search/pagination, effective outstanding balance and loan statement with retry, fee totals and full-history balances.",
           "tests": "13 focused service/API tests passed; grouped isolated PostgreSQL money/loan regressions 12 passed, 0 failed, 0 skipped, including 204 real posted entries. Node22 TypeScript, targeted ESLint and Android compileDebugKotlin passed. Browser, export, physical-device and final-head checks remain pending."
+        },
+        {
+          "work": "Independently exercised web loan creation-to-detail navigation and statement on both browser sizes.",
+          "tests": "2 desktop/mobile-web tests passed, including detail accessibility scan. Final-head/device and remaining reference-layout parity pending."
         }
       ]
     },
@@ -14404,13 +14408,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A067-F01",
         "A067-F03",
         "A067-F04"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Added optional displayName, loanAccountNumber, description and durationMonths with additive migration 118 and DB range check. Web/Android creation and detail fields bound; search matches loan name/number; retry compares normalized metadata; existing records remain NULL.",
+          "tests": "15 focused loan input/overview/history tests passed; 13 grouped PostgreSQL money/loan regressions passed; desktop and mobile-web creation/detail/statement and detail axe checks passed (2 tests, 46.4s). Node22 TypeScript, targeted ESLint, Prisma validation/generation, isolated migration deploy and Android compileDebugKotlin passed. Final-head regression and physical-device verification pending."
+        }
       ]
     },
     {

@@ -3153,6 +3153,10 @@ model Loan {
   id                String     @id @default(uuid()) @db.Uuid
   companyId         String     @db.Uuid
   branchId          String     @db.Uuid
+  displayName       String?    @db.VarChar(240)
+  loanAccountNumber String?    @db.VarChar(160)
+  description       String?    @db.VarChar(2000)
+  durationMonths    Int?
   lender            String     @db.VarChar(240)
   loanType          String     @db.VarChar(80)
   principal         Decimal    @db.Decimal(18, 2)

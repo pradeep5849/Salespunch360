@@ -123,6 +123,8 @@ test.afterAll(async () => {
     await tx.projectChangeOrder.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
     await tx.moneyTransfer.deleteMany({where:{companyId}});
+    await tx.loanPayment.deleteMany({where:{companyId}});
+    await tx.loan.deleteMany({where:{companyId}});
     await tx.journalLine.deleteMany({where:{companyId}});
     await tx.journalEntry.deleteMany({where:{companyId}});
     await tx.accountingAuditEvent.deleteMany({where:{companyId}});
@@ -1604,4 +1606,18 @@ test("A082 quotation creation filters and resets customers when branch changes",
  expect(created.status).toBe("DRAFT");
  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
  await expect(createQuotationForActor(actor,{branchId:second,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",lines:[{lineType:"CUSTOM",itemName:"Wrong branch",quantity:"1",rate:"1"}]})).rejects.toThrow("INVALID_CUSTOMER");
+});
+
+test("A067 loan identity creation opens scoped detail and ledger statement",async({page})=>{
+ const {createMoneyAccountForActor}=await import("../src/lib/account/money");
+ const actor={id:userId,name:"Admin",email,companyId,role:"COMPANY_ADMIN",accountRole:"ACCOUNT_ADMIN",salesRole:"PRIMARY_ADMIN",isActive:true,accountAccessActive:true,salesAccessActive:true,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor;
+ await db.financialYear.create({data:{companyId,name:"Loan browser year",startDate:new Date("2032-01-01"),endDate:new Date("2032-12-31")}});
+ const account=await createMoneyAccountForActor(actor,{branchId,type:"BANK",name:"A067 Loan Bank",creationRequestKey:randomUUID()});
+ await signInSettings(page);await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
+ const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create and receive loan",exact:true})});
+ await form.getByLabel("Loan name",{exact:true}).fill("A067 Project loan");await form.getByLabel("Loan account number",{exact:true}).fill("A067-ACCOUNT");await form.getByLabel("Description",{exact:true}).fill("Working capital");await form.getByLabel("Duration (months)",{exact:true}).fill("60");await form.getByLabel("Lender",{exact:true}).fill("A067 Lender");
+ await form.locator("select[name=branchId]").selectOption(branchId);await form.locator("select[name=moneyAccountId]").selectOption(account.id);await form.locator("input[name=loanType]").fill("TERM");await form.locator("input[name=principal]").fill("100000");await form.locator("input[name=startDate]").fill("2032-01-01");await form.getByRole("button",{name:"Create and receive loan"}).click();
+ await expect.poll(()=>db.loan.count({where:{companyId,loanAccountNumber:"A067-ACCOUNT"}}),{timeout:20000}).toBe(1);
+ await page.getByLabel("Search loans").fill("A067-ACCOUNT");await page.getByRole("button",{name:"Apply loan filters"}).click();await page.getByRole("link",{name:"A067 Project loan · TERM"}).click();
+ await expect(page.locator("dl")).toContainText("Working capital",{timeout:20000});await expect(page.locator("dl")).toContainText("A067-ACCOUNT");await expect(page.locator("dl")).toContainText("60");await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("LOAN RECEIPT");await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("1,00,000.00");expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);
 });

@@ -1146,7 +1146,11 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
     ["companyId", "idempotencyKey"],
   );
 }
-const loanInput = z.object({
+export const loanInput = z.object({
+  displayName: z.string().trim().max(240).transform(v=>v||undefined).optional(),
+  loanAccountNumber: z.string().trim().max(160).transform(v=>v||undefined).optional(),
+  description: z.string().trim().max(2000).transform(v=>v||undefined).optional(),
+  durationMonths: z.preprocess(v=>v===""||v==null?undefined:v,z.coerce.number().int().min(1).max(1200).optional()),
   branchId: z.string().uuid(),
   lender: z.string().trim().min(1).max(240),
   loanType: z.string().trim().min(1).max(80),
@@ -1183,6 +1187,10 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
               existing.moneyAccountId !== d.moneyAccountId ||
               existing.lender !== d.lender ||
               existing.loanType !== d.loanType ||
+              (existing.displayName??"") !== (d.displayName??"") ||
+              (existing.loanAccountNumber??"") !== (d.loanAccountNumber??"") ||
+              (existing.description??"") !== (d.description??"") ||
+              (existing.durationMonths??null) !== (d.durationMonths??null) ||
               !existing.principal.eq(d.principal) ||
               !new D(existing.interestRate ?? 0).eq(d.interestRate ?? 0) ||
               existing.startDate.getTime() !== d.startDate.getTime() ||

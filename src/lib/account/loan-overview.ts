@@ -9,7 +9,7 @@ const input=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all
 export async function loanOverviewForActor(actor:ProjectActor,raw:unknown={}) {
  const f=input.parse(raw),resolved=await moneyReadContext(actor,{...(f.branchId?{branchId:f.branchId}:{}),...(f.scope?{scope:f.scope}:{})});
  const branch=resolved.context.mode==="BRANCH"?resolved.context.branchId:undefined;
- const where:Prisma.LoanWhereInput={companyId:actor.companyId,...(branch?{branchId:branch}:{}),...(f.status?{status:f.status}:{}),...(f.q?{OR:[{lender:{contains:f.q,mode:"insensitive"}},{loanType:{contains:f.q,mode:"insensitive"}},{reference:{contains:f.q,mode:"insensitive"}}]}:{})};
+ const where:Prisma.LoanWhereInput={companyId:actor.companyId,...(branch?{branchId:branch}:{}),...(f.status?{status:f.status}:{}),...(f.q?{OR:[{displayName:{contains:f.q,mode:"insensitive"}},{loanAccountNumber:{contains:f.q,mode:"insensitive"}},{lender:{contains:f.q,mode:"insensitive"}},{loanType:{contains:f.q,mode:"insensitive"}},{reference:{contains:f.q,mode:"insensitive"}}]}:{})};
  return db.$transaction(async tx=>{
   const [rows,total,matching]=await Promise.all([
    tx.loan.findMany({where,orderBy:[{startDate:"desc"},{createdAt:"desc"},{id:"desc"}],take:f.limit,skip:f.offset}),

@@ -30,7 +30,7 @@ export default async function Page({searchParams}:{searchParams:Promise<{branchI
             <label>Status<select name="status" defaultValue={query.status??""}><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="PAID_OFF">Paid off</option><option value="CANCELLED">Cancelled</option></select></label>
             <button>Apply loan filters</button>
           </form>
-          {!overview.rows.length?<p role="status">No loans match these filters.</p>:<div className="table-wrap" role="region" aria-label="Loan balances table" tabIndex={0}><table><thead><tr><th>Lender / loan</th><th>Original principal</th><th>Outstanding</th><th>Status</th></tr></thead><tbody>{overview.rows.map(loan=><tr key={loan.id}><td><Link href={`/workspace/account/money/loans/${loan.id}?${scopeQuery}`}>{loan.lender} · {loan.loanType}</Link></td><td><ClientMoney value={loan.principal.toString()}/></td><td>{loan.outstanding===null?"Not established":<ClientMoney value={loan.outstanding}/>}</td><td>{loan.status.replaceAll("_"," ")}</td></tr>)}</tbody></table></div>}
+          {!overview.rows.length?<p role="status">No loans match these filters.</p>:<div className="table-wrap" role="region" aria-label="Loan balances table" tabIndex={0}><table><thead><tr><th>Lender / loan</th><th>Original principal</th><th>Outstanding</th><th>Status</th></tr></thead><tbody>{overview.rows.map(loan=><tr key={loan.id}><td><Link href={`/workspace/account/money/loans/${loan.id}?${scopeQuery}`}>{loan.displayName||loan.lender} · {loan.loanType}</Link></td><td><ClientMoney value={loan.principal.toString()}/></td><td>{loan.outstanding===null?"Not established":<ClientMoney value={loan.outstanding}/>}</td><td>{loan.status.replaceAll("_"," ")}</td></tr>)}</tbody></table></div>}
           <nav aria-label="Loan list pages">{overview.offset>0&&<Link href={pageHref(Math.max(0,overview.offset-overview.limit))}>Previous loans</Link>} {overview.nextOffset!==null&&<Link href={pageHref(overview.nextOffset)}>Next loans</Link>}</nav>
         </section>
         <form action={loanAction} className="stack">
@@ -48,7 +48,11 @@ export default async function Page({searchParams}:{searchParams:Promise<{branchI
               </option>
             ))}
           </select>
-          <input name="lender" placeholder="Lender" required />
+          <label>Loan name<input name="displayName" maxLength={240}/></label>
+          <label>Loan account number<input name="loanAccountNumber" maxLength={160}/></label>
+          <label>Description<textarea name="description" maxLength={2000}/></label>
+          <label>Duration (months)<input name="durationMonths" type="number" min={1} max={1200}/></label>
+          <label>Lender<input name="lender" required maxLength={240}/></label>
           <input name="loanType" placeholder="Loan type" required />
           <input name="principal" required />
           <input name="interestRate" />

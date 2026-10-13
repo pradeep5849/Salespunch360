@@ -5332,13 +5332,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Same lender with distinct loan names/numbers; optional descriptions; duration validation; company and branch authorization.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F01, A067-F03, A067-F04.
+
+**Checkpoint work:** Optional independent loan name/number/description/duration stored with additive migration 118; web/native fields and search bound; normalized metadata retry checks; existing records preserved NULL. Fifteen focused tests, thirteen PostgreSQL grouped regressions, two desktop/mobile-web creation/detail/statement and detail accessibility tests passed. TypeScript, lint, Prisma validate/generate/local deploy and Android compile passed. Final-head/device verification remains pending.
 
 ## A067-F03 — Opening processing fee and standalone Charges On Loan absent
 

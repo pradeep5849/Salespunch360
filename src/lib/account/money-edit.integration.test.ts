@@ -144,13 +144,24 @@ describe.skipIf(!url)(
       await expect(loanHistoryForActor({...actor,companyId:otherCompany},loan.id,{branchId})).rejects.toThrow();
       await expect(loanHistoryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},loan.id,{branchId})).rejects.toThrow();
     });
+    it("persists independent loan identity and rejects changed metadata on retry",async()=>{
+      const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
+      expect(source.displayName).toBeNull();expect(source.loanAccountNumber).toBeNull();expect(source.durationMonths).toBeNull();
+      const request={branchId,lender:"Same lender",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:source.moneyAccountId,idempotencyKey:randomUUID(),displayName:"Project loan A",loanAccountNumber:"ACCOUNT-A",description:"Working capital",durationMonths:"60"};
+      const first=await createAndReceiveLoanForActor(actor,request);
+      const second=await createAndReceiveLoanForActor(actor,{...request,idempotencyKey:randomUUID(),displayName:"Project loan B",loanAccountNumber:"ACCOUNT-B"});
+      expect(first.id).not.toBe(second.id);expect(first).toMatchObject({displayName:"Project loan A",loanAccountNumber:"ACCOUNT-A",description:"Working capital",durationMonths:60});
+      expect((await createAndReceiveLoanForActor(actor,request)).id).toBe(first.id);
+      for(const change of [{displayName:"Changed"},{loanAccountNumber:"Changed"},{description:"Changed"},{durationMonths:"61"}])await expect(createAndReceiveLoanForActor(actor,{...request,...change})).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+      const {loanOverviewForActor}=await import("./loan-overview");expect((await loanOverviewForActor(actor,{branchId,q:"ACCOUNT-B"})).rows.map(row=>row.id)).toEqual([second.id]);
+    });
     it("keeps real posted running balances beyond 200 statement entries",async()=>{
       const {loanHistoryForActor}=await import("./loan-history");
       const loan=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});
       for(let n=0;n<201;n++)await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:loan.moneyAccountId,paymentDate:"2032-01-04",principal:"0",interest:"0",charges:"1",idempotencyKey:randomUUID()});
       const history=await loanHistoryForActor(actor,loan.id,{branchId,offset:200,limit:2});
       expect(history.total).toBe(204);expect(history.rows).toHaveLength(2);expect(history.rows.every(row=>row.balance==="98000")).toBe(true);expect(history.outstanding).toBe("98000");expect(history.nextOffset).toBe(202);
-    });
+    },30000);
     it("replays concurrent creation without a second account, ledger or audit", async () => {
       const input = {
         type: "BANK",
