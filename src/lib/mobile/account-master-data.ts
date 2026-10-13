@@ -698,9 +698,10 @@ export async function saveMobileAccountMaster(
       .catch(rethrowItemIdentifierConflict);
     return id ? getMobileAccountMaster(user, kind, row.id) : publicItem(row);
   }
-  const input = warehouseSchema.parse(raw);
+  const parsedWarehouse = warehouseSchema.parse(raw);
+  const input = { ...parsedWarehouse, isDefault: parsedWarehouse.isActive === false ? false : parsedWarehouse.isDefault };
   if (
-    !(user.branchIds ?? []).includes(input.branchId) ||
+    (user.branchAccessScope === "SELECTED_BRANCHES" && !(user.branchIds ?? []).includes(input.branchId)) ||
     !(await db.branch.findFirst({
       where: { id: input.branchId, companyId: user.companyId, isActive: true },
     }))

@@ -1441,6 +1441,8 @@ Remaining: Other native inventory editor parity and device verification remain p
 
 **Native tracking date continuation:** Batch manufactured/expiry and serial expiry inputs are wired to the protected API. Shared real-calendar validation rejects rollover dates; valid Date callers and range guard retained. 14 focused tests and 1 PostgreSQL persistence/guard test passed (29 unrelated filtered skips); Android compile, TypeScript and focused lint passed. Warehouse/product-setting scope, device interaction and final-head verification remain pending; PARTIAL retained.
 
+**Native product/warehouse continuation:** Product description/category/unit/tracking controls are wired to the existing scoped API; saved description/category/unit switches respected. Warehouse ALL_BRANCHES creation no longer requires selected IDs; active tenant-branch and selected assignment guards retained; deactivation clears default. 35 related tests + 5 warehouse regressions, final Android compile, TypeScript and focused lint passed. Real API persistence/device/full parity and final-head verification remain pending; PARTIAL retained.
+
 ## A054-F04 — Shared forms lack accessible names and nest main landmarks
 
 **Title:** Shared forms lack accessible names and nest main landmarks

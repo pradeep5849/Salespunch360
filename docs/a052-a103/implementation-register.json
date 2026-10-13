@@ -4169,6 +4169,11 @@
           "implementation": "Android batch editor now accepts optional manufactured/expiry dates and serial editor optional expiry; fields are carried to existing protected shared APIs. Shared date schemas reject impossible calendar strings/timestamps instead of Date coercion rollover; valid Date callers retained and server expiry-before-manufactured guard preserved.",
           "tests": "14 focused input/inventory/native-contract tests passed; one real PostgreSQL persistence/calendar/tracking/unknown-record guard test passed (29 unrelated filtered skips); Android compile, TypeScript and focused lint passed.",
           "remaining": "Warehouse create/deactivate and product settings/native UI original scope, actual-device interaction and final-head regression remain pending; finding remains PARTIAL."
+        },
+        "native_product_warehouse": {
+          "implementation": "Native product editor exposes retained description/category/unit/tracking controls, respecting saved description/category/unit switches. Warehouse API accepts authorized ALL_BRANCHES actors without selected IDs while retaining active company-branch checks and selected assignment guards; deactivation clears isDefault. Existing native warehouse create/edit Active controls remain.",
+          "tests": "35 reference/scope/inventory-option/action/policy tests and five new warehouse permission/branch/deactivation regressions passed; final Android compile, TypeScript and focused lint passed.",
+          "remaining": "Independent real API persistence and native warehouse/product interactions, original complete parity and final-head/device checks remain pending. Finding remains PARTIAL."
         }
       },
       "intermediate_validation": {
