@@ -3791,13 +3791,19 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Add/reduce bank/cash; exact before/after delta and history; date/period validation; permission/branch/company denial; duplicate prevention and rollback. Offset policy requires business confirmation before implementation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A069_Audit_Coverage.md, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Reason/offset-ledger Add/Reduce journal posting with company financial lock, exact Decimal, UUID replay, active account/ledger and period/year guards, owner/control ledger exclusions and cash funds protection. Web/native account history controls and authorized no-store mobile write API. Owner capital and transfers route through existing dedicated flows.
+
+**Intermediate validation:** 19 focused tests passed: 10 real PostgreSQL money tests and 9 mobile API tests. Includes concurrent cash reduction protection, exact ledger/history effects, UUID replay/conflict, audit-failure rollback, period lock and tenant/branch denial. Desktop/mobile Chromium 2 passed with actual adjustment posting and key rotation; Android compilation, TypeScript and focused lint passed. Intermediate only.
+
+**Remaining:** Final-head checkpoint regression and physical Android UI verification. No final_status assigned.
 
 ## A064-F06 — Deposit/Withdraw reference entry points and transfer attachments are missing
 

@@ -1382,6 +1382,7 @@ test("A062 units preserve concurrent rules, paginate native choices and show saf
 test("A064 money account form labels and company-wide creation provide feedback",async({page})=>{
  test.setTimeout(120000);
  if(!await db.financialYear.findFirst({where:{companyId,isActive:true,startDate:{lte:new Date("2026-10-13")},endDate:{gte:new Date("2026-10-13")}}}))await db.financialYear.create({data:{companyId,name:"Opening balance browser year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ const adjustmentLedger=await db.ledgerAccount.create({data:{companyId,code:"A064-BROWSER-OFFSET",name:"Browser shortage expense",accountClass:"EXPENSE",normalBalance:"DEBIT"}});
  await signInSettings(page);await page.goto("/workspace/account/money/accounts");
  const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create account and asset ledger",exact:true})});
  const initialKey=await form.locator("input[name=creationRequestKey]").inputValue();
@@ -1394,6 +1395,8 @@ test("A064 money account form labels and company-wide creation provide feedback"
  const opening=await db.journalEntry.findFirstOrThrow({where:{companyId,sourceId:account.id,postingPurpose:"MONEY_ACCOUNT_OPENING"},include:{lines:true}});expect(opening.lines.find(line=>line.ledgerAccountId===account.ledgerAccountId)?.debit.toFixed(2)).toBe("1000.00");const obe=await db.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});expect(obe.accountClass).toBe("EQUITY");expect(opening.lines.find(line=>line.ledgerAccountId===obe.id)?.credit.toFixed(2)).toBe("1000.00");
 
  await page.goto(`/workspace/account/money/accounts/${account.id}?branchId=${branchId}`);await expect(page.getByRole("table",{name:"Account ledger history"})).toContainText("Opening balance");await expect(page.getByRole("table").getByRole("row").last()).toContainText("₹1,000.00");expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);await page.getByLabel("From",{exact:true}).fill("2026-10-14");await page.getByRole("button",{name:"Apply dates"}).click();await expect(page.getByText("No posted entries match these dates.")).toBeVisible();await expect(page.locator("dl")).toContainText("₹1,000.00");
+
+ const adjustment=page.locator("form").filter({has:page.getByRole("button",{name:"Post adjustment",exact:true})});await adjustment.getByLabel("Adjustment",{exact:true}).selectOption("REDUCE");await adjustment.getByLabel("Offset ledger",{exact:true}).selectOption(adjustmentLedger.id);await adjustment.getByLabel("Amount",{exact:true}).fill("50.00");await adjustment.getByLabel("Date",{exact:true}).fill("2026-10-14");await adjustment.getByLabel("Reason",{exact:true}).fill("Confirmed cash count correction");const adjustmentKey=await adjustment.locator("input[name=idempotencyKey]").inputValue();await adjustment.getByRole("button",{name:"Post adjustment"}).click();await expect(adjustment.getByRole("status")).toContainText("Account adjustment posted",{timeout:20000});expect(await db.journalEntry.count({where:{companyId,sourceType:"MONEY_ADJUSTMENT",sourceId:adjustmentKey}})).toBe(1);await expect(adjustment.locator("input[name=idempotencyKey]")).not.toHaveValue(adjustmentKey);await expect(page.locator("dl")).toContainText("₹950.00");
 
 });
 

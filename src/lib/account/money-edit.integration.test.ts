@@ -639,5 +639,153 @@ describe.skipIf(!url)(
         moneyReadContext(actor, { branchId, scope: "all" }),
       ).rejects.toThrow();
     });
+    it("posts selected-ledger cash adjustments once and prevents concurrent cash overdrafts", async () => {
+      const { postMoneyAdjustmentForActor } =
+        await import("./money-adjustment");
+      const { moneyAccountHistoryForActor } =
+        await import("./money-account-history");
+      const ledger = await client.ledgerAccount.create({
+        data: {
+          companyId,
+          code: "ADJ-EXPENSE",
+          name: "Cash shortage expense",
+          accountClass: "EXPENSE",
+          normalBalance: "DEBIT",
+        },
+      });
+      const account = await createMoneyAccountForActor(actor, {
+        type: "CASH",
+        name: "Adjustment cash",
+        branchId,
+        creationRequestKey: randomUUID(),
+        openingBalance: "100",
+        openingDate: "2026-10-13",
+      });
+      const base = {
+        moneyAccountId: account.id,
+        branchId,
+        direction: "REDUCE",
+        offsetLedgerId: ledger.id,
+        amount: "80.00",
+        date: "2026-10-13",
+        reason: "Counted cash shortage",
+        idempotencyKey: randomUUID(),
+      };
+      const concurrent = await Promise.allSettled([
+        postMoneyAdjustmentForActor(actor, base),
+        postMoneyAdjustmentForActor(actor, {
+          ...base,
+          idempotencyKey: randomUUID(),
+        }),
+      ]);
+      expect(concurrent.filter((r) => r.status === "fulfilled")).toHaveLength(
+        1,
+      );
+      expect(concurrent.filter((r) => r.status === "rejected")).toHaveLength(1);
+      const saved = (
+        concurrent.find(
+          (r) => r.status === "fulfilled",
+        ) as PromiseFulfilledResult<{ id: string }>
+      ).value;
+      const posted = await client.journalEntry.findUniqueOrThrow({
+        where: { id: saved.id },
+        include: { lines: true },
+      });
+      expect(
+        posted.lines
+          .find((l) => l.ledgerAccountId === ledger.id)
+          ?.debit.toFixed(2),
+      ).toBe("80.00");
+      expect(
+        (await moneyAccountHistoryForActor(actor, account.id, { branchId }))
+          .closing,
+      ).toBe("20.00");
+      const replayInput = { ...base, idempotencyKey: posted.sourceId! };
+      expect((await postMoneyAdjustmentForActor(actor, replayInput)).id).toBe(
+        saved.id,
+      );
+      await expect(
+        postMoneyAdjustmentForActor(actor, { ...replayInput, amount: "10" }),
+      ).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+      const obe = await client.ledgerAccount.findFirstOrThrow({
+        where: { companyId, systemKey: "OPENING_BALANCE_EQUITY" },
+      });
+      await expect(
+        postMoneyAdjustmentForActor(actor, {
+          ...base,
+          direction: "ADD",
+          offsetLedgerId: obe.id,
+          idempotencyKey: randomUUID(),
+        }),
+      ).rejects.toThrow("INVALID_LEDGER_ACCOUNT");
+      await expect(
+        postMoneyAdjustmentForActor(
+          { ...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [] },
+          base,
+        ),
+      ).rejects.toThrow();
+      const invalidAuditKey = randomUUID();
+      await expect(
+        postMoneyAdjustmentForActor(
+          { ...actor, id: randomUUID() },
+          {
+            ...base,
+            direction: "ADD",
+            amount: "1",
+            idempotencyKey: invalidAuditKey,
+          },
+        ),
+      ).rejects.toThrow();
+      expect(
+        await client.journalEntry.count({
+          where: {
+            companyId,
+            sourceType: "MONEY_ADJUSTMENT",
+            sourceId: invalidAuditKey,
+          },
+        }),
+      ).toBe(0);
+      const fy = await client.financialYear.findFirstOrThrow({
+        where: {
+          companyId,
+          startDate: { lte: new Date(base.date) },
+          endDate: { gte: new Date(base.date) },
+        },
+      });
+      const lock = await client.accountingPeriodLock.create({
+        data: {
+          companyId,
+          financialYearId: fy.id,
+          lockedThrough: new Date(base.date),
+          updatedById: userId,
+        },
+      });
+      try {
+        await expect(
+          postMoneyAdjustmentForActor(actor, {
+            ...base,
+            direction: "ADD",
+            idempotencyKey: randomUUID(),
+          }),
+        ).rejects.toThrow("PERIOD_LOCKED");
+      } finally {
+        await client.accountingPeriodLock.delete({ where: { id: lock.id } });
+      }
+      await expect(
+        postMoneyAdjustmentForActor(
+          { ...actor, companyId: otherCompany },
+          base,
+        ),
+      ).rejects.toThrow();
+      expect(
+        await client.accountOperationalAudit.count({
+          where: {
+            companyId,
+            eventType: "MONEY_ADJUSTMENT_POSTED",
+            entityId: account.id,
+          },
+        }),
+      ).toBe(1);
+    });
   },
 );

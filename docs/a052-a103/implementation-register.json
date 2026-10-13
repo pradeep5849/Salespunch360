@@ -9680,7 +9680,7 @@
       "checkpoint_work": {
         "implementation": "Account-specific paginated ledger history under RepeatableRead, exact opening/in/out/closing and running balances; POSTED and REVERSED originals included; validated date/company/branch scope and inactive-account history; web row/detail links and date/paging; no-store authorized native API; native account tap opens history with separate Edit action and cancellation-safe scoped loading.",
         "tests": "12 focused tests passed: 9 PostgreSQL money/history and 3 history API. Desktop/mobile Chromium 2 passed including opening history, date carry-forward and Axe keyboard-scroll checks. Android compile, TypeScript and focused ESLint passed. Intermediate evidence only; final head not run.",
-        "remaining": "Deposit/Withdraw/Add/Reduce actions linked to approved offset workflow A064-F05; account edit/detail metadata parity and final checkpoint verification. Physical native UI not verified."
+        "remaining": "Account edit/detail metadata and named Deposit/Withdraw parity remain linked to A064-F04/F06; Add/Reduce now implemented under A064-F05. Final checkpoint verification and physical native UI unverified."
       }
     },
     {
@@ -10017,11 +10017,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "business_decision": "Approved 2026-10-13: Opening Balance Equity for opening amounts; reason/ledger selection for Add/Reduce Cash. See approved_business_decisions.money_openings_adjustments."
+      "business_decision": "Approved 2026-10-13: Opening Balance Equity for opening amounts; reason/ledger selection for Add/Reduce Cash. See approved_business_decisions.money_openings_adjustments.",
+      "checkpoint_work": {
+        "implementation": "Reason/offset-ledger Add/Reduce journal posting with company financial lock, exact Decimal, UUID replay, active account/ledger and period/year guards, owner/control ledger exclusions and cash funds protection. Web/native account history controls and authorized no-store mobile write API. Owner capital and transfers route through existing dedicated flows.",
+        "tests": "19 focused tests passed: 10 real PostgreSQL money tests and 9 mobile API tests. Includes concurrent cash reduction protection, exact ledger/history effects, UUID replay/conflict, audit-failure rollback, period lock and tenant/branch denial. Desktop/mobile Chromium 2 passed with actual adjustment posting and key rotation; Android compilation, TypeScript and focused lint passed. Intermediate only.",
+        "remaining": "Final-head checkpoint regression and physical Android UI verification. No final_status assigned."
+      }
     },
     {
       "finding_id": "A064-F06",

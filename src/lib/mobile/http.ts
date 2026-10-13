@@ -50,6 +50,7 @@ export function mobileUnexpected(category: string, error: unknown) {
       { error: error.message, message: accountErrorMessage(error) },
       [
         "IDEMPOTENCY_KEY_REUSED",
+        "IDEMPOTENCY_CONFLICT",
         "CHEQUE_CHANGED",
         "CHEQUE_NUMBER_EXISTS",
         "INVALID_CHEQUE_SOURCE",

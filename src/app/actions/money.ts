@@ -123,10 +123,31 @@ export async function saveLegacyChequeSourceAction(fd: FormData) {
 
 export async function saveMoneyAccountAction(fd: FormData) {
   const { accountAction } = await import("@/lib/account/action-feedback");
-  return accountAction(async () => { await moneyAccountAction(fd); }, "Money account created");
+  return accountAction(async () => {
+    await moneyAccountAction(fd);
+  }, "Money account created");
 }
 
 export async function saveMoneyTransferAction(fd: FormData) {
   const { accountAction } = await import("@/lib/account/action-feedback");
-  return accountAction(async () => { await transferAction(fd); }, "Transfer posted");
+  return accountAction(async () => {
+    await transferAction(fd);
+  }, "Transfer posted");
+}
+
+export async function saveMoneyAdjustmentAction(fd: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  return accountAction(async () => {
+    const { requirePermissionForMutation } =
+      await import("@/lib/auth/authorization");
+    const { postMoneyAdjustmentForActor } =
+      await import("@/lib/account/money-adjustment");
+    const a = await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");
+    if (!a.companyId) throw new Error("NOT_AUTHORIZED");
+    await postMoneyAdjustmentForActor(
+      { ...a, companyId: a.companyId },
+      raw(fd),
+    );
+    refresh();
+  }, "Account adjustment posted");
 }

@@ -1,3 +1,7 @@
+import {
+  moneyAdjustmentOptionsForActor,
+  postMoneyAdjustmentForActor,
+} from "@/lib/account/money-adjustment";
 import { moneyReadContext } from "@/lib/account/money-context";
 import { chequeFinancialActionForActor } from "@/lib/account/cheque-finance";
 import {
@@ -82,6 +86,9 @@ export async function mobileMoneyContext(
   );
   return {
     ...data,
+    adjustmentOptions: data.capabilities.postMoneyEntries
+      ? await moneyAdjustmentOptionsForActor(a)
+      : null,
     branchContext: readScope.context,
     owners: data.owners.map((x) => ({
       ...x,
@@ -280,4 +287,12 @@ export async function mobileMoneyAccountHistory(
     id,
     query,
   );
+}
+
+export async function mobileMoneyAdjustment(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  await write(u);
+  return postMoneyAdjustmentForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
 }

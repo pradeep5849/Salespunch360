@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { canUsePermission } from "@/lib/auth/permissions";
+import { moneyAdjustmentOptionsForActor } from "@/lib/account/money-adjustment";
+import { MoneyAdjustmentForm } from "@/components/account/money-adjustment-form";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth/authorization";
 import { moneyAccountHistoryForActor } from "@/lib/account/money-account-history";
@@ -32,6 +36,14 @@ export default async function Page({
     if (isMoneyReadScopeError(e)) return <MoneyReadUnavailable />;
     throw e;
   }
+  const adjustmentOptions =
+    data.account.isActive &&
+    canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY")
+      ? await moneyAdjustmentOptionsForActor({
+          ...actor,
+          companyId: actor.companyId!,
+        } as ProjectActor)
+      : null;
   const scope: Record<string, string> =
     data.branchContext.mode === "COMPANY"
       ? { scope: "all" }
@@ -144,6 +156,21 @@ export default async function Page({
           </div>
         ) : (
           <p>No posted entries match these dates.</p>
+        )}
+        {adjustmentOptions && (
+          <MoneyAdjustmentForm
+            accountId={id}
+            branches={adjustmentOptions.branches.filter(
+              (b) => !data.account.branchId || b.id === data.account.branchId,
+            )}
+            ledgers={adjustmentOptions.ledgers}
+            selectedBranch={
+              data.branchContext.mode === "BRANCH"
+                ? data.branchContext.branchId
+                : undefined
+            }
+            requestKey={randomUUID()}
+          />
         )}
         <nav aria-label="Account history pages">
           {data.offset > 0 && (

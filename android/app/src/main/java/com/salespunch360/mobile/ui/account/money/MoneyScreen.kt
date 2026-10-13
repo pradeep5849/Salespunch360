@@ -103,7 +103,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                     }
                 }
             },
-            confirmButton = { TextButton(vm::closeOwnerHistory) { Text("Close") } }
+            confirmButton = { Row { if(s.historyIsAccount&&can("postMoneyEntries"))s.history?.get("account")?.jsonObject?.takeIf{it["isActive"]?.jsonPrimitive?.booleanOrNull==true}?.let{row->TextButton({vm.adjustAccount(row)}){Text("Add / Reduce")}};TextButton(vm::closeOwnerHistory) { Text("Close") } } }
         )
     }
     s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save,initialAccountType=moneyAccountInitialType(s.mode,initialQuery))}
@@ -124,6 +124,9 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var email by remember{mutableStateOf(selected?.str("email").orEmpty())}
     var address by remember{mutableStateOf(selected?.str("address").orEmpty())}
     var active by remember{mutableStateOf(selected?.get("isActive")?.jsonPrimitive?.booleanOrNull?:true)}
+    var offsetLedger by remember{mutableStateOf("")}
+    var adjustmentReason by remember{mutableStateOf("")}
+    var direction by remember{mutableStateOf("ADD")}
     var openingBranch by remember{mutableStateOf("")}
     var amount by remember{mutableStateOf("")}
     var interest by remember{mutableStateOf("0")}
@@ -133,6 +136,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty()
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
+        kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
         kind=="accounts"->name.isNotBlank()
         else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||owner.isNotBlank())
     }
@@ -148,6 +152,14 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{Pick("App user (optional)",owner,data.array("users"),enabled=!saving){owner=it};if(owner.isNotBlank())TextButton({owner=""},enabled=!saving){Text("Clear app user")}}
                     item{Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it}}
                 }else item{Row{Text("Active");Switch(active,{active=it},enabled=!saving)}}
+            }else if(kind=="adjustments"){
+                item{Text("Owner funding and withdrawals use Capital & drawings. Bank/cash movements use Transfers.")}
+                item{Pick("Posting branch",branch,data.array("branches").filter{selected?.str("branchId").orEmpty().isBlank()||it.jsonObject.str("id")==selected?.str("branchId")},enabled=!saving){branch=it}}
+                item{PickText("Adjustment",direction,listOf("ADD","REDUCE"),enabled=!saving){direction=it}}
+                item{Pick("Offset ledger",offsetLedger,data["adjustmentOptions"]?.jsonObject?.array("ledgers").orEmpty(),enabled=!saving){offsetLedger=it}}
+                item{OutlinedTextField(amount,{amount=it},label={Text("Amount")},enabled=!saving)}
+                item{OutlinedTextField(date,{date=it},label={Text("Date (YYYY-MM-DD)")},enabled=!saving)}
+                item{OutlinedTextField(adjustmentReason,{adjustmentReason=it},label={Text("Reason")},enabled=!saving)}
             }else if(kind=="accounts"){
                 item{OutlinedTextField(name,{name=it},label={Text("Account name")},enabled=!saving)}
                 item{if(selected==null)PickText("Account type",type,listOf("CASH","BANK","PETTY_CASH"),enabled=!saving){type=it}else Text("Account type: ${moneyTypeLabel(type)} (cannot be changed)")}
@@ -185,6 +197,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     },confirmButton={Button(enabled=!saving&&valid,onClick={save(kind,buildJsonObject{
         when{
             identity->{put("name",name);put("partyType",type);put("phone",phone);put("email",email);put("address",address);if(kind=="owner-setup"){owner.takeIf{it.isNotBlank()}?.let{put("userId",it)};put("branchId",branch);put("creationRequestKey",requestKey)}else put("isActive",active)}
+            kind=="adjustments"->{put("moneyAccountId",selected?.str("id").orEmpty());put("branchId",branch);put("direction",direction);put("offsetLedgerId",offsetLedger);put("amount",amount);put("date",date);put("reason",adjustmentReason);put("idempotencyKey",requestKey)}
             kind=="accounts"->{put("name",name);if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
                 "transfers"->{put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
