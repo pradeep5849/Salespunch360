@@ -4,6 +4,8 @@
 
 Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; FIXED + TEST LIMITATION; BLOCKED with exact reason. A finding without final_status is actively unfinished, never implicitly fixed.
 
+**TypeScript evidence correction:** Earlier warehouse/Project slice pass statements were inaccurate: a shell command continued to lint after a failing typecheck. The incomplete warehouse principal fixture is corrected. Clean Node22 full typecheck with failure propagation passed (`a080-unicode-final-typecheck.log`), superseding those claims. Final-head verification remains pending.
+
 ## Page index
 
 | Page | Name | Findings |
@@ -6908,13 +6910,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Actual PDF parsing/rendering of Indian scripts, accented text and ₹; long descriptions; font embedding and multi-page output.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md.
 
 **Linked finding IDs:** A080-F03.
+
+**Unicode PDF continuation:** Embedded/subset licensed Noto fonts preserve Latin/Devanagari/Kannada text; measured grapheme wrapping/pagination, shaping runtime and cached widths replace ASCII substitution. All three PDF routes await the renderer; explicit customer allowlist retained. 84 grouped tests + 2 desktop/mobile PDF/revision checks passed; latest 5 PDF tests verify extraction, pagination, escaping and private-cost exclusion. Clean Node22 TypeScript/lint and 9 combined PDF/warehouse tests passed. Final production tracing/build, final-head regression and physical Android PDF/share checks remain pending; font coverage documented.
 
 ## A081-F01 — Native saved revisions expose identity selectors
 

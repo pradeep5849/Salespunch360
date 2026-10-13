@@ -22,6 +22,7 @@ const securityHeaders = [
     : []),
 ];
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/*": ["./assets/fonts/*.ttf"] },
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
   agentRules: false,
   poweredByHeader: false,

@@ -18057,12 +18057,17 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A080-F03"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Replaced hand-built ASCII substitution PDF with asynchronous pdf-lib renderer, embedded/subset licensed Noto Latin/Devanagari/Kannada fonts, Indic shaping runtime, measured grapheme-aware wrapping/pagination and request-local width caches. Authenticated web/mobile and public-token routes await the renderer; customer allowlist remains explicit. Deployment tracing includes offline font assets; test-only PDF parser validates actual extracted content.",
+        "tests": "84 grouped quotation calculation/service/privacy/PDF tests passed on Node22; 2 desktop/mobile actual quotation edit/revision/PDF safe-field checks passed (56.2s); latest 5 PDF tests passed for Unicode, wrapping/pagination, PDF operator escaping and hidden-cost exclusion. Clean Node22 full TypeScript and focused lint passed after correcting a warehouse fixture principal and obsolete parser option; 9 combined PDF/warehouse tests passed.",
+        "remaining": "Final-head production build/font tracing, final grouped regression and physical Android PDF/share-target verification remain pending. Font coverage documented; unsupported glyphs raise an error rather than silently replacing text."
+      }
     },
     {
       "finding_id": "A081-F01",
@@ -22750,6 +22755,10 @@
         "failed": 0,
         "skipped": 0
       }
+    },
+    "typecheck_evidence_correction": {
+      "reason": "Earlier warehouse and Project slice summaries incorrectly stated TypeScript passed because shell commands continued to successful lint after a failing tsc. The warehouse test principal lacked required fields; corrected it. Removed a PDF parser option obsolete in installed version.",
+      "superseding_evidence": "Clean Node22 tsc --noEmit with set -e passed in a080-unicode-final-typecheck.log; focused lint and 9 PDF/warehouse tests passed. Earlier erroneous pass statements are superseded, not final-head evidence."
     }
   },
   "approved_business_decisions": {

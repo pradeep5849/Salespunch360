@@ -1,3 +1,4 @@
+import {extractPdfText} from "../tests/helpers/pdf-text";
 import AxeBuilder from "@axe-core/playwright";
 import {mobileStockSummary,mobileStockSummaryExport} from "../src/lib/mobile/account-inventory";
 import {reversePostedSaleForActor} from "../src/lib/account/sale-amendments";
@@ -1000,7 +1001,7 @@ test("A089 quotation fields reopen and stay with their own revision and public P
   await signInSettings(page);await page.goto(`/workspace/account/quotations/${quote.id}/edit`);await expect(page.getByLabel("Quotation site reference",{exact:true})).toHaveValue("QUOTE-ORIGINAL");await expect(page.getByLabel("Issue date",{exact:true})).toHaveValue("2026-10-11");await expect(page.getByLabel("Valid until",{exact:true})).toHaveValue("2026-11-11");await page.getByLabel("Quotation site reference",{exact:true}).fill("QUOTE-EDITED");await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${quote.id}\\?saved=1$`));
   let document=await getQuotationForActor(actor,quote.id);const originalRevision=document.revisions[0].id;
   expect(document.revisions[0].customFields.quote_site).toBe("QUOTE-EDITED");
-  const pdf=await page.request.get(`/workspace/account/quotations/${quote.id}/pdf`);expect(pdf.status()).toBe(200);expect((await pdf.body()).toString()).toContain("QUOTE-EDITED");expect((await pdf.body()).toString()).not.toContain("INTERNAL-DO-NOT-SHARE");
+  const pdf=await page.request.get(`/workspace/account/quotations/${quote.id}/pdf`);expect(pdf.status()).toBe(200);const pdfText=(await extractPdfText(await pdf.body())).text;expect(pdfText).toContain("QUOTE-EDITED");expect(pdfText).not.toContain("INTERNAL-DO-NOT-SHARE");
   await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
   const shared=await createQuotationShareForActor(actor,quote.id);const token=shared;
   const publicQuote=await getPublicQuotation(token);expect(publicQuote.customFields).toEqual([{label:"Quotation site reference",value:"QUOTE-EDITED"}]);expect(JSON.stringify(publicQuote)).not.toContain("INTERNAL-DO-NOT-SHARE");
