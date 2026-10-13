@@ -136,6 +136,7 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
 @Composable
 private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel) {
     val revision = quotation.array("revisions").firstOrNull()
+    val capabilities=quotation["capabilities"] as? JsonObject
     val allowedTransitions = quotation["allowedTransitions"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
     AlertDialog(
         onDismissRequest = vm::close,
@@ -152,10 +153,10 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel) {
                 revision?.array("lines")?.let { lines -> items(lines) { line -> Text("${line.str("itemName")} · ${line.str("quantity")} × ${accountMoney(line.str("rate"))} = ${accountMoney(line.str("lineTotal"))}") } }
                 item {
                     allowedTransitions.forEach { target -> Button(onClick = { vm.transition(target) }, modifier = Modifier.fillMaxWidth()) { Text(target.replace('_', ' ')) } }
-                    if (quotation.str("status") in listOf("DRAFT", "APPROVED", "REJECTED", "SENT", "DECLINED", "EXPIRED")) {
+                    if (capabilities?.get("canEdit")?.jsonPrimitive?.booleanOrNull==true || capabilities?.get("canRevise")?.jsonPrimitive?.booleanOrNull==true) {
                         OutlinedButton(onClick = vm::revise, modifier = Modifier.fillMaxWidth()) { Text(if (quotation.str("status") == "DRAFT") "Edit" else "Create revision") }
                     }
-                    if (quotation.str("status") in listOf("APPROVED", "SENT")) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
+                    if (capabilities?.get("canShare")?.jsonPrimitive?.booleanOrNull==true) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
                     OutlinedButton(onClick = vm::download, modifier = Modifier.fillMaxWidth()) { Text("Download / share PDF") }
                 }
             }

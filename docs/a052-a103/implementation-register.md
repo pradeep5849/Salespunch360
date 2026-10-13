@@ -6876,13 +6876,15 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Data Entry draft submit permitted; non-draft lifecycle/approval/share unavailable; authorized roles unaffected; crafted requests still denied.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md.
 
 **Linked finding IDs:** A080-F02, A080-F04.
+
+**Action capability continuation:** Role/workspace/state capabilities and filtered mobile transitions drive native action visibility. Existing Admin/Accountant/Project Manager approval and Data Entry draft submission preserved; denied issued lifecycle/share/approval hidden with server guards retained. 54 focused capability/API/service tests, Android compile, clean Node22 TypeScript and focused lint passed. Final-head and physical Android role/state checks pending.
 
 ## A080-F04 — Quotation PDF loses non-ASCII customer content
 
