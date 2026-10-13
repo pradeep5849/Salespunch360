@@ -49,6 +49,12 @@ private fun PrintChoice(label:String,value:String,options:List<String>,onChange:
 }
 
 @Composable
+private fun PrintBankChoice(value:String,banks:List<Pair<String,String>>,onChange:(String)->Unit){
+ var open by remember{mutableStateOf(false)}
+ ListItem(headlineContent={Text("Invoice bank account")},trailingContent={Box{TextButton({open=true}){Text(if(value.isBlank())"Use global print profile"else banks.firstOrNull{it.first==value}?.second?:"Unavailable bank")};DropdownMenu(open,{open=false}){DropdownMenuItem({Text("Use global print profile")},{onChange("");open=false});banks.forEach{bank->DropdownMenuItem({Text(bank.second)},{onChange(bank.first);open=false})}}}})
+}
+
+@Composable
 private fun PrintStepper(label:String,value:Int,maxValue:Int=50,onChange:(Int)->Unit){
     Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
         Text(label,Modifier.weight(1f),fontSize=15.5.sp)
@@ -66,6 +72,8 @@ fun InvoicePrintSettingsView(data: JsonElement, vm: AccountAdministrationViewMod
     fun str(key:String,default:String)=saved?.get(key)?.jsonPrimitive?.contentOrNull?:default
     fun int(key:String,default:Int)=saved?.get(key)?.jsonPrimitive?.intOrNull?:default
 
+    var bankAccountId by remember(saved){mutableStateOf(str("bankAccountId",""))}
+    val invoiceBanks=root["invoiceBanks"]?.jsonArray?.mapNotNull{entry->val bank=entry as? JsonObject?:return@mapNotNull null;val id=bank["id"]?.jsonPrimitive?.contentOrNull?:return@mapNotNull null;id to (bank["name"]?.jsonPrimitive?.contentOrNull?:"Bank account")}.orEmpty()
     var printer by remember(saved){mutableStateOf(str("printer","REGULAR"))}
     var regularDefault by remember(saved){mutableStateOf(bool("regularDefault",true))}
     var theme by remember(saved){mutableStateOf(str("theme","REGULAR"))}
@@ -146,6 +154,8 @@ fun InvoicePrintSettingsView(data: JsonElement, vm: AccountAdministrationViewMod
         item{PrintSwitch("Amount Grouping",amountGrouping){amountGrouping=it}}
         item{PrintChoice("Amount in words format",amountWordsFormat,listOf("INDIAN","INTERNATIONAL")){amountWordsFormat=it}}
         item{PrintSwitch("You Saved",youSaved){youSaved=it}}
+        item{PrintSection("Payment instructions")}
+        item{PrintBankChoice(bankAccountId,invoiceBanks){bankAccountId=it}}
         item{PrintSection("Footer")}
         item{PrintSwitch("Print description",printDescription){printDescription=it}}
         item{PrintSwitch("Terms & Conditions",termsEnabled){termsEnabled=it}}
@@ -158,8 +168,8 @@ fun InvoicePrintSettingsView(data: JsonElement, vm: AccountAdministrationViewMod
         item{PrintSwitch("Print Acknowledgement",acknowledgement){acknowledgement=it}}
         item{PrintSwitch("Print Page Numbers",pageNumbers){pageNumbers=it}}
         item{
-            Button(onClick={vm.save("invoice-print-settings",buildJsonObject{
-                put("printer",printer);put("regularDefault",regularDefault);put("theme",theme);put("printTextSize",printTextSize);put("pageSize",pageSize);put("orientation",orientation);put("repeatHeader",repeatHeader);put("printCompanyName",printCompanyName);put("companyNameTextSize",companyNameTextSize);put("companyLogo",companyLogo);put("address",address);put("email",email);put("phone",phone);put("gstinOnSale",gstinOnSale);put("billOfSupply",billOfSupply);put("topSpace",topSpace);put("originalDuplicate",originalDuplicate);put("transactionName",transactionName);put("expandTable",expandTable);put("minRows",minRows);put("itemTableColumns",itemTableColumns);put("totalItemQuantity",totalItemQuantity);put("amountDecimal",amountDecimal);put("receivedAmount",receivedAmount);put("balanceAmount",balanceAmount);put("partyCurrentBalance",partyCurrentBalance);put("taxDetails",taxDetails);put("amountGrouping",amountGrouping);put("amountWordsFormat",amountWordsFormat);put("youSaved",youSaved);put("printDescription",printDescription);put("termsEnabled",termsEnabled);put("termsText",termsText);put("receivedBy",receivedBy);put("deliveredBy",deliveredBy);put("signatureText",signatureText);put("customSignatureText",customSignatureText);put("paymentMode",paymentMode);put("acknowledgement",acknowledgement);put("pageNumbers",pageNumbers)
+            Button(enabled=bankAccountId.isBlank()||invoiceBanks.any{it.first==bankAccountId},onClick={vm.save("invoice-print-settings",buildJsonObject{
+                put("bankAccountId",bankAccountId);put("printer",printer);put("regularDefault",regularDefault);put("theme",theme);put("printTextSize",printTextSize);put("pageSize",pageSize);put("orientation",orientation);put("repeatHeader",repeatHeader);put("printCompanyName",printCompanyName);put("companyNameTextSize",companyNameTextSize);put("companyLogo",companyLogo);put("address",address);put("email",email);put("phone",phone);put("gstinOnSale",gstinOnSale);put("billOfSupply",billOfSupply);put("topSpace",topSpace);put("originalDuplicate",originalDuplicate);put("transactionName",transactionName);put("expandTable",expandTable);put("minRows",minRows);put("itemTableColumns",itemTableColumns);put("totalItemQuantity",totalItemQuantity);put("amountDecimal",amountDecimal);put("receivedAmount",receivedAmount);put("balanceAmount",balanceAmount);put("partyCurrentBalance",partyCurrentBalance);put("taxDetails",taxDetails);put("amountGrouping",amountGrouping);put("amountWordsFormat",amountWordsFormat);put("youSaved",youSaved);put("printDescription",printDescription);put("termsEnabled",termsEnabled);put("termsText",termsText);put("receivedBy",receivedBy);put("deliveredBy",deliveredBy);put("signatureText",signatureText);put("customSignatureText",customSignatureText);put("paymentMode",paymentMode);put("acknowledgement",acknowledgement);put("pageNumbers",pageNumbers)
             })},modifier=Modifier.fillMaxWidth().padding(16.dp)){Text("Save Invoice Print Settings")}
         }
     }

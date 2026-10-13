@@ -9727,11 +9727,17 @@
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "implementation": "Account-specific paginated ledger history under RepeatableRead, exact opening/in/out/closing and running balances; POSTED and REVERSED originals included; validated date/company/branch scope and inactive-account history; web row/detail links and date/paging; no-store authorized native API; native account tap opens history with separate Edit action and cancellation-safe scoped loading.",
-        "tests": "12 focused tests passed: 9 PostgreSQL money/history and 3 history API. Desktop/mobile Chromium 2 passed including opening history, date carry-forward and Axe keyboard-scroll checks. Android compile, TypeScript and focused ESLint passed. Intermediate evidence only; final head not run.",
-        "remaining": "Account edit/detail metadata and named Deposit/Withdraw parity remain linked to A064-F04/F06; Add/Reduce now implemented under A064-F05. Final checkpoint verification and physical native UI unverified."
-      }
+      "checkpoint_work": [
+        {
+          "implementation": "Account-specific paginated ledger history under RepeatableRead, exact opening/in/out/closing and running balances; POSTED and REVERSED originals included; validated date/company/branch scope and inactive-account history; web row/detail links and date/paging; no-store authorized native API; native account tap opens history with separate Edit action and cancellation-safe scoped loading.",
+          "tests": "12 focused tests passed: 9 PostgreSQL money/history and 3 history API. Desktop/mobile Chromium 2 passed including opening history, date carry-forward and Axe keyboard-scroll checks. Android compile, TypeScript and focused ESLint passed. Intermediate evidence only; final head not run.",
+          "remaining": "Account edit/detail metadata and named Deposit/Withdraw parity remain linked to A064-F04/F06; Add/Reduce now implemented under A064-F05. Final checkpoint verification and physical native UI unverified."
+        },
+        {
+          "work": "Added authorized web account metadata editing with associated labels, retained typed feedback and pending guard. Type/branch identity remains outside this edit form.",
+          "tests": "Shared focused bank slice verification above; this does not independently close the original finding."
+        }
+      ]
     },
     {
       "finding_id": "A064-F03",
@@ -9948,10 +9954,21 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Bank metadata validation/model/service persistence and conditional web creation/edit forms in progress; per-account print opt-ins default OFF. Additive migration 120 prepared. Native editing, invoice account selection/output and final validation remain pending.",
+          "tests": "21 focused bank metadata/replay tests passed. Web typecheck in progress; no final-head result claimed."
+        },
+        {
+          "work": "Persisted bank holder/branch/UPI and independent print opt-ins; conditional retained web create/edit and native fields/validation; active authorized invoice bank selection on web/native Settings; selected bank output fails closed outside company/compatible branch; existing global profile retained when unselected. Local additive migration 120 applied.",
+          "tests": "15 grouped PostgreSQL tests passed, including bank metadata/retry/clearing and invoice selection authorization with no ledger effects. 55 print/profile tests passed with real parsed PDFs and QR image checks in A4/A5/thermal. 21 bank metadata/replay tests passed. 2 desktop/mobile-web bank validation/edit/accessibility and authenticated web/mobile invoice tests passed (1.0m). Native final compile and 3 bank-validation JVM tests passed; TypeScript/targeted ESLint/Prisma validation/generation/local migration deploy passed.",
+          "remaining": "A064-F04 remains PARTIAL: saved audit explicitly leaves alternate account-number/UPI requirement unresolved. Clarification requested; final-head and physical device validation pending."
+        }
+      ]
     },
     {
       "finding_id": "A064-F05",
@@ -14808,6 +14825,10 @@
         {
           "work": "Exact minor-unit web total and BigDecimal native total; optional EMI description saved on LoanPayment and journal narration; normalized replay includes description. Active compatible account choices and statement descriptions/totals. Additive migration 119 preserves prior rows.",
           "tests": "40 grouped focused/real PostgreSQL regressions passed; 3 mobile domain-error tests passed; 4 desktop/mobile-web workflow/permission/accessibility checks passed (46.0s). Android compilation and 2 exact-total JVM tests passed; final native validation/accessibility compile passed. Node22 TypeScript, targeted ESLint, Prisma validation/generation and isolated migration 119 deploy passed. Final-head suite/build/rehearsal and physical-device checks remain pending."
+        },
+        {
+          "work": "Native loan payment branch now displays its original branch instead of an editable branch selector; compatible payment choices remain restricted to that branch.",
+          "tests": "Final native bank slice compilation passed. Final-head/device regression remains pending."
         }
       ]
     },
@@ -22150,6 +22171,12 @@
         "A097-F03",
         "A097-F04",
         "A100-F01"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Invoice Print settings now select an active authorized bank; unavailable stored choices are retained and cannot silently fall back. Native settings include the selector and safe validation.",
+          "tests": "Shared focused bank slice verification above; this does not independently close the original finding."
+        }
       ]
     },
     {

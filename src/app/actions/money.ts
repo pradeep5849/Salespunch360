@@ -154,3 +154,5 @@ export async function saveMoneyAdjustmentAction(fd: FormData) {
 
 export async function saveLoanAction(fd:FormData) {const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(()=>loanAction(fd),"Loan received");}
 export async function saveLoanPaymentAction(fd:FormData) {const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(()=>loanPaymentAction(fd),"Loan payment posted");}
+
+export async function saveMoneyAccountMetadataAction(fd:FormData){const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(async()=>{const {updateMoneyAccount}=await import("@/lib/account/money");const data=raw(fd);delete data.id;await updateMoneyAccount(String(fd.get("id")),data);refresh();},"Account details saved");}

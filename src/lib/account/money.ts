@@ -1,3 +1,4 @@
+import {moneyBankMetadata,bankIfsc,hasBankMetadata} from "./money-bank-metadata";
 import { moneyReadContext } from "./money-context";
 import { createSettlementForActor } from "./commercial";
 import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
@@ -99,6 +100,7 @@ async function context(
   return fy;
 }
 const accountInput = z.object({
+  ...moneyBankMetadata.shape,
   type: z.nativeEnum(MoneyAccountType),
   name: z.string().trim().min(1).max(160),
   branchId: z.preprocess(
@@ -107,7 +109,7 @@ const accountInput = z.object({
   ),
   bankName: z.string().max(160).optional(),
   accountNumberMasked: z.string().max(40).optional(),
-  ifsc: z.string().max(20).optional(),
+  ifsc: bankIfsc,
 });
 async function allocateMoneyLedgerCodeInTx(
   tx: Prisma.TransactionClient,
@@ -205,6 +207,8 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
       }
     })
     .parse(raw);
+  if(d.type!=="BANK"&&hasBankMetadata(d))throw new Error("BANK_METADATA_NOT_APPLICABLE");
+  if(d.printUpiQr&&!d.upiId)throw new Error("BANK_UPI_REQUIRED");
   const openingAmount = new D(openingBalance);
   const hasOpening = !openingAmount.isZero();
   if (
@@ -225,6 +229,7 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
             bankName: d.bankName ?? "",
             accountNumberMasked: d.accountNumberMasked ?? "",
             ifsc: d.ifsc ?? "",
+            ...(hasBankMetadata(d)?{accountHolderName:d.accountHolderName??"",bankBranchName:d.bankBranchName??"",upiId:d.upiId??"",printBankDetails:d.printBankDetails,printUpiQr:d.printUpiQr}:{}),
             ...(hasOpening
               ? {
                   openingBalance: openingAmount.toFixed(2),
@@ -362,6 +367,7 @@ function moneyAccountAuditSnapshot(row: {
   bankName: string | null;
   accountNumberMasked: string | null;
   ifsc: string | null;
+  accountHolderName:string|null;bankBranchName:string|null;upiId:string|null;printBankDetails:boolean;printUpiQr:boolean;
   isActive: boolean;
   ledgerAccountId: string;
   branchId: string | null;
@@ -371,6 +377,7 @@ function moneyAccountAuditSnapshot(row: {
     bankName: row.bankName,
     accountNumberMasked: row.accountNumberMasked,
     ifsc: row.ifsc,
+    accountHolderName:row.accountHolderName,bankBranchName:row.bankBranchName,upiId:row.upiId,printBankDetails:row.printBankDetails,printUpiQr:row.printUpiQr,
     isActive: row.isActive,
     ledgerAccountId: row.ledgerAccountId,
     branchId: row.branchId,
@@ -397,10 +404,12 @@ async function mutateMoneyAccountForActor(
           },
         });
         if (!before) throw new AuthorizationError();
+        if(before.type!=="BANK"&&hasBankMetadata(data as Record<string,unknown>))throw new Error("BANK_METADATA_NOT_APPLICABLE");
         const after = await tx.moneyAccount.update({
           where: { id: before.id },
           data,
         });
+        if(after.printUpiQr&&!after.upiId)throw new Error("BANK_UPI_REQUIRED");
         if (before.name !== after.name) {
           const changed = await tx.ledgerAccount.updateMany({
             where: { id: before.ledgerAccountId, companyId: a.companyId },
@@ -432,7 +441,9 @@ export async function updateMoneyAccountForActor(
     .partial()
     .omit({ type: true, branchId: true })
     .parse(raw);
-  return mutateMoneyAccountForActor(a, id, data, "MONEY_ACCOUNT_UPDATED");
+  const patch:Prisma.MoneyAccountUpdateInput={...data};
+  for(const key of ["accountHolderName","bankBranchName","upiId","ifsc"] as const){if(typeof (raw as Record<string,unknown>)[key]==="string"&&String((raw as Record<string,unknown>)[key]).trim()==="")patch[key]=null;}
+  return mutateMoneyAccountForActor(a, id, patch, "MONEY_ACCOUNT_UPDATED");
 }
 export async function deactivateMoneyAccountForActor(a: Actor, id: string) {
   return mutateMoneyAccountForActor(

@@ -3068,6 +3068,11 @@ model MoneyAccount {
   bankName            String?          @db.VarChar(160)
   accountNumberMasked String?          @db.VarChar(40)
   ifsc                String?          @db.VarChar(20)
+  accountHolderName   String? @db.VarChar(160)
+  bankBranchName      String? @db.VarChar(160)
+  upiId               String? @db.VarChar(322)
+  printBankDetails    Boolean @default(false)
+  printUpiQr          Boolean @default(false)
   isActive            Boolean          @default(true)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt

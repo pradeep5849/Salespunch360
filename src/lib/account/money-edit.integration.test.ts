@@ -123,6 +123,7 @@ describe.skipIf(!url)(
         await tx.user.deleteMany({ where: { companyId } });
         await tx.numberingSeries.deleteMany({ where: { companyId } });
         await tx.branch.deleteMany({ where: { companyId } });
+        await tx.accountSettings.deleteMany({where:{companyId}});
         await tx.company.deleteMany({ where: { id: companyId } });
       });
       await client.$disconnect();
@@ -164,6 +165,25 @@ describe.skipIf(!url)(
       const history=await loanHistoryForActor(actor,loan.id,{branchId,offset:200,limit:2});
       expect(history.total).toBe(204);expect(history.rows).toHaveLength(2);expect(history.rows.every(row=>row.balance==="98000")).toBe(true);expect(history.outstanding).toBe("98000");expect(history.nextOffset).toBe(202);
     },30000);
+    it("persists independent bank print preferences, validates identifiers and clears optional metadata",async()=>{
+      const request={type:"BANK",name:"Metadata bank",branchId,creationRequestKey:randomUUID(),accountHolderName:"Holder",bankBranchName:"Bank branch",bankName:"Bank",accountNumberMasked:"****1234",ifsc:"SBIN0001234",upiId:"holder@bank",printBankDetails:true,printUpiQr:true};
+      const row=await createMoneyAccountForActor(actor,request);expect(row).toMatchObject({accountHolderName:"Holder",bankBranchName:"Bank branch",upiId:"holder@bank",printBankDetails:true,printUpiQr:true});expect((await createMoneyAccountForActor(actor,request)).id).toBe(row.id);
+      await expect(createMoneyAccountForActor(actor,{...request,printUpiQr:false})).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+      await expect(updateMoneyAccountForActor(actor,row.id,{ifsc:"BAD"})).rejects.toThrow();await expect(updateMoneyAccountForActor(actor,row.id,{upiId:"invalid"})).rejects.toThrow();
+      for(const [bank,qr] of [[false,false],[true,false],[false,true],[true,true]]){await updateMoneyAccountForActor(actor,row.id,{printBankDetails:bank,printUpiQr:qr});expect(await client.moneyAccount.findUniqueOrThrow({where:{id:row.id}})).toMatchObject({printBankDetails:bank,printUpiQr:qr});}
+      await expect(updateMoneyAccountForActor(actor,row.id,{upiId:""})).rejects.toThrow("BANK_UPI_REQUIRED");
+      await updateMoneyAccountForActor(actor,row.id,{printBankDetails:false,printUpiQr:false,upiId:"",accountHolderName:"",bankBranchName:""});expect(await client.moneyAccount.findUniqueOrThrow({where:{id:row.id}})).toMatchObject({upiId:null,accountHolderName:null,bankBranchName:null,printBankDetails:false,printUpiQr:false});
+      await expect(createMoneyAccountForActor(actor,{type:"CASH",name:"Invalid cash metadata",branchId,creationRequestKey:randomUUID(),printBankDetails:true})).rejects.toThrow("BANK_METADATA_NOT_APPLICABLE");
+    });
+    it("authorizes invoice bank selection and keeps print changes outside the financial ledger",async()=>{
+      const {updateSettingsSectionForActor}=await import("./settings-persistence");const {invoiceBankProfile}=await import("./invoice-bank-profile");
+      const bank=await client.moneyAccount.findFirstOrThrow({where:{companyId,name:"Metadata bank"}});const journalsBefore=await client.journalEntry.count({where:{companyId}});
+      await updateSettingsSectionForActor(actor,"invoicePrintSettings",{bankAccountId:bank.id,theme:"REGULAR"});expect((await client.accountSettings.findUniqueOrThrow({where:{companyId}})).transactionDefaults).toMatchObject({invoicePrintSettings:{bankAccountId:bank.id}});
+      for(const principal of [{...actor,accountRole:"ACCOUNTANT"},{...actor,companyId:otherCompany},{...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[randomUUID()]}])await expect(updateSettingsSectionForActor(principal,"invoicePrintSettings",{bankAccountId:bank.id})).rejects.toThrow();
+      await expect(updateSettingsSectionForActor(actor,"invoicePrintSettings",{bankAccountId:randomUUID()})).rejects.toThrow("BANK_ACCOUNT_NOT_AVAILABLE");
+      await client.moneyAccount.update({where:{id:bank.id},data:{isActive:false}});await expect(updateSettingsSectionForActor(actor,"invoicePrintSettings",{bankAccountId:bank.id})).rejects.toThrow("BANK_ACCOUNT_NOT_AVAILABLE");expect(await invoiceBankProfile(companyId,branchId,bank.id)).toEqual({bankDetails:null,showQr:false});await client.moneyAccount.update({where:{id:bank.id},data:{isActive:true}});
+      expect(await client.journalEntry.count({where:{companyId}})).toBe(journalsBefore);
+    });
     it("replays concurrent creation without a second account, ledger or audit", async () => {
       const input = {
         type: "BANK",
@@ -246,7 +266,7 @@ describe.skipIf(!url)(
         ).name,
       ).toBe("Renamed bank");
       const audit = await client.accountOperationalAudit.findFirstOrThrow({
-        where: { companyId, eventType: "MONEY_ACCOUNT_UPDATED" },
+        where: { companyId, entityId:accountId,eventType: "MONEY_ACCOUNT_UPDATED" },
       });
       expect(audit.metadata).toMatchObject({
         before: { name: "Original bank", isActive: true },

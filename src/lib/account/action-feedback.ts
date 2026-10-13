@@ -8,6 +8,9 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  BANK_ACCOUNT_NOT_AVAILABLE:"Select an active bank account available to your branch.",
+  BANK_UPI_REQUIRED:"Enter a valid UPI ID before enabling the payment QR on invoices.",
+  BANK_METADATA_NOT_APPLICABLE:"Bank details and payment QR settings apply to bank accounts. Select a bank account.",
   INVALID_LOAN:"Select an active loan from this business and branch.",
   PRINCIPAL_EXCEEDS_OUTSTANDING:"Principal paid cannot exceed the outstanding principal. Check the amount.",
   INTEREST_LEDGER_MISSING:"Set up the general expense ledger before recording interest or charges.",

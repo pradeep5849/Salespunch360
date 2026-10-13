@@ -1,7 +1,8 @@
+import {invoicePrintSettingsSchema} from "./invoice-print-settings";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
-type SettingsActor = {id:string;companyId:string|null;accountRole?:string|null};
+type SettingsActor = {id:string;companyId:string|null;accountRole?:string|null;branchAccessScope?:string;branchIds?:string[]};
 
 /** Serialize JSON read/merge/write and its audit event for every Settings section. */
 export async function updateSettingsSectionForActor(
@@ -11,7 +12,9 @@ export async function updateSettingsSectionForActor(
 ) {
   if (!actor.companyId || actor.accountRole !== "ACCOUNT_ADMIN")
     throw new AuthorizationError();
+  if(section==="invoicePrintSettings")patch=invoicePrintSettingsSchema.parse(patch);
   return db.$transaction(async (tx) => {
+    if(section==="invoicePrintSettings"&&patch.bankAccountId){const bank=await tx.moneyAccount.findFirst({where:{id:String(patch.bankAccountId),companyId:actor.companyId!,isActive:true,type:"BANK",...(actor.branchAccessScope==="SELECTED_BRANCHES"?{OR:[{branchId:null},{branchId:{in:actor.branchIds??[]}}]}:{})},select:{id:true}});if(!bank)throw new Error("BANK_ACCOUNT_NOT_AVAILABLE");}
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId! + ":account-settings"}))`;
     const current = await tx.accountSettings.findUnique({
       where: { companyId: actor.companyId! }, select: { transactionDefaults: true },

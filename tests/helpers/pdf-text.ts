@@ -1,6 +1,7 @@
+import {resolve} from "node:path";
 export async function extractPdfText(bytes:Uint8Array) {
   const {getDocument}=await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const task=getDocument({data:new Uint8Array(bytes),disableFontFace:true,useSystemFonts:false});
+  const task=getDocument({data:new Uint8Array(bytes),disableFontFace:true,useSystemFonts:false,standardFontDataUrl:resolve(process.cwd(),"node_modules/pdfjs-dist/standard_fonts")+"/"});
   const document=await task.promise;
   try {
     const pages:string[]=[];

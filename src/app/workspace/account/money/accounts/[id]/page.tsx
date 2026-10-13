@@ -1,3 +1,4 @@
+import {MoneyAccountMetadataForm} from "@/components/account/money-account-form";
 import { randomUUID } from "node:crypto";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { moneyAdjustmentOptionsForActor } from "@/lib/account/money-adjustment";
@@ -51,7 +52,7 @@ export default async function Page({
   const href = (offset: number) =>
     `?${new URLSearchParams({ ...scope, ...(data.from ? { from: data.from } : {}), ...(data.to ? { to: data.to } : {}), offset: String(offset) })}`;
   return (
-    <main className="employees-shell">
+    <div className="employees-shell">
       <section className="employees-content">
         <WorkspacePageHeader
           title={data.account.name}
@@ -64,6 +65,7 @@ export default async function Page({
             ? "All company branches"
             : data.branchContext.branchName}
         </p>
+        {canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_MONEY_ENTRY")&&<MoneyAccountMetadataForm account={data.account}/>}
         <form method="get">
           <input
             type="hidden"
@@ -183,6 +185,6 @@ export default async function Page({
           )}
         </nav>
       </section>
-    </main>
+    </div>
   );
 }

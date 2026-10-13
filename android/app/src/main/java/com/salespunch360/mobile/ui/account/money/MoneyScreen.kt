@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -145,17 +146,26 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var loanDescription by remember{mutableStateOf("")}
     var loanDuration by remember{mutableStateOf("")}
     var loanType by remember{mutableStateOf("TERM")}
+    var bankName by remember{mutableStateOf(selected?.str("bankName").orEmpty())}
+    var accountHolder by remember{mutableStateOf(selected?.str("accountHolderName").orEmpty())}
+    var bankBranch by remember{mutableStateOf(selected?.str("bankBranchName").orEmpty())}
+    var bankNumber by remember{mutableStateOf(selected?.str("accountNumberMasked").orEmpty())}
+    var bankIfsc by remember{mutableStateOf(selected?.str("ifsc").orEmpty())}
+    var bankUpi by remember{mutableStateOf(selected?.str("upiId").orEmpty())}
+    var printBank by remember{mutableStateOf(selected?.get("printBankDetails")?.jsonPrimitive?.booleanOrNull?:false)}
+    var printQr by remember{mutableStateOf(selected?.get("printUpiQr")?.jsonPrimitive?.booleanOrNull?:false)}
     var paymentDescription by remember{mutableStateOf("")}
     var charges by remember{mutableStateOf("0")}
     var date by remember{mutableStateOf(java.time.LocalDate.now().toString())}
     var reference by remember{mutableStateOf("")}
     val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("loans","loan-payments")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
+    val bankErrors=bankMetadataErrors(bankName,accountHolder,bankBranch,bankIfsc,bankUpi,printQr)
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
         kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
         kind=="loans"->source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(amount,interest,charges)?.signum()==1
-        kind=="accounts"->name.isNotBlank()
+        kind=="accounts"->name.isNotBlank()&&(type!="BANK"||bankErrors.valid)
         else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||owner.isNotBlank())
     }
     AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(identity)"Owner / partner" else kind.replace('-',' ').replaceFirstChar{it.uppercase()})},text={
@@ -168,7 +178,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                 item{OutlinedTextField(address,{address=it},label={Text("Address")},enabled=!saving)}
                 if(kind=="owner-setup"){
                     item{Pick("App user (optional)",owner,data.array("users"),enabled=!saving){owner=it};if(owner.isNotBlank())TextButton({owner=""},enabled=!saving){Text("Clear app user")}}
-                    item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;if(kind=="loans")source=""}}
+                    item{Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it}}
                 }else item{Row{Text("Active");Switch(active,{active=it},enabled=!saving)}}
             }else if(kind=="adjustments"){
                 item{Text("Owner funding and withdrawals use Capital & drawings. Bank/cash movements use Transfers.")}
@@ -181,6 +191,16 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             }else if(kind=="accounts"){
                 item{OutlinedTextField(name,{name=it},label={Text("Account name")},enabled=!saving)}
                 item{if(selected==null)PickText("Account type",type,listOf("CASH","BANK","PETTY_CASH"),enabled=!saving){type=it}else Text("Account type: ${moneyTypeLabel(type)} (cannot be changed)")}
+                if(type=="BANK"){
+                    item{OutlinedTextField(bankName,{bankName=it},label={Text("Bank name")},isError=bankErrors.bankName!=null,supportingText={bankErrors.bankName?.let{Text(it)}},enabled=!saving)}
+                    item{OutlinedTextField(accountHolder,{accountHolder=it},label={Text("Account holder name")},isError=bankErrors.holder!=null,supportingText={bankErrors.holder?.let{Text(it)}},enabled=!saving)}
+                    item{OutlinedTextField(bankBranch,{bankBranch=it},label={Text("Bank branch name")},isError=bankErrors.branch!=null,supportingText={bankErrors.branch?.let{Text(it)}},enabled=!saving)}
+                    item{OutlinedTextField(bankNumber,{bankNumber=it},label={Text("Masked account number")},enabled=!saving)}
+                    item{OutlinedTextField(bankIfsc,{bankIfsc=it},label={Text("IFSC")},isError=bankErrors.ifsc!=null,supportingText={bankErrors.ifsc?.let{Text(it)}},enabled=!saving);Text("Use IFSC from your bank document. Only its format is checked.")}
+                    item{OutlinedTextField(bankUpi,{bankUpi=it},label={Text("UPI ID")},isError=bankErrors.upi!=null,supportingText={bankErrors.upi?.let{Text(it)}},enabled=!saving)}
+                    item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Print bank details on invoices");Switch(printBank,{printBank=it},enabled=!saving,modifier=Modifier.semantics{contentDescription="Print bank details on invoices"})}}
+                    item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Print payment QR on invoices");Switch(printQr,{printQr=it},enabled=!saving,modifier=Modifier.semantics{contentDescription="Print payment QR on invoices"})}}
+                }
                 if(selected==null){
                     item{Pick("Branch (optional)",branch,data.array("branches"),enabled=!saving){branch=it}}
                     item{OutlinedTextField(amount,{amount=it},label={Text("Starting balance (optional)")},enabled=!saving)}
@@ -189,7 +209,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{Text("A non-zero starting balance posts against Opening Balance Equity.")}
                 }
             }else{
-                item{Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it}}
+                item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;if(kind=="loans")source=""}}
                 if(kind=="transfers"){
                     item{Pick("Source account",source,accounts,enabled=!saving){source=it}}
                     item{Pick("Destination account",destination,accounts,enabled=!saving){destination=it}}
@@ -223,7 +243,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
         when{
             identity->{put("name",name);put("partyType",type);put("phone",phone);put("email",email);put("address",address);if(kind=="owner-setup"){owner.takeIf{it.isNotBlank()}?.let{put("userId",it)};put("branchId",branch);put("creationRequestKey",requestKey)}else put("isActive",active)}
             kind=="adjustments"->{put("moneyAccountId",selected?.str("id").orEmpty());put("branchId",branch);put("direction",direction);put("offsetLedgerId",offsetLedger);put("amount",amount);put("date",date);put("reason",adjustmentReason);put("idempotencyKey",requestKey)}
-            kind=="accounts"->{put("name",name);if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
+            kind=="accounts"->{put("name",name);if(type=="BANK"){put("bankName",bankName);put("accountHolderName",accountHolder);put("bankBranchName",bankBranch);put("accountNumberMasked",bankNumber);put("ifsc",bankIfsc);put("upiId",bankUpi);put("printBankDetails",printBank);put("printUpiQr",printQr)};if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
                 "transfers"->{put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
                 "owners"->{put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}

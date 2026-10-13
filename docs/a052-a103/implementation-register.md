@@ -3779,13 +3779,19 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Both switches OFF, bank ON, QR ON, both ON; save/reload/edit; conditional fields; valid/invalid IFSC/UPI; correct account output and switch-off behavior across invoice formats.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+**Checkpoint work in progress:** Bank metadata and independent print opt-ins added to schema/services and conditional web create/edit forms; migration 120 prepared. Twenty-one focused metadata/replay tests passed. Native, invoice output and final validation remain pending.
+
+**Completed bank slice:** Persisted bank holder/branch/UPI and independent print opt-ins; conditional retained web create/edit and native fields/validation; active authorized invoice bank selection on web/native Settings; selected bank output fails closed outside company/compatible branch; existing global profile retained when unselected. Local additive migration 120 applied. 15 grouped PostgreSQL tests passed, including bank metadata/retry/clearing and invoice selection authorization with no ledger effects. 55 print/profile tests passed with real parsed PDFs and QR image checks in A4/A5/thermal. 21 bank metadata/replay tests passed. 2 desktop/mobile-web bank validation/edit/accessibility and authenticated web/mobile invoice tests passed (1.0m). Native final compile and 3 bank-validation JVM tests passed; TypeScript/targeted ESLint/Prisma validation/generation/local migration deploy passed.
+
+**Remaining for this finding:** A064-F04 remains PARTIAL: saved audit explicitly leaves alternate account-number/UPI requirement unresolved. Clarification requested; final-head and physical device validation pending.
+
 
 ## A064-F05 — Bank balance adjustment and Add/Reduce Cash workflows are absent
 

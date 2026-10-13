@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { saveMoneyAccountAction } from "@/app/actions/money";
+import { saveMoneyAccountAction,saveMoneyAccountMetadataAction } from "@/app/actions/money";
 import {
   ActionFeedbackForm,
   AccountFieldError,
@@ -13,17 +13,20 @@ function Field({
   label,
   maxLength,
   required = false,
+  defaultValue,
 }: {
   name: string;
   label: string;
   maxLength: number;
   required?: boolean;
+  defaultValue?:string;
 }) {
   const error = useAccountFieldError(name);
   return (
     <label>
       {label}
       <input
+        defaultValue={defaultValue}
         name={name}
         aria-label={label}
         maxLength={maxLength}
@@ -83,7 +86,9 @@ function Choice({
   label,
   children,
   defaultValue,
+  onChange,
 }: {
+  onChange?:(value:string)=>void;
   defaultValue?: string;
   name: string;
   label: string;
@@ -96,6 +101,7 @@ function Choice({
       <select
         name={name}
         defaultValue={defaultValue}
+        onChange={e=>onChange?.(e.target.value)}
         aria-label={label}
         aria-invalid={!!error}
         aria-describedby={error ? `${name}-error` : undefined}
@@ -116,6 +122,7 @@ export function MoneyAccountForm({
   initialType?: "BANK" | "CASH" | "PETTY_CASH";
 }) {
   const [requestKey, setRequestKey] = useState(creationRequestKey);
+  const [accountType,setAccountType]=useState<string>(initialType);
   return (
     <ActionFeedbackForm
       action={saveMoneyAccountAction}
@@ -125,7 +132,7 @@ export function MoneyAccountForm({
       <input type="hidden" name="creationRequestKey" value={requestKey} />
       <FocusErrors />
       <SavePendingFields>
-        <Choice name="type" label="Account type" defaultValue={initialType}>
+        <Choice name="type" label="Account type" defaultValue={initialType} onChange={setAccountType}>
           <option value="BANK">Bank</option>
           <option value="CASH">Cash</option>
           <option value="PETTY_CASH">Petty Cash</option>
@@ -144,13 +151,7 @@ export function MoneyAccountForm({
             </option>
           ))}
         </Choice>
-        <Field name="bankName" label="Bank name" maxLength={160} />
-        <Field
-          name="accountNumberMasked"
-          label="Masked account number"
-          maxLength={40}
-        />
-        <Field name="ifsc" label="IFSC" maxLength={20} />
+        <fieldset hidden={accountType!=="BANK"} style={accountType!=="BANK"?{display:"none"}:undefined} disabled={accountType!=="BANK"}><BankFields/></fieldset>
         <Field
           name="openingBalance"
           label="Starting balance (optional)"
@@ -181,3 +182,7 @@ export function MoneyAccountForm({
     </ActionFeedbackForm>
   );
 }
+
+type BankValues={bankName?:string|null;accountNumberMasked?:string|null;ifsc?:string|null;accountHolderName?:string|null;bankBranchName?:string|null;upiId?:string|null;printBankDetails?:boolean;printUpiQr?:boolean};
+function BankFields({values={}}:{values?:BankValues}){return <><legend>Bank details and invoice preferences</legend><Field name="bankName" label="Bank name" maxLength={160} defaultValue={values.bankName??""}/><Field name="accountHolderName" label="Account holder name" maxLength={160} defaultValue={values.accountHolderName??""}/><Field name="bankBranchName" label="Bank branch name" maxLength={160} defaultValue={values.bankBranchName??""}/><Field name="accountNumberMasked" label="Masked account number" maxLength={40} defaultValue={values.accountNumberMasked??""}/><Field name="ifsc" label="IFSC" maxLength={20} defaultValue={values.ifsc??""}/><p style={{color:"#445167"}}>Enter IFSC from your bank document. We check its format; we do not verify it with the bank.</p><Field name="upiId" label="UPI ID" maxLength={322} defaultValue={values.upiId??""}/><input type="hidden" name="printBankDetails" value="false"/><label><input type="checkbox" name="printBankDetails" value="true" defaultChecked={values.printBankDetails??false}/>Print bank details on invoices</label><input type="hidden" name="printUpiQr" value="false"/><label><input type="checkbox" name="printUpiQr" value="true" defaultChecked={values.printUpiQr??false}/>Print payment QR on invoices</label></>;}
+export function MoneyAccountMetadataForm({account}:{account:BankValues&{id:string;name:string;type:string}}){return <ActionFeedbackForm action={saveMoneyAccountMetadataAction} className="stack"><input type="hidden" name="id" value={account.id}/><FocusErrors/><SavePendingFields><Field name="name" label="Account display name" maxLength={160} required defaultValue={account.name}/>{account.type==="BANK"&&<fieldset><BankFields values={account}/></fieldset>}<SaveSubmitButton>Save account details</SaveSubmitButton></SavePendingFields></ActionFeedbackForm>;}

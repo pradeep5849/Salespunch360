@@ -1,9 +1,10 @@
 import { z } from "zod";
 export const PRINT_BOOLS = ["regularDefault","repeatHeader","printCompanyName","companyLogo","address","email","phone","gstinOnSale","billOfSupply","originalDuplicate","expandTable","totalItemQuantity","amountDecimal","receivedAmount","balanceAmount","partyCurrentBalance","taxDetails","amountGrouping","youSaved","printDescription","termsEnabled","receivedBy","deliveredBy","signatureText","paymentMode","acknowledgement","pageNumbers"] as const;
-export const PRINT_STRINGS = ["printer","theme","printTextSize","pageSize","orientation","companyNameTextSize","amountWordsFormat","termsText","customSignatureText","transactionName","itemTableColumns"] as const;
+export const PRINT_STRINGS = ["printer","theme","printTextSize","pageSize","orientation","companyNameTextSize","amountWordsFormat","termsText","customSignatureText","transactionName","itemTableColumns","bankAccountId"] as const;
 export const invoicePrintSettingsSchema = z.object({
   ...Object.fromEntries(PRINT_BOOLS.map(key=>[key,z.boolean().optional()])),
   ...Object.fromEntries(PRINT_STRINGS.map(key=>[key,z.string().max(key==="termsText"?10000:500).optional()])),
+  bankAccountId:z.union([z.literal(""),z.string().uuid()]).optional(),
   printer:z.enum(["REGULAR","THERMAL"]).optional(),
   pageSize:z.enum(["A4","A5","THERMAL_80MM"]).optional(),
   orientation:z.enum(["PORTRAIT","LANDSCAPE"]).optional(),

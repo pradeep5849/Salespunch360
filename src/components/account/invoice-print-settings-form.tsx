@@ -6,14 +6,16 @@ import styles from "./invoice-print-settings.module.css";
 
 export type InvoicePrintSettings=Record<string,string|number|boolean>;
 type SearchableProps={"data-search"?:string};
-type Props={values:InvoicePrintSettings;action:(fd:FormData)=>Promise<void>};
+type Props={banks?:Array<{id:string;name:string}>;values:InvoicePrintSettings;action:(fd:FormData)=>Promise<void>};
 const bool=(v:unknown,fallback:boolean)=>typeof v==="boolean"?v:fallback;
 const str=(v:unknown,fallback:string)=>typeof v==="string"?v:fallback;
 const num=(v:unknown,fallback:number)=>typeof v==="number"?v:fallback;
 
-export function InvoicePrintSettingsForm({values,action}:Props){
+export function InvoicePrintSettingsForm({values,action,banks=[]}:Props){
  const defaults=useMemo(()=>({
   printer:str(values.printer,"REGULAR"),regularDefault:bool(values.regularDefault,true),theme:str(values.theme,"REGULAR"),printTextSize:str(values.printTextSize,"MEDIUM"),pageSize:str(values.pageSize,"A4"),orientation:str(values.orientation,"PORTRAIT"),repeatHeader:bool(values.repeatHeader,true),printCompanyName:bool(values.printCompanyName,true),companyNameTextSize:str(values.companyNameTextSize,"LARGE"),companyLogo:bool(values.companyLogo,true),address:bool(values.address,true),email:bool(values.email,true),phone:bool(values.phone,true),gstinOnSale:bool(values.gstinOnSale,true),billOfSupply:bool(values.billOfSupply,false),topSpace:num(values.topSpace,0),originalDuplicate:bool(values.originalDuplicate,false),expandTable:bool(values.expandTable,true),minRows:num(values.minRows,0),totalItemQuantity:bool(values.totalItemQuantity,true),amountDecimal:bool(values.amountDecimal,true),receivedAmount:bool(values.receivedAmount,true),balanceAmount:bool(values.balanceAmount,true),partyCurrentBalance:bool(values.partyCurrentBalance,false),taxDetails:bool(values.taxDetails,true),amountGrouping:bool(values.amountGrouping,true),amountWordsFormat:str(values.amountWordsFormat,"INDIAN"),youSaved:bool(values.youSaved,true),printDescription:bool(values.printDescription,true),termsEnabled:bool(values.termsEnabled,true),termsText:str(values.termsText,""),receivedBy:bool(values.receivedBy,true),deliveredBy:bool(values.deliveredBy,true),signatureText:bool(values.signatureText,true),customSignatureText:str(values.customSignatureText,""),paymentMode:bool(values.paymentMode,true),acknowledgement:bool(values.acknowledgement,true),pageNumbers:bool(values.pageNumbers,false),transactionName:str(values.transactionName,"Sale Invoice"),itemTableColumns:str(values.itemTableColumns,"ITEM,QTY,RATE,TAX,AMOUNT")}),[values]);
+ const[bankAccountId,setBankAccountId]=useState(str(values.bankAccountId,""));
+ const bankUnavailable=bankAccountId!==""&&!banks.some(bank=>bank.id===bankAccountId);
  const[printer,setPrinter]=useState(defaults.printer),[topSpace,setTopSpace]=useState(defaults.topSpace),[minRows,setMinRows]=useState(defaults.minRows),[search,setSearch]=useState("");
  const rows=(items:ReactNode[])=>items.filter(Boolean);
  const toggle=(name:string,label:string,checked:boolean,info=true)=><label className={styles.row} data-search={label.toLowerCase()}><span>{label}{info&&<i title={label}>i</i>}</span><input className={styles.switch} name={name} type="checkbox" defaultChecked={checked}/></label>;
@@ -46,9 +48,10 @@ export function InvoicePrintSettingsForm({values,action}:Props){
    nav("Item Table Customization","itemTableColumns",defaults.itemTableColumns,"ITEM,QTY,RATE,TAX,AMOUNT"),toggle("totalItemQuantity","Total Item Quantity",defaults.totalItemQuantity),toggle("amountDecimal","Amount with Decimal(eg 0.00)",defaults.amountDecimal),toggle("receivedAmount","Received amount",defaults.receivedAmount),toggle("balanceAmount","Balance amount",defaults.balanceAmount),toggle("partyCurrentBalance","Print Current Balance of Party",defaults.partyCurrentBalance),toggle("taxDetails","Tax details",defaults.taxDetails),toggle("amountGrouping","Amount Grouping",defaults.amountGrouping),
    <label key="words" className={styles.selectRow} data-search="amount in words format"><span>Amount in words format <i>i</i></span><select name="amountWordsFormat" defaultValue={defaults.amountWordsFormat}><option value="INDIAN">Indian Eg 1,00,00,000</option><option value="INTERNATIONAL">International Eg 10,000,000</option></select></label>,toggle("youSaved","You Saved",defaults.youSaved)
   ]))}
+  {section("Payment instructions",rows([<label key="bank" className={styles.selectRow} data-search="invoice bank account payment instructions"><span>Invoice bank account</span><select name="bankAccountId" aria-label="Invoice bank account" value={bankAccountId} onChange={e=>setBankAccountId(e.target.value)}><option value="">Use existing global print profile</option>{bankUnavailable&&<option value={bankAccountId}>Unavailable bank (select another account)</option>}{banks.map(bank=><option key={bank.id} value={bank.id}>{bank.name}</option>)}</select></label>]))}
   {section("Footer",rows([
    toggle("printDescription","Print description",defaults.printDescription),toggle("termsEnabled","Terms & Conditions",defaults.termsEnabled),nav("Set Terms & Conditions","termsText",defaults.termsText,"Enter terms & conditions"),toggle("receivedBy","Print Received by details",defaults.receivedBy),toggle("deliveredBy","Print Delivered by details",defaults.deliveredBy),toggle("signatureText","Print Signature Text",defaults.signatureText),nav("Set Custom Signature Text","customSignatureText",defaults.customSignatureText,"Authorized Signatory"),toggle("paymentMode","Payment mode",defaults.paymentMode),toggle("acknowledgement","Print Acknowledgement",defaults.acknowledgement),toggle("pageNumbers","Print Page Numbers",defaults.pageNumbers)
   ]))}
-</SavePendingFields>  <div className={styles.save}><SaveSubmitButton className="account-primary">Save Invoice Print Settings</SaveSubmitButton></div>
+</SavePendingFields>  <div className={styles.save}><SaveSubmitButton disabled={bankUnavailable} className="account-primary">Save Invoice Print Settings</SaveSubmitButton></div>
  </SaveFeedbackForm>;
 }

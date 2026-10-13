@@ -57,7 +57,7 @@ const branchWhere = (a: ReturnType<typeof mobileAccountActor>) =>
     : {};
 export async function mobileSettings(u: MobileAppPrincipal) {
   const a = actor(u, "ACCOUNT_SETTINGS");
-  const [settings, fields, templates, modules, branches, numberingSeries] =
+  const [settings, fields, templates, modules, branches, numberingSeries,invoiceBanks] =
     await Promise.all([
       db.accountSettings.findUnique({ where: { companyId: a.companyId } }),
       db.customFieldDefinition.findMany({
@@ -83,8 +83,10 @@ export async function mobileSettings(u: MobileAppPrincipal) {
         },
         select: { branchId: true, seriesKey: true, prefix: true },
       }),
+      db.moneyAccount.findMany({where:{companyId:a.companyId,type:"BANK",isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{OR:[{branchId:null},{branchId:{in:a.branchIds??[]}}]}:{})},select:{id:true,name:true},orderBy:{name:"asc"}}),
     ]);
   return {
+    invoiceBanks,
     settings,
     fields,
     templates,
