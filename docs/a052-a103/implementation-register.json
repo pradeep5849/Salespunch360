@@ -18642,14 +18642,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A082-F01",
         "A082-F02",
         "A083-F01"
-      ]
+      ],
+      "checkpoint_work": {
+        "implementation": "Authenticated quotation list/detail/editor options and customer-safe export DTO now enforce shared QUOTATIONS_BOQ module boundary before reading records. Web/mobile wrappers and PDF export inherit the same check. Public issued share tokens retain their existing token/revocation/expiry boundary. No source data/model changes.",
+        "tests": "52 focused quotation runtime/mobile contract/PDF tests passed across 3 files; includes unavailable-module early denial for all 4 authenticated read paths and public DTO independence. TypeScript and focused ESLint passed. Intermediate only.",
+        "remaining": "Final-head complete regression and export/browser validation. QUOTATIONS_BOQ is currently a core capability, so normal supported Account companies cannot toggle it OFF; early denial was exercised through the shared module boundary."
+      }
     },
     {
       "finding_id": "A084-F01",

@@ -7176,13 +7176,19 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Disabled/enabled module direct list/detail/options/PDF routes on both platforms; no-data disclosure when denied.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A079-A083_Estimate_Quotation_Findings.json, SalesPunch360_A079-A083_Estimate_Quotation_Audit.md.
 
 **Linked finding IDs:** A082-F01, A082-F02, A083-F01.
+
+**Checkpoint work:** Authenticated quotation list/detail/editor options and customer-safe export DTO now enforce shared QUOTATIONS_BOQ module boundary before reading records. Web/mobile wrappers and PDF export inherit the same check. Public issued share tokens retain their existing token/revocation/expiry boundary. No source data/model changes.
+
+**Intermediate validation:** 52 focused quotation runtime/mobile contract/PDF tests passed across 3 files; includes unavailable-module early denial for all 4 authenticated read paths and public DTO independence. TypeScript and focused ESLint passed. Intermediate only.
+
+**Remaining:** Final-head complete regression and export/browser validation. QUOTATIONS_BOQ is currently a core capability, so normal supported Account companies cannot toggle it OFF; early denial was exercised through the shared module boundary.
 
 ## A084-F01 — Run Report rejects blank All selector values
 
