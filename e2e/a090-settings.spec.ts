@@ -123,6 +123,7 @@ test.afterAll(async () => {
     await tx.projectChangeOrder.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
     await tx.moneyTransfer.deleteMany({where:{companyId}});
+    await tx.loanOperation.deleteMany({where:{companyId}});
     await tx.loanPayment.deleteMany({where:{companyId}});
     await tx.loan.deleteMany({where:{companyId}});
     await tx.journalLine.deleteMany({where:{companyId}});
@@ -1626,6 +1627,9 @@ test("A067 loan identity creation opens scoped detail and ledger statement",asyn
  await paymentForm.getByLabel("Loan to repay",{exact:true}).selectOption(loan.id);await paymentForm.getByLabel("Payment account",{exact:true}).selectOption(account.id);await paymentForm.getByLabel("Payment date",{exact:true}).fill("2032-01-02");await paymentForm.getByLabel("Principal paid",{exact:true}).fill("100001");await paymentForm.getByLabel("Interest paid",{exact:true}).fill("550");await paymentForm.getByLabel("Payment description",{exact:true}).fill("October EMI");await paymentForm.getByRole("button",{name:"Post EMI/payment"}).click();await expect(paymentForm.getByRole("alert")).toContainText("cannot exceed",{timeout:20000});await expect(paymentForm.getByLabel("Payment description",{exact:true})).toHaveValue("October EMI");
  await paymentForm.getByLabel("Principal paid",{exact:true}).fill("2000");await expect(paymentForm.getByRole("status").filter({hasText:"Payment total"})).toContainText("2,550.00");await paymentForm.getByRole("button",{name:"Post EMI/payment"}).click();await expect(paymentForm.getByRole("status").filter({hasText:"Loan payment posted"})).toBeVisible({timeout:20000});expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);
  await page.getByRole("link",{name:"A067 Project loan · TERM"}).click();await expect(page.locator("dl")).toContainText("98,000.00",{timeout:20000});await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("October EMI");await expect(page.getByRole("region",{name:"Loan statement"})).toContainText("2,550.00");
+
+ const journalsBefore=await db.journalEntry.count({where:{companyId}});const metadata=page.locator("section[aria-label='Edit loan details']");
+ await metadata.getByLabel("Loan name",{exact:true}).fill("A067 Edited loan");await metadata.getByLabel("Description",{exact:true}).fill("Updated loan details");await metadata.getByRole("button",{name:"Save loan details"}).click();await expect(metadata.getByRole("status")).toContainText("Loan details saved",{timeout:20000});await expect(page.getByRole("heading",{name:"A067 Edited loan",exact:true})).toBeVisible({timeout:20000});expect(await db.journalEntry.count({where:{companyId}})).toBe(journalsBefore);expect(await db.loanOperation.count({where:{companyId,loanId:loan.id,action:"EDIT_METADATA"}})).toBe(1);await expect(page.locator("dl")).toContainText("98,000.00");
 
 });
 

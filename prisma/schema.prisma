@@ -851,6 +851,8 @@ model Company {
 }
 
 model User {
+  loanOperations LoanOperation[] @relation("LoanOperationCreator")
+
   completedServiceReminders ServiceReminderCompletion[] @relation("ServiceReminderCompleter")
   id                         String                   @id @default(uuid()) @db.Uuid
   companyId                  String?                  @db.Uuid
@@ -2101,6 +2103,8 @@ model CostCentre {
 }
 
 model JournalEntry {
+  loanOperations LoanOperation[] @relation("LoanOperationJournal")
+
   id                  String               @id @default(uuid()) @db.Uuid
   companyId           String               @db.Uuid
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -3057,6 +3061,8 @@ model ExpenseAttachment {
 }
 
 model MoneyAccount {
+  loanOperations LoanOperation[] @relation("LoanOperationMoneyAccount")
+
   id                  String           @id @default(uuid()) @db.Uuid
   companyId           String           @db.Uuid
   branchId            String?          @db.Uuid
@@ -3155,6 +3161,11 @@ model OwnerFinancialAccount {
 }
 
 model Loan {
+  version Int @default(0)
+  creationRequestHash String? @db.VarChar(64)
+  archivedAt DateTime?
+  operations LoanOperation[]
+
   id                String     @id @default(uuid()) @db.Uuid
   companyId         String     @db.Uuid
   branchId          String     @db.Uuid
@@ -3182,6 +3193,32 @@ model Loan {
   @@unique([companyId, idempotencyKey])
   @@index([companyId, status])
   @@map("loans")
+}
+
+model LoanOperation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  loanId String @db.Uuid
+  loan Loan @relation(fields:[companyId,loanId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_loan_company_fkey")
+  action String @db.VarChar(24)
+  requestKey String @db.Uuid
+  requestHash String @db.VarChar(64)
+  expectedVersion Int
+  resultingVersion Int
+  amount Decimal? @db.Decimal(18,2)
+  operationDate DateTime? @db.Date
+  moneyAccountId String? @db.Uuid
+  moneyAccount MoneyAccount? @relation("LoanOperationMoneyAccount",fields:[companyId,moneyAccountId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_money_company_fkey")
+  journalEntryId String? @db.Uuid
+  journalEntry JournalEntry? @relation("LoanOperationJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_journal_company_fkey")
+  createdById String @db.Uuid
+  createdBy User @relation("LoanOperationCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_creator_company_fkey")
+  metadata Json?
+  createdAt DateTime @default(now())
+  @@unique([companyId,id])
+  @@unique([companyId,requestKey])
+  @@index([companyId,loanId,createdAt])
+  @@map("loan_operations")
 }
 
 model LoanPayment {

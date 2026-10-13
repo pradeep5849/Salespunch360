@@ -1,3 +1,4 @@
+import {loanCreationFingerprint} from "./loan-fingerprint";
 import {moneyBankMetadata,bankIfsc,hasBankMetadata} from "./money-bank-metadata";
 import { moneyReadContext } from "./money-context";
 import { createSettlementForActor } from "./commercial";
@@ -1180,7 +1181,9 @@ export const loanInput = z.object({
   idempotencyKey: z.string().min(8).max(160),
 });
 export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
+  if(!canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_LOAN_ADMIN"))throw new AuthorizationError();
   const d = loanInput.parse(raw);
+  const fingerprint=loanCreationFingerprint(d);
   branchOk(a, d.branchId);
   if (!new D(d.principal).gt(0)) throw new Error("INVALID_AMOUNT");
   return retrySerializable(
@@ -1193,6 +1196,7 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
           });
           if (existing) {
             branchOk(a, existing.branchId);
+            if(existing.creationRequestHash){if(existing.creationRequestHash!==fingerprint)throw new Error("IDEMPOTENCY_CONFLICT");return existing;}
             if (
               existing.branchId !== d.branchId ||
               existing.moneyAccountId !== d.moneyAccountId ||
@@ -1259,6 +1263,7 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
                 companyId: a.companyId,
                 ...d,
                 principal,
+                creationRequestHash:fingerprint,
                 interestRate: d.interestRate ? new D(d.interestRate) : null,
                 liabilityLedgerId: liability.id,
                 receivedJournalId: journal.id,
@@ -1288,6 +1293,7 @@ export const paymentInput = z.object({
   idempotencyKey: z.string().min(8).max(160),
 });
 export async function postLoanPaymentForActor(a: Actor, raw: unknown) {
+  if(!canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_LOAN_ADMIN"))throw new AuthorizationError();
   const d = paymentInput.parse(raw);
   if (!new D(d.principal).add(d.interest).add(d.charges).gt(0))
     throw new Error("INVALID_AMOUNT");

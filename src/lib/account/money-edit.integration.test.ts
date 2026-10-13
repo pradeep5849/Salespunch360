@@ -112,6 +112,7 @@ describe.skipIf(!url)(
         await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
         await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
         await tx.moneyTransfer.deleteMany({ where: { companyId } });
+        await tx.loanOperation.deleteMany({where:{companyId}});
         await tx.loanPayment.deleteMany({where:{companyId}});
         await tx.loan.deleteMany({where:{companyId}});
         await tx.journalLine.deleteMany({ where: { companyId } });
@@ -183,6 +184,22 @@ describe.skipIf(!url)(
       await expect(updateSettingsSectionForActor(actor,"invoicePrintSettings",{bankAccountId:randomUUID()})).rejects.toThrow("BANK_ACCOUNT_NOT_AVAILABLE");
       await client.moneyAccount.update({where:{id:bank.id},data:{isActive:false}});await expect(updateSettingsSectionForActor(actor,"invoicePrintSettings",{bankAccountId:bank.id})).rejects.toThrow("BANK_ACCOUNT_NOT_AVAILABLE");expect(await invoiceBankProfile(companyId,branchId,bank.id)).toEqual({bankDetails:null,showQr:false});await client.moneyAccount.update({where:{id:bank.id},data:{isActive:true}});
       expect(await client.journalEntry.count({where:{companyId}})).toBe(journalsBefore);
+    });
+    it("edits loan metadata once under concurrent retries and preserves the original financial request",async()=>{
+      const {editLoanMetadataForActor}=await import("./loan-operations");
+      const loan=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});const journalsBefore=await client.journalEntry.count({where:{companyId}});
+      const request={requestKey:randomUUID(),expectedVersion:loan.version,displayName:"Edited statement loan",loanAccountNumber:"EDITED-ACCOUNT",description:"Edited details",durationMonths:"24"};
+      const [first,second]=await Promise.all([editLoanMetadataForActor(actor,loan.id,request),editLoanMetadataForActor(actor,loan.id,request)]);expect(first.version).toBe(loan.version+1);expect(second.version).toBe(first.version);expect(await client.loanOperation.count({where:{companyId,requestKey:request.requestKey}})).toBe(1);
+      expect(first).toMatchObject({displayName:"Edited statement loan",loanAccountNumber:"EDITED-ACCOUNT",durationMonths:24,receivedJournalId:loan.receivedJournalId,creationRequestHash:loan.creationRequestHash});expect(first.principal.eq(loan.principal)).toBe(true);expect(await client.journalEntry.count({where:{companyId}})).toBe(journalsBefore);
+      await expect(editLoanMetadataForActor(actor,loan.id,{...request,description:"Changed same key"})).rejects.toThrow("IDEMPOTENCY_CONFLICT");await expect(editLoanMetadataForActor(actor,loan.id,{...request,requestKey:randomUUID()})).rejects.toThrow("LOAN_CHANGED");await expect(editLoanMetadataForActor({...actor,accountRole:"ACCOUNTANT"},loan.id,request)).rejects.toThrow();await expect(editLoanMetadataForActor({...actor,companyId:otherCompany},loan.id,request)).rejects.toThrow();await expect(editLoanMetadataForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},loan.id,request)).rejects.toThrow();
+      const original={branchId:loan.branchId,lender:loan.lender,loanType:loan.loanType,principal:loan.principal.toString(),startDate:loan.startDate,moneyAccountId:loan.moneyAccountId,idempotencyKey:loan.idempotencyKey!};expect((await createAndReceiveLoanForActor(actor,original)).id).toBe(loan.id);expect(await client.journalEntry.count({where:{companyId}})).toBe(journalsBefore);
+      const operation=await client.loanOperation.findFirstOrThrow({where:{companyId,requestKey:request.requestKey}});await expect(client.loanOperation.update({where:{id:operation.id},data:{metadata:{forged:true}}})).rejects.toThrow("LOAN_OPERATION_IMMUTABLE");await expect(client.loan.update({where:{id:loan.id},data:{principal:"1"}})).rejects.toThrow("LOAN_RECEIPT_IMMUTABLE");await expect(client.loan.delete({where:{id:loan.id}})).rejects.toThrow("LOAN_HISTORY_IMMUTABLE");
+    });
+    it("rolls back loan metadata and its retry record when audit insertion fails",async()=>{
+      const {editLoanMetadataForActor}=await import("./loan-operations");const before=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});const request={requestKey:randomUUID(),expectedVersion:before.version,description:"Must roll back"};const suffix=randomUUID().replaceAll("-","");const fn=`loan_audit_${suffix}`,trigger=`loan_audit_trigger_${suffix}`;
+      await client.$executeRawUnsafe(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."companyId"='${companyId}'::uuid AND NEW."eventType"='LOAN_METADATA_EDITED' THEN RAISE EXCEPTION 'test loan audit failure'; END IF; RETURN NEW; END $$`);
+      await client.$executeRawUnsafe(`CREATE TRIGGER ${trigger} BEFORE INSERT ON account_operational_audits FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+      try{await expect(editLoanMetadataForActor(actor,before.id,request)).rejects.toThrow();expect(await client.loan.findUniqueOrThrow({where:{id:before.id}})).toMatchObject({version:before.version,description:before.description});expect(await client.loanOperation.count({where:{companyId,requestKey:request.requestKey}})).toBe(0);}finally{await client.$executeRawUnsafe(`DROP TRIGGER ${trigger} ON account_operational_audits`);await client.$executeRawUnsafe(`DROP FUNCTION ${fn}()`);}
     });
     it("replays concurrent creation without a second account, ledger or audit", async () => {
       const input = {

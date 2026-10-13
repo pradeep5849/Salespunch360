@@ -5424,13 +5424,17 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Top-up increases outstanding and selected receipt account once; edit preserves journals; cancellation permissions, paid loan and historical receipts/payments.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A067_Findings.json, SalesPunch360_A067_Audit_Report.md.
 
 **Linked finding IDs:** A067-F03, A067-F05, A067-F06.
+**Checkpoint work in progress:** Versioned audited metadata editing and immutable operation/creation history implemented; local migration 121 applied. Operation tests and UI/API binding in progress; top-up/cancel/archive remain pending.
+
+**Completed metadata slice:** Completed web/native prefilled metadata editing and return-to-detail flow, authenticated PATCH endpoint, optimistic version and stable request history. Creation fingerprints preserve original request equivalence after edits; direct loan write/replay services enforce Loan Admin permission. Posted receipt fields and operation audit history are protected by new DB guards. Backup snapshot includes loanOperation records. Top-up/cancel/archive remain pending. 26 focused loan metadata/replay/input tests and 6 focused service/API tests passed. 17 grouped PostgreSQL regressions passed, including concurrent same-key replay, stale/altered edits, actor/company/branch denials, original receipt preservation, DB immutable-history rejection and audit rollback. 4 desktop/mobile-web workflow/permission tests passed (45.7s); native compilation, TypeScript and targeted ESLint passed. Migration 121 locally applied. Final-head/device checks not yet run.
+
 
 ## A067-F05 — Add EMI lacks computed total and persisted optional description
 

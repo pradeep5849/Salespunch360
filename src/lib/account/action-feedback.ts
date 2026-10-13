@@ -8,6 +8,7 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  LOAN_CHANGED:"This loan changed. Reload its latest details before saving again.",
   BANK_ACCOUNT_NOT_AVAILABLE:"Select an active bank account available to your branch.",
   BANK_UPI_REQUIRED:"Enter a valid UPI ID before enabling the payment QR on invoices.",
   BANK_METADATA_NOT_APPLICABLE:"Bank details and payment QR settings apply to bank accounts. Select a bank account.",

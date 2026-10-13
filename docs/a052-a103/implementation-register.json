@@ -14584,7 +14584,11 @@
         "prisma/schema.prisma",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
         "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
-        "src/lib/accounting/service.ts"
+        "src/lib/accounting/service.ts",
+        "src/lib/account/loan-operations.ts",
+        "src/lib/account/loan-fingerprint.ts",
+        "src/components/account/loan-metadata-form.tsx",
+        "src/app/api/v1/mobile/account/money/loans/[id]/route.ts"
       ],
       "affected_services_apis_actions": [
         "loanAction / loanPaymentAction",
@@ -14599,7 +14603,8 @@
         "MoneyAccount",
         "JournalEntry",
         "JournalLine",
-        "AccountOperationalAudit"
+        "AccountOperationalAudit",
+        "LoanOperation"
       ],
       "module_impact": "Core money/loan accounting; preserve existing navigation and optional module rules. No project-module dependency inferred from loan name Project.",
       "permission_impact": "Reads ACCOUNT_MONEY_VIEW; mutations ACCOUNT_LOAN_ADMIN; generic reversal ACCOUNT_JOURNAL_REVERSE. Maintain server permissions and reflect them in UI.",
@@ -14683,13 +14688,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A067-F03",
         "A067-F05",
         "A067-F06"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Loan metadata edit service, optimistic versioning, immutable operation history and original creation fingerprints implemented; migration 121 locally applied. Top-up/cancellation/archive and UI/API binding remain pending.",
+          "tests": "Schema validation/generation and focused TypeScript/lint checks passed; focused operation regression validation in progress. No final-head result claimed."
+        },
+        {
+          "work": "Completed web/native prefilled metadata editing and return-to-detail flow, authenticated PATCH endpoint, optimistic version and stable request history. Creation fingerprints preserve original request equivalence after edits; direct loan write/replay services enforce Loan Admin permission. Posted receipt fields and operation audit history are protected by new DB guards. Backup snapshot includes loanOperation records. Top-up/cancel/archive remain pending.",
+          "tests": "26 focused loan metadata/replay/input tests and 6 focused service/API tests passed. 17 grouped PostgreSQL regressions passed, including concurrent same-key replay, stale/altered edits, actor/company/branch denials, original receipt preservation, DB immutable-history rejection and audit rollback. 4 desktop/mobile-web workflow/permission tests passed (45.7s); native compilation, TypeScript and targeted ESLint passed. Migration 121 locally applied. Final-head/device checks not yet run."
+        }
       ]
     },
     {
@@ -15095,12 +15110,18 @@
         "A067-F08",
         "A067-F09"
       ],
-      "checkpoint_work": {
-        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.",
-        "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
-      }
+      "checkpoint_work": [
+        {
+          "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+          "work": "Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.",
+          "remaining_work": "Final-head regression and original finding verification remain pending.",
+          "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        },
+        {
+          "work": "Creation request fingerprints remain stable through metadata edits; explicit Loan Admin service permission also applies before replay.",
+          "tests": "Independently verified original create replay after metadata edit and role/branch/company denials in focused/PostgreSQL checks. Final-head verification pending."
+        }
+      ]
     },
     {
       "finding_id": "A067-F08",
@@ -21729,7 +21750,13 @@
       "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Backup snapshot now includes immutable loanOperation request/audit records with deterministic ordering; existing Loan snapshots include versions and creation fingerprints.",
+          "tests": "TypeScript/lint passed. Dedicated backup and final-head verification remain pending; no finding completion inferred."
+        }
+      ]
     },
     {
       "finding_id": "A089-F01",

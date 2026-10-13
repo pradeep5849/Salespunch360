@@ -114,7 +114,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                     }
                 }
             },
-            confirmButton = { Row { if(s.historyIsAccount&&can("postMoneyEntries"))s.history?.get("account")?.jsonObject?.takeIf{it["isActive"]?.jsonPrimitive?.booleanOrNull==true}?.let{row->TextButton({vm.adjustAccount(row)}){Text("Add / Reduce")}};TextButton(vm::closeOwnerHistory) { Text("Close") } } }
+            confirmButton = { Row { if(s.historyIsLoan&&can("manageLoans"))s.history?.get("loan")?.jsonObject?.let{loan->TextButton({vm.editLoanMetadata(loan)},enabled=!s.saving&&!s.historyLoading){Text("Edit loan details")}};if(s.historyIsAccount&&can("postMoneyEntries"))s.history?.get("account")?.jsonObject?.takeIf{it["isActive"]?.jsonPrimitive?.booleanOrNull==true}?.let{row->TextButton({vm.adjustAccount(row)}){Text("Add / Reduce")}};TextButton(vm::closeOwnerHistory) { Text("Close") } } }
         )
     }
     s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save,initialAccountType=moneyAccountInitialType(s.mode,initialQuery))}
@@ -141,10 +141,10 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var openingBranch by remember{mutableStateOf("")}
     var amount by remember{mutableStateOf("")}
     var interest by remember{mutableStateOf("0")}
-    var loanName by remember{mutableStateOf("")}
-    var loanNumber by remember{mutableStateOf("")}
-    var loanDescription by remember{mutableStateOf("")}
-    var loanDuration by remember{mutableStateOf("")}
+    var loanName by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("displayName").orEmpty()else "")}
+    var loanNumber by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("loanAccountNumber").orEmpty()else "")}
+    var loanDescription by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("description").orEmpty()else "")}
+    var loanDuration by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("durationMonths").orEmpty()else "")}
     var loanType by remember{mutableStateOf("TERM")}
     var bankName by remember{mutableStateOf(selected?.str("bankName").orEmpty())}
     var accountHolder by remember{mutableStateOf(selected?.str("accountHolderName").orEmpty())}
@@ -163,14 +163,20 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
         kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
+        kind=="loan-edit"->loanName.length<=240&&loanNumber.length<=160&&loanDescription.length<=2000&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loans"->source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(amount,interest,charges)?.signum()==1
         kind=="accounts"->name.isNotBlank()&&(type!="BANK"||bankErrors.valid)
         else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||owner.isNotBlank())
     }
-    AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(identity)"Owner / partner" else kind.replace('-',' ').replaceFirstChar{it.uppercase()})},text={
+    AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(kind=="loan-edit")"Edit loan details"else if(identity)"Owner / partner" else kind.replace('-',' ').replaceFirstChar{it.uppercase()})},text={
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
-            if(identity){
+            if(kind=="loan-edit"){
+                item{OutlinedTextField(loanName,{loanName=it},label={Text("Loan name")},enabled=!saving)}
+                item{OutlinedTextField(loanNumber,{loanNumber=it},label={Text("Loan account number")},enabled=!saving)}
+                item{OutlinedTextField(loanDescription,{loanDescription=it},label={Text("Description")},enabled=!saving)}
+                item{OutlinedTextField(loanDuration,{loanDuration=it},label={Text("Duration (months)")},enabled=!saving)}
+            }else if(identity){
                 item{OutlinedTextField(name,{name=it},label={Text("Owner / partner name")},enabled=!saving)}
                 item{PickText("Type",type,listOf("OWNER","PARTNER"),enabled=!saving){type=it}}
                 item{OutlinedTextField(phone,{phone=it},label={Text("Phone")},enabled=!saving)}
@@ -241,6 +247,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
         }
     },confirmButton={Button(enabled=!saving&&valid,onClick={save(kind,buildJsonObject{
         when{
+            kind=="loan-edit"->{put("requestKey",requestKey);put("expectedVersion",selected?.get("version")?.jsonPrimitive?.intOrNull?:0);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration)}
             identity->{put("name",name);put("partyType",type);put("phone",phone);put("email",email);put("address",address);if(kind=="owner-setup"){owner.takeIf{it.isNotBlank()}?.let{put("userId",it)};put("branchId",branch);put("creationRequestKey",requestKey)}else put("isActive",active)}
             kind=="adjustments"->{put("moneyAccountId",selected?.str("id").orEmpty());put("branchId",branch);put("direction",direction);put("offsetLedgerId",offsetLedger);put("amount",amount);put("date",date);put("reason",adjustmentReason);put("idempotencyKey",requestKey)}
             kind=="accounts"->{put("name",name);if(type=="BANK"){put("bankName",bankName);put("accountHolderName",accountHolder);put("bankBranchName",bankBranch);put("accountNumberMasked",bankNumber);put("ifsc",bankIfsc);put("upiId",bankUpi);put("printBankDetails",printBank);put("printUpiQr",printQr)};if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
