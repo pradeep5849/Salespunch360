@@ -154,6 +154,23 @@ describe.skipIf(!url)(
         }),
       ).toBe(2);
     });
+    it("serializes same-pair writes and retries without duplicate rules", async () => {
+      const input={baseUnitId:units[0],secondaryUnitId:units[1],rate:"15"};
+      await Promise.all([saveUnitConversionForActor(actor,input),saveUnitConversionForActor(actor,{...input,rate:"18"})]);
+      const read=async()=>((await client.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings as {unitConversions:Array<{baseUnitId:string;secondaryUnitId:string;rate:string}>}).unitConversions;
+      const pair=(await read()).filter(rule=>rule.baseUnitId===input.baseUnitId&&rule.secondaryUnitId===input.secondaryUnitId);
+      expect(pair).toHaveLength(1);expect(["15","18"]).toContain(pair[0].rate);
+      await saveUnitConversionForActor(actor,{...input,rate:pair[0].rate});
+      expect((await read()).filter(rule=>rule.baseUnitId===input.baseUnitId&&rule.secondaryUnitId===input.secondaryUnitId)).toEqual(pair);
+    });
+    it("rolls back both conversion and unit mutations when their audit cannot be persisted", async () => {
+      const invalidActor={...actor,id:randomUUID()};
+      const original=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+      await expect(saveUnitConversionForActor(invalidActor,{baseUnitId:units[0],secondaryUnitId:units[1],rate:"999"})).rejects.toThrow();
+      expect((await client.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings).toEqual(original.itemSettings);
+      await expect(saveUnitForActor(invalidActor,{name:"Rollback unit",symbol:"RB"})).rejects.toThrow();
+      expect(await client.accountUnit.count({where:{companyId,name:"Rollback unit"}})).toBe(0);
+    });
     it("denies cross-company updates and conversion references and non-stock roles", async () => {
       await expect(
         saveUnitForActor(actor, { name: "Stolen", symbol: "ST" }, foreignUnit),
@@ -178,6 +195,18 @@ describe.skipIf(!url)(
           })
         ).name,
       ).toBe("Foreign unit");
+    });
+    it("allows Admin and Accountant but rejects Data Entry and Project Manager on direct unit requests", async () => {
+      for(const accountRole of ["ACCOUNT_ADMIN","ACCOUNTANT"] as const){
+        const allowed={...actor,accountRole};await expect(assertUnitAccess(allowed)).resolves.toBeDefined();
+        const saved=await saveUnitForActor(allowed,{name:`Role ${accountRole}`,symbol:accountRole});
+        await expect(saveUnitForActor(allowed,{name:`Edited ${accountRole}`,symbol:accountRole},saved.id)).resolves.toMatchObject({id:saved.id});
+      }
+      for(const accountRole of ["DATA_ENTRY","PROJECT_MANAGER"] as const){
+        const denied={...actor,accountRole};await expect(assertUnitAccess(denied)).rejects.toThrow();
+        await expect(saveUnitForActor(denied,{name:"Denied role",symbol:"DENIED"})).rejects.toThrow();
+        await expect(saveUnitConversionForActor(denied,{baseUnitId:units[0],secondaryUnitId:units[1],rate:"2"})).rejects.toThrow();
+      }
     });
     it("rejects unit name/short-name duplicates and invalid conversion precision", async () => {
       await expect(

@@ -3222,7 +3222,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F02 — Saved conversion rules have no business application
 
@@ -3266,7 +3266,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F03 — Concurrent conversion saves can overwrite other rules/settings
 
@@ -3310,7 +3310,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F04 — Unit entry points do not consistently enforce item settings or permissions
 
@@ -3354,7 +3354,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F05 — Unit and conversion errors/loading are hidden from users
 
@@ -3398,7 +3398,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F06 — Android unit search and pickers omit records after first 200
 
@@ -3442,7 +3442,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A062-F07 — Units interface lacks reference navigation and accessible web controls
 
@@ -3486,7 +3486,7 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Linked finding IDs:** None explicitly linked.
 
-**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 4, focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
+**Checkpoint work:** Shared atomic audited unit saves/conversion settings, Stock/Items/Units gates, safe web save feedback/dialogs and native complete paging implemented. PostgreSQL 7 (including same-pair retries, atomic rollback and role enforcement), focused tests 24 and Android pagination 3 passed; desktop/mobile browser 2 passed including AXE and Escape/focus checks. Assignment and transaction conversion remain open; no final-head verification.
 
 ## A063-F01 — Menu ignores the disabled Items setting
 

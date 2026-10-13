@@ -8504,7 +8504,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
@@ -8628,7 +8628,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
@@ -8748,7 +8748,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
@@ -8870,7 +8870,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
@@ -8992,7 +8992,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
@@ -9112,7 +9112,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
@@ -9230,7 +9230,7 @@
       "shared_fix_links": [],
       "checkpoint_work": {
         "summary": "Shared company-scoped Stock permission and Items/Units gates, atomic audited unit/conversion saves under the shared settings lock, exact bounded conversion rates, structured save feedback, accessible web dialogs/tabs and complete independent native units paging with retained conversions and retry/error states. Unit-to-item assignment and authoritative transaction conversion remain unfinished.",
-        "verification": "Intermediate: isolated PostgreSQL 4 passed; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
+        "verification": "Intermediate: isolated PostgreSQL 7 passed, including same-pair retries, rollback on audit failure, Admin/Accountant allow and Data Entry/Project Manager denial; focused item-settings/master-reference tests 24 passed; Android compile and 3 MasterPagination tests passed; TypeScript and focused ESLint passed. Desktop/mobile browser 2 passed, including concurrent rule persistence, >200 units, duplicate error/draft retention, successful saves, Units OFF, AXE and Escape/focus checks. No final-head verification claimed.",
         "remaining": "Finish original finding-specific behavior and verification; final-head checkpoint validation and native device/accessibility/share limitations remain.",
         "files": [
           "src/lib/account/units.ts",
