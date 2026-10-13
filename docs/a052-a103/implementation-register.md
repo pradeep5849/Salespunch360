@@ -4154,6 +4154,8 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Creation retry slice:** Web/native stable creation identity with company-scoped payload validation and atomic replay prevents duplicate accounts/asset ledgers; additive nullable migration preserves legacy rows. Intermediate 23 focused tests, Android compile plus 3 tests, desktop/mobile browser 2, Prisma validate/local migrate and TypeScript/ESLint passed. Final-head validation/migration rehearsal remain.
 
+**Transfer form slice:** Accessible branch-compatible active account selections, same-account/zero prevention, pending controls and stable retry key with structured feedback. Money Entry gates web account/transfer forms. Intermediate 30 focused tests and grouped desktop/mobile browser 4 passed, including one balanced real transfer. TypeScript/ESLint passed; broader forms/final-head validation remain.
+
 ## A065-F01 — Owners must currently be admin users rather than independent owner/partner records
 
 **Title:** Owners must currently be admin users rather than independent owner/partner records

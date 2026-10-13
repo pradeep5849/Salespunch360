@@ -11089,6 +11089,19 @@
             "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
           ],
           "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
+        },
+        "transfer_form_slice": {
+          "summary": "Web transfer form now labels all controls, limits pickers to active company-wide/current-branch accounts, disables same-account/zero/invalid-precision submissions, keeps one key across retry, disables pending controls, provides structured feedback and rotates the key/clears amount only on success. Web account/transfer entry forms are hidden without Money Entry permission.",
+          "verification": "Intermediate 30 focused tests across 4 files passed; grouped desktop/mobile browser 4 passed including account creation/error focus/AXE and one balanced 12.50 transfer with one journal and correct source credit/destination debit, inactive-account exclusion, zero-amount prevention and key rotation. TypeScript and focused ESLint passed.",
+          "remaining": "Other reference money entry/adjustment/detail screens and wider form/device checks remain tracked separately; final-head complete validation pending.",
+          "files": [
+            "src/components/account/money-transfer-form.tsx",
+            "src/components/account/save-feedback.tsx",
+            "src/app/workspace/account/money/transfers/page.tsx",
+            "src/app/workspace/account/money/accounts/page.tsx",
+            "src/app/actions/money.ts",
+            "e2e/a090-settings.spec.ts"
+          ]
         }
       }
     },

@@ -125,3 +125,8 @@ export async function saveMoneyAccountAction(fd: FormData) {
   const { accountAction } = await import("@/lib/account/action-feedback");
   return accountAction(async () => { await moneyAccountAction(fd); }, "Money account created");
 }
+
+export async function saveMoneyTransferAction(fd: FormData) {
+  const { accountAction } = await import("@/lib/account/action-feedback");
+  return accountAction(async () => { await transferAction(fd); }, "Transfer posted");
+}

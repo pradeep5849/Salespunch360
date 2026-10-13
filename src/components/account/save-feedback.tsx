@@ -90,12 +90,14 @@ export function SaveSubmitButton({
   className,
   name,
   value,
+  disabled = false,
 }: {
   children: React.ReactNode;
   pendingLabel?: string;
   className?: string;
   name?: string;
   value?: string;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
@@ -104,8 +106,8 @@ export function SaveSubmitButton({
       name={name}
       value={value}
       className={className}
-      disabled={pending}
-      aria-disabled={pending}
+      disabled={pending || disabled}
+      aria-disabled={pending || disabled}
     >
       {pending ? pendingLabel : children}
     </button>

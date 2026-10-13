@@ -11,10 +11,14 @@ export default async function Page() {
           title="Money Accounts"
           backHref="/workspace/account/money"
         />
-        <MoneyAccountForm
-          branches={d.branches}
-          creationRequestKey={randomUUID()}
-        />
+        {d.capabilities.postMoneyEntries ? (
+          <MoneyAccountForm
+            branches={d.branches}
+            creationRequestKey={randomUUID()}
+          />
+        ) : (
+          <p>Creating money accounts requires Money Entry permission.</p>
+        )}
         <ul>
           {d.dashboard.accounts.map((x) => (
             <li key={x.id}>

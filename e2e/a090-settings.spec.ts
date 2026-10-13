@@ -120,6 +120,7 @@ test.afterAll(async () => {
     await tx.commercialDocumentLine.deleteMany({where:{companyId}});
     await tx.commercialDocument.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
+    await tx.moneyTransfer.deleteMany({where:{companyId}});
     await tx.journalLine.deleteMany({where:{companyId}});
     await tx.journalEntry.deleteMany({where:{companyId}});
     await tx.accountingAuditEvent.deleteMany({where:{companyId}});
@@ -1388,4 +1389,22 @@ test("A064 money account form labels and company-wide creation provide feedback"
  expect((await new AxeBuilder({page}).include("form").analyze()).violations).toEqual([]);
  await form.getByRole("button",{name:"Create account and asset ledger",exact:true}).click();await expect(form.getByRole("status")).toContainText("Money account created",{timeout:20000});
  const account=await db.moneyAccount.findFirstOrThrow({where:{companyId,name:"A064 Accessible Bank"}});expect(account.branchId).toBeNull();expect(account.creationRequestKey).toBe(initialKey);await expect(form.locator("input[name=creationRequestKey]")).not.toHaveValue(initialKey);expect(await db.ledgerAccount.findUniqueOrThrow({where:{id:account.ledgerAccountId}})).toMatchObject({name:account.name,companyId});
+});
+
+
+test("A064 transfer form uses compatible active accounts and posts one balanced transfer",async({page})=>{
+ test.setTimeout(120000);
+ const {createMoneyAccountForActor}=await import("@/lib/account/money");
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Transfer form year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ const from=await createMoneyAccountForActor(actor,{name:"A064 Source Bank",type:"BANK",branchId,creationRequestKey:randomUUID()});
+ const to=await createMoneyAccountForActor(actor,{name:"A064 Destination Cash",type:"CASH",branchId,creationRequestKey:randomUUID()});
+ const inactive=await createMoneyAccountForActor(actor,{name:"A064 Inactive Account",type:"BANK",branchId,creationRequestKey:randomUUID()});await db.moneyAccount.update({where:{id:inactive.id},data:{isActive:false}});
+ await signInSettings(page);await page.goto("/workspace/account/money/transfers");const form=page.locator("form").filter({has:page.getByRole("button",{name:"Post transfer / deposit",exact:true})});
+ await form.getByLabel("Branch",{exact:true}).selectOption(branchId);expect(await form.getByLabel("From account",{exact:true}).locator("option").allTextContents()).not.toContain(inactive.name);
+ await expect(form.getByRole("button",{name:"Post transfer / deposit",exact:true})).toBeDisabled();await form.getByLabel("From account",{exact:true}).selectOption(from.id);await expect(form.getByLabel("To account",{exact:true}).locator(`option[value="${from.id}"]`)).toHaveJSProperty("disabled",true);await form.getByLabel("To account",{exact:true}).selectOption(to.id);
+ await form.getByLabel("Amount",{exact:true}).fill("0");await expect(form.getByRole("button",{name:"Post transfer / deposit",exact:true})).toBeDisabled();
+ await form.getByLabel("Amount",{exact:true}).fill("12.50");await form.getByLabel("Transfer date",{exact:true}).fill("2026-10-13");await form.getByLabel("Reference",{exact:true}).fill("A064 browser transfer");const key=await form.locator("input[name=idempotencyKey]").inputValue();expect((await new AxeBuilder({page}).include("form").analyze()).violations).toEqual([]);
+ await form.getByRole("button",{name:"Post transfer / deposit",exact:true}).click();await expect(form.getByRole("status").filter({hasText:"Transfer posted"})).toBeVisible({timeout:20000});
+ const saved=await db.moneyTransfer.findMany({where:{companyId,idempotencyKey:key}});expect(saved).toHaveLength(1);expect(saved[0].amount.toFixed(2)).toBe("12.50");const lines=await db.journalLine.findMany({where:{journalEntryId:saved[0].journalEntryId}});expect(lines).toHaveLength(2);expect(lines.find(row=>row.ledgerAccountId===from.ledgerAccountId)?.credit.toFixed(2)).toBe("12.50");expect(lines.find(row=>row.ledgerAccountId===to.ledgerAccountId)?.debit.toFixed(2)).toBe("12.50");await expect(form.getByLabel("Amount",{exact:true})).toHaveValue("");await expect(form.locator("input[name=idempotencyKey]")).not.toHaveValue(key);
 });
