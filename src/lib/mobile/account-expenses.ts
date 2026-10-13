@@ -159,13 +159,16 @@ export async function mobileExpenseDownload(u: MobileAppPrincipal, id: string) {
 export async function mobileExpenseCategories(
   u: MobileAppPrincipal,
   q?: string | null,
+  context: { branchId?: string; scope?: string } = {},
 ) {
   const actor = permit(u, "ACCOUNT_EXPENSE_VIEW");
+  const scoped = await resolveAccountBranchContext(actor, context);
+  const branchId = scoped.context.mode === "BRANCH" ? scoped.context.branchId : undefined;
   const [options, summary] = await Promise.all([
     expenseCategoryOptionsForActor(actor, q ?? ""),
-    expenseSummaryForActor(actor, {}, q ?? ""),
+    expenseSummaryForActor(actor, { branchId }, q ?? ""),
   ]);
-  return { ...options, summary };
+  return { ...options, summary, branchContext: scoped.context };
 }
 export async function mobileSaveExpenseCategory(
   u: MobileAppPrincipal,

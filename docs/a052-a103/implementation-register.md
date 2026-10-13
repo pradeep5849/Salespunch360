@@ -141,7 +141,7 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Data Entry direct URL denied gracefully; Project Manager Projects OFF hidden/explicit blocked, ON assigned access works; Admin/Accountant unaffected; mobile API denial equivalent.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -162,6 +162,8 @@ Remaining: Other original permission/module findings and final checkpoint-head v
 Validation correction: initial lint PASS was recorded before inspecting a new-page JSX/try-catch lint failure. Data loading now returns a result outside rendering; focused lint and TypeScript were rerun and passed. No financial behavior changed.
 
 **Expense/Home context continuation:** Resolved branch/company context is retained by filters, pagination and empty-state creation. Desktop/mobile branch/consolidation and Data Entry denial checks passed; remaining original role/isolation coverage and final-head validation are pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
+
+**Independent continuation verification:** Role/module recoverable denial and Projects OFF/ON recovery verified on desktop/mobile; original permission guards retained. Browser: 2 passed (38.1s); API/expense query: 18 passed; ledger/navigation: 20 passed; Android final compile, TypeScript and focused lint passed. Final-head regression remains pending.
 
 ## A052-F03 — Web expense list ignores selected Account branch context
 
@@ -220,6 +222,8 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 **Expense/Home context continuation:** Resolved branch/company context is retained by filters, pagination and empty-state creation. Desktop/mobile branch/consolidation and Data Entry denial checks passed; remaining original role/isolation coverage and final-head validation are pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
 
 **Category context continuation:** Web category totals/search/back now retain the resolved selected branch/company context. Two desktop/mobile regressions and 35 grouped permission/capability/API tests passed, with TypeScript and focused lint. Native category context propagation and final-head verification remain pending.
+
+**Independent continuation verification:** Native category API/screen now carry authorized context, scope captions and stale-read protection. Original full assignment/tenant coverage and physical device interaction remain pending. Browser: 2 passed (38.1s); API/expense query: 18 passed; ledger/navigation: 20 passed; Android final compile, TypeScript and focused lint passed. Final-head regression remains pending.
 
 ## A052-F04 — Silent 200-row cap hides older transactions and makes Android search incomplete
 

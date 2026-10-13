@@ -32,8 +32,8 @@ import { postJournalInTx } from "../src/lib/accounting/service";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 let settingsCookies:Awaited<ReturnType<BrowserContext["cookies"]>>=[];
 async function signInSettings(page:Page){
- if(settingsCookies.length){await page.context().addCookies(settingsCookies);await page.goto("/workspace/account");await expect(page).toHaveURL(/\/workspace\/account/);return}
- await page.goto("/sign-in");await page.getByLabel("Email",{exact:true}).fill(email);await page.getByLabel("Password",{exact:true}).fill(password);await page.getByRole("button",{name:"Sign In",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account/);
+ if(settingsCookies.length){await page.context().addCookies(settingsCookies);await page.goto("/workspace/account");await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});return}
+ await page.goto("/sign-in");await page.getByLabel("Email",{exact:true}).fill(email);await page.getByLabel("Password",{exact:true}).fill(password);await page.getByRole("button",{name:"Sign In",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
  settingsCookies=await page.context().cookies();
 }
 
@@ -1530,6 +1530,7 @@ test("A071 New Party creates Account-only customers in the selected branch and e
 test("A052 expense list preserves explicit branch filters and safely denies Data Entry", async ({page}) => {
  test.setTimeout(120000);
  const second=randomUUID(), category=randomUUID(), ledger=randomUUID(), ids=[randomUUID(),randomUUID()];
+ const originalSettings=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
  await db.branch.create({data:{id:second,companyId,name:"Expense second branch",code:"A052-SECOND"}});
  await db.ledgerAccount.create({data:{id:ledger,companyId,code:"A052-SCOPE",name:"Expense scope fixture",accountClass:"EXPENSE",normalBalance:"DEBIT",allowPosting:true}});
  await db.expenseCategory.create({data:{id:category,companyId,name:"Expense scope category",scope:"EXPENSE",defaultLedgerAccountId:ledger}});
@@ -1557,7 +1558,17 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   await page.goto("/workspace/account/expenses");
   await expect(page.getByRole("heading",{name:"Expenses access unavailable",exact:true})).toBeVisible();
   await expect(page.getByRole("link",{name:/A052-SCOPE/})).toHaveCount(0);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:[]}});
+  await page.goto("/workspace/account/expenses");
+  await expect(page.getByRole("heading",{name:"Expenses access unavailable",exact:true})).toBeVisible();
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+  await page.goto(`/workspace/account/expenses?branchId=${branchId}`);
+  await expect(page.getByRole("heading",{name:"Expenses & Other Income",exact:true})).toBeVisible();
+  await expect(page.getByRole("link",{name:/A052-SCOPE/})).toHaveCount(0);
+
  } finally {
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:originalSettings.enabledModules}});
   await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});
   await db.expenseTransaction.deleteMany({where:{id:{in:ids},companyId}});
   await db.expenseCategory.delete({where:{id:category}});

@@ -20,7 +20,8 @@ import com.salespunch360.mobile.ui.account.accounting.Option
 import kotlinx.serialization.json.*
 
 @Composable
-fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel = viewModel()) {
+fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel = viewModel(), initialQuery: String = "") {
+    LaunchedEffect(initialQuery) { vm.context(initialQuery) }
     val s = vm.state.collectAsStateWithLifecycle().value
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         Row {
@@ -33,7 +34,7 @@ fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel =
         s.message?.let { Text(it) }
         if (!s.loading && s.categories.isEmpty()) Text("No categories found.")
         if (!s.loading && s.error == null) s.summary?.let { totals ->
-            Text("Posted totals · all accessible branches · all history")
+            Text("Posted totals · ${s.scopeLabel} · all history")
             Text("Expense: ${accountMoney(totals.str("expense"))} · Other income: ${accountMoney(totals.str("income"))}")
             Text(totals.str("recognition"))
         }

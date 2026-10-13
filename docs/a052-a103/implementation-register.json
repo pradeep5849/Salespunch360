@@ -949,7 +949,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -974,6 +974,11 @@
           "implementation": "Expense GET filters and pagination normalize the resolved authorized branch/company context; empty-state Add Expense retains it. Expected Data Entry denial preserves a recoverable page.",
           "tests": "19 focused tests passed across Home query/filter and scoped expense list; TypeScript and focused lint passed; 2 desktop/mobile browser tests passed (27.2s).",
           "remaining": "Project Manager Projects ON/OFF, assigned-user exclusion, cross-company browser regression and final-head verification remain pending; no final closure inferred."
+        },
+        "independent_verification": {
+          "implementation": "Expected role/module denial renders recoverable feedback; navigation respects the Projects dependency for Project Managers; all server permission/module gates retained.",
+          "tests": "Desktop/mobile (2 tests) verified Data Entry denial, Project Manager Projects OFF denial and ON scoped recovery. 35 grouped permission/capability/API tests and 20 ledger/navigation tests passed; TypeScript/lint passed.",
+          "remaining": "Final implementation-head regression remains pending. No final status assigned."
         }
       },
       "intermediate_validation": {
@@ -1113,6 +1118,11 @@
           "implementation": "Web category summary resolves authorized selected branch/company context; totals, search hidden inputs and Back navigation retain that context; expense Categories link carries it.",
           "tests": "2 desktop/mobile expense/category navigation and scope regressions passed; 35 grouped expense permission/capability/API contract tests passed; TypeScript and focused lint passed.",
           "remaining": "Native category summary still needs explicit selected context propagation; original full isolation/module/browser coverage and final-head validation remain pending."
+        },
+        "native_category_context": {
+          "implementation": "Mobile category API resolves authorized branch/consolidated context and returns a scope caption. Android category search/refresh carries that context; read cancellation/generation prevents stale results; stale capabilities cleared on reload/denial; pending mutations guard repeated commands.",
+          "tests": "18 focused API/expense query tests passed, including four new category context/permission regressions; Android final compile passed; 2 desktop/mobile role/category context tests passed in 38.1s; 20 ledger/navigation tests passed; TypeScript/lint passed.",
+          "remaining": "Original full tenant/branch assignment coverage, physical Android interaction and final-head regression pending."
         }
       },
       "intermediate_validation": {
