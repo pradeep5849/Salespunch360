@@ -1,4 +1,4 @@
-import {moneyReadContext} from "@/lib/account/money-context";
+import { moneyReadContext } from "@/lib/account/money-context";
 import { chequeFinancialActionForActor } from "@/lib/account/cheque-finance";
 import {
   chequePageForActor,
@@ -39,8 +39,14 @@ function permit(
 }
 const write = async (u: MobileAppPrincipal) =>
   assertOperationalWrite(u.companyId);
-export async function mobileMoneyContext(u: MobileAppPrincipal,query:unknown={}) {
-  const readScope=await moneyReadContext(permit(u,"ACCOUNT_MONEY_VIEW"),query);
+export async function mobileMoneyContext(
+  u: MobileAppPrincipal,
+  query: unknown = {},
+) {
+  const readScope = await moneyReadContext(
+    permit(u, "ACCOUNT_MONEY_VIEW"),
+    query,
+  );
   const a = readScope.actor,
     data = await listMoneyDataForActor(a),
     scope =
@@ -76,7 +82,7 @@ export async function mobileMoneyContext(u: MobileAppPrincipal,query:unknown={})
   );
   return {
     ...data,
-    branchContext:readScope.context,
+    branchContext: readScope.context,
     owners: data.owners.map((x) => ({
       ...x,
       name: x.name || users.find((u) => u.id === x.userId)?.name || "Owner",
@@ -260,4 +266,18 @@ export async function mobileChequeEntryOptions(
   const { chequeEntryOptionsForActor } =
     await import("@/lib/account/cheque-entry-options");
   return chequeEntryOptionsForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+
+export async function mobileMoneyAccountHistory(
+  u: MobileAppPrincipal,
+  id: string,
+  query: unknown = {},
+) {
+  const { moneyAccountHistoryForActor } =
+    await import("@/lib/account/money-account-history");
+  return moneyAccountHistoryForActor(
+    permit(u, "ACCOUNT_MONEY_VIEW"),
+    id,
+    query,
+  );
 }

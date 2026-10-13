@@ -3661,6 +3661,12 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 Checkpoint dashboard reconciliation: Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.
 Remaining: Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.
 
+**Account-history slice:** Account-specific paginated ledger history under RepeatableRead, exact opening/in/out/closing and running balances; POSTED and REVERSED originals included; validated date/company/branch scope and inactive-account history; web row/detail links and date/paging; no-store authorized native API; native account tap opens history with separate Edit action and cancellation-safe scoped loading.
+
+**Intermediate validation:** 12 focused tests passed: 9 PostgreSQL money/history and 3 history API; Android compilation passed; desktop/mobile Chromium 2 passed after keyboard-scroll accessibility fix; final head not run.
+
+**Remaining:** Deposit/Withdraw/Add/Reduce actions linked to approved offset workflow A064-F05; account edit/detail metadata parity and final checkpoint verification. Physical native UI not verified.
+
 ## A064-F03 — Opening balance and As On date cannot initialize a money account
 
 **Title:** Opening balance and As On date cannot initialize a money account
@@ -3695,7 +3701,7 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** Zero/nonzero opening; date/year/period locks; authorized/denied role; atomic rollback; duplicate retry; account balance/history/ledger reconciliation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 

@@ -9678,11 +9678,9 @@
       "final_tests": [],
       "shared_fix_links": [],
       "checkpoint_work": {
-        "implementation_status": "PARTIAL",
-        "work": "Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.",
-        "remaining_work": "Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
-        "list_error_slice": "Native account lists no longer show successful-empty text alongside a loading failure. This does not implement account-specific transaction history; A064-F02 remains PARTIAL."
+        "implementation": "Account-specific paginated ledger history under RepeatableRead, exact opening/in/out/closing and running balances; POSTED and REVERSED originals included; validated date/company/branch scope and inactive-account history; web row/detail links and date/paging; no-store authorized native API; native account tap opens history with separate Edit action and cancellation-safe scoped loading.",
+        "tests": "12 focused tests passed: 9 PostgreSQL money/history and 3 history API. Desktop/mobile Chromium 2 passed including opening history, date carry-forward and Axe keyboard-scroll checks. Android compile, TypeScript and focused ESLint passed. Intermediate evidence only; final head not run.",
+        "remaining": "Deposit/Withdraw/Add/Reduce actions linked to approved offset workflow A064-F05; account edit/detail metadata parity and final checkpoint verification. Physical native UI not verified."
       }
     },
     {

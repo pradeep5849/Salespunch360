@@ -460,6 +460,56 @@ describe.skipIf(!url)(
         }),
       ).toBe(0);
     });
+    it("reads exact opening and running balances with date filters and branch isolation", async () => {
+      const { moneyAccountHistoryForActor } =
+        await import("./money-account-history");
+      const account = await client.moneyAccount.findFirstOrThrow({
+        where: { companyId, name: "Opening cash" },
+      });
+      const all = await moneyAccountHistoryForActor(actor, account.id, {
+        branchId,
+      });
+      expect(all.opening).toBe("0.00");
+      expect(all.closing).toBe("5000.00");
+      expect(all.rows[0].balance).toBe("5000.00");
+      expect(all.total).toBe(1);
+      const after = await moneyAccountHistoryForActor(actor, account.id, {
+        branchId,
+        from: "2025-10-14",
+      });
+      expect(after.opening).toBe("5000.00");
+      expect(after.closing).toBe("5000.00");
+      expect(after.rows).toEqual([]);
+      const before = await moneyAccountHistoryForActor(actor, account.id, {
+        branchId,
+        to: "2025-10-12",
+      });
+      expect(before.closing).toBe("0.00");
+      await client.moneyAccount.update({
+        where: { id: account.id },
+        data: { isActive: false },
+      });
+      expect(
+        (await moneyAccountHistoryForActor(actor, account.id, { branchId }))
+          .closing,
+      ).toBe("5000.00");
+      await expect(
+        moneyAccountHistoryForActor(actor, account.id, {
+          branchId,
+          from: "2025-02-30",
+        }),
+      ).rejects.toThrow();
+      await expect(
+        moneyAccountHistoryForActor(
+          { ...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [] },
+          account.id,
+          { branchId },
+        ),
+      ).rejects.toThrow();
+      await expect(
+        moneyAccountHistoryForActor(actor, randomUUID(), { branchId }),
+      ).rejects.toThrow();
+    });
     it("scopes shared-account balances to an authorized selected branch or Admin consolidation", async () => {
       const secondBranch = randomUUID();
       await client.branch.create({
@@ -511,6 +561,41 @@ describe.skipIf(!url)(
         transferDate: "2026-10-13",
         idempotencyKey: randomUUID(),
       });
+      const { moneyAccountHistoryForActor } =
+        await import("./money-account-history");
+      expect(
+        (await moneyAccountHistoryForActor(actor, shared.id, { branchId }))
+          .closing,
+      ).toBe("-10.00");
+      expect(
+        (
+          await moneyAccountHistoryForActor(actor, shared.id, {
+            branchId: secondBranch,
+          })
+        ).closing,
+      ).toBe("-20.00");
+      const history = await moneyAccountHistoryForActor(actor, shared.id, {
+        scope: "all",
+        limit: 1,
+      });
+      expect(history.total).toBe(2);
+      expect(history.closing).toBe("-30.00");
+      expect(history.rows[0].balance).toBe("-30.00");
+      const older = await moneyAccountHistoryForActor(actor, shared.id, {
+        scope: "all",
+        offset: 1,
+        limit: 1,
+      });
+      expect(older.rows[0].balance).toBe("-10.00");
+      expect(
+        (await moneyAccountHistoryForActor(actor, cash1.id, { branchId }))
+          .closing,
+      ).toBe("10.00");
+      await expect(
+        moneyAccountHistoryForActor(actor, cash1.id, {
+          branchId: secondBranch,
+        }),
+      ).rejects.toThrow();
       const branchOne = await moneyReadContext(actor, { branchId }),
         branchTwo = await moneyReadContext(actor, { branchId: secondBranch }),
         all = await moneyReadContext(actor, { scope: "all" });

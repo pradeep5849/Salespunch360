@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   isMoneyReadScopeError,
   MoneyReadUnavailable,
@@ -50,7 +51,12 @@ export default async function Page({
         <ul>
           {d.dashboard.accounts.map((x) => (
             <li key={x.id}>
-              {x.name} · {x.type} · {x.balance.toFixed(2)}
+              <Link
+                href={`/workspace/account/money/accounts/${x.id}?${d.branchContext.mode === "COMPANY" ? "scope=all" : `branchId=${d.branchContext.branchId}`}`}
+              >
+                {x.name}
+              </Link>{" "}
+              · {x.type} · {x.balance.toFixed(2)}
             </li>
           ))}
         </ul>

@@ -1393,6 +1393,8 @@ test("A064 money account form labels and company-wide creation provide feedback"
  const account=await db.moneyAccount.findFirstOrThrow({where:{companyId,name:"A064 Accessible Bank"}});expect(account.branchId).toBeNull();expect(account.creationRequestKey).toBe(initialKey);await expect(form.locator("input[name=creationRequestKey]")).not.toHaveValue(initialKey);expect(await db.ledgerAccount.findUniqueOrThrow({where:{id:account.ledgerAccountId}})).toMatchObject({name:account.name,companyId});
  const opening=await db.journalEntry.findFirstOrThrow({where:{companyId,sourceId:account.id,postingPurpose:"MONEY_ACCOUNT_OPENING"},include:{lines:true}});expect(opening.lines.find(line=>line.ledgerAccountId===account.ledgerAccountId)?.debit.toFixed(2)).toBe("1000.00");const obe=await db.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});expect(obe.accountClass).toBe("EQUITY");expect(opening.lines.find(line=>line.ledgerAccountId===obe.id)?.credit.toFixed(2)).toBe("1000.00");
 
+ await page.goto(`/workspace/account/money/accounts/${account.id}?branchId=${branchId}`);await expect(page.getByRole("table",{name:"Account ledger history"})).toContainText("Opening balance");await expect(page.getByRole("table").getByRole("row").last()).toContainText("₹1,000.00");expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);await page.getByLabel("From",{exact:true}).fill("2026-10-14");await page.getByRole("button",{name:"Apply dates"}).click();await expect(page.getByText("No posted entries match these dates.")).toBeVisible();await expect(page.locator("dl")).toContainText("₹1,000.00");
+
 });
 
 

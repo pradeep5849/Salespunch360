@@ -103,7 +103,11 @@ export async function MoneyAccountDirectory({
           <ul aria-label={`${title} list`}>
             {rows.map((row) => (
               <li key={row.id}>
-                <strong>{row.name}</strong>
+                <Link
+                  href={`/workspace/account/money/accounts/${row.id}?${scopeQuery}`}
+                >
+                  <strong>{row.name}</strong>
+                </Link>
                 {" · "}
                 <ClientMoney value={row.balance.toFixed()} />
                 {!row.isActive && <span> · Inactive</span>}

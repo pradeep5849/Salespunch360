@@ -58,8 +58,9 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                 ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference")).filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{
                     Text(accountMoney(row.str("balance").ifBlank{row.str("amount").ifBlank{row.str("principal")}}))
                     if(s.mode=="loans"&&can("manageLoans")&&row.str("status")=="ACTIVE")TextButton({vm.loanPayment(row)},enabled=!s.saving){Text("Repay")}
+                    if(accountMode&&can("postMoneyEntries"))TextButton({vm.editAccount(row)},enabled=!s.saving){Text("Edit")}
                     if(accountMode&&can("postMoneyEntries")&&row["isActive"]?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.disableAccount(row.str("id"))},enabled=!s.saving){Text("Deactivate")}
-                }},modifier=if(accountMode&&can("postMoneyEntries"))Modifier.clickable(enabled=!s.saving){vm.editAccount(row)}else Modifier)
+                }},modifier=if(accountMode)Modifier.clickable(enabled=!s.saving){vm.openMoneyHistory(row.str("id"))}else Modifier)
             }
             if(rows.isEmpty()&&!s.loading&&s.error==null)item{Text(if(accountMode)"No accounts available."else "No transactions available.")}
         }
@@ -67,7 +68,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
     if (s.historyOwnerId != null) {
         AlertDialog(
             onDismissRequest = vm::closeOwnerHistory,
-            title = { Text(s.history?.get("owner")?.jsonObject?.str("name") ?: "Owner history") },
+            title = { Text(s.history?.get(if(s.historyIsAccount)"account" else "owner")?.jsonObject?.str("name") ?: "Owner history") },
             text = {
                 Column {
                     OutlinedTextField(s.historyFrom, { vm.historyDates(it, s.historyTo) }, label = { Text("From (YYYY-MM-DD)") }, enabled = !s.historyLoading)
@@ -75,29 +76,30 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                     TextButton({ vm.loadOwnerHistory(0) }, enabled = !s.historyLoading) { Text("Apply dates") }
                     if (s.historyLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     s.historyError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    val historyRows = s.history?.array("items").orEmpty()
+                    if(s.historyIsAccount)s.history?.let{h->Text("Opening: "+accountMoney(h.str("opening")));Text("Money in: "+accountMoney(h.str("debit")));Text("Money out: "+accountMoney(h.str("credit")));Text("Closing: "+accountMoney(h.str("closing")))}
+                    val historyRows = s.history?.array(if(s.historyIsAccount)"rows" else "items").orEmpty()
                     if (!s.historyLoading && s.historyError == null && s.history != null && historyRows.isEmpty()) Text("No transactions match these dates.")
                     LazyColumn(Modifier.heightIn(max = 280.dp)) {
                         items(historyRows) { entry ->
                             val row = entry.jsonObject
                             ListItem(
-                                headlineContent = { Text(moneyTypeLabel(row.str("type"))) },
+                                headlineContent = { Text(if(s.historyIsAccount)row.str("journalNumber")else moneyTypeLabel(row.str("type"))) },
                                 supportingContent = {
                                     Column {
-                                        Text(accountDate(row.str("transactionDate")) + " · " + row.str("moneyAccountName"))
-                                        Text("Status: " + row.str("journalStatus"))
+                                        if(s.historyIsAccount){Text(accountDate(row.str("entryDate")));Text(row.str("narration").ifBlank{row.str("sourceType")});Text("In: "+accountMoney(row.str("debit"))+" · Out: "+accountMoney(row.str("credit")))}else Text(accountDate(row.str("transactionDate")) + " · " + row.str("moneyAccountName"))
+                                        Text("Status: " + row.str(if(s.historyIsAccount)"status"else "journalStatus"))
                                         if (row.str("reference").isNotBlank()) Text(row.str("reference"))
                                         val reversal = row["reversal"] as? JsonObject
                                         reversal?.let { Text("Reversed " + accountDate(it.str("date")) + ": " + it.str("reason")) }
                                     }
                                 },
-                                trailingContent = { Text(accountMoney(row.str("amount"))) }
+                                trailingContent = { Text(accountMoney(row.str(if(s.historyIsAccount)"balance"else "amount"))) }
                             )
                         }
                     }
                     Row {
                         if (s.historyOffset > 0) TextButton({ vm.loadOwnerHistory((s.historyOffset - 50).coerceAtLeast(0)) }, enabled = !s.historyLoading) { Text("Previous") }
-                        if (s.history?.get("hasMore")?.jsonPrimitive?.booleanOrNull == true) TextButton({ vm.loadOwnerHistory(s.historyOffset + 50) }, enabled = !s.historyLoading) { Text("Next") }
+                        if (if(s.historyIsAccount)s.historyOffset+50<(s.history?.get("total")?.jsonPrimitive?.intOrNull?:0)else s.history?.get("hasMore")?.jsonPrimitive?.booleanOrNull == true) TextButton({ vm.loadOwnerHistory(s.historyOffset + 50) }, enabled = !s.historyLoading) { Text("Next") }
                     }
                 }
             },
