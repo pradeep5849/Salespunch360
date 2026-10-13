@@ -3606,13 +3606,15 @@ Checkpoint follow-up: dedicated native summary and shared native/web PDF/XLSX se
 
 **Required tests:** Menu heading is not a link; web/native Bank Accounts and Cash In-Hand navigation, zero/populated states, search, balances, mobile layout and Back.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A064_Findings.json, SalesPunch360_A064_Audit_Report.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+**Checkpoint work:** Separate authorized web/native Bank Accounts and Cash In-Hand routes, navigation/type filtering and correct add-account defaults; combined manager/inactive history preserved. Intermediate navigation tests 27, Android compile plus 5 tests and grouped desktop/mobile browser 6 passed; TypeScript/ESLint passed. Details/history and selected branch context remain A064-F02/F11; final-head validation pending.
 
 ## A064-F02 — Account-specific details and reconciled transaction history are unavailable
 

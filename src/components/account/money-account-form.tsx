@@ -73,7 +73,9 @@ function Choice({
   name,
   label,
   children,
+  defaultValue,
 }: {
+  defaultValue?: string;
   name: string;
   label: string;
   children: React.ReactNode;
@@ -84,6 +86,7 @@ function Choice({
       {label}
       <select
         name={name}
+        defaultValue={defaultValue}
         aria-label={label}
         aria-invalid={!!error}
         aria-describedby={error ? `${name}-error` : undefined}
@@ -97,9 +100,11 @@ function Choice({
 export function MoneyAccountForm({
   branches,
   creationRequestKey,
+  initialType = "BANK",
 }: {
   branches: Array<{ id: string; name: string }>;
   creationRequestKey: string;
+  initialType?: "BANK" | "CASH" | "PETTY_CASH";
 }) {
   const [requestKey, setRequestKey] = useState(creationRequestKey);
   return (
@@ -111,7 +116,7 @@ export function MoneyAccountForm({
       <input type="hidden" name="creationRequestKey" value={requestKey} />
       <FocusErrors />
       <SavePendingFields>
-        <Choice name="type" label="Account type">
+        <Choice name="type" label="Account type" defaultValue={initialType}>
           <option value="BANK">Bank</option>
           <option value="CASH">Cash</option>
           <option value="PETTY_CASH">Petty Cash</option>

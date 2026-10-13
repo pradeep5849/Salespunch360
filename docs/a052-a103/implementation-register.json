@@ -9548,10 +9548,29 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": {
+        "summary": "Separate Bank Accounts and Cash In-Hand destinations added to shared Cash & Bank navigation, web/mobile Home and native route resolution. Company-authorized account lists filter BANK/CASH respectively, retain inactive history and company display preferences, preserve the combined money-account manager and land Add Bank/Add Cash on the corresponding type. Native account list filters and entry defaults mirror the destinations.",
+        "verification": "Intermediate 27 focused navigation tests passed across 3 files; Android compile and 5 focused account navigation/request tests passed; grouped desktop/mobile browser 6 passed covering account/transfer regressions plus separate bank/cash lists, inactive bank history, foreign-company exclusion, AXE and correct Add Bank/Add Cash type. TypeScript and focused ESLint passed.",
+        "remaining": "Final-head full validation and native device/reference verification remain. Account details/history and branch report context stay open under A064-F02/F11 and are not claimed fixed by navigation.",
+        "files": [
+          "src/components/account/money-account-directory.tsx",
+          "src/app/workspace/account/money/bank-accounts/page.tsx",
+          "src/app/workspace/account/money/cash-in-hand/page.tsx",
+          "src/app/workspace/account/money/accounts/page.tsx",
+          "src/components/account/money-account-form.tsx",
+          "src/lib/account/navigation.ts",
+          "src/components/account/account-mobile-home.tsx",
+          "src/app/workspace/account/money/page.tsx",
+          "android/app/src/main/java/com/salespunch360/mobile/account/MoneyAccountNavigation.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+          "android/app/src/test/java/com/salespunch360/mobile/account/MoneyAccountNavigationTest.kt"
+        ]
+      }
     },
     {
       "finding_id": "A064-F02",
@@ -9662,7 +9681,8 @@
         "implementation_status": "PARTIAL",
         "work": "Money dashboard balances now use shared ledger-effective POSTED/REVERSED status policy and filter journals to actor-assigned branches, including shared money accounts. Real DB tests prove reversed balances and branch-restricted shared balances reconcile.",
         "remaining_work": "Account-specific paginated history/details, explicit selected report/branch context and final-head web/native/API verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "list_error_slice": "Native account lists no longer show successful-empty text alongside a loading failure. This does not implement account-specific transaction history; A064-F02 remains PARTIAL."
       }
     },
     {

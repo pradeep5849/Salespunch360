@@ -26,8 +26,9 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
     fun can(key:String)=caps?.get(key)?.jsonPrimitive?.booleanOrNull==true
     val owners=s.data.array("owners")
     val ownerNames=owners.associate{it.jsonObject.str("id") to it.jsonObject.str("name")}
+    val accountMode=s.mode in listOf("accounts","bank-accounts","cash-in-hand")
     val rows=when(s.mode){
-        "accounts"->s.data["dashboard"]?.jsonObject?.array("accounts").orEmpty()
+        "accounts","bank-accounts","cash-in-hand"->moneyAccountRowsForMode(s.data["dashboard"]?.jsonObject?.array("accounts").orEmpty(),s.mode)
         "transfers"->s.data.array("transfers")
         "owners"->s.data.array("ownerTransactions")
         "loans"->s.data.array("loans")
@@ -35,11 +36,11 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
     }
     val canCreate=when(s.mode){"owners"->can("postOwnerTransactions");"loans"->can("manageLoans");else->can("postMoneyEntries")}
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)){
-        LazyRow{items(listOf("accounts","transfers","owners","loans")){mode->FilterChip(s.mode==mode,{if(!s.saving)vm.show(mode)},{Text(if(mode=="owners")"Capital & drawings" else mode.replaceFirstChar{it.uppercase()})})}}
+        LazyRow{items(listOf("bank-accounts","cash-in-hand","accounts","transfers","owners","loans")){mode->FilterChip(s.mode==mode,{if(!s.saving)vm.show(mode)},{Text(when(mode){"bank-accounts"->"Bank Accounts";"cash-in-hand"->"Cash In-Hand";"accounts"->"All accounts";"owners"->"Capital & drawings";else->mode.replaceFirstChar{it.uppercase()}})})}}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
             IconButton(vm::load,enabled=!s.saving){Icon(Icons.Default.Refresh,"Refresh")}
             if(s.mode=="owners"&&can("manageOwners"))TextButton({vm.create("owner-setup")},enabled=!s.saving){Text("Add owner / partner")}
-            if(canCreate)FilledIconButton({vm.create(s.mode)},enabled=!s.saving){Icon(Icons.Default.Add,"New transaction")}
+            if(canCreate)FilledIconButton({vm.create(if(accountMode)"accounts"else s.mode)},enabled=!s.saving){Icon(Icons.Default.Add,"New transaction")}
         }
         if(s.loading)LinearProgressIndicator(Modifier.fillMaxWidth())
         s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
@@ -56,10 +57,10 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                 ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference")).filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{
                     Text(accountMoney(row.str("balance").ifBlank{row.str("amount").ifBlank{row.str("principal")}}))
                     if(s.mode=="loans"&&can("manageLoans")&&row.str("status")=="ACTIVE")TextButton({vm.loanPayment(row)},enabled=!s.saving){Text("Repay")}
-                    if(s.mode=="accounts"&&can("postMoneyEntries")&&row["isActive"]?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.disableAccount(row.str("id"))},enabled=!s.saving){Text("Deactivate")}
-                }},modifier=if(s.mode=="accounts"&&can("postMoneyEntries"))Modifier.clickable(enabled=!s.saving){vm.editAccount(row)}else Modifier)
+                    if(accountMode&&can("postMoneyEntries")&&row["isActive"]?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.disableAccount(row.str("id"))},enabled=!s.saving){Text("Deactivate")}
+                }},modifier=if(accountMode&&can("postMoneyEntries"))Modifier.clickable(enabled=!s.saving){vm.editAccount(row)}else Modifier)
             }
-            if(rows.isEmpty()&&!s.loading)item{Text("No transactions available.")}
+            if(rows.isEmpty()&&!s.loading&&s.error==null)item{Text(if(accountMode)"No accounts available."else "No transactions available.")}
         }
     }
     if (s.historyOwnerId != null) {
@@ -102,12 +103,12 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
             confirmButton = { TextButton(vm::closeOwnerHistory) { Text("Close") } }
         )
     }
-    s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save)}
+    s.editing?.let{MoneyEditor(it,s.data,s.selected,s.saving,s.error,vm::close,vm::save,initialAccountType=if(s.mode=="cash-in-hand")"CASH"else"BANK")}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:Boolean,error:String?,close:()->Unit,save:(String,JsonObject)->Unit){
+private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:Boolean,error:String?,close:()->Unit,save:(String,JsonObject)->Unit,initialAccountType:String="BANK"){
     val requestKey=remember{java.util.UUID.randomUUID().toString()}
     var branch by remember{mutableStateOf("")}
     var source by remember{mutableStateOf("")}
@@ -115,7 +116,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var owner by remember{mutableStateOf("")}
     var name by remember{mutableStateOf(selected?.str("name").orEmpty())}
     val identity=kind=="owner-setup"||kind=="owner-edit"
-    var type by remember{mutableStateOf(if(kind=="owners")"INVESTMENT" else if(identity)selected?.str("partyType").orEmpty().ifBlank{"OWNER"} else selected?.str("type").orEmpty().ifBlank{"BANK"})}
+    var type by remember{mutableStateOf(if(kind=="owners")"INVESTMENT" else if(identity)selected?.str("partyType").orEmpty().ifBlank{"OWNER"} else selected?.str("type").orEmpty().ifBlank{initialAccountType})}
     var phone by remember{mutableStateOf(selected?.str("phone").orEmpty())}
     var email by remember{mutableStateOf(selected?.str("email").orEmpty())}
     var address by remember{mutableStateOf(selected?.str("address").orEmpty())}

@@ -2,7 +2,18 @@ import { randomUUID } from "node:crypto";
 import { MoneyAccountForm } from "@/components/account/money-account-form";
 import { listMoneyData } from "@/lib/account/money";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
+  const query = await searchParams,
+    initialType =
+      query.type === "CASH"
+        ? "CASH"
+        : query.type === "PETTY_CASH"
+          ? "PETTY_CASH"
+          : "BANK";
   const d = await listMoneyData();
   return (
     <main className="employees-shell">
@@ -14,6 +25,7 @@ export default async function Page() {
         {d.capabilities.postMoneyEntries ? (
           <MoneyAccountForm
             branches={d.branches}
+            initialType={initialType}
             creationRequestKey={randomUUID()}
           />
         ) : (

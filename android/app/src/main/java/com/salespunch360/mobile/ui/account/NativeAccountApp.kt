@@ -257,7 +257,7 @@ private fun AccountHomeScreen(
         "P2P_RECEIVED" to "Party To Party [Rcvd]","P2P_PAID" to "Party To Party [Paid]","SALE_FA" to "Sale FA","PURCHASE_FA" to "Purchase FA",
         "SALE_CANCELLED" to "Sale [Cancelled]","JOB_WORK_OUT" to "Job work out (Challan)","SUBCONTRACT_PURCHASE" to "Purchase (Job work)","SALE_REPEATING" to "Sale [Repeating]"
     )
-    val transactionMore=listOf("Bank Accounts" to "/workspace/account/money/accounts","Day Book" to "/workspace/account/reports/general-ledger","All Txns Report" to "/workspace/account/transactions","Profit & Loss" to "/workspace/account/reports/profit-loss","Balance Sheet" to "/workspace/account/reports/balance-sheet","Billwise PnL" to "/workspace/account/reports/invoices","Print Settings" to "/workspace/account/settings/print-templates","Txn SMS Settings" to "")
+    val transactionMore=listOf("Bank Accounts" to "/workspace/account/money/bank-accounts","Day Book" to "/workspace/account/reports/general-ledger","All Txns Report" to "/workspace/account/transactions","Profit & Loss" to "/workspace/account/reports/profit-loss","Balance Sheet" to "/workspace/account/reports/balance-sheet","Billwise PnL" to "/workspace/account/reports/invoices","Print Settings" to "/workspace/account/settings/print-templates","Txn SMS Settings" to "")
     val partyMore=listOf("All Parties Report" to "/workspace/account/reports/customers","Import Party" to "/workspace/account/utilities/import","Partywise P&L" to "/workspace/account/reports/customers")
     val transactionActions=listOf("Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),"Sale Report" to "/workspace/account/reports/invoices","Txn Settings" to "/workspace/account/settings/transactions","Show All" to "")
     val partyActions=listOf("Network" to "","Party Statement" to "/workspace/account/reports/customer-ledger","Party Settings" to "/workspace/account/settings/custom-fields","Show All" to "")
@@ -501,8 +501,7 @@ private fun inventoryMode(path:String)=when{
     else->null
 }
 
-private fun moneyMode(path:String)=when{
-    path.startsWith("/workspace/account/money/accounts")->"accounts"
+private fun moneyMode(path:String)=com.salespunch360.mobile.account.moneyAccountListMode(path)?:when{
     path.startsWith("/workspace/account/money/transfers")->"transfers"
     path.startsWith("/workspace/account/money/capital")->"owners"
     path.startsWith("/workspace/account/money/loans")->"loans"
