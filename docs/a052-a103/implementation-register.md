@@ -8577,7 +8577,7 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Shared Add/Edit Sale form prefilled; inclusive GST/cess preview and footer clearance corrected; hidden header metadata retained server-side; full credit/replacement behavior tested.", "tests": "Own mobile+desktop Edit Sale/header retention/delete cases passed (2 of 6 corrected sales cases); related reverse-charge/tracked stock/custom-invoice cases passed. TypeScript and targeted ESLint passed. See follow-up for earlier failed runs.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9017,7 +9017,7 @@ Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases;
 
 **Required tests:** A5/thermal/landscape dimensions; descriptions/table columns; totals/receipts; page numbers; multi-page content; HTML/PDF parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Invoice Print own form/schema/action/native view, HTML/PDF preferences and data-loading consumers reviewed. Search keeps hidden controls mounted. All 27 booleans retain both values. Added payment modes from actual receipt/advance allocations; replaced native enum text entry with choices and capped top space at 20.", "tests": "Own toggle persistence passed 2 browser cases among the 8-case run (52.4s). Payment mode shows CASH and hides when disabled in 2 further browser cases (28.5s). Print-related tests included in 81/81 seven-file unit run (1.31s). Android compileDebugKotlin passed (36s); TypeScript and targeted ESLint passed.", "finding_status": null, "evidence": ["SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A095-A103_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9407,3 +9407,9 @@ A065-F03/F09 continuation: batched scoped owner capital/drawings/loan balances, 
 
 
 A100-F01 continuation: independent concurrent scheduler/overdue/scoped/current-outstanding PostgreSQL verification and service-selection lifecycle completed. Grouped checks 33/33 passed (5.33s); desktop/mobile service reminders 2/2 passed (48.7s); TypeScript/targeted lint passed. Initial test fixture corrections and concurrent-run serialization contention were followed by clean sequential runs. No schema or external message writes. Deployed scheduler/physical-device/final-head verification pending. Totals: 155 IMPLEMENTED BUT NOT VERIFIED, 42 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
+
+
+A097-F01 continuation: independently verified desktop/mobile print preferences, all toggles, filtered saves and authenticated native settings-to-PDF round trips. 39/39 focused tests, 6/6 browser cases and expanded native API pair 2/2 passed (overlapping first settings cases); TypeScript/lint passed. Physical Android/printer/final-head validation pending. Totals: 156 IMPLEMENTED BUT NOT VERIFIED, 41 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
+
+
+A086-F07 continuation: responsive footer-height/safe-area clearance and field scroll margins implemented. Desktop/mobile saved-sale edit geometry/lifecycle 2/2 passed (46.1s); TypeScript/lint passed. Device safe-area/keyboard and final-head validation pending. Totals:157 IMPLEMENTED BUT NOT VERIFIED,40 PARTIAL,2 NOT STARTED; all199 final statuses remain unset.

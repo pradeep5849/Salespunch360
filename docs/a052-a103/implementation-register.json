@@ -21929,11 +21929,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A086-F06"
+      ],
+      "checkpoint_work": [
+        {
+          "date": "2026-10-14",
+          "work": "Sale form bottom clearance now shares the actual responsive footer height, adds safe-area inset and 24px spacing, and scroll margins keep focused form fields above fixed actions. Preserved all existing edit/save/accounting behavior.",
+          "tests": "Desktop/mobile saved-sale edit lifecycle 2/2 passed (46.1s), including focused Terms textarea geometry at maximum scroll: lower edge at least8px above fixed footer. TypeScript/targeted ESLint passed. Physical keyboard/safe-area device and final-head validation pending."
+        }
       ]
     },
     {
@@ -22667,7 +22674,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -22701,6 +22708,11 @@
         {
           "work": "Invoice print settings reject unsupported theme names and unknown/empty table columns rather than saving ineffective preferences. Regular/Modern/Classic/Minimal and hex accents are supported in both outputs; Minimal has an explicit color. Web inputs explain accepted values. Shared server validation covers native saves without changing stored data.",
           "tests": "35/35 focused print-option/settings-workflow/renderer tests passed; targeted lint and TypeScript passed. Native/browser preference round-trip and final-head validation remain pending."
+        },
+        {
+          "date": "2026-10-14",
+          "work": "Independently verified print setting consumers and persistence across desktop/mobile web plus authenticated mobile settings GET/POST and resulting native PDF. Native changes retain neighbouring settings, reload into web form and produce parsed A5 portrait output; earlier web A5 landscape, all toggles, search-hidden values and regular/thermal changes remain covered. Existing renderer implementations preserved.",
+          "tests": "39/39 focused print/settings tests passed (4 files,4.43s). Desktop/mobile setting/toggle/filtered-save cases 6/6 passed (2.4m). Expanded authenticated native API round-trip cases 2/2 passed (2.0m; overlap initial settings cases). TypeScript and focused ESLint passed. Physical Android/printer and exact final-head validation remain pending."
         }
       ]
     },
