@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import {transferModeChoices,type MoneyTransferMode} from "@/lib/account/money-transfer-modes";
 import { useState } from "react";
 import { saveMoneyTransferAction } from "@/app/actions/money";
 import { ActionFeedbackForm, AccountFieldError } from "./action-feedback-form";
@@ -8,34 +10,39 @@ type Account = {
   name: string;
   branchId: string | null;
   isActive: boolean;
+  type: string;
 };
 export function MoneyTransferForm({
   branches,
   accounts,
   requestKey,
   today,
+  selectedBranch,
 }: {
   branches: Array<{ id: string; name: string }>;
   accounts: Account[];
   requestKey: string;
   today: string;
+  selectedBranch?:string;
 }) {
-  const [branch, setBranch] = useState(branches[0]?.id ?? ""),
+  const [branch, setBranch] = useState(selectedBranch??branches[0]?.id ?? ""),
     [source, setSource] = useState(""),
     [destination, setDestination] = useState(""),
     [key, setKey] = useState(requestKey),
-    [amount, setAmount] = useState("");
+    [amount, setAmount] = useState(""),
+    [mode,setMode]=useState<MoneyTransferMode>("BANK_TO_CASH");
   const choices = accounts.filter(
     (account) =>
       account.isActive && (!account.branchId || account.branchId === branch),
   );
+  const sources=transferModeChoices(choices,mode,"source"),destinations=transferModeChoices(choices,mode,"destination");
   const ready =
     !!branch &&
     !!source &&
     !!destination &&
     source !== destination &&
-    choices.some((row) => row.id === source) &&
-    choices.some((row) => row.id === destination);
+    sources.some((row) => row.id === source) &&
+    destinations.some((row) => row.id === destination);
   return (
     <ActionFeedbackForm
       action={saveMoneyTransferAction}
@@ -47,6 +54,8 @@ export function MoneyTransferForm({
     >
       <input type="hidden" name="idempotencyKey" value={key} />
       <SavePendingFields>
+        <fieldset><legend>Deposit / Withdraw</legend>{([["BANK_TO_CASH","Bank to Cash"],["CASH_TO_BANK","Cash to Bank"],["BANK_TO_BANK","Bank to Bank"],["ALL","Other internal transfer"]] as const).map(([value,label])=><label key={value}><input type="radio" name="transferMode" value={value} checked={mode===value} onChange={()=>{setMode(value);setSource("");setDestination("");setKey(crypto.randomUUID());}}/>{label}</label>)}</fieldset>
+        <details><summary>Adjust Bank Balance</summary><p>Select the bank account to add or reduce its balance with an offset ledger and reason.</p>{choices.filter(row=>row.type==="BANK").map(row=><p key={row.id}><Link href={`/workspace/account/money/accounts/${row.id}?branchId=${encodeURIComponent(branch)}`}>{row.name}</Link></p>)}</details>
         <label>
           Branch
           <select
@@ -78,7 +87,7 @@ export function MoneyTransferForm({
             required
           >
             <option value="">Select account</option>
-            {choices.map((row) => (
+            {sources.map((row) => (
               <option
                 key={row.id}
                 value={row.id}
@@ -100,7 +109,7 @@ export function MoneyTransferForm({
             required
           >
             <option value="">Select account</option>
-            {choices.map((row) => (
+            {destinations.map((row) => (
               <option key={row.id} value={row.id} disabled={row.id === source}>
                 {row.name}
               </option>

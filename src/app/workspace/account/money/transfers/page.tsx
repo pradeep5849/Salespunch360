@@ -42,9 +42,11 @@ export default async function Page({
         {d.capabilities.postMoneyEntries ? (
           <MoneyTransferForm
             branches={d.branches}
+            selectedBranch={d.branchContext.mode==="BRANCH"?d.branchContext.branchId:undefined}
             accounts={d.dashboard.accounts.map(
-              ({ id, name, branchId, isActive }) => ({
+              ({ id, name, branchId, isActive,type }) => ({
                 id,
+                type,
                 name,
                 branchId,
                 isActive,

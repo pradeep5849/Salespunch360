@@ -10268,10 +10268,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Started the saved transfer reference finding: web Bank-to-Cash, Cash-to-Bank and Bank-to-Bank radio modes constrain source/destination account types, clear stale selections on mode changes, retain selected branch and disallow the same account on both sides. Adjust Bank Balance opens existing authorized account adjustment/offset-ledger form. Preserved generic internal transfers and existing balanced/idempotent posting service. Attachments/description persistence and native mode parity remain unimplemented.",
+          "tests": "25/25 focused transfer/money/replay/route tests passed, including two new account-side mode regressions. TypeScript and targeted lint passed. Desktop/mobile Chromium 2/2 passed (28.4s): correct bank/cash sides, mode-change selection reset, selected branch, same-account disabled DOM property and adjustment route. Initial option matcher did not inspect its disabled property; corrected assertion, rerun passed. No final status assigned; native, description/image and final-head coverage pending."
+        }
+      ]
     },
     {
       "finding_id": "A064-F07",

@@ -1777,3 +1777,20 @@ test("A071 Party Home groups rows and preserves long names, dates, scope and emp
  const axe=await new AxeBuilder({page}).include('[aria-label="Payment details"]').withTags(["wcag2a","wcag2aa"]).analyze();expect(axe.violations).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  });
+
+test("A064 transfer modes constrain cash and bank sides and preserve the selected branch",async({page})=>{
+ test.setTimeout(120000);
+ const ids:string[]=[];
+ for(const [index,type] of ["BANK","BANK","CASH"].entries()){
+  const ledger=await db.ledgerAccount.create({data:{companyId,code:`MODE-${index}`,name:`Transfer mode ${index}`,accountClass:"ASSET",normalBalance:"DEBIT"}});
+  const account=await db.moneyAccount.create({data:{companyId,branchId,type:type as "BANK"|"CASH",name:`Transfer mode ${index}`,ledgerAccountId:ledger.id}});ids.push(account.id);
+ }
+ await signInSettings(page);await page.goto(`/workspace/account/money/transfers?branchId=${branchId}`);
+ await expect(page.getByLabel("Branch",{exact:true})).toHaveValue(branchId);
+ const from=page.getByLabel("From account",{exact:true}),to=page.getByLabel("To account",{exact:true});
+ await expect(from.locator("option")).toHaveCount(3);await expect(to.locator("option")).toHaveCount(2);
+ await from.selectOption(ids[0]);await to.selectOption(ids[2]);
+ await page.getByRole("radio",{name:"Cash to Bank",exact:true}).check();await expect(from).toHaveValue("");await expect(to).toHaveValue("");await expect(from.locator("option")).toHaveCount(2);await expect(to.locator("option")).toHaveCount(3);
+ await page.getByRole("radio",{name:"Bank to Bank",exact:true}).check();await from.selectOption(ids[0]);await expect(to.locator(`option[value="${ids[0]}"]`)).toHaveJSProperty("disabled",true);await to.selectOption(ids[1]);
+ await page.getByText("Adjust Bank Balance",{exact:true}).click();await page.getByRole("link",{name:"Transfer mode 0",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/money/accounts/${ids[0]}`));await expect(page.getByRole("heading",{name:"Add / Reduce balance"})).toBeVisible();
+});
