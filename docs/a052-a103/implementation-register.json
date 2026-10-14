@@ -20889,11 +20889,17 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F18"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Dormant Project material report requires material-read and cost-view capabilities plus PROJECTS/PROJECT_COSTING. It resolves assigned authorized project IDs for every query, intersects branch scope, rejects unassigned explicit projects, and retains original costs/correction lineage. Public web/native allowlists remain unchanged; no new destination exposed.",
+          "tests": "60/60 grouped PostgreSQL/unit/service/Project material/costing tests passed in 5 files (6.19s). Real same-branch assigned/unassigned projects, explicit project denial, Accountant cost denial, empty branch scope and module OFF exercised. TypeScript/lint passed. Dormant service has no public browser/native route to exercise; checkpoint final-head verification pending."
+        }
       ]
     },
     {
@@ -23435,6 +23441,27 @@
       },
       "typescript": "PASS",
       "focused_lint": "PASS",
+      "migrations": "NONE",
+      "final_head_verification": false
+    },
+    "dormant_project_material_scope": {
+      "finding": "A084-F17",
+      "grouped_tests": {
+        "passed": 60,
+        "failed": 0,
+        "files": 5,
+        "seconds": 6.19
+      },
+      "postgresql": [
+        "assigned vs unassigned projects in same branch",
+        "explicit unassigned project denied",
+        "Accountant cost denied",
+        "empty branch scope",
+        "module OFF"
+      ],
+      "typescript": "PASS",
+      "focused_lint": "PASS",
+      "public_exposure": "UNCHANGED \u2014 service remains outside web/native allowlists",
       "migrations": "NONE",
       "final_head_verification": false
     }

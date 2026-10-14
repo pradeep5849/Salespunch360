@@ -8085,7 +8085,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9395,3 +9395,6 @@ A084-F15 continuation: shared economic-document cutoff preserves legacy cancelle
 
 
 A084-F04/F14 continuation: scoped profitability filters, accessible selectors, native controls and saved-unit quantity grouping implemented. Related A086-F02 Project credit payload corrected to inherit source project. Grouped checks 45/45 passed; desktop/mobile form/export/native/Axe/overflow checks 2/2 passed (39.8s); Android compile plus 4 JVM tests passed (2m); TypeScript/lint passed. No migration. Final-head validation pending. Totals: 150 IMPLEMENTED BUT NOT VERIFIED, 47 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
+
+
+A084-F17 continuation: dormant costed Project material service now enforces assignment, branch, material/cost permissions and PROJECTS/PROJECT_COSTING gates. Original costs/correction lineage retained; public allowlists unchanged. Grouped PostgreSQL/unit/Project checks 60/60 passed (5 files, 6.19s); TypeScript/lint passed. No public browser/native route exposed; final-head verification pending. Totals: 151 IMPLEMENTED BUT NOT VERIFIED, 46 PARTIAL, 2 NOT STARTED. All 199 final statuses remain unset.

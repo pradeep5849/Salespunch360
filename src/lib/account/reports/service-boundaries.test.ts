@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   owners: vi.fn(),
   owner: vi.fn(),
   webAuth: vi.fn(),
+  movements: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
   db: {
@@ -30,6 +31,7 @@ vi.mock("@/lib/db", () => ({
     vendor: { findMany: mocks.vendors },
     accountProduct: { findMany: mocks.products },
     project: { findMany: mocks.projects },
+    projectMaterialMovement: { findMany: mocks.movements },
   },
 }));
 vi.mock("@/lib/auth/authorization", () => ({
@@ -65,6 +67,7 @@ beforeEach(() => {
   mocks.vendors.mockResolvedValue([]);
   mocks.products.mockResolvedValue([]);
   mocks.projects.mockResolvedValue([]);
+  mocks.movements.mockResolvedValue([]);
 });
 describe("A084 report filter, accounting and native authentication boundaries", () => {
   it("limits customer options to assigned branches and keeps all-branch options tenant-scoped", async () => {
@@ -284,4 +287,42 @@ describe("A065 owner report period, combined totals and scope", () => {
     });
     expect(result.rows[0][0]).toBe("Inactive partner");
   });
+});
+
+describe("A084-F17 dormant costed Project material report boundaries",()=>{
+ const manager={...actor,isActive:true,role:"ACCOUNT_USER",accountAccessActive:true,accountRole:"PROJECT_MANAGER"} as ProjectActor;
+ const enable=()=>mocks.company.mockResolvedValue({productEdition:"SALESPUNCH360_ACCOUNT",accountSettings:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+ it("requires both Project and costing modules before reading material costs",async()=>{
+  for(const enabledModules of [[],["PROJECTS"],["PROJECT_COSTING"]]){
+   mocks.company.mockResolvedValue({productEdition:"SALESPUNCH360_ACCOUNT",accountSettings:{enabledModules}});
+   await expect(runFinancialReportForActor(manager,"project-material-balance",{})).rejects.toThrow();
+  }
+  expect(mocks.movements).not.toHaveBeenCalled();
+ });
+ it("scopes every all-project material query to assignments as well as authorized branches",async()=>{
+  enable();mocks.projects.mockResolvedValue([{id:"assigned-project"}]);
+  await runFinancialReportForActor(manager,"material-consumption",{});
+  expect(mocks.projects).toHaveBeenCalledWith({where:{companyId:"company",branchId:{in:["allowed"]},OR:[{projectManagerId:"actor"},{members:{some:{userId:"actor"}}}]},select:{id:true}});
+  expect(mocks.movements).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({companyId:"company",branchId:{in:["allowed"]},projectId:{in:["assigned-project"]},movementType:"CONSUMPTION"})}));
+ });
+ it("rejects an unassigned explicit project before any material read",async()=>{
+  enable();mocks.projects.mockResolvedValue([]);
+  await expect(runFinancialReportForActor(manager,"project-transfer",{projectId:"00000000-0000-4000-8000-000000000001"})).rejects.toThrow();
+  expect(mocks.movements).not.toHaveBeenCalled();
+ });
+ it("retains original cost and correction lineage without changing signed source movements",async()=>{
+  enable();mocks.projects.mockResolvedValue([{id:"assigned-project"}]);
+  mocks.movements.mockResolvedValue([{movementDate:new Date("2026-10-14"),projectId:"assigned-project",movementType:"RETURN_TO_INVENTORY",productId:"product",quantity:D("2"),originalUnitCost:D("40"),totalCost:D("80"),sourceProjectId:"assigned-project",destinationProjectId:null,purchaseDocumentId:"purchase",correctionDocumentId:"debit-note",sourceMovementId:"original-receipt"}]);
+  const result=await runFinancialReportForActor(manager,"project-material-balance",{});
+  expect(result.rows[0]).toEqual(["2026-10-14","assigned-project","RETURN_TO_INVENTORY","product","2","40","80","assigned-project","","purchase","debit-note","original-receipt"]);
+ });
+ it("rejects a role without report and costing access before querying movements",async()=>{
+  enable();await expect(runFinancialReportForActor({...actor,accountRole:"DATA_ENTRY"} as ProjectActor,"project-material-balance",{})).rejects.toThrow();expect(mocks.movements).not.toHaveBeenCalled();
+ });
+});
+
+it("A084-F17 denies Accountant material costs even when material read is allowed",async()=>{
+ mocks.company.mockResolvedValue({productEdition:"SALESPUNCH360_ACCOUNT",accountSettings:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+ await expect(runFinancialReportForActor({...actor,isActive:true,role:"ACCOUNT_USER",accountAccessActive:true,accountRole:"ACCOUNTANT"} as ProjectActor,"project-material-balance",{})).rejects.toThrow();
+ expect(mocks.movements).not.toHaveBeenCalled();
 });

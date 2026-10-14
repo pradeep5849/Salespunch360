@@ -242,6 +242,9 @@ describe.skipIf(!url)(
           await tx.accountSettlement.deleteMany({ where: { companyId } });
           await tx.cheque.deleteMany({ where: { companyId } });
           await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+          await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
+          await tx.projectMaterialMovement.deleteMany({where:{companyId}});
+          await tx.$executeRawUnsafe("SET LOCAL session_replication_role = origin");
           await tx.stockMovement.deleteMany({where:{companyId}});
           await tx.purchaseLineAllocation.deleteMany({where:{companyId}});
           await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
@@ -783,6 +786,22 @@ describe.skipIf(!url)(
         expect(movements.find(row=>row.movementType==="SALES_RETURN")?.quantity.toFixed(4)).toBe("1.0000");
         expect(await outstanding(sale.id)).toBe("0.00");
         expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id}})).toEqual(before);
+      }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
+    });
+    it("isolates dormant material cost reports by Project assignment and branch",async()=>{
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+      try{
+        const projects=await Promise.all([true,false].map(assigned=>client.project.create({data:{companyId,branchId,customerId,projectNumber:randomUUID(),name:assigned?"Assigned material project":"Unassigned material project",createdById:userId,projectManagerId:assigned?userId:null}})));
+        const product=await client.accountProduct.create({data:{companyId,name:"Scoped report material",trackInventory:false}});
+        for(const project of projects)await client.projectMaterialMovement.create({data:{companyId,branchId,projectId:project.id,productId:product.id,movementType:"CONSUMPTION",quantity:"1",originalUnitCost:"40",totalCost:"40",movementDate:new Date("2026-10-10"),createdById:userId,idempotencyKey:randomUUID()}});
+        const manager={...actor,accountRole:"PROJECT_MANAGER"} as ProjectActor;
+        const result=await runFinancialReportForActor(manager,"material-consumption",{from:"2026-10-10",to:"2026-10-10"});
+        expect(result.rows).toHaveLength(1);expect(result.rows[0][1]).toBe(projects[0].id);expect(result.rows[0][5]).toBe("40");
+        await expect(runFinancialReportForActor(manager,"material-consumption",{projectId:projects[1].id})).rejects.toThrow();
+        await expect(runFinancialReportForActor({...actor,accountRole:"ACCOUNTANT"} as ProjectActor,"material-consumption",{})).rejects.toThrow();
+        expect((await runFinancialReportForActor({...manager,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},"material-consumption",{})).rows).toEqual([]);
+        await client.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS"]}});
+        await expect(runFinancialReportForActor(manager,"material-consumption",{})).rejects.toThrow();
       }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
     });
     it("applies profitability filters and preserves compatible unit quantities through credits",async()=>{

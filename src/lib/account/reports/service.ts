@@ -1,3 +1,4 @@
+import { requireAccountModules } from "../modules";
 import { reportQuantity, reportUnitKey } from "./quantity";
 import { economicDocumentsAt } from "../commercial-report-policy";
 import { partyLedgerReport } from "./party-ledger";
@@ -24,6 +25,7 @@ import { gstReportForActor } from "../tax";
 import { reportCalendarDate, reportFinancialYearStart } from "./dates";
 import { itemProfitability } from "../inventory";
 import {
+  requireProjectFunction,
   authorizedProjectBranchIds,
   projectRecordScope,
   type ProjectActor,
@@ -883,24 +885,30 @@ async function projectMaterialReport(
   raw: unknown,
   actor: ProjectActor,
 ): Promise<ReportResult> {
-  const c = await context(raw, true, actor),
-    branches = await authorizedProjectBranchIds(actor);
-  if (
-    c.f.projectId &&
-    !(await db.project.findFirst({
-      where: { id: c.f.projectId, ...projectRecordScope(actor, branches) },
-    }))
-  )
+  const c = await context(raw, true, actor);
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_MATERIAL_VIEW");
+  await requireProjectFunction(actor, "ACCOUNT_PROJECT_COST_VIEW");
+  await requireAccountModules(actor, "PROJECT_COSTING");
+  const authorizedBranches = await authorizedProjectBranchIds(actor),
+    branches = c.f.branchId
+      ? authorizedBranches.filter(id => id === c.f.branchId)
+      : authorizedBranches,
+    projects = await db.project.findMany({
+      where: {
+        ...projectRecordScope(actor, branches),
+        ...(c.f.projectId ? { id: c.f.projectId } : {}),
+      },
+      select: { id: true },
+    });
+  if (c.f.projectId && !projects.some(project => project.id === c.f.projectId))
     throw new AuthorizationError();
   const rows = await db.projectMaterialMovement.findMany({
     where: {
       companyId: actor.companyId,
       movementDate: { gte: c.from, lte: c.to },
-      ...(c.f.projectId ? { projectId: c.f.projectId } : {}),
+      projectId: { in: projects.map(project => project.id) },
       ...(c.f.productId ? { productId: c.f.productId } : {}),
-      ...(c.f.branchId
-        ? { branchId: c.f.branchId }
-        : { branchId: { in: branches } }),
+      branchId: { in: branches },
       ...(name === "material-consumption"
         ? { movementType: "CONSUMPTION" }
         : name === "project-transfer"
