@@ -8,6 +8,7 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  CUSTOM_FIELD_PRINT_UNSUPPORTED: "Printing custom fields is unavailable for this entity. Keep Show in print off.",
   MANAGED_CORRECTION_REVERSAL_REQUIRED:"Use the original transaction workflow to make the next correction. Reversing its correction journal cannot reopen the business record.",
   OWNER_CONTRIBUTION_HAS_ASSET_FUNDING:"Cancel the contribution’s asset funding allocations before reversing it. Reverse any related capital repayments first.",
   ASSET_FUNDING_REPAYMENT_REALLOCATED:"Later funding uses the asset’s released share. Correct those allocations before reversing this capital repayment.",

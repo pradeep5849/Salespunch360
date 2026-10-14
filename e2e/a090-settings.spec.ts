@@ -1015,7 +1015,7 @@ test("A089 quotation fields reopen and stay with their own revision and public P
   const shared=await createQuotationShareForActor(actor,quote.id);const token=shared;
   const publicQuote=await getPublicQuotation(token);expect(publicQuote.customFields).toEqual([{label:"Quotation site reference",value:"QUOTE-EDITED"}]);expect(JSON.stringify(publicQuote)).not.toContain("INTERNAL-DO-NOT-SHARE");
   await page.goto(`/workspace/account/quotations/${quote.id}/revisions/new`);await expect(page.getByLabel("Issue date",{exact:true})).toHaveValue("2026-10-11");await expect(page.getByLabel("Valid until",{exact:true})).toHaveValue("2026-11-11");
-  await expect(page.getByRole("combobox",{name:/^Type/})).toBeDisabled();await expect(page.getByRole("combobox",{name:/^Branch/})).toBeDisabled();await expect(page.getByRole("combobox",{name:/^Customer/})).toBeDisabled();
+  await expect(page.getByRole("combobox",{name:"Document type",exact:true})).toBeDisabled();await expect(page.getByRole("combobox",{name:/^Branch/})).toBeDisabled();await expect(page.getByRole("combobox",{name:/^Customer/})).toBeDisabled();
   await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${quote.id}\\?revised=1$`));
   document=await getQuotationForActor(actor,quote.id);
   expect(document.revisions[0].lines[0].quantity.toString()).toBe("2");expect(document.revisions[0].lines[0].rate.toString()).toBe("100");expect((await db.quotationLine.findUniqueOrThrow({where:{id:document.revisions[0].lines[0].id}})).internalUnitCost.toString()).toBe("25");expect(document.revisions[0].lines[0].unitSymbol).toBe("sqft");expect(document.revisions[0].lines[0].specification).toBe("Retain finish A");
@@ -1919,4 +1919,19 @@ test("A084 profitability filters constrain web exports and native results",async
   const native=await page.request.get(`/api/v1/mobile/account/reports/customers?${query}`,{headers:{authorization:`Bearer ${token}`}});expect(native.status()).toBe(200);expect(String((await native.json()).rows[0][2])).toContain("30.00");
   expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules}})}
+});
+
+test("A089 print visibility is limited to working outputs without losing saved fields",async({page})=>{
+ test.setTimeout(120000);
+ const legacy=await db.customFieldDefinition.create({data:{companyId,entityType:"PRODUCT",fieldKey:"legacy_print_scope",label:"Legacy product print field",dataType:"TEXT",validation:{showInPrint:true,retained:"metadata"}}});
+ await db.customFieldValue.create({data:{companyId,definitionId:legacy.id,entityType:"PRODUCT",entityId:productId,value:"Retain product value"}});
+ await signInSettings(page);await page.goto("/workspace/account/settings/custom-fields");
+ const form=page.locator("form.account-form").first(),printing=form.getByLabel("Show in print",{exact:true});
+ await printing.check();await form.getByLabel("Entity",{exact:true}).selectOption("PRODUCT");await expect(printing).toBeDisabled();await expect(printing).not.toBeChecked();await expect(form).toContainText("Printing custom fields is unavailable");
+ await form.getByLabel("Entity",{exact:true}).selectOption("SALES_INVOICE");await expect(printing).toBeEnabled();await printing.check();
+ const row=page.locator(".account-list > div").filter({hasText:"legacy_print_scope"});await row.getByText("Edit field",{exact:true}).click();await expect(row.getByLabel("Show in print",{exact:true})).toBeDisabled();await row.getByRole("button",{name:"Save field",exact:true}).click();await expect(row.getByText("Saved successfully",{exact:true})).toBeVisible();
+ expect(await db.customFieldDefinition.findUniqueOrThrow({where:{id:legacy.id}})).toMatchObject({validation:{showInPrint:false,retained:"metadata"}});expect(await db.customFieldValue.findFirstOrThrow({where:{companyId,definitionId:legacy.id}})).toMatchObject({value:"Retain product value"});
+ const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});
+ const response=await page.request.post("/api/v1/mobile/account/settings/custom-fields",{headers:{authorization:`Bearer ${token}`},data:{id:legacy.id,entityType:"PRODUCT",fieldKey:"legacy_print_scope",label:legacy.label,dataType:"TEXT",showInPrint:true}});expect(response.status()).toBe(400);expect((await response.json()).error).toBe("CUSTOM_FIELD_PRINT_UNSUPPORTED");
+ expect((await new AxeBuilder({page}).include(".account-main").analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

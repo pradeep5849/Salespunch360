@@ -1,3 +1,4 @@
+import { supportsCustomFieldPrint } from "./custom-field-print-policy";
 import { Prisma, CustomFieldDataType, CustomFieldEntity, PrintPaperSize } from "@prisma/client";
 import { z } from "zod";
 import { businessCurrencySchema, recordedCurrencyHistory } from "./business-currency";
@@ -84,7 +85,7 @@ export async function updateSalesInvoicePrefix(branchId:string,prefix:string){
 const fieldSchema = z.object({ showInPrint:z.boolean().optional(), id: z.string().uuid().optional(), entityType: z.nativeEnum(CustomFieldEntity), fieldKey: z.string().regex(/^[a-z][a-z0-9_]{1,59}$/), label: z.string().min(1).max(100), dataType: z.nativeEnum(CustomFieldDataType), isRequired: z.boolean().default(false), isActive:z.boolean().optional(), position: z.number().int().min(0).max(1000).default(0), options: z.array(z.string().min(1).max(100)).max(100).optional() }).strict();
 export async function saveCustomFieldForActor(actor:{id:string;companyId:string|null;accountRole?:string|null},raw:unknown){
  if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
- const input=fieldSchema.parse(raw);if(input.dataType==="SELECT"&&!input.options?.length)throw new Error("SELECT_OPTIONS_REQUIRED");
+ const input=fieldSchema.parse(raw);if(input.showInPrint&&!supportsCustomFieldPrint(input.entityType))throw new Error("CUSTOM_FIELD_PRINT_UNSUPPORTED");if(input.dataType==="SELECT"&&!input.options?.length)throw new Error("SELECT_OPTIONS_REQUIRED");
  return db.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId!+":custom-fields"}))`;
   let existingValidation:Prisma.JsonValue|null=null;

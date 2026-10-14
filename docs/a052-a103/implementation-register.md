@@ -8839,7 +8839,7 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own source audit complete for definition editor, typed values, access/used-definition protections and offered consumers; Decimal web selector and creation bounds corrected.", "tests": "14 offered-consumer browser cases passed; 18 validation tests across four files passed (1.33s); new definition-editor test initially selected the wrong form, corrected rerun pending. TypeScript and targeted ESLint passed. Corrected definition editor passed 2 browser cases (12.8s), including saved Decimal/Required/Show in print/Active states.", "finding_status": null, "evidence": ["SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9398,3 +9398,6 @@ A084-F04/F14 continuation: scoped profitability filters, accessible selectors, n
 
 
 A084-F17 continuation: dormant costed Project material service now enforces assignment, branch, material/cost permissions and PROJECTS/PROJECT_COSTING gates. Original costs/correction lineage retained; public allowlists unchanged. Grouped PostgreSQL/unit/Project checks 60/60 passed (5 files, 6.19s); TypeScript/lint passed. No public browser/native route exposed; final-head verification pending. Totals: 151 IMPLEMENTED BUT NOT VERIFIED, 46 PARTIAL, 2 NOT STARTED. All 199 final statuses remain unset.
+
+
+A089-F02 continuation: Show in print now follows supported party/quotation/invoice/bill outputs; unsupported web/native controls explain the limit and the shared API rejects unsupported true flags. Explicit legacy save retains entity values and other validation metadata. Grouped tests 58/58 passed; 4 desktop/mobile custom-field cases passed and 2 quotation PDF/revision cases passed after stale selector correction; Android compile + 2 JVM tests passed (1m52s); TypeScript/lint passed. No migration. Final-head verification pending. Totals: 152 IMPLEMENTED BUT NOT VERIFIED, 45 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.

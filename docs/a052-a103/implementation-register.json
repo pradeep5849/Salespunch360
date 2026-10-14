@@ -22235,7 +22235,12 @@
       "expected_behavior": "Honor print visibility in supported entity outputs or accurately constrain unsupported settings.",
       "root_cause": "Definition UI exceeds printable entity consumers.",
       "affected_files": [
-        "src/lib/account/print.ts"
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt",
+        "src/app/workspace/account/settings/custom-fields/page.tsx",
+        "src/components/account/custom-field-print-controls.tsx",
+        "src/lib/account/custom-field-print-policy.ts",
+        "src/lib/account/print.ts",
+        "src/lib/account/settings.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -22268,11 +22273,17 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A089-F01"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Show in print is limited to entities with existing consumers: CUSTOMER, VENDOR, QUOTATION, SALES_INVOICE, PURCHASE_BILL. Web/native explain unsupported outputs and disable the toggle; shared service rejects unsupported true requests with a safe 400 message. Explicit legacy definition save clears ineffective print metadata while preserving validation metadata and saved entity values. No historical definition/value migration.",
+          "tests": "58/58 grouped custom-field, party, print and feedback tests passed (6 files, 4.39s). Four desktop/mobile definition/visibility browser cases passed; two existing quotation revision/private-public PDF cases passed on focused rerun (54.6s) after correcting a stale Document type selector. Android compile plus 2 focused JVM tests passed (1m52s, zero failure/error/skip). TypeScript/lint passed. Native physical interaction and final-head verification pending."
+        }
       ]
     },
     {
@@ -23462,6 +23473,40 @@
       "typescript": "PASS",
       "focused_lint": "PASS",
       "public_exposure": "UNCHANGED \u2014 service remains outside web/native allowlists",
+      "migrations": "NONE",
+      "final_head_verification": false
+    },
+    "custom_field_print_capabilities": {
+      "finding": "A089-F02",
+      "grouped_tests": {
+        "passed": 58,
+        "failed": 0,
+        "files": 6
+      },
+      "browser": {
+        "passed": 6,
+        "failed_after_focused_rerun": 0,
+        "initial_failure": "Two quotation cases used stale Type selector; Document type selector corrected, rerun 2/2 pass. Four custom-field cases already passed.",
+        "checks": [
+          "unsupported toggle disabled",
+          "supported toggle enabled",
+          "legacy saved values retained",
+          "native API 400",
+          "quotation private/public PDF",
+          "revision isolation",
+          "Axe",
+          "overflow"
+        ]
+      },
+      "android": {
+        "compile": "PASS",
+        "jvm_passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "device": "NOT AVAILABLE"
+      },
+      "typescript": "PASS",
+      "focused_lint": "PASS",
       "migrations": "NONE",
       "final_head_verification": false
     }

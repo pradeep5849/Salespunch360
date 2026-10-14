@@ -284,6 +284,7 @@ private fun CustomFieldView(data: JsonElement, vm: AccountAdministrationViewMode
     var required by remember(editing){mutableStateOf(editing?.get("isRequired")?.jsonPrimitive?.booleanOrNull?:false)}
     var active by remember(editing){mutableStateOf(editing?.get("isActive")?.jsonPrimitive?.booleanOrNull?:true)}
     var printing by remember(editing){mutableStateOf((editing?.get("validation") as? JsonObject)?.get("showInPrint")?.jsonPrimitive?.booleanOrNull?:false)}
+    val printSupported=com.salespunch360.mobile.account.supportsCustomFieldPrint(entity)
     var position by remember(editing){mutableStateOf(editing?.str("position")?:"0")}
     LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         item{Text(if(editing==null)"Create custom field" else "Edit custom field",fontWeight=FontWeight.Bold)}
@@ -293,10 +294,10 @@ private fun CustomFieldView(data: JsonElement, vm: AccountAdministrationViewMode
         item{SelectField("Type",type,listOf("TEXT","TEXTAREA","NUMBER","DECIMAL","DATE","BOOLEAN","SELECT").map{it to it}){if(!busy&&editing==null)type=it}}
         if(type=="SELECT")item{OutlinedTextField(choices,{choices=it},enabled=!busy,label={Text("Options, comma separated")})}
         item{OutlinedTextField(position,{position=it},enabled=!busy,label={Text("Position")})}
-        item{SwitchRow("Required",required,!busy){required=it};SwitchRow("Show in print",printing,!busy){printing=it};if(editing!=null)SwitchRow("Active",active,!busy){active=it}}
+        item{SwitchRow("Required",required,!busy){required=it};SwitchRow("Show in print",printing&&printSupported,!busy&&printSupported){printing=it};if(!printSupported)Text("Printing custom fields is unavailable for this entity. Saved fields remain available on its record.");if(editing!=null)SwitchRow("Active",active,!busy){active=it}}
         item{Button(enabled=!busy&&key.matches(Regex("[a-z][a-z0-9_]{1,59}"))&&label.isNotBlank()&&label.length<=100&&position.toIntOrNull() in 0..1000&&(type!="SELECT"||choices.split(',').any{it.isNotBlank()}),onClick={
             vm.save("custom-fields",buildJsonObject{
-                editing?.str("id")?.let{put("id",it)};put("entityType",entity);put("fieldKey",key);put("label",label);put("dataType",type);put("isRequired",required);put("showInPrint",printing);put("isActive",active);put("position",position.toInt());if(type=="SELECT")putJsonArray("options"){choices.split(',').map{it.trim()}.filter{it.isNotBlank()}.forEach{add(JsonPrimitive(it))}}
+                editing?.str("id")?.let{put("id",it)};put("entityType",entity);put("fieldKey",key);put("label",label);put("dataType",type);put("isRequired",required);put("showInPrint",printing&&printSupported);put("isActive",active);put("position",position.toInt());if(type=="SELECT")putJsonArray("options"){choices.split(',').map{it.trim()}.filter{it.isNotBlank()}.forEach{add(JsonPrimitive(it))}}
             })
         }){Text(if(busy)"Saving…" else if(editing==null)"Create field" else "Save field")};if(editing!=null)TextButton(enabled=!busy,onClick={editing=null}){Text("Cancel edit")}}
         items((root["fields"] as? JsonArray).orEmpty()){value->val field=value.jsonObject;ListItem(headlineContent={Text(field.str("label"))},supportingContent={Text("${field.str("entityType")} · ${field.str("dataType")} · ${if(field["isActive"]?.jsonPrimitive?.booleanOrNull==true)"ACTIVE" else "INACTIVE"}")},trailingContent={TextButton(enabled=!busy,onClick={editing=field}){Text("Edit")}})}
