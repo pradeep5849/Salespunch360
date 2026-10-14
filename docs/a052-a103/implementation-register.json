@@ -6842,7 +6842,11 @@
         "work": "Native option loads now explicitly track usable configuration, prevent Save before it loads, expose Retry on load failure and retain draft fields; duplicate pending saves are blocked. Full overlay/selector accessibility and numeric validation findings remain unfinished.",
         "remaining_work": "Complete remaining modal focus/Escape, numeric validation, field errors and state-retention verification; final-head tests pending.",
         "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
-        "opening_controls": "Opening stock and unit-cost inputs have explicit accessible names; stock unit cost accepts four decimal places. Broader overlays and numeric validation remain PARTIAL."
+        "opening_controls": "Opening stock and unit-cost inputs have explicit accessible names; stock unit cost accepts four decimal places. Broader overlays and numeric validation remain PARTIAL.",
+        "web_modal_validation": {
+          "work": "Unit/category selectors, nested creation sheets and help overlays use labelled native modal dialogs with Escape, browser focus containment and original-trigger restoration. Capture trigger before child autofocus; pending Escape cannot dismiss an in-flight save. Main item Save invokes actual HTML input validity checks, retains draft values and focuses invalid controls before any server mutation.",
+          "tests": "29/29 focused item/custom-field policy tests passed. Desktop/mobile dialog/nested Escape/Tab/Axe AA and negative-price focus/state/no-write regressions2/2 passed(32.8s). TypeScript/focused lint passed. Initial browser check caught category autofocus restoration timing and passed after correction. Remaining original native/numeric/overlay coverage and final-head checks pending; finding remains PARTIAL."
+        }
       }
     },
     {

@@ -9416,3 +9416,6 @@ A086-F07 continuation: responsive footer-height/safe-area clearance and field sc
 
 
 A052-F03 continuation: independently verified real database selected/consolidated branches, actual branch assignments, assigned/unassigned Projects and foreign-company exclusion. 50/50 scoped/financial/aggregate tests passed,zero skips; desktop/mobile role/context cases2/2 passed(43.9s); TypeScript/lint passed. Device/final-head checks pending. Totals:158 IMPLEMENTED BUT NOT VERIFIED,39 PARTIAL,2 NOT STARTED; all199 final statuses remain unset.
+
+
+A058-F08 partial continuation: labelled native web unit/category/help dialogs, nested Escape/focus containment/restoration, and pre-save HTML numeric validation implemented. 29/29 focused policy tests and2/2 desktop/mobile nested-dialog/Axe AA/invalid-price retention checks passed(32.8s); TypeScript/lint passed. Category autofocus timing corrected after initial browser failure. Remaining original native/numeric/overlay coverage and final-head verification pending; status remains PARTIAL. Totals unchanged158/39/2.

@@ -1969,3 +1969,22 @@ test("A065 owner correction preserves failed inputs and posts one balanced rever
  await db.ownerFinancialAccount.update({where:{id:owner.id},data:{name:"O".repeat(160)}});await page.reload();await expect(page.getByRole("heading",{name:"O".repeat(160),exact:true})).toBeVisible();
  expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+
+test("A058 item dialogs restore focus and reject invalid numeric saves without losing drafts",async({page})=>{
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),defaults=(original.transactionDefaults??{}) as import("@prisma/client").Prisma.JsonObject;
+ await db.accountSettings.update({where:{companyId},data:{transactionDefaults:{...defaults,itemSettings:{itemUnits:true,itemCategory:true,itemType:"PRODUCTS"}}}});
+ try{
+  await signInSettings(page);await page.goto("/workspace/account/inventory/items/new");
+  const name=page.getByRole("textbox",{name:"Item Name *",exact:true});await name.fill("Retained invalid item draft");
+  const unitTrigger=page.locator(".add-item-unit-pill");await unitTrigger.click();
+  const units=page.getByRole("dialog",{name:"Add Item Unit",exact:true});await expect(units).toBeVisible();
+  await units.getByRole("button",{name:/Primary Unit/}).click();await units.getByRole("button",{name:"Add Unit",exact:true}).click();
+  const newUnit=page.getByRole("dialog",{name:"Add Unit",exact:true});await expect(newUnit).toBeVisible();await newUnit.getByRole("textbox",{name:"Name",exact:true}).fill("Retained unit draft");await newUnit.getByRole("button",{name:"Save",exact:true}).focus();await page.keyboard.press("Tab");expect(await newUnit.evaluate(node=>node.contains(document.activeElement))).toBe(true);expect((await new AxeBuilder({page}).include('dialog[aria-label="Add Unit"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
+  await page.keyboard.press("Escape");await expect(newUnit).not.toBeVisible();await expect(units.getByRole("button",{name:"Add Unit",exact:true})).toBeFocused();
+  await page.keyboard.press("Escape");await expect(units).not.toBeVisible();await expect(unitTrigger).toBeFocused();
+  const categoryTrigger=page.getByRole("button",{name:/Item Category.*Select Category/});await categoryTrigger.click();
+  const category=page.getByRole("dialog",{name:"Select Category",exact:true});await category.getByRole("button",{name:/Add New Category/}).click();
+  const newCategory=page.getByRole("dialog",{name:"Add New Category",exact:true});await newCategory.getByRole("textbox",{name:"Category Name",exact:true}).fill("Retained category draft");await page.keyboard.press("Escape");await expect(newCategory).not.toBeVisible();await expect(category.getByRole("button",{name:/Add New Category/})).toBeFocused();await page.keyboard.press("Escape");await expect(categoryTrigger).toBeFocused();
+  const price=page.getByPlaceholder("Sale Price",{exact:true});await price.fill("-1");await page.getByRole("button",{name:"Save",exact:true}).click();await expect(price).toBeFocused();expect(await price.evaluate((node:HTMLInputElement)=>node.validity.rangeUnderflow)).toBe(true);await expect(name).toHaveValue("Retained invalid item draft");expect(await db.accountProduct.count({where:{companyId,name:"Retained invalid item draft"}})).toBe(0);
+ }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:original.transactionDefaults??{}}})}
+});

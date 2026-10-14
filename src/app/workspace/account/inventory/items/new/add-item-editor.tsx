@@ -2,7 +2,7 @@
 import { generateItemCode } from "@/lib/account/item-identifiers";
 import type { CustomFieldDefinition } from "@prisma/client";
 import { CustomFieldInput } from "@/components/account/custom-field-input";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, type ReactNode } from "react";
 import { updateQuickItemSettingAction } from "@/app/actions/account-settings";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
@@ -31,9 +31,19 @@ type Props = {
 };
 type HelpKey = "OPENING" | "PRICE" | "MIN" | null;
 const taxRates = ["0", "0.1", "0.25", "3", "5", "12", "18", "28"];
+function ItemEditorDialog({children,label,className,onClose,pending=false}:{children:ReactNode;label:string;className:string;onClose:()=>void;pending?:boolean}) {
+  const dialog=useRef<HTMLDialogElement>(null);
+  const restoreFocus=useRef<HTMLElement|null>(typeof document!=="undefined"&&document.activeElement instanceof HTMLElement?document.activeElement:null);
+  useEffect(()=>{
+    const previous=restoreFocus.current;
+    const current=dialog.current;current?.showModal();
+    return ()=>{current?.close();if(previous?.isConnected)previous.focus()};
+  },[]);
+  return <dialog ref={dialog} aria-label={label} className={className} onCancel={event=>{event.preventDefault();if(!pending)onClose()}} style={{margin:0,border:0,padding:0,width:"100vw",height:"100dvh",maxWidth:"none",maxHeight:"none",borderRadius:0}}>{children}</dialog>;
+}
 function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
   return (
-    <div className="sale-overlay">
+    <ItemEditorDialog label="Item help" className="sale-overlay" onClose={onClose}>
       <section className="sale-dialog">
         <header>
           <span />
@@ -48,7 +58,7 @@ function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
           </button>
         </div>
       </section>
-    </div>
+    </ItemEditorDialog>
   );
 }
 export function AddItemEditor({
@@ -65,6 +75,7 @@ export function AddItemEditor({
   const settingsDialog = useRef<HTMLDialogElement>(null);
   const settingsTrigger = useRef<HTMLButtonElement>(null);
   const customFieldRoot = useRef<HTMLDivElement>(null);
+  const editorRoot = useRef<HTMLElement>(null);
   const creationKey = useRef<string | null>(null);
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const router = useRouter(),
@@ -179,7 +190,9 @@ export function AddItemEditor({
     if (!code) setCode(generateItemCode(kind));
   }
   function save() {
-    if (!name.trim()) return;
+    if (pending || !name.trim()) return;
+    const inputs=editorRoot.current?.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>("input,select,textarea")??[];
+    if(Array.from(inputs).some(control=>!control.reportValidity()))return;
     const controls = Array.from(
       customFieldRoot.current?.querySelectorAll<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -288,7 +301,7 @@ export function AddItemEditor({
     });
   }
   return (
-    <main className="add-item-page">
+    <main ref={editorRoot} className="add-item-page">
       <SaveFeedback state={mutation.feedback} />
       <header>
         <Link href="/workspace/account/inventory" aria-label="Back">
@@ -666,7 +679,7 @@ export function AddItemEditor({
       </footer>
 
       {unitPage && (
-        <div className="sale-fullscreen-panel add-unit-full">
+        <ItemEditorDialog label="Add Item Unit" className="sale-fullscreen-panel add-unit-full" onClose={()=>setUnitPage(false)} pending={pending}>
           <header>
             <button onClick={() => setUnitPage(false)} aria-label="Back">
               ←
@@ -769,11 +782,11 @@ export function AddItemEditor({
               Save
             </button>
           </footer>
-        </div>
+        </ItemEditorDialog>
       )}
 
       {categoryOpen && (
-        <div className="sale-fullscreen-panel category-full">
+        <ItemEditorDialog label="Select Category" className="sale-fullscreen-panel category-full" onClose={()=>setCategoryOpen(false)} pending={pending}>
           <header>
             <h2>Select Category</h2>
             <button onClick={() => setCategoryOpen(false)} aria-label="Close">
@@ -783,6 +796,7 @@ export function AddItemEditor({
           <div className="sale-fullscreen-body">
             <input
               className="category-search"
+              aria-label="Search Category"
               autoFocus
               value={categoryQuery}
               onChange={(e) => setCategoryQuery(e.target.value)}
@@ -820,15 +834,15 @@ export function AddItemEditor({
               Apply
             </button>
           </footer>
-        </div>
+        </ItemEditorDialog>
       )}
 
       {addUnitOpen && (
-        <div className="sale-overlay">
+        <ItemEditorDialog label="Add Unit" className="sale-overlay" onClose={()=>setAddUnitOpen(false)} pending={pending}>
           <section className="sale-dialog">
             <header>
               <h2>Add Unit</h2>
-              <button onClick={() => setAddUnitOpen(false)}>×</button>
+              <button aria-label="Close Add Unit" disabled={pending} onClick={() => setAddUnitOpen(false)}>×</button>
             </header>
             <label>
               Name
@@ -858,14 +872,14 @@ export function AddItemEditor({
               </button>
             </div>
           </section>
-        </div>
+        </ItemEditorDialog>
       )}
       {addCategoryOpen && (
-        <div className="sale-overlay">
+        <ItemEditorDialog label="Add New Category" className="sale-overlay" onClose={()=>setAddCategoryOpen(false)} pending={pending}>
           <section className="sale-dialog">
             <header>
               <h2>Add New Category</h2>
-              <button onClick={() => setAddCategoryOpen(false)}>×</button>
+              <button aria-label="Close Add New Category" disabled={pending} onClick={() => setAddCategoryOpen(false)}>×</button>
             </header>
             <label>
               Category Name
@@ -885,7 +899,7 @@ export function AddItemEditor({
               </button>
             </div>
           </section>
-        </div>
+        </ItemEditorDialog>
       )}
       {help === "OPENING" && (
         <HelpDialog
