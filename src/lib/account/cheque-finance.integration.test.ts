@@ -250,6 +250,7 @@ describe.skipIf(!url)(
           await tx.accountProduct.deleteMany({where:{companyId}});
           await tx.warehouse.deleteMany({where:{companyId}});
           await tx.commercialDocument.deleteMany({ where: { companyId } });
+        await tx.project.deleteMany({where:{companyId}});
           await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
           await tx.journalLine.deleteMany({ where: { companyId } });
           await tx.journalEntry.deleteMany({ where: { companyId } });
@@ -782,6 +783,30 @@ describe.skipIf(!url)(
         expect(movements.find(row=>row.movementType==="SALES_RETURN")?.quantity.toFixed(4)).toBe("1.0000");
         expect(await outstanding(sale.id)).toBe("0.00");
         expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id}})).toEqual(before);
+      }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
+    });
+    it("applies profitability filters and preserves compatible unit quantities through credits",async()=>{
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","INVENTORY"]}});
+      try{
+        const party=await client.customer.create({data:{companyId,branchId,name:"Profit filter customer",isAccountCustomer:true}});
+        const project=await client.project.create({data:{companyId,branchId,customerId:party.id,projectNumber:randomUUID(),name:"Profit filter project",createdById:actor.id}});
+        const products=await Promise.all(["Selected product","Other product"].map(name=>client.accountProduct.create({data:{companyId,name,trackInventory:false}})));
+        const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:party.id,projectId:project.id,issueDate:"2026-10-10",lines:products.map((product,index)=>({lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:index?"70":"30",taxRate:"0",unitName:index?"Kilogram":"Number",unitSymbol:index?"kg":"Nos"}))});
+        await postCommercialDocumentForActor(actor,{documentId:sale.id});
+        for(const name of ["items","invoices","customers"]){
+          const filter={scope:"all",from:"2026-10-10",to:"2026-10-10",customerId:party.id,projectId:project.id,productId:products[0].id};
+          const result=await runFinancialReportForActor(actor,name,filter);
+          expect(result.rows).toHaveLength(1);expect(result.rows[0][2]).toBe("30");expect(result.rows[0][1]).toBe("1.0000 Nos");
+          for(const key of ["customerId","projectId","productId"]){
+            expect((await runFinancialReportForActor(actor,name,{...filter,[key]:randomUUID()})).rows).toEqual([]);
+          }
+          expect((await runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},name,filter)).rows).toEqual([]);
+        }
+        const mixed=await runFinancialReportForActor(actor,"customers",{scope:"all",from:"2026-10-10",to:"2026-10-10",customerId:party.id});
+        expect(mixed.rows[0][1]).toBe("Mixed units");
+        await reversePostedSaleForActor(actor,sale.id);
+        const corrected=await runFinancialReportForActor(actor,"customers",{scope:"all",from:"2026-10-10",to:"2026-10-31",customerId:party.id,projectId:project.id,productId:products[0].id});
+        expect(corrected.rows).toHaveLength(1);expect(corrected.rows[0][2]).toBe("0");expect(corrected.rows[0][1]).toBe("0.0000 Nos");
       }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
     });
     it("preserves cancelled sale history in profit and GST across correction periods",async()=>{

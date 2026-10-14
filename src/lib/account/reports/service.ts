@@ -1,3 +1,4 @@
+import { reportQuantity, reportUnitKey } from "./quantity";
 import { economicDocumentsAt } from "../commercial-report-policy";
 import { partyLedgerReport } from "./party-ledger";
 import { postedJournalAt } from "../settlement-policy";
@@ -791,8 +792,11 @@ export async function runFinancialReportForActor(
         type: { in: ["SALES_INVOICE", "CREDIT_NOTE"] },
         issueDate: { gte: c.from, lte: c.to },
         ...c.branch,
+        ...(c.f.customerId ? { customerId: c.f.customerId } : {}),
+        ...(c.f.projectId ? { projectId: c.f.projectId } : {}),
+        ...(c.f.productId ? { lines: { some: { productId: c.f.productId } } } : {}),
       },
-      include: { lines: true },
+      include: { lines: c.f.productId ? { where: { productId: c.f.productId } } : true },
     });
     const movementGrouped = await db.stockMovement.groupBy({
       by: ["sourceLineId"],
@@ -816,14 +820,14 @@ export async function runFinancialReportForActor(
         label: string;
         revenue: Prisma.Decimal;
         cogs: Prisma.Decimal;
-        quantity: Prisma.Decimal;
+        quantities: Map<string, Prisma.Decimal>;
       }
     >();
     for (const doc of docs)
       for (const line of doc.lines) {
         const key =
             name === "items"
-              ? (line.productId ?? line.itemName)
+              ? `${line.productId ?? line.itemName}:${reportUnitKey(line)}`
               : name === "invoices"
                 ? doc.id
                 : doc.partyId,
@@ -836,12 +840,13 @@ export async function runFinancialReportForActor(
                   : doc.partyName,
             revenue: Z,
             cogs: Z,
-            quantity: Z,
+            quantities: new Map<string, Prisma.Decimal>(),
           },
           sign = doc.type === "CREDIT_NOTE" ? new D(-1) : new D(1),
           cost = costByLine.get(line.id) ?? Z;
         old.revenue = old.revenue.add(line.taxableAmount.mul(sign));
-        old.quantity = old.quantity.add(line.quantity.mul(sign));
+        const unitKey = reportUnitKey(line);
+        old.quantities.set(unitKey, (old.quantities.get(unitKey) ?? Z).add(line.quantity.mul(sign)));
         old.cogs = old.cogs.add(cost.mul(sign));
         group.set(key, old);
       }
@@ -859,14 +864,14 @@ export async function runFinancialReportForActor(
         const p = itemProfitability(x.revenue, x.cogs);
         return [
           x.label,
-          x.quantity.toFixed(4),
+          reportQuantity(x.quantities),
           n(p.revenue),
           n(p.cogs),
           n(p.profit),
           p.marginPercent.toFixed(2),
         ];
       }),
-      note: "Tax-exclusive posted sales revenue less linked inventory movement cost; service cost is not fabricated.",
+      note: "Tax-exclusive posted sales revenue less linked inventory movement cost; service cost is not fabricated. Quantities retain saved units; mixed units are not added or converted.",
     };
   }
 

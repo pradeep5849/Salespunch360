@@ -76,7 +76,10 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             "general-ledger" -> Option("Ledger", state.ledgerId, state.options.array("ledgers")) { vm.filter("ledger", it) }
             "customer-ledger" -> Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
             "vendor-ledger" -> Option("Vendor", state.vendorId, state.options.array("vendors")) { vm.filter("vendor", it) }
-            "items" -> Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
+            "items", "invoices", "customers" -> {
+                Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
+                Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
+            }
         }
         Row {
             Button(onClick = vm::run) { Text("Run") }

@@ -63,7 +63,6 @@ function creditPayload(
     taxMode: sale.taxMode,
     stateOfSupplyCode: sale.stateOfSupplyCode ?? undefined,
     reverseCharge: sale.reverseCharge,
-    projectId: sale.projectId ?? undefined,
     projectReference: sale.projectReference ?? undefined,
     tdsRate: sale.taxableTotal.isZero()
       ? "0"

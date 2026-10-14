@@ -41,6 +41,7 @@ export default async function Page({
   const q = await searchParams,
     options = await reportOptions(),
     projectLifetime = report === "projects" || report === "budget-vs-actual",
+    profitability = ["items", "invoices", "customers"].includes(report),
     to = q.to || q.asOf || reportCalendarDate(),
     from = q.from || iso(reportFinancialYearStart(new Date(to)));
   let data;
@@ -116,12 +117,12 @@ export default async function Page({
                 value={q.customerId}
                 rows={options.customers}
               />
-              <Select
+              {!profitability && <Select
                 name="vendorId"
                 label="Vendor"
                 value={q.vendorId}
                 rows={options.vendors}
-              />
+              />}
               <Select
                 name="productId"
                 label="Product"
@@ -137,12 +138,12 @@ export default async function Page({
                   rows={options.owners}
                 />
               )}
-              <Select
+              {!profitability && <Select
                 name="ledgerId"
                 label="Ledger"
                 value={q.ledgerId}
                 rows={options.ledgers}
-              />
+              />}
             </>
           )}
           <button>Run report</button>
@@ -186,7 +187,7 @@ function Select({
   return (
     <label>
       {label}
-      <select name={name} defaultValue={value ?? ""}>
+      <select name={name} aria-label={label} defaultValue={value ?? ""}>
         <option value="">All / select</option>
         {rows.map((x) => (
           <option key={x.id} value={x.id}>

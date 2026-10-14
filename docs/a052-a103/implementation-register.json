@@ -19651,13 +19651,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F03",
         "A084-F05",
         "A084-F06"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Profitability applies scoped customer/project filters at document query and product filters both at document existence and included-line aggregation. Web removes irrelevant vendor/ledger controls and gives selectors stable accessible names; native exposes customer/product controls for all three profit reports.",
+          "tests": "45/45 grouped PostgreSQL/unit/service/filter/export checks passed (6 files, 5.87s); desktop/mobile browser 2/2 passed (39.8s), including form filters, CSV/XLSX/PDF, native API, Axe and overflow. Android Kotlin compile and four report JVM tests passed (2m; zero failure/error/skip). TypeScript/lint passed. Final-head validation pending."
+        }
       ]
     },
     {
@@ -20669,12 +20675,18 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F12",
         "A084-F15"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Profit quantities use saved unit snapshots. Item keys separate differing units; aggregate mixed-unit rows show Mixed units. Missing-unit snapshots remain explicit without inferred conversion; signed credits preserve quantities across native and all exports.",
+          "tests": "45/45 grouped PostgreSQL/unit/service/filter/export checks passed (6 files, 5.87s); desktop/mobile browser 2/2 passed (39.8s), including form filters, CSV/XLSX/PDF, native API, Axe and overflow. Android Kotlin compile and four report JVM tests passed (2m; zero failure/error/skip). TypeScript/lint passed. Final-head validation pending."
+        }
       ]
     },
     {
@@ -21470,19 +21482,25 @@
         "A086-F03",
         "A086-F04"
       ],
-      "checkpoint_work": {
-        "summary": "Atomic source-bound amendment request identity and durable replay; web/native retain the same request identity on retries. Full-sale reversal replays the existing credit. Paid-sale correction remains pending.",
-        "verification": "Intermediate: 16 focused PostgreSQL cheque/sale-correction and fault tests passed; 44 focused contract/request/action tests passed; Android compilation and focused creation-identity/edit-snapshot unit tests passed. Final-head validation pending. Shared Add Sale edit/reversal browser workflow: desktop and mobile, 2 passed. TypeScript and focused ESLint passed.",
-        "files": [
-          "src/lib/account/sale-amendments.ts",
-          "src/lib/account/cheque-finance.integration.test.ts",
-          "src/lib/account/cheque-transitions.integration.test.ts"
-        ],
-        "financial_checkpoint_verification": {
-          "work": "Independently verified atomic unpaid-sale replacement, source-bound retry and final-audit failure rollback. Added a real concurrent payment/amendment regression: exactly one operation commits, with no duplicate economic sale or receipt. Paid-sale replacement remains the separate open A086-F05 scope.",
-          "tests": "34/34 grouped PostgreSQL/cheque-capability tests pass, including retry, final-audit rollback and concurrency. Final-head verification remains pending."
+      "checkpoint_work": [
+        {
+          "summary": "Atomic source-bound amendment request identity and durable replay; web/native retain the same request identity on retries. Full-sale reversal replays the existing credit. Paid-sale correction remains pending.",
+          "verification": "Intermediate: 16 focused PostgreSQL cheque/sale-correction and fault tests passed; 44 focused contract/request/action tests passed; Android compilation and focused creation-identity/edit-snapshot unit tests passed. Final-head validation pending. Shared Add Sale edit/reversal browser workflow: desktop and mobile, 2 passed. TypeScript and focused ESLint passed.",
+          "files": [
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/cheque-transitions.integration.test.ts"
+          ],
+          "financial_checkpoint_verification": {
+            "work": "Independently verified atomic unpaid-sale replacement, source-bound retry and final-audit failure rollback. Added a real concurrent payment/amendment regression: exactly one operation commits, with no duplicate economic sale or receipt. Paid-sale replacement remains the separate open A086-F05 scope.",
+            "tests": "34/34 grouped PostgreSQL/cheque-capability tests pass, including retry, final-audit rollback and concurrency. Final-head verification remains pending."
+          }
+        },
+        {
+          "work": "Project sale correction credit payload now inherits projectId from its source instead of supplying a forbidden project override. Real PostgreSQL filtered credit netting verifies source inheritance and atomic correction.",
+          "tests": "45/45 grouped PostgreSQL/unit/service/filter/export checks passed (6 files, 5.87s); desktop/mobile browser 2/2 passed (39.8s), including form filters, CSV/XLSX/PDF, native API, Axe and overflow. Android Kotlin compile and four report JVM tests passed (2m; zero failure/error/skip). TypeScript/lint passed. Final-head validation pending."
         }
-      }
+      ]
     },
     {
       "finding_id": "A086-F03",
@@ -23376,6 +23394,44 @@
         "passed": 2,
         "failed": 0,
         "seconds": 44.1
+      },
+      "typescript": "PASS",
+      "focused_lint": "PASS",
+      "migrations": "NONE",
+      "final_head_verification": false
+    },
+    "profitability_filters_and_quantities": {
+      "findings": [
+        "A084-F04",
+        "A084-F14"
+      ],
+      "shared_findings": [
+        "A086-F02"
+      ],
+      "grouped_tests": {
+        "passed": 45,
+        "failed": 0,
+        "files": 6
+      },
+      "browser": {
+        "passed": 2,
+        "failed": 0,
+        "seconds": 39.8,
+        "checks": [
+          "form filters",
+          "compatible quantities",
+          "CSV/XLSX/PDF",
+          "native API",
+          "Axe",
+          "overflow"
+        ]
+      },
+      "android": {
+        "compile": "PASS",
+        "jvm_passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "device": "NOT AVAILABLE"
       },
       "typescript": "PASS",
       "focused_lint": "PASS",

@@ -7504,7 +7504,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Multi-product/customer/project fixture; selected report filter excludes other data; credits/returns scoped correctly; view/export equality.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -7954,7 +7954,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Same-unit total; mixed Nos/kg; credit-note quantities per unit; item unit labels; missing unit; CSV/XLSX/PDF parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9392,3 +9392,6 @@ A084-F07/F09 continuation: scoped journal-based party opening/running balances a
 
 
 A084-F15 continuation: shared economic-document cutoff preserves legacy cancelled-source and dated credit history in profit/GST reports. PostgreSQL covers pre-credit revenue/GST, net-zero correction and later-period credit; grouped checks 44/44 passed, desktop/mobile PDF/Axe/overflow browser 2/2 passed (44.1s), TypeScript/lint passed. No migration. Final-head verification pending. Totals: 148 IMPLEMENTED BUT NOT VERIFIED, 49 PARTIAL, 2 NOT STARTED.
+
+
+A084-F04/F14 continuation: scoped profitability filters, accessible selectors, native controls and saved-unit quantity grouping implemented. Related A086-F02 Project credit payload corrected to inherit source project. Grouped checks 45/45 passed; desktop/mobile form/export/native/Axe/overflow checks 2/2 passed (39.8s); Android compile plus 4 JVM tests passed (2m); TypeScript/lint passed. No migration. Final-head validation pending. Totals: 150 IMPLEMENTED BUT NOT VERIFIED, 47 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.

@@ -1895,3 +1895,28 @@ test("A084 corrected sales keep dated profit and GST report history",async({page
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules}})}
 });
+
+test("A084 profitability filters constrain web exports and native results",async({page})=>{
+ test.setTimeout(180000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","INVENTORY"]}});
+  await db.financialYear.create({data:{companyId,name:"Profit filter year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const party=await db.customer.create({data:{companyId,branchId,name:"A084 filtered customer",isAccountCustomer:true}});
+  const project=await db.project.create({data:{companyId,branchId,customerId:party.id,projectNumber:randomUUID(),name:"A084 filtered project",createdById:userId}});
+  const products=await Promise.all(["A084 selected product","A084 other product"].map(name=>db.accountProduct.create({data:{companyId,name,trackInventory:false}})));
+  const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:party.id,projectId:project.id,issueDate:"2026-10-10",lines:products.map((product,index)=>({lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:index?"70":"30",taxRate:"0",unitName:index?"Kilogram":"Number",unitSymbol:index?"kg":"Nos"}))});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  await signInSettings(page);await page.goto("/workspace/account/reports/customers?scope=all&from=2026-10-10&to=2026-10-10");
+  await expect(page.locator("tbody tr").filter({hasText:party.name})).toContainText("Mixed units");
+  await page.getByLabel("Customer",{exact:true}).selectOption(party.id,{timeout:20000});await page.getByLabel("Project",{exact:true}).selectOption(project.id,{timeout:20000});await page.getByLabel("Product",{exact:true}).selectOption(products[0].id,{timeout:20000});
+  await expect(page.getByLabel("Vendor",{exact:true})).toHaveCount(0);await expect(page.getByLabel("Ledger",{exact:true})).toHaveCount(0);
+  await page.getByRole("button",{name:"Run report",exact:true}).click();await expect(page).toHaveURL(new RegExp(`productId=${products[0].id}`));
+  const row=page.locator("tbody tr").filter({hasText:party.name});await expect(row).toHaveCount(1);await expect(row.locator("td").nth(2)).toHaveText("₹30.00");await expect(row.locator("td").nth(1)).toHaveText("1.0000 Nos");
+  const query=new URL(page.url()).searchParams.toString();for(const format of ["csv","xlsx","pdf"]){const response=await page.request.get(`/api/account/reports/customers/${format}?${query}`);expect(response.status()).toBe(200);let text="";if(format==="csv")text=await response.text();else if(format==="pdf")text=(await extractPdfText(await response.body())).text;else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await response.body()).buffer);text=JSON.stringify(book.worksheets[0].getSheetValues())}expect(text).toContain("30.00");expect(text).toContain("1.0000 Nos");expect(text).not.toContain("70.00")}
+  const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});
+  const native=await page.request.get(`/api/v1/mobile/account/reports/customers?${query}`,{headers:{authorization:`Bearer ${token}`}});expect(native.status()).toBe(200);expect(String((await native.json()).rows[0][2])).toContain("30.00");
+  expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules}})}
+});
