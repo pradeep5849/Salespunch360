@@ -17,8 +17,8 @@ import kotlinx.serialization.json.*
 data class AccountReportState(
     val loading: Boolean = false,
     val report: String? = null,
-    val from: String = java.time.LocalDate.now().withDayOfYear(1).toString(),
-    val to: String = java.time.LocalDate.now().toString(),
+    val from: String = com.salespunch360.mobile.account.accountReportFinancialYearStart().toString(),
+    val to: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val branchId: String = "",
     val projectId: String = "",
     val ledgerId: String = "",

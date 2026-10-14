@@ -1250,6 +1250,7 @@ test("A084 profit withdrawal separates drawings from investment and preserves da
   if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Withdrawal audit year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
   const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
   const owner=await setupOwnerFinancialAccountForActor(actor,userId,branchId);
+  await db.ownerFinancialAccount.update({where:{id:owner.id},data:{name:"José Café"}});
   const ledger=await db.ledgerAccount.create({data:{companyId,code:`A084-${randomUUID().slice(0,8)}`,name:"Withdrawal test cash",accountClass:"ASSET",normalBalance:"DEBIT"}});
   const money=await db.moneyAccount.create({data:{companyId,branchId,name:"Withdrawal test cash",type:"CASH",ledgerAccountId:ledger.id}});
   await postOwnerTransactionForActor(actor,{ownerFinancialAccountId:owner.id,moneyAccountId:money.id,branchId,type:"INVESTMENT",amount:"200",transactionDate:"2026-10-10",reference:"Investment excluded",idempotencyKey:randomUUID()});
@@ -1259,11 +1260,15 @@ test("A084 profit withdrawal separates drawings from investment and preserves da
   expect(before.rows).toHaveLength(1);expect(before.totals?.[3]).toBe("50");expect(before.rows[0][4]).toBe("WITHDRAWAL");
   const after=await runFinancialReportForActor(actor,"profit-withdrawal",{from:"2026-10-01",to:"2026-10-12"});
   expect(after.rows).toHaveLength(2);expect(after.totals?.[3]).toBe("0");
-  await signInSettings(page);await page.goto("/workspace/account/reports/profit-withdrawal?scope=all&from=2026-10-01&to=2026-10-11");
+  await signInSettings(page);await page.goto("/workspace/account/reports/profit-withdrawal?scope=all&from=2026-10-01&to=2026-10-11&page=3&q=navigation-only");
   await expect(page.getByRole("heading",{name:"Profit Withdrawal Report",exact:true})).toBeVisible();
-  await expect(page.locator("main.employees-shell")).toContainText("withdrawals are not business expenses");
+  await expect(page.locator(".employees-content")).toContainText("withdrawals are not business expenses");
+  const exportHref=await page.getByRole("link",{name:"CSV",exact:true}).getAttribute("href");
+  expect(exportHref).not.toContain("page=");expect(exportHref).not.toContain("navigation-only");expect(exportHref).toContain("scope=all");
+  expect((await page.request.get(exportHref!)).status()).toBe(200);
   await page.getByRole("button",{name:"Run report",exact:true}).click();
-  await expect(page.locator("main.employees-shell")).not.toContainText("Invalid UUID");
+  await expect(page).toHaveURL(/scope=all/);
+  await expect(page.locator(".employees-content")).not.toContainText("Invalid UUID");
   await expect(page.locator("table")).toContainText("Owner withdrawal");
   const csv=await page.request.get("/api/account/reports/profit-withdrawal/csv?scope=all&from=2026-10-01&to=2026-10-11");
   expect(csv.status()).toBe(200);const content=await csv.text();expect(content).toContain("Net withdrawals");expect(content).toContain("Scope:");expect(content).not.toContain("Investment excluded");
@@ -1272,7 +1277,7 @@ test("A084 profit withdrawal separates drawings from investment and preserves da
   const values=JSON.stringify(book.worksheets[0].getSheetValues());expect(values).toContain("Net withdrawals");expect(values).toContain("Scope:");expect(values).toContain("Owner withdrawal");expect(values).not.toContain("Investment excluded");
   const pdf=await page.request.get("/api/account/reports/profit-withdrawal/pdf?scope=all&from=2026-10-01&to=2026-10-11");
   expect(pdf.status()).toBe(200);const pdfBytes=await pdf.body();expect((await PDFDocument.load(pdfBytes)).getPageCount()).toBeGreaterThan(0);
-  expect(pdfBytes.toString()).toContain("Net withdrawals");expect(pdfBytes.toString()).toContain("Scope:");expect(pdfBytes.toString()).not.toContain("Investment excluded");
+  const pdfText=(await extractPdfText(pdfBytes)).text;expect(pdfText).toContain("José Café");expect(pdfText).toContain("Net withdrawals");expect(pdfText).toContain("Scope:");expect(pdfText).not.toContain("Investment excluded");
  }finally{await page.goto("/workspace/account");await db.accountSettings.update({where:{companyId},data:{baseCurrency:original.baseCurrency,displayDecimalPlaces:original.displayDecimalPlaces}})}
 });
 
@@ -1356,12 +1361,12 @@ test("A061 stock summary retains inactive history and scoped exports with strict
   const response=await page.request.get(href!);expect(response.status()).toBe(200);const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await response.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain(product.name);expect(book.worksheets[0].getCell("D7").value).toBe("12.50");
   for(const decimals of [0,1,2,3,4]){await db.accountSettings.update({where:{companyId},data:{displayDecimalPlaces:decimals}});await page.reload();await expect(card.locator("dl div").filter({has:page.getByText("Stock quantity",{exact:true})}).locator("dd")).toHaveText(decimals===0?"1":decimals===1?"1.3":(1.25).toFixed(decimals));const formatted=await page.request.get(href!);const precisionBook=new ExcelJS.Workbook();await precisionBook.xlsx.load(new Uint8Array(await formatted.body()).buffer);expect(precisionBook.worksheets[0].getCell("C7").value).toBe((decimals===0?"1":decimals===1?"1.3":(1.25).toFixed(decimals)));expect(precisionBook.worksheets[0].getCell("D7").value).toBe((decimals===0?"13":(12.5).toFixed(decimals)));}
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
-  const pdfHref=await page.getByRole("link",{name:"Download stock summary PDF"}).getAttribute("href");const pdf=await page.request.get(pdfHref!);expect(pdf.status()).toBe(200);expect((await pdf.body()).toString()).toContain("Branch:");
+  const pdfHref=await page.getByRole("link",{name:"Download stock summary PDF"}).getAttribute("href");const pdf=await page.request.get(pdfHref!);expect(pdf.status()).toBe(200);expect((await extractPdfText(await pdf.body())).text).toContain("Branch:");
   expect((await page.request.get("/api/account/inventory/stock-summary/xlsx?asOf=2026-02-30")).status()).toBe(400);
   expect((await page.request.get(`/api/account/inventory/stock-summary/xlsx?branchId=${randomUUID()}`)).status()).toBe(403);
   await page.getByRole("textbox",{name:"Search stock"}).fill(product.name);
   await page.evaluate(()=>{Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});Object.defineProperty(navigator,"share",{configurable:true,value:async()=>{throw new DOMException("Cancelled","AbortError")}})});await page.getByRole("button",{name:"Share report",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Sharing cancelled."})).toBeVisible();
-  await page.evaluate(()=>{Object.defineProperty(navigator,"share",{configurable:true,value:async(data:ShareData)=>{Object.defineProperty(window,"stockSharedPdf",{configurable:true,value:await data.files![0].text()})}})});await page.getByRole("button",{name:"Share report",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Report handed"})).toBeVisible();expect(await page.evaluate(()=>(window as unknown as Window & {stockSharedPdf:string}).stockSharedPdf)).toContain(product.name);
+  await page.evaluate(()=>{Object.defineProperty(navigator,"share",{configurable:true,value:async(data:ShareData)=>{Object.defineProperty(window,"stockSharedPdf",{configurable:true,value:Array.from(new Uint8Array(await data.files![0].arrayBuffer()))})}})});await page.getByRole("button",{name:"Share report",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Report handed"})).toBeVisible();expect((await extractPdfText(new Uint8Array(await page.evaluate(()=>(window as unknown as Window & {stockSharedPdf:number[]}).stockSharedPdf)))).text).toContain(product.name);
   await page.evaluate(()=>{Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>false})});const downloadEvent=page.waitForEvent("download");await page.getByRole("button",{name:"Share report",exact:true}).click();expect((await downloadEvent).suggestedFilename()).toBe("stock-summary.pdf");await expect(page.getByRole("status").filter({hasText:"PDF downloaded"})).toBeVisible();
   await page.getByRole("textbox",{name:"Search stock"}).fill("No matching archived item");await expect(page.getByRole("status").filter({hasText:"No stock items match"})).toBeVisible();await page.getByRole("button",{name:"Reset filters"}).click();await expect(page.getByRole("textbox",{name:"Search stock"})).toHaveValue("");
   await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});

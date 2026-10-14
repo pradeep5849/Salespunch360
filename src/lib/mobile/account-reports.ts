@@ -100,7 +100,7 @@ export async function mobileAccountReportExport(
     };
   if (format === "pdf")
     return {
-      bytes: new Uint8Array(exportPdf(input)),
+      bytes: new Uint8Array(await exportPdf(input)),
       mime: "application/pdf",
       extension: "pdf",
     };

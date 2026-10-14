@@ -1,4 +1,5 @@
-import { reportFinancialYearStart } from "@/lib/account/reports/dates";
+import { reportExportQuery } from "@/lib/account/reports/queries";
+import { reportCalendarDate, reportFinancialYearStart } from "@/lib/account/reports/dates";
 import { ReportTable } from "@/components/account/report-table";
 import { notFound } from "next/navigation";
 import { AuthorizationError } from "@/lib/auth/authorization";
@@ -40,15 +41,16 @@ export default async function Page({
   const q = await searchParams,
     options = await reportOptions(),
     projectLifetime = report === "projects" || report === "budget-vs-actual",
-    to = q.to || q.asOf || iso(new Date()),
+    to = q.to || q.asOf || reportCalendarDate(),
     from = q.from || iso(reportFinancialYearStart(new Date(to)));
   let data;
   try {
     data = await runFinancialReport(
       report,
       projectLifetime
-        ? { branchId: q.branchId, projectId: q.projectId }
+        ? { scope:q.scope, branchId: q.branchId, projectId: q.projectId }
         : {
+            scope:q.scope,
             from,
             to,
             asOf: q.asOf,
@@ -70,20 +72,13 @@ export default async function Page({
       note: e instanceof Error ? e.message : "Unable to load report",
     };
   }
-  const queryParams = new URLSearchParams(
-    Object.entries(q).filter((x): x is [string, string] => !!x[1]),
-  );
-  if (projectLifetime) {
-    queryParams.delete("from");
-    queryParams.delete("to");
-    queryParams.delete("asOf");
-  }
-  const query = queryParams.toString();
+  const query = reportExportQuery(q,from,to,projectLifetime);
   return (
     <div className="employees-shell">
       <section className="employees-content">
         <h1>{data.title}</h1>
         <form method="get" className="stack">
+          {q.scope === "all" ? <input type="hidden" name="scope" value="all" /> : null}
           {projectLifetime ? (
             <p>
               Project profitability and budget-versus-actual figures are

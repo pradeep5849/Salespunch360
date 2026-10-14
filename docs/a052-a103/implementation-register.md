@@ -7358,13 +7358,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Run with all selectors blank; one selected; date-only; invalid UUID; same normalized filters used for all exports.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md, SalesPunch360_A084-A085_Report_Followup.md.
 
 **Linked finding IDs:** A084-F02, A084-F03, A084-F16, A085-F03.
+
+
+**Report checkpoint work:** Verified existing shared blank-selector normalization and strict rejection of invalid nonblank/unknown filters. Web Run Report retains company-scope intent without invalid UUID errors.
+
+**Interim validation:** Shared boundary suite passes, including blank selectors and assigned-branch limits; actual desktop/mobile Run Report and CSV/XLSX/PDF paths pass. Final-head validation remains pending.
 
 ## A084-F02 — Company-scope hub links break export filter validation
 
@@ -7400,13 +7405,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Menu/company hub→report→CSV/XLSX/PDF; Branch hub; reset; unchanged dates; no differing display/export results.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F01, A084-F03, A084-F04.
+
+
+**Report checkpoint work:** Report export links now whitelist domain filters, preserve explicit company scope and displayed default dates, and exclude UI navigation/search/page parameters. Run Report preserves scope=all through a hidden form field.
+
+**Interim validation:** Query tests and desktop/mobile actual CSV link requests pass; unknown service filters remain rejected. Final-head validation remains pending.
 
 ## A084-F03 — Report-specific reference layouts and filter controls are missing
 
@@ -7820,13 +7830,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** January 15, March 31, April 1 and December defaults; explicit ranges; web/mobile parity; timezone boundary.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F11, A084-F14, A084-F15.
+
+
+**Report checkpoint work:** Centralized business-calendar dates using the existing Asia/Kolkata report timezone. Web/service defaults use the current business date and preceding April for January–March. Native report defaults now use April financial year rather than January calendar year, with pure clock-based helpers.
+
+**Interim validation:** Business-midnight March31/April1 and December31/January1 tests pass; Android compilation and 2 date-boundary JVM tests pass (1m42s). Final-head validation remains pending.
 
 ## A084-F13 — Date-only report cutoff excludes transactions later on the final day
 
@@ -7988,13 +8003,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A084-A085_Report_Followup.md.
 
 **Linked finding IDs:** A084-F17.
+
+
+**Report checkpoint work:** Independently verified current formatter only formats ISO calendar dates and preserves summary labels in both screen and export data.
+
+**Interim validation:** Report display tests and actual financial export parsed-text assertions pass; no redundant formatter rewrite. Final-head validation remains pending.
 
 ## A084-F17 — Dormant project material reports lack project/cost permission scope
 
@@ -8072,13 +8092,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Regress original behavior and approved scope; enforce role/company/branch guards; desktop/mobile browser and Android validation where applicable.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A084-A085_Report_Followup.md.
 
 **Linked finding IDs:** None explicitly linked.
+
+
+**Report checkpoint work:** Replaced ASCII substitution in shared financial-report PDF exports with existing embedded Unicode font layout, measured wrapping and pagination. Web/mobile/stock-summary callers await the renderer. Unsupported glyphs fail explicitly with an actionable domain message rather than corrupting original names; CSV/Excel remain alternatives.
+
+**Interim validation:** 35/35 focused report/PDF/stock-format tests pass; parsed Unicode company/party, Hindi/Kannada text, rupee, pagination, unsupported glyph and export-cap checks included. Desktop/mobile financial report exports retain José Café. Shared stock-summary browser checks are being verified separately. Final-head validation remains pending.
 
 ## A085-F01 — Reports hub lacks grouped reference UI, search and favourites
 
@@ -9307,3 +9332,7 @@ A064-F06 private-image web continuation: validated/normalized PNG/JPEG/WebP up t
 A064-F06 native image completion: bounded picker/JSON transport, validated image before posting, authenticated preview, immutable-image error and stable financial retry identity across web modes implemented. 35/35 grouped regressions, desktop/mobile browser 2/2 (35.3s), Android compile + 4 JVM tests (2m11s; zero fail/error/skip) passed. Status IMPLEMENTED BUT NOT VERIFIED; final-head/migration rehearsal/device checks pending. Live totals: 129 IMPLEMENTED BUT NOT VERIFIED, 67 PARTIAL, 3 NOT STARTED; no final statuses.
 
 A065-F12 funding foundation: immutable explicit funding/repayment/correction/classification records added in new 20261014030000_owner_asset_funding migration; original contributions and asset cost preserved. Company lock, caps, stable replay, protected reserved capital and unresolved-source reversal guards implemented. 19/19 actual PostgreSQL tests passed, including the40000/30000/10000→25000/15000 example, bank0/equipment40000, full repayment, races, corrections and scope/module denial. Legacy funding remains unknown until confirmation. UI/native, more multi-source/disposal cases, backup dependencies and final-head checks pending; PARTIAL. Live totals:129 IMPLEMENTED BUT NOT VERIFIED,68 PARTIAL,2 NOT STARTED.
+
+## Report slice shared verification evidence
+
+A084-F02, A084-F12 and A084-F18: TypeScript and focused ESLint pass; 35/35 focused report tests pass; financial export browser checks pass on desktop/mobile (2/2). The shared stock-summary export/sharing rerun passes (2/2,51.6s), retaining parsed PDF content/scope assertions. Android compilation and 2 report-date JVM checks pass. All are interim results; final-head validation remains pending.

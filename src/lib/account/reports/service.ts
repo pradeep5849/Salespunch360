@@ -18,7 +18,7 @@ import {
   type ReportLine,
 } from "../financial-reports";
 import { gstReportForActor } from "../tax";
-import { reportFinancialYearStart } from "./dates";
+import { reportCalendarDate, reportFinancialYearStart } from "./dates";
 import { itemProfitability } from "../inventory";
 import {
   authorizedProjectBranchIds,
@@ -74,7 +74,7 @@ async function context(
     throw new AuthorizationError();
 
   const f = filterSchema.parse(raw),
-    to = f.to ?? f.asOf ?? new Date(),
+    to = f.to ?? f.asOf ?? new Date(reportCalendarDate()),
     from = f.from ?? reportFinancialYearStart(to);
 
   if (to < from) throw new Error("INVALID_DATE_RANGE");

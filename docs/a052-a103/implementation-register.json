@@ -19298,7 +19298,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -19306,6 +19306,12 @@
         "A084-F03",
         "A084-F16",
         "A085-F03"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Verified existing shared blank-selector normalization and strict rejection of invalid nonblank/unknown filters. Web Run Report retains company-scope intent without invalid UUID errors.",
+          "tests": "Shared boundary suite passes, including blank selectors and assigned-branch limits; actual desktop/mobile Run Report and CSV/XLSX/PDF paths pass. Final-head regression remains pending. Earlier overlapping test groups are not additive."
+        }
       ]
     },
     {
@@ -19404,13 +19410,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F01",
         "A084-F03",
         "A084-F04"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Report export links now whitelist domain filters, preserve explicit company scope and displayed default dates, and exclude UI navigation/search/page parameters. Run Report preserves scope=all through a hidden form field.",
+          "tests": "Query tests and desktop/mobile actual CSV link requests pass; unknown service filters remain rejected. Final-head regression remains pending. Earlier overlapping test groups are not additive."
+        },
+        {
+          "work": "Report slice verification completed; shared stock-summary export/sharing consumer preserved.",
+          "tests": "TypeScript and focused ESLint pass. Report group:35/35. Desktop/mobile financial export checks:2/2 passed; affected stock-summary export/sharing rerun:2/2 passed (51.6s). Native date compilation and2 JVM tests pass. Earlier stock checks failed on raw compressed-PDF byte assertions; corrected to parsed-content assertions, no product assertion removed. No final-head closure asserted."
+        }
       ]
     },
     {
@@ -20407,13 +20423,23 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F11",
         "A084-F14",
         "A084-F15"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Centralized business-calendar dates using the existing Asia/Kolkata report timezone. Web/service defaults use the current business date and preceding April for January\u2013March. Native report defaults now use April financial year rather than January calendar year, with pure clock-based helpers.",
+          "tests": "Business-midnight March31/April1 and December31/January1 tests pass; Android compilation and 2 date-boundary JVM tests pass (1m42s). Final-head regression remains pending. Earlier overlapping test groups are not additive."
+        },
+        {
+          "work": "Report slice verification completed; shared stock-summary export/sharing consumer preserved.",
+          "tests": "TypeScript and focused ESLint pass. Report group:35/35. Desktop/mobile financial export checks:2/2 passed; affected stock-summary export/sharing rerun:2/2 passed (51.6s). Native date compilation and2 JVM tests pass. Earlier stock checks failed on raw compressed-PDF byte assertions; corrected to parsed-content assertions, no product assertion removed. No final-head closure asserted."
+        }
       ]
     },
     {
@@ -20732,11 +20758,17 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F17"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified current formatter only formats ISO calendar dates and preserves summary labels in both screen and export data.",
+          "tests": "Report display tests and actual financial export parsed-text assertions pass; no redundant formatter rewrite. Final-head regression remains pending. Earlier overlapping test groups are not additive."
+        }
       ]
     },
     {
@@ -20832,10 +20864,20 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Replaced ASCII substitution in shared financial-report PDF exports with existing embedded Unicode font layout, measured wrapping and pagination. Web/mobile/stock-summary callers await the renderer. Unsupported glyphs fail explicitly with an actionable domain message rather than corrupting original names; CSV/Excel remain alternatives.",
+          "tests": "35/35 focused report/PDF/stock-format tests pass; parsed Unicode company/party, Hindi/Kannada text, rupee, pagination, unsupported glyph and export-cap checks included. Desktop/mobile financial report exports retain Jos\u00e9 Caf\u00e9. Shared stock-summary browser checks are being verified separately. Final-head regression remains pending. Earlier overlapping test groups are not additive."
+        },
+        {
+          "work": "Report slice verification completed; shared stock-summary export/sharing consumer preserved.",
+          "tests": "TypeScript and focused ESLint pass. Report group:35/35. Desktop/mobile financial export checks:2/2 passed; affected stock-summary export/sharing rerun:2/2 passed (51.6s). Native date compilation and2 JVM tests pass. Earlier stock checks failed on raw compressed-PDF byte assertions; corrected to parsed-content assertions, no product assertion removed. No final-head closure asserted."
+        }
+      ]
     },
     {
       "finding_id": "A085-F01",
