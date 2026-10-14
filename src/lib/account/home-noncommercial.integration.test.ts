@@ -10,8 +10,9 @@ vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof Prism
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {createSettlementForActor} from "./commercial";
 import {createQuotationForActor} from "@/lib/quotations/service";
+import {homeSettlementForActor} from "./home-settlement";
 import {homeNonCommercialRows} from "./home-noncommercial";
-const modules=new Set<AccountModule>(["CUSTOMER_RECEIPTS","VENDOR_PAYMENTS","EXPENSES","QUOTATIONS_BOQ"]),permissions=new Set<Permission>(["ACCOUNT_LEDGER_VIEW","ACCOUNT_EXPENSE_VIEW","ACCOUNT_QUOTATION_VIEW"]);
+const modules=new Set<AccountModule>(["CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES","VENDOR_PAYMENTS","VENDOR_ADVANCES","EXPENSES","QUOTATIONS_BOQ"]),permissions=new Set<Permission>(["ACCOUNT_LEDGER_VIEW","ACCOUNT_EXPENSE_VIEW","ACCOUNT_QUOTATION_VIEW"]);
 const companies=[randomUUID(),randomUUID()],branches=[randomUUID(),randomUUID()],users=[randomUUID(),randomUUID()];
 const actors=companies.map((companyId,index)=>({id:users[index],name:"Home test",email:`${users[index]}@example.test`,companyId,role:"ACCOUNT_USER",isActive:true,accountRole:"ACCOUNT_ADMIN",accountAccessActive:true,salesAccessActive:false,salesRole:null,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor));
 describe.skipIf(!url)("Home source adapters against isolated PostgreSQL",()=>{
@@ -61,6 +62,13 @@ describe.skipIf(!url)("Home source adapters against isolated PostgreSQL",()=>{
   const actor={...actors[0],branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[branches[0]]};
   expect(await homeNonCommercialRows(actor,{mode:"BRANCH",branchId:branches[1],branchName:"Foreign"},{q:"",types:[]},modules,permissions)).toEqual([]);
   expect(await homeNonCommercialRows(actor,{mode:"COMPANY",branchId:null,branchName:null},{q:"",types:[]},modules,new Set())).toEqual([]);
+ });
+ it("reads a payment destination without posting and denies foreign or unassigned records",async()=>{
+  const own=await client.accountSettlement.findFirstOrThrow({where:{companyId:companies[0]}}),foreign=await client.accountSettlement.findFirstOrThrow({where:{companyId:companies[1]}});
+  const before=await client.journalEntry.count({where:{companyId:companies[0]}});
+  const view=await homeSettlementForActor(actors[0],own.id);expect(view).toMatchObject({entry:{partyName:"Own buyer",grandTotal:"100",balanceDue:"100"},discountAmount:"0",applications:[]});expect(JSON.stringify(view)).not.toMatch(/journalEntryId|ledgerAccountId|FOREIGN-SECRET/);
+  expect(await homeSettlementForActor(actors[0],foreign.id)).toBeNull();expect(await homeSettlementForActor({...actors[0],branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},own.id)).toBeNull();expect(await homeSettlementForActor({...actors[0],accountRole:"PROJECT_MANAGER"},own.id)).toBeNull();expect(await homeSettlementForActor(actors[0],"not-a-uuid")).toBeNull();
+  await expect(homeSettlementForActor({...actors[0],accountRole:null},own.id)).rejects.toThrow();expect(await client.journalEntry.count({where:{companyId:companies[0]}})).toBe(before);
  });
  it("applies each non-commercial filter to its real source",async()=>{
   for(const [type,kind] of [["CUSTOMER_RECEIPT","SETTLEMENT"],["EXPENSE","EXPENSE"],["ESTIMATE","QUOTATION"]]){

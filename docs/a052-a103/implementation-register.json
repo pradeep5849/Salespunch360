@@ -16647,7 +16647,10 @@
         "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
         "src/lib/account/home-noncommercial.ts",
         "src/lib/account/home-noncommercial.test.ts",
-        "src/lib/account/home-noncommercial.integration.test.ts"
+        "src/lib/account/home-noncommercial.integration.test.ts",
+        "src/lib/account/home-settlement.ts",
+        "src/lib/account/home-settlement-scope.ts",
+        "src/app/workspace/account/settlements/[id]/page.tsx"
       ],
       "affected_services_apis_actions": [
         "Account Home web and shared accountMobileHomeData",
@@ -16750,6 +16753,10 @@
         {
           "work": "Added typed, whitelisted non-commercial Home source adapters for receipts/advances, vendor payments, expenses/income and current estimates/quotations. Canonical role permission intersection, module gates, company/assigned-branch intersection, managed-project expense/payment scope and parameterized SQL are enforced. Distinct source/destination/print metadata prevents treating estimates as debt or paid expenses as unpaid. This adapter stage is not yet connected to the Home consumer; source-aware read destinations and native consumers must be completed before enabling it. Party-to-party semantics clarification is pending; unsupported source types are not invented.",
           "tests": "12/12 grouped tests passed: 9 unit and 3 isolated PostgreSQL tests with two companies, real posted advances, current estimates and draft expenses. Verified actual joins/filters, company and assigned-branch isolation, role/module denial, safe search parameters, no private-field serialization and no journal writes during reads. TypeScript and targeted lint passed. Consumer/browser/native/final-head verification pending; status remains PARTIAL."
+        },
+        {
+          "work": "Added a scoped read-only payment/advance destination for Home, showing cash amount, discounts, applications and unallocated amount without posting or allocation. Receipt/advance module gates are independent and exact. Shared normalization preserves whitelisted metadata. PostgreSQL uncovered that settlements have scalar projectId without a Prisma relation; replaced the invalid spread query with authorized managed-project IDs in both adapters and reader. No new migration or financial writes. Home consumer integration is still pending, so adapters remain disabled there.",
+          "tests": "14/14 grouped tests passed (10 unit, 4 actual PostgreSQL): source filters, independent module and role gates, company/assigned-branch isolation, forbidden manager/unassigned receipts, invalid UUID, safe metadata and no journal writes while opening payment details. Earlier runtime project-relation failure corrected and rerun successfully. TypeScript and targeted lint passed. Payment-page browser/native consumer and final-head checks pending; status PARTIAL."
         }
       ]
     },
