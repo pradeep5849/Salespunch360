@@ -8,6 +8,20 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  MANAGED_CORRECTION_REVERSAL_REQUIRED:"Use the original transaction workflow to make the next correction. Reversing its correction journal cannot reopen the business record.",
+  OWNER_CONTRIBUTION_HAS_ASSET_FUNDING:"Cancel the contribution’s asset funding allocations before reversing it. Reverse any related capital repayments first.",
+  ASSET_FUNDING_REPAYMENT_REALLOCATED:"Later funding uses the asset’s released share. Correct those allocations before reversing this capital repayment.",
+  ASSET_FUNDING_CHANGED:"The asset cost changed. Reload its current funding details before confirming the allocation.",
+  ASSET_FUNDING_INVALID_STATE:"The saved funding amounts are inconsistent. Reconcile their recorded transactions before continuing.",
+  ASSET_FUNDING_EXCEEDS_AVAILABLE:"This exceeds the contribution, asset cost or available unallocated owner capital.",
+  INVALID_ASSET_FUNDING_SOURCE:"Choose a retained asset and posted investment for the same owner, company and branch, dated before this allocation.",
+  INVALID_ASSET_FUNDING_RETURN:"Choose a valid funding allocation for this owner and branch, dated before the repayment.",
+  ASSET_FUNDING_RETURN_EXCEEDS_PAYMENT:"Attributed capital repayments cannot exceed the total capital withdrawal.",
+  ASSET_FUNDING_RETURN_EXCEEDS_BALANCE:"The repayment exceeds this asset’s remaining owner funding.",
+  INSUFFICIENT_OWNER_CAPITAL:"The owner does not have enough posted capital for this capital return.",
+  ASSET_FUNDING_ATTRIBUTION_REQUIRED:"Some capital is allocated to retained assets. Select the funding being repaid, or reduce the unallocated capital withdrawal.",
+  ASSET_FUNDING_HAS_REPAYMENTS:"Reverse the related capital repayments before cancelling this allocation.",
+  ASSET_FUNDING_ALREADY_CANCELLED:"This allocation is already cancelled. Open its recorded history.",
   TRANSFER_IMAGE_ALREADY_ATTACHED:"This transfer already has a saved image. Open the existing transfer; its image cannot be replaced here.",
   INVALID_TRANSFER_IMAGE:"Choose a valid PNG, JPEG or WebP image up to 5 MB.",
   TRANSFER_POSTED_IMAGE_UPLOAD_FAILED:"The transfer was posted, but its image could not be saved. Retry this same form to attach it without posting again.",

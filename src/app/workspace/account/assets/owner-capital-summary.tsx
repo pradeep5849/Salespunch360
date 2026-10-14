@@ -7,12 +7,12 @@ import {
 } from "@/lib/auth/authorization";
 import { ownerCapitalSummaryForActor } from "@/lib/account/owner-capital-summary";
 import type { ProjectActor } from "@/lib/account/projects";
-export async function OwnerCapitalSummary({showLink=true}:{showLink?:boolean}={}) {
+export async function OwnerCapitalSummary({showLink=true,scopeActor}:{showLink?:boolean;scopeActor?:ProjectActor}={}) {
   let summary: Awaited<ReturnType<typeof ownerCapitalSummaryForActor>> | null =
     null;
   let unavailable = false;
   try {
-    const actor = (await requirePermission(
+    const actor = scopeActor??(await requirePermission(
       "ACCOUNT_MONEY_VIEW",
     )) as ProjectActor;
     summary = await ownerCapitalSummaryForActor(actor);

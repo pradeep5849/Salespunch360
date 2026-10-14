@@ -22,6 +22,7 @@ type Props = {
   accounts: Array<Option & { balance: string }>;
   canManage: boolean;
   canPost: boolean;
+  fundingRepayments?:Array<{id:string;branchId:string;assetName:string;ownerFinancialAccountId:string;remainingAmount:string}>;
 };
 export function OwnerForms({
   owners,
@@ -30,6 +31,7 @@ export function OwnerForms({
   accounts,
   canManage,
   canPost,
+  fundingRepayments=[],
 }: Props) {
   const router = useRouter(),
     [pending, startTransition] = useTransition(),
@@ -43,6 +45,7 @@ export function OwnerForms({
     [errors, setErrors] = useState<Record<string, string[] | undefined>>({}),
     [entryError, setEntryError] = useState<string | null>(null),
     [entrySuccess, setEntrySuccess] = useState<string | null>(null);
+  const [entryBranch,setEntryBranch]=useState(branches[0]?.id??""),[fundingAmounts,setFundingAmounts]=useState<Record<string,string>>({});
   const creationKey = useRef<string | null>(null),
     entryKey = useRef<string | null>(null),
     entryForm = useRef<HTMLFormElement>(null),
@@ -57,6 +60,7 @@ export function OwnerForms({
   )
     ? selectedAccount
     : (accounts[0]?.id ?? "");
+  const repaymentChoices=fundingRepayments.filter(row=>row.ownerFinancialAccountId===activeOwner&&row.branchId===entryBranch);
   function edit(owner: OwnerView | null) {
     setEditing(owner);
     setMessage(null);
@@ -108,16 +112,18 @@ export function OwnerForms({
         moneyAccountId: form.get("moneyAccountId"),
         branchId: form.get("branchId"),
         type: form.get("type"),
+        fundingReturns:entryType==="CAPITAL_WITHDRAWAL"?repaymentChoices.filter(row=>fundingAmounts[row.id]?.trim()).map(row=>({fundingId:row.id,amount:fundingAmounts[row.id].trim()})):[],
         amount: form.get("amount"),
         transactionDate: form.get("transactionDate"),
         reference: form.get("reference"),
         idempotencyKey:
           entryKey.current ?? (entryKey.current = crypto.randomUUID()),
       });
-      if (result.kind === "error") setEntryError(result.message);
+      if (result.kind === "error") setEntryError([result.message,...(result.fieldErrors?.fundingReturns??[])].join(" "));
       else {
         setEntrySuccess(result.message);
         entryKey.current = null;
+        setFundingAmounts({});
         entryForm.current?.reset();
         router.refresh();
       }
@@ -126,6 +132,7 @@ export function OwnerForms({
   function selectEntry(ownerId: string, type: string) {
     setSelectedOwner(ownerId);
     setEntryType(type);
+    setFundingAmounts({});
     entryForm.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     requestAnimationFrame(() =>
       entryForm.current
@@ -317,9 +324,9 @@ export function OwnerForms({
             Owner / partner
             <select
               disabled={pending}
-              name="ownerFinancialAccountId"
+              name="ownerFinancialAccountId" aria-label="Owner / partner"
               value={activeOwner}
-              onChange={(event) => setSelectedOwner(event.target.value)}
+              onChange={(event) => {setSelectedOwner(event.target.value);setFundingAmounts({});}}
               required
             >
               {owners
@@ -335,9 +342,9 @@ export function OwnerForms({
             Transaction
             <select
               disabled={pending}
-              name="type"
+              name="type" aria-label="Transaction"
               value={entryType}
-              onChange={(event) => setEntryType(event.target.value)}
+              onChange={(event) => {setEntryType(event.target.value);setFundingAmounts({});}}
             >
               <option value="INVESTMENT">Capital addition</option>
               <option value="CAPITAL_WITHDRAWAL">Capital withdrawal</option>
@@ -351,7 +358,7 @@ export function OwnerForms({
             Money account
             <select
               disabled={pending}
-              name="moneyAccountId"
+              name="moneyAccountId" aria-label="Cash / bank account"
               value={activeAccount}
               onChange={(event) => setSelectedAccount(event.target.value)}
               required
@@ -370,7 +377,7 @@ export function OwnerForms({
           </p>
           <label>
             Branch
-            <select disabled={pending} name="branchId" required>
+            <select disabled={pending} name="branchId" aria-label="Branch" required value={entryBranch} onChange={event=>{setEntryBranch(event.target.value);setFundingAmounts({});}}>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
                   {branch.name}
@@ -378,6 +385,7 @@ export function OwnerForms({
               ))}
             </select>
           </label>
+          {entryType==="CAPITAL_WITHDRAWAL"&&repaymentChoices.length>0&&<fieldset><legend>Asset funding being repaid</legend><p>Enter the part of this capital withdrawal repaying each recorded asset allocation. Any remainder uses unallocated owner capital.</p>{repaymentChoices.map(row=><label key={row.id}>{row.assetName} — {row.remainingAmount} remaining<input disabled={pending} aria-label={`Repayment toward ${row.assetName}`} inputMode="decimal" pattern="[0-9]{1,16}(\.[0-9]{1,2})?" value={fundingAmounts[row.id]??""} onChange={event=>setFundingAmounts(old=>({...old,[row.id]:event.target.value}))}/></label>)}</fieldset>}
           <label>
             Amount
             <input

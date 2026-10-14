@@ -35,7 +35,7 @@ import com.salespunch360.mobile.account.*
 import kotlinx.serialization.json.*
 
 @Composable
-fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel(),initialOwnerId:String?=null,initialQuery:String="") {
+fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel(),initialOwnerId:String?=null,initialQuery:String="",onFunding:(()->Unit)?=null) {
     val imageContext=LocalContext.current;val imageScope=rememberCoroutineScope()
     var imagePreview by remember(initialMode,initialQuery){mutableStateOf<android.graphics.Bitmap?>(null)}
     var imageError by remember(initialMode,initialQuery){mutableStateOf<String?>(null)}
@@ -64,6 +64,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
         LazyRow{items(listOf("bank-accounts","cash-in-hand","accounts","transfers","owners","loans")){mode->FilterChip(s.mode==mode,{if(!s.saving)vm.show(mode)},{Text(when(mode){"bank-accounts"->"Bank Accounts";"cash-in-hand"->"Cash In-Hand";"accounts"->"All accounts";"owners"->"Capital & drawings";else->mode.replaceFirstChar{it.uppercase()}})})}}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
             IconButton(vm::load,enabled=!s.saving){Icon(Icons.Default.Refresh,"Refresh")}
+            if(s.mode=="owners"&&onFunding!=null)TextButton(onFunding,enabled=!s.saving){Text("Asset funding")}
             if(s.mode=="owners"&&can("manageOwners"))TextButton({vm.create("owner-setup")},enabled=!s.saving){Text("Add owner / partner")}
             if(canCreate)FilledIconButton({vm.create(if(accountMode)"accounts"else s.mode)},enabled=!s.saving&&!s.loading){Icon(Icons.Default.Add,"New transaction")}
         }
@@ -149,6 +150,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var destination by remember{mutableStateOf("")}
     var transferMode by remember{mutableStateOf(MoneyTransferMode.BANK_TO_CASH)}
     var owner by remember{mutableStateOf("")}
+    var fundingAmounts by remember{mutableStateOf<Map<String,String>>(emptyMap())}
     var name by remember{mutableStateOf(selected?.str("name").orEmpty())}
     val identity=kind=="owner-setup"||kind=="owner-edit"
     var type by remember{mutableStateOf(if(kind=="owners")"INVESTMENT" else if(identity)selected?.str("partyType").orEmpty().ifBlank{"OWNER"} else selected?.str("type").orEmpty().ifBlank{initialAccountType})}
@@ -189,6 +191,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     val imagePicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->if(uri!=null)imageScope.launch{transferImageLoading=true;transferImage=null;transferImageError=null;try{transferImage=readTransferImageInput(imageContext,uri)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){transferImageError=error.message?:"Image could not be read."}finally{transferImageLoading=false}}}
 
     val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("transfers","loans","loan-payments","loan-operations")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
+    val fundingReturns=if(kind=="owners"&&type=="CAPITAL_WITHDRAWAL")assetFundingReturns(data.array("fundingRepayments"),fundingAmounts,owner,branch,amount)else JsonArray(emptyList())
     val bankErrors=bankMetadataErrors(bankName,accountHolder,bankBranch,bankIfsc,bankUpi,printQr)
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
@@ -199,7 +202,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
         kind=="loans"->source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(amount,interest,charges)?.signum()==1
         kind=="accounts"->name.isNotBlank()&&(type!="BANK"||bankErrors.valid)
-        else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||owner.isNotBlank())
+        else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||(owner.isNotBlank()&&fundingReturns!=null))
     }
     AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(kind=="loan-edit")"Edit loan details"else if(identity)"Owner / partner" else kind.replace('-',' ').replaceFirstChar{it.uppercase()})},text={
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -224,7 +227,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                 item{OutlinedTextField(email,{email=it},label={Text("Email")},enabled=!saving)}
                 item{OutlinedTextField(address,{address=it},label={Text("Address")},enabled=!saving)}
                 if(kind=="owner-setup"){
-                    item{Pick("App user (optional)",owner,data.array("users"),enabled=!saving){owner=it};if(owner.isNotBlank())TextButton({owner=""},enabled=!saving){Text("Clear app user")}}
+                    item{Pick("App user (optional)",owner,data.array("users"),enabled=!saving){owner=it;fundingAmounts=emptyMap()};if(owner.isNotBlank())TextButton({owner=""},enabled=!saving){Text("Clear app user")}}
                     item{Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it}}
                 }else item{Row{Text("Active");Switch(active,{active=it},enabled=!saving)}}
             }else if(kind=="adjustments"){
@@ -256,7 +259,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{Text("A non-zero starting balance posts against Opening Balance Equity.")}
                 }
             }else{
-                item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;if(kind=="loans")source=""}}
+                item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;fundingAmounts=emptyMap();if(kind=="loans")source=""}}
                 if(kind=="transfers"){
                     item{Text("Deposit / Withdraw");MoneyTransferMode.entries.forEach{mode->Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){RadioButton(selected=transferMode==mode,onClick={transferMode=mode;source="";destination=""},enabled=!saving);Text(mode.label)}}}
                     item{Pick("Source account",source,accounts.filter{transferModeAccepts(transferMode,it.jsonObject.str("type"),true)&&it.jsonObject.str("id")!=destination},enabled=!saving){source=it}}
@@ -264,8 +267,14 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{Text("To adjust a bank balance, open the bank account history and choose Add / Reduce with an offset ledger and reason.")}
                 }else item{Pick("Money account",source,accounts,enabled=!saving){source=it}}
                 if(kind=="owners"){
-                    item{Pick("Owner / partner",owner,data.array("owners").filter{it.jsonObject["isActive"]?.jsonPrimitive?.booleanOrNull!=false},enabled=!saving){owner=it}}
-                    item{PickText("Transaction",type,listOf("INVESTMENT","CAPITAL_WITHDRAWAL","PROFIT_DISTRIBUTION")+if(data["capabilities"]?.jsonObject?.get("manageLoans")?.jsonPrimitive?.booleanOrNull==true)listOf("OWNER_LOAN")else emptyList(),enabled=!saving){type=it}}
+                    item{Pick("Owner / partner",owner,data.array("owners").filter{it.jsonObject["isActive"]?.jsonPrimitive?.booleanOrNull!=false},enabled=!saving){owner=it;fundingAmounts=emptyMap()}}
+                    item{PickText("Transaction",type,listOf("INVESTMENT","CAPITAL_WITHDRAWAL","PROFIT_DISTRIBUTION")+if(data["capabilities"]?.jsonObject?.get("manageLoans")?.jsonPrimitive?.booleanOrNull==true)listOf("OWNER_LOAN")else emptyList(),enabled=!saving){type=it;fundingAmounts=emptyMap()}}
+                }
+                if(kind=="owners"&&type=="CAPITAL_WITHDRAWAL"){
+                    val funding=data.array("fundingRepayments").filter{it.jsonObject.str("ownerFinancialAccountId")==owner&&it.jsonObject.str("branchId")==branch}
+                    if(funding.isNotEmpty())item{Text("Attribute capital returned to funded assets. Leave blank for unallocated capital.")}
+                    items(funding){entry->val row=entry.jsonObject;val id=row.str("id");OutlinedTextField(fundingAmounts[id].orEmpty(),{fundingAmounts=fundingAmounts+(id to it)},label={Text(row.str("assetName")+" · remaining "+accountMoney(row.str("remainingAmount")))},enabled=!saving)}
+                    if(fundingReturns==null&&amount.isNotBlank())item{Text("Enter positive amounts within the payment and remaining funding, with at most two decimal places.",color=MaterialTheme.colorScheme.error)}
                 }
                 if(kind=="loans"){
                     item{OutlinedTextField(loanName,{loanName=it},label={Text("Loan name")},enabled=!saving)}
@@ -299,7 +308,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             kind=="accounts"->{put("name",name);if(type=="BANK"){put("bankName",bankName);put("accountHolderName",accountHolder);put("bankBranchName",bankBranch);put("accountNumberMasked",bankNumber);put("ifsc",bankIfsc);put("upiId",bankUpi);put("printBankDetails",printBank);put("printUpiQr",printQr)};if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
                 "transfers"->{transferImage?.let{put("image",it)};put("description",transferDescription);put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
-                "owners"->{put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}
+                "owners"->{if(type=="CAPITAL_WITHDRAWAL")put("fundingReturns",fundingReturns?:JsonArray(emptyList()));put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}
                 "loans"->{put("lender",name);put("loanType",loanType);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration);put("principal",amount);put("interestRate",interest);put("startDate",date)}
                 "loan-payments"->{put("loanId",selected?.str("id").orEmpty());put("paymentDate",date);put("principal",amount);put("interest",interest);put("charges",charges);put("description",paymentDescription)}
             }}

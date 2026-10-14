@@ -1,3 +1,4 @@
+import { fundingRowsInTx, remainingFunding } from "./owner-asset-funding";
 import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { retrySerializable } from "./transaction-retry";
 import { createHash } from "node:crypto";
@@ -399,6 +400,8 @@ export async function updateAssetForActor(
 ) {
   await scoped(a, id);
   return db.$transaction(async (tx) => {
+    // Serialize cost corrections with funding allocations and capital repayments.
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
     await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
     const current = await scoped(a, id, tx);
     const d = base.parse({
@@ -419,6 +422,8 @@ export async function updateAssetForActor(
       d,
       current.vendorId,
     );
+    const allocated=(await fundingRowsInTx(tx,a.companyId)).filter(row=>row.assetId===id).reduce((sum,row)=>sum.add(remainingFunding(row)),new D(0));
+    if(allocated.gt(purchaseValue))throw new Error("ASSET_FUNDING_EXCEEDS_AVAILABLE");
     const {customFields,...values}=d;
     const row = await tx.asset.update({
       where: { id },

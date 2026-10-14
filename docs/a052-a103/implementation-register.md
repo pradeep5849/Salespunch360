@@ -724,6 +724,11 @@ Intermediate verification:95 grouped tests;36 financial/unit tests including5 Po
 
 **Independent paid-entry verification:** 29 grouped PostgreSQL financial tests passed (0 failed, 0 skipped), including concurrent retry, immediate cash/expense posting, approval-as-review rejection without reversal, invalid account/branch denial, posting-audit rollback and closed-period rollback. TypeScript/focused lint passed. Full tenant fixture, web/native flow and final-head checks remain pending; status remains PARTIAL.
 
+
+**Checkpoint dependency follow-up:** Shared accounting correction guard rejects reversal-of-reversal for managed financial sources; original business correction must be used.
+
+**Interim validation:** Four focused managed-source cases passed in the 54/54 financial group. Final-head validation remains pending.
+
 ## A053-F01 — Web Create recurring expense fails on React action metadata
 
 **Title:** Web Create recurring expense fails on React action metadata
@@ -4770,13 +4775,23 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** 40000equipment/30000owner/10000company plus repayment5000 yields25000owner/15000company, bank0, equipment40000; full repayment with sufficient cash yields0owner funding; mixed funding, multiple owners/assets, unallocated contributions, correction/reversal/disposal interactions, branch/company permissions, no double counting or duplicate journal.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_A065_Findings.json, SalesPunch360_A065_Audit_Report.md, SalesPunch360_A065_UI_and_Changes.md.
 
 **Linked finding IDs:** A065-F10, A065-F11.
+
+
+**Checkpoint dependency follow-up:** Implemented atomic asset funding allocations, explicit legacy/company classification, immutable corrections and capital-return attribution with reserved-capital guards. Web scoped allocation/repayment workflow is implemented. Repayment reversal cannot overfund a reallocated asset; managed financial reversal chains cannot bypass source corrections.
+
+**Interim validation:** 54/54 focused financial group passed; expanded funding unit/PostgreSQL pair 11/11 passed including reallocation rejection and disposal exclusion. Desktop/mobile browser 2/2 passed (38.7s), including accessibility and repayment/accounting invariants. Native workflow and final-head validation remain pending.
+
+
+**Funding workflow checkpoint:** Completed web and native asset-funding allocation, explicit company/legacy classification, correction/history and attributed capital repayment workflows. Mobile authenticated options/mutations use canonical branch scope, permission and write-entitlement checks. Native exact-cent repayment validation preserves owner/branch/outstanding/payment caps; pending mutation identity is retained across retry/configuration change. Asset cost edits serialize with funding writes and cannot reduce cost below reserved funding. No duplicate asset/cash journal is posted for classification.
+
+**Interim validation:** Interim validation: 13/13 funding unit/PostgreSQL tests pass, including multi-owner/multi-asset source caps, disposal, reversal after reallocation, and cost-edit rejection. 80/80 grouped dependency tests pass; 8/8 mobile route/context checks pass. Desktop/mobile browser 2/2 pass (38.7s). Android compileDebugKotlin + 4 AssetFundingReturnsTest tests pass (1m49s). TypeScript/lint checks run separately. Physical device/TalkBack, complete final-head validation and migration rehearsal remain pending.
 
 ## A066-F01 — Cheque list omits reference tabs, sorting, cards and empty states
 
@@ -5669,6 +5684,11 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 **Checkpoint work:** Generic LOAN_RECEIPT/LOAN_PAYMENT journal reversal is blocked before writes, an explicitly permitted fix strategy in the original finding; two focused regressions pass.
 
 **Remaining work:** Check any already-reversed legacy loan rows and reconcile effective outstanding/history where required; final-head ledger/API regressions remain pending.
+
+
+**Checkpoint dependency follow-up:** Shared accounting correction guard rejects reversal-of-reversal for managed loan financial sources, preserving managed business history.
+
+**Interim validation:** Focused managed-source cases passed in the 54/54 financial group. Final-head validation remains pending.
 
 ## A067-F10 — Loan controls lack accessible labels and actionable validation feedback
 
@@ -8658,6 +8678,16 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Linked finding IDs:** None explicitly linked.
 
+
+**Checkpoint dependency follow-up:** Extended company-scoped repeatable-read snapshots with transfer-image private object metadata, asset funding allocations, repayment attributions, cancellation history and classification confirmations.
+
+**Interim validation:** 9/9 focused backup snapshot/scheduling tests passed. Provider/blob recovery and final-head rehearsal remain pending.
+
+
+**Funding workflow checkpoint:** Populated backup regression retains original IDs, exact amount strings and company-scoped records for transfer images and all four funding history models; private transfer image keys remain in administrator-only backup metadata.
+
+**Interim validation:** Focused populated-snapshot and admin-denial checks added. Complete restore/provider/blob verification remains pending.
+
 ## A089-F01 — Web custom field editor omits Decimal
 
 **Title:** Web custom field editor omits Decimal
@@ -9275,3 +9305,5 @@ A064-F06 description/native continuation: native mode and branch-compatible choi
 A064-F06 private-image web continuation: validated/normalized PNG/JPEG/WebP up to 5 MB, safe filenames, scoped private download, metadata-only history links, one immutable image per transfer and locked retry deduplication. Image failure reports already-posted transfer and preserves financial retry identity. 27/27 focused unit/action/PostgreSQL/replay checks, TypeScript/lint and browser desktop/mobile 2/2 (34.3s) passed. New 20261014020000_money_transfer_image migration corrected a missing pre-existing schema-declared company/ID unique key before its FK; only the failed unreleased isolated migration was resolved/reapplied. Historical migrations and production untouched. Native image API/UI and final-head/device checks pending; PARTIAL.
 
 A064-F06 native image completion: bounded picker/JSON transport, validated image before posting, authenticated preview, immutable-image error and stable financial retry identity across web modes implemented. 35/35 grouped regressions, desktop/mobile browser 2/2 (35.3s), Android compile + 4 JVM tests (2m11s; zero fail/error/skip) passed. Status IMPLEMENTED BUT NOT VERIFIED; final-head/migration rehearsal/device checks pending. Live totals: 129 IMPLEMENTED BUT NOT VERIFIED, 67 PARTIAL, 3 NOT STARTED; no final statuses.
+
+A065-F12 funding foundation: immutable explicit funding/repayment/correction/classification records added in new 20261014030000_owner_asset_funding migration; original contributions and asset cost preserved. Company lock, caps, stable replay, protected reserved capital and unresolved-source reversal guards implemented. 19/19 actual PostgreSQL tests passed, including the40000/30000/10000→25000/15000 example, bank0/equipment40000, full repayment, races, corrections and scope/module denial. Legacy funding remains unknown until confirmation. UI/native, more multi-source/disposal cases, backup dependencies and final-head checks pending; PARTIAL. Live totals:129 IMPLEMENTED BUT NOT VERIFIED,68 PARTIAL,2 NOT STARTED.

@@ -2314,6 +2314,10 @@
           "work": "Independently verified immediate paid expense posting under approval-as-review; no financial implementation reverted. Added concurrent Accountant retry/idempotency, exact cash/expense postings, review rejection without reversal, account/branch denial, audit failure rollback and closed-period rollback regressions. Updated existing cash-flow assertion to compare exact amount independently of display padding.",
           "tests": "29 related real-PostgreSQL financial tests passed, 0 failed/0 skipped; TypeScript and focused lint passed. Earlier isolated new-test run: 1 passed, 25 filtered skips; grouped run supersedes it for this slice.",
           "remaining": "Original full tenant/account fixture isolation, web/native paid entry flows and final implementation-head financial regression remain pending; no final closure inferred."
+        },
+        "funding_dependency_followup": {
+          "work": "Shared accounting correction guard rejects reversal-of-reversal for managed financial sources; original business correction must be used.",
+          "tests": "Four focused managed-source cases passed in the 54/54 financial group. Final-head validation remains pending."
         }
       }
     },
@@ -12895,12 +12899,26 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A065-F10",
         "A065-F11"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Started explicit asset funding attribution: new immutable allocation, capital-return, cancellation and classification-confirmation records, linked by company-scoped foreign keys to actual assets/owners/investments. Allocation/payment/correction use the existing company accounting lock, preserve original asset cost/contributions, cap allocation and remaining funding, protect reserved capital from manual journals and block reversing a contribution with unresolved asset funding. Capital-return journal remains the existing balanced posting; attribution adds no duplicate journal. Legacy assets remain unclassified until explicit confirmation. New additive 20261014030000_owner_asset_funding migration applied only to isolated local CI database. Web/native workflows, further correction/disposal/multiple-source tests and backup dependencies remain pending.",
+          "tests": "19/19 PostgreSQL tests passed (6 new funding cases plus 13 existing owner-funds regressions): 40000 asset/30000 owner/10000 company, 5000 repayment yields25000/15000 and bank0/equipment40000, full repayment with replenished cash yields0/40000; duplicate/drop-attribution replay, no attribution journal, preserved originals, reserved-capital protection and manual capital credit support, concurrent payment/creation retries, reversal/cancellation, unknown legacy classification and foreign branch/company/role/module denial. Prisma generation/validation/migration deployment and TypeScript passed. No final-head verification; status PARTIAL."
+        },
+        {
+          "work": "Implemented atomic asset funding allocations, explicit legacy/company classification, immutable corrections and capital-return attribution with reserved-capital guards. Web scoped allocation/repayment workflow is implemented. Repayment reversal cannot overfund a reallocated asset; managed financial reversal chains cannot bypass source corrections.",
+          "tests": "54/54 focused financial group passed; expanded funding unit/PostgreSQL pair 11/11 passed including reallocation rejection and disposal exclusion. Desktop/mobile browser 2/2 passed (38.7s), including accessibility and repayment/accounting invariants. Native workflow and final-head validation remain pending."
+        },
+        {
+          "work": "Completed web and native asset-funding allocation, explicit company/legacy classification, correction/history and attributed capital repayment workflows. Mobile authenticated options/mutations use canonical branch scope, permission and write-entitlement checks. Native exact-cent repayment validation preserves owner/branch/outstanding/payment caps; pending mutation identity is retained across retry/configuration change. Asset cost edits serialize with funding writes and cannot reduce cost below reserved funding. No duplicate asset/cash journal is posted for classification.",
+          "tests": "Interim validation: 13/13 funding unit/PostgreSQL tests pass, including multi-owner/multi-asset source caps, disposal, reversal after reallocation, and cost-edit rejection. 80/80 grouped dependency tests pass; 8/8 mobile route/context checks pass. Desktop/mobile browser 2/2 pass (38.7s). Android compileDebugKotlin + 4 AssetFundingReturnsTest tests pass (1m49s). TypeScript/lint checks run separately. Physical device/TalkBack, complete final-head validation and migration rehearsal remain pending."
+        }
       ]
     },
     {
@@ -15533,6 +15551,10 @@
           "date": "2026-10-13",
           "work": "Shared legacy loan ledger balances are unknown/excluded rather than counted for each loan; repayments, top-ups and cancellation reject ambiguous ownership. Scoped history returns an explanatory state. Exact minor-unit summation retains cents for large aggregate balances.",
           "tests": "23 isolated financial tests passed including legacy duplicate ledger, company/branch/mutation guards; 32 grouped money sum, overview/history/accounting runtime tests passed; TypeScript and ESLint passed. Android compile at lifecycle head passed; newest native shared-ledger explanatory text awaits grouped/final compile."
+        },
+        {
+          "work": "Shared accounting correction guard rejects reversal-of-reversal for managed loan financial sources, preserving managed business history.",
+          "tests": "Focused managed-source cases passed in the 54/54 financial group. Final-head validation remains pending."
         }
       ]
     },
@@ -21990,6 +22012,14 @@
         {
           "work": "Backup snapshot now includes immutable loanOperation request/audit records with deterministic ordering; existing Loan snapshots include versions and creation fingerprints.",
           "tests": "TypeScript/lint passed. Dedicated backup and final-head verification remain pending; no finding completion inferred."
+        },
+        {
+          "work": "Extended company-scoped repeatable-read snapshots with transfer-image private object metadata, asset funding allocations, repayment attributions, cancellation history and classification confirmations.",
+          "tests": "9/9 focused backup snapshot/scheduling tests passed. Provider/blob recovery and final-head rehearsal remain pending."
+        },
+        {
+          "work": "Populated backup regression retains original IDs, exact amount strings and company-scoped records for transfer images and all four funding history models; private transfer image keys remain in administrator-only backup metadata.",
+          "tests": "Focused populated-snapshot and admin-denial checks added. Complete restore/provider/blob verification remains pending."
         }
       ]
     },

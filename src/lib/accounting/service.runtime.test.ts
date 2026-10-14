@@ -65,6 +65,7 @@ const input = (overrides = {}) => ({
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  m.raw.mockReset().mockResolvedValue([]); // No saved asset funding in legacy journal fixtures.
   m.permission.mockResolvedValue({
     id: "actor",
     companyId: COMPANY,
@@ -401,3 +402,8 @@ it.each(["PROJECT_EXPENSE", "OFFICE_EXPENSE", "OTHER_INCOME", "REIMBURSEMENT"])(
     expect(m.number).not.toHaveBeenCalled();
   },
 );
+
+it.each(["OFFICE_EXPENSE","LOAN_RECEIPT","CUSTOMER_ADVANCE","CAPITAL_WITHDRAWAL"])("blocks generic reversal of a %s correction without writing",async sourceType=>{
+ m.findJournal.mockResolvedValueOnce({id:"66666666-6666-4666-8666-666666666666",companyId:COMPANY,branchId:BRANCH,financialYearId:FY,status:"POSTED",sourceType:"REVERSAL",reversalOfId:"77777777-7777-4777-8777-777777777777",lines:[{ledgerAccountId:A,debit:"0",credit:"10"},{ledgerAccountId:B,debit:"10",credit:"0"}]}).mockResolvedValueOnce({sourceType,reversalOfId:null});
+ await expect(reverseJournal({journalEntryId:"66666666-6666-4666-8666-666666666666",entryDate:"2026-04-02",reason:"Undo correction"})).rejects.toThrow("MANAGED_CORRECTION_REVERSAL_REQUIRED");expect(m.create).not.toHaveBeenCalled();expect(m.update).not.toHaveBeenCalled();
+});

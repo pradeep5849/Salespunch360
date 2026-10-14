@@ -3156,6 +3156,8 @@ model Cheque {
 }
 
 model OwnerFinancialAccount {
+  assetFundings AssetOwnerFunding[]
+
   id                 String         @id @default(uuid()) @db.Uuid
   companyId          String         @db.Uuid
   userId             String?        @db.Uuid
@@ -3274,7 +3276,77 @@ model AccountOperationalAudit {
   @@map("account_operational_audits")
 }
 
+model AssetFundingConfirmation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  assetId String @db.Uuid
+  asset Asset @relation(fields:[companyId,assetId],references:[companyId,id],onDelete:Restrict)
+  costBasis Decimal @db.Decimal(18,2)
+  confirmed Boolean
+  revision Int
+  reason String @db.VarChar(1000)
+  requestKey String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  @@unique([companyId,requestKey])
+  @@unique([companyId,assetId,revision])
+  @@map("asset_funding_confirmations")
+}
+
+model AssetOwnerFunding {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  assetId String @db.Uuid
+  asset Asset @relation(fields:[companyId,assetId],references:[companyId,id],onDelete:Restrict)
+  ownerFinancialAccountId String @db.Uuid
+  owner OwnerFinancialAccount @relation(fields:[companyId,ownerFinancialAccountId],references:[companyId,id],onDelete:Restrict)
+  contributionTransactionId String @db.Uuid
+  contribution OwnerTransaction @relation("AssetFundingContribution",fields:[companyId,contributionTransactionId],references:[companyId,id],onDelete:Restrict)
+  amount Decimal @db.Decimal(18,2)
+  allocationDate DateTime @db.Date
+  requestKey String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  repayments OwnerAssetFundingReturn[]
+  cancellation AssetOwnerFundingCancellation?
+  @@unique([companyId,id])
+  @@unique([companyId,requestKey])
+  @@index([companyId,branchId,assetId])
+  @@map("asset_owner_fundings")
+}
+model AssetOwnerFundingCancellation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  fundingId String @unique @db.Uuid
+  funding AssetOwnerFunding @relation(fields:[companyId,fundingId],references:[companyId,id],onDelete:Restrict)
+  reason String @db.VarChar(1000)
+  requestKey String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  @@unique([companyId,fundingId])
+  @@unique([companyId,requestKey])
+  @@map("asset_owner_funding_cancellations")
+}
+model OwnerAssetFundingReturn {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  fundingId String @db.Uuid
+  funding AssetOwnerFunding @relation(fields:[companyId,fundingId],references:[companyId,id],onDelete:Restrict)
+  ownerTransactionId String @db.Uuid
+  transaction OwnerTransaction @relation("AssetFundingRepayment",fields:[companyId,ownerTransactionId],references:[companyId,id],onDelete:Restrict)
+  amount Decimal @db.Decimal(18,2)
+  createdAt DateTime @default(now())
+  @@unique([companyId,ownerTransactionId,fundingId])
+  @@index([companyId,fundingId])
+  @@map("owner_asset_funding_returns")
+}
+
 model OwnerTransaction {
+  assetFundingContributions AssetOwnerFunding[] @relation("AssetFundingContribution")
+  assetFundingRepayments OwnerAssetFundingReturn[] @relation("AssetFundingRepayment")
+
   id                      String               @id @default(uuid()) @db.Uuid
   companyId               String               @db.Uuid
   branchId                String               @db.Uuid
@@ -3386,6 +3458,9 @@ model ProductPrice {
 }
 
 model Asset {
+  fundingConfirmations AssetFundingConfirmation[]
+  ownerFundings AssetOwnerFunding[]
+
   id                              String             @id @default(uuid()) @db.Uuid
   companyId                       String             @db.Uuid
   branchId                        String             @db.Uuid

@@ -1,3 +1,4 @@
+import {fundingReturnsSchema,fundingReturnReplayMatches,validateFundingReturnsInTx} from "./owner-asset-funding";
 import {loanCreationFingerprint} from "./loan-fingerprint";
 import {moneyBankMetadata,bankIfsc,hasBankMetadata} from "./money-bank-metadata";
 import { moneyReadContext } from "./money-context";
@@ -1017,9 +1018,12 @@ const ownerInput = z.object({
   transactionDate: z.coerce.date(),
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
+  fundingReturns:fundingReturnsSchema.default([]),
 });
 export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
   const d = ownerInput.parse(raw);
+  const {fundingReturns,...entry}=d;
+  if(fundingReturns.length&&d.type!=="CAPITAL_WITHDRAWAL")throw new Error("INVALID_ASSET_FUNDING_RETURN");
   if (
     !canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY") ||
     (d.type === "OWNER_LOAN" &&
@@ -1049,7 +1053,8 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
               !existing.amount.eq(d.amount) ||
               existing.transactionDate.getTime() !==
                 d.transactionDate.getTime() ||
-              (existing.reference ?? "") !== (d.reference ?? "")
+              (existing.reference ?? "") !== (d.reference ?? "") ||
+              (d.type==="CAPITAL_WITHDRAWAL"&&!await fundingReturnReplayMatches(tx,a.companyId,existing.id,fundingReturns))
             )
               throw new Error("IDEMPOTENCY_CONFLICT");
             return existing;
@@ -1099,6 +1104,7 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
             )
               throw new Error("INSUFFICIENT_MONEY_BALANCE");
           }
+          if(d.type==="CAPITAL_WITHDRAWAL")await validateFundingReturnsInTx(tx,a,d,owner.capitalLedgerId);
           const amount = new D(d.amount),
             ownerLedger = ["INVESTMENT", "CAPITAL_WITHDRAWAL"].includes(d.type)
               ? owner.capitalLedgerId
@@ -1132,12 +1138,13 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
               data: {
                 id,
                 companyId: a.companyId,
-                ...d,
+                ...entry,
                 amount,
                 journalEntryId: journal.id,
                 createdById: a.id,
               },
             });
+          if(fundingReturns.length)await tx.ownerAssetFundingReturn.createMany({data:fundingReturns.map(row=>({...row,companyId:a.companyId,ownerTransactionId:id}))});
           await audit(
             tx,
             a,
@@ -1152,6 +1159,7 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
             )[d.type],
             "OWNER_TRANSACTION",
             row.id,
+            fundingReturns.length?{fundingReturns}:undefined,
           );
           return row;
         },

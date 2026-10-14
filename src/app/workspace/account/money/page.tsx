@@ -55,7 +55,7 @@ export default async function Page({
           ].map(([path, label]) => (
             <Link
               key={path}
-              href={`/workspace/account/money/${path}${["bank-accounts", "cash-in-hand", "accounts", "transfers", "cheques"].includes(path) ? `?${scopeQuery}` : ""}`}
+              href={`/workspace/account/money/${path}${["bank-accounts", "cash-in-hand", "accounts", "transfers", "cheques", "capital"].includes(path) ? `?${scopeQuery}` : ""}`}
             >
               {label} ·{" "}
             </Link>

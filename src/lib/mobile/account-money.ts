@@ -1,3 +1,4 @@
+import { allocateOwnerAssetFundingForActor, cancelOwnerAssetFundingForActor, confirmAssetFundingForActor, ownerAssetFundingOptionsForActor, ownerFundingRepaymentOptionsForActor } from "@/lib/account/owner-asset-funding";
 import {prepareTransferImagePayload,addTransferImageForActor,transferImageForActor} from "@/lib/account/money-transfer-image";
 import {editLoanMetadataForActor,topUpLoanForActor,changeLoanLifecycleForActor} from "@/lib/account/loan-operations";
 import {loanOverviewForActor} from "@/lib/account/loan-overview";
@@ -95,6 +96,7 @@ export async function mobileMoneyContext(
       ? await moneyAdjustmentOptionsForActor(a)
       : null,
     branchContext: readScope.context,
+    fundingRepayments: await ownerFundingRepaymentOptionsForActor(a),
     owners: data.owners.map((x) => ({
       ...x,
       name: x.name || users.find((u) => u.id === x.userId)?.name || "Owner",
@@ -314,3 +316,17 @@ export async function mobileTopUpLoan(u:MobileAppPrincipal,id:string,raw:unknown
 export async function mobileChangeLoanLifecycle(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return changeLoanLifecycleForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
 
 export async function mobileMoneyTransferImage(u:MobileAppPrincipal,id:string){return transferImageForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id);}
+
+export async function mobileAssetFundingOptions(u: MobileAppPrincipal, raw: unknown = {}) {
+  const {q,...scope}=z.object({q:z.string().max(100).optional(),branchId:z.string().uuid().optional(),scope:z.literal("all").optional()}).strict().parse(raw);
+  const read=await moneyReadContext(permit(u,"ACCOUNT_MONEY_VIEW"),scope);
+  return { ...await ownerAssetFundingOptionsForActor(read.actor,q),branchContext:read.context };
+}
+export async function mobileAssetFundingMutation(u: MobileAppPrincipal, raw: unknown) {
+  const actor=permit(u,"ACCOUNT_MONEY_ENTRY");
+  await write(u);
+  const {operation,payload}=z.object({operation:z.enum(["ALLOCATE","CONFIRM","CANCEL"]),payload:z.unknown()}).strict().parse(raw);
+  if(operation==="ALLOCATE") return allocateOwnerAssetFundingForActor(actor,payload);
+  if(operation==="CONFIRM") return confirmAssetFundingForActor(actor,payload);
+  return cancelOwnerAssetFundingForActor(actor,payload);
+}
