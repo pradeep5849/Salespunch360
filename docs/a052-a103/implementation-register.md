@@ -7640,7 +7640,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Prior invoice/current receipt; party opening credit/debit; credit/debit notes; refund/advance; empty period with opening; branch isolation and export parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -7729,7 +7729,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Payment after cutoff; credit/debit note after cutoff; advance after cutoff; opening allocation after cutoff; reversal policy; future invoices excluded; same historical balance in export.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
