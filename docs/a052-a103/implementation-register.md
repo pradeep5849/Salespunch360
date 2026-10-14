@@ -3875,7 +3875,7 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** All four entry points; source/destination labels and fixed Cash side; bank-to-bank distinct accounts; attachments upload/view/denied access; date/description; web/native parity and Back.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9269,3 +9269,5 @@ A071-F05 web integration: opt-in merged controller and source-aware web cards en
 A071-F05 native/version continuation: Android consumes source destinations and balance/print metadata; expense/quotation detail deep links and authorized payment PDF preview wired. Client opts into homeVersion=2, legacy API unchanged. Compile + 5 JVM tests passed (1m38s; zero fail/error/skip). Browser desktop/mobile 2/2 passed (29.9s), including legacy/v2 mobile roundtrip, read-only payment view, scoped Axe AA and overflow assertions. Device verification, other source routes and unsupported filter semantics pending; PARTIAL.
 
 A064-F06 started: web Bank-to-Cash/Cash-to-Bank/Bank-to-Bank modes, correct account-side choices, branch retention and adjustment account links implemented using existing balanced/idempotent service. Other internal transfers preserved. 25/25 focused tests, TypeScript/lint and desktop/mobile browser 2/2 (28.4s) passed. Native mode parity and description/image persistence remain. Status PARTIAL. Current register totals: 128 IMPLEMENTED BUT NOT VERIFIED, 68 PARTIAL, 3 NOT STARTED; no final statuses yet.
+
+A064-F06 description/native continuation: native mode and branch-compatible choices validated; description saved in new additive migration 20261014010000_money_transfer_description, service replay identity, web/native inputs/history. Isolated migration deployment, Prisma validation/generation, 26/26 money/replay tests, browser 2/2 (33.3s) with actual balanced 20.25 transfer and description persistence passed. Updated Android compile + 2 JVM tests passed (1m43s; zero fail/error/skip), final stage TypeScript/lint passed. Transfer image persistence, device checks and final-head verification pending; PARTIAL.

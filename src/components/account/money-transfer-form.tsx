@@ -146,6 +146,7 @@ export function MoneyTransferForm({
           <input name="reference" aria-label="Reference" maxLength={160} />
           <AccountFieldError name="reference" />
         </label>
+        <label>Description<textarea name="description" aria-label="Description" maxLength={2000}/><AccountFieldError name="description"/></label>
         {choices.length < 2 && (
           <p role="status">
             Add two active accounts in this branch to make a transfer.

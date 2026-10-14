@@ -1,4 +1,6 @@
 package com.salespunch360.mobile.ui.account.money
+import com.salespunch360.mobile.account.MoneyTransferMode
+import com.salespunch360.mobile.account.transferModeAccepts
 
 import com.salespunch360.mobile.ui.account.accountDate
 import com.salespunch360.mobile.ui.account.accountMoney
@@ -65,7 +67,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
             }
             items(rows){entry->val row=entry.jsonObject
                 val title=if(s.mode=="owners")ownerNames[row.str("ownerFinancialAccountId")]?:"Owner" else row.str("name").ifBlank{row.str("displayName").ifBlank{row.str("lender").ifBlank{moneyTypeLabel(row.str("type"))}}}
-                ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference")).filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{
+                ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference"),if(s.mode=="transfers")row.str("description")else "").filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{
                     if(s.mode=="loans")Text(row["outstanding"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)}?:"Balance not established")else Text(accountMoney(row.str("balance").ifBlank{row.str("amount").ifBlank{row.str("principal")}}))
                     if(s.mode=="loans"&&can("manageLoans")&&row.str("status")=="ACTIVE"&&row["archivedAt"]?.jsonPrimitive?.contentOrNull==null)TextButton({vm.loanPayment(row)},enabled=!s.saving){Text("Repay")}
                     if(accountMode&&can("postMoneyEntries"))TextButton({vm.editAccount(row)},enabled=!s.saving){Text("Edit")}
@@ -124,9 +126,10 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
 @Composable
 private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:Boolean,error:String?,close:()->Unit,save:(String,JsonObject)->Unit,initialAccountType:String="BANK"){
     val requestKey=remember{java.util.UUID.randomUUID().toString()}
-    var branch by remember{mutableStateOf(if(kind in listOf("loan-payments","loan-operations"))selected?.str("branchId").orEmpty()else "")}
+    var branch by remember{mutableStateOf(if(kind in listOf("loan-payments","loan-operations"))selected?.str("branchId").orEmpty()else if(kind=="transfers")data["branchContext"]?.jsonObject?.str("branchId").orEmpty()else "")}
     var source by remember{mutableStateOf("")}
     var destination by remember{mutableStateOf("")}
+    var transferMode by remember{mutableStateOf(MoneyTransferMode.BANK_TO_CASH)}
     var owner by remember{mutableStateOf("")}
     var name by remember{mutableStateOf(selected?.str("name").orEmpty())}
     val identity=kind=="owner-setup"||kind=="owner-edit"
@@ -160,10 +163,12 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var charges by remember{mutableStateOf("0")}
     var date by remember{mutableStateOf(java.time.LocalDate.now().toString())}
     var reference by remember{mutableStateOf("")}
-    val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("loans","loan-payments","loan-operations")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
+    var transferDescription by remember{mutableStateOf("")}
+    val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("transfers","loans","loan-payments","loan-operations")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
     val bankErrors=bankMetadataErrors(bankName,accountHolder,bankBranch,bankIfsc,bankUpi,printQr)
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
+        kind=="transfers"->branch.isNotBlank()&&source.isNotBlank()&&destination.isNotBlank()&&source!=destination&&loanPaymentTotal(amount)?.signum()==1&&accounts.any{it.jsonObject.str("id")==source&&transferModeAccepts(transferMode,it.jsonObject.str("type"),true)}&&accounts.any{it.jsonObject.str("id")==destination&&transferModeAccepts(transferMode,it.jsonObject.str("type"),false)}
         kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
         kind=="loan-operations"->date.isNotBlank()&&(if(loanAction=="TOP_UP")source.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1 else adjustmentReason.trim().length in 3..1000)
         kind=="loan-edit"->loanName.length<=240&&loanNumber.length<=160&&loanDescription.length<=2000&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
@@ -229,8 +234,10 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             }else{
                 item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;if(kind=="loans")source=""}}
                 if(kind=="transfers"){
-                    item{Pick("Source account",source,accounts,enabled=!saving){source=it}}
-                    item{Pick("Destination account",destination,accounts,enabled=!saving){destination=it}}
+                    item{Text("Deposit / Withdraw");MoneyTransferMode.entries.forEach{mode->Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){RadioButton(selected=transferMode==mode,onClick={transferMode=mode;source="";destination=""},enabled=!saving);Text(mode.label)}}}
+                    item{Pick("Source account",source,accounts.filter{transferModeAccepts(transferMode,it.jsonObject.str("type"),true)&&it.jsonObject.str("id")!=destination},enabled=!saving){source=it}}
+                    item{Pick("Destination account",destination,accounts.filter{transferModeAccepts(transferMode,it.jsonObject.str("type"),false)&&it.jsonObject.str("id")!=source},enabled=!saving){destination=it}}
+                    item{Text("To adjust a bank balance, open the bank account history and choose Add / Reduce with an offset ledger and reason.")}
                 }else item{Pick("Money account",source,accounts,enabled=!saving){source=it}}
                 if(kind=="owners"){
                     item{Pick("Owner / partner",owner,data.array("owners").filter{it.jsonObject["isActive"]?.jsonPrimitive?.booleanOrNull!=false},enabled=!saving){owner=it}}
@@ -253,6 +260,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                 }
                 item{OutlinedTextField(amount,{amount=it},label={Text(if(kind=="loan-payments")"Principal paid" else "Amount")},enabled=!saving)}
                 item{OutlinedTextField(date,{date=it},label={Text("Date")},enabled=!saving)}
+                if(kind=="transfers")item{OutlinedTextField(transferDescription,{if(it.length<=2000)transferDescription=it},label={Text("Description")},enabled=!saving)}
                 item{OutlinedTextField(reference,{reference=it},label={Text("Reference")},enabled=!saving)}
             }
             if(error!=null)item{Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics{liveRegion=LiveRegionMode.Polite})}
@@ -265,7 +273,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             kind=="adjustments"->{put("moneyAccountId",selected?.str("id").orEmpty());put("branchId",branch);put("direction",direction);put("offsetLedgerId",offsetLedger);put("amount",amount);put("date",date);put("reason",adjustmentReason);put("idempotencyKey",requestKey)}
             kind=="accounts"->{put("name",name);if(type=="BANK"){put("bankName",bankName);put("accountHolderName",accountHolder);put("bankBranchName",bankBranch);put("accountNumberMasked",bankNumber);put("ifsc",bankIfsc);put("upiId",bankUpi);put("printBankDetails",printBank);put("printUpiQr",printQr)};if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
-                "transfers"->{put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
+                "transfers"->{put("description",transferDescription);put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
                 "owners"->{put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}
                 "loans"->{put("lender",name);put("loanType",loanType);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration);put("principal",amount);put("interestRate",interest);put("startDate",date)}
                 "loan-payments"->{put("loanId",selected?.str("id").orEmpty());put("paymentDate",date);put("principal",amount);put("interest",interest);put("charges",charges);put("description",paymentDescription)}

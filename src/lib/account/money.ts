@@ -534,6 +534,7 @@ const transferInput = z.object({
   amount: money,
   transferDate: z.coerce.date(),
   reference: z.string().max(160).optional(),
+  description:z.string().trim().max(2000).optional(),
   idempotencyKey: z.string().min(8).max(160),
 });
 export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
@@ -555,7 +556,8 @@ export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
               existing.destinationAccountId !== d.destinationAccountId ||
               !existing.amount.eq(d.amount) ||
               existing.transferDate.getTime() !== d.transferDate.getTime() ||
-              (existing.reference ?? "") !== (d.reference ?? "")
+              (existing.reference ?? "") !== (d.reference ?? "") ||
+              (existing.description??"")!==(d.description??"")
             )
               throw new Error("IDEMPOTENCY_CONFLICT");
             return existing;

@@ -109,6 +109,7 @@ export default async function Page({
             <li key={row.id}>
               <AccountDate value={row.transferDate.toISOString()} /> ·{" "}
               <ClientMoney value={row.amount.toFixed()} />
+              {row.description&&<p>{row.description}</p>}
             </li>
           ))}
         </ul>

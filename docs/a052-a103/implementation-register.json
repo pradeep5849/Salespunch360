@@ -10276,6 +10276,10 @@
         {
           "work": "Started the saved transfer reference finding: web Bank-to-Cash, Cash-to-Bank and Bank-to-Bank radio modes constrain source/destination account types, clear stale selections on mode changes, retain selected branch and disallow the same account on both sides. Adjust Bank Balance opens existing authorized account adjustment/offset-ledger form. Preserved generic internal transfers and existing balanced/idempotent posting service. Attachments/description persistence and native mode parity remain unimplemented.",
           "tests": "25/25 focused transfer/money/replay/route tests passed, including two new account-side mode regressions. TypeScript and targeted lint passed. Desktop/mobile Chromium 2/2 passed (28.4s): correct bank/cash sides, mode-change selection reset, selected branch, same-account disabled DOM property and adjustment route. Initial option matcher did not inspect its disabled property; corrected assertion, rerun passed. No final status assigned; native, description/image and final-head coverage pending."
+        },
+        {
+          "work": "Added native bank/cash mode selectors and correct side/branch filtering, distinct-source/destination validation and existing adjustment guidance. Added optional transfer description across schema, financial service replay identity, web/native inputs and history. New additive 20261014010000_money_transfer_description migration leaves historical values/journals unchanged. Image persistence still pending; no final status.",
+          "tests": "Initial native mode compile + 2 JVM tests passed (1m38s). New description migration applied only to isolated local CI DB; Prisma generation/validation passed. Focused money/replay suite 26/26 passed. Desktop/mobile browser 2/2 passed (33.3s) with actual transfer action, saved description/amount and equal debit/credit 20.25 journal assertions. Updated Android compile + 2 focused JVM tests passed (1m43s, zero failures/errors/skips). Final stage TypeScript and targeted lint passed. Transfer image persistence/device testing and final-head validation remain pending."
         }
       ]
     },

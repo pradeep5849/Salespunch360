@@ -3101,6 +3101,7 @@ model MoneyTransfer {
   idempotencyKey       String   @db.VarChar(160)
   journalEntryId       String   @db.Uuid
   reference            String?  @db.VarChar(160)
+  description          String?  @db.VarChar(2000)
   createdById          String   @db.Uuid
   createdAt            DateTime @default(now())
 

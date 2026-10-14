@@ -121,6 +121,7 @@ describe("A064 A065 A067 financial request replay", () => {
   );
   it.each([
     ["transfer", createMoneyTransferForActor, { ...transfer, amount: "11" }],
+    ["transfer description", createMoneyTransferForActor, { ...transfer, description:"Different context" }],
     ["owner", postOwnerTransactionForActor, { ...owner, amount: "11" }],
     ["loan", createAndReceiveLoanForActor, { ...loan, principal: "11" }],
     ["payment", postLoanPaymentForActor, { ...payment, interest: "1" }],
