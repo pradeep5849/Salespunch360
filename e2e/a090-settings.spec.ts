@@ -122,6 +122,7 @@ test.afterAll(async () => {
     await tx.commercialDocument.deleteMany({where:{companyId}});
     await tx.projectChangeOrder.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
+    await tx.moneyTransferImage.deleteMany({where:{companyId}});
     await tx.moneyTransfer.deleteMany({where:{companyId}});
     await tx.loanOperation.deleteMany({where:{companyId}});
     await tx.loanPayment.deleteMany({where:{companyId}});
@@ -1794,7 +1795,8 @@ test("A064 transfer modes constrain cash and bank sides and preserve the selecte
  await page.getByRole("radio",{name:"Cash to Bank",exact:true}).check();await expect(from).toHaveValue("");await expect(to).toHaveValue("");await expect(from.locator("option")).toHaveCount(2);await expect(to.locator("option")).toHaveCount(3);
  await page.getByRole("radio",{name:"Bank to Bank",exact:true}).check();await from.selectOption(ids[0]);await expect(to.locator(`option[value="${ids[0]}"]`)).toHaveJSProperty("disabled",true);await to.selectOption(ids[1]);
  await page.getByLabel("Amount",{exact:true}).fill("20.25");await page.getByLabel("Description",{exact:true}).fill("Move funds to operating bank");await page.getByLabel("Transfer date",{exact:true}).fill("2026-10-11");
+ const sharp=(await import("sharp")).default,pixels=await sharp({create:{width:2,height:2,channels:3,background:"red"}}).png().toBuffer();await page.locator('input[name="image"]').setInputFiles({name:"proof.png",mimeType:"image/png",buffer:pixels});
  await page.getByRole("button",{name:"Post transfer / deposit"}).click();await expect(page.getByRole("status").filter({hasText:"Transfer posted"})).toBeVisible();
- const saved=await db.moneyTransfer.findFirstOrThrow({where:{companyId,sourceAccountId:ids[0],destinationAccountId:ids[1]}});expect(saved.description).toBe("Move funds to operating bank");expect(saved.amount.toString()).toBe("20.25");const lines=await db.journalLine.findMany({where:{companyId,journalEntryId:saved.journalEntryId}});expect(lines.map(row=>row.debit.toString()).sort()).toEqual(["0","20.25"]);expect(lines.map(row=>row.credit.toString()).sort()).toEqual(["0","20.25"]);
+ const saved=await db.moneyTransfer.findFirstOrThrow({where:{companyId,sourceAccountId:ids[0],destinationAccountId:ids[1]}});const image=await db.moneyTransferImage.findUniqueOrThrow({where:{transferId:saved.id}});expect(image.displayName).toBe("proof.png");const response=await page.request.get(`/api/account/money/transfers/${saved.id}/image`);expect(response.status()).toBe(200);expect(response.headers()["cache-control"]).toBe("private, no-store");expect(response.headers()["content-type"]).toBe("image/png");expect((await response.body()).subarray(1,4).toString()).toBe("PNG");expect(saved.description).toBe("Move funds to operating bank");expect(saved.amount.toString()).toBe("20.25");const lines=await db.journalLine.findMany({where:{companyId,journalEntryId:saved.journalEntryId}});expect(lines.map(row=>row.debit.toString()).sort()).toEqual(["0","20.25"]);expect(lines.map(row=>row.credit.toString()).sort()).toEqual(["0","20.25"]);
  await page.getByText("Adjust Bank Balance",{exact:true}).click();await page.getByRole("link",{name:"Transfer mode 0",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/money/accounts/${ids[0]}`));await expect(page.getByRole("heading",{name:"Add / Reduce balance"})).toBeVisible();
 });

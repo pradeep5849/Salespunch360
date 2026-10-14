@@ -8,6 +8,8 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_TRANSFER_IMAGE:"Choose a valid PNG, JPEG or WebP image up to 5 MB.",
+  TRANSFER_POSTED_IMAGE_UPLOAD_FAILED:"The transfer was posted, but its image could not be saved. Retry this same form to attach it without posting again.",
   UNIT_HAS_TRANSACTION_HISTORY:"This item already has stock or document quantities. Its base unit cannot be changed; use a conversion instead.",
   INSUFFICIENT_FUNDS:"The receipt account does not have enough posted funds to reverse this loan receipt.",
   LOAN_BALANCE_AMBIGUOUS:"This legacy loan shares its liability ledger with another loan. Separate their opening balances before changing financial history.",

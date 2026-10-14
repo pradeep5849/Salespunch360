@@ -110,6 +110,7 @@ export default async function Page({
               <AccountDate value={row.transferDate.toISOString()} /> ·{" "}
               <ClientMoney value={row.amount.toFixed()} />
               {row.description&&<p>{row.description}</p>}
+              {row.image&&<a href={`/api/account/money/transfers/${row.id}/image`}>View transfer image</a>}
             </li>
           ))}
         </ul>

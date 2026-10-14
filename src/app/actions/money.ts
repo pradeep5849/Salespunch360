@@ -4,7 +4,6 @@ import {
   createAndReceiveLoan,
   createCheque,
   createMoneyAccount,
-  createMoneyTransfer,
   postLoanPayment,
   postOwnerTransaction,
   setupOwnerFinancialAccount,
@@ -17,7 +16,13 @@ export async function moneyAccountAction(fd: FormData) {
   refresh();
 }
 export async function transferAction(fd: FormData) {
-  await createMoneyTransfer(raw(fd));
+  const {requirePermissionForMutation}=await import("@/lib/auth/authorization");
+  const {createMoneyTransferForActor}=await import("@/lib/account/money");
+  const {prepareTransferImage,addTransferImageForActor}=await import("@/lib/account/money-transfer-image");
+  const actor=await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");if(!actor.companyId)throw new Error("NOT_AUTHORIZED");
+  const file=fd.get("image"),image=file instanceof File&&file.size?await prepareTransferImage(file):null;
+  const scoped={...actor,companyId:actor.companyId},row=await createMoneyTransferForActor(scoped,raw(fd));
+  if(image)try{await addTransferImageForActor(scoped,row.id,image);}catch{refresh();throw new Error("TRANSFER_POSTED_IMAGE_UPLOAD_FAILED");}
   refresh();
 }
 export async function chequeAction(fd: FormData) {

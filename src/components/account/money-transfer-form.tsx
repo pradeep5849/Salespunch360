@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {transferModeChoices,type MoneyTransferMode} from "@/lib/account/money-transfer-modes";
-import { useState } from "react";
+import { useState,useRef } from "react";
 import { saveMoneyTransferAction } from "@/app/actions/money";
 import { ActionFeedbackForm, AccountFieldError } from "./action-feedback-form";
 import { SavePendingFields, SaveSubmitButton } from "./save-feedback";
@@ -25,6 +25,7 @@ export function MoneyTransferForm({
   today: string;
   selectedBranch?:string;
 }) {
+  const imageInput=useRef<HTMLInputElement>(null);
   const [branch, setBranch] = useState(selectedBranch??branches[0]?.id ?? ""),
     [source, setSource] = useState(""),
     [destination, setDestination] = useState(""),
@@ -50,6 +51,7 @@ export function MoneyTransferForm({
       onSuccess={() => {
         setKey(crypto.randomUUID());
         setAmount("");
+        if(imageInput.current)imageInput.current.value="";
       }}
     >
       <input type="hidden" name="idempotencyKey" value={key} />
@@ -147,6 +149,7 @@ export function MoneyTransferForm({
           <AccountFieldError name="reference" />
         </label>
         <label>Description<textarea name="description" aria-label="Description" maxLength={2000}/><AccountFieldError name="description"/></label>
+        <label>Image (optional)<input ref={imageInput} type="file" name="image" accept="image/png,image/jpeg,image/webp"/><small>PNG, JPEG or WebP, up to 5 MB. One image per transfer.</small></label>
         {choices.length < 2 && (
           <p role="status">
             Add two active accounts in this branch to make a transfer.

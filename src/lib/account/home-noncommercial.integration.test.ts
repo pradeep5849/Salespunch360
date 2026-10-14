@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import {randomUUID} from "node:crypto";
 import {PrismaClient,type AccountModule} from "@prisma/client";
 import {afterAll,beforeAll,describe,expect,it,vi} from "vitest";
@@ -7,8 +8,12 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
+const objects=new Map<string,Buffer>();
+vi.mock("@/lib/storage",()=>({privateStorage:()=>({put:async(key:string,data:Buffer)=>{objects.set(key,data)},get:async(key:string)=>{const data=objects.get(key);if(!data)throw new Error("NOT_FOUND");return data},delete:async(key:string)=>{objects.delete(key)}})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {loadPrintDocumentForActor} from "./print";
+import {prepareTransferImage,addTransferImageForActor,transferImageForActor} from "./money-transfer-image";
+import {createMoneyTransferForActor} from "./money";
 import {createCommercialDocumentForActor,createSettlementForActor} from "./commercial";
 import {createQuotationForActor} from "@/lib/quotations/service";
 import {homeSettlementForActor} from "./home-settlement";
@@ -44,6 +49,7 @@ describe.skipIf(!url)("Home source adapters against isolated PostgreSQL",()=>{
    await tx.quotationRevision.deleteMany({where:{document:{companyId}}});
    await tx.quotationDocument.deleteMany({where:{companyId}});
    await tx.expenseTransaction.deleteMany({where:{companyId}});await tx.expenseCategory.deleteMany({where:{companyId}});
+   await tx.moneyTransferImage.deleteMany({where:{companyId}});await tx.moneyTransfer.deleteMany({where:{companyId}});
    await tx.accountOperationalAudit.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});
    await tx.accountSettlement.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{document:{companyId}}});await tx.commercialDocument.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});
    await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});
@@ -88,6 +94,16 @@ describe.skipIf(!url)("Home source adapters against isolated PostgreSQL",()=>{
   const filtered=await accountMobileHomeData(actors[0],context,{includeNonCommercial:true,types:["CUSTOMER_RECEIPT"]});
   expect(filtered.transactions).toHaveLength(1);expect(filtered.transactions[0].sourceKind).toBe("SETTLEMENT");
   expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+ });
+ it("stores one authorized private transfer image with safe concurrent retries and no financial repost",async()=>{
+  const companyId=companies[0],actor=actors[0],accounts:string[]=[];
+  for(let index=0;index<2;index++){const ledger=await client.ledgerAccount.create({data:{companyId,code:`IMAGE-${index}`,name:`Image transfer account ${index}`,accountClass:"ASSET",normalBalance:"DEBIT"}});accounts.push((await client.moneyAccount.create({data:{companyId,branchId:branches[0],type:"BANK",name:`Image bank ${index}`,ledgerAccountId:ledger.id}})).id);}
+  const transfer=await createMoneyTransferForActor(actor,{branchId:branches[0],sourceAccountId:accounts[0],destinationAccountId:accounts[1],amount:"5",description:"Image transfer",transferDate:"2026-10-11",idempotencyKey:randomUUID()});
+  const pixels=await sharp({create:{width:2,height:2,channels:3,background:"red"}}).png().toBuffer(),image=await prepareTransferImage(new File([new Uint8Array(pixels)],"../../proof.png",{type:"image/png"}));
+  const count=await client.journalEntry.count({where:{companyId}}),[first,second]=await Promise.all([addTransferImageForActor(actor,transfer.id,image),addTransferImageForActor(actor,transfer.id,image)]);expect(first).toBe(second);expect(await client.moneyTransferImage.count({where:{companyId,transferId:transfer.id}})).toBe(1);
+  const downloaded=await transferImageForActor(actor,transfer.id);expect(downloaded.name).toBe("proof.png");expect(downloaded.data.equals(image.data)).toBe(true);expect(objects.size).toBe(1);
+  await expect(transferImageForActor(actors[1],transfer.id)).rejects.toThrow("TRANSFER_NOT_FOUND");await expect(transferImageForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},transfer.id)).rejects.toThrow("TRANSFER_NOT_FOUND");await expect(addTransferImageForActor({...actor,accountRole:"PROJECT_MANAGER"},transfer.id,image)).rejects.toThrow();
+  await expect(addTransferImageForActor(actor,transfer.id,{...image,hash:"0".repeat(64)})).rejects.toThrow("TRANSFER_IMAGE_ALREADY_ATTACHED");expect(await client.journalEntry.count({where:{companyId}})).toBe(count);
  });
  it("allows managed-project payment and invoice views while denying another project",async()=>{
   const companyId=companies[0],branchId=branches[0],pmId=randomUUID();

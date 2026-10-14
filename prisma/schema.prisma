@@ -3091,6 +3091,7 @@ model MoneyAccount {
 }
 
 model MoneyTransfer {
+  image MoneyTransferImage?
   id                   String   @id @default(uuid()) @db.Uuid
   companyId            String   @db.Uuid
   branchId             String   @db.Uuid
@@ -3109,6 +3110,23 @@ model MoneyTransfer {
   @@unique([companyId, idempotencyKey])
   @@unique([companyId, journalEntryId])
   @@map("money_transfers")
+}
+
+model MoneyTransferImage {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  transferId String @unique @db.Uuid
+  transfer MoneyTransfer @relation(fields:[companyId,transferId],references:[companyId,id],onDelete:Restrict)
+  storageKey String @db.VarChar(1000)
+  displayName String @db.VarChar(240)
+  mimeType String @db.VarChar(80)
+  sizeBytes Int
+  contentHash String @db.VarChar(64)
+  uploadedById String @db.Uuid
+  createdAt DateTime @default(now())
+  @@unique([companyId,transferId])
+  @@index([companyId])
+  @@map("money_transfer_images")
 }
 
 model Cheque {

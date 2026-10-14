@@ -1,0 +1,5 @@
+import sharp from "sharp";
+import {it,expect} from "vitest";
+import {prepareTransferImage} from "./money-transfer-image";
+it("normalizes actual image pixels and safe bounded names",async()=>{const png=await sharp({create:{width:2,height:2,channels:3,background:"red"}}).png().toBuffer();const image=await prepareTransferImage(new File([new Uint8Array(png)],"../"+"x".repeat(240),{type:"image/png"}));expect(image.name.length).toBeLessThanOrEqual(240);expect(image.name).not.toContain("/");expect(image.hash).toMatch(/^[0-9a-f]{64}$/);expect((await sharp(image.data).metadata()).format).toBe("png")});
+it("rejects invalid payloads and unsupported active content",async()=>{await expect(prepareTransferImage(new File(["<svg/>"],"x.svg",{type:"image/svg+xml"}))).rejects.toThrow("INVALID_TRANSFER_IMAGE");await expect(prepareTransferImage(new File(["<html/>"],"x.png",{type:"image/png"}))).rejects.toThrow("INVALID_TRANSFER_IMAGE");await expect(prepareTransferImage(new File([],"x.png",{type:"image/png"}))).rejects.toThrow("INVALID_TRANSFER_IMAGE")});

@@ -490,6 +490,7 @@ export async function moneyDashboardForActor(a: Actor) {
       balance: balances.get(x.ledgerAccountId) ?? Z,
     })),
     transfers: await db.moneyTransfer.findMany({
+      include:{image:{select:{id:true}}},
       where: { companyId: a.companyId, ...branchScope(a) },
       orderBy: { transferDate: "desc" },
       take: 10,
