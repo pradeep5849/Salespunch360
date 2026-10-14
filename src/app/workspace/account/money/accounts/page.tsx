@@ -1,1 +1,66 @@
-import{moneyAccountAction}from"@/app/actions/money";import{listMoneyData}from"@/lib/account/money";import{WorkspacePageHeader}from"@/components/workspace/workspace-page-header";export default async function Page(){const d=await listMoneyData();return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Money Accounts" backHref="/workspace/account/money"/><form action={moneyAccountAction} className="stack"><select name="type"><option>BANK</option><option>CASH</option><option>PETTY_CASH</option></select><input name="name" placeholder="Account display name" required/><select name="branchId"><option value="">Company-wide</option>{d.branches.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="bankName" placeholder="Bank name"/><input name="accountNumberMasked" placeholder="Masked account"/><input name="ifsc" placeholder="IFSC"/><button>Create account and asset ledger</button></form><ul>{d.dashboard.accounts.map(x=><li key={x.id}>{x.name} · {x.type} · {x.balance.toFixed(2)}</li>)}</ul></section></main>}
+import Link from "next/link";
+import {
+  isMoneyReadScopeError,
+  MoneyReadUnavailable,
+} from "@/components/account/money-read-unavailable";
+import { randomUUID } from "node:crypto";
+import { MoneyAccountForm } from "@/components/account/money-account-form";
+import { listMoneyData } from "@/lib/account/money";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string; branchId?: string; scope?: string }>;
+}) {
+  const query = await searchParams,
+    initialType =
+      query.type === "CASH"
+        ? "CASH"
+        : query.type === "PETTY_CASH"
+          ? "PETTY_CASH"
+          : "BANK";
+  let d: Awaited<ReturnType<typeof listMoneyData>>;
+  try {
+    d = await listMoneyData({ branchId: query.branchId, scope: query.scope });
+  } catch (error) {
+    if (isMoneyReadScopeError(error)) return <MoneyReadUnavailable />;
+    throw error;
+  }
+  return (
+    <main className="employees-shell">
+      <section className="employees-content">
+        <WorkspacePageHeader
+          title="Money Accounts"
+          backHref="/workspace/account/money"
+        />
+        {d.capabilities.postMoneyEntries ? (
+          <MoneyAccountForm
+            branches={d.branches}
+            initialType={initialType}
+            creationRequestKey={randomUUID()}
+          />
+        ) : (
+          <p>Creating money accounts requires Money Entry permission.</p>
+        )}
+        <p>
+          Scope:{" "}
+          {d.branchContext.mode === "COMPANY"
+            ? "All company branches"
+            : d.branchContext.branchName}
+        </p>
+        <ul>
+          {d.dashboard.accounts.map((x) => (
+            <li key={x.id}>
+              <Link
+                href={`/workspace/account/money/accounts/${x.id}?${d.branchContext.mode === "COMPANY" ? "scope=all" : `branchId=${d.branchContext.branchId}`}`}
+              >
+                {x.name}
+              </Link>{" "}
+              · {x.type} · {x.balance.toFixed(2)}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}

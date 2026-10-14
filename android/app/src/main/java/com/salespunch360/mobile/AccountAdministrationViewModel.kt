@@ -3,6 +3,7 @@ package com.salespunch360.mobile
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.salespunch360.mobile.data.ApiException
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.SecureSession
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,14 +24,24 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(AdministrationState())
     val state = _state.asStateFlow()
 
-    fun load(mode: String) {
+    private var contextQuery=""
+    private var notificationOffset=0
+    private var loadGeneration=0L
+    private var loadJob:kotlinx.coroutines.Job?=null
+    fun notificationsPage(offset:Int){notificationOffset=offset.coerceAtLeast(0);load("notifications")}
+    fun load(mode: String,query:String?=null) {
+        if(query!=null&&query!=contextQuery){contextQuery=query;notificationOffset=0;_state.value=_state.value.copy(data=JsonObject(emptyMap()))}
+        loadJob?.cancel()
+        val generation=++loadGeneration
+        val selectedQuery=contextQuery
+        val offset=notificationOffset
         _state.value = _state.value.copy(mode = mode, loading = true, error = null)
-        viewModelScope.launch {
+        loadJob=viewModelScope.launch {
             runCatching {
                 when (mode) {
                     "users" -> api.accountUsers()
-                    "settings", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings", "reminders", "payment-reminders", "payment-reminder-message", "service-reminders", "tax-settings", "tax-list" -> api.accountAdministration("settings")
-                    "notifications" -> api.accountAdministration("notifications")
+                    "settings", "backup-settings", "transaction-defaults", "business-currency", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings", "reminders", "payment-reminders", "payment-reminder-message", "service-reminders", "tax-settings", "tax-list" -> api.accountAdministration("settings")
+                    "notifications" -> api.accountAdministration("notifications",listOf(com.salespunch360.mobile.account.moneyContextQuery(selectedQuery),"offset=$offset").filter{it.isNotBlank()}.joinToString("&"))
                     "tax-reports" -> api.accountTax(
                         mapOf(
                             "from" to java.time.LocalDate.now().withDayOfYear(1).toString(),
@@ -40,11 +51,18 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
                     else -> api.accountUtility(mode)
                 }
             }.onSuccess {
-                _state.value = _state.value.copy(loading = false, data = it)
+                if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, data = it)
             }.onFailure {
-                _state.value = _state.value.copy(loading = false, error = it.message ?: "Unable to load")
+                if(it is kotlinx.coroutines.CancellationException)throw it
+                if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, error = it.message ?: "Unable to load")
             }
         }
+    }
+
+    fun completeServiceReminder(lineId:String){
+        if(_state.value.loading)return
+        _state.value=_state.value.copy(loading=true,error=null)
+        viewModelScope.launch{runCatching{api.saveAccountAdministration("notifications","complete-service",buildJsonObject{put("lineId",lineId);com.salespunch360.mobile.account.moneyContextQuery(contextQuery).split('&').filter{it.contains('=')}.forEach{part->put(part.substringBefore('='),part.substringAfter('='))}})}.onSuccess{load("notifications")}.onFailure{_state.value=_state.value.copy(loading=false,error=(it as? ApiException)?.serverMessage?:"Unable to complete service reminder")}}
     }
 
     fun saveUser(payload: JsonObject) {
@@ -60,7 +78,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
     // Administration settings can use either object or array JSON payloads.
     fun save(section: String, payload: JsonElement) {
         if (_state.value.loading) return
-        _state.value = _state.value.copy(loading = true, error = null)
+        _state.value = _state.value.copy(loading = true, error = null, message = null)
         viewModelScope.launch {
             runCatching {
                 if (section == "tax-settings") api.saveAccountTax(payload.jsonObject)
@@ -69,7 +87,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = _state.value.copy(message = "Saved on server")
                 load(_state.value.mode)
             }.onFailure {
-                _state.value = _state.value.copy(loading = false, error = it.message ?: "Save failed")
+                _state.value = _state.value.copy(loading = false, error = (it as? ApiException)?.serverMessage ?: "Settings could not be saved. Check the details and try again.")
             }
         }
     }

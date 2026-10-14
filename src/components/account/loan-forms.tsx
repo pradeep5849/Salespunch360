@@ -1,0 +1,27 @@
+"use client";
+import {useId,useState} from "react";
+import {saveLoanAction,saveLoanPaymentAction} from "@/app/actions/money";
+import {ActionFeedbackForm,AccountFieldError,useAccountFieldError} from "./action-feedback-form";
+import {SavePendingFields,SaveSubmitButton} from "./save-feedback";
+import {ClientMoney} from "./display-preferences";
+import {loanPaymentTotal} from "@/lib/account/loan-payment-total";
+type Branch={id:string;name:string};type Account={id:string;name:string;branchId:string|null;isActive:boolean};type Loan={id:string;lender:string;displayName:string|null;branchId:string;status:string;archived?:boolean};
+function Field({name,label,type="text",required=false,maxLength,defaultValue,onChange}:{name:string;label:string;type?:string;required?:boolean;maxLength?:number;defaultValue?:string;onChange?:(value:string)=>void}){
+ const error=useAccountFieldError(name);const errorId=useId();return <label>{label}<input aria-label={label} name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} onChange={e=>onChange?.(e.target.value)} aria-invalid={!!error} aria-describedby={error?errorId:undefined}/><AccountFieldError name={name} id={errorId}/></label>;
+}
+function Select({name,label,value,onChange,children}:{name:string;label:string;value:string;onChange:(value:string)=>void;children:React.ReactNode}){const error=useAccountFieldError(name);const errorId=useId();return <label>{label}<select aria-label={label} name={name} value={value} onChange={e=>onChange(e.target.value)} required aria-invalid={!!error} aria-describedby={error?errorId:undefined}>{children}</select><AccountFieldError name={name} id={errorId}/></label>;}
+export function LoanForms({branches,accounts,loans,initialBranch,creationKey,paymentKey}:{branches:Branch[];accounts:Account[];loans:Loan[];initialBranch?:string;creationKey:string;paymentKey:string}){
+ const [branch,setBranch]=useState(initialBranch??branches[0]?.id??"");const [loanId,setLoanId]=useState("");const [createAccount,setCreateAccount]=useState("");const [payAccount,setPayAccount]=useState("");const [createKey,setCreateKey]=useState(creationKey);const [payKey,setPayKey]=useState(paymentKey);const [principal,setPrincipal]=useState("0");const [interest,setInterest]=useState("0");const [charges,setCharges]=useState("0");
+ const selectedLoan=loans.find(row=>row.id===loanId);const compatible=(id:string)=>accounts.filter(row=>row.isActive&&(row.branchId===null||row.branchId===id));const total=loanPaymentTotal(principal,interest,charges);
+ return <><h2>Receive loan</h2><ActionFeedbackForm action={saveLoanAction} className="stack" onSuccess={()=>setCreateKey(crypto.randomUUID())}><SavePendingFields>
+ <input type="hidden" name="idempotencyKey" value={createKey}/><Select name="branchId" label="Loan branch" value={branch} onChange={value=>{setBranch(value);setCreateAccount("");}}>{branches.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</Select>
+ <Select name="moneyAccountId" label="Receive into account" value={createAccount} onChange={setCreateAccount}><option value="">Select account</option>{compatible(branch).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</Select>
+ <Field name="displayName" label="Loan name" maxLength={240}/><Field name="loanAccountNumber" label="Loan account number" maxLength={160}/><Field name="description" label="Description" maxLength={2000}/><Field name="durationMonths" label="Duration (months)" type="number"/><Field name="lender" label="Lender" maxLength={240} required/><Field name="loanType" label="Loan type" maxLength={80} required defaultValue="TERM"/><Field name="principal" label="Loan principal" required/><Field name="interestRate" label="Interest rate"/><Field name="startDate" label="Loan start date" type="date" required/><Field name="maturityDate" label="Maturity date" type="date"/><Field name="reference" label="Loan reference" maxLength={160}/><SaveSubmitButton>Create and receive loan</SaveSubmitButton>
+ </SavePendingFields></ActionFeedbackForm>
+ <h2>Payments</h2><ActionFeedbackForm action={saveLoanPaymentAction} className="stack" onSuccess={()=>setPayKey(crypto.randomUUID())}><SavePendingFields><input type="hidden" name="idempotencyKey" value={payKey}/>
+ <Select name="loanId" label="Loan to repay" value={loanId} onChange={value=>{setLoanId(value);setPayAccount("");}}><option value="">Select active loan</option>{loans.filter(row=>row.status==="ACTIVE"&&!row.archived).map(row=><option key={row.id} value={row.id}>{row.displayName||row.lender}</option>)}</Select>
+ <Select name="moneyAccountId" label="Payment account" value={payAccount} onChange={setPayAccount}><option value="">Select account</option>{selectedLoan&&compatible(selectedLoan.branchId).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</Select>
+ <Field name="paymentDate" label="Payment date" type="date" required/><Field name="principal" label="Principal paid" required defaultValue="0" onChange={setPrincipal}/><Field name="interest" label="Interest paid" required defaultValue="0" onChange={setInterest}/><Field name="charges" label="Charges" defaultValue="0" onChange={setCharges}/><Field name="description" label="Payment description" maxLength={2000}/>
+ <p role="status">Payment total: {total===null?"Enter valid amounts":<ClientMoney value={total}/>}</p><SaveSubmitButton>Post EMI/payment</SaveSubmitButton>
+ </SavePendingFields></ActionFeedbackForm></>;
+}

@@ -1,1 +1,67 @@
-import{transferAction}from"@/app/actions/money";import{listMoneyData}from"@/lib/account/money";import{WorkspacePageHeader}from"@/components/workspace/workspace-page-header";export default async function Page(){const d=await listMoneyData();return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Transfers & Cash Deposits" backHref="/workspace/account/money"/><form action={transferAction} className="stack"><select name="branchId">{d.branches.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select name="sourceAccountId">{d.dashboard.accounts.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select name="destinationAccountId">{d.dashboard.accounts.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="amount" required/><input type="date" name="transferDate" required/><input name="reference"/><input type="hidden" name="idempotencyKey" value={crypto.randomUUID()}/><button>Post transfer / deposit</button></form></section></main>}
+import {
+  isMoneyReadScopeError,
+  MoneyReadUnavailable,
+} from "@/components/account/money-read-unavailable";
+import { randomUUID } from "node:crypto";
+import { MoneyTransferForm } from "@/components/account/money-transfer-form";
+import { listMoneyData } from "@/lib/account/money";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
+const businessToday = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string; scope?: string }>;
+}) {
+  const query = await searchParams;
+  let d: Awaited<ReturnType<typeof listMoneyData>>;
+  try {
+    d = await listMoneyData(query);
+  } catch (error) {
+    if (isMoneyReadScopeError(error)) return <MoneyReadUnavailable />;
+    throw error;
+  }
+  return (
+    <main className="employees-shell">
+      <section className="employees-content">
+        <WorkspacePageHeader
+          title="Transfers & Cash Deposits"
+          backHref="/workspace/account/money"
+        />
+        <p>
+          Scope:{" "}
+          {d.branchContext.mode === "COMPANY"
+            ? "All company branches"
+            : d.branchContext.branchName}
+        </p>
+        {d.capabilities.postMoneyEntries ? (
+          <MoneyTransferForm
+            branches={d.branches}
+            selectedBranch={d.branchContext.mode==="BRANCH"?d.branchContext.branchId:undefined}
+            accounts={d.dashboard.accounts.map(
+              ({ id, name, branchId, isActive,type }) => ({
+                id,
+                type,
+                name,
+                branchId,
+                isActive,
+              }),
+            )}
+            requestKey={randomUUID()}
+            today={businessToday()}
+          />
+        ) : (
+          <p>
+            You can view money accounts. Posting transfers requires Money Entry
+            permission.
+          </p>
+        )}
+      </section>
+    </main>
+  );
+}

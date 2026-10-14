@@ -50,10 +50,12 @@ class AccountInventoryViewModel(app:Application):AndroidViewModel(app){
     "batches","serials","prices"->api.inventoryCatalog(mode)
     else->api.inventoryHistory(mode)
    }.map{it.jsonObject}
-   val items=runCatching{api.accountMasterList("items","", "true")}.getOrDefault(emptyList())
-   val services=runCatching{api.accountMasterList("services","", "true")}.getOrDefault(emptyList())
-   val masterOptions=runCatching{api.accountMasterOptions()}.getOrDefault(AccountMasterOptions())
-   if(request==generation)_state.value=_state.value.copy(loading=false,options=o,rows=r,itemRecords=items,serviceRecords=services,categories=masterOptions.categories)
+   if(mode=="stock"||mode=="low-stock")com.salespunch360.mobile.account.productStockTotals(r)
+   val items=com.salespunch360.mobile.account.loadMasterPages { offset -> api.accountMasterList("items","", "true",offset=offset) }.distinctBy{it.id}
+   val services=com.salespunch360.mobile.account.loadMasterPages { offset -> api.accountMasterList("services","", "true",offset=offset) }.distinctBy{it.id}
+   val categoryRecords=com.salespunch360.mobile.account.loadMasterPages { offset -> api.accountMasterList("categories","", "true",offset=offset) }
+   val categories=categoryRecords.distinctBy{it.id}.map{AccountOption(it.id,it.name)}
+   if(request==generation)_state.value=_state.value.copy(loading=false,options=o,rows=r,itemRecords=items,serviceRecords=services,categories=categories)
   }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)fail(e)}
  }}
  fun save(kind:String,payload:JsonObject)=viewModelScope.launch{

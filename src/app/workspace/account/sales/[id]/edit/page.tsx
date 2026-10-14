@@ -1,22 +1,30 @@
+import Link from "next/link";
+import styles from "../sale-detail.module.css";
 import { commercialEditorOptions, getCommercialDocument } from "@/lib/account/commercial";
 import { SaleEditForm } from "./sale-edit-form";
 
 export default async function Page({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
   const [sale,rawOptions]=await Promise.all([getCommercialDocument(id),commercialEditorOptions()]);
-  if(sale.type!=="SALES_INVOICE"||sale.status!=="POSTED"||!sale.partyId)throw new Error("SALE_NOT_EDITABLE");
+  if(sale.type!=="SALES_INVOICE"||sale.status!=="POSTED"||!sale.partyId)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This document cannot be edited as a posted sale.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
   const base=sale.payableAmount??sale.grandTotal;
-  if(!sale.financial||!sale.financial.outstanding.eq(base)||sale.adjustments.length||sale.allocations.length||sale.advanceApplications.length)throw new Error("SALE_HAS_PAYMENTS_OR_ADJUSTMENTS");
+  if(!sale.financial||!sale.financial.outstanding.eq(base)||sale.adjustments.length||sale.allocations.length||sale.advanceApplications.length)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This sale has a payment or adjustment and cannot be edited.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
   const options=JSON.parse(JSON.stringify(rawOptions));
   const initial={
-    id:sale.id,
+    id:sale.id,documentNumber:sale.documentNumber,
+    projectId:sale.projectId??undefined,
+    freightAmount:sale.freightAmount.toString(),otherChargesAmount:sale.otherChargesAmount.toString(),
+    tdsRate:sale.taxableTotal.isZero()?"0":sale.tdsAmount.mul(100).div(sale.taxableTotal).toString(),tcsRate:sale.taxableTotal.isZero()?"0":sale.tcsAmount.mul(100).div(sale.taxableTotal).toString(),
+    customValues:sale.customValues,
     branchId:sale.branchId,
     partyId:sale.partyId,
+    billingName:sale.billingName??undefined,customerPoNumber:sale.customerPoNumber??undefined,customerPoDate:sale.customerPoDate?.toISOString().slice(0,10),transactionTime:sale.transactionTime??undefined,ewayBillNumber:sale.ewayBillNumber??undefined,notes:sale.notes??undefined,dueDate:sale.dueDate?.toISOString().slice(0,10),
     issueDate:sale.issueDate.toISOString().slice(0,10),
     taxMode:sale.taxMode,
+    reverseCharge:sale.reverseCharge,
     stateOfSupplyCode:sale.stateOfSupplyCode??undefined,
     roundOffAmount:sale.roundOffAmount.toString(),
-    lines:sale.lines.map(line=>({id:line.id,lineType:line.lineType,sourceId:line.productId??line.serviceId??line.workPackageId??undefined,itemName:line.itemName,description:line.description??undefined,unitName:line.unitName??undefined,unitSymbol:line.unitSymbol??undefined,quantity:line.quantity.toString(),rate:line.rate.toString(),discountType:line.discountType??undefined,discountValue:line.discountValue?.toString()??"0",taxRate:line.taxRate.toString(),cessRate:line.cessRate.toString(),warehouseId:line.warehouseId??undefined,batchId:line.batchId??undefined,serialNumberId:line.serialNumberId??undefined})),
+    lines:sale.lines.map(line=>({originalLineId:line.id,lineType:line.lineType,sourceId:line.productId??line.serviceId??line.workPackageId??"",itemName:line.itemName,itemCode:line.itemCode??undefined,description:line.description??"",specification:line.specification??"",unitName:line.unitName??"",unitSymbol:line.unitSymbol??"",quantity:line.quantity.toString(),rate:line.rate.toString(),discountType:line.discountType??"",discountValue:line.discountValue?.toString()??"0",taxRate:line.taxRate.toString(),cessRate:line.cessRate.toString(),warehouseId:line.warehouseId??"",batchId:line.batchId??"",serialNumberId:line.serialNumberId??"",servicePeriodDays:line.servicePeriodDays===null?undefined:String(line.servicePeriodDays),stockReturnQuantity:"0",sourceCommercialLineId:"",purchaseAllocations:[]})),
   };
-  return <SaleEditForm initial={initial} customers={options.customers} products={options.products} services={options.services} warehouses={options.warehouses}/>;
+  return <SaleEditForm initial={initial} options={options}/>;
 }

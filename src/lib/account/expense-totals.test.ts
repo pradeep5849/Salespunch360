@@ -71,6 +71,8 @@ describe("A049-F11/A051-F09 expense totals", () => {
     ).toThrow("INVALID_EXPENSE_AMOUNT"));
   it.each([
     { name: "", quantity: "1", rate: "10" },
+    { name: "   ", quantity: "1", rate: "10" },
+    { name: "x".repeat(241), quantity: "1", rate: "10" },
     { name: "Fuel", quantity: "0", rate: "10" },
     { name: "Fuel", quantity: "-1", rate: "10" },
     { name: "Fuel", quantity: "1", rate: "-1" },

@@ -9,20 +9,48 @@ import {
   createRecurringTemplate,
   deactivateExpenseCategory,
   generateRecurringExpense,
+  setRecurringTemplateActive,
   postExpense,
   reverseExpense,
   saveExpenseCategory,
   transitionExpense,
+  payRecurringExpense,
+  updateRecurringTemplate,
 } from "@/lib/account/expenses";
-const raw = (fd: FormData) => Object.fromEntries(fd.entries());
-export async function createExpenseAction(fd: FormData) {
+const raw = (fd: FormData) =>
+  Object.fromEntries(
+    [...fd.entries()].filter(
+      ([key]) =>
+        !key.startsWith("$ACTION_") && !["operation", "id"].includes(key),
+    ),
+  );
+export async function payRecurringExpenseAction(form: FormData) {
   return accountAction(async () => {
-    const row = await createExpense(expenseFormInput(fd));
+    const id = String(form.get("id"));
+    await payRecurringExpense(id, {
+      requestKey: form.get("requestKey"),
+      moneyAccountId: form.get("moneyAccountId"),
+      paymentDate: form.get("paymentDate"),
+    });
+    revalidatePath(`/workspace/account/expenses/${id}`);
     revalidatePath("/workspace/account/expenses");
-    return fd.get("saveMode") === "new"
-      ? `/workspace/account/expenses/new?saved=${row.id}`
-      : `/workspace/account/expenses/${row.id}`;
-  }, "Draft saved with server-calculated totals.");
+    revalidatePath("/workspace/account/expenses/recurring");
+    return `/workspace/account/expenses/${id}`;
+  }, "Recurring expense payment recorded.");
+}
+export async function createExpenseAction(fd: FormData) {
+  return accountAction(
+    async () => {
+      const row = await createExpense(expenseFormInput(fd));
+      revalidatePath("/workspace/account/expenses");
+      return fd.get("saveMode") === "new"
+        ? `/workspace/account/expenses/new?saved=${row.id}&branchId=${row.branchId}`
+        : `/workspace/account/expenses/${row.id}`;
+    },
+    fd.get("recordAsPaid") === "true"
+      ? "Payment recorded with server-calculated totals."
+      : "Draft saved with server-calculated totals.",
+  );
 }
 export async function updateExpenseAction(fd: FormData) {
   return accountAction(async () => {
@@ -77,11 +105,28 @@ export async function categoryAction(fd: FormData) {
   }, "Category saved.");
 }
 export async function recurringAction(fd: FormData) {
-  if (fd.get("operation") === "generate")
-    await generateRecurringExpense(
-      String(fd.get("templateId")),
-      String(fd.get("moneyAccountId")),
-    );
-  else await createRecurringTemplate(raw(fd));
-  revalidatePath("/workspace/account/expenses/recurring");
+  return accountAction(async () => {
+    if (fd.get("operation") === "generate") {
+      const expense = await generateRecurringExpense(
+        String(fd.get("templateId")),
+        String(fd.get("moneyAccountId")),
+        String(fd.get("expectedDueDate")),
+      );
+      revalidatePath("/workspace/account/expenses/recurring");
+      return `/workspace/account/expenses/${expense.id}`;
+    } else if (fd.get("operation") === "active")
+      await setRecurringTemplateActive(
+        String(fd.get("id")),
+        fd.get("isActive") === "true",
+      );
+    else if (fd.get("operation") === "edit")
+      await updateRecurringTemplate(String(fd.get("id")), {
+        frequency: fd.get("frequency"),
+        amount: fd.get("amount"),
+        nextDueDate: fd.get("nextDueDate"),
+        expectedUpdatedAt: fd.get("expectedUpdatedAt"),
+      });
+    else await createRecurringTemplate(raw(fd));
+    revalidatePath("/workspace/account/expenses/recurring");
+  }, "Recurring schedule saved.");
 }

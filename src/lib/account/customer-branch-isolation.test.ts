@@ -23,6 +23,7 @@ const m = vi.hoisted(() => ({
   documentAggregate: vi.fn(),
   audit: vi.fn(),
   settlementFind: vi.fn(),
+  advanceMany: vi.fn(),
   settlementCreate: vi.fn(),
   fy: vi.fn(),
   ledgers: vi.fn(),
@@ -55,6 +56,7 @@ vi.mock("./opening-balances", () => ({
 }));
 vi.mock("@/lib/accounting/service", () => ({ postJournalInTx: m.post }));
 const tx = {
+  customFieldDefinition: { findMany: vi.fn().mockResolvedValue([]) },
   branch: { findFirst: m.branch },
   customer: { findFirst: m.customer },
   vendor: { findFirst: vi.fn() },
@@ -81,6 +83,7 @@ const tx = {
 };
 vi.mock("@/lib/db", () => ({
   db: {
+    customFieldDefinition: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: m.transaction,
     company: { findUniqueOrThrow: m.company },
     commercialDocument: { findMany: m.documentMany },
@@ -93,6 +96,7 @@ vi.mock("@/lib/db", () => ({
     inventoryBatch: { findMany: m.findMany },
     inventorySerialNumber: { findMany: m.findMany },
     accountSettings: { findUnique: m.settings },
+    accountSettlement: { findMany: m.advanceMany },
     accountService: { findMany: m.findMany },
     workPackage: { findMany: m.findMany },
   },
@@ -177,6 +181,7 @@ beforeEach(() => {
   m.lock.mockResolvedValue(null);
   m.post.mockResolvedValue({ id: "journal" });
   m.findMany.mockResolvedValue([]);
+  m.advanceMany.mockResolvedValue([]);
   m.allocationAggregate.mockResolvedValue({ _sum: { amount: 0 } });
   m.applicationAggregate.mockResolvedValue({ _sum: { amount: 0 } });
 });
@@ -191,14 +196,26 @@ describe("commercial Account Customer Branch options", () => {
         isAccountCustomer: true,
         branchId: { in: [BRANCH] },
       },
-      select: { id: true, name: true, phone: true, branchId: true },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        branchId: true,
+        stateCode: true,
+      },
     });
   });
   it("retains company-wide customers for ALL_BRANCHES", async () => {
     await commercialEditorOptions();
     expect(m.findMany).toHaveBeenCalledWith({
       where: { companyId: COMPANY, isActive: true, isAccountCustomer: true },
-      select: { id: true, name: true, phone: true, branchId: true },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        branchId: true,
+        stateCode: true,
+      },
     });
   });
 });

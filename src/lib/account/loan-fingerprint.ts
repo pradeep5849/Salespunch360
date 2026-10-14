@@ -1,0 +1,5 @@
+import {createHash} from "node:crypto";
+import {Prisma} from "@prisma/client";
+type Creation={branchId:string;lender:string;loanType:string;principal:string|Prisma.Decimal;interestRate?:string|Prisma.Decimal|null;startDate:Date;maturityDate?:Date|null;moneyAccountId:string;reference?:string|null;displayName?:string|null;loanAccountNumber?:string|null;description?:string|null;durationMonths?:number|null};
+/** Date columns and decimal values are fingerprinted in their persisted representation. */
+export function loanCreationFingerprint(d:Creation){return createHash("sha256").update(JSON.stringify({branchId:d.branchId,lender:d.lender,loanType:d.loanType,principal:new Prisma.Decimal(d.principal).toFixed(2),interestRate:new Prisma.Decimal(d.interestRate??0).toString(),startDate:d.startDate.toISOString().slice(0,10),maturityDate:d.maturityDate?.toISOString().slice(0,10)??null,moneyAccountId:d.moneyAccountId,reference:d.reference??"",displayName:d.displayName??"",loanAccountNumber:d.loanAccountNumber??"",description:d.description??"",durationMonths:d.durationMonths??null})).digest("hex");}

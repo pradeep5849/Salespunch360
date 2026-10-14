@@ -18,7 +18,7 @@ export default async function Page(){
       <div><div className={styles.benefitIcon}>↗</div><span>Grow your<br/>business</span></div>
      </div>
     </div>
-    <div className={styles.video}><div className={styles.videoThumb}>▶</div><div className={styles.videoText}><strong>How do Service Reminders work?</strong><span>Watch Video ›</span></div></div>
+    <div className={styles.videoText}><strong>How do Service Reminders work?</strong><span>Select items and a service period. Saved sales activate reminders for the item and party. View due reminders in Attention, then copy or share the message.</span></div>
    </div>
   </section>
  </main>;

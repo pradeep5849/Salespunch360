@@ -1,4 +1,6 @@
 "use client";
+import {useDisplayPreferences} from "@/components/account/display-preferences";
+import {formatMoney} from "@/lib/account/display-preferences";
 import Link from "next/link";
 import styles from "./transactions.module.css";
 
@@ -7,7 +9,8 @@ function ShareIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d=
 function MoreIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>}
 
 export function TransactionCardActions({id,type,number,party,total}:{id:string;type:string;number:string;party:string;total:string}){
- async function share(){const text=`${party} • ${number} • ₹${total}`;try{if(navigator.share)await navigator.share({title:`Invoice ${number}`,text});else await navigator.clipboard.writeText(text)}catch{}}
+ const preferences=useDisplayPreferences();
+ async function share(){const text=`${party} • ${number} • ${formatMoney(total,preferences)}`;try{if(navigator.share)await navigator.share({title:`Invoice ${number}`,text});else await navigator.clipboard.writeText(text)}catch{}}
  return <div className={styles.actions} onClick={e=>e.stopPropagation()} aria-label="Transaction actions">
    <a className={styles.actionIcon} aria-label="Print" title="Print" href={`/api/account/print/${encodeURIComponent(type)}/${encodeURIComponent(id)}?format=pdf`} target="_blank" rel="noreferrer"><PrintIcon/></a>
    <button className={styles.actionIcon} aria-label="Share" title="Share" type="button" onClick={share}><ShareIcon/></button>

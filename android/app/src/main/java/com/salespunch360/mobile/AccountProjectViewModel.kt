@@ -46,8 +46,9 @@ class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = _state.value.copy(loading = true, error = null)
             try {
                 val result = api.projects(query, status)
-                val options = api.projectOptions()
-                _state.value = _state.value.copy(loading = false, rows = result["rows"]?.jsonArray?.map { it.jsonObject }.orEmpty(), metrics = result["metrics"]?.jsonObject ?: buildJsonObject {}, options = options)
+                val optionsProjectId=_state.value.detail?.str("id")?.takeIf{it.isNotBlank()}
+                val options = api.projectOptions(optionsProjectId)
+                _state.value = _state.value.copy(loading = false, rows = result["rows"]?.jsonArray?.map { it.jsonObject }.orEmpty(), metrics = result["metrics"]?.jsonObject ?: buildJsonObject {}, options = if(_state.value.detail?.str("id")?.takeIf{it.isNotBlank()}==optionsProjectId)options else _state.value.options)
             } catch (e: CancellationException) { throw e } catch (e: Exception) { fail(e) }
         }
     }
@@ -91,7 +92,8 @@ class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
             val key = if (_state.value.creationIntent == null || _state.value.creationIntent == payload) _state.value.creationRequestKey else UUID.randomUUID().toString()
             if (!edit) _state.value = _state.value.copy(creationIntent = payload, creationRequestKey = key)
             val detail = api.saveProject(edit, if (edit) payload else projectCreationPayload(payload, key))
-            _state.value = _state.value.copy(saving = false, editing = null, detail = detail, costing = optionalCosting(detail.str("id"), _state.value.options))
+            val options=api.projectOptions(detail.str("id"))
+            _state.value = _state.value.copy(saving = false, editing = null, detail = detail, options=options, costing = optionalCosting(detail.str("id"), options))
             load()
         } catch (e: Exception) { fail(e) }
     }

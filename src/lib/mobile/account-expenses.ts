@@ -1,23 +1,33 @@
+import { z } from "zod";
 import type { ExpenseTransactionStatus } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
+  payRecurringExpenseForActor,
+  updateRecurringTemplateForActor,
+  recurringTemplateEditInput,
   addExpenseAttachmentForActor,
   deactivateExpenseCategoryForActor,
   createExpenseForActor,
   createRecurringTemplateForActor,
+  recurringTemplatesForActor,
+  setRecurringTemplateActiveForActor,
+  generateRecurringExpenseForActor,
   downloadExpenseAttachmentForActor,
   saveExpenseCategoryForActor,
   expenseOptionsForActor,
   expenseCategoryOptionsForActor,
   getExpenseForActor,
-  listExpensesForActor,
+  expensePageForActor,
+  expenseSummaryForActor,
+  expenseListQuerySchema,
   postExpenseForActor,
   reverseExpenseForActor,
   transitionExpenseForActor,
   updateExpenseForActor,
 } from "@/lib/account/expenses";
 import { requireAccountModules } from "@/lib/account/modules";
+import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 function permit(
@@ -34,14 +44,28 @@ export async function mobileExpenseList(
   q?: string | null,
   status?: string | null,
 ) {
-  const rows = await listExpensesForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"));
-  return rows.filter(
-    (x) =>
-      (!status || x.status === status) &&
-      (!q ||
-        x.transactionNumber.toLowerCase().includes(q.toLowerCase()) ||
-        (x.reference ?? "").toLowerCase().includes(q.toLowerCase())),
-  );
+  return (
+    await mobileExpensePage(u, {
+      q: q || undefined,
+      status: status || undefined,
+      limit: 200,
+    })
+  ).rows;
+}
+export async function mobileExpensePage(u: MobileAppPrincipal, raw: unknown) {
+  const a = permit(u, "ACCOUNT_EXPENSE_VIEW");
+  const { scope, ...query } = expenseListQuerySchema
+    .extend({ scope: z.literal("all").optional() })
+    .parse(raw);
+  const scoped = await resolveAccountBranchContext(a, {
+    scope,
+    branchId: query.branchId,
+  });
+  return expensePageForActor(a, {
+    ...query,
+    branchId:
+      scoped.context.mode === "BRANCH" ? scoped.context.branchId : undefined,
+  });
 }
 export async function mobileExpenseDetail(u: MobileAppPrincipal, id: string) {
   return getExpenseForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"), id);
@@ -75,6 +99,18 @@ export async function mobileExpenseAction(
     entryDate?: string;
     reason?: string;
   };
+  if (d.action === "PAY_RECURRING") {
+    const input = raw as {
+      requestKey?: unknown;
+      moneyAccountId?: unknown;
+      paymentDate?: unknown;
+    };
+    return payRecurringExpenseForActor(permit(u, "ACCOUNT_EXPENSE_ENTRY"), id, {
+      requestKey: input.requestKey,
+      moneyAccountId: input.moneyAccountId,
+      paymentDate: input.paymentDate,
+    });
+  }
   if (d.action === "TRANSITION" && d.status) {
     const p = ["APPROVED", "REJECTED"].includes(d.status)
       ? "ACCOUNT_EXPENSE_APPROVE"
@@ -123,11 +159,16 @@ export async function mobileExpenseDownload(u: MobileAppPrincipal, id: string) {
 export async function mobileExpenseCategories(
   u: MobileAppPrincipal,
   q?: string | null,
+  context: { branchId?: string; scope?: string } = {},
 ) {
-  return expenseCategoryOptionsForActor(
-    permit(u, "ACCOUNT_EXPENSE_VIEW"),
-    q ?? "",
-  );
+  const actor = permit(u, "ACCOUNT_EXPENSE_VIEW");
+  const scoped = await resolveAccountBranchContext(actor, context);
+  const branchId = scoped.context.mode === "BRANCH" ? scoped.context.branchId : undefined;
+  const [options, summary] = await Promise.all([
+    expenseCategoryOptionsForActor(actor, q ?? ""),
+    expenseSummaryForActor(actor, { branchId }, q ?? ""),
+  ]);
+  return { ...options, summary, branchContext: scoped.context };
 }
 export async function mobileSaveExpenseCategory(
   u: MobileAppPrincipal,
@@ -150,3 +191,43 @@ export async function mobileDeactivateExpenseCategory(
   await deactivateExpenseCategoryForActor(actor, id);
   return { ok: true };
 }
+
+export async function mobileRecurringExpenseList(u: MobileAppPrincipal) {
+  return recurringTemplatesForActor(permit(u, "ACCOUNT_EXPENSE_VIEW"));
+}
+export async function mobileRecurringExpenseAction(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await assertOperationalWrite(u.companyId);
+  const a = permit(u, "ACCOUNT_EXPENSE_ENTRY");
+  const input = recurringActionSchema.parse(raw);
+  if (input.action === "EDIT") {
+    const { action: _action, ...edit } = input;
+    void _action;
+    return updateRecurringTemplateForActor(a, id, edit);
+  }
+  if (input.action === "ACTIVE") {
+    await setRecurringTemplateActiveForActor(a, id, input.isActive);
+    return { ok: true };
+  }
+  return generateRecurringExpenseForActor(
+    a,
+    id,
+    input.moneyAccountId,
+    input.expectedDueDate,
+  );
+}
+
+const recurringActionSchema = z.discriminatedUnion("action", [
+  recurringTemplateEditInput.extend({ action: z.literal("EDIT") }),
+  z.object({ action: z.literal("ACTIVE"), isActive: z.boolean() }).strict(),
+  z
+    .object({
+      action: z.literal("GENERATE"),
+      moneyAccountId: z.string().uuid(),
+      expectedDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .strict(),
+]);

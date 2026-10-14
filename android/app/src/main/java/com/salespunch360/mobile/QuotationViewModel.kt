@@ -9,9 +9,15 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.serialization.json.*
 
 data class QuotationDraft(
+    val customFields:Map<String,String> = emptyMap(),
     val id: String? = null,
     val revision: Boolean = false,
     val branchId: String = "",
@@ -23,7 +29,10 @@ data class QuotationDraft(
     val inclusions: String = "",
     val exclusions: String = "",
     val notes: String = "",
-    val lines: List<SalesLineDraft> = listOf(SalesLineDraft())
+    val lines: List<SalesLineDraft> = listOf(SalesLineDraft()),
+    val lineMetadata: List<JsonObject> = emptyList(),
+    val adjustments: List<JsonObject> = emptyList(),
+    val paymentSchedule: List<JsonObject> = emptyList()
 )
 
 data class QuotationRow(
@@ -33,10 +42,13 @@ data class QuotationRow(
     val customer: String,
     val status: String,
     val total: String,
-    val revision: Int
+    val revision: Int,
+    val issueDate:String=""
 )
 
 data class QuotationState(
+    val canCreate:Boolean=false,
+    val customFields:List<JsonObject> = emptyList(),
     val loading: Boolean = true,
     val saving: Boolean = false,
     val query: String = "",
@@ -61,15 +73,20 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(QuotationState())
     val state: StateFlow<QuotationState> = _state
 
+    private var detailTarget:String?=null
+    private var listJob:Job?=null
+
     init {
         refresh()
     }
 
-    fun refresh() = viewModelScope.launch {
+    fun refresh(){loadList(0)}
+    private fun loadList(waitMillis:Long){listJob?.cancel();val query=_state.value.query;val status=_state.value.status;listJob=viewModelScope.launch {
+        if(waitMillis>0)delay(waitMillis)
         _state.value = _state.value.copy(loading = true, error = null)
         try {
             val options = api.quotationOptions()
-            val rows = api.quotations(_state.value.query, _state.value.status)
+            val rows = api.quotations(query, status)
                 .map { it.jsonObject }
                 .map {
                     val revision = it.array("revisions").firstOrNull()
@@ -80,13 +97,17 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                         revision?.str("customerName").orEmpty(),
                         it.str("status"),
                         revision?.str("grandTotal").orEmpty(),
-                        it.str("currentRevisionNumber").toIntOrNull() ?: 0
+                        it.str("currentRevisionNumber").toIntOrNull() ?: 0,
+                        revision?.str("issueDate").orEmpty()
                     )
                 }
 
+            currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
+                canCreate=options["canCreate"]?.jsonPrimitive?.booleanOrNull==true,
                 loading = false,
                 rows = rows,
+                customFields=options.array("customFields"),
                 branches = options.array("branches").map { it.option() },
                 customers = options.array("customers").map { it.option() },
                 products = options.array("products").map { it.option() },
@@ -94,20 +115,22 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                 workPackages = options.array("workPackages").map { it.option("sellingRate") },
                 units = options.array("units").map { it.option() }
             )
-        } catch (e: Exception) {
+        } catch(e:CancellationException){throw e} catch (e: Exception) {
             fail(e)
         }
-    }
+    }}
 
     fun search(query: String) {
         _state.value = _state.value.copy(query = query)
-        refresh()
+        loadList(250)
     }
 
     fun filter(status: String?) {
         _state.value = _state.value.copy(status = status)
         refresh()
     }
+
+    fun createEstimate(){if(!_state.value.canCreate||_state.value.saving)return;val current=_state.value;_state.value=current.copy(draft=QuotationDraft(branchId=current.branches.firstOrNull()?.id.orEmpty(),documentType="ESTIMATE"))}
 
     fun create() {
         val current = _state.value
@@ -117,109 +140,69 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun editDraft(draft: QuotationDraft) {
-        _state.value = _state.value.copy(draft = draft)
+        if(_state.value.saving)return
+        val previous=_state.value.draft
+        _state.value = _state.value.copy(draft = previous?.let{editedQuotationDraft(it,draft)}?:draft)
     }
 
     fun closeDraft() {
+        if(_state.value.saving)return
         _state.value = _state.value.copy(draft = null)
     }
 
     fun line(index: Int, line: SalesLineDraft) {
-        _state.value.draft?.let {
-            editDraft(it.copy(lines = it.lines.mapIndexed { i, current -> if (i == index) line else current }))
-        }
+        _state.value.draft?.let { editDraft(editedQuotationLine(it, index, line)) }
     }
 
     fun addLine() {
         _state.value.draft?.let {
-            editDraft(it.copy(lines = it.lines + SalesLineDraft()))
+            editDraft(it.copy(lines = it.lines + SalesLineDraft(), lineMetadata = it.lines.indices.map { i -> it.lineMetadata.getOrNull(i) ?: JsonObject(emptyMap()) } + JsonObject(emptyMap())))
         }
     }
 
     fun removeLine(index: Int) {
-        _state.value.draft?.let {
-            if (it.lines.size > 1) {
-                editDraft(it.copy(lines = it.lines.filterIndexed { i, _ -> i != index }))
-            }
-        }
+        _state.value.draft?.let { editDraft(removedQuotationLine(it, index)) }
     }
 
-    private fun payload(draft: QuotationDraft) = buildJsonObject {
-        put("branchId", draft.branchId)
-        put("documentType", draft.documentType)
-        put("customerId", draft.customerId)
-        put("issueDate", draft.issueDate)
-        draft.validUntil.takeIf { it.isNotBlank() }?.let { put("validUntil", it) }
-        put("terms", draft.terms)
-        put("inclusions", draft.inclusions)
-        put("exclusions", draft.exclusions)
-        put("notes", draft.notes)
-        putJsonArray("lines") {
-            draft.lines.forEach { line ->
-                add(
-                    buildJsonObject {
-                        put("lineType", line.lineType)
-                        line.sourceId.takeIf { it.isNotBlank() }?.let { put("sourceId", it) }
-                        line.itemName.takeIf { it.isNotBlank() }?.let { put("itemName", it) }
-                        put("description", line.description)
-                        put("quantity", line.quantity)
-                        line.rate.takeIf { it.isNotBlank() }?.let { put("rate", it) }
-                        line.taxRate.takeIf { it.isNotBlank() }?.let { put("taxRate", it) }
-                        line.discountType.takeIf { it.isNotBlank() }?.let {
-                            put("discountType", it)
-                            put("discountValue", line.discountValue)
-                        }
-                    }
-                )
-            }
-        }
-        putJsonArray("adjustments") {}
-        putJsonArray("paymentSchedule") {}
-    }
+    private fun payload(draft: QuotationDraft) = quotationDraftPayload(draft)
 
     fun save() {
+        if(_state.value.saving)return
         val draft = _state.value.draft ?: return
+        _state.value = _state.value.copy(saving = true,error=null)
         viewModelScope.launch {
-            _state.value = _state.value.copy(saving = true)
             try {
                 val id = draft.id
-                if (id == null) {
-                    val created = api.createQuotation(payload(draft))
-                    open(created.str("id"))
-                } else if (draft.revision) {
-                    api.quotationAction(
-                        id,
-                        buildJsonObject {
-                            put("action", "REVISE")
-                            put("document", payload(draft))
-                        }
-                    )
+                val savedId = if (id == null) {
+                    api.createQuotation(payload(draft)).str("id")
                 } else {
-                    api.updateQuotation(id, payload(draft))
+                    if(draft.revision)api.quotationAction(id,buildJsonObject { put("action","REVISE");put("document",payload(draft)) })
+                    else api.updateQuotation(id,payload(draft))
+                    id
                 }
-
-                _state.value = _state.value.copy(
-                    saving = false,
-                    draft = null,
-                    message = "Quotation saved with server totals."
-                )
+                // The write is confirmed. A failed detail reload must never retain
+                // this form as an unsaved revision that could be submitted again.
+                _state.value = _state.value.copy(saving=false,draft=null,detail=null,message="Quotation saved with server totals.")
+                open(savedId)
                 refresh()
-            } catch (e: Exception) {
-                fail(e)
-            }
+            } catch(e:Exception) { fail(e) }
         }
     }
 
-    fun open(id: String) = viewModelScope.launch {
-        _state.value = _state.value.copy(loading = true)
-        try {
-            _state.value = _state.value.copy(loading = false, detail = api.quotation(id))
-        } catch (e: Exception) {
-            fail(e)
+    fun open(id:String) {
+        detailTarget=id
+        viewModelScope.launch {
+            _state.value=_state.value.copy(loading=true,error=null)
+            try {
+                val detail=api.quotation(id)
+                if(detailTarget==id)_state.value=_state.value.copy(loading=false,detail=detail)
+            } catch(e:Exception) {if(detailTarget==id)fail(e)}
         }
     }
+    fun retry() {detailTarget?.let{open(it)}?:refresh()}
 
     fun close() {
+        detailTarget=null
         _state.value = _state.value.copy(detail = null)
     }
 
@@ -248,34 +231,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         val detail = _state.value.detail ?: return
         val revision = detail.array("revisions").firstOrNull() ?: return
         _state.value = _state.value.copy(
-            draft = QuotationDraft(
-                id = detail.str("id"),
-                revision = detail.str("status") != "DRAFT",
-                branchId = detail.str("branchId"),
-                customerId = detail.str("customerId"),
-                documentType = detail.str("documentType"),
-                issueDate = revision.str("issueDate").take(10),
-                validUntil = revision.str("validUntil").take(10),
-                terms = revision.str("terms"),
-                inclusions = revision.str("inclusions"),
-                exclusions = revision.str("exclusions"),
-                notes = revision.str("notes"),
-                lines = revision.array("lines").map {
-                    SalesLineDraft(
-                        it.str("lineType"),
-                        it.str("productId").ifBlank {
-                            it.str("serviceId").ifBlank { it.str("workPackageId") }
-                        },
-                        it.str("itemName"),
-                        it.str("description"),
-                        it.str("quantity"),
-                        it.str("rate"),
-                        it.str("discountType"),
-                        it.str("discountValue"),
-                        it.str("taxRate")
-                    )
-                }
-            )
+            draft = savedQuotationDraft(detail, revision)
         )
     }
 

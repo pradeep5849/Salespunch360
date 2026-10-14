@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.sales
 
+import com.salespunch360.mobile.ui.account.accountMoney
+import com.salespunch360.mobile.ui.account.accountDate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,17 +24,19 @@ import com.salespunch360.mobile.AccountSalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, vm: AccountSalesViewModel = viewModel()) {
+fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, initialDocumentId:String?=null, initialDuplicateId:String?=null, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
-    var initialEditorOpened by remember(initialType, initialProjectId, projectMode) { mutableStateOf(false) }
-    LaunchedEffect(initialType, initialProjectId, projectMode, state.loading) {
+    LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
+    LaunchedEffect(initialType,state.options.types) { if (initialType != null && initialType!="SALES_INVOICE" && state.options.types.isNotEmpty()) vm.filter(initialType) }
+    var initialEditorOpened by remember(initialType, initialProjectId, projectMode,initialDuplicateId) { mutableStateOf(false) }
+    LaunchedEffect(initialType, initialProjectId, projectMode,initialDuplicateId, state.loading) {
         if (!initialEditorOpened && initialType == "SALES_INVOICE" && !state.loading && state.options.types.isNotEmpty()) {
             initialEditorOpened = true
-            vm.newDocument(initialType, initialProjectId, projectMode)
+            if(initialDuplicateId!=null)vm.duplicateSale(initialDuplicateId) else vm.newDocument(initialType, initialProjectId, projectMode)
         }
     }
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+        if(initialDuplicateId!=null&&state.error!=null&&state.editor==null)TextButton(enabled=!state.loading,onClick={vm.duplicateSale(initialDuplicateId)}){Text("Retry duplicate")}
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or customer") }, singleLine = true, modifier = Modifier.weight(1f))
             IconButton(onClick = vm::refresh) { Icon(Icons.Default.Refresh, "Refresh") }
@@ -56,7 +60,7 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
                             Column(Modifier.weight(1f)){Text(row.party,fontWeight=FontWeight.SemiBold);Text(if(isSale)paymentLabel else row.type.replace('_',' '),style=MaterialTheme.typography.labelSmall,color=if(row.paymentStatus=="PAID")MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)}
                             Column{Text("#${row.number}",fontWeight=FontWeight.Medium,style=MaterialTheme.typography.bodySmall);Text(row.date,style=MaterialTheme.typography.labelSmall)}
                         }
-                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text("₹${row.total}",fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text("₹${row.balance.ifBlank{row.total}}",fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
+                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.total),fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.balance.ifBlank{row.total}),fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
                     }
                 }
             }

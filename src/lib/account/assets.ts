@@ -1,3 +1,5 @@
+import { fundingRowsInTx, remainingFunding } from "./owner-asset-funding";
+import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { retrySerializable } from "./transaction-retry";
 import { createHash } from "node:crypto";
 import {
@@ -21,6 +23,7 @@ const D = Prisma.Decimal,
   base = z
     .object({
       name: z.string().trim().min(1).max(240),
+      customFields:z.record(z.string(),z.string().max(10000)).optional(),
       assetType: z.nativeEnum(AssetType),
       category: z.string().max(120).nullable().optional(),
       hsnCode: z
@@ -226,6 +229,7 @@ export async function assetOptionsForActor(a: ProjectActor) {
   });
   return {
     branches,
+    customFields:await db.customFieldDefinition.findMany({where:{companyId:a.companyId,entityType:"ASSET",isActive:true},orderBy:{position:"asc"}}),
     hsnCodes: (
       await db.accountProduct.findMany({
         where: { companyId: a.companyId, hsnCode: { not: null } },
@@ -289,9 +293,9 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
     db.$transaction(
       async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":asset-number"}))`;
-        const { requestKey, ...values } = d;
+        const { requestKey, customFields, ...values } = d;
         const requestHash = createHash("sha256")
-          .update(JSON.stringify(values))
+          .update(JSON.stringify({...values,...(customFields?{customFields:Object.fromEntries(Object.entries(customFields).sort(([a],[b])=>a.localeCompare(b)))}:{})}))
           .digest("hex");
         if (requestKey) {
           const existing = await tx.asset.findUnique({
@@ -350,6 +354,7 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
             createdById: a.id,
           },
         });
+        await saveCustomFieldValuesInTx(tx,a.companyId,"ASSET",row.id,customFields??{});
         await audit(tx, a, "ASSET_CREATED", row.id);
         return row;
       },
@@ -373,6 +378,7 @@ export async function getAssetForActor(a: ProjectActor, id: string) {
   const asset = await scoped(a, id);
   return {
     asset,
+    customValues:Object.fromEntries((await db.customFieldValue.findMany({where:{companyId:a.companyId,entityType:"ASSET",entityId:id,definition:{isActive:true}},include:{definition:{select:{fieldKey:true}}}})).map(row=>[row.definition.fieldKey,row.value])),
     history: await db.assetAssignmentHistory.findMany({
       where: { companyId: a.companyId, assetId: id },
       orderBy: { assignedAt: "desc" },
@@ -394,6 +400,8 @@ export async function updateAssetForActor(
 ) {
   await scoped(a, id);
   return db.$transaction(async (tx) => {
+    // Serialize cost corrections with funding allocations and capital repayments.
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
     await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
     const current = await scoped(a, id, tx);
     const d = base.parse({
@@ -414,10 +422,14 @@ export async function updateAssetForActor(
       d,
       current.vendorId,
     );
+    const allocated=(await fundingRowsInTx(tx,a.companyId)).filter(row=>row.assetId===id).reduce((sum,row)=>sum.add(remainingFunding(row)),new D(0));
+    if(allocated.gt(purchaseValue))throw new Error("ASSET_FUNDING_EXCEEDS_AVAILABLE");
+    const {customFields,...values}=d;
     const row = await tx.asset.update({
       where: { id },
-      data: { ...d, purchaseValue, salvageValue: new D(d.salvageValue) },
+      data: { ...values, purchaseValue, salvageValue: new D(d.salvageValue) },
     });
+    await saveCustomFieldValuesInTx(tx,a.companyId,"ASSET",id,customFields??{},true);
     await audit(tx, a, "ASSET_UPDATED", id);
     return row;
   });

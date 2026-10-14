@@ -14,6 +14,7 @@ const reports = [
   "payable-aging",
   "cash-bank",
   "owner-capital",
+  "profit-withdrawal",
   "projects",
   "branches",
   "items",

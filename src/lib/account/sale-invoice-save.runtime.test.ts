@@ -88,6 +88,7 @@ function productFixture() {
 function transaction() {
   return {
     $queryRaw: vi.fn().mockResolvedValue([]),
+    customFieldDefinition: { findMany: vi.fn().mockResolvedValue([]) },
     branch: {
       findFirst: vi
         .fn()

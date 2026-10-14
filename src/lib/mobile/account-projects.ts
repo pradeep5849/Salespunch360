@@ -34,6 +34,7 @@ const createInput = z
     projectManagerId: z.string().uuid().optional(),
     startDate: z.string().trim().optional(),
     projectValue,
+    customFields:z.record(z.string(),z.string().max(10000)).optional(),
   })
   .strict();
 const updateInput = createInput

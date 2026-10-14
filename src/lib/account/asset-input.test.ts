@@ -32,6 +32,7 @@ describe("A044-F04 explicit asset clears", () => {
     expect(assetFormInput(form, true)).toEqual({ [key]: null });
     expect(assetFormInput(form)).toEqual({});
   });
+  it("retains explicit custom-field clears and false values",()=>{const form=new FormData();form.set("custom_optional","");form.set("custom_confirmed","false");expect(assetFormInput(form,true)).toEqual({customFields:{optional:"",confirmed:"false"}})});
   it("does not forward routing and submit-button fields", () => {
     const form = new FormData();
     form.set("id", "asset");

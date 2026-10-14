@@ -46,6 +46,7 @@ export async function GET(
         q: url.searchParams.get("q"),
         active: url.searchParams.get("active"),
         branchId: url.searchParams.get("branchId"),
+        offset: url.searchParams.get("offset"),
       }),
     );
   } catch (error) {

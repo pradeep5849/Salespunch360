@@ -13,13 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.ui.account.accountMoney
 import com.salespunch360.mobile.ExpenseCategoryViewModel
 import com.salespunch360.mobile.account.*
 import com.salespunch360.mobile.ui.account.accounting.Option
 import kotlinx.serialization.json.*
 
 @Composable
-fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel = viewModel()) {
+fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel = viewModel(), initialQuery: String = "") {
+    LaunchedEffect(initialQuery) { vm.context(initialQuery) }
     val s = vm.state.collectAsStateWithLifecycle().value
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         Row {
@@ -31,11 +33,19 @@ fun ExpenseCategoryScreen(padding: PaddingValues, vm: ExpenseCategoryViewModel =
         s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         s.message?.let { Text(it) }
         if (!s.loading && s.categories.isEmpty()) Text("No categories found.")
+        if (!s.loading && s.error == null) s.summary?.let { totals ->
+            Text("Posted totals · ${s.scopeLabel} · all history")
+            Text("Expense: ${accountMoney(totals.str("expense"))} · Other income: ${accountMoney(totals.str("income"))}")
+            Text(totals.str("recognition"))
+        }
         LazyColumn {
             items(s.categories, key = { it.str("id") }) { x ->
+                val amounts = s.summary?.array("categories")?.firstOrNull { it.str("categoryId") == x.str("id") }
                 ListItem(
                     headlineContent = { Text(x.str("name")) },
-                    supportingContent = { Text("${x.str("scope")} · ${s.ledgers.firstOrNull { it.str("id") == x.str("defaultLedgerAccountId") }?.str("name").orEmpty()}") },
+                    supportingContent = { Column { Text("${x.str("scope")} · ${s.ledgers.firstOrNull { it.str("id") == x.str("defaultLedgerAccountId") }?.str("name").orEmpty()}")
+                      if (!s.loading && s.error == null) Text("Expense: ${accountMoney(amounts?.str("expense") ?: "0.00")} · Other income: ${accountMoney(amounts?.str("income") ?: "0.00")}")
+                    } },
                     trailingContent = {
                         if (x["isActive"]?.jsonPrimitive?.booleanOrNull == true) {
                             if (s.canManage) TextButton({ vm.disable(x.str("id")) }, enabled = !s.saving) { Text("Deactivate") }

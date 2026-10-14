@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { parseCustomFieldValue } from "./custom-field-values";
+import { describe, expect, it, vi } from "vitest";
+import { parseCustomFieldValue,saveCustomFieldValuesInTx } from "./custom-field-values";
 const field = {
   fieldKey: "extra",
   isRequired: true,
@@ -44,4 +44,20 @@ describe("A042-F06 custom-field semantics", () => {
     expect(
       parseCustomFieldValue({ ...field, dataType: "BOOLEAN" }, "false"),
     ).toBe(false));
+});
+
+
+describe("A089 editing stored custom fields",()=>{
+ it("clears an explicitly blank optional value in the same company and entity",async()=>{
+  const remove=vi.fn(),upsert=vi.fn();
+  const tx={customFieldDefinition:{findMany:vi.fn().mockResolvedValue([{...field,id:"definition",isRequired:false}])},customFieldValue:{deleteMany:remove,upsert}};
+  await saveCustomFieldValuesInTx(tx as unknown as import("@prisma/client").Prisma.TransactionClient,"company","CUSTOMER","customer",{extra:""},true);
+  expect(remove).toHaveBeenCalledWith({where:{companyId:"company",definitionId:"definition",entityType:"CUSTOMER",entityId:"customer"}});expect(upsert).not.toHaveBeenCalled();
+ });
+ it("keeps omitted values and stores an explicit false instead of deleting it",async()=>{
+  const remove=vi.fn(),upsert=vi.fn();
+  const tx={customFieldDefinition:{findMany:vi.fn().mockResolvedValue([{...field,id:"definition",dataType:"BOOLEAN"}])},customFieldValue:{deleteMany:remove,upsert}};
+  await saveCustomFieldValuesInTx(tx as unknown as import("@prisma/client").Prisma.TransactionClient,"company","CUSTOMER","customer",{},true);expect(upsert).not.toHaveBeenCalled();
+  await saveCustomFieldValuesInTx(tx as unknown as import("@prisma/client").Prisma.TransactionClient,"company","CUSTOMER","customer",{extra:"false"},true);expect(upsert).toHaveBeenCalledWith(expect.objectContaining({update:{value:false}}));expect(remove).not.toHaveBeenCalled();
+ });
 });

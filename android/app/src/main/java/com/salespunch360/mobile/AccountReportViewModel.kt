@@ -3,6 +3,7 @@ package com.salespunch360.mobile
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.salespunch360.mobile.account.AppliedAccountReport
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.SecureSession
 import java.io.IOException
@@ -16,16 +17,18 @@ import kotlinx.serialization.json.*
 data class AccountReportState(
     val loading: Boolean = false,
     val report: String? = null,
-    val from: String = java.time.LocalDate.now().withDayOfYear(1).toString(),
-    val to: String = java.time.LocalDate.now().toString(),
+    val from: String = com.salespunch360.mobile.account.accountReportFinancialYearStart().toString(),
+    val to: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val branchId: String = "",
     val projectId: String = "",
     val ledgerId: String = "",
     val customerId: String = "",
     val vendorId: String = "",
     val productId: String = "",
+    val ownerId: String = "",
     val options: JsonObject = buildJsonObject {},
     val data: JsonObject? = null,
+    val appliedFilters: Map<String,String> = emptyMap(),
     val export: Pair<String, ByteArray>? = null,
     val error: String? = null
 )
@@ -37,6 +40,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
     private var reportJob: Job? = null
     private var exportJob: Job? = null
     private var requestGeneration = 0L
+    private var appliedRequest: AppliedAccountReport? = null
 
     init { options() }
 
@@ -56,9 +60,10 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun choose(report: String?) {
         requestGeneration++
+        appliedRequest = null
         reportJob?.cancel()
         exportJob?.cancel()
-        _state.value = _state.value.copy(report = report, data = null, export = null, loading = false, error = null)
+        _state.value = _state.value.copy(report = report, data = null, appliedFilters = emptyMap(), export = null, loading = false, error = null)
         if (report != null) run()
     }
 
@@ -73,6 +78,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "ledger" -> _state.value.copy(ledgerId = value)
             "customer" -> _state.value.copy(customerId = value)
             "vendor" -> _state.value.copy(vendorId = value)
+            "owner" -> _state.value.copy(ownerId = value)
             else -> _state.value.copy(productId = value)
         }
     }
@@ -89,6 +95,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "ledgerId" to _state.value.ledgerId,
             "customerId" to _state.value.customerId,
             "vendorId" to _state.value.vendorId,
+            "ownerId" to (if(report == "owner-capital" || report == "profit-withdrawal") _state.value.ownerId else ""),
             "productId" to _state.value.productId
         ).forEach { (key, value) ->
             if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId")) put(key, value)
@@ -105,7 +112,8 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = _state.value.copy(loading = true, error = null)
                 val data = api.accountReport(report, requestFilters)
                 if (generation == requestGeneration && _state.value.report == report) {
-                    _state.value = _state.value.copy(loading = false, data = data)
+                    appliedRequest = AppliedAccountReport(report, requestFilters)
+                    _state.value = _state.value.copy(loading = false, data = data, appliedFilters = requestFilters)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -117,9 +125,10 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun export(format: String) {
         val report = _state.value.report ?: return
+        val shown = appliedRequest?.takeIf { it.report == report && _state.value.data != null } ?: return
         exportJob?.cancel()
         val generation = requestGeneration
-        val requestFilters = filters(report)
+        val requestFilters = shown.filters
         exportJob = viewModelScope.launch {
             try {
                 val bytes = api.accountReportExport(report, format, requestFilters)

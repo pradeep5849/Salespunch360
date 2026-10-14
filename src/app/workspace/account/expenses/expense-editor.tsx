@@ -1,4 +1,7 @@
 "use client";
+import { useDisplayPreferences } from "@/components/account/display-preferences";
+import { formatMoney } from "@/lib/account/display-preferences";
+import { AddExpenseItem } from "@/components/account/add-expense-item";
 import { useEffect, useState } from "react";
 import { Prisma } from "@prisma/client";
 import {
@@ -26,6 +29,7 @@ export type ExpenseValue = {
   projectId?: string | null;
   moneyAccountId?: string | null;
   transactionDate: string;
+  occurrenceKey?: string | null;
   taxableAmount: string;
   billedItems?: Line[] | null;
   additionalCharges?: string;
@@ -69,6 +73,7 @@ export function ExpenseEditor({
   action: (f: FormData) => Promise<AccountActionResult>;
   requestKey: string;
 }) {
+  const displayPreferences = useDisplayPreferences();
   const [stableKey] = useState(requestKey),
     [branch, setBranch] = useState(x?.branchId ?? o.branches[0]?.id ?? ""),
     [type, setType] = useState(
@@ -91,6 +96,7 @@ export function ExpenseEditor({
     [credit, setCredit] = useState(x?.taxCreditTreatment ?? "ELIGIBLE"),
     [supply, setSupply] = useState(x?.stateOfSupplyCode ?? ""),
     [inlineCategory, setInlineCategory] = useState(false),
+    [addingItem, setAddingItem] = useState(false),
     [dirty, setDirty] = useState(false);
   useEffect(() => {
     if (!dirty) return;
@@ -204,6 +210,11 @@ export function ExpenseEditor({
       >
         {x && <input type="hidden" name="id" value={x.id} />}
         <input type="hidden" name="requestKey" value={stableKey} />
+        <input
+          type="hidden"
+          name="recordAsPaid"
+          value={String(!x && type !== "REIMBURSEMENT")}
+        />
         <label>
           Transaction type
           <select
@@ -278,6 +289,7 @@ export function ExpenseEditor({
           <input
             type="date"
             name="transactionDate"
+            readOnly={!!x?.occurrenceKey}
             required
             defaultValue={
               x?.transactionDate.slice(0, 10) ??
@@ -327,13 +339,24 @@ export function ExpenseEditor({
           <button
             type="button"
             disabled={lines.length >= 200}
-            onClick={() => {
-              setLines([...lines, { name: "", quantity: "1", rate: "0" }]);
-              setDirty(true);
-            }}
+            onClick={() => setAddingItem(true)}
           >
             Add billed item
           </button>
+          {addingItem && (
+            <AddExpenseItem
+              onClose={() => setAddingItem(false)}
+              onSave={(name) => {
+                setLines((current) =>
+                  current.length < 200
+                    ? [...current, { name, quantity: "1", rate: "0" }]
+                    : current,
+                );
+                setDirty(true);
+                setAddingItem(false);
+              }}
+            />
+          )}
           <input
             type="hidden"
             name="billedItems"
@@ -488,7 +511,7 @@ export function ExpenseEditor({
         </details>
         <p role="status" aria-live="polite">
           {preview
-            ? `Taxable ₹${preview.taxable.toFixed(2)} · GST/CESS ₹${preview.totalTax.toFixed(2)} · Round off ₹${preview.roundOffAmount.toFixed(2)} · Total ₹${preview.grandTotal.toFixed(2)}`
+            ? `Taxable ${formatMoney(preview.taxable, displayPreferences)} · GST/CESS ${formatMoney(preview.totalTax, displayPreferences)} · Round off ${formatMoney(preview.roundOffAmount, displayPreferences)} · Total ${formatMoney(preview.grandTotal, displayPreferences)}`
             : "Complete positive amounts and billed items to preview the total."}
         </p>
         <label>
@@ -510,7 +533,13 @@ export function ExpenseEditor({
             onChange={() => setDirty(true)}
           />
         </label>
-        <SaveSubmitButton>Save draft</SaveSubmitButton>
+        <SaveSubmitButton>
+          {x || type === "REIMBURSEMENT"
+            ? "Save draft"
+            : income
+              ? "Save receipt"
+              : "Save expense"}
+        </SaveSubmitButton>
         {!x && (
           <SaveSubmitButton name="saveMode" value="new">
             Save &amp; New

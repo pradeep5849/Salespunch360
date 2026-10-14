@@ -22,12 +22,20 @@ import {
   applyAdvanceAction,
   reminderStatusAction,
   saveReminderAction,
+  submitSaleInvoiceAction,
 } from "./commercial";
 beforeEach(() => {
   vi.clearAllMocks();
   m.status.mockResolvedValue({ documentId: "d" });
 });
 describe("commercial actions normal FormData contracts", () => {
+  it("rejects incomplete cheque details before creating a sale", async () => {
+    const result = await submitSaleInvoiceAction({ type: "SALES_INVOICE" }, {
+      paymentType: "CHEQUE", receivedAmount: 1593, chequeNumber: "", chequeDate: "2026-10-12",
+    });
+    expect(result.ok).toBe(false);
+    expect(m.create).not.toHaveBeenCalled();
+  });
   it("applies an advance and redirects using the extracted document", async () => {
     const f = new FormData();
     f.set("advanceId", "a");

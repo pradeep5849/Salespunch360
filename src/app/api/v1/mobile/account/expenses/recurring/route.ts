@@ -1,5 +1,8 @@
 import { authenticateMobileToken } from "@/lib/mobile/auth";
-import { mobileRecurringExpense } from "@/lib/mobile/account-expenses";
+import {
+  mobileRecurringExpense,
+  mobileRecurringExpenseList,
+} from "@/lib/mobile/account-expenses";
 import {
   mobileAuthorizationFailure,
   mobileJson,
@@ -20,6 +23,22 @@ export async function POST(r: Request) {
       mobileUnauthorized(e) ??
       mobileAuthorizationFailure(e) ??
       mobileUnexpected("MOBILE_RECURRING_EXPENSE", e)
+    );
+  }
+}
+
+export async function GET(r: Request) {
+  try {
+    return mobileJson(
+      await mobileRecurringExpenseList(
+        await authenticateMobileToken(r.headers.get("authorization")),
+      ),
+    );
+  } catch (e) {
+    return (
+      mobileUnauthorized(e) ??
+      mobileAuthorizationFailure(e) ??
+      mobileUnexpected("MOBILE_RECURRING_EXPENSE_LIST", e)
     );
   }
 }

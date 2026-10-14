@@ -1,3 +1,5 @@
+import {Money} from "@/components/account/account-ui";
+import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { assetPageRead } from "../page-access";
 import { assetOptions, getAsset } from "@/lib/account/assets";
@@ -17,16 +19,16 @@ export default async function Page({
         x.branchAccesses.some((b) => b.branchId === asset.branchId),
     ),
     names = new Map(people.map((x) => [x.id, x.name]));
-  const details: [string, string | number | null | undefined][] = [
+  const details: [string, React.ReactNode][] = [
     ["Asset type", asset.assetType],
     ["Status", asset.status],
-    ["Purchase value", `₹${asset.purchaseValue.toFixed(2)}`],
-    ["Purchase date", asset.purchaseDate.toISOString().slice(0, 10)],
+    ["Purchase value", <Money key="purchase-value" value={asset.purchaseValue}/>],
+    ["Purchase date", <AccountDate key="purchase-date" value={asset.purchaseDate.toISOString()}/>],
     ["Category", asset.category],
     ["HSN code", asset.hsnCode],
     ["Opening quantity", asset.openingQuantity?.toString()],
-    ["Price per unit", asset.unitPrice?.toFixed(2)],
-    ["Effective date", asset.effectiveDate?.toISOString().slice(0, 10)],
+    ["Price per unit", asset.unitPrice?<Money value={asset.unitPrice}/>:null],
+    ["Effective date", asset.effectiveDate?<AccountDate value={asset.effectiveDate.toISOString()}/>:null],
     [
       "Vendor",
       options.vendors.find((x) => x.id === asset.vendorId)?.name ??
@@ -52,10 +54,10 @@ export default async function Page({
     ["Description", asset.description],
     ["Depreciation method", asset.depreciationMethod],
     ["Useful life (months)", asset.usefulLifeMonths],
-    ["Salvage value", asset.salvageValue.toFixed(2)],
+    ["Salvage value", <Money key="salvage-value" value={asset.salvageValue}/>],
     [
       "Depreciation start date",
-      asset.depreciationStartDate?.toISOString().slice(0, 10),
+      asset.depreciationStartDate?<AccountDate value={asset.depreciationStartDate.toISOString()}/>:null,
     ],
     [
       "Asset ledger",

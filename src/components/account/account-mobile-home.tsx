@@ -1,63 +1,671 @@
 "use client";
 
 import Link from "next/link";
+import {printPdfPageImages} from "./print-page-images";
+import {preparePrintPdf,isShareCancellation} from "./share-print-file";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AccountDate } from "./display-preferences";
 import { Money } from "./account-ui";
-import {AccountIcon, type AccountIconName} from "./account-icons";
+import { AccountIcon, type AccountIconName } from "./account-icons";
 
-type Transaction={id:string;partyName:string;type:string;documentNumber:string;issueDate:Date|string;status:string;grandTotal:string;balanceDue:string;paymentStatus?:string};
-type Party={id:string;name:string;lastActivity:Date|string;balance:string};
-type Action={label:string;href?:string;disabled?:boolean;icon?:AccountIconName};
-export const TRANSACTION_FILTERS=[
-  {value:"SALES_INVOICE",label:"Sale"},{value:"SALES_ORDER",label:"Sale Order"},{value:"CREDIT_NOTE",label:"Credit Note"},
-  {value:"PURCHASE_BILL",label:"Purchase"},{value:"PURCHASE_ORDER",label:"Purchase Order"},{value:"DEBIT_NOTE",label:"Debit Note"},
-  {value:"CUSTOMER_RECEIPT",label:"Payment-In"},{value:"VENDOR_PAYMENT",label:"Payment-Out"},{value:"ESTIMATE",label:"Estimate"},
-  {value:"PROFORMA_INVOICE",label:"Proforma Invoice"},{value:"EXPENSE",label:"Expense"},{value:"DELIVERY_CHALLAN",label:"Delivery Challan"},
-  {value:"P2P_RECEIVED",label:"Party To Party [Rcvd]"},{value:"P2P_PAID",label:"Party To Party [Paid]"},{value:"SALE_FA",label:"Sale FA"},
-  {value:"PURCHASE_FA",label:"Purchase FA"},{value:"SALE_CANCELLED",label:"Sale [Cancelled]"},{value:"JOB_WORK_OUT",label:"Job work out (Challan)"},
-  {value:"SUBCONTRACT_PURCHASE",label:"Purchase (Job work)"},{value:"SALE_REPEATING",label:"Sale [Repeating]"},
+type Transaction = {
+  id: string;
+  partyName: string;
+  type: string;
+  documentNumber: string;
+  issueDate: Date | string;
+  status: string;
+  grandTotal: string;
+  balanceDue: string;
+  paymentStatus?: string;
+  sourceKind?: string;
+  detailHref?: string;
+  printType?: string | null;
+  showBalance?: boolean;
+  balanceLabel?: string;
+};
+type Party = {
+  id: string;
+  name: string;
+  lastActivity: Date | string;
+  balance: string;
+};
+type Action = {
+  label: string;
+  href?: string;
+  disabled?: boolean;
+  icon?: AccountIconName;
+};
+export const TRANSACTION_FILTERS = [
+  { value: "SALES_INVOICE", label: "Sale" },
+  { value: "SALES_ORDER", label: "Sale Order" },
+  { value: "CREDIT_NOTE", label: "Credit Note" },
+  { value: "PURCHASE_BILL", label: "Purchase" },
+  { value: "PURCHASE_ORDER", label: "Purchase Order" },
+  { value: "DEBIT_NOTE", label: "Debit Note" },
+  { value: "CUSTOMER_RECEIPT", label: "Payment-In" },
+  { value: "VENDOR_PAYMENT", label: "Payment-Out" },
+  { value: "ESTIMATE", label: "Estimate" },
+  { value: "PROFORMA_INVOICE", label: "Proforma Invoice" },
+  { value: "EXPENSE", label: "Expense" },
+  { value: "DELIVERY_CHALLAN", label: "Delivery Challan" },
+  { value: "P2P_RECEIVED", label: "Party To Party [Rcvd]" },
+  { value: "P2P_PAID", label: "Party To Party [Paid]" },
+  { value: "SALE_FA", label: "Sale FA" },
+  { value: "PURCHASE_FA", label: "Purchase FA" },
+  { value: "SALE_CANCELLED", label: "Sale [Cancelled]" },
+  { value: "JOB_WORK_OUT", label: "Job work out (Challan)" },
+  { value: "SUBCONTRACT_PURCHASE", label: "Purchase (Job work)" },
+  { value: "SALE_REPEATING", label: "Sale [Repeating]" },
 ] as const;
-export const ADD_GROUPS:{title:string;actions:Action[]}[]=[
-  {title:"Sale transactions",actions:[{label:"Payment-In",href:"/workspace/account/transactions/money?type=CUSTOMER_RECEIPT"},{label:"Sale Return",href:"/workspace/account/transactions/new?type=CREDIT_NOTE"},{label:"Delivery Challan",href:"/workspace/account/transactions/new?type=DELIVERY_CHALLAN"},{label:"Estimate / Quotation",href:"/workspace/account/quotations/new"},{label:"Proforma Invoice",href:"/workspace/account/transactions/new?type=PROFORMA_INVOICE"},{label:"Sale Order",href:"/workspace/account/transactions/new?type=SALES_ORDER"},{label:"Sale Invoice",href:"/workspace/account/transactions/new?type=SALES_INVOICE"},{label:"Mobile POS",disabled:true}]},
-  {title:"Purchase transactions",actions:[{label:"Purchase",href:"/workspace/account/transactions/new?type=PURCHASE_BILL"},{label:"Payment-Out",href:"/workspace/account/transactions/money?type=VENDOR_PAYMENT"},{label:"Purchase Return",href:"/workspace/account/transactions/new?type=DEBIT_NOTE"},{label:"Purchase Order",href:"/workspace/account/transactions/new?type=PURCHASE_ORDER"}]},
-  {title:"Other transactions",actions:[{label:"Expenses",href:"/workspace/account/expenses/new"},{label:"P2P Transfer",href:"/workspace/account/money/transfers"}]},
+export const ADD_GROUPS: { title: string; actions: Action[] }[] = [
+  {
+    title: "Sale transactions",
+    actions: [
+      {
+        label: "Payment-In",
+        href: "/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",
+      },
+      {
+        label: "Sale Return",
+        href: "/workspace/account/transactions/new?type=CREDIT_NOTE",
+      },
+      {
+        label: "Delivery Challan",
+        href: "/workspace/account/transactions/new?type=DELIVERY_CHALLAN",
+      },
+      {
+        label: "Estimate / Quotation",
+        href: "/workspace/account/quotations/new",
+      },
+      {
+        label: "Proforma Invoice",
+        href: "/workspace/account/transactions/new?type=PROFORMA_INVOICE",
+      },
+      {
+        label: "Sale Order",
+        href: "/workspace/account/transactions/new?type=SALES_ORDER",
+      },
+      {
+        label: "Sale Invoice",
+        href: "/workspace/account/transactions/new?type=SALES_INVOICE",
+      },
+      { label: "Mobile POS", disabled: true },
+    ],
+  },
+  {
+    title: "Purchase transactions",
+    actions: [
+      {
+        label: "Purchase",
+        href: "/workspace/account/transactions/new?type=PURCHASE_BILL",
+      },
+      {
+        label: "Payment-Out",
+        href: "/workspace/account/transactions/money?type=VENDOR_PAYMENT",
+      },
+      {
+        label: "Purchase Return",
+        href: "/workspace/account/transactions/new?type=DEBIT_NOTE",
+      },
+      {
+        label: "Purchase Order",
+        href: "/workspace/account/transactions/new?type=PURCHASE_ORDER",
+      },
+    ],
+  },
+  {
+    title: "Other transactions",
+    actions: [
+      { label: "Expenses", href: "/workspace/account/expenses/new" },
+      { label: "P2P Transfer", href: "/workspace/account/money/transfers" },
+    ],
+  },
 ];
-const MORE_TXN:Action[]=[{label:"Bank Accounts",href:"/workspace/account/money/accounts"},{label:"Day Book",href:"/workspace/account/reports/general-ledger"},{label:"All Txns Report",href:"/workspace/account/transactions"},{label:"Profit & Loss",href:"/workspace/account/reports/profit-loss"},{label:"Balance Sheet",href:"/workspace/account/reports/balance-sheet"},{label:"Billwise PnL",href:"/workspace/account/reports/invoices"},{label:"Print Settings",href:"/workspace/account/settings/print-templates"},{label:"Txn SMS Settings",disabled:true}];
-const MORE_PARTY:Action[]=[{label:"All Parties Report",href:"/workspace/account/reports/customers"},{label:"Import Party",href:"/workspace/account/utilities/import"},{label:"Loyalty Points",disabled:true},{label:"Invite Party",disabled:true},{label:"Partywise P&L",href:"/workspace/account/reports/customers"},{label:"Reminder Settings",disabled:true},{label:"WhatsApp Marketing",disabled:true}];
+const MORE_TXN: Action[] = [
+  { label: "Bank Accounts", href: "/workspace/account/money/bank-accounts" },
+  { label: "Day Book", href: "/workspace/account/reports/general-ledger" },
+  { label: "All Txns Report", href: "/workspace/account/transactions" },
+  { label: "Profit & Loss", href: "/workspace/account/reports/profit-loss" },
+  { label: "Balance Sheet", href: "/workspace/account/reports/balance-sheet" },
+  { label: "Billwise PnL", href: "/workspace/account/reports/invoices" },
+  {
+    label: "Print Settings",
+    href: "/workspace/account/settings/print-templates",
+  },
+  { label: "Txn SMS Settings", disabled: true },
+];
+const MORE_PARTY: Action[] = [
+  { label: "All Parties Report", href: "/workspace/account/reports/customers" },
+  { label: "Import Party", href: "/workspace/account/utilities/import" },
+  { label: "Loyalty Points", disabled: true },
+  { label: "Invite Party", disabled: true },
+  { label: "Partywise P&L", href: "/workspace/account/reports/customers" },
+  { label: "Reminder Settings", disabled: true },
+  { label: "WhatsApp Marketing", disabled: true },
+];
 
-function saleStatus(tx:Transaction){if(tx.type!=="SALES_INVOICE"||tx.status!=="POSTED")return tx.status.replaceAll("_"," ");if(tx.paymentStatus==="PAID")return "SALE : PAID";if(tx.paymentStatus==="PARTIALLY_PAID")return "SALE : PARTIAL";return "SALE : UNPAID"}
-function saleStatusClass(tx:Transaction){if(tx.paymentStatus==="PAID")return "is-paid";if(tx.paymentStatus==="PARTIALLY_PAID")return "is-partial";return "is-unpaid"}
-function shortDate(value:Date|string){return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"2-digit"}).format(new Date(value)).replace(/^(\d+) (\w+) (\d+)$/,"$1 $2, $3")}
-
-export function AccountMobileHome({tab,transactions,parties,q,selectedTypes}:{tab:"transactions"|"parties";transactions:Transaction[];parties:Party[];q:string;selectedTypes:string[]}){
-  const router=useRouter(),pathname=usePathname(),params=useSearchParams();
-  const [sheet,setSheet]=useState<"add"|"more"|"filter"|"share"|"actions"|null>(null);
-  const [active,setActive]=useState<Transaction|null>(null);
-  const [draftTypes,setDraftTypes]=useState(selectedTypes);
-  const [floatingVisible,setFloatingVisible]=useState(true);
-  useEffect(()=>{let timer:ReturnType<typeof setTimeout>|undefined;const onScroll=()=>{setFloatingVisible(false);clearTimeout(timer);timer=setTimeout(()=>setFloatingVisible(true),180)};window.addEventListener("scroll",onScroll,{passive:true});return()=>{window.removeEventListener("scroll",onScroll);clearTimeout(timer)}},[]);
-  const update=(changes:Record<string,string|null>)=>{const next=new URLSearchParams(params);Object.entries(changes).forEach(([key,value])=>value?next.set(key,value):next.delete(key));router.push(`${pathname}?${next}`)};
-  const quick:(Action&{icon:AccountIconName;action?:()=>void})[]=tab==="transactions"?[{label:"Add Txn",icon:"plus",action:()=>setSheet("add")},{label:"Sale Report",icon:"report",href:"/workspace/account/reports/invoices"},{label:"Txn Settings",icon:"settings",href:"/workspace/account/settings/transactions"},{label:"Show All",icon:"grid",action:()=>setSheet("more")}]:[{label:"Network",icon:"share",disabled:true},{label:"Party Statement",icon:"report",href:"/workspace/account/reports/customer-ledger"},{label:"Party Settings",icon:"settings",href:"/workspace/account/settings/custom-fields"},{label:"Show All",icon:"grid",action:()=>setSheet("more")}];
-  const pdfUrl=active?`/api/account/print/${active.type}/${active.id}?format=pdf`:"";
-  const sharePdf=async()=>{if(!active)return;const response=await fetch(pdfUrl);if(!response.ok)return;const file=new File([await response.blob()],`${active.documentNumber}.pdf`,{type:"application/pdf"});if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({files:[file],title:active.documentNumber});else{const url=URL.createObjectURL(file),link=document.createElement("a");link.href=url;link.download=file.name;link.click();URL.revokeObjectURL(url)}};
-  return <div className="account-mobile-home">
-    <div className="account-segmented" role="tablist" aria-label="Home details">
-      <button role="tab" aria-selected={tab==="transactions"} onClick={()=>update({tab:null,q:null,types:null})}>Transaction Details</button>
-      <button role="tab" aria-selected={tab==="parties"} onClick={()=>update({tab:"parties",q:null,types:null})}>Party Details</button>
-    </div>
-    <section className="account-card account-quick-card"><h1>Quick Links</h1><div>{quick.map(item=>item.href?<Link key={item.label} href={item.href}><span><AccountIcon name={item.icon}/></span>{item.label}</Link>:<button key={item.label} disabled={item.disabled} onClick={item.action}><span><AccountIcon name={item.icon}/></span>{item.label}{item.disabled&&<small>Coming later</small>}</button>)}</div></section>
-    <form className="account-home-search"><label><span aria-hidden><AccountIcon name="search"/></span><input name="q" defaultValue={q} placeholder={tab==="transactions"?"Search party or document number":"Search parties"}/></label><input type="hidden" name="tab" value={tab==="parties"?"parties":""}/>{tab==="transactions"&&<button type="button" onClick={()=>setSheet("filter")} aria-label={`Filter transactions${selectedTypes.length?`, ${selectedTypes.length} active`:""}`}><AccountIcon name="filter"/></button>}</form>
-    {tab==="transactions"?<section className="account-home-list" aria-label="Recent transactions">{transactions.length?transactions.map(tx=><article className="account-transaction-card account-reference-transaction-card" key={tx.id}>
-      <Link href={tx.type==="SALES_INVOICE"?`/workspace/account/sales/${tx.id}`:`/workspace/account/transactions/${tx.id}`}>
-        <div className="account-reference-card-top"><div className="account-reference-party"><strong>{tx.partyName}</strong><span className={`account-reference-sale-status ${saleStatusClass(tx)}`}>{saleStatus(tx)}</span></div><div className="account-reference-meta"><strong>#{tx.documentNumber}</strong><small>{shortDate(tx.issueDate)}</small></div></div>
-        <div className="account-reference-amounts"><span><small>Total</small><Money value={tx.grandTotal}/></span><span><small>Balance</small><Money value={tx.balanceDue}/></span></div>
-      </Link>
-      <footer className="account-reference-actions"><a href={`/api/account/print/${tx.type}/${tx.id}`} target="_blank" rel="noreferrer" aria-label="Print"><AccountIcon name="print"/></a><button aria-label="Share" onClick={()=>{setActive(tx);setSheet("share")}}><AccountIcon name="share"/></button><button aria-label="More" onClick={()=>{setActive(tx);setSheet("actions")}}><AccountIcon name="moreVertical"/></button></footer>
-    </article>):<Empty title="No transactions found" detail="Try changing your search or filters."/>}</section>
-    :<section className="account-home-list" aria-label="Parties">{parties.length?parties.map(party=><Link className="account-party-card" href={`/workspace/account/customers?q=${encodeURIComponent(party.name)}`} key={party.id}><span><strong>{party.name}</strong><small>Last activity {new Date(party.lastActivity).toLocaleDateString("en-IN")}</small></span><Money value={party.balance}/></Link>):<Empty title="No parties found" detail="Create an Account customer or change your search."/>}</section>}
-    <Link className={`account-floating-action${floatingVisible?"":" is-hidden"}`} aria-hidden={!floatingVisible} tabIndex={floatingVisible?0:-1} href={tab==="transactions"?"/workspace/account/transactions/new?type=SALES_INVOICE":"/workspace/customers/new"}>{tab==="transactions"?"+ Add New Sale":"+ New Party"}</Link>
-    {sheet&&<div className="account-sheet-overlay" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setSheet(null)}}><section className={`account-sheet${sheet==="add"?" account-add-launcher":""}`} role="dialog" aria-modal="true" aria-labelledby="account-sheet-title"><header><h2 id="account-sheet-title">{sheet==="add"?"Add Transaction":sheet==="filter"?"Filter By":sheet==="share"?"Share Transaction":sheet==="actions"?"Transaction Actions":"More Options"}</h2><button onClick={()=>setSheet(null)} aria-label="Close">×</button></header>{sheet==="add"&&ADD_GROUPS.map(group=><div className="account-sheet-group" key={group.title}><h3>{group.title}</h3><div>{group.actions.map(action=>action.disabled?<button disabled key={action.label}><span><AccountIcon name="plus"/></span>{action.label}<small>Coming Soon</small></button>:<Link key={action.label} href={action.href!}><span><AccountIcon name="plus"/></span>{action.label}</Link>)}</div></div>)}{sheet==="more"&&<div className="account-more-grid">{(tab==="transactions"?MORE_TXN:MORE_PARTY).map(action=>action.disabled?<button disabled key={action.label}>{action.label}<small>Coming later</small></button>:<Link key={action.label} href={action.href!}>{action.label}</Link>)}</div>}{sheet==="share"&&<div className="account-more-grid"><button disabled>Share as Image<small>Coming later</small></button><button onClick={sharePdf}>Share as PDF</button></div>}{sheet==="actions"&&active&&<div className="account-more-grid">{active.type==="SALES_INVOICE"&&active.status==="POSTED"&&<><Link href={`/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${active.id}`}>Return</Link><Link href={`/workspace/account/transactions/new?type=DELIVERY_CHALLAN&sourceDocumentId=${active.id}`}>Delivery Challan</Link></>}<Link href={active.type==="SALES_INVOICE"?`/workspace/account/sales/${active.id}`:`/workspace/account/transactions/${active.id}`}>Payment History</Link><button onClick={sharePdf}>Share as PDF</button><button disabled>Generate e-Invoice<small>Coming later</small></button></div>}{sheet==="filter"&&<><div className="account-filter-list">{TRANSACTION_FILTERS.map(filter=><label key={filter.value}><input type="checkbox" checked={draftTypes.includes(filter.value)} onChange={()=>setDraftTypes(old=>old.includes(filter.value)?old.filter(x=>x!==filter.value):[...old,filter.value])}/>{filter.label}</label>)}</div><footer className="account-sheet-actions"><button onClick={()=>setDraftTypes([])}>Clear</button><button onClick={()=>{update({types:draftTypes.join(",")||null});setSheet(null)}}>Apply</button></footer></>}</section></div>}
-  </div>;
+function saleStatus(tx: Transaction) {
+  if (tx.type !== "SALES_INVOICE" || tx.status !== "POSTED")
+    return tx.status.replaceAll("_", " ");
+  if (tx.paymentStatus === "PAID") return "SALE : PAID";
+  if (tx.paymentStatus === "PARTIALLY_PAID") return "SALE : PARTIAL";
+  return "SALE : UNPAID";
 }
-function Empty({title,detail}:{title:string;detail:string}){return <div className="account-home-empty"><strong>{title}</strong><p>{detail}</p></div>}
+function saleStatusClass(tx: Transaction) {
+  if (tx.paymentStatus === "PAID") return "is-paid";
+  if (tx.paymentStatus === "PARTIALLY_PAID") return "is-partial";
+  return "is-unpaid";
+}
+
+export function AccountMobileHome({
+  tab,
+  transactions,
+  parties,
+  q,
+  selectedTypes,
+  searchScope = {},
+  canCreateParty = false,
+  canCreateSale = false,
+  shareAs = "ASK",
+}: {
+  shareAs?: "ASK"|"PDF";
+  searchScope?: { branchId?: string; scope?: "all" };
+  canCreateParty?: boolean;
+  canCreateSale?: boolean;
+  tab: "transactions" | "parties";
+  transactions: Transaction[];
+  parties: Party[];
+  q: string;
+  selectedTypes: string[];
+}) {
+  const router = useRouter(),
+    pathname = usePathname(),
+    params = useSearchParams();
+  const [sheet, setSheet] = useState<
+    "add" | "more" | "filter" | "share" | "actions" | null
+  >(null);
+  const [imageDownloads,setImageDownloads]=useState<{id:string;files:File[]}|null>(null);
+  const [sharePending,setSharePending]=useState(false);
+  const [shareError,setShareError]=useState<{id:string;message:string}|null>(null);
+  const [active, setActive] = useState<Transaction | null>(null);
+  const [draftTypes, setDraftTypes] = useState(selectedTypes);
+  const [floatingVisible, setFloatingVisible] = useState(true);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      setFloatingVisible(false);
+      clearTimeout(timer);
+      timer = setTimeout(() => setFloatingVisible(true), 180);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(timer);
+    };
+  }, []);
+  const scopeParams = new URLSearchParams();
+  if (searchScope.branchId) scopeParams.set("branchId", searchScope.branchId);
+  if (searchScope.scope) scopeParams.set("scope", searchScope.scope);
+  const tabHref = (target: "transactions" | "parties") => {
+    const next = new URLSearchParams(scopeParams);
+    if (target === "parties") next.set("tab", "parties");
+    return `${pathname}?${next}`;
+  };
+  const update = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    Object.entries(changes).forEach(([key, value]) =>
+      value ? next.set(key, value) : next.delete(key),
+    );
+    router.push(`${pathname}?${next}`);
+  };
+  const quick: (Action & { icon: AccountIconName; action?: () => void })[] =
+    tab === "transactions"
+      ? [
+          { label: "Add Txn", icon: "plus", action: () => setSheet("add") },
+          {
+            label: "Sale Report",
+            icon: "report",
+            href: "/workspace/account/reports/invoices",
+          },
+          {
+            label: "Txn Settings",
+            icon: "settings",
+            href: "/workspace/account/settings/transactions",
+          },
+          { label: "Show All", icon: "grid", action: () => setSheet("more") },
+        ]
+      : [
+          { label: "Network", icon: "share", disabled: true },
+          {
+            label: "Party Statement",
+            icon: "report",
+            href: "/workspace/account/reports/customer-ledger",
+          },
+          {
+            label: "Party Settings",
+            icon: "settings",
+            href: "/workspace/account/settings/custom-fields",
+          },
+          { label: "Show All", icon: "grid", action: () => setSheet("more") },
+        ];
+  const downloadFile=(file:File)=>{const url=URL.createObjectURL(file),link=document.createElement("a");link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  const shareImages=async()=>{
+   if(!active||active.printType===null||sharePending)return;
+   setSharePending(true);setShareError(null);setImageDownloads(null);
+   try{
+    const files=await printPdfPageImages(await preparePrintPdf(`/api/account/print/${active.printType??active.type}/${active.id}?format=pdf`,active.documentNumber));
+    if(navigator.share&&navigator.canShare?.({files}))await navigator.share({files,title:active.documentNumber});
+    else if(files.length===1)downloadFile(files[0]);
+    else setImageDownloads({id:active.id,files});
+   }catch(error){if(!isShareCancellation(error))setShareError({id:active.id,message:error instanceof Error?error.message:"Could not share images. Please try PDF instead."});}finally{setSharePending(false);}
+  };
+  const sharePdf = async (selected:Transaction|null=active) => {
+    if (!selected||selected.printType===null||sharePending) return;
+    const pdfUrl=`/api/account/print/${selected.printType??selected.type}/${selected.id}?format=pdf`;
+    setSharePending(true);setShareError(null);
+    try{
+    const file=await preparePrintPdf(pdfUrl,selected.documentNumber);
+    if (navigator.share && navigator.canShare?.({ files: [file] }))
+      await navigator.share({ files: [file], title: selected.documentNumber });
+    else {
+      const url = URL.createObjectURL(file),
+        link = document.createElement("a");
+      link.href = url;
+      link.download = file.name;
+      link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    }catch(error){if(!isShareCancellation(error))setShareError({id:selected.id,message:error instanceof Error?error.message:"Could not share this document. Please try again."});}finally{setSharePending(false);}
+  };
+  return (
+    <div className="account-mobile-home">
+      <div
+        className="account-segmented"
+        role="tablist"
+        aria-label="Home details"
+      >
+        <Link
+          role="tab"
+          aria-selected={tab === "transactions"}
+          href={tabHref("transactions")}
+        >
+          Transaction Details
+        </Link>
+        <Link
+          role="tab"
+          aria-selected={tab === "parties"}
+          href={tabHref("parties")}
+        >
+          Party Details
+        </Link>
+      </div>
+      <section className="account-card account-quick-card">
+        <h1>Quick Links</h1>
+        <div>
+          {quick.map((item) =>
+            item.href ? (
+              <Link key={item.label} href={item.href}>
+                <span>
+                  <AccountIcon name={item.icon} />
+                </span>
+                {item.label}
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                disabled={item.disabled}
+                onClick={item.action}
+              >
+                <span>
+                  <AccountIcon name={item.icon} />
+                </span>
+                {item.label}
+                {item.disabled && <small>Coming later</small>}
+              </button>
+            ),
+          )}
+        </div>
+      </section>
+      <form className="account-home-search">
+        <label>
+          <span aria-hidden>
+            <AccountIcon name="search" />
+          </span>
+          <input
+            type="search"
+            name="q"
+            key={`${tab}:${q}`}
+            defaultValue={q}
+            aria-label={
+              tab === "transactions"
+                ? "Search party or document number"
+                : "Search parties"
+            }
+            placeholder={
+              tab === "transactions"
+                ? "Search party or document number"
+                : "Search parties"
+            }
+          />
+        </label>
+        <input
+          type="hidden"
+          name="tab"
+          value={tab === "parties" ? "parties" : ""}
+        />
+        {tab === "transactions" && selectedTypes.length > 0 && (
+          <input type="hidden" name="types" value={selectedTypes.join(",")} />
+        )}{" "}
+        {searchScope.branchId && (
+          <input type="hidden" name="branchId" value={searchScope.branchId} />
+        )}{" "}
+        {searchScope.scope && (
+          <input type="hidden" name="scope" value={searchScope.scope} />
+        )}
+        {tab === "transactions" && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraftTypes(selectedTypes);
+              setSheet("filter");
+            }}
+            aria-label={`Filter transactions${selectedTypes.length ? `, ${selectedTypes.length} active` : ""}`}
+          >
+            <AccountIcon name="filter" />
+          </button>
+        )}
+      </form>
+      {tab === "transactions" ? (
+        <section className="account-home-list" aria-label="Recent transactions">
+          {transactions.length ? (
+            transactions.map((tx) => (
+              <article
+                className="account-transaction-card account-reference-transaction-card"
+                key={`${tx.sourceKind??"COMMERCIAL"}:${tx.id}`}
+              >
+                <Link
+                  href={
+                    tx.detailHref ?? (tx.type === "SALES_INVOICE"
+                      ? `/workspace/account/sales/${tx.id}`
+                      : `/workspace/account/transactions/${tx.id}`)
+                  }
+                >
+                  <div className="account-reference-card-top">
+                    <div className="account-reference-party">
+                      <strong>{tx.partyName}</strong>
+                      <span
+                        className={`account-reference-sale-status ${saleStatusClass(tx)}`}
+                      >
+                        {saleStatus(tx)}
+                      </span>
+                    </div>
+                    <div className="account-reference-meta">
+                      <strong>#{tx.documentNumber}</strong>
+                      <small>
+                        <AccountDate
+                          value={
+                            tx.issueDate instanceof Date
+                              ? tx.issueDate.toISOString()
+                              : tx.issueDate
+                          }
+                        />
+                      </small>
+                    </div>
+                  </div>
+                  <div className="account-reference-amounts">
+                    <span>
+                      <small>Total</small>
+                      <Money value={tx.grandTotal} />
+                    </span>
+                    {tx.showBalance!==false&&<span>
+                      <small>{tx.balanceLabel??"Balance"}</small>
+                      <Money value={tx.balanceDue} />
+                    </span>}
+                  </div>
+                </Link>
+                <footer className="account-reference-actions">
+                  {tx.printType!==null&&<><a
+                    href={`/api/account/print/${tx.printType??tx.type}/${tx.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Print"
+                  >
+                    <AccountIcon name="print" />
+                  </a>
+                  <button
+                    aria-label="Share"
+                    onClick={() => {
+                      setActive(tx);
+                      setSheet("share");
+                      if(shareAs==="PDF")void sharePdf(tx);
+                    }}
+                  >
+                    <AccountIcon name="share" />
+                  </button></>}
+                  <button
+                    aria-label="More"
+                    onClick={() => {
+                      setActive(tx);
+                      setSheet("actions");
+                    }}
+                  >
+                    <AccountIcon name="moreVertical" />
+                  </button>
+                </footer>
+              </article>
+            ))
+          ) : (
+            <Empty
+              title="No transactions found"
+              detail="Try changing your search or filters."
+            />
+          )}
+        </section>
+      ) : (
+        <section className="account-home-list account-party-panel" aria-label="Parties">
+          {parties.length ? (
+            parties.map((party) => (
+              <Link
+                className="account-party-card"
+                href={`/workspace/account/customers?${scopeParams}&q=${encodeURIComponent(party.name)}`}
+                key={party.id}
+              >
+                <span>
+                  <strong>{party.name}</strong>
+                  <small>
+                    Last activity{" "}
+                    {
+                      <AccountDate
+                        value={new Date(party.lastActivity).toISOString()}
+                      />
+                    }
+                  </small>
+                </span>
+                <Money value={party.balance} />
+              </Link>
+            ))
+          ) : (
+            <Empty
+              title="No parties found"
+              detail="Create an Account customer or change your search."
+            />
+          )}
+        </section>
+      )}
+      {(tab === "parties" ? canCreateParty : canCreateSale) && (
+        <Link
+          className={`account-floating-action${floatingVisible ? "" : " is-hidden"}`}
+          aria-hidden={!floatingVisible}
+          tabIndex={floatingVisible ? 0 : -1}
+          href={
+            tab === "transactions"
+              ? "/workspace/account/transactions/new?type=SALES_INVOICE"
+              : `/workspace/account/customers/new?${scopeParams}`
+          }
+        >
+          {tab === "transactions" ? "+ Add New Sale" : "+ Add New Party"}
+        </Link>
+      )}
+      {sheet && (
+        <div
+          className="account-sheet-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSheet(null);
+          }}
+        >
+          <section
+            className={`account-sheet${sheet === "add" ? " account-add-launcher" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="account-sheet-title"
+          >
+            <header>
+              <h2 id="account-sheet-title">
+                {sheet === "add"
+                  ? "Add Transaction"
+                  : sheet === "filter"
+                    ? "Filter By"
+                    : sheet === "share"
+                      ? "Share Transaction"
+                      : sheet === "actions"
+                        ? "Transaction Actions"
+                        : "More Options"}
+              </h2>
+              <button onClick={() => setSheet(null)} aria-label="Close">
+                ×
+              </button>
+            </header>
+            {sheet === "add" &&
+              ADD_GROUPS.map((group) => (
+                <div className="account-sheet-group" key={group.title}>
+                  <h3>{group.title}</h3>
+                  <div>
+                    {group.actions.map((action) =>
+                      action.disabled ? (
+                        <button disabled key={action.label}>
+                          <span>
+                            <AccountIcon name="plus" />
+                          </span>
+                          {action.label}
+                          <small>Coming Soon</small>
+                        </button>
+                      ) : (
+                        <Link key={action.label} href={action.href!}>
+                          <span>
+                            <AccountIcon name="plus" />
+                          </span>
+                          {action.label}
+                        </Link>
+                      ),
+                    )}
+                  </div>
+                </div>
+              ))}
+            {sheet === "more" && (
+              <div className="account-more-grid">
+                {(tab === "transactions" ? MORE_TXN : MORE_PARTY).map(
+                  (action) =>
+                    action.disabled ? (
+                      <button disabled key={action.label}>
+                        {action.label}
+                        <small>Coming later</small>
+                      </button>
+                    ) : (
+                      <Link key={action.label} href={action.href!}>
+                        {action.label}
+                      </Link>
+                    ),
+                )}
+              </div>
+            )}
+            {imageDownloads?.id===active?.id&&imageDownloads&&<div><p>Download each page image:</p>{imageDownloads.files.map((file,index)=><button key={file.name} onClick={()=>downloadFile(file)}>Download page {index+1}</button>)}</div>}
+            {shareError?.id===active?.id&&shareError&&<p role="alert">{shareError.message}</p>}
+            {sheet === "share" && (
+              <div className="account-more-grid">
+                <button disabled={sharePending} onClick={()=>void shareImages()}>{sharePending?"Preparing…":"Share as Image"}</button>
+                <button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
+              </div>
+            )}
+            {sheet === "actions" && active && (
+              <div className="account-more-grid">
+                {active.type==="SALES_INVOICE"&&canCreateSale&&<Link href={`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${active.id}`}>Duplicate</Link>}
+                {active.type === "SALES_INVOICE" &&
+                  active.status === "POSTED" && (
+                    <>
+                      <Link
+                        href={`/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${active.id}`}
+                      >
+                        Return
+                      </Link>
+                      <Link
+                        href={`/workspace/account/transactions/new?type=DELIVERY_CHALLAN&sourceDocumentId=${active.id}`}
+                      >
+                        Delivery Challan
+                      </Link>
+                    </>
+                  )}
+                <Link
+                  href={
+                    active.detailHref ?? (active.type === "SALES_INVOICE"
+                      ? `/workspace/account/sales/${active.id}`
+                      : `/workspace/account/transactions/${active.id}`)
+                  }
+                >
+                  {active.sourceKind&&active.sourceKind!=="COMMERCIAL"?"View details":"Payment History"}
+                </Link>
+                {active.printType!==null&&<button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>}
+                <button disabled>
+                  Generate e-Invoice<small>Coming later</small>
+                </button>
+              </div>
+            )}
+            {sheet === "filter" && (
+              <>
+                <div className="account-filter-list">
+                  {TRANSACTION_FILTERS.map((filter) => (
+                    <label key={filter.value}>
+                      <input
+                        type="checkbox"
+                        checked={draftTypes.includes(filter.value)}
+                        onChange={() =>
+                          setDraftTypes((old) =>
+                            old.includes(filter.value)
+                              ? old.filter((x) => x !== filter.value)
+                              : [...old, filter.value],
+                          )
+                        }
+                      />
+                      {filter.label}
+                    </label>
+                  ))}
+                </div>
+                <footer className="account-sheet-actions">
+                  <button onClick={() => setDraftTypes([])}>Clear</button>
+                  <button
+                    onClick={() => {
+                      update({ types: draftTypes.join(",") || null });
+                      setSheet(null);
+                    }}
+                  >
+                    Apply
+                  </button>
+                </footer>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+function Empty({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="account-home-empty">
+      <strong>{title}</strong>
+      <p>{detail}</p>
+    </div>
+  );
+}

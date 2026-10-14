@@ -1,9 +1,13 @@
+import { Money } from "@/components/account/account-ui";
 import Link from "next/link";
+import { randomUUID } from "node:crypto";
+import { indiaDateText } from "@/lib/follow-up-tasks/date";
 import {
   expenseAttachmentAction,
   expenseLifecycleAction,
+  payRecurringExpenseAction,
 } from "@/app/actions/expenses";
-import { getExpense } from "@/lib/account/expenses";
+import { getExpense, expenseOptions } from "@/lib/account/expenses";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
 import { SaveSubmitButton } from "@/components/account/save-feedback";
@@ -15,6 +19,7 @@ export default async function Page({
   const { id } = await params,
     x = await getExpense(id),
     c = x.capabilities;
+  const paymentOptions = c.payRecurring ? await expenseOptions() : null;
   const who = (userId: string | null) =>
     x.people.find((p) => p.id === userId)?.name ?? "Historical user";
   const control = (operation: string, label: string) => (
@@ -40,6 +45,13 @@ export default async function Page({
             Type: x.type,
             Status: x.status,
             Date: x.transactionDate.toISOString().slice(0, 10),
+            ...(x.paidDate
+              ? {
+                  "Payment date": x.paidDate.toISOString().slice(0, 10),
+                  "Approval review": x.approvalReviewStatus ?? "Not required",
+                  "Review reason": x.approvalReviewReason ?? "None",
+                }
+              : {}),
             Branch: x.branch?.name ?? "Historical branch",
             Category: x.category?.name ?? "Historical category",
             Project: x.project?.name ?? "No project",
@@ -79,12 +91,54 @@ export default async function Page({
             <h2>Billed items</h2>
             {lines.map((l, i) => (
               <p key={i}>
-                {l.name} · {l.quantity} × ₹{l.rate}
+                {l.name} · {l.quantity} × <Money value={l.rate} />
               </p>
             ))}
           </section>
         )}
         <section aria-label="Expense actions">
+          {c.payRecurring && (
+            <ActionFeedbackForm action={payRecurringExpenseAction}>
+              <h2>Record recurring bill payment</h2>
+              <p>
+                Due date stays unchanged. Payment posts on the date entered
+                below.
+              </p>
+              <input type="hidden" name="id" value={id} />
+              <input type="hidden" name="requestKey" value={randomUUID()} />
+              <label>
+                Payment date
+                <input
+                  type="date"
+                  name="paymentDate"
+                  required
+                  defaultValue={indiaDateText()}
+                />
+              </label>
+              <label>
+                Paid from
+                <select
+                  aria-label="Paid from"
+                  name="moneyAccountId"
+                  required
+                  defaultValue={x.moneyAccountId ?? ""}
+                >
+                  <option value="">Select account</option>
+                  {paymentOptions?.moneyAccounts
+                    .filter(
+                      (account) =>
+                        !account.branchId || account.branchId === x.branchId,
+                    )
+                    .map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <SaveSubmitButton>Mark recurring bill paid</SaveSubmitButton>
+            </ActionFeedbackForm>
+          )}
           {c.edit && (
             <Link href={`/workspace/account/expenses/${id}/edit`}>
               Edit draft
@@ -92,7 +146,8 @@ export default async function Page({
           )}
           {c.submit && control("PENDING_APPROVAL", "Submit")}
           {c.cancel && control("CANCELLED", "Cancel expense")}
-          {c.approve && control("APPROVED", "Approve")}
+          {c.approve &&
+            control("APPROVED", x.paidDate ? "Approve review" : "Approve")}
           {c.post && control("POSTED", "Post")}
           {c.reject && (
             <ActionFeedbackForm action={expenseLifecycleAction}>

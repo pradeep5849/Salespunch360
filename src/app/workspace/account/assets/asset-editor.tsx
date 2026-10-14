@@ -1,4 +1,8 @@
 "use client";
+import {useDisplayPreferences} from "@/components/account/display-preferences";
+import {formatMoney} from "@/lib/account/display-preferences";
+import type {CustomFieldDefinition} from "@prisma/client";
+import {CustomFieldInput} from "@/components/account/custom-field-input";
 import Link from "next/link";
 import { useState } from "react";
 import type { AccountActionResult } from "@/lib/account/action-feedback";
@@ -10,6 +14,7 @@ import {
 } from "@/components/account/action-feedback-form";
 import { SaveSubmitButton } from "@/components/account/save-feedback";
 export type AssetEditorOptions = {
+  customFields?:CustomFieldDefinition[];
   branches: { id: string; name: string }[];
   vendors: { id: string; name: string }[];
   hsnCodes: string[];
@@ -74,14 +79,17 @@ function Field({
 export function AssetEditor({
   options,
   asset,
+  customValues={},
   requestKey,
   action,
 }: {
   options: AssetEditorOptions;
+  customValues?:Record<string,unknown>;
   asset?: AssetEditorValue;
   requestKey: string;
   action: (f: FormData) => Promise<AccountActionResult>;
 }) {
+  const displayPreferences=useDisplayPreferences();
   const [stableRequestKey] = useState(requestKey);
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -230,7 +238,7 @@ export function AssetEditor({
         "Purchase line",
         (purchase?.lines ?? []).map((x) => ({
           id: x.id,
-          name: `${x.itemName} · ₹${x.taxableAmount}`,
+          name: `${x.itemName} · ${formatMoney(x.taxableAmount,displayPreferences)}`,
         })),
       )}
       <Field
@@ -338,6 +346,7 @@ export function AssetEditor({
           )}
         </div>
       ))}
+      {(options.customFields??[]).map(field=><CustomFieldInput key={field.id} field={field} value={customValues[field.fieldKey]}/>)}
       <div className="button-row">
         <SaveSubmitButton>Save asset</SaveSubmitButton>
         {!asset && (

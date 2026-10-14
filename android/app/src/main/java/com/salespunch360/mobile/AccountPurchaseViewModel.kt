@@ -52,6 +52,8 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                 if (generation != refreshGeneration) return@launch
                 _state.value = _state.value.copy(
                     loading = false,
+                    invoiceCustomFields=options.array("invoiceCustomFields"),
+                    accountSettings=options["accountSettings"] as? JsonObject?:JsonObject(emptyMap()),
                     rows = rows,
                     types = options["allowedDocumentTypes"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
                     branches = options.array("branches").map { it.option() },
@@ -98,14 +100,15 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                 type = type,
                 branchId = project?.branchId ?: _state.value.branches.firstOrNull()?.id.orEmpty(),
                 purpose=if(projectId.isNullOrBlank())"INVENTORY_SALES" else "PROJECT",
-                projectId=projectId.orEmpty()
+                projectId=projectId.orEmpty(),
+                notes=purchaseDefaultTerms(_state.value.accountSettings,type,!projectId.isNullOrBlank())
             )
         )
     }
 
     fun edit(draft: PurchaseDraft) {
         if (_state.value.saving) return
-        _state.value = _state.value.copy(draft = draft)
+        _state.value = _state.value.copy(draft = purchaseTermsForContextChange(_state.value.draft,draft,_state.value.accountSettings))
     }
 
     fun closeDraft() {

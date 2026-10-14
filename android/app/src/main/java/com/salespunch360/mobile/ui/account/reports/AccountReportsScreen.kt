@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,13 +19,16 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountReportViewModel
+import com.salespunch360.mobile.account.accountReportNames
+import com.salespunch360.mobile.account.accountReportColumns
+import com.salespunch360.mobile.account.accountReportRows
 import com.salespunch360.mobile.account.array
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.ui.account.accounting.Option
 import kotlinx.serialization.json.*
 
 @Composable
-fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountReportViewModel = viewModel(), initialQuery:String="") {
+fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountReportViewModel = viewModel(), initialQuery:String="", onNavigate:(String)->Unit={}) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     LaunchedEffect(initial,initialQuery) { vm.context(initialQuery); vm.choose(initial) }
@@ -49,8 +53,8 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     if (state.report == null) {
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp)) {
             item { Text("Account reports", style = MaterialTheme.typography.headlineSmall) }
-            items(state.options.array("reports")) { report ->
-                val name = report.jsonPrimitive.content
+            items(accountReportNames(state.options)) { report ->
+                val name = report
                 ListItem(headlineContent = { Text(name.replace('-', ' ').replaceFirstChar { it.uppercase() }) }, modifier = Modifier.clickable { vm.choose(name) })
             }
         }
@@ -68,10 +72,14 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             Option("Project", state.projectId, state.options.array("projects")) { vm.filter("project", it) }
         }
         when (state.report) {
+            "owner-capital", "profit-withdrawal" -> Option("Owner / Partner", state.ownerId, state.options.array("owners")) { vm.filter("owner", it) }
             "general-ledger" -> Option("Ledger", state.ledgerId, state.options.array("ledgers")) { vm.filter("ledger", it) }
             "customer-ledger" -> Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
             "vendor-ledger" -> Option("Vendor", state.vendorId, state.options.array("vendors")) { vm.filter("vendor", it) }
-            "items" -> Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
+            "items", "invoices", "customers" -> {
+                Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
+                Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
+            }
         }
         Row {
             Button(onClick = vm::run) { Text("Run") }
@@ -81,9 +89,11 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.data?.let { data ->
             Text(data.str("title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            data.str("note").takeIf { it.isNotBlank() }?.let { Text(it) }
+            state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
             LazyRow {
-                item { Column { data.array("columns").forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } }
-                items(data.array("rows")) { row -> Column { row.jsonArray.forEach { Text(it.jsonPrimitive.content) } } }
+                item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
+                itemsIndexed(accountReportRows(data)) { index, row -> val link=data.array("rowLinks").getOrNull(index)?.jsonPrimitive?.contentOrNull?.takeIf{it.startsWith("/workspace/account/money/capital/")};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }
             }
         }

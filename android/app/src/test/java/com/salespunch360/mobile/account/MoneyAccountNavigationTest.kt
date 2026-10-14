@@ -1,0 +1,34 @@
+package com.salespunch360.mobile.account
+
+import kotlinx.serialization.json.*
+import org.junit.Assert.*
+import org.junit.Test
+
+class MoneyAccountNavigationTest {
+    private val rows = listOf("BANK", "CASH", "PETTY_CASH").map { type -> buildJsonObject { put("id",type); put("type",type); put("isActive",false) } }
+    @Test fun separatesBankAndCashWithoutDroppingInactiveHistory() {
+        assertEquals(listOf(rows[0]),moneyAccountRowsForMode(rows,"bank-accounts"))
+        assertEquals(listOf(rows[1]),moneyAccountRowsForMode(rows,"cash-in-hand"))
+        assertEquals(rows,moneyAccountRowsForMode(rows,"accounts"))
+    }
+    @Test fun acceptsOnlySupportedAccountDestinations() {
+        assertEquals("bank-accounts",moneyAccountListMode("/workspace/account/money/bank-accounts?branchId=branch"))
+        assertEquals("cash-in-hand",moneyAccountListMode("/workspace/account/money/cash-in-hand"))
+        assertEquals("accounts",moneyAccountListMode("/workspace/account/money/accounts"))
+        assertNull(moneyAccountListMode("/workspace/account/money/accounts-unrelated"))
+        assertNull(moneyAccountListMode("/workspace/account/money/loans"))
+    }
+    @Test fun sendsOnlyBranchScopeWhileRetainingEntryTypePreference() {
+        val query="type=CASH&branchId=selected&search=bank"
+        assertEquals("branchId=selected",moneyContextQuery(query))
+        assertEquals("CASH",moneyAccountInitialType("accounts",query))
+        assertEquals("CASH",moneyAccountInitialType("cash-in-hand","scope=all"))
+        assertEquals("BANK",moneyAccountInitialType("bank-accounts","type=CASH"))
+        assertEquals("PETTY_CASH",moneyAccountInitialType("accounts","type=PETTY_CASH&scope=all"))
+    }
+    @Test fun preservesAmbiguousScopeForServerRejection() {
+        assertEquals("branchId=selected&scope=all",moneyContextQuery("branchId=selected&type=BANK&scope=all"))
+        assertEquals("",moneyContextQuery("type=CASH"))
+    }
+
+}

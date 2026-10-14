@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.purchase
 
+import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,8 +19,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
 @Composable
-fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
+fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
+    LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
     var initialEditorOpened by remember(initialType, initialProjectId) { mutableStateOf(false) }
     LaunchedEffect(initialType, initialProjectId, state.loading) {
@@ -50,7 +52,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
                 ListItem(
                     headlineContent = { Text(row.number, fontWeight = FontWeight.Bold) },
                     supportingContent = { Text("${row.party} · ${row.date} · ${row.type.replace('_', ' ')}") },
-                    trailingContent = { Column { Text("₹${row.total}"); Text(row.status) } },
+                    trailingContent = { Column { Text(accountMoney(row.total)); Text(row.status) } },
                     modifier = Modifier.clickable { vm.open(row.id) }
                 )
             }

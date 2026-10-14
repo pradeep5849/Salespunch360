@@ -16,6 +16,7 @@ export async function GET(r: Request) {
       await mobileExpenseCategories(
         await authenticateMobileToken(r.headers.get("authorization")),
         x.searchParams.get("q"),
+        { branchId: x.searchParams.get("branchId") ?? undefined, scope: x.searchParams.get("scope") ?? undefined },
       ),
     );
   } catch (e) {

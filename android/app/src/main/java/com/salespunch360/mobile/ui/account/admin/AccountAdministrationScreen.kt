@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.admin
 
+import com.salespunch360.mobile.ui.account.accountLabel
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountAdministrationViewModel
+import com.salespunch360.mobile.account.str
+import com.salespunch360.mobile.ui.account.sales.SelectField
 import com.salespunch360.mobile.ui.MutationFeedback
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -52,12 +55,13 @@ fun AccountAdministrationScreen(
     mode: String,
     padding: PaddingValues,
     navigate:(String)->Unit={},
-    vm: AccountAdministrationViewModel = viewModel()
+    vm: AccountAdministrationViewModel = viewModel(),
+    initialQuery:String=""
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
 
-    LaunchedEffect(mode) {
-        vm.load(mode)
+    LaunchedEffect(mode,initialQuery) {
+        vm.load(mode,initialQuery)
     }
 
     Column(
@@ -85,13 +89,17 @@ fun AccountAdministrationScreen(
         when (mode) {
             "users" -> UserView(state.data, vm)
             "settings" -> SettingsForm(state.data, vm)
-            "general" -> GeneralSettingsView(state.data, vm)
-            "party-settings" -> PartySettingsView(state.data,vm,navigate)
-            "party-additional-fields" -> PartyAdditionalFieldsView(state.data,vm)
-            "transaction-sms" -> TransactionSmsView()
-            "transaction-settings" -> TransactionSettingsForm(state.data, vm)
-            "custom-fields" -> CustomFieldView(state.data, vm)
-            "modules" -> ModuleView(state.data, vm)
+            "general" -> androidx.compose.runtime.CompositionLocalProvider(com.salespunch360.mobile.ui.account.LocalAccountDisplayPreferences provides com.salespunch360.mobile.ui.account.AccountDisplayPreferences.from(state.data.jsonObject["settings"]?.jsonObject)){GeneralSettingsView(state.data, vm,navigate)}
+            "party-settings" -> PartySettingsView(state.data,vm,navigate,state.loading)
+            "party-additional-fields" -> PartyAdditionalFieldsView(state.data,vm,state.loading)
+            "transaction-sms" -> TransactionSmsView(state.data,vm,state.loading)
+            "business-currency" -> BusinessCurrencyView(state.data,vm,state.loading)
+            "transaction-settings" -> TransactionSettingsForm(state.data, vm,navigate)
+            "transaction-defaults" -> TransactionDefaultsView(state.data,vm,state.loading)
+            "backup-settings" -> BackupSettingsView(state.data,vm,navigate)
+            "notifications" -> AttentionView(state.data,navigate,vm::completeServiceReminder,state.loading,vm::notificationsPage)
+            "custom-fields" -> CustomFieldView(state.data, vm,state.loading)
+            "modules" -> ModuleView(state.data, vm,state.loading)
             "item-settings" -> ItemSettingsView(state.data,vm)
             "print-templates" -> InvoicePrintSettingsView(state.data, vm)
             "reminders" -> ReminderLandingView(navigate)
@@ -151,12 +159,9 @@ private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel)
         item{SwitchRow("Barcode scanning for items",barcode){barcode=it}}
         item{SwitchRow("Stock maintenance",stock){stock=it}}
         item{SwitchRow("Manufacturing",false,enabled=false){}}
-        item{SwitchRow("Item Units",units){units=it}}
+        item{SwitchRow("Item Units",units){units=it;if(!it)defaultUnit=""}}
         item{
-            Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
-                Text("Default Unit",Modifier.weight(1f))
-                Switch(checked=defaultUnit.isNotBlank(),onCheckedChange={checked->defaultUnit=if(checked)defaultUnit.ifBlank{"Unit"} else ""})
-            }
+            OutlinedTextField(defaultUnit,{if(it.length<=40)defaultUnit=it},label={Text("Default Unit")},placeholder={Text("For example, PCS")},enabled=units,modifier=Modifier.fillMaxWidth(),singleLine=true)
         }
         item{SwitchRow("Item Category",category){category=it}}
         item{SwitchRow("Party wise item rate",partyRate){partyRate=it}}
@@ -207,12 +212,12 @@ private val transactionSettingGroups=listOf(
 )
 private val transactionPrefixes=listOf("SALES_INVOICE" to "Sale invoices","CREDIT_NOTE" to "Credit Note","SALES_ORDER" to "Sale Order","PURCHASE_ORDER" to "Purchase Order","ESTIMATE" to "Estimate","PROFORMA_INVOICE" to "Proforma Invoice","DELIVERY_CHALLAN" to "Delivery Challan","CUSTOMER_RECEIPT" to "Payment-In")
 
-@Composable private fun TransactionSettingsForm(data:JsonElement,vm:AccountAdministrationViewModel){
-    val root=data as? JsonObject?:return;val settings=root["settings"]?.jsonObject?:JsonObject(emptyMap());val stored=settings["transactionDefaults"]?.jsonObject?.get("transactionPreferences")?.jsonObject?:JsonObject(emptyMap());val branches=root["branches"]?.jsonArray.orEmpty();val branchId=branches.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty();val defaults=mapOf("showInvoiceNumber" to true,"billingName" to true,"rateTaxMode" to true,"transactionTax" to true,"transactionDiscount" to true,"linkPayments" to true,"invoicePreview" to true,"termsEnabled" to true,"reverseCharge" to true,"stateOfSupply" to true);var values by remember(stored){mutableStateOf(transactionSettingGroups.flatMap{it.second}.associate{it.first to (stored[it.first]?.jsonPrimitive?.booleanOrNull?:defaults.getOrDefault(it.first,false))})};var roundStep by remember(stored){mutableStateOf(stored["roundingStep"]?.jsonPrimitive?.content?:"1")};var shareAs by remember(stored){mutableStateOf(stored["shareAs"]?.jsonPrimitive?.content?:"ASK")};val prefixRows=root["numberingSeries"]?.jsonArray.orEmpty();var prefixes by remember(prefixRows,branchId){mutableStateOf(transactionPrefixes.associate{item->item.first to (prefixRows.firstOrNull{row->row.jsonObject["branchId"]?.jsonPrimitive?.content==branchId&&row.jsonObject["seriesKey"]?.jsonPrimitive?.content==item.first}?.jsonObject?.get("prefix")?.jsonPrimitive?.content?:"")})}
+@Composable private fun TransactionSettingsForm(data:JsonElement,vm:AccountAdministrationViewModel,navigate:(String)->Unit){
+    val root=data as? JsonObject?:return;val settings=root["settings"]?.jsonObject?:JsonObject(emptyMap());val stored=settings["transactionDefaults"]?.jsonObject?.get("transactionPreferences")?.jsonObject?:JsonObject(emptyMap());val branches=root["branches"]?.jsonArray.orEmpty().filter{it.jsonObject["isActive"]?.jsonPrimitive?.booleanOrNull!=false};var branchId by remember(branches){mutableStateOf(branches.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty())};val defaults=mapOf("showInvoiceNumber" to true,"billingName" to true,"rateTaxMode" to true,"transactionTax" to true,"transactionDiscount" to true,"linkPayments" to true,"invoicePreview" to true,"termsEnabled" to true,"reverseCharge" to true,"stateOfSupply" to true);var values by remember(stored){mutableStateOf(transactionSettingGroups.flatMap{it.second}.associate{it.first to (stored[it.first]?.jsonPrimitive?.booleanOrNull?:defaults.getOrDefault(it.first,false))})};var roundStep by remember(stored){mutableStateOf(stored["roundingStep"]?.jsonPrimitive?.content?:"1")};var shareAs by remember(stored){mutableStateOf(stored["shareAs"]?.jsonPrimitive?.content?:"ASK")};val prefixRows=root["numberingSeries"]?.jsonArray.orEmpty();var prefixes by remember(prefixRows,branchId){mutableStateOf(transactionPrefixes.associate{item->item.first to (prefixRows.firstOrNull{row->row.jsonObject["branchId"]?.jsonPrimitive?.content==branchId&&row.jsonObject["seriesKey"]?.jsonPrimitive?.content==item.first}?.jsonObject?.get("prefix")?.jsonPrimitive?.content?:"")})}
     LazyColumn(verticalArrangement=Arrangement.spacedBy(4.dp),contentPadding=PaddingValues(bottom=80.dp)){
-        item{Text(branches.firstOrNull()?.jsonObject?.get("name")?.jsonPrimitive?.content?:"No active branch",style=MaterialTheme.typography.titleMedium)}
-        transactionSettingGroups.forEach{group->item{Text(group.first,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp,bottom=5.dp))};items(group.second){entry->SwitchRow(entry.second,values[entry.first]?:false){checked->values=values+(entry.first to checked)}};if(group.first=="TAXES, DISCOUNT & TOTAL")item{OutlinedTextField(roundStep,{roundStep=it},label={Text("Nearest · To")})};if(group.first=="MORE TRANSACTION FEATURES"){item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Share Transaction as");TextButton(onClick={shareAs=if(shareAs=="ASK")"PDF" else "ASK"}){Text(if(shareAs=="ASK")"Ask me Everytime" else "PDF")}}};item{ListItem(headlineContent={Text("Passcode for edit/delete")},supportingContent={Text("Secure passcode support required")},trailingContent={Switch(false,null)})};items(listOf("Due Dates and Payment terms","Set Terms & Conditions","Additional Fields","Transportation Details","Additional Charges")){ListItem(headlineContent={Text(it)},trailingContent={Text("›")})}}}
-        item{Text("TRANSACTION PREFIXES",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp,bottom=5.dp))};items(transactionPrefixes){entry->OutlinedTextField(prefixes[entry.first].orEmpty(),{prefixes=prefixes+(entry.first to it)},label={Text(entry.second+" prefix")},modifier=Modifier.fillMaxWidth())};item{Button(enabled=branchId.isNotBlank(),onClick={vm.save("transaction-settings",buildJsonObject{putJsonObject("preferences"){values.forEach{put(it.key,it.value)};put("shareAs",shareAs);put("roundingMode","NEAREST");put("roundingStep",roundStep.toDoubleOrNull()?:1.0)};put("branchId",branchId);putJsonObject("prefixes"){prefixes.forEach{put(it.key,it.value)}}})},modifier=Modifier.fillMaxWidth()){Text("Save Transaction Settings")}}
+        item{ChoiceSetting("Firm / company branch",branchId,branches.map{row->val branch=row.jsonObject;(branch["id"]?.jsonPrimitive?.content.orEmpty()) to (branch["name"]?.jsonPrimitive?.content.orEmpty())},enabled=branches.isNotEmpty()){branchId=it}}
+        transactionSettingGroups.forEach{group->item{Text(group.first,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp,bottom=5.dp))};items(group.second){entry->SwitchRow(entry.second,values[entry.first]?:false){checked->values=values+(entry.first to checked)}};if(group.first=="TAXES, DISCOUNT & TOTAL")item{OutlinedTextField(roundStep,{roundStep=it},label={Text("Nearest · To")},isError=roundStep.toDoubleOrNull()?.let{it.isFinite()&&it>0&&it<=100}!=true,supportingText={Text("Enter a rounding step greater than 0 and at most 100.")})};if(group.first=="MORE TRANSACTION FEATURES"){item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Share Transaction as");TextButton(onClick={shareAs=if(shareAs=="ASK")"PDF" else "ASK"}){Text(if(shareAs=="ASK")"Ask me Everytime" else "PDF")}}};item{ListItem(headlineContent={Text("Passcode for edit/delete")},supportingContent={Text("Secure passcode support required")},trailingContent={Switch(false,null)})};items(listOf("Due Dates and Payment terms","Set Terms & Conditions","Additional Fields")){label->ListItem(headlineContent={Text(label)},trailingContent={Text("›")},modifier=Modifier.clickable{navigate(if(label=="Additional Fields")"/workspace/account/settings/custom-fields" else "/workspace/account/settings/transactions/defaults")})}}}
+        item{Text("TRANSACTION PREFIXES",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp,bottom=5.dp))};items(transactionPrefixes){entry->OutlinedTextField(prefixes[entry.first].orEmpty(),{if(it.length<=30)prefixes=prefixes+(entry.first to it)},label={Text(entry.second+" prefix")},modifier=Modifier.fillMaxWidth())};item{Button(enabled=branchId.isNotBlank()&&roundStep.toDoubleOrNull()?.let{it.isFinite()&&it>0&&it<=100}==true,onClick={vm.save("transaction-settings",buildJsonObject{putJsonObject("preferences"){values.forEach{put(it.key,it.value)};put("shareAs",shareAs);put("roundingMode","NEAREST");put("roundingStep",roundStep.toDoubleOrNull()?:1.0)};put("branchId",branchId);putJsonObject("prefixes"){prefixes.forEach{put(it.key,it.value)}}})},modifier=Modifier.fillMaxWidth()){Text("Save Transaction Settings")}}
     }
 }
 
@@ -268,29 +273,39 @@ private fun SettingsForm(data: JsonElement, vm: AccountAdministrationViewModel) 
 }
 
 @Composable
-private fun CustomFieldView(data: JsonElement, vm: AccountAdministrationViewModel) {
+private fun CustomFieldView(data: JsonElement, vm: AccountAdministrationViewModel,busy:Boolean) {
     val root = data as? JsonObject ?: return
-    var key by remember { mutableStateOf("") }
-    var label by remember { mutableStateOf("") }
-    Column {
-        OutlinedTextField(key, { key = it }, label = { Text("Field key") })
-        OutlinedTextField(label, { label = it }, label = { Text("Label") })
-        Button(onClick = {
-            vm.save("custom-fields", buildJsonObject {
-                put("entityType", "CUSTOMER")
-                put("fieldKey", key)
-                put("label", label)
-                put("dataType", "TEXT")
-                put("isRequired", false)
-                put("position", 0)
+    var editing by remember(root){mutableStateOf<JsonObject?>(null)}
+    var entity by remember(editing){mutableStateOf(editing?.str("entityType")?:"CUSTOMER")}
+    var key by remember(editing){mutableStateOf(editing?.str("fieldKey").orEmpty())}
+    var label by remember(editing){mutableStateOf(editing?.str("label").orEmpty())}
+    var type by remember(editing){mutableStateOf(editing?.str("dataType")?:"TEXT")}
+    var choices by remember(editing){mutableStateOf((editing?.get("options") as? JsonArray).orEmpty().joinToString(", "){it.jsonPrimitive.content})}
+    var required by remember(editing){mutableStateOf(editing?.get("isRequired")?.jsonPrimitive?.booleanOrNull?:false)}
+    var active by remember(editing){mutableStateOf(editing?.get("isActive")?.jsonPrimitive?.booleanOrNull?:true)}
+    var printing by remember(editing){mutableStateOf((editing?.get("validation") as? JsonObject)?.get("showInPrint")?.jsonPrimitive?.booleanOrNull?:false)}
+    val printSupported=com.salespunch360.mobile.account.supportsCustomFieldPrint(entity)
+    var position by remember(editing){mutableStateOf(editing?.str("position")?:"0")}
+    LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        item{Text(if(editing==null)"Create custom field" else "Edit custom field",fontWeight=FontWeight.Bold)}
+        item{SelectField("Entity",entity,listOf("CUSTOMER","VENDOR","PRODUCT","SERVICE","PROJECT","ASSET","QUOTATION","SALES_INVOICE","PURCHASE_BILL").map{it to it.replace('_',' ')}){if(!busy&&editing==null)entity=it}}
+        item{OutlinedTextField(key,{key=it},enabled=!busy&&editing==null,label={Text("Field key")})}
+        item{OutlinedTextField(label,{label=it},enabled=!busy,label={Text("Label")})}
+        item{SelectField("Type",type,listOf("TEXT","TEXTAREA","NUMBER","DECIMAL","DATE","BOOLEAN","SELECT").map{it to it}){if(!busy&&editing==null)type=it}}
+        if(type=="SELECT")item{OutlinedTextField(choices,{choices=it},enabled=!busy,label={Text("Options, comma separated")})}
+        item{OutlinedTextField(position,{position=it},enabled=!busy,label={Text("Position")})}
+        item{SwitchRow("Required",required,!busy){required=it};SwitchRow("Show in print",printing&&printSupported,!busy&&printSupported){printing=it};if(!printSupported)Text("Printing custom fields is unavailable for this entity. Saved fields remain available on its record.");if(editing!=null)SwitchRow("Active",active,!busy){active=it}}
+        item{Button(enabled=!busy&&key.matches(Regex("[a-z][a-z0-9_]{1,59}"))&&label.isNotBlank()&&label.length<=100&&position.toIntOrNull() in 0..1000&&(type!="SELECT"||choices.split(',').any{it.isNotBlank()}),onClick={
+            vm.save("custom-fields",buildJsonObject{
+                editing?.str("id")?.let{put("id",it)};put("entityType",entity);put("fieldKey",key);put("label",label);put("dataType",type);put("isRequired",required);put("showInPrint",printing&&printSupported);put("isActive",active);put("position",position.toInt());if(type=="SELECT")putJsonArray("options"){choices.split(',').map{it.trim()}.filter{it.isNotBlank()}.forEach{add(JsonPrimitive(it))}}
             })
-        }) { Text("Create custom field") }
-        JsonRows(root["fields"] ?: JsonArray(emptyList()))
+        }){Text(if(busy)"Saving…" else if(editing==null)"Create field" else "Save field")};if(editing!=null)TextButton(enabled=!busy,onClick={editing=null}){Text("Cancel edit")}}
+        items((root["fields"] as? JsonArray).orEmpty()){value->val field=value.jsonObject;ListItem(headlineContent={Text(field.str("label"))},supportingContent={Text("${field.str("entityType")} · ${field.str("dataType")} · ${if(field["isActive"]?.jsonPrimitive?.booleanOrNull==true)"ACTIVE" else "INACTIVE"}")},trailingContent={TextButton(enabled=!busy,onClick={editing=field}){Text("Edit")}})}
     }
 }
 
 @Composable
-private fun ModuleView(data: JsonElement, vm: AccountAdministrationViewModel) {
+private fun ModuleView(data: JsonElement, vm: AccountAdministrationViewModel,busy:Boolean) {
     val root = data as? JsonObject ?: return
     val enabled = root["modules"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty()
     val types = root["businessTypes"]?.jsonArray?.toList().orEmpty()
@@ -298,7 +313,7 @@ private fun ModuleView(data: JsonElement, vm: AccountAdministrationViewModel) {
     var selected by remember(root) { mutableStateOf(enabled) }
     var businessType by remember(root) { mutableStateOf(initialType) }
     var typeMenu by remember { mutableStateOf(false) }
-    val recommendations = root["recommendations"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty()
+    val recommendations = (root["recommendationsByBusinessType"]?.jsonObject?.get(businessType) ?: root["recommendations"])?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty()
     LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item {
             ElevatedCard(Modifier.fillMaxWidth()) {
@@ -306,7 +321,7 @@ private fun ModuleView(data: JsonElement, vm: AccountAdministrationViewModel) {
                     Text("Step 1",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
                     Text("Business Type",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
                     Box {
-                        OutlinedButton(onClick={typeMenu=true},modifier=Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick={typeMenu=true},enabled=!busy,modifier=Modifier.fillMaxWidth()) {
                             val label=types.firstOrNull{it.jsonObject["key"]?.jsonPrimitive?.content==businessType}?.jsonObject?.get("label")?.jsonPrimitive?.content?:"Other / Mixed"
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Text("⌄")}
                         }
@@ -327,18 +342,18 @@ private fun ModuleView(data: JsonElement, vm: AccountAdministrationViewModel) {
             val available=item["available"]!!.jsonPrimitive.boolean
             val core=key=="BASIC_ACCOUNTING"
             ElevatedCard(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().clickable(enabled=available&&!core){selected=if(key in selected)selected-key else selected+key}.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clickable(enabled=available&&!core&&!busy){selected=if(key in selected)selected-key else selected+key}.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(item["label"]!!.jsonPrimitive.content,fontWeight=FontWeight.SemiBold)
                         val recommended=key in recommendations&&available&&!core
                         Text(item["note"]!!.jsonPrimitive.content+(if(recommended)" · Recommended" else ""),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    when { core->Text("Core",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);!available->Text("Coming Soon",color=MaterialTheme.colorScheme.onSurfaceVariant);else->Switch(checked=key in selected,onCheckedChange={checked->selected=if(checked)selected+key else selected-key}) }
+                    when { core->Text("Core",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);!available->Text("Coming Soon",color=MaterialTheme.colorScheme.onSurfaceVariant);else->Switch(checked=key in selected,enabled=!busy,onCheckedChange={checked->selected=if(checked)selected+key else selected-key}) }
                 }
             }
         }
         item {
-            Button(onClick = {
+            Button(enabled=!busy,onClick = {
                 vm.save("modules", buildJsonObject {
                     put("businessType", businessType)
                     putJsonArray("enabledModules") { selected.forEach { add(it) } }
@@ -473,8 +488,8 @@ private val accountSettingsDestinations=listOf(
 @Composable
 fun AccountSettingsMenuScreen(padding:PaddingValues,navigate:(String)->Unit,back:()->Boolean){
     Column(Modifier.fillMaxSize().padding(padding)){
-        Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={back()}){Text("←")};Text("Settings",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)}
-        LazyColumn(Modifier.fillMaxSize()){items(accountSettingsDestinations){item->ListItem(headlineContent={Text(item.first)},leadingContent={Text(item.third,style=MaterialTheme.typography.titleLarge)},trailingContent={Text("›")},modifier=Modifier.fillMaxWidth().clickable{navigate(item.second)});HorizontalDivider()}}
+        Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={back()}){Text("←")};Text(accountLabel("Settings"),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)}
+        LazyColumn(Modifier.fillMaxSize()){items(accountSettingsDestinations){item->ListItem(headlineContent={Text(accountLabel(item.first))},leadingContent={Text(item.third,style=MaterialTheme.typography.titleLarge)},trailingContent={Text("›")},modifier=Modifier.fillMaxWidth().clickable{navigate(item.second)});HorizontalDivider()}}
     }
 }
 
@@ -493,7 +508,8 @@ private val partyHelp=mapOf(
 private fun PartySettingsView(
     data: JsonElement,
     vm: AccountAdministrationViewModel,
-    navigate: (String) -> Unit
+    navigate: (String) -> Unit,
+    busy:Boolean
 ) {
     val saved = data.jsonObject["settings"]
         ?.jsonObject
@@ -516,7 +532,7 @@ private fun PartySettingsView(
             PartySettingRow(
                 "GSTIN Number",
                 gstin,
-                true,
+                !busy,
                 partyHelp.getValue("gstin"),
                 { gstin = it },
                 { help = it }
@@ -526,7 +542,7 @@ private fun PartySettingsView(
             PartySettingRow(
                 "Party Grouping",
                 grouping,
-                true,
+                !busy,
                 partyHelp.getValue("grouping"),
                 { grouping = it },
                 { help = it }
@@ -552,7 +568,7 @@ private fun PartySettingsView(
             PartySettingRow(
                 "Party Shipping Address",
                 shipping,
-                true,
+                !busy,
                 partyHelp.getValue("shipping"),
                 { shipping = it },
                 { help = it }
@@ -562,7 +578,7 @@ private fun PartySettingsView(
             PartySettingRow(
                 "Print Shipping Address",
                 printShipping,
-                shipping,
+                shipping&&!busy,
                 partyHelp.getValue("print"),
                 { printShipping = it },
                 { help = it }
@@ -580,6 +596,7 @@ private fun PartySettingsView(
         }
         item {
             Button(
+                enabled=!busy,
                 onClick = {
                     vm.save(
                         "party-settings",
@@ -602,12 +619,23 @@ private fun PartySettingsView(
 
     PartyInfoDialog(help) { help = null }
 }
-@Composable private fun PartyAdditionalFieldsView(data:JsonElement,vm:AccountAdministrationViewModel){val existing=data.jsonObject["fields"]?.jsonArray.orEmpty().filter{it.jsonObject["entityType"]?.jsonPrimitive?.content=="CUSTOMER"}.associateBy{it.jsonObject["fieldKey"]?.jsonPrimitive?.content.orEmpty()};val keys=listOf("party_additional_1","party_additional_2","party_additional_3","party_date");var enabled by remember(existing){mutableStateOf(keys.map{existing[it]?.jsonObject?.get("isActive")?.jsonPrimitive?.booleanOrNull?:false})};var labels by remember(existing){mutableStateOf(keys.mapIndexed{i,key->existing[key]?.jsonObject?.get("label")?.jsonPrimitive?.content?:if(key=="party_date")"Date Field" else "Additional Field ${i+1}"})};var printing by remember(existing){mutableStateOf(keys.map{key->existing[key]?.jsonObject?.get("validation")?.jsonObject?.get("showInPrint")?.jsonPrimitive?.booleanOrNull?:false})};LazyColumn(contentPadding=PaddingValues(bottom=90.dp)){items(keys.size){i->Text(if(i==3)"Date Field" else "Additional Field ${i+1}",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=16.dp));SwitchRow("Enable",enabled[i]){value->enabled=enabled.mapIndexed{index,old->if(index==i)value else old}};OutlinedTextField(labels[i],{value->labels=labels.mapIndexed{index,old->if(index==i)value else old}},label={Text("Field Name")},enabled=enabled[i],modifier=Modifier.fillMaxWidth());if(i==3)OutlinedTextField("dd/MM/yyyy",{},readOnly=true,label={Text("Date Format")},enabled=enabled[i],modifier=Modifier.fillMaxWidth());SwitchRow("Show in print",printing[i],enabled[i]){value->printing=printing.mapIndexed{index,old->if(index==i)value else old}}};item{Button(onClick={vm.save("party-additional-fields",buildJsonArray{keys.forEachIndexed{i,key->add(buildJsonObject{put("key",key);put("enabled",enabled[i]);put("label",labels[i]);put("showInPrint",printing[i]);if(i==3)put("dateFormat","DD/MM/YYYY")})}})},modifier=Modifier.fillMaxWidth().padding(top=16.dp)){Text("Save")}}}}
-@Composable private fun TransactionSmsView(){Column{Text("Coming Soon",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold,modifier=Modifier.padding(vertical=16.dp));listOf("Send to party","Send SMS Copy to Self","Automatically Share Invoices on SalesPunch360 Network").forEach{ListItem(headlineContent={Text(it)},supportingContent={Text("Coming Soon")},trailingContent={Switch(false,null,enabled=false)});HorizontalDivider()}}}
+@Composable private fun PartyAdditionalFieldsView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean){val existing=data.jsonObject["fields"]?.jsonArray.orEmpty().filter{it.jsonObject["entityType"]?.jsonPrimitive?.content=="CUSTOMER"}.associateBy{it.jsonObject["fieldKey"]?.jsonPrimitive?.content.orEmpty()};val keys=listOf("party_additional_1","party_additional_2","party_additional_3","party_date");var enabled by remember(existing){mutableStateOf(keys.map{existing[it]?.jsonObject?.get("isActive")?.jsonPrimitive?.booleanOrNull?:false})};var labels by remember(existing){mutableStateOf(keys.mapIndexed{i,key->existing[key]?.jsonObject?.get("label")?.jsonPrimitive?.content?:if(key=="party_date")"Date Field" else "Additional Field ${i+1}"})};var printing by remember(existing){mutableStateOf(keys.map{key->existing[key]?.jsonObject?.get("validation")?.jsonObject?.get("showInPrint")?.jsonPrimitive?.booleanOrNull?:false})};LazyColumn(contentPadding=PaddingValues(bottom=90.dp)){items(keys.size){i->Text(if(i==3)"Date Field" else "Additional Field ${i+1}",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=16.dp));SwitchRow("Enable",enabled[i],!busy){value->enabled=enabled.mapIndexed{index,old->if(index==i)value else old}};OutlinedTextField(labels[i],{value->labels=labels.mapIndexed{index,old->if(index==i)value else old}},label={Text("Field Name")},enabled=enabled[i]&&!busy,modifier=Modifier.fillMaxWidth());if(i==3)OutlinedTextField("dd/MM/yyyy",{},readOnly=true,label={Text("Date Format")},enabled=enabled[i]&&!busy,modifier=Modifier.fillMaxWidth());SwitchRow("Show in print",printing[i],enabled[i]&&!busy){value->printing=printing.mapIndexed{index,old->if(index==i)value else old}}};item{Button(enabled=!busy&&labels.all{it.isNotBlank()&&it.length<=100},onClick={vm.save("party-additional-fields",buildJsonArray{keys.forEachIndexed{i,key->add(buildJsonObject{put("key",key);put("enabled",enabled[i]);put("label",labels[i]);put("showInPrint",printing[i]);if(i==3)put("dateFormat","DD/MM/YYYY")})}})},modifier=Modifier.fillMaxWidth().padding(top=16.dp)){Text("Save")}}}}
+@Composable private fun TransactionSmsView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean){
+ val saved=data.jsonObject["settings"]?.jsonObject?.get("transactionDefaults")?.jsonObject?.get("transactionMessaging")?.jsonObject
+ var party by remember(saved){mutableStateOf(saved?.get("sendToParty")?.jsonPrimitive?.booleanOrNull?:false)}
+ var self by remember(saved){mutableStateOf(saved?.get("copyToSelf")?.jsonPrimitive?.booleanOrNull?:false)}
+ var link by remember(saved){mutableStateOf(saved?.get("includeInvoiceLink")?.jsonPrimitive?.booleanOrNull?:false)}
+ Column{Text("Prepare messages for manual sending. Use SMS, WhatsApp, copy or share.");SwitchRow("Send to party",party,!busy){party=it};SwitchRow("Prepare Copy to Self",self,!busy){self=it};SwitchRow("Include Invoice Link",link,!busy){link=it};Button(enabled=!busy,onClick={vm.save("transaction-messaging",buildJsonObject{put("sendToParty",party);put("copyToSelf",self);put("includeInvoiceLink",link)})}){Text("Save")}}
+}
+@Composable private fun BusinessCurrencyView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean){
+ var currency by remember(data){mutableStateOf(data.jsonObject["settings"]?.jsonObject?.get("baseCurrency")?.jsonPrimitive?.content?:"INR")}
+ Column{Text("Business Currency");listOf("INR","USD","EUR","GBP","AED").forEach{x->Row(verticalAlignment=Alignment.CenterVertically){RadioButton(currency==x,{currency=x},enabled=!busy);Text(x)}};Text("Currency can be changed before accounting entries are posted.");Button(enabled=!busy,onClick={vm.save("business-currency",buildJsonObject{put("baseCurrency",currency)})}){Text("Save")}}
+}
 
 @Composable
-private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewModel){
+private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewModel,navigate:(String)->Unit){
     val context=LocalContext.current
+    val busy=vm.state.collectAsStateWithLifecycle().value.loading
     val current=data.jsonObject["settings"]?.jsonObject?:JsonObject(emptyMap())
     var assetsEnabled by remember(data){mutableStateOf(data.jsonObject["modules"]?.jsonArray?.any{it.jsonPrimitive.content=="ASSETS"}?:true)}
     var language by remember(current){mutableStateOf(current["appLanguage"]?.jsonPrimitive?.content?:"en")}
@@ -616,19 +644,49 @@ private fun GeneralSettingsView(data:JsonElement,vm:AccountAdministrationViewMod
     var dateFormat by remember(current){mutableStateOf(current["dateFormat"]?.jsonPrimitive?.content?:"DD/MM/YYYY")}
     var warning by remember(current){mutableStateOf(current["warnUnsavedChanges"]?.jsonPrimitive?.booleanOrNull?:true)}
     val appearance="STANDARD"
+    val originalAssets=data.jsonObject["modules"]?.jsonArray?.any{it.jsonPrimitive.content=="ASSETS"}?:true
+    val dirty=language!=(current["appLanguage"]?.jsonPrimitive?.content?:"en")||currency!=(current["baseCurrency"]?.jsonPrimitive?.content?:"INR")||decimals!=(current["displayDecimalPlaces"]?.jsonPrimitive?.intOrNull?:2)||dateFormat!=(current["dateFormat"]?.jsonPrimitive?.content?:"DD/MM/YYYY")||warning!=(current["warnUnsavedChanges"]?.jsonPrimitive?.booleanOrNull?:true)||assetsEnabled!=originalAssets
+    var leaveTo by remember{mutableStateOf<String?>(null)}
+    androidx.activity.compose.BackHandler(enabled=dirty&&warning){leaveTo="/workspace/account/settings"}
+    fun open(path:String){if(dirty&&warning)leaveTo=path else navigate(path)}
+    if(leaveTo!=null)AlertDialog(onDismissRequest={leaveTo=null},title={Text(accountLabel("Unsaved changes"))},text={Text(accountLabel("Leave General Settings without saving your changes?"))},confirmButton={TextButton({val path=leaveTo!!;leaveTo=null;navigate(path)}){Text(accountLabel("Leave"))}},dismissButton={TextButton({leaveTo=null}){Text(accountLabel("Stay"))}})
     LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
-        item{Text("Application",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
-        item{ChoiceSetting("App Language",language,listOf("en" to "English","hi" to "Hindi")){language=it}}
-        item{ChoiceSetting("Business Currency",currency,listOf("INR","USD","EUR","GBP","AED").map{it to it}){currency=it}}
-        item{ListItem(headlineContent={Text("Decimal Places")},supportingContent={Text("Display precision only; stored calculation precision is unchanged.")},trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={decimals=(decimals-1).coerceAtLeast(0)},enabled=decimals>0){Text("−")};Text(decimals.toString());IconButton(onClick={decimals=(decimals+1).coerceAtMost(4)},enabled=decimals<4){Text("+")}}})}
-        item{ChoiceSetting("Date Format",dateFormat,listOf("DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD").map{it to it}){dateFormat=it}}
-        item{SwitchRow("Show warning for unsaved changes",warning){warning=it}}
-        item{ChoiceSetting("Theme",appearance,listOf("STANDARD" to "Standard","TRENDING_DISABLED" to "Trending — Coming Soon","MODERN_DISABLED" to "Modern — Coming Soon")){}}
-        item{SwitchRow("Fixed Assets",assetsEnabled){assetsEnabled=it}}
-        item{Text("Security",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);ListItem(headlineContent={Text("Passcode / Fingerprint")},supportingContent={Text("Managed by Android device security")},trailingContent={Text("›")},modifier=Modifier.clickable{context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))})}
-        item{Button(onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance);put("fixedAssetsEnabled",assetsEnabled)})},modifier=Modifier.fillMaxWidth()){Text("Save General Settings")}}
+        item{Text(accountLabel("Application"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+        item{ChoiceSetting("App Language",language,listOf("en" to "English","hi" to "Hindi"),enabled=!busy){language=it}}
+        item{ChoiceSetting("Business Currency",currency,listOf("INR","USD","EUR","GBP","AED").map{it to it},enabled=!busy){currency=it}}
+        item{ListItem(headlineContent={Text(accountLabel("Decimal Places"))},supportingContent={Text(accountLabel("Display precision only; stored calculation precision is unchanged."))},trailingContent={Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={decimals=(decimals-1).coerceAtLeast(0)},enabled=!busy&&decimals>0){Text(accountLabel("−"))};Text(decimals.toString());IconButton(onClick={decimals=(decimals+1).coerceAtMost(4)},enabled=!busy&&decimals<4){Text(accountLabel("+"))}}})}
+        item{ChoiceSetting("Date Format",dateFormat,listOf("DD/MM/YYYY","MM/DD/YYYY","YYYY-MM-DD").map{it to it},enabled=!busy){dateFormat=it}}
+        item{SwitchRow(accountLabel("Show warning for unsaved changes"),warning,enabled=!busy){warning=it}}
+        item{ListItem(headlineContent={Text(accountLabel("Theme"))},supportingContent={Text(accountLabel("Standard"))})}
+        item{SwitchRow(accountLabel("Fixed Assets"),assetsEnabled,enabled=!busy){assetsEnabled=it}}
+        item{Text(accountLabel("Business & Data"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+        item{ListItem(headlineContent={Text(accountLabel("Multi-Branch Settings"))},trailingContent={Text(accountLabel("›"))},modifier=Modifier.clickable{open("/workspace/account/settings/multi-branch")})}
+        item{ListItem(headlineContent={Text(accountLabel("Godown / Warehouse & Stock Transfer"))},trailingContent={Text(accountLabel("›"))},modifier=Modifier.clickable{open("/workspace/account/inventory/warehouses")})}
+        item{ListItem(headlineContent={Text(accountLabel("Backup Settings"))},trailingContent={Text(accountLabel("›"))},modifier=Modifier.clickable{open("/workspace/account/settings/backup")})}
+        item{Text(accountLabel("Security"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);ListItem(headlineContent={Text(accountLabel("Passcode / Fingerprint"))},supportingContent={Text(accountLabel("Managed by Android device security"))},trailingContent={Text(accountLabel("›"))},modifier=Modifier.clickable{context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))})}
+        item{Button(enabled=!busy,onClick={vm.save("general",buildJsonObject{put("appLanguage",language);put("baseCurrency",currency);put("displayDecimalPlaces",decimals);put("dateFormat",dateFormat);put("warnUnsavedChanges",warning);put("appearance",appearance);put("fixedAssetsEnabled",assetsEnabled)})},modifier=Modifier.fillMaxWidth()){Text(accountLabel("Save General Settings"))}}
     }
 }
 
 @Composable
-private fun ChoiceSetting(label:String,value:String,choices:List<Pair<String,String>>,change:(String)->Unit){var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},modifier=Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Text(choices.firstOrNull{it.first==value}?.second?:value)}};DropdownMenu(expanded=open,onDismissRequest={open=false}){choices.forEach{choice->DropdownMenuItem(text={Text(choice.second)},onClick={change(choice.first);open=false})}}}}
+private fun ChoiceSetting(label:String,value:String,choices:List<Pair<String,String>>,enabled:Boolean=true,change:(String)->Unit){var open by remember{mutableStateOf(false)};Box{OutlinedButton(enabled=enabled,onClick={open=true},modifier=Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(label));Text(accountLabel(choices.firstOrNull{it.first==value}?.second?:value))}};DropdownMenu(expanded=open,onDismissRequest={open=false}){choices.forEach{choice->DropdownMenuItem(text={Text(accountLabel(choice.second))},onClick={change(choice.first);open=false})}}}}
+
+@Composable private fun TransactionDefaultsView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean){
+ val saved=data.jsonObject["settings"]?.jsonObject?.get("transactionDefaults")?.jsonObject
+ var days by remember(saved){mutableStateOf(saved?.get("defaultDueDays")?.jsonPrimitive?.content?:"0")};var sale by remember(saved){mutableStateOf(saved?.get("salesTerms")?.jsonPrimitive?.content?:"")};var purchase by remember(saved){mutableStateOf(saved?.get("purchaseTerms")?.jsonPrimitive?.content?:"")};var project by remember(saved){mutableStateOf(saved?.get("projectTerms")?.jsonPrimitive?.content?:"")}
+ LazyColumn{item{OutlinedTextField(days,{days=it},label={Text("Default Due Days")})};item{OutlinedTextField(sale,{sale=it},label={Text("Sale Terms & Conditions")})};item{OutlinedTextField(purchase,{purchase=it},label={Text("Purchase Terms & Conditions")})};item{OutlinedTextField(project,{project=it},label={Text("Project Terms & Conditions")})};item{Button(enabled=!busy&&days.toIntOrNull() in 0..365&&listOf(sale,purchase,project).all{it.length<=5000},onClick={vm.save("transaction-defaults",buildJsonObject{put("defaultDueDays",days.toInt());put("salesTerms",sale);put("purchaseTerms",purchase);put("projectTerms",project)})}){Text("Save")}}}
+}
+@Composable private fun BackupSettingsView(data:JsonElement,vm:AccountAdministrationViewModel,navigate:(String)->Unit){
+ val saved=data.jsonObject["settings"]?.jsonObject?.get("transactionDefaults")?.jsonObject?.get("backupSettings")?.jsonObject
+ var auto by remember(saved){mutableStateOf(saved?.get("autoBackup")?.jsonPrimitive?.booleanOrNull?:false)};var interval by remember(saved){mutableStateOf(saved?.get("intervalDays")?.jsonPrimitive?.content?:"7")};var reminder by remember(saved){mutableStateOf(saved?.get("manualReminderDays")?.jsonPrimitive?.content?:"7")}
+ Column{SwitchRow("Enable auto backup",auto){auto=it};OutlinedTextField(interval,{interval=it},label={Text("Automatic Backup Interval (days)")});OutlinedTextField(reminder,{reminder=it},label={Text("Manual Backup Reminder (days)")});Button(enabled=interval.toIntOrNull() in 1..365&&reminder.toIntOrNull() in 1..365,onClick={vm.save("backup-settings",buildJsonObject{put("autoBackup",auto);put("intervalDays",interval.toInt());put("manualReminderDays",reminder.toInt())})}){Text("Save")};TextButton({navigate("/workspace/account/utilities/backup")}){Text("Open Manual Backup")}}
+}
+@Composable private fun AttentionView(data:JsonElement,navigate:(String)->Unit,complete:(String)->Unit,busy:Boolean,page:(Int)->Unit){
+ val context=LocalContext.current;val rows=((data as? JsonArray)?:((data as? JsonObject)?.get("rows") as? JsonArray)).orEmpty();var error by remember{mutableStateOf<String?>(null)}
+ val dto=data as? JsonObject
+ val offset=dto?.get("expenseOffset")?.jsonPrimitive?.intOrNull?:0
+ val limit=dto?.get("expenseLimit")?.jsonPrimitive?.intOrNull?:50
+ LazyColumn{dto?.get("branchContext")?.jsonObject?.let{scope->item{Text("Scope: "+if(scope["mode"]?.jsonPrimitive?.content=="COMPANY")"All company branches"else scope["branchName"]?.jsonPrimitive?.content.orEmpty())}};if(rows.isEmpty()&&!busy)item{Text("All caught up")};error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}};items(rows){row->val x=row.jsonObject;val kind=x["type"]?.jsonPrimitive?.content.orEmpty();val message=x["message"]?.jsonPrimitive?.content.orEmpty();val document=x["documentId"]?.jsonPrimitive?.content.orEmpty();val number=x["documentNumber"]?.jsonPrimitive?.content.orEmpty();val party=x["partyName"]?.jsonPrimitive?.content.orEmpty()
+ Card(Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(14.dp)){Text(if(kind=="SERVICE_REMINDER")"Service reminder — $party" else if(kind=="PAYMENT_REMINDER")"Payment reminder — $party" else x["title"]?.jsonPrimitive?.content?:x["transactionNumber"]?.jsonPrimitive?.content?:kind);if(message.isNotBlank()){Text(message);Button({try{context.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).apply{type="text/plain";putExtra(android.content.Intent.EXTRA_TEXT,message)},"Send reminder"))}catch(_:Exception){error="No app is available to share this message"}}){Text("Share message")}};TextButton({navigate(if(document.isNotBlank())"/workspace/account/sales/$document" else x["navigationTarget"]?.jsonPrimitive?.content?:"/workspace/account/expenses?status=PENDING_APPROVAL")}){Text(if(number.isNotBlank())"Open $number" else "Open")};if(kind=="SERVICE_REMINDER")Button(enabled=!busy,onClick={complete(x["lineId"]?.jsonPrimitive?.content.orEmpty())}){Text("Mark service completed")}}}
+ };item{Row{if(offset>0)TextButton({page((offset-limit).coerceAtLeast(0))},enabled=!busy){Text("Previous")};if(dto?.get("hasMoreExpenses")?.jsonPrimitive?.booleanOrNull==true)TextButton({page(offset+limit)},enabled=!busy){Text("Next")}}}}
+}

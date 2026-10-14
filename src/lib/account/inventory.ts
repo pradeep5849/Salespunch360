@@ -1,3 +1,5 @@
+import { inventoryBatchInput, inventorySerialInput } from "./inventory-tracking-input";
+import { ACCOUNT_ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import { Prisma, StockMovementType } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -7,6 +9,7 @@ import {
   requirePermissionForMutation,
 } from "@/lib/auth/authorization";
 import { requireAccountModules } from "./modules";
+import { resolveItemSettings } from "./item-settings-policy";
 import type { ProjectActor } from "./projects";
 const D = Prisma.Decimal,
   Z = new D(0),
@@ -30,9 +33,22 @@ async function actor(write = false) {
       ? await requirePermissionForMutation("ACCOUNT_STOCK")
       : await requirePermission("ACCOUNT_STOCK")
   ) as ProjectActor;
-  await requireAccountModules(a, "INVENTORY");
+  await assertInventoryAvailable(a);
   if (a.accountRole === "PROJECT_MANAGER") throw new AuthorizationError();
   return a;
+}
+export async function assertInventoryAvailable(a: {
+  companyId: string | null;
+}) {
+  await requireAccountModules(a, "INVENTORY");
+  if (!a.companyId) throw new AuthorizationError();
+  const settings = await db.accountSettings.findUnique({
+    where: { companyId: a.companyId },
+    select: { itemSettings: true },
+  });
+  const policy = resolveItemSettings(settings?.itemSettings);
+  if (!policy.enabled) throw new Error("ITEMS_DISABLED");
+  return policy;
 }
 const branchAllowed = (a: ProjectActor, id: string) =>
   a.branchAccessScope !== "SELECTED_BRANCHES" || a.branchIds?.includes(id);
@@ -101,9 +117,11 @@ export async function createStockMovementForActor(
   type: StockMovementType,
   raw: unknown,
 ) {
+  await assertInventoryAvailable(a);
   const d = movement.parse(raw);
   return db.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.warehouseId}:${d.productId}`}))`;
       const [w, p, settings] = await Promise.all([
         warehouse(tx, a, d.warehouseId),
@@ -202,11 +220,13 @@ export const transferInput = z
   })
   .strict();
 export async function transferStockForActor(a: ProjectActor, raw: unknown) {
+  await assertInventoryAvailable(a);
   const d = transferInput.parse(raw);
   if (d.sourceWarehouseId === d.destinationWarehouseId)
     throw new Error("SAME_WAREHOUSE");
   return db.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${a.companyId}:${d.productId}:${[d.sourceWarehouseId, d.destinationWarehouseId].sort().join(":")}`}))`;
       const [source, destination, p, settings] = await Promise.all([
           warehouse(tx, a, d.sourceWarehouseId),
@@ -282,6 +302,7 @@ export async function transferStock(raw: unknown) {
   return transferStockForActor(await actor(true), raw);
 }
 export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
+  await assertInventoryAvailable(a);
   const warehouses = await db.warehouse.findMany({
     where: {
       companyId: a.companyId,
@@ -376,6 +397,7 @@ export async function inventorySnapshot(asOf?: Date) {
   return inventorySnapshotForActor(await actor(), asOf);
 }
 export async function listWarehousesForActor(a: ProjectActor) {
+  await assertInventoryAvailable(a);
   return db.warehouse.findMany({
     where: {
       companyId: a.companyId,
@@ -495,9 +517,10 @@ export async function updateInventoryProduct(productId: string, raw: unknown) {
     },
   });
 }
-export async function listInventoryProductsForActor(a: ProjectActor) {
+export async function listInventoryProductsForActor(a: ProjectActor, options: { includeInactive?: boolean } = {}) {
+  await assertInventoryAvailable(a);
   return db.accountProduct.findMany({
-    where: { companyId: a.companyId, isActive: true },
+    where: { companyId: a.companyId, ...(options.includeInactive ? {} : { isActive: true }) },
     include: { unit: true, category: true },
     orderBy: { name: "asc" },
   });
@@ -506,15 +529,8 @@ export async function listInventoryProducts() {
   return listInventoryProductsForActor(await actor());
 }
 export async function createBatchForActor(a: ProjectActor, raw: unknown) {
-  const d = z
-      .object({
-        productId: z.string().uuid(),
-        batchNumber: z.string().trim().min(1).max(100),
-        manufacturedDate: z.coerce.date().optional(),
-        expiryDate: z.coerce.date().optional(),
-      })
-      .strict()
-      .parse(raw),
+  await assertInventoryAvailable(a);
+  const d = inventoryBatchInput.parse(raw),
     p = await db.accountProduct.findFirst({
       where: {
         id: d.productId,
@@ -533,6 +549,7 @@ export async function createBatch(raw: unknown) {
   return createBatchForActor(await actor(true), raw);
 }
 export async function listBatchesForActor(a: ProjectActor, productId?: string) {
+  await assertInventoryAvailable(a);
   return db.inventoryBatch.findMany({
     where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
     orderBy: { createdAt: "desc" },
@@ -545,14 +562,8 @@ export async function registerSerialNumberForActor(
   a: ProjectActor,
   raw: unknown,
 ) {
-  const d = z
-      .object({
-        productId: z.string().uuid(),
-        serialNumber: z.string().trim().min(1).max(160),
-        expiryDate: z.coerce.date().optional(),
-      })
-      .strict()
-      .parse(raw),
+  await assertInventoryAvailable(a);
+  const d = inventorySerialInput.parse(raw),
     p = await db.accountProduct.findFirst({
       where: {
         id: d.productId,
@@ -574,6 +585,7 @@ export async function listSerialNumbersForActor(
   a: ProjectActor,
   productId?: string,
 ) {
+  await assertInventoryAvailable(a);
   const rows = await db.inventorySerialNumber.findMany({
       where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
       orderBy: { createdAt: "desc" },
@@ -601,13 +613,64 @@ const priceInput = z
     priceType: z.enum(["RETAIL", "WHOLESALE", "CUSTOMER"]),
     customerId: z.string().uuid().optional(),
     rate: money,
-    effectiveFrom: z.coerce.date().optional(),
-    effectiveTo: z.coerce.date().optional(),
+    effectiveFrom: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z
+        .union([
+          z.date(),
+          z
+            .string()
+            .date()
+            .transform((value) => new Date(value)),
+        ])
+        .optional(),
+    ),
+    effectiveTo: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z
+        .union([
+          z.date(),
+          z
+            .string()
+            .date()
+            .transform((value) => new Date(value)),
+        ])
+        .optional(),
+    ),
   })
   .strict();
-async function validatePrice(a: ProjectActor, d: z.infer<typeof priceInput>) {
+async function validatePrice(
+  a: ProjectActor,
+  d: z.infer<typeof priceInput>,
+  client: Pick<
+    Prisma.TransactionClient,
+    "accountSettings" | "accountProduct" | "customer"
+  > = db,
+) {
   if (
-    !(await db.accountProduct.findFirst({
+    !a.accountRole ||
+    !ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes("ACCOUNT_STOCK")
+  )
+    throw new AuthorizationError();
+  const settings = resolveItemSettings(
+    (
+      await client.accountSettings.findUnique({
+        where: { companyId: a.companyId },
+        select: { itemSettings: true },
+      })
+    )?.itemSettings,
+  );
+  if (!settings.enabled) throw new Error("ITEMS_DISABLED");
+  if (d.priceType === "WHOLESALE" && !settings.wholesalePrice)
+    throw new Error("WHOLESALE_PRICING_DISABLED");
+  if (d.priceType === "CUSTOMER" && !settings.partyWiseRate)
+    throw new Error("CUSTOMER_PRICING_DISABLED");
+  if (d.effectiveFrom && d.effectiveTo && d.effectiveFrom > d.effectiveTo)
+    throw new Error("INVALID_PRICE_DATES");
+  if (new D(d.rate).toDecimalPlaces(2).gte("10000000000000000"))
+    throw new Error("PRICE_VALUE_OUT_OF_RANGE");
+  if (
+    !(await client.accountProduct.findFirst({
       where: { id: d.productId, companyId: a.companyId, isActive: true },
     }))
   )
@@ -615,26 +678,83 @@ async function validatePrice(a: ProjectActor, d: z.infer<typeof priceInput>) {
   if (d.priceType === "CUSTOMER") {
     if (
       !d.customerId ||
-      !(await db.customer.findFirst({
+      !(await client.customer.findFirst({
         where: {
           id: d.customerId,
           companyId: a.companyId,
           isActive: true,
           isAccountCustomer: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { branchId: { in: a.branchIds ?? [] } }
+            : {}),
         },
       }))
     )
       throw new AuthorizationError();
   } else if (d.customerId) throw new Error("CUSTOMER_ONLY_PRICE");
 }
+const priceAuditSnapshot = (row: {
+  productId: string;
+  priceType: string;
+  customerId: string | null;
+  rate: Prisma.Decimal;
+  effectiveFrom: Date | null;
+  effectiveTo: Date | null;
+}) => ({
+  productId: row.productId,
+  priceType: row.priceType,
+  customerId: row.customerId ?? null,
+  rate: row.rate.toString(),
+  effectiveFrom: row.effectiveFrom?.toISOString().slice(0, 10) ?? null,
+  effectiveTo: row.effectiveTo?.toISOString().slice(0, 10) ?? null,
+});
+async function assertExistingPriceScope(
+  a: ProjectActor,
+  row: { customerId: string | null },
+  tx: Prisma.TransactionClient,
+) {
+  if (
+    row.customerId &&
+    !(await tx.customer.findFirst({
+      where: {
+        id: row.customerId,
+        companyId: a.companyId,
+        isActive: true,
+        isAccountCustomer: true,
+        ...(a.branchAccessScope === "SELECTED_BRANCHES"
+          ? { branchId: { in: a.branchIds ?? [] } }
+          : {}),
+      },
+    }))
+  )
+    throw new AuthorizationError();
+}
 export async function createProductPriceForActor(
   a: ProjectActor,
   raw: unknown,
 ) {
+  await assertInventoryAvailable(a);
   const d = priceInput.parse(raw);
-  await validatePrice(a, d);
-  return db.productPrice.create({
-    data: { ...d, companyId: a.companyId!, rate: new D(d.rate) },
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":account-settings"}))`;
+    await validatePrice(a, d, tx);
+    const row = await tx.productPrice.create({
+      data: {
+        ...d,
+        companyId: a.companyId,
+        rate: new D(d.rate).toDecimalPlaces(2),
+      },
+    });
+    await auditInventory(
+      tx,
+      a,
+      "PRODUCT_PRICE_CREATED",
+      "PRODUCT_PRICE",
+      row.id,
+      { after: priceAuditSnapshot(row) },
+    );
+    return row;
   });
 }
 export async function createProductPrice(raw: unknown) {
@@ -642,31 +762,105 @@ export async function createProductPrice(raw: unknown) {
 }
 export async function updateProductPrice(id: string, raw: unknown) {
   const a = await actor(true),
-    current = await db.productPrice.findFirst({
+    d = priceInput.parse(raw);
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+    const current = await tx.productPrice.findFirst({
       where: { id, companyId: a.companyId },
     });
-  if (!current) throw new AuthorizationError();
-  const d = priceInput.parse(raw);
-  await validatePrice(a, d);
-  return db.productPrice.update({
-    where: { id },
-    data: { ...d, rate: new D(d.rate) },
+    if (!current) throw new AuthorizationError();
+    await assertExistingPriceScope(a, current, tx);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":account-settings"}))`;
+    await validatePrice(a, d, tx);
+    const row = await tx.productPrice.update({
+      where: { id },
+      data: {
+        ...d,
+        customerId: d.priceType === "CUSTOMER" ? d.customerId : null,
+        effectiveFrom: d.effectiveFrom ?? null,
+        effectiveTo: d.effectiveTo ?? null,
+        rate: new D(d.rate).toDecimalPlaces(2),
+      },
+    });
+    await auditInventory(tx, a, "PRODUCT_PRICE_UPDATED", "PRODUCT_PRICE", id, {
+      before: priceAuditSnapshot(current),
+      after: priceAuditSnapshot(row),
+    });
+    return row;
   });
 }
 export async function deactivateProductPrice(id: string) {
-  const a = await actor(true),
-    changed = await db.productPrice.updateMany({
+  const a = await actor(true);
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
+    const current = await tx.productPrice.findFirst({
       where: { id, companyId: a.companyId },
-      data: { isActive: false },
     });
-  if (changed.count !== 1) throw new AuthorizationError();
+    if (!current) throw new AuthorizationError();
+    await assertExistingPriceScope(a, current, tx);
+    if (!current.isActive) return;
+    await tx.productPrice.update({ where: { id }, data: { isActive: false } });
+    await auditInventory(
+      tx,
+      a,
+      "PRODUCT_PRICE_DEACTIVATED",
+      "PRODUCT_PRICE",
+      id,
+      { before: priceAuditSnapshot(current) },
+    );
+  });
 }
 export async function listProductPricesForActor(
   a: ProjectActor,
   productId?: string,
 ) {
+  await assertInventoryAvailable(a);
+  if (
+    !a.accountRole ||
+    !ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes("ACCOUNT_STOCK")
+  )
+    throw new AuthorizationError();
+  const policy = resolveItemSettings(
+    (
+      await db.accountSettings.findUnique({
+        where: { companyId: a.companyId },
+        select: { itemSettings: true },
+      })
+    )?.itemSettings,
+  );
+  const generalTypes: Array<"RETAIL" | "WHOLESALE"> = [
+    "RETAIL",
+    ...(policy.wholesalePrice ? ["WHOLESALE" as const] : []),
+  ];
+  const customers = policy.partyWiseRate
+    ? await db.customer.findMany({
+        where: {
+          companyId: a.companyId,
+          isActive: true,
+          isAccountCustomer: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { branchId: { in: a.branchIds ?? [] } }
+            : {}),
+        },
+        select: { id: true },
+      })
+    : [];
   return db.productPrice.findMany({
-    where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
+    where: {
+      companyId: a.companyId,
+      ...(productId ? { productId } : {}),
+      OR: [
+        { priceType: { in: generalTypes }, customerId: null },
+        ...(policy.partyWiseRate
+          ? [
+              {
+                priceType: "CUSTOMER" as const,
+                customerId: { in: customers.map((customer) => customer.id) },
+              },
+            ]
+          : []),
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -679,6 +873,7 @@ async function auditInventory(
   eventType: string,
   entityType: string,
   entityId: string,
+  metadata?: Prisma.InputJsonValue,
 ) {
   await tx.accountOperationalAudit.create({
     data: {
@@ -687,52 +882,104 @@ async function auditInventory(
       eventType,
       entityType,
       entityId,
+      metadata,
     },
   });
 }
-export async function inventoryOptionsForActor(a: ProjectActor) {
-  const branches = await db.branch.findMany({
-    where: {
-      companyId: a.companyId,
-      isActive: true,
-      ...(a.branchAccessScope === "SELECTED_BRANCHES"
-        ? { id: { in: a.branchIds ?? [] } }
-        : {}),
-    },
-    orderBy: { name: "asc" },
-  });
+export async function inventoryOptionsForActor(
+  a: ProjectActor,
+  section = "all",
+) {
+  const itemSettings = await assertInventoryAvailable(a);
+  const needsBranches = [
+    "all",
+    "warehouses",
+    "stock",
+    "low-stock",
+    "opening",
+    "transfers",
+    "adjustments",
+  ].includes(section);
+  const branches = needsBranches
+    ? await db.branch.findMany({
+        where: {
+          companyId: a.companyId,
+          isActive: true,
+          ...(a.branchAccessScope === "SELECTED_BRANCHES"
+            ? { id: { in: a.branchIds ?? [] } }
+            : {}),
+        },
+        orderBy: { name: "asc" },
+      })
+    : [];
+  const [warehouses, products, customers, batches, serials] = await Promise.all(
+    [
+      [
+        "all",
+        "stock",
+        "low-stock",
+        "opening",
+        "transfers",
+        "adjustments",
+      ].includes(section)
+        ? db.warehouse.findMany({
+            where: {
+              companyId: a.companyId,
+              isActive: true,
+              branchId: { in: branches.map((x) => x.id) },
+            },
+            orderBy: { name: "asc" },
+          })
+        : Promise.resolve([]),
+      [
+        "all",
+        "batches",
+        "stock",
+        "low-stock",
+        "opening",
+        "transfers",
+        "adjustments",
+      ].includes(section)
+        ? db.accountProduct.findMany({
+            where: { companyId: a.companyId, isActive: true },
+            orderBy: { name: "asc" },
+          })
+        : Promise.resolve([]),
+      ["all", "items"].includes(section)
+        ? db.customer.findMany({
+            where: {
+              companyId: a.companyId,
+              isActive: true,
+              isAccountCustomer: true,
+              ...(a.branchAccessScope === "SELECTED_BRANCHES"
+                ? { branchId: { in: a.branchIds ?? [] } }
+                : {}),
+            },
+            orderBy: { name: "asc" },
+          })
+        : Promise.resolve([]),
+      ["all", "opening", "transfers", "adjustments"].includes(section)
+        ? db.inventoryBatch.findMany({ where: { companyId: a.companyId } })
+        : Promise.resolve([]),
+      ["all", "opening", "transfers", "adjustments"].includes(section)
+        ? db.inventorySerialNumber.findMany({
+            where: { companyId: a.companyId },
+          })
+        : Promise.resolve([]),
+    ],
+  );
   return {
     branches,
-    warehouses: await db.warehouse.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        branchId: { in: branches.map((x) => x.id) },
-      },
-      orderBy: { name: "asc" },
-    }),
-    products: await db.accountProduct.findMany({
-      where: { companyId: a.companyId, isActive: true },
-      orderBy: { name: "asc" },
-    }),
-    customers: await db.customer.findMany({
-      where: {
-        companyId: a.companyId,
-        isActive: true,
-        isAccountCustomer: true,
-      },
-      orderBy: { name: "asc" },
-    }),
-    batches: await db.inventoryBatch.findMany({
-      where: { companyId: a.companyId },
-    }),
-    serials: await db.inventorySerialNumber.findMany({
-      where: { companyId: a.companyId },
-    }),
+    warehouses,
+    products,
+    customers,
+    batches,
+    serials,
+    itemSettings,
   };
 }
-export async function inventoryOptions() {
-  return inventoryOptionsForActor(await actor());
+export async function inventoryOptions(section = "all") {
+  return inventoryOptionsForActor(await actor(), section);
 }
 export async function lowStockSnapshotForActor(
   a: ProjectActor,
@@ -797,8 +1044,9 @@ export async function recordAdjustment(raw: unknown) {
     })
     .strict()
     .parse(raw);
-  return adjustStock(d.direction, {
-    ...d,
+  const { direction, ...movementInput } = d;
+  return adjustStock(direction, {
+    ...movementInput,
     sourceType: "STOCK_ADJUSTMENT",
     sourceId: crypto.randomUUID(),
   });

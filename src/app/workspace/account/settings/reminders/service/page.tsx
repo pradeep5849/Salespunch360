@@ -1,4 +1,6 @@
-import {redirect} from "next/navigation";
+import {saveReminderSettingsForActor} from "@/lib/account/reminder-settings";
+import type {ProjectActor} from "@/lib/account/projects";
+import {revalidatePath} from "next/cache";
 import {AuthorizationError,requirePermission,requirePermissionForMutation} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
 import {ServiceReminderPicker} from "@/components/account/service-reminder-picker";
@@ -21,12 +23,8 @@ export default async function Page(){
   const editor=await requirePermissionForMutation("ACCOUNT_SETTINGS");
   if(editor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
   const selected=[...new Set(fd.getAll("selectedIds").map(String).filter(Boolean))].slice(0,2000);
-  const existing=await db.accountSettings.findUnique({where:{companyId:editor.companyId!},select:{transactionDefaults:true}});
-  const defaults=(existing?.transactionDefaults as Record<string,unknown>|null)??{};
-  const reminderSettings=(defaults.reminderSettings as Record<string,unknown>|undefined)??{};
-  const previous=(reminderSettings.service as Record<string,unknown>|undefined)??{};
-  await db.accountSettings.upsert({where:{companyId:editor.companyId!},create:{companyId:editor.companyId!,transactionDefaults:{...defaults,reminderSettings:{...reminderSettings,service:{...previous,enabled:true,selectedItemIds:selected}}}},update:{transactionDefaults:{...defaults,reminderSettings:{...reminderSettings,service:{...previous,enabled:true,selectedItemIds:selected}}}}});
-  redirect("/workspace/account/settings/reminders");
+  await saveReminderSettingsForActor(editor as ProjectActor,{service:{enabled:fd.get("enabled")==="on",allowSalePeriodOverride:fd.get("allowSalePeriodOverride")==="on",selectedItemIds:selected,periodDays:Number(fd.get("periodDays")),message:String(fd.get("message")??"")}});
+  revalidatePath("/workspace/account/settings/reminders/service");
  }
- return <ServiceReminderPicker items={items} selectedIds={selectedIds} action={save}/>;
+ return <ServiceReminderPicker enabled={service.enabled!==false} allowSalePeriodOverride={service.allowSalePeriodOverride===true} items={items} selectedIds={selectedIds} periodDays={typeof service.periodDays==="number"?service.periodDays:60} message={typeof service.message==="string"?service.message:"Hi {Party name}, your next service for {Item name} is due on {reminder date}. Please contact us to book an appointment. Regards, {Company name}."} action={save}/>;
 }

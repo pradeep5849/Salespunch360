@@ -1,3 +1,16 @@
+import { AccountDate, ClientMoney } from "./display-preferences";
+const monetaryColumns = new Set([
+  "amount",
+  "cost",
+  "taxableAmount",
+  "taxAmount",
+  "totalAmount",
+  "remainingAmount",
+  "revenue",
+  "tax",
+  "total",
+  "outstanding",
+]);
 type Row = Record<string, string | null>;
 export function ProjectFinancialDetails({
   details,
@@ -118,7 +131,17 @@ export function ProjectFinancialDetails({
                   {rows.map((row) => (
                     <tr key={row.id}>
                       {columns.map((column) => (
-                        <td key={column}>{row[column] ?? "—"}</td>
+                        <td key={column}>
+                          {row[column] == null ? (
+                            "—"
+                          ) : column === "date" ? (
+                            <AccountDate value={row[column]} />
+                          ) : monetaryColumns.has(column) ? (
+                            <ClientMoney value={row[column]} />
+                          ) : (
+                            row[column]
+                          )}
+                        </td>
                       ))}
                     </tr>
                   ))}

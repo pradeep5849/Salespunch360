@@ -11,6 +11,7 @@ export async function GET(r: Request) {
     return mobileJson(
       await mobileMoneyContext(
         await authenticateMobileToken(r.headers.get("authorization")),
+        Object.fromEntries(new URL(r.url).searchParams),
       ),
     );
   } catch (e) {

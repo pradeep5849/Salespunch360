@@ -29,6 +29,7 @@ export const projectInput = z
     startDate: z.coerce.date().optional(),
     targetEndDate: z.coerce.date().optional(),
     projectValue: money.default("0"),
+    customFields: z.record(z.string(), z.string().max(10000)).optional(),
   })
   .strict();
 export const projectUpdateInput = projectInput

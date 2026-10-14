@@ -171,6 +171,7 @@ export default async function MasterPage({
         {input("cost", "Estimated / cost rate", "number")}
         {!work && input("taxRate", "GST %", "number")}
         {!work && input("hsnSacCode", master === "products" ? "HSN" : "SAC")}
+        {d.itemCustomFields.map(field=><CustomFieldInput key={field.id} field={field}/>)}
       </>
     );
   }

@@ -8,6 +8,8 @@ export function expenseFormInput(form: FormData) {
     input.roundOffEnabled =
       form.get("roundOffEnabled") === "on" ||
       form.get("roundOffEnabled") === "true";
+  if (form.has("recordAsPaid"))
+    input.recordAsPaid = form.get("recordAsPaid") === "true";
   if (typeof input.billedItems === "string")
     input.billedItems = JSON.parse(input.billedItems);
   return input;
