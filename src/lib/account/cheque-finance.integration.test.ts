@@ -19,6 +19,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
+import { generateAccountPaymentReminders, duePaymentReminders } from "./payment-reminder-execution";
 import { gstReportForActor } from "./tax";
 import { runFinancialReportForActor } from "./reports/service";
 import { listOpeningOutstandings } from "./opening-balances";
@@ -69,13 +70,14 @@ const actor = {
   branchIds: [branchId, otherBranch],
 } as ProjectActor;
 let bankLedger: string;
-async function invoice(amount = "100", partyId: string = customerId) {
+async function invoice(amount = "100", partyId: string = customerId, dueDate?: string) {
   const doc = await createCommercialDocumentForActor(actor, {
     type: "SALES_INVOICE",
     idempotencyKey: randomUUID(),
     branchId,
     partyId,
     issueDate: "2026-10-10",
+    dueDate,
     lines: [
       {
         lineType: "CUSTOM",
@@ -229,6 +231,7 @@ describe.skipIf(!url)(
       if (url)
         await client.$transaction(async (tx) => {
           await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+          await tx.paymentReminder.deleteMany({where:{companyId}});
           await tx.cheque.updateMany({
             where: { companyId },
             data: { settlementId: null },
@@ -1033,6 +1036,110 @@ describe.skipIf(!url)(
           where: { id: source.id },
         }),
       ).toEqual(source);
+    });
+    it("A100 scheduled sweeps deduplicate, scope and suppress settled manual reminders", async () => {
+      const due = await invoice("100", customerId, "2026-10-10");
+      const future = await invoice("50", customerId, "2026-10-20");
+      const now = new Date("2026-10-12T06:00:00Z");
+      const defaults = {
+        reminderSettings: {
+          payment: {
+            enabled: true,
+            overdueDays: 1,
+            frequency: "TWICE_DAILY",
+            message: "Hi {party}, pay {amount} for {document}.",
+          },
+        },
+      };
+      await client.accountSettings.update({
+        where: { companyId },
+        data: { transactionDefaults: defaults },
+      });
+      try {
+        await Promise.all([
+          generateAccountPaymentReminders(now),
+          generateAccountPaymentReminders(now),
+        ]);
+        expect(
+          await client.paymentReminder.count({
+            where: { companyId, documentId: due.id },
+          }),
+        ).toBe(1);
+        expect(
+          await client.paymentReminder.count({
+            where: { companyId, documentId: future.id },
+          }),
+        ).toBe(0);
+        const visible = await duePaymentReminders(
+          {
+            ...actor,
+            branchAccessScope: "SELECTED_BRANCHES",
+            branchIds: [branchId],
+          },
+          now,
+        );
+        expect(
+          visible.find((row) => row.documentId === due.id)?.message,
+        ).toContain("₹100.00");
+        expect(
+          await duePaymentReminders(
+            {
+              ...actor,
+              branchAccessScope: "SELECTED_BRANCHES",
+              branchIds: [otherBranch],
+            },
+            now,
+          ),
+        ).toEqual([]);
+        expect(
+          await duePaymentReminders(
+            { ...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: [] },
+            now,
+          ),
+        ).toEqual([]);
+        expect(
+          await duePaymentReminders({ ...actor, companyId: randomUUID() }, now),
+        ).toEqual([]);
+        const queued = await client.paymentReminder.findFirstOrThrow({
+          where: { companyId, documentId: due.id },
+        });
+        expect(queued.status).toBe("PENDING");
+        await createSettlementForActor(actor, {
+          type: "CUSTOMER_RECEIPT",
+          idempotencyKey: randomUUID(),
+          branchId,
+          partyId: customerId,
+          moneyAccountId: bankId,
+          paymentMode: "BANK",
+          transactionDate: "2026-10-12",
+          amount: "100",
+          allocations: [{ documentId: due.id, amount: "100" }],
+        });
+        expect(
+          (await duePaymentReminders(actor, now)).some(
+            (row) => row.documentId === due.id,
+          ),
+        ).toBe(false);
+        await generateAccountPaymentReminders(new Date("2026-10-12T12:00:00Z"));
+        expect(
+          await client.paymentReminder.count({
+            where: { companyId, documentId: due.id },
+          }),
+        ).toBe(1);
+        expect(
+          (
+            await client.paymentReminder.findUniqueOrThrow({
+              where: { id: queued.id },
+            })
+          ).status,
+        ).toBe("PENDING");
+      } finally {
+        await client.paymentReminder.deleteMany({ where: { companyId } });
+        await client.accountSettings.update({
+          where: { companyId },
+          data: { transactionDefaults: {} },
+        });
+      }
     });
   },
 );

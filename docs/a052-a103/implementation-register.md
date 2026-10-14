@@ -9185,7 +9185,7 @@ Intermediate validation: 43 focused tests including 4 isolated PostgreSQL cases;
 
 **Required tests:** Enabled/disabled; overdue-day cutoff; once/twice/weekly cadence; selected service events; outstanding settled before run; duplicate-run prevention; no unauthorized external delivery.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own payment-reminder web autosave, day limits/four frequencies, queued saving and native frequency mapping reviewed. Internal job creates deduplicated pending slots in Indian business time; Attention rebuilds current outstanding text and excludes paid/not-posted/inaccessible documents. No external automatic message transmission.", "tests": "Save/reload retained enabled/day/message settings in two cross-settings browser cases. Reminder execution unit cases passed within 81/81 seven-file run (1.31s), including schedule slots, disabled/paid suppression and deduplication. TypeScript and targeted ESLint passed.", "finding_status": null, "evidence": ["SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A095-A103_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9404,3 +9404,6 @@ A089-F02 continuation: Show in print now follows supported party/quotation/invoi
 
 
 A065-F03/F09 continuation: batched scoped owner capital/drawings/loan balances, remaining capital, immutable dated correction UI/API/native flow, selected/default branch parity and active-form recovery completed. Shared A065-F10 owner-loan reversal funds guard and A065-F07 replay checks extended; A064-F13 feedback focus improved without inferring its remaining screens complete. Grouped checks 53/53 passed; desktop/mobile identity/correction/long-name cases 4/4 passed (1.6m), final native-default pair rerun 2/2 passed (44.3s; overlaps correction cases); Android compile + 4 JVM tests passed (1m41s); TypeScript/lint passed. No migration. Final-head validation pending. Totals: 154 IMPLEMENTED BUT NOT VERIFIED, 43 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
+
+
+A100-F01 continuation: independent concurrent scheduler/overdue/scoped/current-outstanding PostgreSQL verification and service-selection lifecycle completed. Grouped checks 33/33 passed (5.33s); desktop/mobile service reminders 2/2 passed (48.7s); TypeScript/targeted lint passed. Initial test fixture corrections and concurrent-run serialization contention were followed by clean sequential runs. No schema or external message writes. Deployed scheduler/physical-device/final-head verification pending. Totals: 155 IMPLEMENTED BUT NOT VERIFIED, 42 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
