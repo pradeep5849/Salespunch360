@@ -19,6 +19,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
+import { gstReportForActor } from "./tax";
 import { runFinancialReportForActor } from "./reports/service";
 import { listOpeningOutstandings } from "./opening-balances";
 import { saveBusinessCurrency } from "./business-currency";
@@ -781,6 +782,38 @@ describe.skipIf(!url)(
         expect(movements.find(row=>row.movementType==="SALES_RETURN")?.quantity.toFixed(4)).toBe("1.0000");
         expect(await outstanding(sale.id)).toBe("0.00");
         expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id}})).toEqual(before);
+      }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
+    });
+    it("preserves cancelled sale history in profit and GST across correction periods",async()=>{
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:["GST_ADVANCED"]}});
+      try{
+        const party=await client.customer.create({data:{companyId,branchId,name:"Historical correction reports",isAccountCustomer:true}});
+        const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:party.id,issueDate:"2026-10-10",lines:[{lineType:"CUSTOM",itemName:"Historical report service",quantity:"1",rate:"100",taxRate:"18"}]});
+        await postCommercialDocumentForActor(actor,{documentId:sale.id});
+        const credit=await reversePostedSaleForActor(actor,sale.id);
+        // Rehearse historical lifecycle data: older correction code marked the source CANCELLED.
+        // Only this isolated fixture tenant bypasses immutability; production writes remain guarded.
+        await client.$transaction(async tx=>{
+          await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
+          await tx.commercialDocument.update({where:{id:sale.id},data:{status:"CANCELLED"}});
+          await tx.commercialDocument.update({where:{id:credit.id},data:{issueDate:new Date("2026-10-14")}});
+          await tx.journalEntry.update({where:{id:credit.journalEntryId!},data:{entryDate:new Date("2026-10-14")}});
+          await tx.$executeRawUnsafe("SET LOCAL session_replication_role = origin");
+        });
+        for(const to of ["2026-10-13","2026-10-14"]){
+          for(const report of ["items","invoices","customers"]){
+            const result=await runFinancialReportForActor(actor,report,{scope:"all",from:"2026-10-10",to});
+            const label=report==="items"?"Historical report service":report==="customers"?party.name:sale.documentNumber;
+            const rows=result.rows.filter(row=>row[0]===label||report==="invoices"&&row[0]===credit.documentNumber);
+            expect(rows.reduce((sum,row)=>sum+Number(row[2]),0)).toBe(to==="2026-10-13"?100:0);
+          }
+          const gst=await gstReportForActor(actor,{from:"2026-10-10",to,branchId});
+          const rows=gst.rows.filter(row=>row.id===sale.id||row.id===credit.id);
+          expect(rows.reduce((sum,row)=>sum+Number(row.taxable),0)).toBe(to==="2026-10-13"?100:0);
+          expect(rows.reduce((sum,row)=>sum+Number(row.cgst)+Number(row.sgst)+Number(row.igst),0)).toBe(to==="2026-10-13"?18:0);
+        }
+        const later=await runFinancialReportForActor(actor,"customers",{scope:"all",from:"2026-10-14",to:"2026-10-14"});
+        expect(later.rows.find(row=>row[0]===party.name)?.[2]).toBe("-100");
       }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
     });
     it("fully offsets GST, cess, charges, round-off and withholding when correcting an unpaid sale", async () => {

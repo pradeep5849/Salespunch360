@@ -7996,7 +7996,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Same-period reversal; cross-period reversal; replacement; customer/item/invoice profit; party ledger; GST; reconcile against effective general ledger.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9389,3 +9389,6 @@ A084-F02, A084-F12 and A084-F18: TypeScript and focused ESLint pass; 35/35 focus
 
 
 A084-F07/F09 continuation: scoped journal-based party opening/running balances and explicit historical aging cutoff implemented. Grouped PostgreSQL/unit/service/report checks 50/50 passed (7 files, 6.95s); desktop/mobile browser 2/2 passed (42.3s), with CSV/XLSX/PDF/native API parity, Axe and overflow checks. TypeScript and focused lint passed. No migration or posting changes. Final-head validation pending. Totals: 147 IMPLEMENTED BUT NOT VERIFIED, 50 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset. A084-F15 remains partial; these shared fixes do not establish profitability/GST correction coverage.
+
+
+A084-F15 continuation: shared economic-document cutoff preserves legacy cancelled-source and dated credit history in profit/GST reports. PostgreSQL covers pre-credit revenue/GST, net-zero correction and later-period credit; grouped checks 44/44 passed, desktop/mobile PDF/Axe/overflow browser 2/2 passed (44.1s), TypeScript/lint passed. No migration. Final-head verification pending. Totals: 148 IMPLEMENTED BUT NOT VERIFIED, 49 PARTIAL, 2 NOT STARTED.

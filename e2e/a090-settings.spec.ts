@@ -1862,3 +1862,36 @@ test("A084 party ledger opening and export balances match web and native scoped 
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  }finally{await page.goto("/workspace/account");await db.accountSettings.update({where:{companyId},data:{baseCurrency:original.baseCurrency,displayDecimalPlaces:original.displayDecimalPlaces}})}
 });
+
+test("A084 corrected sales keep dated profit and GST report history",async({page})=>{
+ test.setTimeout(180000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["GST_ADVANCED"]}});
+  await db.financialYear.create({data:{companyId,name:"Correction report year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const party=await db.customer.create({data:{companyId,branchId,name:"A084 correction history customer",isAccountCustomer:true}});
+  const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:party.id,issueDate:"2026-10-10",lines:[{lineType:"CUSTOM",itemName:"Dated correction service",quantity:"1",rate:"100",taxRate:"18"}]});
+  await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  const credit=await reversePostedSaleForActor(actor,sale.id);
+  await db.$transaction(async tx=>{
+   await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
+   await tx.commercialDocument.update({where:{id:sale.id},data:{status:"CANCELLED"}});
+   await tx.commercialDocument.update({where:{id:credit.id},data:{issueDate:new Date("2026-10-14")}});
+   await tx.journalEntry.update({where:{id:credit.journalEntryId!},data:{entryDate:new Date("2026-10-14")}});
+   await tx.$executeRawUnsafe("SET LOCAL session_replication_role = origin");
+  });
+  await signInSettings(page);
+  for(const to of ["2026-10-13","2026-10-14"]){
+   const query=`scope=all&from=2026-10-10&to=${to}`;
+   await page.goto(`/workspace/account/reports/customers?${query}`);
+   const row=page.locator("tbody tr").filter({hasText:party.name});await expect(row).toHaveCount(1,{timeout:20000});await expect(row.locator("td").nth(2)).toHaveText(to.endsWith("13")?"₹100.00":"₹0.00");
+   const profit=await page.request.get(`/api/account/reports/customers/pdf?${query}`);expect(profit.status()).toBe(200);expect((await extractPdfText(await profit.body())).text).toContain(party.name);
+   await page.goto(`/workspace/account/reports/tax?${query}`);
+   const gstRows=page.locator("tbody tr").filter({hasText:party.name});await expect(gstRows).toHaveCount(to.endsWith("13")?1:2,{timeout:20000});
+  }
+  expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules}})}
+});

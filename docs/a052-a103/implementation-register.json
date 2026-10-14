@@ -20689,6 +20689,7 @@
       "root_cause": "Lifecycle cancellation is used as an economic exclusion although the original journal is not itself removed and is offset by a dated credit note.",
       "affected_files": [
         "src/app/actions/sale-amendments.ts",
+        "src/lib/account/commercial-report-policy.ts",
         "src/lib/account/reports/service.ts",
         "src/lib/account/tax.ts"
       ],
@@ -20764,11 +20765,17 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F14"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Shared economic-document policy includes posted historical effects for both POSTED and legacy CANCELLED sources, with effective journal cutoff. Applied to item/invoice/customer profitability and GST; party ledgers already retain dated journal history. Preserves immutable current correction records and reads legacy data without migration.",
+          "tests": "44/44 grouped PostgreSQL/service/tax/export/PDF tests passed in 6 files (13.08s). Historical legacy cancellation fixture verifies pre-credit revenue/GST, same-period net zero and later-period credit. Desktop/mobile browser 2/2 passed (44.1s) with PDF, Axe and overflow checks. TypeScript and focused lint passed; initial browser fixture assertions corrected. Final-head verification pending."
+        }
       ]
     },
     {
@@ -23352,6 +23359,23 @@
           "Axe",
           "overflow"
         ]
+      },
+      "typescript": "PASS",
+      "focused_lint": "PASS",
+      "migrations": "NONE",
+      "final_head_verification": false
+    },
+    "cancelled_sale_report_history": {
+      "finding": "A084-F15",
+      "grouped_tests": {
+        "passed": 44,
+        "failed": 0,
+        "files": 6
+      },
+      "browser": {
+        "passed": 2,
+        "failed": 0,
+        "seconds": 44.1
       },
       "typescript": "PASS",
       "focused_lint": "PASS",

@@ -1,3 +1,4 @@
+import { economicDocumentsAt } from "../commercial-report-policy";
 import { partyLedgerReport } from "./party-ledger";
 import { postedJournalAt } from "../settlement-policy";
 import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
@@ -786,7 +787,7 @@ export async function runFinancialReportForActor(
     const docs = await db.commercialDocument.findMany({
       where: {
         companyId: c.actor.companyId,
-        status: "POSTED",
+        ...economicDocumentsAt(c.to),
         type: { in: ["SALES_INVOICE", "CREDIT_NOTE"] },
         issueDate: { gte: c.from, lte: c.to },
         ...c.branch,
