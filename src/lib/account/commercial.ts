@@ -1,3 +1,4 @@
+import {commercialLineAmounts} from "./commercial-line-amounts";
 import { effectiveAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { normalizeTransactionPreferences } from "./transaction-settings";
@@ -596,16 +597,7 @@ async function snapshotLine(
     discountValue = new D(row.discountValue ?? 0);
   if (quantity.lte(0) || rate.lt(0) || taxRate.lt(0) || discountValue.lt(0))
     throw new Error("INVALID_AMOUNT");
-  const baseAmount = quantity.mul(rate).toDecimalPlaces(2),
-    discountAmount =
-      row.discountType === "PERCENTAGE"
-        ? baseAmount.mul(discountValue).div(100).toDecimalPlaces(2)
-        : discountValue.toDecimalPlaces(2);
-  if (
-    discountAmount.gt(baseAmount) ||
-    (row.discountType === "PERCENTAGE" && discountValue.gt(100))
-  )
-    throw new Error("INVALID_DISCOUNT");
+  const {baseAmount,discountAmount}=commercialLineAmounts(quantity,rate,row.discountType,discountValue);
   if (
     master?.trackInventory &&
     ["PURCHASE_BILL", "SALES_INVOICE", "CREDIT_NOTE", "DEBIT_NOTE"].includes(

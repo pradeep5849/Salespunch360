@@ -9419,3 +9419,6 @@ A052-F03 continuation: independently verified real database selected/consolidate
 
 
 A058-F08 partial continuation: labelled native web unit/category/help dialogs, nested Escape/focus containment/restoration, and pre-save HTML numeric validation implemented. 29/29 focused policy tests and2/2 desktop/mobile nested-dialog/Axe AA/invalid-price retention checks passed(32.8s); TypeScript/lint passed. Category autofocus timing corrected after initial browser failure. Remaining original native/numeric/overlay coverage and final-head verification pending; status remains PARTIAL. Totals unchanged158/39/2.
+
+
+Push checkpoint — A086-F01 partial Decimal preview: shared server/preview base-discount rounding, GST/cess decomposition and rounded-line totals preserved. 61/61 focused unit/real PostgreSQL tests passed (5.98s); checkpoint TypeScript/targeted lint passed. Latest slice browser/native/final-head validation not run. No status promoted. Counts158 implemented but not verified/39 partial/2 not started;199 unique findings retained.

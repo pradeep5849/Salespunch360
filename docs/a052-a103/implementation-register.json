@@ -21457,7 +21457,19 @@
           "src/app/workspace/account/transactions/new/commercial-editor.tsx",
           "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
           "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt"
-        ]
+        ],
+        "decimal_preview_checkpoint": {
+          "work": "Shared Decimal base/discount rounding is used by server snapshots and sale previews; preview uses authoritative GST/cess decomposition, rounded-line aggregation and inclusive taxable subtotal. The open editor retains cess while recalculating its line. Preserved as partial work at user-requested push checkpoint; not claimed fully fixed or verified.",
+          "files": [
+            "src/lib/account/commercial-line-amounts.ts",
+            "src/lib/account/sale-preview-calculation.ts",
+            "src/lib/account/sale-preview-calculation.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx"
+          ],
+          "tests": "61/61 focused commercial/tax/financial PostgreSQL tests passed (5 files,5.98s), including 10 new preview cases and stored inclusive/exclusive fractional discounted GST/cess parity. Checkpoint TypeScript and targeted ESLint passed. Latest slice browser/native/final-head validation not executed; original finding remains PARTIAL."
+        }
       }
     },
     {
