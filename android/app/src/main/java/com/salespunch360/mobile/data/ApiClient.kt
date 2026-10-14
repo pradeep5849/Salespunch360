@@ -120,6 +120,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun moneyContext(query:String=""):JsonObject {val scope=com.salespunch360.mobile.account.moneyContextQuery(query);return json.parseToJsonElement(call("api/v1/mobile/account/money${if(scope.isBlank())""else"?$scope"}")).jsonObject}
  suspend fun saveMoneyAccount(id:String?,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/money/accounts${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())
  suspend fun disableMoneyAccount(id:String)=call("api/v1/mobile/account/money/accounts/${enc(id)}","DELETE")
+ suspend fun moneyTransferImage(id:String):ByteArray=download("api/v1/mobile/account/money/transfers/${enc(id)}/image")
  suspend fun moneyAction(kind:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/${enc(kind)}","POST",payload.toString()))
  suspend fun journalHistory(q:String="",page:Int=1,branch:String="",from:String="",to:String="")=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals?q=${enc(q)}&page=$page"+(if(branch.isNotBlank())"&branchId=${enc(branch)}" else "")+(if(from.isNotBlank())"&from=${enc(from)}" else "")+(if(to.isNotBlank())"&to=${enc(to)}" else ""))).jsonObject
  suspend fun accountingOverview()=json.parseToJsonElement(call("api/v1/mobile/account/accounting")).jsonObject

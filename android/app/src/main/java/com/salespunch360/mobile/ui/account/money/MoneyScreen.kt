@@ -11,6 +11,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import com.salespunch360.mobile.data.ApiClient
+import com.salespunch360.mobile.data.SecureSession
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -26,6 +36,14 @@ import kotlinx.serialization.json.*
 
 @Composable
 fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewModel=viewModel(),initialOwnerId:String?=null,initialQuery:String="") {
+    val imageContext=LocalContext.current;val imageScope=rememberCoroutineScope()
+    var imagePreview by remember(initialMode,initialQuery){mutableStateOf<android.graphics.Bitmap?>(null)}
+    var imageError by remember(initialMode,initialQuery){mutableStateOf<String?>(null)}
+    var imageLoading by remember(initialMode,initialQuery){mutableStateOf(false)}
+    fun viewTransferImage(id:String){if(imageLoading)return;imageLoading=true;imageError=null;imageScope.launch{try{val bytes=ApiClient(SecureSession(imageContext)).moneyTransferImage(id);imagePreview=withContext(Dispatchers.IO){android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size)?:throw IllegalArgumentException("Image could not be displayed.")}}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){imageError=error.message?:"Image could not be loaded."}finally{imageLoading=false}}}
+    imagePreview?.let{bitmap->AlertDialog(onDismissRequest={imagePreview=null},title={Text("Transfer image")},text={Image(bitmap.asImageBitmap(),contentDescription="Transfer image",modifier=Modifier.fillMaxWidth().heightIn(max=400.dp))},confirmButton={TextButton(onClick={imagePreview=null}){Text("Close")}})}
+    imageError?.let{message->AlertDialog(onDismissRequest={imageError=null},title={Text("Image unavailable")},text={Text(message)},confirmButton={TextButton(onClick={imageError=null}){Text("OK")}})}
+
     val s=vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialMode,initialOwnerId,initialQuery){vm.show(initialMode,initialQuery);initialOwnerId?.let(vm::openOwnerHistory)}
     val caps=s.data["capabilities"]?.jsonObject
@@ -67,7 +85,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
             }
             items(rows){entry->val row=entry.jsonObject
                 val title=if(s.mode=="owners")ownerNames[row.str("ownerFinancialAccountId")]?:"Owner" else row.str("name").ifBlank{row.str("displayName").ifBlank{row.str("lender").ifBlank{moneyTypeLabel(row.str("type"))}}}
-                ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference"),if(s.mode=="transfers")row.str("description")else "").filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{
+                ListItem(headlineContent={Text(title,fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(if(s.mode=="owners")moneyTypeLabel(row.str("type")) else "",accountDate(row.str("transferDate")),accountDate(row.str("transactionDate")),accountDate(row.str("startDate")),row.str("reference"),if(s.mode=="transfers")row.str("description")else "").filter{it.isNotBlank()}.joinToString(" · "))},trailingContent={Column{if(s.mode=="transfers"&&row["image"] is JsonObject)TextButton(enabled=!imageLoading,onClick={viewTransferImage(row.str("id"))}){Text("View image")};
                     if(s.mode=="loans")Text(row["outstanding"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)}?:"Balance not established")else Text(accountMoney(row.str("balance").ifBlank{row.str("amount").ifBlank{row.str("principal")}}))
                     if(s.mode=="loans"&&can("manageLoans")&&row.str("status")=="ACTIVE"&&row["archivedAt"]?.jsonPrimitive?.contentOrNull==null)TextButton({vm.loanPayment(row)},enabled=!s.saving){Text("Repay")}
                     if(accountMode&&can("postMoneyEntries"))TextButton({vm.editAccount(row)},enabled=!s.saving){Text("Edit")}
@@ -164,11 +182,17 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var date by remember{mutableStateOf(java.time.LocalDate.now().toString())}
     var reference by remember{mutableStateOf("")}
     var transferDescription by remember{mutableStateOf("")}
+    val imageContext=LocalContext.current;val imageScope=rememberCoroutineScope()
+    var transferImage by remember{mutableStateOf<JsonObject?>(null)}
+    var transferImageLoading by remember{mutableStateOf(false)}
+    var transferImageError by remember{mutableStateOf<String?>(null)}
+    val imagePicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->if(uri!=null)imageScope.launch{transferImageLoading=true;transferImage=null;transferImageError=null;try{transferImage=readTransferImageInput(imageContext,uri)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){transferImageError=error.message?:"Image could not be read."}finally{transferImageLoading=false}}}
+
     val accounts=data["dashboard"]?.jsonObject?.array("accounts").orEmpty().filter{entry->val row=entry.jsonObject;row["isActive"]?.jsonPrimitive?.booleanOrNull!=false&&(kind !in listOf("transfers","loans","loan-payments","loan-operations")||row.str("branchId").isBlank()||row.str("branchId")==branch)}
     val bankErrors=bankMetadataErrors(bankName,accountHolder,bankBranch,bankIfsc,bankUpi,printQr)
     val valid=when{
         identity->name.isNotBlank()&&(kind=="owner-edit"||branch.isNotBlank())
-        kind=="transfers"->branch.isNotBlank()&&source.isNotBlank()&&destination.isNotBlank()&&source!=destination&&loanPaymentTotal(amount)?.signum()==1&&accounts.any{it.jsonObject.str("id")==source&&transferModeAccepts(transferMode,it.jsonObject.str("type"),true)}&&accounts.any{it.jsonObject.str("id")==destination&&transferModeAccepts(transferMode,it.jsonObject.str("type"),false)}
+        kind=="transfers"->!transferImageLoading&&transferImageError==null&&branch.isNotBlank()&&source.isNotBlank()&&destination.isNotBlank()&&source!=destination&&loanPaymentTotal(amount)?.signum()==1&&accounts.any{it.jsonObject.str("id")==source&&transferModeAccepts(transferMode,it.jsonObject.str("type"),true)}&&accounts.any{it.jsonObject.str("id")==destination&&transferModeAccepts(transferMode,it.jsonObject.str("type"),false)}
         kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
         kind=="loan-operations"->date.isNotBlank()&&(if(loanAction=="TOP_UP")source.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1 else adjustmentReason.trim().length in 3..1000)
         kind=="loan-edit"->loanName.length<=240&&loanNumber.length<=160&&loanDescription.length<=2000&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
@@ -260,6 +284,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                 }
                 item{OutlinedTextField(amount,{amount=it},label={Text(if(kind=="loan-payments")"Principal paid" else "Amount")},enabled=!saving)}
                 item{OutlinedTextField(date,{date=it},label={Text("Date")},enabled=!saving)}
+                if(kind=="transfers")item{TextButton(enabled=!saving&&!transferImageLoading,onClick={imagePicker.launch("image/*")}){Text(if(transferImageLoading)"Reading image…" else "Add image (optional)")};transferImage?.let{image->Text(image.str("name"));TextButton(enabled=!saving,onClick={transferImage=null}){Text("Remove image")}};transferImageError?.let{Text(it,color=MaterialTheme.colorScheme.error);TextButton(enabled=!saving,onClick={transferImageError=null;transferImage=null}){Text("Remove image")}};Text("PNG, JPEG or WebP up to 5 MB.")}
                 if(kind=="transfers")item{OutlinedTextField(transferDescription,{if(it.length<=2000)transferDescription=it},label={Text("Description")},enabled=!saving)}
                 item{OutlinedTextField(reference,{reference=it},label={Text("Reference")},enabled=!saving)}
             }
@@ -273,7 +298,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             kind=="adjustments"->{put("moneyAccountId",selected?.str("id").orEmpty());put("branchId",branch);put("direction",direction);put("offsetLedgerId",offsetLedger);put("amount",amount);put("date",date);put("reason",adjustmentReason);put("idempotencyKey",requestKey)}
             kind=="accounts"->{put("name",name);if(type=="BANK"){put("bankName",bankName);put("accountHolderName",accountHolder);put("bankBranchName",bankBranch);put("accountNumberMasked",bankNumber);put("ifsc",bankIfsc);put("upiId",bankUpi);put("printBankDetails",printBank);put("printUpiQr",printQr)};if(selected==null){put("type",type);branch.takeIf{it.isNotBlank()}?.let{put("branchId",it)};if(amount.isNotBlank()){put("openingBalance",amount);put("openingDate",date);if(branch.isBlank()&&openingBranch.isNotBlank())put("openingBranchId",openingBranch)}}}
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
-                "transfers"->{put("description",transferDescription);put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
+                "transfers"->{transferImage?.let{put("image",it)};put("description",transferDescription);put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
                 "owners"->{put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}
                 "loans"->{put("lender",name);put("loanType",loanType);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration);put("principal",amount);put("interestRate",interest);put("startDate",date)}
                 "loan-payments"->{put("loanId",selected?.str("id").orEmpty());put("paymentDate",date);put("principal",amount);put("interest",interest);put("charges",charges);put("description",paymentDescription)}

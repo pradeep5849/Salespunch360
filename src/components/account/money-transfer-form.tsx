@@ -56,7 +56,7 @@ export function MoneyTransferForm({
     >
       <input type="hidden" name="idempotencyKey" value={key} />
       <SavePendingFields>
-        <fieldset><legend>Deposit / Withdraw</legend>{([["BANK_TO_CASH","Bank to Cash"],["CASH_TO_BANK","Cash to Bank"],["BANK_TO_BANK","Bank to Bank"],["ALL","Other internal transfer"]] as const).map(([value,label])=><label key={value}><input type="radio" name="transferMode" value={value} checked={mode===value} onChange={()=>{setMode(value);setSource("");setDestination("");setKey(crypto.randomUUID());}}/>{label}</label>)}</fieldset>
+        <fieldset><legend>Deposit / Withdraw</legend>{([["BANK_TO_CASH","Bank to Cash"],["CASH_TO_BANK","Cash to Bank"],["BANK_TO_BANK","Bank to Bank"],["ALL","Other internal transfer"]] as const).map(([value,label])=><label key={value}><input type="radio" name="transferMode" value={value} checked={mode===value} onChange={()=>{setMode(value);setSource("");setDestination("");}}/>{label}</label>)}</fieldset>
         <details><summary>Adjust Bank Balance</summary><p>Select the bank account to add or reduce its balance with an offset ledger and reason.</p>{choices.filter(row=>row.type==="BANK").map(row=><p key={row.id}><Link href={`/workspace/account/money/accounts/${row.id}?branchId=${encodeURIComponent(branch)}`}>{row.name}</Link></p>)}</details>
         <label>
           Branch

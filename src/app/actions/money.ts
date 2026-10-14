@@ -22,7 +22,7 @@ export async function transferAction(fd: FormData) {
   const actor=await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");if(!actor.companyId)throw new Error("NOT_AUTHORIZED");
   const file=fd.get("image"),image=file instanceof File&&file.size?await prepareTransferImage(file):null;
   const scoped={...actor,companyId:actor.companyId},row=await createMoneyTransferForActor(scoped,raw(fd));
-  if(image)try{await addTransferImageForActor(scoped,row.id,image);}catch{refresh();throw new Error("TRANSFER_POSTED_IMAGE_UPLOAD_FAILED");}
+  if(image)try{await addTransferImageForActor(scoped,row.id,image);}catch(error){refresh();if(error instanceof Error&&error.message==="TRANSFER_IMAGE_ALREADY_ATTACHED")throw error;throw new Error("TRANSFER_POSTED_IMAGE_UPLOAD_FAILED");}
   refresh();
 }
 export async function chequeAction(fd: FormData) {

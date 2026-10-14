@@ -3875,7 +3875,7 @@ Remaining: Account-specific paginated history/details, explicit selected report/
 
 **Required tests:** All four entry points; source/destination labels and fixed Cash side; bank-to-bank distinct accounts; attachments upload/view/denied access; date/description; web/native parity and Back.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A064_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9273,3 +9273,5 @@ A064-F06 started: web Bank-to-Cash/Cash-to-Bank/Bank-to-Bank modes, correct acco
 A064-F06 description/native continuation: native mode and branch-compatible choices validated; description saved in new additive migration 20261014010000_money_transfer_description, service replay identity, web/native inputs/history. Isolated migration deployment, Prisma validation/generation, 26/26 money/replay tests, browser 2/2 (33.3s) with actual balanced 20.25 transfer and description persistence passed. Updated Android compile + 2 JVM tests passed (1m43s; zero fail/error/skip), final stage TypeScript/lint passed. Transfer image persistence, device checks and final-head verification pending; PARTIAL.
 
 A064-F06 private-image web continuation: validated/normalized PNG/JPEG/WebP up to 5 MB, safe filenames, scoped private download, metadata-only history links, one immutable image per transfer and locked retry deduplication. Image failure reports already-posted transfer and preserves financial retry identity. 27/27 focused unit/action/PostgreSQL/replay checks, TypeScript/lint and browser desktop/mobile 2/2 (34.3s) passed. New 20261014020000_money_transfer_image migration corrected a missing pre-existing schema-declared company/ID unique key before its FK; only the failed unreleased isolated migration was resolved/reapplied. Historical migrations and production untouched. Native image API/UI and final-head/device checks pending; PARTIAL.
+
+A064-F06 native image completion: bounded picker/JSON transport, validated image before posting, authenticated preview, immutable-image error and stable financial retry identity across web modes implemented. 35/35 grouped regressions, desktop/mobile browser 2/2 (35.3s), Android compile + 4 JVM tests (2m11s; zero fail/error/skip) passed. Status IMPLEMENTED BUT NOT VERIFIED; final-head/migration rehearsal/device checks pending. Live totals: 129 IMPLEMENTED BUT NOT VERIFIED, 67 PARTIAL, 3 NOT STARTED; no final statuses.

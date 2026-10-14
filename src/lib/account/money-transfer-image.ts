@@ -43,3 +43,10 @@ export async function transferImageForActor(a:ProjectActor,id:string){
  const row=await db.moneyTransferImage.findFirst({where:{companyId:a.companyId,transferId:id}});if(!row)throw new Error("TRANSFER_IMAGE_NOT_FOUND");
  return{data:await privateStorage().get(row.storageKey),name:row.displayName,mimeType:row.mimeType};
 }
+/** JSON transport for native clients; reject oversized/noncanonical base64 before decoding. */
+export async function prepareTransferImagePayload(raw:unknown){
+ if(raw===undefined)return null;
+ const value=z.object({name:z.string().max(240),mimeType:z.enum(["image/png","image/jpeg","image/webp"]),base64:z.string().max(7_000_000).regex(/^[A-Za-z0-9+/]*={0,2}$/)}).parse(raw);
+ const bytes=Buffer.from(value.base64,"base64");if(bytes.toString("base64")!==value.base64||bytes.length>5*1024*1024)throw new Error("INVALID_TRANSFER_IMAGE");
+ return prepareTransferImage(new File([new Uint8Array(bytes)],value.name,{type:value.mimeType}));
+}

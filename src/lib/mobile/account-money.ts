@@ -1,3 +1,4 @@
+import {prepareTransferImagePayload,addTransferImageForActor,transferImageForActor} from "@/lib/account/money-transfer-image";
 import {editLoanMetadataForActor,topUpLoanForActor,changeLoanLifecycleForActor} from "@/lib/account/loan-operations";
 import {loanOverviewForActor} from "@/lib/account/loan-overview";
 import {loanHistoryForActor} from "@/lib/account/loan-history";
@@ -67,6 +68,7 @@ export async function mobileMoneyContext(
   const [transfers, ownerTransactions, loanPayments, users] = await Promise.all(
     [
       db.moneyTransfer.findMany({
+        include:{image:{select:{id:true}}},
         where: { companyId: a.companyId, ...scope },
         orderBy: { transferDate: "desc" },
         take: 200,
@@ -129,7 +131,10 @@ export async function mobileDisableMoneyAccount(
 }
 export async function mobileMoneyTransfer(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
-  return createMoneyTransferForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+  const actor=permit(u,"ACCOUNT_MONEY_ENTRY"),input=z.object({image:z.unknown().optional()}).passthrough().parse(raw),image=await prepareTransferImagePayload(input.image);
+  const row=await createMoneyTransferForActor(actor,raw);
+  if(image)try{await addTransferImageForActor(actor,row.id,image);}catch(error){if(error instanceof Error&&error.message==="TRANSFER_IMAGE_ALREADY_ATTACHED")throw error;throw new Error("TRANSFER_POSTED_IMAGE_UPLOAD_FAILED");}
+  return row;
 }
 export async function mobileOwnerTransaction(
   u: MobileAppPrincipal,
@@ -307,3 +312,5 @@ export async function mobileEditLoanMetadata(u:MobileAppPrincipal,id:string,raw:
 
 export async function mobileTopUpLoan(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return topUpLoanForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
 export async function mobileChangeLoanLifecycle(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return changeLoanLifecycleForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
+
+export async function mobileMoneyTransferImage(u:MobileAppPrincipal,id:string){return transferImageForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id);}

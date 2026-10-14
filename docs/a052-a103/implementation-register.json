@@ -10268,7 +10268,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -10284,6 +10284,10 @@
         {
           "work": "Added web optional private transfer image (PNG/JPEG/WebP up to 5 MB), actual-pixel decoding/normalization, bounded safe names, one immutable image per transfer, company/branch/permission-gated download and metadata-only history link. Financial posting and image attachment retries are separate; image validation precedes posting, upload failure explicitly reports that transfer already posted and retains the same financial request key. Image metadata/audit creation is locked and atomic; concurrent identical retries reuse one image, rejected/duplicate staging objects are cleaned. New additive 20261014020000_money_transfer_image migration also creates the Prisma-declared company/ID unique index missing in existing DB; no historical migrations edited. Native image UI/API and physical-device testing remain pending.",
           "tests": "27/27 focused tests passed: unit actual-image/filename validation; action pre-post validation, posted-on-upload-error and stable request-key retry; isolated PostgreSQL company/branch/role denial, concurrent same-image deduplication, immutable-image conflict and no additional journal writes; financial replay tests. Browser desktop/mobile 2/2 passed (34.3s) with actual form upload, saved description/metadata, private PNG download and equal debit/credit 20.25 entries. Initial migration failed on missing existing company/ID unique index; corrected the new unreleased migration, resolved only its isolated local failure, then deployment/schema validation passed. Initial fixture duplicate ledger name corrected; rerun passed. TypeScript and targeted lint passed; final-head checks not run. Status PARTIAL."
+        },
+        {
+          "work": "Completed native transfer image selection, bounded stream reads and canonical payload, private authenticated image preview, cancellation/error handling and explicit invalid-image removal. Native API validates actual image before financial posting, preserves financial retry identity after attachment failure and rejects immutable-image replacement with an accurate message. Native JSON body is bounded independently of headers. Core web request identity is retained across mode changes until confirmed success, preventing an attachment retry from becoming a new financial write.",
+          "tests": "35/35 grouped transfer/image/action/database/money-context regressions passed. Final desktop/mobile browser 2/2 passed (35.3s): unchanged request key through mode changes, actual web image/description post, balanced debit/credit, native API image post/replay with one journal, private PNG download, invalid-image rejection without posting and adjustment destination. Updated Android compile + 4 JVM tests passed (2m11s; zero fail/error/skip). Prior mobile navigation timed out at 5s after its financial/API assertions passed; rerun at established 20s cold-route timeout passed. Final stage TypeScript and targeted lint passed; complete final-head build/regression/migration rehearsal and real device picker/preview/TalkBack remain pending. No final status assigned."
         }
       ]
     },
