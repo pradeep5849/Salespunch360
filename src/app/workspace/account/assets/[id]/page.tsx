@@ -22,8 +22,8 @@ export default async function Page({
   const details: [string, React.ReactNode][] = [
     ["Asset type", asset.assetType],
     ["Status", asset.status],
-    ["Purchase value", <Money value={asset.purchaseValue}/>],
-    ["Purchase date", <AccountDate value={asset.purchaseDate.toISOString()}/>],
+    ["Purchase value", <Money key="purchase-value" value={asset.purchaseValue}/>],
+    ["Purchase date", <AccountDate key="purchase-date" value={asset.purchaseDate.toISOString()}/>],
     ["Category", asset.category],
     ["HSN code", asset.hsnCode],
     ["Opening quantity", asset.openingQuantity?.toString()],
@@ -54,7 +54,7 @@ export default async function Page({
     ["Description", asset.description],
     ["Depreciation method", asset.depreciationMethod],
     ["Useful life (months)", asset.usefulLifeMonths],
-    ["Salvage value", <Money value={asset.salvageValue}/>],
+    ["Salvage value", <Money key="salvage-value" value={asset.salvageValue}/>],
     [
       "Depreciation start date",
       asset.depreciationStartDate?<AccountDate value={asset.depreciationStartDate.toISOString()}/>:null,
