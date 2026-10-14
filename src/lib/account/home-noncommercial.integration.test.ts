@@ -8,9 +8,11 @@ if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(ur
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
-import {createSettlementForActor} from "./commercial";
+import {loadPrintDocumentForActor} from "./print";
+import {createCommercialDocumentForActor,createSettlementForActor} from "./commercial";
 import {createQuotationForActor} from "@/lib/quotations/service";
 import {homeSettlementForActor} from "./home-settlement";
+import {accountMobileHomeData} from "./mobile-home";
 import {homeNonCommercialRows} from "./home-noncommercial";
 const modules=new Set<AccountModule>(["CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES","VENDOR_PAYMENTS","VENDOR_ADVANCES","EXPENSES","QUOTATIONS_BOQ"]),permissions=new Set<Permission>(["ACCOUNT_LEDGER_VIEW","ACCOUNT_EXPENSE_VIEW","ACCOUNT_QUOTATION_VIEW"]);
 const companies=[randomUUID(),randomUUID()],branches=[randomUUID(),randomUUID()],users=[randomUUID(),randomUUID()];
@@ -43,9 +45,9 @@ describe.skipIf(!url)("Home source adapters against isolated PostgreSQL",()=>{
    await tx.quotationDocument.deleteMany({where:{companyId}});
    await tx.expenseTransaction.deleteMany({where:{companyId}});await tx.expenseCategory.deleteMany({where:{companyId}});
    await tx.accountOperationalAudit.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});
-   await tx.accountSettlement.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});
+   await tx.accountSettlement.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{document:{companyId}}});await tx.commercialDocument.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});
    await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});
-   await tx.customer.deleteMany({where:{companyId}});await tx.numberingSeries.deleteMany({where:{companyId}});
+   await tx.project.deleteMany({where:{companyId}});await tx.customer.deleteMany({where:{companyId}});await tx.numberingSeries.deleteMany({where:{companyId}});
    await tx.financialYear.deleteMany({where:{companyId}});await tx.moneyAccount.deleteMany({where:{companyId}});await tx.ledgerAccount.deleteMany({where:{companyId}});
    await tx.user.deleteMany({where:{companyId}});await tx.branch.deleteMany({where:{companyId}});await tx.accountSettings.deleteMany({where:{companyId}});await tx.company.deleteMany({where:{id:companyId}});
   });await client.$disconnect();
@@ -75,4 +77,34 @@ describe.skipIf(!url)("Home source adapters against isolated PostgreSQL",()=>{
    const rows=await homeNonCommercialRows(actors[0],{mode:"COMPANY",branchId:null,branchName:null},{q:"",types:[type]},modules,permissions);expect(rows).toHaveLength(1);expect(rows[0].sourceKind).toBe(kind);
   }
  });
+ it("merges real sources in Home date order with source destinations and no writes",async()=>{
+  const companyId=companies[0],context={mode:"BRANCH" as const,branchId:branches[0],branchName:"Home"};
+  const before=await client.journalEntry.count({where:{companyId}});
+  const all=await accountMobileHomeData(actors[0],context,{includeNonCommercial:true});
+  expect(all.transactions.map(row=>row.sourceKind)).toEqual(["EXPENSE","QUOTATION","SETTLEMENT"]);
+  expect(all.transactions[0]).toMatchObject({printType:null,showBalance:false});
+  expect(all.transactions[1].detailHref).toMatch(/^\/workspace\/account\/quotations\//);
+  expect(all.transactions[2].detailHref).toMatch(/^\/workspace\/account\/settlements\//);
+  const filtered=await accountMobileHomeData(actors[0],context,{includeNonCommercial:true,types:["CUSTOMER_RECEIPT"]});
+  expect(filtered.transactions).toHaveLength(1);expect(filtered.transactions[0].sourceKind).toBe("SETTLEMENT");
+  expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+ });
+ it("allows managed-project payment and invoice views while denying another project",async()=>{
+  const companyId=companies[0],branchId=branches[0],pmId=randomUUID();
+  await client.user.create({data:{id:pmId,companyId,name:"Project manager",email:`${pmId}@example.test`,passwordHash:"isolated-fixture",role:"ACCOUNT_USER",accountRole:"PROJECT_MANAGER",accountAccessActive:true}});
+  const customer=await client.customer.findFirstOrThrow({where:{companyId}}),pm={...actors[0],id:pmId,accountRole:"PROJECT_MANAGER" as const,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[branchId]};
+  const own=await client.project.create({data:{companyId,branchId,customerId:customer.id,createdById:users[0],projectManagerId:pmId,projectNumber:"HOME-PM",name:"Managed project",status:"ACTIVE",startDate:new Date("2026-01-01"),projectValue:"1000"}});
+  const other=await client.project.create({data:{companyId,branchId,customerId:customer.id,createdById:users[0],projectManagerId:users[0],projectNumber:"HOME-OTHER",name:"Other project",status:"ACTIVE",startDate:new Date("2026-01-01"),projectValue:"1000"}});
+  const payment=await createSettlementForActor(actors[0],{idempotencyKey:randomUUID(),type:"CUSTOMER_ADVANCE",branchId,projectId:own.id,partyId:customer.id,paymentMode:"CASH",amount:"10",transactionDate:"2026-10-11"});
+  const invoice=await createCommercialDocumentForActor(actors[0],{type:"SALES_INVOICE",branchId,partyId:customer.id,projectId:own.id,issueDate:"2026-10-11",lines:[{lineType:"CUSTOM",itemName:"Managed invoice",quantity:"1",rate:"50",taxRate:"0"}]});
+  const foreignInvoice=await createCommercialDocumentForActor(actors[0],{type:"SALES_INVOICE",branchId,partyId:customer.id,projectId:other.id,issueDate:"2026-10-11",lines:[{lineType:"CUSTOM",itemName:"Other invoice",quantity:"1",rate:"70",taxRate:"0"}]});
+  await client.accountSettings.upsert({where:{companyId},create:{companyId,enabledModules:["PROJECTS"],transactionDefaults:{invoicePrintSettings:{partyCurrentBalance:true}}},update:{transactionDefaults:{invoicePrintSettings:{partyCurrentBalance:true}}}});
+  const journalCount=await client.journalEntry.count({where:{companyId}});
+  expect((await homeSettlementForActor(pm,payment.id))?.entry.grandTotal).toBe("10");
+  expect((await homeNonCommercialRows(pm,{mode:"BRANCH",branchId,branchName:"Home"},{q:"",types:["CUSTOMER_RECEIPT"]},modules,permissions)).map(row=>row.id)).toEqual([payment.id]);
+  const receipt=await loadPrintDocumentForActor(pm,"CUSTOMER_ADVANCE",payment.id);expect(receipt.document.total).toBe("10");
+  const view=await loadPrintDocumentForActor(pm,"SALES_INVOICE",invoice.id);expect(view.document.total).toBe("50");expect(view.document.partyCurrentBalance).toBeUndefined();
+  await expect(loadPrintDocumentForActor(pm,"SALES_INVOICE",foreignInvoice.id)).rejects.toThrow("PRINT_DOCUMENT_NOT_FOUND");expect(await client.journalEntry.count({where:{companyId}})).toBe(journalCount);
+ });
+
 });

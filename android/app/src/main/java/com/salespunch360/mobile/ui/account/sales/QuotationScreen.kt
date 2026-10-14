@@ -32,7 +32,8 @@ import java.io.File
 import kotlinx.serialization.json.*
 
 @Composable
-fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()) {
+fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel(), initialDocumentId:String?=null) {
+    LaunchedEffect(initialDocumentId){initialDocumentId?.let(vm::open)}
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     LaunchedEffect(state.pdf) {

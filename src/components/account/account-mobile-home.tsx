@@ -19,6 +19,11 @@ type Transaction = {
   grandTotal: string;
   balanceDue: string;
   paymentStatus?: string;
+  sourceKind?: string;
+  detailHref?: string;
+  printType?: string | null;
+  showBalance?: boolean;
+  balanceLabel?: string;
 };
 type Party = {
   id: string;
@@ -247,18 +252,18 @@ export function AccountMobileHome({
         ];
   const downloadFile=(file:File)=>{const url=URL.createObjectURL(file),link=document.createElement("a");link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   const shareImages=async()=>{
-   if(!active||sharePending)return;
+   if(!active||active.printType===null||sharePending)return;
    setSharePending(true);setShareError(null);setImageDownloads(null);
    try{
-    const files=await printPdfPageImages(await preparePrintPdf(`/api/account/print/${active.type}/${active.id}?format=pdf`,active.documentNumber));
+    const files=await printPdfPageImages(await preparePrintPdf(`/api/account/print/${active.printType??active.type}/${active.id}?format=pdf`,active.documentNumber));
     if(navigator.share&&navigator.canShare?.({files}))await navigator.share({files,title:active.documentNumber});
     else if(files.length===1)downloadFile(files[0]);
     else setImageDownloads({id:active.id,files});
    }catch(error){if(!isShareCancellation(error))setShareError({id:active.id,message:error instanceof Error?error.message:"Could not share images. Please try PDF instead."});}finally{setSharePending(false);}
   };
   const sharePdf = async (selected:Transaction|null=active) => {
-    if (!selected||sharePending) return;
-    const pdfUrl=`/api/account/print/${selected.type}/${selected.id}?format=pdf`;
+    if (!selected||selected.printType===null||sharePending) return;
+    const pdfUrl=`/api/account/print/${selected.printType??selected.type}/${selected.id}?format=pdf`;
     setSharePending(true);setShareError(null);
     try{
     const file=await preparePrintPdf(pdfUrl,selected.documentNumber);
@@ -378,13 +383,13 @@ export function AccountMobileHome({
             transactions.map((tx) => (
               <article
                 className="account-transaction-card account-reference-transaction-card"
-                key={tx.id}
+                key={`${tx.sourceKind??"COMMERCIAL"}:${tx.id}`}
               >
                 <Link
                   href={
-                    tx.type === "SALES_INVOICE"
+                    tx.detailHref ?? (tx.type === "SALES_INVOICE"
                       ? `/workspace/account/sales/${tx.id}`
-                      : `/workspace/account/transactions/${tx.id}`
+                      : `/workspace/account/transactions/${tx.id}`)
                   }
                 >
                   <div className="account-reference-card-top">
@@ -414,15 +419,15 @@ export function AccountMobileHome({
                       <small>Total</small>
                       <Money value={tx.grandTotal} />
                     </span>
-                    <span>
-                      <small>Balance</small>
+                    {tx.showBalance!==false&&<span>
+                      <small>{tx.balanceLabel??"Balance"}</small>
                       <Money value={tx.balanceDue} />
-                    </span>
+                    </span>}
                   </div>
                 </Link>
                 <footer className="account-reference-actions">
-                  <a
-                    href={`/api/account/print/${tx.type}/${tx.id}`}
+                  {tx.printType!==null&&<><a
+                    href={`/api/account/print/${tx.printType??tx.type}/${tx.id}`}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Print"
@@ -438,7 +443,7 @@ export function AccountMobileHome({
                     }}
                   >
                     <AccountIcon name="share" />
-                  </button>
+                  </button></>}
                   <button
                     aria-label="More"
                     onClick={() => {
@@ -604,14 +609,14 @@ export function AccountMobileHome({
                   )}
                 <Link
                   href={
-                    active.type === "SALES_INVOICE"
+                    active.detailHref ?? (active.type === "SALES_INVOICE"
                       ? `/workspace/account/sales/${active.id}`
-                      : `/workspace/account/transactions/${active.id}`
+                      : `/workspace/account/transactions/${active.id}`)
                   }
                 >
-                  Payment History
+                  {active.sourceKind&&active.sourceKind!=="COMMERCIAL"?"View details":"Payment History"}
                 </Link>
-                <button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>
+                {active.printType!==null&&<button disabled={sharePending} onClick={()=>void sharePdf()}>{sharePending?"Preparing PDF…":"Share as PDF"}</button>}
                 <button disabled>
                   Generate e-Invoice<small>Coming later</small>
                 </button>

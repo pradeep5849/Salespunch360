@@ -9,6 +9,10 @@ describe("account home contexts",()=>{
   it("exposes the exact transaction filter labels in their requested order",()=>{
     expect(TRANSACTION_FILTERS.map(x=>x.label)).toEqual(["Sale","Sale Order","Credit Note","Purchase","Purchase Order","Debit Note","Payment-In","Payment-Out","Estimate","Proforma Invoice","Expense","Delivery Challan","Party To Party [Rcvd]","Party To Party [Paid]","Sale FA","Purchase FA","Sale [Cancelled]","Job work out (Challan)","Purchase (Job work)","Sale [Repeating]"]);
   });
+  it("uses source destinations and hides unsupported print and estimate balances",()=>{
+    const html=renderToStaticMarkup(createElement(AccountMobileHome,{tab:"transactions",transactions:[{id:"expense",sourceKind:"EXPENSE",type:"EXPENSE",documentNumber:"E1",issueDate:"2026-10-13",status:"DRAFT",partyName:"Office",grandTotal:"90",balanceDue:"0",showBalance:false,detailHref:"/workspace/account/expenses/expense",printType:null}],parties:[],q:"",selectedTypes:[]}));
+    expect(html).toContain('href="/workspace/account/expenses/expense"');expect(html).not.toContain('/api/account/print/EXPENSE');expect(html).not.toContain('aria-label="Share"');expect(html).not.toContain('<small>Balance</small>');
+  });
   it("keeps search/filter and the visible floating sale action contracts",()=>{
     const source=readFileSync("src/components/account/account-mobile-home.tsx","utf8"),css=readFileSync("src/app/globals.css","utf8");
     expect(source).toContain('className="account-home-search"');

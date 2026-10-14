@@ -7,10 +7,10 @@ import {requireAccountModules} from "./modules";
 import type {AccountBranchActor} from "./branch-context";
 import type {HomeSourceRow} from "./home-noncommercial";
 type Amount={toString():string};
-type Header={id:string;type:string;settlementNumber:string;transactionDate:Date;status:string;amount:Amount;remainingAmount:Amount;customer?:{name:string}|null;vendor?:{name:string}|null;journalEntry?:{status:string}|null};
+type Header={id:string;type:string;settlementNumber:string;transactionDate:Date;status:string;amount:Amount;remainingAmount:Amount;createdAt?:Date;customer?:{name:string}|null;vendor?:{name:string}|null;journalEntry?:{status:string}|null};
 export function homeSettlementRow(row:Header):HomeSourceRow{
  const incoming=row.type.startsWith("CUSTOMER"),status=row.journalEntry?.status==="REVERSED"?"REVERSED":row.status;
- return{id:row.id,sourceKind:"SETTLEMENT",type:row.type,filterType:incoming?"CUSTOMER_RECEIPT":"VENDOR_PAYMENT",partyName:row.customer?.name??row.vendor?.name??"Party",documentNumber:row.settlementNumber,issueDate:row.transactionDate,status,grandTotal:row.amount.toString(),balanceDue:status==="POSTED"?row.remainingAmount.toString():"0",balanceLabel:"Unallocated",showBalance:true,detailHref:`/workspace/account/settlements/${row.id}`,printType:row.type};
+ return{id:row.id,sourceKind:"SETTLEMENT",sortAt:row.createdAt,type:row.type,filterType:incoming?"CUSTOMER_RECEIPT":"VENDOR_PAYMENT",partyName:row.customer?.name??row.vendor?.name??"Party",documentNumber:row.settlementNumber,issueDate:row.transactionDate,status,grandTotal:row.amount.toString(),balanceDue:status==="POSTED"?row.remainingAmount.toString():"0",balanceLabel:"Unallocated",showBalance:true,detailHref:`/workspace/account/settlements/${row.id}`,printType:row.type};
 }
 /** Read-only receipt/payment destination for Home; no posting or allocation is
  * performed by opening this view. Amounts distinguish cash from discounts. */

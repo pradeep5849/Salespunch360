@@ -248,6 +248,7 @@ export async function mobileAccountHome(
     scope?: string | null;
     q?: string;
     types?: string[];
+    includeNonCommercial?: boolean;
   },
 ) {
   const actor = accountActor(user);

@@ -165,7 +165,8 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.substringBefore("?")=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath.startsWith("/workspace/account/sales/")->AccountSalesScreen(null,padding,vm::select,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment)
             state.selectedPath.startsWith("/workspace/account/purchases/")->PurchaseScreen(null,padding,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment)
-            state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
+            state.selectedPath.startsWith("/workspace/account/settlements/")->com.salespunch360.mobile.ui.account.sales.InvoicePdfPreview(android.net.Uri.parse(state.selectedPath).lastPathSegment.orEmpty(),documentType=queryValue(state.selectedPath,"type")?:"CUSTOMER_RECEIPT",onClose=vm::back)
+            state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding,initialExpenseId=android.net.Uri.parse(state.selectedPath).lastPathSegment?.takeIf{it!="expenses"&&it!="new"},initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
             state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"))
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId")?:android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(3)?.takeIf{it!="new"},initialCreate=android.net.Uri.parse(state.selectedPath).path?.endsWith("/projects/new")==true)
@@ -197,7 +198,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/inventory/active")->com.salespunch360.mobile.ui.account.inventory.ActiveItemsManagementScreen(queryValue(state.selectedPath,"mode")=="activate",vm::back)
             state.selectedPath.substringBefore("?").endsWith("/inventory/stock-summary")->com.salespunch360.mobile.ui.account.inventory.StockSummaryScreen(padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
-            state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment?.takeIf{it!="quotations"&&it!="new"})
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))
@@ -253,9 +254,9 @@ private fun AccountHomeScreen(
     var shareError by remember{mutableStateOf<String?>(null)}
     var shareChoice by remember{mutableStateOf<com.salespunch360.mobile.data.AccountHomeTransaction?>(null)}
     fun export(tx:com.salespunch360.mobile.data.AccountHomeTransaction,images:Boolean){
-        if(sharePending)return
+        if(sharePending||(tx.sourceKind!="COMMERCIAL"&&tx.printType==null))return
         sharePending=true;shareError=null;shareChoice=null
-        pdf(tx.type,tx.id,{bytes->shareScope.launch{try{val files=prepareDocumentShare(context,tx.documentNumber,bytes,images);launchDocumentShare(context,files,images)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){shareError=error.message?:"Sharing failed. Please try again."}finally{sharePending=false}}},{error->sharePending=false;shareError=error})
+        pdf(tx.printType?:tx.type,tx.id,{bytes->shareScope.launch{try{val files=prepareDocumentShare(context,tx.documentNumber,bytes,images);launchDocumentShare(context,files,images)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){shareError=error.message?:"Sharing failed. Please try again."}finally{sharePending=false}}},{error->sharePending=false;shareError=error})
     }
     if(shareChoice!=null)ModalBottomSheet(onDismissRequest={shareChoice=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){Text("Share transaction",style=MaterialTheme.typography.titleLarge);TextButton(onClick={shareChoice?.let{export(it,true)}}){Text("Share as Image")};TextButton(onClick={shareChoice?.let{export(it,false)}}){Text("Share as PDF")}}}
     transactionMenu?.let{tx->ModalBottomSheet(onDismissRequest={transactionMenu=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){
@@ -265,8 +266,8 @@ private fun AccountHomeScreen(
             TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${tx.id}")}){Text("Return")}
             TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=DELIVERY_CHALLAN&sourceDocumentId=${tx.id}")}){Text("Delivery Challan")}
         }
-        TextButton(onClick={transactionMenu=null;navigate(if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")}){Text("Payment History")}
-        TextButton(enabled=!sharePending,onClick={transactionMenu=null;export(tx,false)}){Text("Share as PDF")}
+        TextButton(onClick={transactionMenu=null;navigate(tx.detailHref?.let{if(tx.sourceKind=="SETTLEMENT")"$it?type=${tx.printType?:tx.type}" else it}?:if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")}){Text(if(tx.sourceKind=="COMMERCIAL")"Payment History" else "View details")}
+        TextButton(enabled=!sharePending&&(tx.sourceKind=="COMMERCIAL"||tx.printType!=null),onClick={transactionMenu=null;export(tx,false)}){Text("Share as PDF")}
         TextButton(enabled=false,onClick={}){Text("Generate e-Invoice · Coming later")}
     }}}
     if(shareError!=null)AlertDialog(onDismissRequest={shareError=null},title={Text("Could not share document")},text={Text(shareError.orEmpty())},confirmButton={TextButton(onClick={shareError=null}){Text("OK")}})
@@ -318,10 +319,10 @@ private fun AccountHomeScreen(
                 }
             }
             if(!partyMode){
-                items(home?.transactions.orEmpty(),key={it.id}){tx->
+                items(home?.transactions.orEmpty(),key={"${it.sourceKind}:${it.id}"}){tx->
                     ElevatedCard(Modifier.fillMaxWidth()){
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                            Row(Modifier.fillMaxWidth().clickable{navigate(if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")},horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            Row(Modifier.fillMaxWidth().clickable{navigate(tx.detailHref?.let{if(tx.sourceKind=="SETTLEMENT")"$it?type=${tx.printType?:tx.type}" else it}?:if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")},horizontalArrangement=Arrangement.spacedBy(8.dp)){
                                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
                                     Text(tx.partyName,fontWeight=FontWeight.SemiBold)
                                     val paid=tx.type=="SALES_INVOICE"&&tx.paymentStatus=="PAID"
@@ -329,9 +330,9 @@ private fun AccountHomeScreen(
                                 }
                                 Column(Modifier.weight(1f),horizontalAlignment=Alignment.End){Text("#${tx.documentNumber}",fontWeight=FontWeight.SemiBold);Text(accountDate(tx.issueDate),style=MaterialTheme.typography.bodySmall)}
                             }
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Column{Text("Amount",style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.grandTotal,"MONEY"))};Column(horizontalAlignment=Alignment.End){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.balanceDue,"MONEY"))}}
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Column{Text("Amount",style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.grandTotal,"MONEY"))};if(tx.showBalance)Column(horizontalAlignment=Alignment.End){Text(tx.balanceLabel,style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.balanceDue,"MONEY"))}}
                             HorizontalDivider()
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){IconButton(enabled=!sharePending,onClick={export(tx,false)}){Icon(Icons.Default.Print,"Print ${tx.documentNumber}")};IconButton(enabled=!sharePending,onClick={if(home?.shareAs=="PDF")export(tx,false)else shareChoice=tx}){Icon(Icons.Default.Share,"Share ${tx.documentNumber}")};IconButton(onClick={transactionMenu=tx}){Icon(Icons.Default.MoreVert,"More ${tx.documentNumber}")}}
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){IconButton(enabled=!sharePending&&(tx.sourceKind=="COMMERCIAL"||tx.printType!=null),onClick={export(tx,false)}){Icon(Icons.Default.Print,"Print ${tx.documentNumber}")};IconButton(enabled=!sharePending&&(tx.sourceKind=="COMMERCIAL"||tx.printType!=null),onClick={if(home?.shareAs=="PDF")export(tx,false)else shareChoice=tx}){Icon(Icons.Default.Share,"Share ${tx.documentNumber}")};IconButton(onClick={transactionMenu=tx}){Icon(Icons.Default.MoreVert,"More ${tx.documentNumber}")}}
                         }
                     }
                 }

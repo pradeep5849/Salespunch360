@@ -28,6 +28,7 @@ export default async function Page({
     tab = query.tab === "parties" ? "parties" : "transactions",
     data = await accountMobileHomeData(actor, resolved.context, {
       tab,
+      includeNonCommercial:true,
       q: query.q,
       types: query.types?.split(","),
     });

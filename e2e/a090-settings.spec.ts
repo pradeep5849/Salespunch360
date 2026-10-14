@@ -1754,3 +1754,26 @@ test("A071 Party Home groups rows and preserves long names, dates, scope and emp
  await row.click();await expect(page).toHaveURL(/\/workspace\/account\/customers\?/,{timeout:20000});expect(new URL(page.url()).searchParams.get("branchId")).toBe(branchId);expect(new URL(page.url()).searchParams.get("q")).toBe(longName);
  await page.goto(`/workspace/account?tab=parties&branchId=${branchId}&q=no-matching-party`);await expect(page.getByText("No parties found",{exact:true})).toBeVisible();await expect(page.getByRole("region",{name:"Parties",exact:true}).getByRole("link")).toHaveCount(0);
 });
+
+ test("A071 Home payment filter opens the scoped read-only payment destination",async({page})=>{
+ test.setTimeout(120000);
+ const customer=await db.customer.create({data:{companyId,branchId,name:"Home source payment buyer",isAccountCustomer:true}});
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ await db.financialYear.create({data:{companyId,name:"Home source year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{}});
+ const payment=await createSettlementForActor(actor,{type:"CUSTOMER_ADVANCE",branchId,partyId:customer.id,amount:"123.45",paymentMode:"CASH",transactionDate:"2026-10-11",idempotencyKey:randomUUID()});
+ const count=await db.journalEntry.count({where:{companyId}});
+ await signInSettings(page);
+ const mobileToken=createSessionToken(),mobileUser=await db.user.findUniqueOrThrow({where:{id:userId}});
+ await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(mobileToken),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:mobileUser.sessionVersion}});
+ const headers={authorization:`Bearer ${mobileToken}`},base=`/api/v1/mobile/account/home?branchId=${branchId}&type=CUSTOMER_RECEIPT&q=Home%20source%20payment%20buyer`;
+ const legacy=await page.request.get(base,{headers});expect(legacy.status()).toBe(200);expect((await legacy.json()).transactions).toEqual([]);
+ const current=await page.request.get(`${base}&homeVersion=2`,{headers});expect(current.status()).toBe(200);expect((await current.json()).transactions).toEqual([expect.objectContaining({id:payment.id,sourceKind:"SETTLEMENT",printType:"CUSTOMER_ADVANCE",balanceLabel:"Unallocated"})]);
+ await page.goto(`/workspace/account?branchId=${branchId}&types=CUSTOMER_RECEIPT&q=Home%20source%20payment%20buyer`);
+ const card=page.locator(".account-transaction-card").filter({hasText:customer.name});await expect(card).toHaveCount(1);await expect(card).toContainText("123.45");
+ await card.getByRole("link").first().click();await expect(page).toHaveURL(new RegExp(`/settlements/${payment.id}`));
+ const detail=page.getByRole("region",{name:"Payment details"});await expect(detail).toContainText(customer.name);await expect(detail).toContainText("Unallocated amount");await expect(detail).toContainText("No applications.");
+ expect(await db.journalEntry.count({where:{companyId}})).toBe(count);
+ const axe=await new AxeBuilder({page}).include('[aria-label="Payment details"]').withTags(["wcag2a","wcag2aa"]).analyze();expect(axe.violations).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ });

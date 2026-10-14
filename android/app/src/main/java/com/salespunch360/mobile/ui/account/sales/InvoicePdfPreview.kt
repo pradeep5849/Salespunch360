@@ -20,18 +20,18 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InvoicePdfPreview(id:String,onClose:()->Unit){
+fun InvoicePdfPreview(id:String,documentType:String="SALES_INVOICE",onClose:()->Unit){
     val context=LocalContext.current
     var file by remember(id){mutableStateOf<File?>(null)}
     var pageIndex by remember(id){mutableIntStateOf(0)}
     var pages by remember(id){mutableIntStateOf(0)}
     var bitmap by remember(id){mutableStateOf<Bitmap?>(null)}
     var error by remember(id){mutableStateOf<String?>(null)}
-    LaunchedEffect(id){
+    LaunchedEffect(id,documentType){
         try{
-            val bytes=ApiClient(SecureSession(context)).accountDocumentPdf("SALES_INVOICE",id)
+            val bytes=ApiClient(SecureSession(context)).accountDocumentPdf(documentType,id)
             file=withContext(Dispatchers.IO){safeAttachmentFile(context.cacheDir,"preview-$id.pdf").also{it.writeBytes(bytes)}}
-        }catch(_:Exception){error="Invoice preview could not be loaded."}
+        }catch(_:Exception){error="Document preview could not be loaded."}
     }
     LaunchedEffect(file,pageIndex){
         val source=file?:return@LaunchedEffect
