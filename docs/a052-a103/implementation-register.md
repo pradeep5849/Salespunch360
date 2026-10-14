@@ -6204,7 +6204,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Several/zero parties; long names; date/balance formatting; narrow/large-font display; row navigation.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9257,3 +9257,5 @@ A071-F01 and A071-F03 are IMPLEMENTED BUT NOT VERIFIED. Android all-page images/
 A071-F02 web continuation: New Sale Duplicate retains editable snapshot values but no original identity/payment/posting/stock-assignment links. Desktop/mobile financial browser tests 2/2 (30.1s), focused units and clean TypeScript/lint passed. No write on opening; explicit Save creates a new unpaid invoice, paid source remains settled. Native workflow and final-head checks pending; status PARTIAL.
 
 A071-F02 native continuation: Android new-copy flow, input reset, fresh request identity, permission/branch guard and retry implemented. Initial editor filtering no longer cancels options bootstrap. Android compile + 7 duplicate/edit JVM tests passed (1m41s), grouped Home tests 15/15 and TypeScript/lint passed. Earlier obsolete Home test assumptions updated with rendered scope/reset-link verification. Physical-device navigation and final-head security/financial regression pending. Status IMPLEMENTED BUT NOT VERIFIED.
+
+A071-F07 implementation: grouped white panel/dividers, Add New Party label, dates/balances, wrapping names and native empty state. Desktop/mobile browser 2/2 (26.0s), enlarged text, scoped Axe AA and correct branch/query navigation passed. Android compile (1m20s), TypeScript/lint passed. Device/font-scale/TalkBack and final-head verification pending.

@@ -16970,10 +16970,16 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
-      "shared_fix_links": []
+      "shared_fix_links": [],
+      "checkpoint_work": [
+        {
+          "work": "Web/native Party Home uses a single white panel with row dividers, Add New Party label, dates/balances, wrapping long names and accessible existing destinations. Native empty list now has an explicit empty state. Web row navigation retains the selected branch and party query. Existing financial source calculations unchanged in this presentation slice.",
+          "tests": "Desktop/mobile web tests 2/2 passed (26.0s): two rows, explicit dates, long name, 2rem enlarged text without horizontal overflow, scoped Axe AA, branch/query-preserving navigation, zero results. Android compileDebugKotlin passed (1m20s). TypeScript and targeted lint passed after browser stopped. Native physical-device/font-scale/TalkBack and final-head checks pending."
+        }
+      ]
     },
     {
       "finding_id": "A072-F01",

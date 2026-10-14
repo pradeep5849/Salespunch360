@@ -1739,3 +1739,18 @@ test("A071 Duplicate opens an independent new Sale without copying its payment o
  const copy=await db.commercialDocument.findFirstOrThrow({where:{companyId,billingName:"Copy billing"},include:{allocations:true,advanceApplications:true,lines:true}});expect(copy.id).not.toBe(source.id);expect(copy.documentNumber).not.toBe(source.documentNumber);expect(copy.allocations).toHaveLength(0);expect(copy.advanceApplications).toHaveLength(0);expect(copy.lines[0].id).not.toBe((await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}})).id);expect((await db.$transaction(tx=>documentOutstandingInTx(tx,companyId,copy.id))).outstanding.toString()).toBe("100");expect((await db.$transaction(tx=>documentOutstandingInTx(tx,companyId,source.id))).outstanding.toString()).toBe("0");
  const missing=await page.request.get(`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${randomUUID()}`);expect(missing.status()).toBe(404);
 });
+
+test("A071 Party Home groups rows and preserves long names, dates, scope and empty state",async({page})=>{
+ test.setTimeout(120_000);
+ const longName="Long party name for grouped rows ".repeat(6).trim();
+ await db.customer.update({where:{id:customerId},data:{updatedAt:new Date("2026-10-11T00:00:00Z")}});
+ await db.customer.create({data:{companyId,branchId,name:longName,isAccountCustomer:true,updatedAt:new Date("2026-10-11T00:00:00Z")}});
+ await signInSettings(page);await page.goto(`/workspace/account?tab=parties&branchId=${branchId}`);
+ const panel=page.getByRole("region",{name:"Parties",exact:true});await expect(panel).toHaveClass(/account-party-panel/);await expect(panel.getByRole("link")).toHaveCount(2);await expect(panel.getByText("Last activity 11/10/2026",{exact:true})).toHaveCount(2);
+ await expect(page.getByRole("link",{name:"+ Add New Party",exact:true})).toHaveAttribute("href",new RegExp(`customers/new\\?.*branchId=${branchId}`));
+ await page.addStyleTag({content:".account-party-panel strong,.account-party-panel small,.account-party-panel .account-money{font-size:2rem!important}"});
+ const row=panel.getByRole("link").filter({hasText:longName});await expect(row).toBeVisible();expect(await panel.evaluate(element=>element.scrollWidth<=element.clientWidth+1)).toBe(true);
+ const axe=await new AxeBuilder({page}).include(".account-party-panel").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze();expect(axe.violations).toEqual([]);
+ await row.click();await expect(page).toHaveURL(/\/workspace\/account\/customers\?/,{timeout:20000});expect(new URL(page.url()).searchParams.get("branchId")).toBe(branchId);expect(new URL(page.url()).searchParams.get("q")).toBe(longName);
+ await page.goto(`/workspace/account?tab=parties&branchId=${branchId}&q=no-matching-party`);await expect(page.getByText("No parties found",{exact:true})).toBeVisible();await expect(page.getByRole("region",{name:"Parties",exact:true}).getByRole("link")).toHaveCount(0);
+});

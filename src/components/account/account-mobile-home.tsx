@@ -459,7 +459,7 @@ export function AccountMobileHome({
           )}
         </section>
       ) : (
-        <section className="account-home-list" aria-label="Parties">
+        <section className="account-home-list account-party-panel" aria-label="Parties">
           {parties.length ? (
             parties.map((party) => (
               <Link
@@ -500,7 +500,7 @@ export function AccountMobileHome({
               : `/workspace/account/customers/new?${scopeParams}`
           }
         >
-          {tab === "transactions" ? "+ Add New Sale" : "+ New Party"}
+          {tab === "transactions" ? "+ Add New Sale" : "+ Add New Party"}
         </Link>
       )}
       {sheet && (

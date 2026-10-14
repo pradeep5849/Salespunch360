@@ -336,11 +336,25 @@ private fun AccountHomeScreen(
                     }
                 }
             }else{
-                items(home?.parties.orEmpty(),key={it.id}){party->ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${accountDate(party.lastActivity)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}}
+                item{
+                    val parties=home?.parties.orEmpty()
+                    Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp),color=Color.White,border=androidx.compose.foundation.BorderStroke(1.dp,Color(0xFFD8DDE5))){
+                        Column{
+                            if(parties.isEmpty())Text("No parties found",Modifier.padding(20.dp))
+                            parties.forEachIndexed{index,party->
+                                Row(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}.padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically){
+                                    Column(Modifier.weight(1f)){Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${accountDate(party.lastActivity)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF596579))}
+                                    Text(formatMetric(party.balance,"MONEY"),Modifier.weight(.7f),fontWeight=FontWeight.Bold,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                                }
+                                if(index<parties.lastIndex)HorizontalDivider(color=Color(0xFFE2E8F0))
+                            }
+                        }
+                    }
+                }
             }
         }
         AnimatedVisibility(visible=floatingVisible&&(if(partyMode)all.any{it.href=="/workspace/account/customers"}else all.any{it.href=="/workspace/account/transactions/new?type=SALES_INVOICE"}),modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
-            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers/new?${com.salespunch360.mobile.account.moneyContextQuery(initialQuery)}" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"New Party" else "New Sale")})
+            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers/new?${com.salespunch360.mobile.account.moneyContextQuery(initialQuery)}" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"Add New Party" else "New Sale")})
         }
     }
     if(filterOpen)ModalBottomSheet(onDismissRequest={filterOpen=false},dragHandle=null){
