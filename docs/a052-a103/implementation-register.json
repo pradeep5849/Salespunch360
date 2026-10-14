@@ -16644,7 +16644,10 @@
         "src/app/globals.css",
         "src/app/workspace/customers/new/page.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
-        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
+        "src/lib/account/home-noncommercial.ts",
+        "src/lib/account/home-noncommercial.test.ts",
+        "src/lib/account/home-noncommercial.integration.test.ts"
       ],
       "affected_services_apis_actions": [
         "Account Home web and shared accountMobileHomeData",
@@ -16738,11 +16741,17 @@
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
-      "checkpoint_work": {
-        "implementation": "Replaced invalid UUID sentinel with an empty UUID set for noncommercial-only selections; retained company/branch and search predicates.",
-        "tests": "Five new query regressions passed (receipts, payments, expense, estimate and mixed filter), with 19 grouped tests passing; TypeScript and focused lint passed.",
-        "remaining": "Implement real authorized noncommercial transaction data sources and their web/native regression coverage. Final-head validation pending."
-      }
+      "checkpoint_work": [
+        {
+          "implementation": "Replaced invalid UUID sentinel with an empty UUID set for noncommercial-only selections; retained company/branch and search predicates.",
+          "tests": "Five new query regressions passed (receipts, payments, expense, estimate and mixed filter), with 19 grouped tests passing; TypeScript and focused lint passed.",
+          "remaining": "Implement real authorized noncommercial transaction data sources and their web/native regression coverage. Final-head validation pending."
+        },
+        {
+          "work": "Added typed, whitelisted non-commercial Home source adapters for receipts/advances, vendor payments, expenses/income and current estimates/quotations. Canonical role permission intersection, module gates, company/assigned-branch intersection, managed-project expense/payment scope and parameterized SQL are enforced. Distinct source/destination/print metadata prevents treating estimates as debt or paid expenses as unpaid. This adapter stage is not yet connected to the Home consumer; source-aware read destinations and native consumers must be completed before enabling it. Party-to-party semantics clarification is pending; unsupported source types are not invented.",
+          "tests": "12/12 grouped tests passed: 9 unit and 3 isolated PostgreSQL tests with two companies, real posted advances, current estimates and draft expenses. Verified actual joins/filters, company and assigned-branch isolation, role/module denial, safe search parameters, no private-field serialization and no journal writes during reads. TypeScript and targeted lint passed. Consumer/browser/native/final-head verification pending; status remains PARTIAL."
+        }
+      ]
     },
     {
       "finding_id": "A071-F06",
