@@ -11286,46 +11286,53 @@
       "shared_fix_links": [
         "A071-F04"
       ],
-      "checkpoint_work": {
-        "summary": "Web money-account creation now uses explicit stable accessible names, bounds, disabled pending fields/button, structured action errors/success, retained inputs and failing-field focus. Existing company-wide blank branch normalization verified through real browser creation.",
-        "verification": "Intermediate desktop/mobile browser 2 passed: whitespace-name server validation, accessible error association/focus, AXE, company-wide account plus linked asset ledger creation and success feedback. TypeScript and focused ESLint passed.",
-        "remaining": "Remaining money forms, broader keyboard/error paths and stable creation retry identity tracked with A064-F09; final-head validation still required.",
-        "files": [
-          "src/components/account/money-account-form.tsx",
-          "src/app/workspace/account/money/accounts/page.tsx",
-          "src/app/actions/money.ts",
-          "e2e/a090-settings.spec.ts"
-        ],
-        "creation_retry_slice": {
-          "summary": "Web/native account creation retains one UUID across failed/ambiguous retries; shared company-scoped payload hash, transaction lock and uniqueness replay return the original account before allocating another asset ledger. Payload changes and excluded-branch replay are rejected. Nullable additive migration retains legacy rows. Web validation and successful company-wide creation verified.",
-          "verification": "Intermediate: 23 focused tests across 3 files passed (6 real PostgreSQL tests including concurrent creation, legacy rows and audit rollback); Android compile and 3 MoneyAccountRequest tests passed; desktop/mobile browser 2 passed with AXE, field-error focus, key retention and key rotation. Prisma generate/validate and migration deploy to isolated test database passed. TypeScript and focused ESLint passed.",
+      "checkpoint_work": [
+        {
+          "summary": "Web money-account creation now uses explicit stable accessible names, bounds, disabled pending fields/button, structured action errors/success, retained inputs and failing-field focus. Existing company-wide blank branch normalization verified through real browser creation.",
+          "verification": "Intermediate desktop/mobile browser 2 passed: whitespace-name server validation, accessible error association/focus, AXE, company-wide account plus linked asset ledger creation and success feedback. TypeScript and focused ESLint passed.",
+          "remaining": "Remaining money forms, broader keyboard/error paths and stable creation retry identity tracked with A064-F09; final-head validation still required.",
           "files": [
-            "src/lib/account/money.ts",
-            "src/lib/account/money-edit.integration.test.ts",
             "src/components/account/money-account-form.tsx",
-            "src/app/workspace/account/money/accounts/page.tsx",
-            "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
-            "android/app/src/main/java/com/salespunch360/mobile/account/MoneyAccountRequest.kt",
-            "android/app/src/test/java/com/salespunch360/mobile/account/MoneyAccountRequestTest.kt",
-            "prisma/schema.prisma",
-            "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
-          ],
-          "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
-        },
-        "transfer_form_slice": {
-          "summary": "Web transfer form now labels all controls, limits pickers to active company-wide/current-branch accounts, disables same-account/zero/invalid-precision submissions, keeps one key across retry, disables pending controls, provides structured feedback and rotates the key/clears amount only on success. Web account/transfer entry forms are hidden without Money Entry permission.",
-          "verification": "Intermediate 30 focused tests across 4 files passed; grouped desktop/mobile browser 4 passed including account creation/error focus/AXE and one balanced 12.50 transfer with one journal and correct source credit/destination debit, inactive-account exclusion, zero-amount prevention and key rotation. TypeScript and focused ESLint passed.",
-          "remaining": "Other reference money entry/adjustment/detail screens and wider form/device checks remain tracked separately; final-head complete validation pending.",
-          "files": [
-            "src/components/account/money-transfer-form.tsx",
-            "src/components/account/save-feedback.tsx",
-            "src/app/workspace/account/money/transfers/page.tsx",
             "src/app/workspace/account/money/accounts/page.tsx",
             "src/app/actions/money.ts",
             "e2e/a090-settings.spec.ts"
-          ]
+          ],
+          "creation_retry_slice": {
+            "summary": "Web/native account creation retains one UUID across failed/ambiguous retries; shared company-scoped payload hash, transaction lock and uniqueness replay return the original account before allocating another asset ledger. Payload changes and excluded-branch replay are rejected. Nullable additive migration retains legacy rows. Web validation and successful company-wide creation verified.",
+            "verification": "Intermediate: 23 focused tests across 3 files passed (6 real PostgreSQL tests including concurrent creation, legacy rows and audit rollback); Android compile and 3 MoneyAccountRequest tests passed; desktop/mobile browser 2 passed with AXE, field-error focus, key retention and key rotation. Prisma generate/validate and migration deploy to isolated test database passed. TypeScript and focused ESLint passed.",
+            "files": [
+              "src/lib/account/money.ts",
+              "src/lib/account/money-edit.integration.test.ts",
+              "src/components/account/money-account-form.tsx",
+              "src/app/workspace/account/money/accounts/page.tsx",
+              "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
+              "android/app/src/main/java/com/salespunch360/mobile/account/MoneyAccountRequest.kt",
+              "android/app/src/test/java/com/salespunch360/mobile/account/MoneyAccountRequestTest.kt",
+              "prisma/schema.prisma",
+              "prisma/migrations/20261013010000_money_account_creation_identity/migration.sql"
+            ],
+            "remaining": "Final-head complete validation and migration rehearsal remain. Other money-form findings remain partial; native physical-device verification is unavailable."
+          },
+          "transfer_form_slice": {
+            "summary": "Web transfer form now labels all controls, limits pickers to active company-wide/current-branch accounts, disables same-account/zero/invalid-precision submissions, keeps one key across retry, disables pending controls, provides structured feedback and rotates the key/clears amount only on success. Web account/transfer entry forms are hidden without Money Entry permission.",
+            "verification": "Intermediate 30 focused tests across 4 files passed; grouped desktop/mobile browser 4 passed including account creation/error focus/AXE and one balanced 12.50 transfer with one journal and correct source credit/destination debit, inactive-account exclusion, zero-amount prevention and key rotation. TypeScript and focused ESLint passed.",
+            "remaining": "Other reference money entry/adjustment/detail screens and wider form/device checks remain tracked separately; final-head complete validation pending.",
+            "files": [
+              "src/components/account/money-transfer-form.tsx",
+              "src/components/account/save-feedback.tsx",
+              "src/app/workspace/account/money/transfers/page.tsx",
+              "src/app/workspace/account/money/accounts/page.tsx",
+              "src/app/actions/money.ts",
+              "e2e/a090-settings.spec.ts"
+            ]
+          }
+        },
+        {
+          "work": "Shared ActionFeedbackForm focuses the active named invalid field, or its own error message when that field is absent. Owner browser insufficient-funds case verifies feedback focus; other money-screen remaining scope is unchanged.",
+          "tests": "53/53 focused PostgreSQL/unit/API/permission/funding/scope tests passed in 7 files (12.07s), including concurrent retry, changed retry denial, date/branch/company/role denial, audit rollback, loan receipt funds and selected-branch totals. Four desktop/mobile identity/capital/profit/correction/long-name cases passed (1.6m); final real native-default-scope/correction pair rerun 2/2 passed (44.3s), overlapping the correction cases. Android final compile + 4 focused JVM tests passed (1m41s; zero failure/error/skip). TypeScript/focused lint passed. Physical device/TalkBack and complete checkpoint-head validation pending.",
+          "finding_status_unchanged": true
         }
-      },
+      ],
       "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change."
     },
     {
@@ -11598,10 +11605,16 @@
       "expected_behavior": "Use Capital & Drawings heading, one/many owner cards, distinct capital/drawings totals, owner details/history and clear named actions with consistent mobile/desktop behavior. Add Draw From: Profit/Capital; show remaining capital after capital withdrawals.",
       "root_cause": "Generic money forms replace dedicated owner workflows.",
       "affected_files": [
-        "src/app/workspace/account/money/capital/page.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
-        "src/lib/mobile/account-money.ts",
-        "src/lib/account/money.ts"
+        "src/app/actions/money.ts",
+        "src/app/api/v1/mobile/account/money/owners/[id]/corrections/route.ts",
+        "src/app/workspace/account/money/capital/page.tsx",
+        "src/components/account/owner-correction-form.tsx",
+        "src/lib/account/money.ts",
+        "src/lib/account/owner-balances.ts",
+        "src/lib/account/owner-corrections.ts",
+        "src/lib/account/owner-history.ts",
+        "src/lib/mobile/account-money.ts"
       ],
       "affected_services_apis_actions": [
         "setupOwnerAction / ownerTransactionAction",
@@ -11699,18 +11712,28 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
+        "A064-F13",
         "A065-F02",
         "A065-F04",
-        "A065-F05"
+        "A065-F05",
+        "A065-F07",
+        "A065-F09",
+        "A065-F10"
       ],
-      "checkpoint_work": {
-        "status": "PARTIAL",
-        "summary": "Named owner cards, Add/Edit and capital/profit action selection implemented on web and Android. Full owner details/history/corrections and summary workflow remain. Owner history added on web/Android with active/inactive identity, named bank/cash, all original transaction types, journal/reversal status and reason, date filters and bounded stable pagination. Owner correction controls and complete summary workflow remain."
-      },
+      "checkpoint_work": [
+        {
+          "status": "PARTIAL",
+          "summary": "Named owner cards, Add/Edit and capital/profit action selection implemented on web and Android. Full owner details/history/corrections and summary workflow remain. Owner history added on web/Android with active/inactive identity, named bank/cash, all original transaction types, journal/reversal status and reason, date filters and bounded stable pagination. Owner correction controls and complete summary workflow remain."
+        },
+        {
+          "work": "Completed owner cards/detail current capital, drawings and owner-loan balances using one batched authorized ledger query. Capital withdrawals show remaining posted capital after refresh. History retains selected branch through web links/date filters/paging and native default/explicit/company scope. Added dated immutable owner correction service, web control and native dialog; separate owner loan context retained. Long names wrap in owner detail.",
+          "tests": "53/53 focused PostgreSQL/unit/API/permission/funding/scope tests passed in 7 files (12.07s), including concurrent retry, changed retry denial, date/branch/company/role denial, audit rollback, loan receipt funds and selected-branch totals. Four desktop/mobile identity/capital/profit/correction/long-name cases passed (1.6m); final real native-default-scope/correction pair rerun 2/2 passed (44.3s), overlapping the correction cases. Android final compile + 4 focused JVM tests passed (1m41s; zero failure/error/skip). TypeScript/focused lint passed. Physical device/TalkBack and complete checkpoint-head validation pending."
+        }
+      ],
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
         "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
@@ -12232,12 +12255,19 @@
         "A065-F08",
         "A065-F09"
       ],
-      "checkpoint_work": {
-        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
-        "work": "Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.",
-        "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
-      }
+      "checkpoint_work": [
+        {
+          "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+          "work": "Money transfers, owner transactions, loan receipts and repayments validate matching replay payload and existing branch scope before returning; company/key advisory locks and Serializable retries protect writes. Fourteen focused replay regressions pass.",
+          "remaining_work": "Final-head regression and original finding verification remain pending.",
+          "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        },
+        {
+          "work": "Owner corrections use the retained source transaction as natural immutable retry identity; same date/reason replays return one reversal, changed payload conflicts, source and branch guards run before replay.",
+          "tests": "53/53 focused PostgreSQL/unit/API/permission/funding/scope tests passed in 7 files (12.07s), including concurrent retry, changed retry denial, date/branch/company/role denial, audit rollback, loan receipt funds and selected-branch totals. Four desktop/mobile identity/capital/profit/correction/long-name cases passed (1.6m); final real native-default-scope/correction pair rerun 2/2 passed (44.3s), overlapping the correction cases. Android final compile + 4 focused JVM tests passed (1m41s; zero failure/error/skip). TypeScript/focused lint passed. Physical device/TalkBack and complete checkpoint-head validation pending.",
+          "finding_status_unchanged": true
+        }
+      ]
     },
     {
       "finding_id": "A065-F08",
@@ -12381,10 +12411,16 @@
       "expected_behavior": "Accessible named controls and owner names; permitted actions only; field errors and available balance feedback in the active form, preserved input and safe retry.",
       "root_cause": "No dedicated capability/action-state and validation feedback contract.",
       "affected_files": [
-        "src/app/workspace/account/money/capital/page.tsx",
-        "src/app/actions/money.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
-        "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt"
+        "src/app/actions/money.ts",
+        "src/app/api/v1/mobile/account/money/owners/[id]/corrections/route.ts",
+        "src/app/workspace/account/money/capital/page.tsx",
+        "src/components/account/owner-correction-form.tsx",
+        "src/lib/account/owner-balances.ts",
+        "src/lib/account/owner-corrections.ts",
+        "src/lib/account/owner-history.ts",
+        "src/lib/mobile/account-money.ts"
       ],
       "affected_services_apis_actions": [
         "setupOwnerAction / ownerTransactionAction",
@@ -12482,19 +12518,28 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
+        "A064-F13",
+        "A065-F03",
+        "A065-F07",
         "A065-F08",
         "A065-F10",
         "A065-F12",
         "A071-F04"
       ],
-      "checkpoint_work": {
-        "status": "PARTIAL",
-        "summary": "Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains. Owner history validates real calendar dates, supports clear/retry recovery and native cancellation/stale-response protection. Identity/posting labelled forms and actionable funds recovery preserved; correction controls remain."
-      },
+      "checkpoint_work": [
+        {
+          "status": "PARTIAL",
+          "summary": "Owner web controls labelled, structured insufficient-funds recovery preserves entered values, active Android editor shows server feedback and disables during submission. Full detail/correction recovery remains. Owner history validates real calendar dates, supports clear/retry recovery and native cancellation/stale-response protection. Identity/posting labelled forms and actionable funds recovery preserved; correction controls remain."
+        },
+        {
+          "work": "Owner correction forms require date/reason, retain input after rejection, disable during posting, and use shared active-form field/error focus. Native dialog preserves source/date/reason for safe retries, shows server errors and reloads history/balances on success. Capabilities require both Money Entry and Journal Reverse; source/company/branch and posted-history guards remain authoritative.",
+          "tests": "53/53 focused PostgreSQL/unit/API/permission/funding/scope tests passed in 7 files (12.07s), including concurrent retry, changed retry denial, date/branch/company/role denial, audit rollback, loan receipt funds and selected-branch totals. Four desktop/mobile identity/capital/profit/correction/long-name cases passed (1.6m); final real native-default-scope/correction pair rerun 2/2 passed (44.3s), overlapping the correction cases. Android final compile + 4 focused JVM tests passed (1m41s; zero failure/error/skip). TypeScript/focused lint passed. Physical device/TalkBack and complete checkpoint-head validation pending."
+        }
+      ],
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
         "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
@@ -12627,18 +12672,25 @@
         "A065-F09",
         "A065-F12"
       ],
-      "checkpoint_work": {
-        "status": "PARTIAL",
-        "summary": "New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains.",
-        "independent_checkpoint_verification": {
-          "work": "Enforced explicit capital withdrawal/profit distribution for new owner cash-out postings at the server boundary. Matching legacy WITHDRAWAL retries remain idempotent; historical rows and their original drawings ledger are preserved without assuming capital return. Web/native forms already expose the distinct types.",
-          "tests": "42/42 focused owner/funding/replay financial tests pass, including actual owner/cash isolation, concurrent funds and legacy retry protection. The required5000profit/3000capital scenario is independently tested against real PostgreSQL; final result recorded separately. No historical migration/data rewrite. Final-head validation remains pending."
+      "checkpoint_work": [
+        {
+          "status": "PARTIAL",
+          "summary": "New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains.",
+          "independent_checkpoint_verification": {
+            "work": "Enforced explicit capital withdrawal/profit distribution for new owner cash-out postings at the server boundary. Matching legacy WITHDRAWAL retries remain idempotent; historical rows and their original drawings ledger are preserved without assuming capital return. Web/native forms already expose the distinct types.",
+            "tests": "42/42 focused owner/funding/replay financial tests pass, including actual owner/cash isolation, concurrent funds and legacy retry protection. The required5000profit/3000capital scenario is independently tested against real PostgreSQL; final result recorded separately. No historical migration/data rewrite. Final-head validation remains pending."
+          },
+          "explicit_scenario_validation": {
+            "work": "New entries require explicit withdrawal classification; legacy retry remains allowed.",
+            "tests": "Specified profit5000/capital3000 real PostgreSQL scenario passes: capital10000\u21927000, drawings5000 and money10000\u21922000. Filtered run1passed/12intentionallyexcluded. Full related group42/42 passes; desktop/mobile profit-distribution/export flow2/2 passes (39.5s). TypeScript and focused lint pass. Final-head validation remains pending."
+          }
         },
-        "explicit_scenario_validation": {
-          "work": "New entries require explicit withdrawal classification; legacy retry remains allowed.",
-          "tests": "Specified profit5000/capital3000 real PostgreSQL scenario passes: capital10000\u21927000, drawings5000 and money10000\u21922000. Filtered run1passed/12intentionallyexcluded. Full related group42/42 passes; desktop/mobile profit-distribution/export flow2/2 passes (39.5s). TypeScript and focused lint pass. Final-head validation remains pending."
+        {
+          "work": "Shared journal reversal funds guard now also covers OWNER_LOAN receipts, preventing an owner loan correction from overdrawing its bank account.",
+          "tests": "53/53 focused PostgreSQL/unit/API/permission/funding/scope tests passed in 7 files (12.07s), including concurrent retry, changed retry denial, date/branch/company/role denial, audit rollback, loan receipt funds and selected-branch totals. Four desktop/mobile identity/capital/profit/correction/long-name cases passed (1.6m); final real native-default-scope/correction pair rerun 2/2 passed (44.3s), overlapping the correction cases. Android final compile + 4 focused JVM tests passed (1m41s; zero failure/error/skip). TypeScript/focused lint passed. Physical device/TalkBack and complete checkpoint-head validation pending.",
+          "finding_status_unchanged": true
         }
-      },
+      ],
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
         "browser": "2 passed desktop/mobile Chromium including accessibility, API identity projection and financial recovery",
@@ -23501,6 +23553,53 @@
       "android": {
         "compile": "PASS",
         "jvm_passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "device": "NOT AVAILABLE"
+      },
+      "typescript": "PASS",
+      "focused_lint": "PASS",
+      "migrations": "NONE",
+      "final_head_verification": false
+    },
+    "owner_detail_corrections_and_scope": {
+      "findings": [
+        "A065-F03",
+        "A065-F09"
+      ],
+      "shared_findings": [
+        "A065-F10",
+        "A065-F07",
+        "A064-F13"
+      ],
+      "grouped_tests": {
+        "passed": 53,
+        "failed": 0,
+        "files": 7,
+        "seconds": 12.07
+      },
+      "browser": {
+        "selected_cases_passed": 4,
+        "seconds": 96,
+        "final_native_default_scope_rerun_passed": 2,
+        "rerun_seconds": 44.3,
+        "overlap": "The native default-scope rerun repeats the two correction cases from the four selected cases.",
+        "checks": [
+          "identity/capital/profit entries",
+          "remaining capital",
+          "current financing balances",
+          "selected branch and paging/dates",
+          "long name overflow",
+          "Axe",
+          "keyboard feedback focus",
+          "native default scope",
+          "immutable original",
+          "one reversal on retry"
+        ]
+      },
+      "android": {
+        "compile": "PASS",
+        "jvm_passed": 4,
         "failed": 0,
         "skipped": 0,
         "device": "NOT AVAILABLE"

@@ -1,3 +1,5 @@
+import {ownerBalancesForActor} from "./owner-balances";
+import { canCorrectOwnerTransaction } from "./owner-corrections";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
@@ -19,12 +21,14 @@ const calendarDate = z.union([
 ]);
 const filters = z
   .object({
+    branchId:z.string().uuid().optional(),
+    scope:z.literal("all").optional(),
     from: z.preprocess(blank, calendarDate.optional()),
     to: z.preprocess(blank, calendarDate.optional()),
     offset: z.coerce.number().int().min(0).default(0),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
-  .strict();
+  .strict().refine(value=>!(value.branchId&&value.scope),"Choose a branch or all authorized branches");
 export async function ownerHistoryForActor(
   actor: ProjectActor,
   id: string,
@@ -39,6 +43,8 @@ export async function ownerHistoryForActor(
   z.string().uuid().parse(id);
   const f = filters.parse(raw);
   if (f.from && f.to && f.from > f.to) throw new Error("INVALID_DATE_RANGE");
+  if(f.branchId&&(actor.branchAccessScope==="SELECTED_BRANCHES"&&!actor.branchIds?.includes(f.branchId)||!await db.branch.findFirst({where:{id:f.branchId,companyId:actor.companyId,isActive:true},select:{id:true}})))throw new AuthorizationError();
+  const branchScope=f.branchId?{branchId:f.branchId}:actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:actor.branchIds??[]}}:{};
   const owner = await db.ownerFinancialAccount.findFirst({
     where: { id, companyId: actor.companyId },
     select: {
@@ -49,15 +55,14 @@ export async function ownerHistoryForActor(
       phone: true,
       email: true,
       address: true,
+      capitalLedgerId: true,drawingsLedgerId: true,loanLedgerId: true,
     },
   });
   if (!owner) throw new AuthorizationError();
   const where = {
     companyId: actor.companyId,
     ownerFinancialAccountId: id,
-    ...(actor.branchAccessScope === "SELECTED_BRANCHES"
-      ? { branchId: { in: actor.branchIds ?? [] } }
-      : {}),
+    ...branchScope,
     ...(f.from || f.to
       ? {
           transactionDate: {
@@ -102,10 +107,15 @@ export async function ownerHistoryForActor(
       select: { id: true, name: true },
     }),
   ]);
+  const currentBalances=(await ownerBalancesForActor(f.branchId?{...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[f.branchId]}:actor,[owner]))[owner.id];
+  const identity={id:owner.id,name:owner.name,partyType:owner.partyType,isActive:owner.isActive,phone:owner.phone,email:owner.email,address:owner.address};
   const journalById = new Map(journals.map((row) => [row.id, row])),
     accountNames = new Map(accounts.map((row) => [row.id, row.name]));
   return {
-    owner,
+    canCorrect: canCorrectOwnerTransaction(actor),
+    scope:{branchId:f.branchId??null},
+    owner:identity,
+    currentBalances,
     items: rows.map((row) => ({
       id: row.id,
       type: row.type,

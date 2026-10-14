@@ -8,6 +8,10 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_OWNER_HISTORY_SCOPE:"Choose a branch or all authorized branches, then reload the owner history.",
+  OWNER_CORRECTION_ALREADY_POSTED: "This transaction already has a correction. Open its recorded history; retry only with the same date and reason.",
+  OWNER_CORRECTION_BEFORE_TRANSACTION: "The correction date cannot precede the original transaction date.",
+  INVALID_OWNER_TRANSACTION_SOURCE: "The retained transaction has no matching source journal. Reconcile its recorded history before correcting it.",
   CUSTOM_FIELD_PRINT_UNSUPPORTED: "Printing custom fields is unavailable for this entity. Keep Show in print off.",
   MANAGED_CORRECTION_REVERSAL_REQUIRED:"Use the original transaction workflow to make the next correction. Reversing its correction journal cannot reopen the business record.",
   OWNER_CONTRIBUTION_HAS_ASSET_FUNDING:"Cancel the contribution’s asset funding allocations before reversing it. Reverse any related capital repayments first.",

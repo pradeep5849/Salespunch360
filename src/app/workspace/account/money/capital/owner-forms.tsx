@@ -1,4 +1,5 @@
 "use client";
+import {Money} from "@/components/account/account-ui";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -14,12 +15,14 @@ export type OwnerView = Option & {
   email: string | null;
   address: string | null;
   isActive: boolean;
+  currentBalances?:{capital:string;drawings:string;loan:string};
 };
 type Props = {
   owners: OwnerView[];
   users: Option[];
   branches: Option[];
   accounts: Array<Option & { balance: string }>;
+  scopeQuery?:string;
   canManage: boolean;
   canPost: boolean;
   fundingRepayments?:Array<{id:string;branchId:string;assetName:string;ownerFinancialAccountId:string;remainingAmount:string}>;
@@ -32,6 +35,7 @@ export function OwnerForms({
   canManage,
   canPost,
   fundingRepayments=[],
+  scopeQuery="",
 }: Props) {
   const router = useRouter(),
     [pending, startTransition] = useTransition(),
@@ -270,13 +274,14 @@ export function OwnerForms({
           owners.map((owner) => (
             <article key={owner.id}>
               <h3>{owner.name}</h3>
-              <Link href={`/workspace/account/money/capital/${owner.id}`}>
+              <Link href={`/workspace/account/money/capital/${owner.id}${scopeQuery?`?${scopeQuery}`:""}`}>
                 View {owner.name} history
               </Link>
               <p>
                 {owner.partyType === "PARTNER" ? "Partner" : "Owner"} ·{" "}
                 {owner.isActive ? "Active" : "Inactive"}
               </p>
+              {owner.currentBalances&&<p>Capital: <Money value={owner.currentBalances.capital}/> · Profit drawings: <Money value={owner.currentBalances.drawings}/> · Owner loan: <Money value={owner.currentBalances.loan}/></p>}
               {owner.phone && <p>{owner.phone}</p>}
               {owner.email && <p>{owner.email}</p>}
               {canManage && (
@@ -385,6 +390,7 @@ export function OwnerForms({
               ))}
             </select>
           </label>
+          {entryType==="CAPITAL_WITHDRAWAL"&&owners.find(owner=>owner.id===activeOwner)?.currentBalances&&<p>Remaining posted capital: <Money value={owners.find(owner=>owner.id===activeOwner)!.currentBalances!.capital}/></p>}
           {entryType==="CAPITAL_WITHDRAWAL"&&repaymentChoices.length>0&&<fieldset><legend>Asset funding being repaid</legend><p>Enter the part of this capital withdrawal repaying each recorded asset allocation. Any remainder uses unallocated owner capital.</p>{repaymentChoices.map(row=><label key={row.id}>{row.assetName} — {row.remainingAmount} remaining<input disabled={pending} aria-label={`Repayment toward ${row.assetName}`} inputMode="decimal" pattern="[0-9]{1,16}(\.[0-9]{1,2})?" value={fundingAmounts[row.id]??""} onChange={event=>setFundingAmounts(old=>({...old,[row.id]:event.target.value}))}/></label>)}</fieldset>}
           <label>
             Amount

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +49,30 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
     LaunchedEffect(initialMode,initialOwnerId,initialQuery){vm.show(initialMode,initialQuery);initialOwnerId?.let(vm::openOwnerHistory)}
     val caps=s.data["capabilities"]?.jsonObject
     fun can(key:String)=caps?.get(key)?.jsonPrimitive?.booleanOrNull==true
+    var correctionTransaction by rememberSaveable(initialMode,initialQuery){mutableStateOf<String?>(null)}
+    var correctionOwner by rememberSaveable(initialMode,initialQuery){mutableStateOf("")}
+    var correctionDate by rememberSaveable(initialMode,initialQuery){mutableStateOf("")}
+    var correctionReason by rememberSaveable(initialMode,initialQuery){mutableStateOf("")}
+    var correctionBusy by remember{mutableStateOf(false)}
+    var correctionError by rememberSaveable(initialMode,initialQuery){mutableStateOf<String?>(null)}
+    correctionTransaction?.let{transactionId->AlertDialog(
+        onDismissRequest={if(!correctionBusy){correctionTransaction=null;correctionError=null}},
+        title={Text("Reverse owner transaction")},
+        text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+            Text("A dated reversal restores its bank/cash and owner ledger effects. The original stays in history.")
+            OutlinedTextField(correctionDate,{correctionDate=it},label={Text("Correction date (YYYY-MM-DD)")},enabled=!correctionBusy,isError=!validOwnerCorrectionDate(correctionDate))
+            OutlinedTextField(correctionReason,{correctionReason=it.take(1000)},label={Text("Reason")},enabled=!correctionBusy)
+            correctionError?.let{Text(it,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics{liveRegion=LiveRegionMode.Assertive})}
+            if(correctionBusy)LinearProgressIndicator(Modifier.fillMaxWidth())
+        }},
+        confirmButton={TextButton(enabled=!correctionBusy&&validOwnerCorrectionDate(correctionDate)&&correctionReason.trim().length in 3..1000,onClick={
+            val requestOwner=correctionOwner;val payload=ownerCorrectionPayload(transactionId,correctionDate,correctionReason,s.history?.get("scope")?.jsonObject?.get("branchId")?.jsonPrimitive?.contentOrNull.orEmpty())
+            correctionBusy=true;correctionError=null
+            imageScope.launch{try{ApiClient(SecureSession(imageContext)).ownerCorrection(requestOwner,payload);correctionTransaction=null;if(vm.state.value.historyOwnerId==requestOwner)vm.loadOwnerHistory(vm.state.value.historyOffset);vm.load()}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){correctionError=error.message?:"Correction could not be posted. Your inputs were kept; retry."}finally{correctionBusy=false}}
+        }){Text(if(correctionBusy)"Posting…" else "Post reversal")}},
+        dismissButton={TextButton(enabled=!correctionBusy,onClick={correctionTransaction=null;correctionError=null}){Text("Cancel")}}
+    )}
+
     val owners=s.data.array("owners")
     val ownerNames=owners.associate{it.jsonObject.str("id") to it.jsonObject.str("name")}
     val accountMode=s.mode in listOf("accounts","bank-accounts","cash-in-hand")
@@ -79,7 +104,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
         LazyColumn{
             if(s.mode=="owners"){
                 items(owners){entry->val owner=entry.jsonObject
-                    ListItem(headlineContent={Text(owner.str("name"),fontWeight=FontWeight.Bold)},supportingContent={Text(moneyTypeLabel(owner.str("partyType"))+" · "+if(owner["isActive"]?.jsonPrimitive?.booleanOrNull!=false)"Active" else "Inactive")},trailingContent={if(can("manageOwners"))TextButton({vm.editOwner(owner)},enabled=!s.saving){Text("Edit")}},modifier=Modifier.clickable(enabled=!s.saving){vm.openOwnerHistory(owner.str("id"))})
+                    ListItem(headlineContent={Text(owner.str("name"),fontWeight=FontWeight.Bold)},supportingContent={Column{Text(moneyTypeLabel(owner.str("partyType"))+" · "+if(owner["isActive"]?.jsonPrimitive?.booleanOrNull!=false)"Active" else "Inactive");owner["currentBalances"]?.jsonObject?.let{balances->Text("Capital: "+accountMoney(balances.str("capital")));Text("Profit drawings: "+accountMoney(balances.str("drawings")));Text("Owner loan: "+accountMoney(balances.str("loan")))}}},trailingContent={if(can("manageOwners"))TextButton({vm.editOwner(owner)},enabled=!s.saving){Text("Edit")}},modifier=Modifier.clickable(enabled=!s.saving){vm.openOwnerHistory(owner.str("id"))})
                 }
                 if(owners.isEmpty())item{Text("No owners or partners yet.")}
                 item{Text("Transaction history",fontWeight=FontWeight.Bold)}
@@ -96,7 +121,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
             if(rows.isEmpty()&&!s.loading&&s.error==null)item{Text(if(accountMode)"No accounts available."else "No transactions available.")}
         }
     }
-    if (s.historyOwnerId != null) {
+    if (s.historyOwnerId != null && correctionTransaction == null) {
         AlertDialog(
             onDismissRequest = vm::closeOwnerHistory,
             title = { Text(if(s.historyIsLoan) s.history?.get("loan")?.jsonObject?.let{it.str("displayName").ifBlank{it.str("lender")}}?:"Loan statement" else s.history?.get(if(s.historyIsAccount)"account" else "owner")?.jsonObject?.str("name") ?: "Owner history") },
@@ -108,6 +133,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                     if (s.historyLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     s.historyError?.let { Text(it, color = MaterialTheme.colorScheme.error);TextButton({vm.loadOwnerHistory(s.historyOffset)},enabled=!s.historyLoading){Text("Retry statement")}}
                     if(s.historyIsLoan)s.history?.let{h->if(h["ambiguousBalance"]?.jsonPrimitive?.booleanOrNull==true)Text("This legacy loan shares its liability ledger. Separate the opening balances before changing its financial history.");Text("Outstanding: "+(h["outstanding"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)}?:"Not established"));h["loan"]?.jsonObject?.let{loan->Text("Original principal: "+accountMoney(loan.str("principal")));Text("Status: "+loan.str("status"));Text("Account number: "+loan.str("loanAccountNumber").ifBlank{"Not provided"});Text("Description: "+loan.str("description").ifBlank{"Not provided"});Text("Duration (months): "+loan.str("durationMonths").ifBlank{"Not provided"})}}
+                    if(!s.historyIsAccount&&!s.historyIsLoan)s.history?.get("currentBalances")?.jsonObject?.let{balances->Text("Current balances in authorized branches (history dates do not change these)");Text("Capital: "+accountMoney(balances.str("capital")));Text("Profit drawings: "+accountMoney(balances.str("drawings")));Text("Owner loan: "+accountMoney(balances.str("loan")))}
                     if(s.historyIsAccount)s.history?.let{h->Text("Opening: "+accountMoney(h.str("opening")));Text("Money in: "+accountMoney(h.str("debit")));Text("Money out: "+accountMoney(h.str("credit")));Text("Closing: "+accountMoney(h.str("closing")))}
                     val historyRows = s.history?.array(if(s.historyIsAccount||s.historyIsLoan)"rows" else "items").orEmpty()
                     if (!s.historyLoading && s.historyError == null && s.history != null && historyRows.isEmpty()) Text("No transactions match these dates.")
@@ -120,6 +146,8 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                                     Column {
                                         if(s.historyIsLoan){Text(accountDate(row.str("entryDate")));Text(row.str("sourceType"));if(row.str("narration").isNotBlank())Text(row.str("narration"));Text("Principal increase: "+accountMoney(row.str("credit"))+" · decrease: "+accountMoney(row.str("debit")));row["payment"]?.jsonPrimitive?.contentOrNull?.let{Text("Payment total: "+accountMoney(it))}}else if(s.historyIsAccount){Text(accountDate(row.str("entryDate")));Text(row.str("narration").ifBlank{row.str("sourceType")});Text("In: "+accountMoney(row.str("debit"))+" · Out: "+accountMoney(row.str("credit")))}else Text(accountDate(row.str("transactionDate")) + " · " + row.str("moneyAccountName"))
                                         Text("Status: " + row.str(if(s.historyIsAccount||s.historyIsLoan)"status"else "journalStatus"))
+                                        if(!s.historyIsAccount&&!s.historyIsLoan&&s.history?.get("canCorrect")?.jsonPrimitive?.booleanOrNull==true&&row.str("journalStatus")=="POSTED")TextButton(enabled=!correctionBusy,onClick={correctionOwner=s.historyOwnerId.orEmpty();correctionTransaction=row.str("id");correctionDate=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString();correctionReason="";correctionError=null}){Text("Reverse transaction")}
+
                                         if (row.str("reference").isNotBlank()) Text(row.str("reference"))
                                         val reversal = row["reversal"] as? JsonObject
                                         reversal?.let { Text("Reversed " + accountDate(it.str("date")) + ": " + it.str("reason")) }
@@ -271,6 +299,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{PickText("Transaction",type,listOf("INVESTMENT","CAPITAL_WITHDRAWAL","PROFIT_DISTRIBUTION")+if(data["capabilities"]?.jsonObject?.get("manageLoans")?.jsonPrimitive?.booleanOrNull==true)listOf("OWNER_LOAN")else emptyList(),enabled=!saving){type=it;fundingAmounts=emptyMap()}}
                 }
                 if(kind=="owners"&&type=="CAPITAL_WITHDRAWAL"){
+                    data.array("owners").firstOrNull{it.jsonObject.str("id")==owner}?.jsonObject?.get("currentBalances")?.jsonObject?.let{balances->item{Text("Remaining posted capital: "+accountMoney(balances.str("capital")))}}
                     val funding=data.array("fundingRepayments").filter{it.jsonObject.str("ownerFinancialAccountId")==owner&&it.jsonObject.str("branchId")==branch}
                     if(funding.isNotEmpty())item{Text("Attribute capital returned to funded assets. Leave blank for unallocated capital.")}
                     items(funding){entry->val row=entry.jsonObject;val id=row.str("id");OutlinedTextField(fundingAmounts[id].orEmpty(),{fundingAmounts=fundingAmounts+(id to it)},label={Text(row.str("assetName")+" · remaining "+accountMoney(row.str("remainingAmount")))},enabled=!saving)}

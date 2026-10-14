@@ -1,3 +1,4 @@
+import {ownerBalancesForActor} from "@/lib/account/owner-balances";
 import { allocateOwnerAssetFundingForActor, cancelOwnerAssetFundingForActor, confirmAssetFundingForActor, ownerAssetFundingOptionsForActor, ownerFundingRepaymentOptionsForActor } from "@/lib/account/owner-asset-funding";
 import {prepareTransferImagePayload,addTransferImageForActor,transferImageForActor} from "@/lib/account/money-transfer-image";
 import {editLoanMetadataForActor,topUpLoanForActor,changeLoanLifecycleForActor} from "@/lib/account/loan-operations";
@@ -90,6 +91,7 @@ export async function mobileMoneyContext(
       }),
     ],
   );
+  const ownerBalances=await ownerBalancesForActor(a,data.owners);
   return {
     ...data,
     adjustmentOptions: data.capabilities.postMoneyEntries
@@ -99,6 +101,7 @@ export async function mobileMoneyContext(
     fundingRepayments: await ownerFundingRepaymentOptionsForActor(a),
     owners: data.owners.map((x) => ({
       ...x,
+      currentBalances:ownerBalances[x.id],
       name: x.name || users.find((u) => u.id === x.userId)?.name || "Owner",
     })),
     transfers,
@@ -217,7 +220,10 @@ export async function mobileOwnerHistory(
   const a = mobileAccountActor(u);
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
     throw new Error("MOBILE_FORBIDDEN");
-  return ownerHistoryForActor(a, id, filters);
+  const query=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional()}).passthrough().parse(filters);
+  const selected=await moneyReadContext(a,{branchId:query.branchId,scope:query.scope});
+  const dates=Object.fromEntries(Object.entries(query).filter(([key])=>key!=="branchId"&&key!=="scope"));
+  return ownerHistoryForActor(selected.actor,id,{...dates,...(selected.context.mode==="BRANCH"?{branchId:selected.context.branchId}:{scope:"all"})});
 }
 
 export async function mobileChequePage(
@@ -329,4 +335,10 @@ export async function mobileAssetFundingMutation(u: MobileAppPrincipal, raw: unk
   if(operation==="ALLOCATE") return allocateOwnerAssetFundingForActor(actor,payload);
   if(operation==="CONFIRM") return confirmAssetFundingForActor(actor,payload);
   return cancelOwnerAssetFundingForActor(actor,payload);
+}
+
+export async function mobileReverseOwnerTransaction(u:MobileAppPrincipal,ownerId:string,raw:unknown){
+ await write(u);const actor=permit(u,"ACCOUNT_MONEY_ENTRY");permit(u,"ACCOUNT_JOURNAL_REVERSE");
+ const {reverseOwnerTransactionForActor}=await import("@/lib/account/owner-corrections");
+ return reverseOwnerTransactionForActor(actor,{...z.object({branchId:z.string().uuid().optional(),transactionId:z.string().uuid(),entryDate:z.string(),reason:z.string()}).strict().parse(raw),ownerId});
 }

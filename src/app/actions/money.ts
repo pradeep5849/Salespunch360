@@ -166,3 +166,10 @@ export async function saveLoanMetadataAction(fd:FormData){const {accountAction}=
 
 export async function saveLoanTopUpAction(fd:FormData){const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(async()=>{const {requirePermissionForMutation}=await import("@/lib/auth/authorization");const {topUpLoanForActor}=await import("@/lib/account/loan-operations");const actor=await requirePermissionForMutation("ACCOUNT_LOAN_ADMIN");if(!actor.companyId)throw new Error("NOT_AUTHORIZED");const data=raw(fd);delete data.id;await topUpLoanForActor({...actor,companyId:actor.companyId},String(fd.get("id")),data);refresh();},"Loan top-up received");}
 export async function saveLoanLifecycleAction(fd:FormData){const {accountAction}=await import("@/lib/account/action-feedback");return accountAction(async()=>{const {requirePermissionForMutation}=await import("@/lib/auth/authorization");const {changeLoanLifecycleForActor}=await import("@/lib/account/loan-operations");const actor=await requirePermissionForMutation("ACCOUNT_LOAN_ADMIN");if(!actor.companyId)throw new Error("NOT_AUTHORIZED");const data=raw(fd);delete data.id;await changeLoanLifecycleForActor({...actor,companyId:actor.companyId},String(fd.get("id")),data);refresh();},"Loan updated");}
+
+export async function reverseOwnerTransactionAction(fd:FormData){
+ const {accountAction}=await import("@/lib/account/action-feedback");
+ const {requirePermissionForMutation}=await import("@/lib/auth/authorization");
+ const {reverseOwnerTransactionForActor}=await import("@/lib/account/owner-corrections");
+ return accountAction(async()=>{const actor=await requirePermissionForMutation("ACCOUNT_MONEY_ENTRY");if(!actor.companyId)throw new Error("NOT_AUTHORIZED");await reverseOwnerTransactionForActor({...actor,companyId:actor.companyId},raw(fd));refresh()},"Owner transaction reversed");
+}

@@ -31,7 +31,7 @@ export function ActionFeedbackForm({
   className?: string;
   onSuccess?: () => void;
 }) {
-  const router = useRouter();
+  const router = useRouter(), formRef=useRef<HTMLFormElement>(null),feedbackRef=useRef<HTMLParagraphElement>(null);
   const successCallback = useRef(onSuccess);
   useEffect(() => {
     successCallback.current = onSuccess;
@@ -50,6 +50,11 @@ export function ActionFeedbackForm({
     },
     { kind: "success", message: "" } as AccountActionResult,
   );
+  useEffect(()=>{
+    if(state.kind!=="error"||!state.message)return;
+    const fields=Object.keys(state.fieldErrors??{}),control=Array.from(formRef.current?.elements??[]).find(element=>element instanceof HTMLElement&&fields.includes(element.getAttribute("name")??"")&&element.getAttribute("type")!=="hidden"&&!element.hasAttribute("disabled"));
+    if(control instanceof HTMLElement)control.focus();else feedbackRef.current?.focus();
+  },[state]);
   useEffect(() => {
     if (state.kind === "success" && state.message) {
       if (state.redirectTo) router.push(state.redirectTo);
@@ -60,12 +65,15 @@ export function ActionFeedbackForm({
   return (
     <FeedbackContext.Provider value={state}>
       <form
+        ref={formRef}
         action={formAction}
         className={className}
         onReset={(event) => event.preventDefault()}
       >
         {state.message && (
           <p
+            ref={feedbackRef}
+            tabIndex={-1}
             role={state.kind === "error" ? "alert" : "status"}
             className={`account-save-feedback ${state.kind}`}
           >

@@ -49,6 +49,7 @@ export function mobileUnexpected(category: string, error: unknown) {
     return mobileJson(
       { error: error.message, message: accountErrorMessage(error) },
       [
+        "OWNER_CORRECTION_ALREADY_POSTED",
         "IDEMPOTENCY_KEY_REUSED",
         "IDEMPOTENCY_CONFLICT",
         "LOAN_CHANGED",

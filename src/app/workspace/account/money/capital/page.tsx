@@ -1,3 +1,4 @@
+import {ownerBalancesForActor} from "@/lib/account/owner-balances";
 import Link from "next/link";
 import { OwnerCapitalSummary } from "../../assets/owner-capital-summary";
 import { listMoneyData } from "@/lib/account/money";
@@ -44,6 +45,7 @@ export default async function Page({
       ? { scope: "all" }
       : { branchId: context.context.branchId },
   );
+  const ownerBalances=await ownerBalancesForActor(context.actor,data.owners);
   return (
     <section className="employees-shell">
       <div className="employees-content">
@@ -66,7 +68,8 @@ export default async function Page({
           </p>
         )}
         <OwnerForms
-          owners={data.owners}
+          scopeQuery={params.toString()}
+          owners={data.owners.map(owner=>({...owner,currentBalances:ownerBalances[owner.id]}))}
           users={data.users}
           branches={data.branches}
           accounts={data.dashboard.accounts.map((account) => ({

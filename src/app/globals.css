@@ -764,3 +764,5 @@ body:has(.account-shell) > .workspace-header{display:none}
 .unit-assignment-items{display:grid;gap:8px;margin:14px 0}.unit-assignment-items label{display:flex;align-items:center;gap:12px;border:1px solid #d9e1eb;border-radius:10px;padding:12px}.unit-assignment-items span{display:grid;gap:4px;overflow-wrap:anywhere}.unit-assignment-items small{color:#475467}.unit-assignment-items input{flex:0 0 auto}
 .items-modal.unit-assignment-dialog label,.items-modal.unit-assignment-dialog legend,.items-modal.unit-assignment-dialog p,.items-modal.unit-assignment-dialog small{color:#344054}.unit-assignment-dialog input[type=checkbox],.unit-assignment-dialog input[type=radio]{width:18px;height:18px;min-height:0;flex:0 0 18px}.unit-assignment-dialog label:has(>input[type=checkbox]),.unit-assignment-dialog label:has(>input[type=radio]){display:flex;align-items:center;gap:10px}
 .units-conversion .manager-bottom-actions button:first-child{color:#344054}.units-conversion .manager-bottom-actions button:last-child{background:#075fbd;color:#fff}
+
+.owner-history-content{overflow-wrap:anywhere}.owner-history-content input,.owner-history-content textarea{max-width:100%;min-width:0}

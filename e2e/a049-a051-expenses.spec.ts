@@ -2114,6 +2114,7 @@ test("A065 independent owner identity and capital/profit entries work without us
     _sum: { credit: true, debit: true },
   });
   expect(Number(sums._sum.credit) - Number(sums._sum.debit)).toBe(90);
+  await expect(entry.locator("p").filter({hasText:"Remaining posted capital:"})).toContainText("90.00");
   await page
     .getByRole("button", { name: "Edit Browser partner", exact: true })
     .click();
@@ -2169,7 +2170,7 @@ test("A065 independent owner identity and capital/profit entries work without us
   await page
     .getByRole("link", { name: "Back to Capital & Drawings", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/money\/capital$/);
+  await expect(page).toHaveURL(/\/money\/capital(?:\?|$)/);
   const previousModules = await db.accountSettings.findUniqueOrThrow({
     where: { companyId },
     select: { enabledModules: true },
@@ -2194,7 +2195,7 @@ test("A065 independent owner identity and capital/profit entries work without us
   await capitalSummary
     .getByRole("link", { name: "View Capital & Drawings" })
     .click();
-  await expect(page).toHaveURL(/\/money\/capital$/);
+  await expect(page).toHaveURL(/\/money\/capital(?:\?|$)/);
   await db.accountSettings.update({
     where: { companyId },
     data: { enabledModules: previousModules.enabledModules },

@@ -1,3 +1,5 @@
+import {ownerHistoryForActor} from "./owner-history";
+import {reverseOwnerTransactionForActor} from "./owner-corrections";
 import { randomUUID } from "node:crypto";
 import { hash } from "@node-rs/argon2";
 import { PrismaClient, Prisma } from "@prisma/client";
@@ -15,6 +17,7 @@ const client = new PrismaClient({
   },
 });
 let companyLockObserved: (() => void) | null = null;
+let failCorrectionAudit=false;
 vi.mock("@/lib/db", () => ({
   db: new Proxy(
     {},
@@ -30,6 +33,7 @@ vi.mock("@/lib/db", () => ({
                 fn(
                   new Proxy(tx, {
                     get: (target, name) => {
+                      if(name==="accountingAuditEvent")return new Proxy(target.accountingAuditEvent,{get:(delegate,method)=>method==="create"?async(args:Prisma.AccountingAuditEventCreateArgs)=>{if(failCorrectionAudit&&args.data.eventType==="JOURNAL_REVERSED")throw new Error("INJECTED_OWNER_CORRECTION_AUDIT_FAILURE");return delegate.create(args)}:delegate[method as keyof typeof delegate]});
                       if (name === "$queryRaw")
                         return (
                           ...args: Parameters<typeof target.$queryRaw>
@@ -589,6 +593,49 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     expect(await ownerCapitalSummaryForActor({...actor,companyId:randomUUID()})).toMatchObject({companyAssets:"0.00",capital:"0.00",ownerCount:0});
     expect((await ownerCapitalSummaryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]})).companyAssets).toBe("0.00");
     await expect(ownerCapitalSummaryForActor({...actor,accountRole:"DATA_ENTRY"})).rejects.toThrow();
+  });
+
+  it("reverses an owner transaction once under concurrent retries and preserves its source",async()=>{
+    const bank=await account(),row=await postOwnerTransactionForActor(actor,raw(bank.id,"INVESTMENT","100"));
+    const input={ownerId,transactionId:row.id,entryDate:"2026-10-10",reason:"Duplicate capital entry"};
+    const results=await Promise.all([reverseOwnerTransactionForActor(actor,input),reverseOwnerTransactionForActor(actor,input)]);
+    expect(results[0].id).toBe(results[1].id);expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("0.00");
+    expect(await client.ownerTransaction.findUniqueOrThrow({where:{id:row.id}})).toEqual(row);
+    expect(await client.journalEntry.count({where:{companyId,reversalOfId:row.journalEntryId}})).toBe(1);
+    await expect(reverseOwnerTransactionForActor(actor,{...input,reason:"Changed retry reason"})).rejects.toThrow("OWNER_CORRECTION_ALREADY_POSTED");
+  });
+  it("blocks owner corrections outside assigned branches, company or required roles",async()=>{
+    const bank=await account(),row=await postOwnerTransactionForActor(actor,raw(bank.id,"INVESTMENT","10"));
+    const input={ownerId,transactionId:row.id,entryDate:"2026-10-10",reason:"Correction scope test"},before=await client.journalEntry.count({where:{companyId}});
+    for(const denied of [{...actor,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[]},{...actor,companyId:randomUUID()},{...actor,accountRole:"DATA_ENTRY" as const}])await expect(reverseOwnerTransactionForActor(denied,input)).rejects.toThrow();
+    expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+    await expect(reverseOwnerTransactionForActor(actor,{...input,entryDate:"2026-10-08"})).rejects.toThrow("OWNER_CORRECTION_BEFORE_TRANSACTION");
+  });
+  it("requires available bank funds when reversing an owner loan receipt",async()=>{
+    const bank=await account(),loan=await postOwnerTransactionForActor(actor,{...raw(bank.id,"INVESTMENT","100"),type:"OWNER_LOAN"});
+    await postOwnerTransactionForActor(actor,raw(bank.id,"PROFIT_DISTRIBUTION","80"));
+    const input={ownerId,transactionId:loan.id,entryDate:"2026-10-10",reason:"Reverse owner loan entry"},before=await client.journalEntry.count({where:{companyId}});
+    await expect(reverseOwnerTransactionForActor(actor,input)).rejects.toThrow("INSUFFICIENT_MONEY_BALANCE");expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+    await postOwnerTransactionForActor(actor,raw(bank.id,"INVESTMENT","80"));await reverseOwnerTransactionForActor(actor,input);expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("0.00");
+  });
+
+  it("rolls back the reversal and source state when its audit write fails",async()=>{
+    const bank=await account(),row=await postOwnerTransactionForActor(actor,raw(bank.id,"INVESTMENT","10"));
+    const before=await client.journalEntry.count({where:{companyId}});
+    failCorrectionAudit=true;
+    try{await expect(reverseOwnerTransactionForActor(actor,{ownerId,transactionId:row.id,entryDate:"2026-10-10",reason:"Audit rollback test"})).rejects.toThrow("INJECTED_OWNER_CORRECTION_AUDIT_FAILURE")}
+    finally{failCorrectionAudit=false}
+    expect(await client.journalEntry.count({where:{companyId}})).toBe(before);expect(await client.journalEntry.findUniqueOrThrow({where:{id:row.journalEntryId}})).toMatchObject({status:"POSTED"});expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("10.00");
+  });
+
+  it("keeps selected branch owner balances, history and correction scope consistent",async()=>{
+    const owner=await createOwnerFinancialAccountForActor(actor,{name:"Branch scoped owner",partyType:"OWNER",branchId,creationRequestKey:randomUUID()});
+    const secondBranch=await client.branch.create({data:{companyId,name:"Owner second branch",code:"OWNER-SECOND"}});
+    const mainBank=await account(),otherBank=await account();await client.moneyAccount.update({where:{id:otherBank.id},data:{branchId:secondBranch.id}});
+    await postOwnerTransactionForActor(actor,{...raw(mainBank.id,"INVESTMENT","10"),ownerFinancialAccountId:owner.id});
+    const other=await postOwnerTransactionForActor(actor,{...raw(otherBank.id,"INVESTMENT","20"),ownerFinancialAccountId:owner.id,branchId:secondBranch.id});
+    const selected=await ownerHistoryForActor(actor,owner.id,{branchId});expect(selected.currentBalances.capital).toBe("10.00");expect(selected.items).toHaveLength(1);expect((await ownerHistoryForActor(actor,owner.id,{scope:"all"})).currentBalances.capital).toBe("30.00");
+    await expect(reverseOwnerTransactionForActor(actor,{ownerId:owner.id,transactionId:other.id,branchId,entryDate:"2026-10-10",reason:"Wrong selected branch"})).rejects.toThrow();
   });
 
 });

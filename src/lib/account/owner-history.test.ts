@@ -6,6 +6,8 @@ const calls = vi.hoisted(() => ({
   count: vi.fn(),
   journals: vi.fn(),
   accounts: vi.fn(),
+  balances: vi.fn(),
+  branch:vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
   db: {
@@ -13,6 +15,8 @@ vi.mock("@/lib/db", () => ({
     ownerTransaction: { findMany: calls.rows, count: calls.count },
     journalEntry: { findMany: calls.journals },
     moneyAccount: { findMany: calls.accounts },
+    journalLine:{groupBy:calls.balances},
+    branch:{findFirst:calls.branch},
   },
 }));
 vi.mock("@/lib/auth/authorization", () => ({
@@ -31,7 +35,9 @@ const id = "00000000-0000-4000-8000-000000000001",
   } as ProjectActor;
 beforeEach(() => {
   vi.clearAllMocks();
-  calls.owner.mockResolvedValue({ id, name: "Partner", isActive: false });
+  calls.owner.mockResolvedValue({ id, name: "Partner", isActive: false,capitalLedgerId:"capital",drawingsLedgerId:"drawings",loanLedgerId:"loan" });
+  calls.balances.mockResolvedValue([]);
+  calls.branch.mockResolvedValue({id:"00000000-0000-4000-8000-000000000002"});
   calls.rows.mockResolvedValue([
     {
       id: "tx",
@@ -118,4 +124,16 @@ it("rejects nonexistent calendar days rather than normalizing them", async () =>
     ownerHistoryForActor(actor, id, { from: "2026-02-31" }),
   ).rejects.toThrow();
   expect(calls.owner).not.toHaveBeenCalled();
+});
+
+it("shows current scoped capital drawings and owner loans separately from filtered history",async()=>{
+ calls.balances.mockResolvedValue([{ledgerAccountId:"capital",_sum:{debit:new Prisma.Decimal("20"),credit:new Prisma.Decimal("100")}},{ledgerAccountId:"drawings",_sum:{debit:new Prisma.Decimal("10"),credit:new Prisma.Decimal("3")}},{ledgerAccountId:"loan",_sum:{debit:new Prisma.Decimal("5"),credit:new Prisma.Decimal("50")}}]);
+ const result=await ownerHistoryForActor(actor,id,{from:"2026-10-01",to:"2026-10-12"});expect(result.currentBalances).toEqual({capital:"80.00",drawings:"7.00",loan:"45.00"});expect(result.owner).not.toHaveProperty("capitalLedgerId");expect(calls.balances).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({companyId:"company",journalEntry:{companyId:"company",status:{in:["POSTED","REVERSED"]},branchId:{in:["branch"]}}})}));
+});
+
+it("retains a selected authorized branch in both history and balances",async()=>{
+ const branch="00000000-0000-4000-8000-000000000002";await ownerHistoryForActor({...actor,branchIds:[branch]},id,{branchId:branch});expect(calls.rows.mock.calls[0][0].where.branchId).toBe(branch);expect(calls.balances.mock.calls[0][0].where.journalEntry.branchId).toEqual({in:[branch]});
+});
+it("denies branch tampering and conflicting company scope before reading history",async()=>{
+ const branch="00000000-0000-4000-8000-000000000002";await expect(ownerHistoryForActor(actor,id,{branchId:branch})).rejects.toThrow();await expect(ownerHistoryForActor(actor,id,{branchId:branch,scope:"all"})).rejects.toThrow();expect(calls.rows).not.toHaveBeenCalled();
 });

@@ -97,7 +97,7 @@ Statuses: NOT STARTED; PARTIAL; IMPLEMENTED BUT NOT VERIFIED; FIXED + VERIFIED; 
 
 **Required tests:** Authenticated deployed Admin reproduction and exact-error regression after root cause established; empty/populated desktop/mobile list, tenant/branch/module checks. Do not assume a missing migration based on a generic screen.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -4351,7 +4351,7 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** One/many/empty owners, long names, all transaction types, history paging/date filters, authorized corrections with reason and traceability, small screens/desktop/native parity.
 
-**Current implementation status:** PARTIAL. Final-head validation pending.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
@@ -4637,7 +4637,7 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Accountant/Admin capabilities; accessible names and keyboard; invalid field/insufficient funds/server/network rejection; recovery without duplicate posting.
 
-**Current implementation status:** PARTIAL. Final-head validation pending.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head validation pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
@@ -9401,3 +9401,6 @@ A084-F17 continuation: dormant costed Project material service now enforces assi
 
 
 A089-F02 continuation: Show in print now follows supported party/quotation/invoice/bill outputs; unsupported web/native controls explain the limit and the shared API rejects unsupported true flags. Explicit legacy save retains entity values and other validation metadata. Grouped tests 58/58 passed; 4 desktop/mobile custom-field cases passed and 2 quotation PDF/revision cases passed after stale selector correction; Android compile + 2 JVM tests passed (1m52s); TypeScript/lint passed. No migration. Final-head verification pending. Totals: 152 IMPLEMENTED BUT NOT VERIFIED, 45 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
+
+
+A065-F03/F09 continuation: batched scoped owner capital/drawings/loan balances, remaining capital, immutable dated correction UI/API/native flow, selected/default branch parity and active-form recovery completed. Shared A065-F10 owner-loan reversal funds guard and A065-F07 replay checks extended; A064-F13 feedback focus improved without inferring its remaining screens complete. Grouped checks 53/53 passed; desktop/mobile identity/correction/long-name cases 4/4 passed (1.6m), final native-default pair rerun 2/2 passed (44.3s; overlaps correction cases); Android compile + 4 JVM tests passed (1m41s); TypeScript/lint passed. No migration. Final-head validation pending. Totals: 154 IMPLEMENTED BUT NOT VERIFIED, 43 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset.
