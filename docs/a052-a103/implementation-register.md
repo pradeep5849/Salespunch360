@@ -9413,3 +9413,6 @@ A097-F01 continuation: independently verified desktop/mobile print preferences, 
 
 
 A086-F07 continuation: responsive footer-height/safe-area clearance and field scroll margins implemented. Desktop/mobile saved-sale edit geometry/lifecycle 2/2 passed (46.1s); TypeScript/lint passed. Device safe-area/keyboard and final-head validation pending. Totals:157 IMPLEMENTED BUT NOT VERIFIED,40 PARTIAL,2 NOT STARTED; all199 final statuses remain unset.
+
+
+A052-F03 continuation: independently verified real database selected/consolidated branches, actual branch assignments, assigned/unassigned Projects and foreign-company exclusion. 50/50 scoped/financial/aggregate tests passed,zero skips; desktop/mobile role/context cases2/2 passed(43.9s); TypeScript/lint passed. Device/final-head checks pending. Totals:158 IMPLEMENTED BUT NOT VERIFIED,39 PARTIAL,2 NOT STARTED; all199 final statuses remain unset.

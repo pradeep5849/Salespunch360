@@ -1088,7 +1088,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -1123,6 +1123,10 @@
           "implementation": "Mobile category API resolves authorized branch/consolidated context and returns a scope caption. Android category search/refresh carries that context; read cancellation/generation prevents stale results; stale capabilities cleared on reload/denial; pending mutations guard repeated commands.",
           "tests": "18 focused API/expense query tests passed, including four new category context/permission regressions; Android final compile passed; 2 desktop/mobile role/category context tests passed in 38.1s; 20 ledger/navigation tests passed; TypeScript/lint passed.",
           "remaining": "Original full tenant/branch assignment coverage, physical Android interaction and final-head regression pending."
+        },
+        "independent_isolation_verification": {
+          "work": "Added real PostgreSQL expense read fixture with two authorized company branches, assigned/unassigned Projects, an unrelated company and actual selected-branch membership. Independently verified existing shared scope implementation; no production source changed.",
+          "tests": "50/50 grouped PostgreSQL expense/aggregate and scoped-service tests passed (4.39s,zero skips). Desktop/mobile list/category/context/role/Projects ON/OFF browser cases2/2 passed(43.9s). TypeScript/focused lint passed. Initial foreign-category fixture required its own ledger; corrected before passing group. Physical Android and final-head validation pending."
         }
       },
       "intermediate_validation": {

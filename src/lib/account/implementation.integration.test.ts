@@ -35,6 +35,7 @@ import {
   transitionExpenseForActor,
   updateExpenseForActor,
   getExpenseForActor,
+  expensePageForActor,
 } from "./expenses";
 import { createBatchForActor, registerSerialNumberForActor } from "./inventory";
 import { runFinancialReportForActor } from "./reports/service";
@@ -1059,4 +1060,40 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     );
     expect(await client.asset.count({ where: { companyId } })).toBe(before);
   });
+  it("A052 expense reads isolate selected branches, assigned projects and companies", async () => {
+    const marker=randomUUID(),customerId=randomUUID(),foreignId=randomUUID(),foreignBranch=randomUUID(),foreignUser=randomUUID(),foreignCategory=randomUUID(),foreignLedger=randomUUID();
+    const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+    const projects=[randomUUID(),randomUUID(),randomUUID()];
+    await client.accountSettings.update({where:{companyId},data:{enabledModules:[...settings.enabledModules,"PROJECTS"]}});
+    await client.customer.create({data:{id:customerId,companyId,branchId:branchA,name:"Scoped expense customer",isAccountCustomer:true}});
+    try {
+      await client.userBranchAccess.create({data:{userId,branchId:branchA}});
+      for(let i=0;i<3;i++)await client.project.create({data:{id:projects[i],companyId,branchId:i===2?branchB:branchA,customerId,createdById:userId,projectNumber:`SCOPE-${i}-${marker}`,name:`Scope ${i}`,projectManagerId:i===1?null:userId}});
+      await client.company.create({data:{id:foreignId,name:"Foreign expense fixture",slug:`expense-${foreignId}`,productEdition:"SALESPUNCH360_ACCOUNT"}});
+      await client.branch.create({data:{id:foreignBranch,companyId:foreignId,name:"Foreign",code:"F"}});
+      await client.user.create({data:{id:foreignUser,companyId:foreignId,name:"Foreign user",email:`${foreignUser}@example.test`,passwordHash:"test-only",role:"ACCOUNT_USER",accountRole:"ACCOUNT_ADMIN",accountAccessActive:true}});
+      await client.ledgerAccount.create({data:{id:foreignLedger,companyId:foreignId,code:"500",name:"Foreign expense",accountClass:"EXPENSE",normalBalance:"DEBIT"}});
+      await client.expenseCategory.create({data:{id:foreignCategory,companyId:foreignId,name:"Foreign category",scope:"EXPENSE",defaultLedgerAccountId:foreignLedger}});
+      for(let i=0;i<5;i++)await client.expenseTransaction.create({data:{companyId:i===4?foreignId:companyId,branchId:i===4?foreignBranch:i===2?branchB:branchA,categoryId:i===4?foreignCategory:categoryId,createdById:i===4?foreignUser:userId,type:i<3?"PROJECT_EXPENSE":"OFFICE_EXPENSE",projectId:i<3?projects[i]:null,transactionNumber:`SCOPE-${marker}-${i}`,reference:marker,transactionDate:new Date("2026-10-09"),taxableAmount:"12.34",totalAmount:"12.34"}});
+      const selected={...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchA]} as ProjectActor;
+      const branchRows=await expensePageForActor(selected,{q:marker,branchId:branchA});
+      expect(branchRows.total).toBe(3);expect(branchRows.rows.every(row=>row.companyId===companyId&&row.branchId===branchA)).toBe(true);expect(branchRows.summary.expense).toBe("0.00");
+      expect((await expensePageForActor(actor,{q:marker,branchId:branchB})).total).toBe(1);
+      expect((await expensePageForActor(actor,{q:marker})).total).toBe(4);
+      await expect(expensePageForActor(selected,{q:marker,branchId:branchB})).rejects.toThrow();
+      const manager={...selected,accountRole:"PROJECT_MANAGER"} as ProjectActor;
+      const assigned=await expensePageForActor(manager,{q:marker});expect(assigned.total).toBe(1);expect(assigned.rows[0].projectId).toBe(projects[0]);
+      await expect(expensePageForActor({...selected,accountRole:"DATA_ENTRY"},{q:marker})).rejects.toThrow();
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules.filter(module=>module!=="PROJECTS")}});
+      await expect(expensePageForActor(manager,{q:marker})).rejects.toThrow("MODULE_DISABLED:PROJECTS");
+      expect((await expensePageForActor(selected,{q:marker})).total).toBe(3);
+    } finally {
+      await client.expenseTransaction.deleteMany({where:{reference:marker,companyId:{in:[companyId,foreignId]}}});
+      await client.project.deleteMany({where:{companyId,id:{in:projects}}});await client.customer.deleteMany({where:{companyId,id:customerId}});
+      await client.userBranchAccess.deleteMany({where:{userId,branchId:branchA}});
+      await client.expenseCategory.deleteMany({where:{companyId:foreignId}});await client.ledgerAccount.deleteMany({where:{companyId:foreignId}});await client.user.deleteMany({where:{companyId:foreignId}});await client.branch.deleteMany({where:{companyId:foreignId}});await client.company.deleteMany({where:{id:foreignId}});
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules}});
+    }
+  });
+
 });
