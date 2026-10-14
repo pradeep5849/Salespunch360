@@ -1,4 +1,4 @@
-import { EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
+import { effectiveAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { normalizeTransactionPreferences } from "./transaction-settings";
 import {recentSalePrices} from "./recent-sale-prices";
@@ -3465,12 +3465,13 @@ export async function documentOutstandingsBatch(
     grandTotal: Prisma.Decimal;
     payableAmount: Prisma.Decimal | null;
   }>,
+  asOf?: Date,
 ) {
   if (!documents.length) return new Map<string, Prisma.Decimal>();
   const ids = documents.map((x) => x.id),
     [adjustments, allocations, applications] = await Promise.all([
       db.commercialDocument.findMany({
-        where: { companyId, status: "POSTED", sourceDocumentId: { in: ids } },
+        where: { companyId, status: asOf?{in:["POSTED","CANCELLED"]}:"POSTED", sourceDocumentId: { in: ids }, ...(asOf?{issueDate:{lte:asOf},journalEntry:{is:postedJournalAt(asOf)}}:{}) },
         select: {
           sourceDocumentId: true,
           grandTotal: true,
@@ -3479,12 +3480,12 @@ export async function documentOutstandingsBatch(
       }),
       db.settlementAllocation.groupBy({
         by: ["documentId"],
-        where: { ...EFFECTIVE_SETTLEMENT_ALLOCATION, companyId, documentId: { in: ids } },
+        where: { ...(asOf?effectiveAllocationAt(asOf):EFFECTIVE_SETTLEMENT_ALLOCATION), companyId, documentId: { in: ids } },
         _sum: { amount: true },
       }),
       db.advanceApplication.groupBy({
         by: ["documentId"],
-        where: { ...EFFECTIVE_ADVANCE_APPLICATION, companyId, documentId: { in: ids } },
+        where: { ...(asOf?effectiveAdvanceApplicationAt(asOf):EFFECTIVE_ADVANCE_APPLICATION), companyId, documentId: { in: ids } },
         _sum: { amount: true },
       }),
     ]),

@@ -19,6 +19,8 @@ vi.mock("@/lib/db", () => ({
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
+import { runFinancialReportForActor } from "./reports/service";
+import { listOpeningOutstandings } from "./opening-balances";
 import { saveBusinessCurrency } from "./business-currency";
 import { createStockMovementForActor } from "./inventory";
 import {
@@ -38,6 +40,7 @@ import {
   postCommercialDocumentForActor,
   createSettlementForActor,
   documentOutstandingInTx,
+  documentOutstandingsBatch,
   applyAdvanceForActor,
 } from "./commercial";
 import {
@@ -239,6 +242,7 @@ describe.skipIf(!url)(
           await tx.cheque.deleteMany({ where: { companyId } });
           await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
           await tx.stockMovement.deleteMany({where:{companyId}});
+          await tx.purchaseLineAllocation.deleteMany({where:{companyId}});
           await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
           await tx.inventoryBatch.deleteMany({where:{companyId}});
           await tx.inventorySerialNumber.deleteMany({where:{companyId}});
@@ -254,6 +258,7 @@ describe.skipIf(!url)(
           await tx.ledgerAccount.deleteMany({ where: { companyId } });
           await tx.financialYear.deleteMany({ where: { companyId } });
           await tx.customer.deleteMany({ where: { companyId } });
+          await tx.vendor.deleteMany({where:{companyId}});
           await tx.user.deleteMany({ where: { companyId } });
           await tx.branch.deleteMany({ where: { companyId } });
           await tx.accountSettings.deleteMany({ where: { companyId } });
@@ -647,6 +652,82 @@ describe.skipIf(!url)(
           first.id,
         ),
       ).rejects.toThrow();
+    });
+    it("carries vendor opening payables through payments, advances and debit notes",async()=>{
+      const vendor=await client.vendor.create({data:{companyId,name:"Period ledger vendor"}});
+      const year=await client.financialYear.findFirstOrThrow({where:{companyId}}),ap=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"ACCOUNTS_PAYABLE"}}),equity=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});
+      await client.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:year.id,branchId,entryDate:"2026-10-01",sourceType:"MANUAL_JOURNAL",sourceId:randomUUID(),lines:[{ledgerAccountId:bankLedger,debit:"100",credit:"0"},{ledgerAccountId:equity.id,debit:"0",credit:"100"}]}));
+      const opening=await client.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:year.id,branchId,entryDate:"2026-10-01",sourceType:"OPENING_BALANCE",sourceId:randomUUID(),lines:[{ledgerAccountId:equity.id,debit:"30",credit:"0"},{ledgerAccountId:ap.id,debit:"0",credit:"30"}]}));
+      await client.partyOpeningBalance.create({data:{companyId,branchId,partyId:vendor.id,partyType:"VENDOR",partyName:vendor.name,effectiveDate:new Date("2026-10-01"),amount:"30",journalEntryId:opening.id,createdById:userId}});
+      const bill=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",purchasePurpose:"GENERAL_OFFICE",vendorInvoiceNumber:"LEDGER-BILL",vendorInvoiceDate:"2026-10-10",idempotencyKey:randomUUID(),branchId,partyId:vendor.id,issueDate:"2026-10-10",lines:[{lineType:"CUSTOM",itemName:"Vendor ledger purchase",quantity:"1",rate:"100",taxRate:"0"}]});
+      await postCommercialDocumentForActor(actor,{documentId:bill.id});
+      await createSettlementForActor(actor,{type:"VENDOR_PAYMENT",idempotencyKey:randomUUID(),branchId,partyId:vendor.id,paymentMode:"BANK",moneyAccountId:bankId,amount:"40",transactionDate:"2026-10-12",allocations:[{documentId:bill.id,amount:"40"}]});
+      const advance=await createSettlementForActor(actor,{type:"VENDOR_ADVANCE",idempotencyKey:randomUUID(),branchId,partyId:vendor.id,paymentMode:"BANK",moneyAccountId:bankId,amount:"20",transactionDate:"2026-10-13",allocations:[]});
+      await applyAdvanceForActor(actor,{advanceId:advance.id,documentId:bill.id,amount:"20",applicationDate:"2026-10-13",idempotencyKey:randomUUID()});
+      const source=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:bill.id}});
+      const note=await createCommercialDocumentForActor(actor,{type:"DEBIT_NOTE",purchasePurpose:"GENERAL_OFFICE",sourceDocumentId:bill.id,idempotencyKey:randomUUID(),branchId,partyId:vendor.id,issueDate:"2026-10-14",lines:[{lineType:"CUSTOM",itemName:source.itemName,sourceCommercialLineId:source.id,quantity:"0.2",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:note.id});
+      const earlier=await runFinancialReportForActor(actor,"vendor-ledger",{vendorId:vendor.id,from:"2026-10-11",to:"2026-10-12"});expect(earlier.rows[0][5]).toBe("130.00");expect(earlier.rows.at(-1)?.[5]).toBe("90.00");
+      const later=await runFinancialReportForActor(actor,"vendor-ledger",{vendorId:vendor.id,from:"2026-10-13",to:"2026-10-14"});expect(later.rows[0][5]).toBe("90.00");expect(later.rows.at(-1)?.[5]).toBe("50.00");expect(later.rows).toHaveLength(3);
+    });
+    it("carries party opening balances through receipts, credits, advances and dated reversal without double allocation",async()=>{
+      const party=await client.customer.create({data:{companyId,branchId,name:"Period ledger party",isAccountCustomer:true}});
+      const sale=await invoice("100",party.id);
+      const year=await client.financialYear.findFirstOrThrow({where:{companyId}}),ar=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"ACCOUNTS_RECEIVABLE"}}),equity=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});
+      const journal=await client.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:year.id,branchId,entryDate:"2026-10-01",sourceType:"OPENING_BALANCE",sourceId:randomUUID(),lines:[{ledgerAccountId:ar.id,debit:"30",credit:"0"},{ledgerAccountId:equity.id,debit:"0",credit:"30"}]}));
+      await client.partyOpeningBalance.create({data:{companyId,branchId,partyId:party.id,partyType:"CUSTOMER",partyName:party.name,effectiveDate:new Date("2026-10-01"),amount:"30",journalEntryId:journal.id,createdById:userId}});
+      const receipt=await createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:party.id,paymentMode:"CHEQUE",moneyAccountId:bankId,chequeNumber:randomUUID().slice(0,8),chequeDate:"2026-10-10",transactionDate:"2026-10-10",amount:"40",allocations:[{documentId:sale.id,amount:"40"}]});
+      const cheque=await client.cheque.findFirstOrThrow({where:{companyId,settlementId:receipt.id}});
+      await chequeFinancialActionForActor(actor,cheque.id,{action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:bankId});
+      const advance=await createSettlementForActor(actor,{type:"CUSTOMER_ADVANCE",idempotencyKey:randomUUID(),branchId,partyId:party.id,paymentMode:"BANK",moneyAccountId:bankId,amount:"20",transactionDate:"2026-10-13",allocations:[]});
+      await applyAdvanceForActor(actor,{advanceId:advance.id,documentId:sale.id,amount:"20",applicationDate:"2026-10-13",idempotencyKey:randomUUID()});
+      const source=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:sale.id}});
+      const credit=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",sourceDocumentId:sale.id,idempotencyKey:randomUUID(),branchId,partyId:party.id,issueDate:"2026-10-14",lines:[{lineType:"CUSTOM",itemName:source.itemName,sourceCommercialLineId:source.id,quantity:"0.2",rate:"100",taxRate:"0"}]});
+      await postCommercialDocumentForActor(actor,{documentId:credit.id});
+      await chequeFinancialActionForActor(actor,cheque.id,{action:"REOPEN",requestKey:randomUUID(),expectedVersion:1,actionDate:"2026-10-14",reason:"Restore earlier receipt"});
+      const period=await runFinancialReportForActor(actor,"customer-ledger",{customerId:party.id,from:"2026-10-11",to:"2026-10-12"});
+      expect(period.rows[0]).toMatchObject(["2026-10-11","Opening balance","","","","130.00"]);expect(period.rows.at(-1)?.[5]).toBe("90.00");
+      const later=await runFinancialReportForActor(actor,"customer-ledger",{customerId:party.id,from:"2026-10-13",to:"2026-10-14"});
+      expect(later.rows[0][5]).toBe("90.00");expect(later.rows.at(-1)?.[5]).toBe("90.00");expect(later.rows.some(row=>row[1]==="ADVANCE_APPLICATION")).toBe(false);expect(later.rows.filter(row=>row[1]==="REVERSAL")).toHaveLength(1);
+      const empty=await runFinancialReportForActor(actor,"customer-ledger",{customerId:party.id,from:"2026-10-15",to:"2026-10-15"});expect(empty.rows).toHaveLength(1);expect(empty.rows[0][5]).toBe("90.00");
+      const denied=await runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},"customer-ledger",{customerId:party.id,from:"2026-10-01",to:"2026-10-14"});expect(denied.rows).toHaveLength(1);expect(denied.rows[0][5]).toBe("0.00");
+    });
+    it("keeps historical aging payments and advance applications effective until their dated reversal",async()=>{
+      for(const advanced of [false,true]){
+        const sale=await invoice();
+        const {receipt,cheque}=await record(advanced?undefined:sale.id);
+        await chequeFinancialActionForActor(actor,cheque.id,{action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:bankId});
+        if(advanced)await applyAdvanceForActor(actor,{advanceId:receipt.id,documentId:sale.id,amount:"40",applicationDate:"2026-10-13",idempotencyKey:randomUUID()});
+        await chequeFinancialActionForActor(actor,cheque.id,{action:"REOPEN",requestKey:randomUUID(),expectedVersion:1,actionDate:"2026-10-14",reason:"Reverse later closure"});
+        for(const [day,expected] of [["2026-10-11","100.00"],["2026-10-12",advanced?"100.00":"0.00"],["2026-10-13",advanced?"60.00":"0.00"],["2026-10-14","100.00"]]){
+          const values=await documentOutstandingsBatch(companyId,[sale],new Date(day));
+          expect(values.get(sale.id)?.toFixed(2)).toBe(expected);
+        }
+        expect((await documentOutstandingsBatch(companyId,[sale])).get(sale.id)?.toFixed(2)).toBe("100.00");
+      }
+    });
+    it("uses the cutoff for opening-balance payments and later cheque reopening",async()=>{
+      const party=await client.customer.create({data:{companyId,branchId,name:"Historical opening party",isAccountCustomer:true}});
+      const year=await client.financialYear.findFirstOrThrow({where:{companyId}}),ar=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"ACCOUNTS_RECEIVABLE"}}),equity=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});
+      const journal=await client.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:year.id,branchId,entryDate:"2026-10-01",sourceType:"OPENING_BALANCE",sourceId:randomUUID(),lines:[{ledgerAccountId:ar.id,debit:"80",credit:"0"},{ledgerAccountId:equity.id,debit:"0",credit:"80"}]}));
+      const opening=await client.partyOpeningBalance.create({data:{companyId,branchId,partyId:party.id,partyType:"CUSTOMER",partyName:party.name,effectiveDate:new Date("2026-10-01"),amount:"80",journalEntryId:journal.id,createdById:userId}});
+      const receipt=await createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:party.id,paymentMode:"CHEQUE",moneyAccountId:bankId,chequeNumber:randomUUID().slice(0,8),chequeDate:"2026-10-10",transactionDate:"2026-10-10",amount:"80",allocations:[{openingBalanceId:opening.id,amount:"80"}]});
+      const cheque=await client.cheque.findFirstOrThrow({where:{companyId,settlementId:receipt.id}});
+      await chequeFinancialActionForActor(actor,cheque.id,{action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:bankId});
+      await chequeFinancialActionForActor(actor,cheque.id,{action:"REOPEN",requestKey:randomUUID(),expectedVersion:1,actionDate:"2026-10-14",reason:"Restore unpaid opening"});
+      for(const [day,expected] of [["2026-10-11","80.00"],["2026-10-12","0.00"],["2026-10-13","0.00"],["2026-10-14","80.00"]]){
+        const rows=await listOpeningOutstandings({companyId,partyType:"CUSTOMER",partyId:party.id,branchIds:[branchId],asOf:new Date(day)});
+        expect(rows.find(row=>row.id===opening.id)?.outstanding.toFixed(2)??"0.00").toBe(expected);
+      }
+    });
+    it("excludes future credit notes from a historical aging cutoff",async()=>{
+      const sale=await invoice();
+      const source=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:sale.id}});
+      const credit=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",sourceDocumentId:sale.id,idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-14",lines:[{lineType:"CUSTOM",itemName:source.itemName,sourceCommercialLineId:source.id,quantity:"0.2",rate:"100",taxRate:"0"}]});
+      await postCommercialDocumentForActor(actor,{documentId:credit.id});
+      expect((await documentOutstandingsBatch(companyId,[sale],new Date("2026-10-13"))).get(sale.id)?.toFixed(2)).toBe("100.00");
+      expect((await documentOutstandingsBatch(companyId,[sale],new Date("2026-10-14"))).get(sale.id)?.toFixed(2)).toBe("80.00");
+      const report=await runFinancialReportForActor(actor,"receivable-aging",{to:"2026-10-13"});
+      expect(report.rows.find(row=>row[0]===sale.documentNumber)?.[3]).toBe("100");
     });
     it("matches advertised Accountant correction authority for linked and advance cheques and rolls back denied actors",async()=>{
       const accountant={...actor,accountRole:"ACCOUNTANT" as const};

@@ -9386,3 +9386,6 @@ A065-F12 funding foundation: immutable explicit funding/repayment/correction/cla
 ## Report slice shared verification evidence
 
 A084-F02, A084-F12 and A084-F18: TypeScript and focused ESLint pass; 35/35 focused report tests pass; financial export browser checks pass on desktop/mobile (2/2). The shared stock-summary export/sharing rerun passes (2/2,51.6s), retaining parsed PDF content/scope assertions. Android compilation and 2 report-date JVM checks pass. All are interim results; final-head validation remains pending.
+
+
+A084-F07/F09 continuation: scoped journal-based party opening/running balances and explicit historical aging cutoff implemented. Grouped PostgreSQL/unit/service/report checks 50/50 passed (7 files, 6.95s); desktop/mobile browser 2/2 passed (42.3s), with CSV/XLSX/PDF/native API parity, Axe and overflow checks. TypeScript and focused lint passed. No migration or posting changes. Final-head validation pending. Totals: 147 IMPLEMENTED BUT NOT VERIFIED, 50 PARTIAL, 2 NOT STARTED; all 199 final statuses remain unset. A084-F15 remains partial; these shared fixes do not establish profitability/GST correction coverage.

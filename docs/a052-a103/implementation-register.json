@@ -19883,6 +19883,7 @@
       "expected_behavior": "Statement includes opening balance and period movements with accurate closing balance for selected party and authorized branches.",
       "root_cause": "Period-only document/settlement query and zero-initialized reducer.",
       "affected_files": [
+        "src/lib/account/reports/party-ledger.ts",
         "src/lib/account/reports/service.ts"
       ],
       "affected_services_apis_actions": [
@@ -19960,13 +19961,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F06",
         "A084-F08",
         "A084-F09"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Added scoped journal-based customer/vendor ledgers with a pre-period opening row, dated corrections, credit/debit notes and advances. Advance allocation is excluded as a second payment. PostgreSQL covers customer and vendor histories, empty periods, and denied branch scope; browser verifies native API and CSV/XLSX/PDF parity.",
+          "tests": "50/50 grouped PostgreSQL/unit/service/report checks passed in 7 files (6.95s). Desktop/mobile party-ledger browser 2/2 passed (42.3s), including scoped Axe, overflow, CSV/XLSX/PDF and native API values. TypeScript and focused lint passed. Browser fixture cleanup FK order and typed COA fixture corrected after initial failures. Final-head regression remains pending."
+        }
       ]
     },
     {
@@ -20087,9 +20094,10 @@
       "expected_behavior": "Historical receivable/payable aging reflects only transactions effective by cutoff, including opening amounts, refunds, credits and advances.",
       "root_cause": "Current-outstanding helpers reused for historical reports with no allocation/adjustment date limit.",
       "affected_files": [
-        "src/lib/account/reports/service.ts",
         "src/lib/account/commercial.ts",
-        "src/lib/account/opening-balances.ts"
+        "src/lib/account/opening-balances.ts",
+        "src/lib/account/reports/service.ts",
+        "src/lib/account/settlement-policy.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -20168,13 +20176,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F08",
         "A084-F10",
         "A084-F11"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Added explicit as-of journal, settlement, allocation, adjustment and advance application predicates for aging and party opening outstanding amounts. Later receipts, credits and cheque reopen corrections preserve historical balances; current outstanding callers retain current behavior.",
+          "tests": "50/50 grouped PostgreSQL/unit/service/report checks passed in 7 files (6.95s). Desktop/mobile party-ledger browser 2/2 passed (42.3s), including scoped Axe, overflow, CSV/XLSX/PDF and native API values. TypeScript and focused lint passed. Browser fixture cleanup FK order and typed COA fixture corrected after initial failures. Final-head regression remains pending."
+        }
       ]
     },
     {
@@ -23311,6 +23325,38 @@
     "typecheck_evidence_correction": {
       "reason": "Earlier warehouse and Project slice summaries incorrectly stated TypeScript passed because shell commands continued to successful lint after a failing tsc. The warehouse test principal lacked required fields; corrected it. Removed a PDF parser option obsolete in installed version.",
       "superseding_evidence": "Clean Node22 tsc --noEmit with set -e passed in a080-unicode-final-typecheck.log; focused lint and 9 PDF/warehouse tests passed. Earlier erroneous pass statements are superseded, not final-head evidence."
+    },
+    "party_ledger_and_historical_aging": {
+      "findings": [
+        "A084-F07",
+        "A084-F09"
+      ],
+      "grouped_tests": {
+        "passed": 50,
+        "failed": 0,
+        "files": 7,
+        "seconds": 6.95
+      },
+      "browser": {
+        "passed": 2,
+        "failed": 0,
+        "seconds": 42.3,
+        "platforms": [
+          "desktop web",
+          "mobile web"
+        ],
+        "checks": [
+          "opening/running balance",
+          "CSV/XLSX/PDF",
+          "native API parity",
+          "Axe",
+          "overflow"
+        ]
+      },
+      "typescript": "PASS",
+      "focused_lint": "PASS",
+      "migrations": "NONE",
+      "final_head_verification": false
     }
   },
   "approved_business_decisions": {

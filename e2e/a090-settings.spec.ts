@@ -131,6 +131,7 @@ test.afterAll(async () => {
     await tx.loanOperation.deleteMany({where:{companyId}});
     await tx.loanPayment.deleteMany({where:{companyId}});
     await tx.loan.deleteMany({where:{companyId}});
+    await tx.partyOpeningBalance.deleteMany({where:{companyId}});
     await tx.journalLine.deleteMany({where:{companyId}});
     await tx.journalEntry.deleteMany({where:{companyId}});
     await tx.accountingAuditEvent.deleteMany({where:{companyId}});
@@ -1835,4 +1836,29 @@ test("A065 asset funding and capital repayment preserve asset cost and scoped na
  const cash=await db.journalLine.aggregate({where:{companyId,ledgerAccountId:bankLedger.id,journalEntry:{status:{in:["POSTED","REVERSED"]}}},_sum:{debit:true,credit:true}});expect(cash._sum.debit?.sub(cash._sum.credit??0).toFixed(2)).toBe("0.00");expect((await db.asset.findUniqueOrThrow({where:{id:asset.id}})).purchaseValue.toFixed(2)).toBe("40000.00");expect((await db.ownerTransaction.findUniqueOrThrow({where:{id:investment.id}})).amount.toFixed(2)).toBe("30000.00");
  await page.getByRole("link",{name:"Asset funding",exact:true}).click();card=page.getByRole("region",{name:`Funding for ${asset.name}`,exact:true});await expect(card).toContainText("25,000.00");await expect(card).toContainText("15,000.00");const axe=await new AxeBuilder({page}).include(".employees-content").withTags(["wcag2a","wcag2aa"]).analyze();expect(axe.violations).toEqual([]);await page.evaluate(()=>document.documentElement.style.fontSize="200%");expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await db.accountSettings.update({where:{companyId},data:{enabledModules:[]}});await page.goto(`/workspace/account/money/capital?branchId=${branchId}`);await page.locator("form.owner-entry-form").getByLabel("Transaction",{exact:true}).selectOption("CAPITAL_WITHDRAWAL");await expect(page.getByLabel(`Repayment toward ${asset.name}`,{exact:true})).toBeVisible();await page.goto(`/workspace/account/money/capital/funding?branchId=${branchId}`);await expect(page.getByText(/Enable Assets to record asset funding/)).toBeVisible();
+});
+
+test("A084 party ledger opening and export balances match web and native scoped results",async({page})=>{
+ test.setTimeout(180000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"INR",displayDecimalPlaces:2}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Ledger audit year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const party=await db.customer.create({data:{companyId,branchId,name:"A084 ledger customer",isAccountCustomer:true}}),year=await db.financialYear.findFirstOrThrow({where:{companyId}}),ar=await db.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"ACCOUNTS_RECEIVABLE"}}),equity=await db.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});
+  const journal=await db.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:year.id,branchId,entryDate:"2026-10-01",sourceType:"OPENING_BALANCE",sourceId:randomUUID(),lines:[{ledgerAccountId:ar.id,debit:"30",credit:"0"},{ledgerAccountId:equity.id,debit:"0",credit:"30"}]}));
+  await db.partyOpeningBalance.create({data:{companyId,branchId,partyId:party.id,partyType:"CUSTOMER",partyName:party.name,effectiveDate:new Date("2026-10-01"),amount:"30",journalEntryId:journal.id,createdById:userId}});
+  const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:party.id,issueDate:"2026-10-10",lines:[{lineType:"CUSTOM",itemName:"Ledger prior sale",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  await createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:party.id,paymentMode:"CASH",amount:"40",transactionDate:"2026-10-12",allocations:[{documentId:sale.id,amount:"40"}]});
+  const query=`scope=all&from=2026-10-11&to=2026-10-12&customerId=${party.id}`;
+  await signInSettings(page);await page.goto(`/workspace/account/reports/customer-ledger?${query}`);
+  await expect(page.getByRole("heading",{name:"Customer Ledger",exact:true})).toBeVisible({timeout:20000});
+  const rows=page.locator("tbody tr");await expect(rows).toHaveCount(2);await expect(rows.first()).toContainText("Opening balance");await expect(rows.first()).toContainText("130.00");await expect(rows.last()).toContainText("90.00");
+  expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);
+  for(const format of ["csv","xlsx","pdf"]){const response=await page.request.get(`/api/account/reports/customer-ledger/${format}?${query}`);expect(response.status()).toBe(200);let text="";if(format==="csv")text=await response.text();else if(format==="pdf")text=(await extractPdfText(await response.body())).text;else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await response.body()).buffer);text=JSON.stringify(book.worksheets[0].getSheetValues())}expect(text).toContain("Opening balance");expect(text).toContain("130.00");expect(text).toContain("90.00")}
+  const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});
+  const native=await page.request.get(`/api/v1/mobile/account/reports/customer-ledger?${query}`,{headers:{authorization:`Bearer ${token}`}});expect(native.status()).toBe(200);const values=await native.json();expect(String(values.rows[0][5])).toContain("130.00");expect(String(values.rows.at(-1)[5])).toContain("90.00");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ }finally{await page.goto("/workspace/account");await db.accountSettings.update({where:{companyId},data:{baseCurrency:original.baseCurrency,displayDecimalPlaces:original.displayDecimalPlaces}})}
 });

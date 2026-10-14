@@ -1,4 +1,5 @@
-import { EFFECTIVE_SETTLEMENT } from "../settlement-policy";
+import { partyLedgerReport } from "./party-ledger";
+import { postedJournalAt } from "../settlement-policy";
 import { LEDGER_EFFECTIVE_JOURNAL_STATUSES } from "@/lib/accounting/ledger-policy";
 import { listOpeningOutstandings } from "../opening-balances";
 import { Prisma } from "@prisma/client";
@@ -434,7 +435,8 @@ export async function runFinancialReportForActor(
     const docs = await db.commercialDocument.findMany({
       where: {
         companyId: c.actor.companyId,
-        status: "POSTED",
+        status: {in:["POSTED","CANCELLED"]},
+        journalEntry: {is:postedJournalAt(c.to)},
         type: sales ? "SALES_INVOICE" : "PURCHASE_BILL",
         issueDate: { lte: c.to },
         ...c.branch,
@@ -442,7 +444,7 @@ export async function runFinancialReportForActor(
       orderBy: { issueDate: "asc" },
     });
     const [outstanding, opening] = await Promise.all([
-      documentOutstandingsBatch(c.actor.companyId!, docs),
+      documentOutstandingsBatch(c.actor.companyId!, docs, c.to),
       listOpeningOutstandings({
         companyId: c.actor.companyId!,
         partyType: sales ? "CUSTOMER" : "VENDOR",
@@ -501,79 +503,9 @@ export async function runFinancialReportForActor(
   }
 
   if (["customer-ledger", "vendor-ledger"].includes(name)) {
-    const customer = name === "customer-ledger",
-      partyId = customer ? c.f.customerId : c.f.vendorId;
-    if (!partyId)
-      throw new Error(customer ? "CUSTOMER_REQUIRED" : "VENDOR_REQUIRED");
-    const [docs, settlements] = await Promise.all([
-      db.commercialDocument.findMany({
-        where: {
-          companyId: c.actor.companyId,
-          ...(customer ? { customerId: partyId } : { vendorId: partyId }),
-          status: "POSTED",
-          issueDate: { gte: c.from, lte: c.to },
-          ...c.branch,
-        },
-        orderBy: { issueDate: "asc" },
-      }),
-      db.accountSettlement.findMany({
-        where: { ...EFFECTIVE_SETTLEMENT,
-          companyId: c.actor.companyId,
-          ...(customer ? { customerId: partyId } : { vendorId: partyId }),
-          transactionDate: { gte: c.from, lte: c.to },
-          ...c.branch,
-        },
-      }),
-    ]);
-    const entries = [
-      ...docs.map((x) => {
-        const value = customer ? x.grandTotal : vendorDocumentAmount(x),
-          debit =
-            (customer && x.type === "SALES_INVOICE") ||
-            (!customer && x.type === "DEBIT_NOTE")
-              ? value
-              : Z,
-          credit =
-            (customer && x.type === "CREDIT_NOTE") ||
-            (!customer && x.type === "PURCHASE_BILL")
-              ? value
-              : Z;
-        return {
-          date: x.issueDate,
-          source: x.type,
-          reference: x.documentNumber,
-          debit,
-          credit,
-        };
-      }),
-      ...settlements.map((x) => ({
-        date: x.transactionDate,
-        source: x.type,
-        reference: x.settlementNumber,
-        debit: customer ? Z : x.amount,
-        credit: customer ? x.amount : Z,
-      })),
-    ].sort((a, b) => a.date.getTime() - b.date.getTime());
-    const rows = entries.reduce<Array<Array<string | number>>>((result, x) => {
-      const prior = result.length ? new D(result[result.length - 1][5]) : Z,
-        balance = customer
-          ? prior.add(x.debit).sub(x.credit)
-          : prior.add(x.credit).sub(x.debit);
-      result.push([
-        x.date.toISOString().slice(0, 10),
-        x.source,
-        x.reference,
-        n(x.debit),
-        n(x.credit),
-        n(balance),
-      ]);
-      return result;
-    }, []);
-    return {
-      title: customer ? "Customer Ledger" : "Vendor Ledger",
-      columns: ["Date", "Source", "Reference", "Debit", "Credit", "Balance"],
-      rows,
-    };
+    const customer=name==="customer-ledger",partyId=customer?c.f.customerId:c.f.vendorId;
+    if(!partyId)throw new Error(customer?"CUSTOMER_REQUIRED":"VENDOR_REQUIRED");
+    return partyLedgerReport({companyId:c.actor.companyId,partyId,customer,from:c.from,to:c.to,branches:c.f.branchId?[c.f.branchId]:c.actor.branchAccessScope==="SELECTED_BRANCHES"?[...(c.actor.branchIds??[])]:undefined});
   }
 
   if (name === "purchase-register") {
