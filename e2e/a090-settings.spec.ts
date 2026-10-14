@@ -1254,10 +1254,10 @@ test("A084 profit withdrawal separates drawings from investment and preserves da
   const ledger=await db.ledgerAccount.create({data:{companyId,code:`A084-${randomUUID().slice(0,8)}`,name:"Withdrawal test cash",accountClass:"ASSET",normalBalance:"DEBIT"}});
   const money=await db.moneyAccount.create({data:{companyId,branchId,name:"Withdrawal test cash",type:"CASH",ledgerAccountId:ledger.id}});
   await postOwnerTransactionForActor(actor,{ownerFinancialAccountId:owner.id,moneyAccountId:money.id,branchId,type:"INVESTMENT",amount:"200",transactionDate:"2026-10-10",reference:"Investment excluded",idempotencyKey:randomUUID()});
-  const withdrawal=await postOwnerTransactionForActor(actor,{ownerFinancialAccountId:owner.id,moneyAccountId:money.id,branchId,type:"WITHDRAWAL",amount:"50",transactionDate:"2026-10-11",reference:"Owner withdrawal",idempotencyKey:randomUUID()});
+  const withdrawal=await postOwnerTransactionForActor(actor,{ownerFinancialAccountId:owner.id,moneyAccountId:money.id,branchId,type:"PROFIT_DISTRIBUTION",amount:"50",transactionDate:"2026-10-11",reference:"Owner withdrawal",idempotencyKey:randomUUID()});
   await reverseJournalForActor(actor,{journalEntryId:withdrawal.journalEntryId,entryDate:"2026-10-12",reason:"Withdrawal reversed for audit"});
   const before=await runFinancialReportForActor(actor,"profit-withdrawal",{from:"2026-10-01",to:"2026-10-11",scope:"all",branchId:"",projectId:"",customerId:"",vendorId:"",productId:"",ledgerId:""});
-  expect(before.rows).toHaveLength(1);expect(before.totals?.[3]).toBe("50");expect(before.rows[0][4]).toBe("WITHDRAWAL");
+  expect(before.rows).toHaveLength(1);expect(before.totals?.[3]).toBe("50");expect(before.rows[0][4]).toBe("PROFIT_DISTRIBUTION");
   const after=await runFinancialReportForActor(actor,"profit-withdrawal",{from:"2026-10-01",to:"2026-10-12"});
   expect(after.rows).toHaveLength(2);expect(after.totals?.[3]).toBe("0");
   await signInSettings(page);await page.goto("/workspace/account/reports/profit-withdrawal?scope=all&from=2026-10-01&to=2026-10-11&page=3&q=navigation-only");

@@ -4687,7 +4687,7 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 
 **Required tests:** Profit5000/capital3000: capital changes only for capital3000, company money decreases8000, correct owner identity, journal balance, report totals/date/source filters, sufficient funds/concurrency/retry.
 
-**Current implementation status:** PARTIAL. Final-head validation pending.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A065_Audit_Report.md", "SalesPunch360_A065_UI_and_Changes.md"], "final_head_regression": "NOT RUN"}
 
@@ -4698,6 +4698,11 @@ Remaining: Final-head unit/database/API/browser/native regression remains pendin
 **Checkpoint work:** New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains.
 
 **Intermediate validation:** 16 service/action tests and 2 desktop/mobile browser tests passed; Android compile/142 JVM tests passed; TypeScript/focused lint passed; legacy migration fixture passed. Full checkpoint final-head validation pending.
+
+
+**Independent implementation checkpoint:** Enforced explicit capital withdrawal/profit distribution for new owner cash-out postings at the server boundary. Matching legacy WITHDRAWAL retries remain idempotent; historical rows and their original drawings ledger are preserved without assuming capital return. Web/native forms already expose the distinct types.
+
+**Interim validation:** 42/42 focused owner/funding/replay financial tests pass, including actual owner/cash isolation, concurrent funds and legacy retry protection. The required5000profit/3000capital scenario is independently tested against real PostgreSQL; final result recorded separately. No historical migration/data rewrite. Final-head validation remains pending.
 
 ## A065-F11 — Company Capital management metric lacks profit-funded asset attribution
 
@@ -5206,7 +5211,7 @@ Validation correction: initial lint PASS was recorded before inspecting a new-pa
 
 **Required tests:** Admin/Accountant denied/allowed linked and unlinked bounce; page action visibility; direct action enforcement; transaction rollback on denial.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A066_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -5218,6 +5223,11 @@ Checkpoint atomic cheque work: Cheque actor commands explicitly enforce Money En
 Remaining: Expose matching transition capabilities in cheque UI/API/native routes and verify final-head permission cases alongside remaining cheque workflow.
 
 Cheque financial slice: normalized pending settlement/source/amount/version, closure and reversal core implemented. Four PostgreSQL scenarios plus23 settings tests pass; UI/API wiring, legacy source completion and final-head verification still pending. Forward migrations rehearsed locally; historical migrations and production untouched.
+
+
+**Independent financial checkpoint:** Independently verified the explicit existing policy: closing requires money entry; bounce/reopen/cancel additionally require journal reversal, and canCorrect advertises that conjunction. Admin/Accountant currently have both capabilities. Web/native consume canCorrect; no implicit permission bypass was introduced.
+
+**Interim validation:** 34/34 grouped read/financial tests pass. Added advertised Admin/Accountant capabilities, denied data-entry reads, actual Accountant linked/advance closure+bounce, and denied writes preserving journals/status. Final-head validation remains pending.
 
 ## A066-F10 — Cheque forms lack accessible labels and actionable status feedback
 
@@ -7536,13 +7546,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Same-year prior-month profit; prior-period loss; closed financial year; opening balances; fixed cutoff with varied start; trial balance and Balance Sheet reconcile.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F04, A084-F06, A084-F07.
+
+
+**Independent implementation checkpoint:** Independently verified opening unclosed earnings and retained-equity closing behavior; closing nominal balances determine Balance Sheet earnings while Profit and Loss stays period-only.
+
+**Interim validation:** 16/16 focused financial math/service/export tests pass, including closing prior income into retained equity without counting earnings twice. Final-head validation remains pending.
 
 ## A084-F06 — Mobile GST report switches to web-session authentication
 
@@ -7578,13 +7593,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Bearer-only GST read/export; absent web cookie; different cookie principal cannot replace token identity; module off; forbidden role/branch/company.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F05, A084-F07, A084-F08.
+
+
+**Independent implementation checkpoint:** Independently verified GST reports use the supplied authenticated native actor and do not request a web session. Existing tenant/assigned-branch conditions remain enforced.
+
+**Interim validation:** Native-actor/no-web-auth and tenant/branch query assertions pass in the focused service-boundary group. Final-head validation remains pending.
 
 ## A084-F07 — Party ledger running balance starts at zero for every date range
 
@@ -7662,13 +7682,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Selected-branch customer exclusion; Project Manager project-only response; minimal scalar payload; allowed company and branch; web and mobile parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F07, A084-F09, A084-F10.
+
+
+**Independent implementation checkpoint:** Independently verified customer options are company-scoped and constrained to the actor assigned branches, including no assigned branches.
+
+**Interim validation:** Allowed/empty/all-branch option query assertions pass in the focused service-boundary group. Final-head validation remains pending.
 
 ## A084-F09 — Historical aging subtracts payments and credits after cutoff
 
@@ -7746,13 +7771,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Aging bucket totals; trial balance totals; lifetime project note; selected date/branch; parsed XLSX/PDF equivalence; CSV totals policy.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F09, A084-F11, A084-F12.
+
+
+**Independent implementation checkpoint:** Independently verified shared export rows include totals, explanatory notes and applied scope across actual CSV, Excel and parsed PDF outputs.
+
+**Interim validation:** Focused export rows test passes; desktop/mobile financial export browser checks pass. Unicode PDF path retains totals and scope. Final-head validation remains pending.
 
 ## A084-F11 — Native exports can use edited filters while showing previous results
 
@@ -7788,13 +7818,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Run A/edit B/export; edits during pending run/export; failed rerun; report switch; unchanged filters; exported values agree with displayed applied period.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md.
 
 **Linked finding IDs:** A084-F10, A084-F12, A084-F14.
+
+
+**Independent implementation checkpoint:** Independently verified native export snapshots the filters of the displayed successful report; later filter edits do not mutate that snapshot. Existing ViewModel exports from appliedRequest, not current edit fields.
+
+**Interim validation:** AccountReportDataTest applied-filter mutation regression passes; Android compile and grouped report-data/date JVM run passes (4 tests,10s). Final-head validation remains pending.
 
 ## A084-F12 — Default financial-year range fails during January to March
 
@@ -8223,13 +8258,18 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Actual API JSON fixtures for report names/columns/rows/totals; nonempty hub/table; malformed data; accessibility and long report pagination.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Reports Menu own audit completed; report destinations, shared scope/date/display and export changes recorded in the report follow-up. Shared report fixes do not certify every destination.", "tests": "Related report follow-up: 29 selected unit/contract tests, 2 withdrawal browser cases and 2 native JVM tests passed. No additional standalone whole-menu verification claimed.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
 **Source reports:** SalesPunch360_Reports_Checkpoint_Findings.json, SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md, SalesPunch360_A084-A085_Report_Followup.md.
 
 **Linked finding IDs:** A084-F01, A084-F02, A084-F16, A085-F01, A085-F02.
+
+
+**Independent implementation checkpoint:** Independently verified native report helpers retain primitive report names, columns and array row cells, including numbers and rupee text.
+
+**Interim validation:** AccountReportDataTest response parsing regression passes; Android compile and grouped report-data/date JVM run passes (4 tests,10s). Final-head validation remains pending.
 
 ## A086-F01 — Sale edit preview disagrees with inclusive GST and cess totals
 
@@ -8309,7 +8349,7 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Required tests:** Original reversal failure; compensation failure; retry; concurrent payment/edit; financial-year lock; stock/batch/serial constraints; one live economic sale and balanced journals after recovery.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Shared Add/Edit Sale form prefilled; inclusive GST/cess preview and footer clearance corrected; hidden header metadata retained server-side; full credit/replacement behavior tested.", "tests": "Own mobile+desktop Edit Sale/header retention/delete cases passed (2 of 6 corrected sales cases); related reverse-charge/tracked stock/custom-invoice cases passed. TypeScript and targeted ESLint passed. See follow-up for earlier failed runs.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -8318,6 +8358,11 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 **Linked finding IDs:** A086-F01, A086-F03, A086-F04.
 
 Checkpoint evidence: atomic source-bound amendment and reversal replay; full credit validates exact ledger/cost-centre offsets including charges and TDS/TCS. Focused PostgreSQL regression: 16 passed, 0 failed. Android compile and focused creation/edit-snapshot tests passed. Paid corrections and final-head validation remain pending; status stays PARTIAL.
+
+
+**Independent financial checkpoint:** Independently verified atomic unpaid-sale replacement, source-bound retry and final-audit failure rollback. Added a real concurrent payment/amendment regression: exactly one operation commits, with no duplicate economic sale or receipt. Paid-sale replacement remains the separate open A086-F05 scope.
+
+**Interim validation:** 34/34 grouped PostgreSQL/cheque-capability tests pass, including retry, final-audit rollback and concurrency. Final-head validation remains pending.
 
 ## A086-F03 — Sale replacement loses retained invoice metadata
 
@@ -8397,7 +8442,7 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Required tests:** Freight/other charges; cess/withholding; round-off; inventory/project allocations; full offset; failed partial reversal must not cancel source.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Shared Add/Edit Sale form prefilled; inclusive GST/cess preview and footer clearance corrected; hidden header metadata retained server-side; full credit/replacement behavior tested.", "tests": "Own mobile+desktop Edit Sale/header retention/delete cases passed (2 of 6 corrected sales cases); related reverse-charge/tracked stock/custom-invoice cases passed. TypeScript and targeted ESLint passed. See follow-up for earlier failed runs.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -8406,6 +8451,11 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 **Linked finding IDs:** A086-F03, A086-F05, A086-F06, A087-F01.
 
 Checkpoint evidence: atomic source-bound amendment and reversal replay; full credit validates exact ledger/cost-centre offsets including charges and TDS/TCS. Focused PostgreSQL regression: 16 passed, 0 failed. Android compile and focused creation/edit-snapshot tests passed. Paid corrections and final-head validation remain pending; status stays PARTIAL.
+
+
+**Independent financial checkpoint:** Independently verified the existing canonical full-sale reversal offsets original journal components, preserves immutable source documents, and returns exactly one unit of the same batch/serial at original unit cost40. Retry returns the same credit with no duplicate stock return.
+
+**Interim validation:** 34/34 grouped tests pass, including GST/cess/freight/other charges/round-off/TDS/TCS, stock/serial restoration and correction retries. Stock quantities are positive magnitudes; SALE/SALES_RETURN directions are asserted explicitly. Final-head validation remains pending.
 
 ## A086-F05 — Paid/advance/adjusted sales cannot be edited or deleted
 

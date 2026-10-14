@@ -89,7 +89,7 @@ const actor = {
 };
 const raw = (
   accountId: string,
-  type: "INVESTMENT" | "WITHDRAWAL",
+  type: "INVESTMENT" | "PROFIT_DISTRIBUTION",
   amount: string,
   key = randomUUID(),
 ) => ({
@@ -336,7 +336,7 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     });
     await expect(
       postOwnerTransactionForActor(actor, {
-        ...raw(bank.id, "WITHDRAWAL", "10"),
+        ...raw(bank.id, "PROFIT_DISTRIBUTION", "10"),
         ownerFinancialAccountId: owner.id,
       }),
     ).rejects.toThrow("INVALID_OWNER_TRANSACTION_ACCOUNT");
@@ -354,27 +354,27 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
       creationRequestKey: randomUUID(),
     });
     const bank = await account();
-    for (const amount of ["60", "40"])
+    for (const amount of ["6000", "4000"])
       await postOwnerTransactionForActor(actor, {
         ...raw(bank.id, "INVESTMENT", amount),
         ownerFinancialAccountId: owner.id,
       });
     await postOwnerTransactionForActor(actor, {
-      ...raw(bank.id, "WITHDRAWAL", "20"),
+      ...raw(bank.id, "PROFIT_DISTRIBUTION", "5000"),
       ownerFinancialAccountId: owner.id,
       type: "PROFIT_DISTRIBUTION",
     });
     expect((await funds(owner.capitalLedgerId)).neg().toFixed(2)).toBe(
-      "100.00",
+      "10000.00",
     );
     await postOwnerTransactionForActor(actor, {
-      ...raw(bank.id, "WITHDRAWAL", "10"),
+      ...raw(bank.id, "PROFIT_DISTRIBUTION", "3000"),
       ownerFinancialAccountId: owner.id,
       type: "CAPITAL_WITHDRAWAL",
     });
-    expect((await funds(owner.capitalLedgerId)).neg().toFixed(2)).toBe("90.00");
-    expect((await funds(owner.drawingsLedgerId)).toFixed(2)).toBe("20.00");
-    expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("70.00");
+    expect((await funds(owner.capitalLedgerId)).neg().toFixed(2)).toBe("7000.00");
+    expect((await funds(owner.drawingsLedgerId)).toFixed(2)).toBe("5000.00");
+    expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("2000.00");
     expect(
       await client.ownerTransaction.count({
         where: {
@@ -419,7 +419,7 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
       await client.accountOperationalAudit.count({ where: { companyId } }),
     ];
     await expect(
-      postOwnerTransactionForActor(actor, raw(bank.id, "WITHDRAWAL", "100.01")),
+      postOwnerTransactionForActor(actor, raw(bank.id, "PROFIT_DISTRIBUTION", "100.01")),
     ).rejects.toThrow("INSUFFICIENT_MONEY_BALANCE");
     expect([
       await client.journalEntry.count({ where: { companyId } }),
@@ -435,8 +435,8 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
       raw(bank.id, "INVESTMENT", "100"),
     );
     const results = await Promise.allSettled([
-      postOwnerTransactionForActor(actor, raw(bank.id, "WITHDRAWAL", "80")),
-      postOwnerTransactionForActor(actor, raw(bank.id, "WITHDRAWAL", "80")),
+      postOwnerTransactionForActor(actor, raw(bank.id, "PROFIT_DISTRIBUTION", "80")),
+      postOwnerTransactionForActor(actor, raw(bank.id, "PROFIT_DISTRIBUTION", "80")),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
@@ -455,7 +455,7 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     });
     await postOwnerTransactionForActor(actor, raw(bank.id, "INVESTMENT", "30"));
     expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("30.00");
-    await postOwnerTransactionForActor(actor, raw(bank.id, "WITHDRAWAL", "30"));
+    await postOwnerTransactionForActor(actor, raw(bank.id, "PROFIT_DISTRIBUTION", "30"));
     expect((await funds(bank.ledgerAccountId)).toFixed(2)).toBe("0.00");
   });
   it("money dashboard agrees with effective reversed journal balances", async () => {
@@ -546,7 +546,7 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
     companyLockObserved = observed;
     const withdrawal = postOwnerTransactionForActor(
       actor,
-      raw(bank.id, "WITHDRAWAL", "80"),
+      raw(bank.id, "PROFIT_DISTRIBUTION", "80"),
     );
     const rejected = expect(withdrawal).rejects.toThrow(
       "INSUFFICIENT_MONEY_BALANCE",
@@ -583,8 +583,8 @@ describe.skipIf(!url)("A065 authoritative available owner funds", () => {
       for(let index=0;index<2;index++)registryIds.push((await client.asset.create({data:{companyId,branchId,assetNumber:randomUUID(),name:"Imported duplicate equipment",assetType:"EQUIPMENT",purchaseDate:date,purchaseValue:"50000",assetLedgerId:fixed.id,createdById:userId}})).id);
       expect(await ownerCapitalSummaryForActor(actor)).toEqual(summary);
     }finally{await client.asset.deleteMany({where:{id:{in:registryIds},companyId}});}
-    await postOwnerTransactionForActor(actor,{...raw(bank.id,"WITHDRAWAL","3000"),type:"CAPITAL_WITHDRAWAL"});summary=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(summary.companyAssets).sub(before.companyAssets).toFixed(2)).toBe("97000.00");expect(new Prisma.Decimal(summary.capital).sub(before.capital).toFixed(2)).toBe("77000.00");
-    await postOwnerTransactionForActor(actor,{...raw(bank.id,"WITHDRAWAL","1000"),type:"PROFIT_DISTRIBUTION"});const after=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(after.companyAssets).sub(summary.companyAssets).toFixed(2)).toBe("-1000.00");expect(after.capital).toBe(summary.capital);
+    await postOwnerTransactionForActor(actor,{...raw(bank.id,"PROFIT_DISTRIBUTION","3000"),type:"CAPITAL_WITHDRAWAL"});summary=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(summary.companyAssets).sub(before.companyAssets).toFixed(2)).toBe("97000.00");expect(new Prisma.Decimal(summary.capital).sub(before.capital).toFixed(2)).toBe("77000.00");
+    await postOwnerTransactionForActor(actor,{...raw(bank.id,"PROFIT_DISTRIBUTION","1000"),type:"PROFIT_DISTRIBUTION"});const after=await ownerCapitalSummaryForActor(actor);expect(new Prisma.Decimal(after.companyAssets).sub(summary.companyAssets).toFixed(2)).toBe("-1000.00");expect(after.capital).toBe(summary.capital);
     const {runFinancialReportForActor}=await import("./reports/service");const report=await runFinancialReportForActor(actor,"balance-sheet",{scope:"all",from:"2026-01-01",to:"2026-12-31"});expect(new Prisma.Decimal(String(report.rows.find(row=>row[0]==="Assets")?.[1])).eq(after.companyAssets)).toBe(true);
     expect(await ownerCapitalSummaryForActor({...actor,companyId:randomUUID()})).toMatchObject({companyAssets:"0.00",capital:"0.00",ownerCount:0});
     expect((await ownerCapitalSummaryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]})).companyAssets).toBe("0.00");

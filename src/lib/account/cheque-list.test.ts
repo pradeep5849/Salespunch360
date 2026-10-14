@@ -151,4 +151,13 @@ describe("A066 authorized bounded cheque read", () => {
     await expect(chequePageForActor(actor, query)).rejects.toThrow();
     expect(m.rows).not.toHaveBeenCalled();
   });
+  it.each(["ACCOUNT_ADMIN","ACCOUNTANT"] as const)("advertises closure and source correction to authorized %s",async accountRole=>{
+    const result=await chequePageForActor({...actor,accountRole});
+    expect(result.canClose).toBe(true);expect(result.canCorrect).toBe(true);
+  });
+  it("does not expose money actions to a data-entry actor",async()=>{
+    await expect(chequePageForActor({...actor,accountRole:"DATA_ENTRY"})).rejects.toThrow();
+    expect(m.rows).not.toHaveBeenCalled();
+  });
+
 });

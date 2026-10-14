@@ -1059,6 +1059,9 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
               throw new Error("IDEMPOTENCY_CONFLICT");
             return existing;
           }
+          // Legacy withdrawals retain their original identity on retry. New
+          // withdrawals must explicitly choose capital return or profit drawings.
+          if(d.type==="WITHDRAWAL")throw new Error("OWNER_WITHDRAWAL_CLASSIFICATION_REQUIRED");
           const fy = await context(tx, a, d.branchId, d.transactionDate),
             [owner, moneyAccount] = await Promise.all([
               tx.ownerFinancialAccount.findFirst({

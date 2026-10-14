@@ -12620,7 +12620,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -12629,7 +12629,15 @@
       ],
       "checkpoint_work": {
         "status": "PARTIAL",
-        "summary": "New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains."
+        "summary": "New capital withdrawal reduces capital ledger; profit distribution posts drawings without reducing capital. Historical WITHDRAWAL stays unchanged. Complete report/source-filter parity remains.",
+        "independent_checkpoint_verification": {
+          "work": "Enforced explicit capital withdrawal/profit distribution for new owner cash-out postings at the server boundary. Matching legacy WITHDRAWAL retries remain idempotent; historical rows and their original drawings ledger are preserved without assuming capital return. Web/native forms already expose the distinct types.",
+          "tests": "42/42 focused owner/funding/replay financial tests pass, including actual owner/cash isolation, concurrent funds and legacy retry protection. The required5000profit/3000capital scenario is independently tested against real PostgreSQL; final result recorded separately. No historical migration/data rewrite. Final-head validation remains pending."
+        },
+        "explicit_scenario_validation": {
+          "work": "New entries require explicit withdrawal classification; legacy retry remains allowed.",
+          "tests": "Specified profit5000/capital3000 real PostgreSQL scenario passes: capital10000\u21927000, drawings5000 and money10000\u21922000. Filtered run1passed/12intentionallyexcluded. Full related group42/42 passes; desktop/mobile profit-distribution/export flow2/2 passes (39.5s). TypeScript and focused lint pass. Final-head validation remains pending."
+        }
       },
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
@@ -14109,7 +14117,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -14130,6 +14138,10 @@
           "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
           "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
           "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
+        },
+        "financial_checkpoint_verification": {
+          "work": "Independently verified the explicit existing policy: closing requires money entry; bounce/reopen/cancel additionally require journal reversal, and canCorrect advertises that conjunction. Admin/Accountant currently have both capabilities. Web/native consume canCorrect; no implicit permission bypass was introduced.",
+          "tests": "34/34 grouped read/financial tests pass. Added advertised Admin/Accountant capabilities, denied data-entry reads, actual Accountant linked/advance closure+bounce, and denied writes preserving journals/status. Final-head verification remains pending."
         }
       }
     },
@@ -19738,13 +19750,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F04",
         "A084-F06",
         "A084-F07"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified opening unclosed earnings and retained-equity closing behavior; closing nominal balances determine Balance Sheet earnings while Profit and Loss stays period-only.",
+          "tests": "16/16 focused financial math/service/export tests pass, including closing prior income into retained equity without counting earnings twice. Final-head validation remains pending."
+        }
       ]
     },
     {
@@ -19839,13 +19857,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F05",
         "A084-F07",
         "A084-F08"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified GST reports use the supplied authenticated native actor and do not request a web session. Existing tenant/assigned-branch conditions remain enforced.",
+          "tests": "Native-actor/no-web-auth and tenant/branch query assertions pass in the focused service-boundary group. Final-head validation remains pending."
+        }
       ]
     },
     {
@@ -20037,13 +20061,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F07",
         "A084-F09",
         "A084-F10"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified customer options are company-scoped and constrained to the actor assigned branches, including no assigned branches.",
+          "tests": "Allowed/empty/all-branch option query assertions pass in the focused service-boundary group. Final-head validation remains pending."
+        }
       ]
     },
     {
@@ -20239,13 +20269,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F09",
         "A084-F11",
         "A084-F12"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified shared export rows include totals, explanatory notes and applied scope across actual CSV, Excel and parsed PDF outputs.",
+          "tests": "Focused export rows test passes; desktop/mobile financial export browser checks pass. Unicode PDF path retains totals and scope. Final-head validation remains pending."
+        }
       ]
     },
     {
@@ -20338,13 +20374,19 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A084-F10",
         "A084-F12",
         "A084-F14"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified native export snapshots the filters of the displayed successful report; later filter edits do not mutate that snapshot. Existing ViewModel exports from appliedRequest, not current edit fields.",
+          "tests": "AccountReportDataTest applied-filter mutation regression passes; Android compile and grouped report-data/date JVM run passes (4 tests,10s). Final-head validation remains pending."
+        }
       ]
     },
     {
@@ -21203,7 +21245,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -21212,6 +21254,12 @@
         "A084-F16",
         "A085-F01",
         "A085-F02"
+      ],
+      "checkpoint_work": [
+        {
+          "work": "Independently verified native report helpers retain primitive report names, columns and array row cells, including numbers and rupee text.",
+          "tests": "AccountReportDataTest response parsing regression passes; Android compile and grouped report-data/date JVM run passes (4 tests,10s). Final-head validation remains pending."
+        }
       ]
     },
     {
@@ -21393,7 +21441,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -21408,7 +21456,11 @@
           "src/lib/account/sale-amendments.ts",
           "src/lib/account/cheque-finance.integration.test.ts",
           "src/lib/account/cheque-transitions.integration.test.ts"
-        ]
+        ],
+        "financial_checkpoint_verification": {
+          "work": "Independently verified atomic unpaid-sale replacement, source-bound retry and final-audit failure rollback. Added a real concurrent payment/amendment regression: exactly one operation commits, with no duplicate economic sale or receipt. Paid-sale replacement remains the separate open A086-F05 scope.",
+          "tests": "34/34 grouped PostgreSQL/cheque-capability tests pass, including retry, final-audit rollback and concurrency. Final-head verification remains pending."
+        }
       }
     },
     {
@@ -21594,7 +21646,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -21610,7 +21662,11 @@
           "src/lib/account/sale-amendments.ts",
           "src/lib/account/cheque-finance.integration.test.ts",
           "src/lib/account/cheque-transitions.integration.test.ts"
-        ]
+        ],
+        "financial_checkpoint_verification": {
+          "work": "Independently verified the existing canonical full-sale reversal offsets original journal components, preserves immutable source documents, and returns exactly one unit of the same batch/serial at original unit cost40. Retry returns the same credit with no duplicate stock return.",
+          "tests": "34/34 grouped tests pass, including GST/cess/freight/other charges/round-off/TDS/TCS, stock/serial restoration and correction retries. Stock quantities are positive magnitudes; SALE/SALES_RETURN directions are asserted explicitly. Final-head verification remains pending."
+        }
       }
     },
     {

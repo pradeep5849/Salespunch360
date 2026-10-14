@@ -20,6 +20,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
 import { saveBusinessCurrency } from "./business-currency";
+import { createStockMovementForActor } from "./inventory";
 import {
   reverseJournalForActor,
   postJournalInTx,
@@ -237,7 +238,12 @@ describe.skipIf(!url)(
           await tx.accountSettlement.deleteMany({ where: { companyId } });
           await tx.cheque.deleteMany({ where: { companyId } });
           await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
+          await tx.stockMovement.deleteMany({where:{companyId}});
           await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
+          await tx.inventoryBatch.deleteMany({where:{companyId}});
+          await tx.inventorySerialNumber.deleteMany({where:{companyId}});
+          await tx.accountProduct.deleteMany({where:{companyId}});
+          await tx.warehouse.deleteMany({where:{companyId}});
           await tx.commercialDocument.deleteMany({ where: { companyId } });
           await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
           await tx.journalLine.deleteMany({ where: { companyId } });
@@ -641,6 +647,60 @@ describe.skipIf(!url)(
           first.id,
         ),
       ).rejects.toThrow();
+    });
+    it("matches advertised Accountant correction authority for linked and advance cheques and rolls back denied actors",async()=>{
+      const accountant={...actor,accountRole:"ACCOUNTANT" as const};
+      for(const linked of [true,false]){
+        const sale=linked?await invoice():null;
+        const {cheque}=await record(sale?.id);
+        const closed=await chequeFinancialActionForActor(accountant,cheque.id,{action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:bankId});
+        const count=await client.journalEntry.count({where:{companyId}});
+        await expect(chequeFinancialActionForActor({...actor,accountRole:"DATA_ENTRY"},cheque.id,{action:"BOUNCE",requestKey:randomUUID(),expectedVersion:closed.actionVersion,actionDate:"2026-10-13",reason:"Bank returned cheque"})).rejects.toThrow();
+        expect(await client.journalEntry.count({where:{companyId}})).toBe(count);
+        expect((await client.cheque.findUniqueOrThrow({where:{id:cheque.id}})).status).toBe(closed.status);
+        const bounced=await chequeFinancialActionForActor(accountant,cheque.id,{action:"BOUNCE",requestKey:randomUUID(),expectedVersion:closed.actionVersion,actionDate:"2026-10-13",reason:"Bank returned cheque"});
+        expect(bounced.status).toBe("BOUNCED");expect(await bankEffect(cheque.id)).toBe(0);
+        if(sale)expect(await outstanding(sale.id)).toBe("100.00");
+      }
+    });
+    it("serializes a concurrent payment and sale amendment without duplicate economic sale or payment",async()=>{
+      const sale=await invoice("100");
+      const results=await Promise.allSettled([
+        replacePostedSaleForActor(actor,sale.id,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-12",lines:[{lineType:"CUSTOM",itemName:"Replacement",quantity:"1",rate:"125",taxRate:"0"}]}),
+        createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:customerId,paymentMode:"BANK",moneyAccountId:bankId,amount:"100",transactionDate:"2026-10-12",allocations:[{documentId:sale.id,amount:"100"}]}),
+      ]);
+      expect(results.filter(result=>result.status==="fulfilled")).toHaveLength(1);
+      if(results[0].status==="fulfilled"){
+        expect(await outstanding(sale.id)).toBe("0.00");
+        expect(await outstanding(results[0].value.id)).toBe("125.00");
+        expect(await client.settlementAllocation.count({where:{companyId,documentId:sale.id}})).toBe(0);
+      }else{
+        expect(results[1].status).toBe("fulfilled");
+        expect(await outstanding(sale.id)).toBe("0.00");
+        expect(await client.commercialDocument.count({where:{companyId,sourceDocumentId:sale.id,type:"CREDIT_NOTE"}})).toBe(0);
+        expect(await client.settlementAllocation.count({where:{companyId,documentId:sale.id}})).toBe(1);
+      }
+    });
+    it("returns the exact batch/serial stock and cost once on full sale reversal",async()=>{
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:["INVENTORY"]}});
+      try{
+        const warehouse=await client.warehouse.create({data:{companyId,branchId,name:"Sale reversal stock",code:"REVERSAL"}});
+        const product=await client.accountProduct.create({data:{companyId,name:"Serial reversal item",trackInventory:true,trackingMode:"SERIAL",costPrice:"40"}});
+        const batch=await client.inventoryBatch.create({data:{companyId,productId:product.id,batchNumber:"REV-BATCH"}});
+        const serial=await client.inventorySerialNumber.create({data:{companyId,productId:product.id,serialNumber:"REV-SERIAL"}});
+        await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"1",unitCost:"40",batchId:batch.id,serialNumberId:serial.id,movementDate:"2026-10-10",sourceType:"OPENING",sourceId:randomUUID()});
+        const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"100",taxRate:"0",warehouseId:warehouse.id,batchId:batch.id,serialNumberId:serial.id}]});
+        await postCommercialDocumentForActor(actor,{documentId:sale.id});
+        const before=await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id}});
+        const credit=await reversePostedSaleForActor(actor,sale.id);
+        expect((await reversePostedSaleForActor(actor,sale.id)).id).toBe(credit.id);
+        const movements=await client.stockMovement.findMany({where:{companyId,productId:product.id,sourceId:{in:[sale.id,credit.id]}}});
+        expect(movements).toHaveLength(2);expect(movements.every(row=>row.batchId===batch.id&&row.serialNumberId===serial.id&&row.unitCost.toFixed(2)==="40.00")).toBe(true);
+        expect(movements.find(row=>row.movementType==="SALE")?.quantity.toFixed(4)).toBe("1.0000");
+        expect(movements.find(row=>row.movementType==="SALES_RETURN")?.quantity.toFixed(4)).toBe("1.0000");
+        expect(await outstanding(sale.id)).toBe("0.00");
+        expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id}})).toEqual(before);
+      }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}
     });
     it("fully offsets GST, cess, charges, round-off and withholding when correcting an unpaid sale", async () => {
       await client.branch.update({

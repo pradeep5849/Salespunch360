@@ -165,3 +165,11 @@ describe("A064 A065 A067 financial request replay", () => {
     });
   });
 });
+
+it("requires explicit classification for a new owner withdrawal while preserving legacy retry",async()=>{
+ const input={...owner,type:"WITHDRAWAL"};
+ m.owner.mockResolvedValueOnce({...input,id,transactionDate:date,amount});
+ expect((await postOwnerTransactionForActor(actor,input)).id).toBe(id);
+ m.owner.mockResolvedValueOnce(null);
+ await expect(postOwnerTransactionForActor(actor,{...input,idempotencyKey:"new-withdrawal-key"})).rejects.toThrow("OWNER_WITHDRAWAL_CLASSIFICATION_REQUIRED");
+});
