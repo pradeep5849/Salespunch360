@@ -19,5 +19,7 @@ export function saleLineNumbers(line:PreviewLine,mode="WITHOUT"){
 export function salePreviewTotals(lines:PreviewLine[],mode:string){
  const result={qty:new D(0),base:new D(0),discount:new D(0),tax:new D(0),taxable:new D(0),total:new D(0)};
  for(const line of lines){const row=values(line,mode);result.qty=result.qty.add(row.qty);result.base=result.base.add(row.base);result.discount=result.discount.add(row.disc);result.tax=result.tax.add(row.tax);result.taxable=result.taxable.add(row.taxable);result.total=result.total.add(row.total)}
+ // Document totals follow the persisted sum of rounded taxable and tax amounts.
+ result.total=result.taxable.add(result.tax);
  return Object.fromEntries(Object.entries(result).map(([key,value])=>[key,value.toNumber()])) as Record<keyof typeof result,number>;
 }

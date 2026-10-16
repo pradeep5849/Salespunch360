@@ -37,4 +37,17 @@ class SalesPreviewTest {
     @Test fun invalidPartialTaxInputDoesNotCrashTheEditor() {
         assertEquals("118.00",salesPreviewTotal(SalesEditorDraft(taxMode="INCLUSIVE",transactionTaxRate="-100",lines=listOf(SalesLineDraft(quantity="1",rate="118"))),SalesOptions()).toPlainString())
     }
+    @Test fun previewRoundsBaseAndDiscountBeforeTaxLikeTheServer() {
+        val line=SalesLineDraft(quantity="3",rate="0.335",taxRate="18",cessRate="2",discountType="PERCENTAGE",discountValue="33.335")
+        assertEquals("0.67",salesPreviewTotal(SalesEditorDraft(taxMode="INCLUSIVE",lines=listOf(line)),SalesOptions()).toPlainString())
+        val fixed=line.copy(quantity="0.125",rate="100.04",discountType="FIXED",discountValue="0.005")
+        assertEquals("12.51",salesPreviewTotal(SalesEditorDraft(taxMode="INCLUSIVE",lines=listOf(fixed)),SalesOptions()).toPlainString())
+    }
+    @Test fun inclusivePreviewMatchesDocumentAggregationAndReverseChargeRemovesCessToo() {
+        val tiny=SalesLineDraft(quantity="1",rate="0.03",taxRate="18")
+        assertEquals("0.04",salesPreviewTotal(SalesEditorDraft(taxMode="INCLUSIVE",lines=listOf(tiny)),SalesOptions()).toPlainString())
+        val cess=SalesLineDraft(quantity="1",rate="120",taxRate="18",cessRate="2")
+        assertEquals("100.00",salesPreviewTotal(SalesEditorDraft(taxMode="INCLUSIVE",reverseCharge=true,lines=listOf(cess)),SalesOptions()).toPlainString())
+    }
+
 }

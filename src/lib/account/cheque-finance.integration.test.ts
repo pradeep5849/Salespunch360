@@ -20,7 +20,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
 import { generateAccountPaymentReminders, duePaymentReminders } from "./payment-reminder-execution";
-import {saleLineNumbers} from "./sale-preview-calculation";
+import {saleLineNumbers,salePreviewTotals} from "./sale-preview-calculation";
 import { gstReportForActor } from "./tax";
 import { runFinancialReportForActor } from "./reports/service";
 import { listOpeningOutstandings } from "./opening-balances";
@@ -1040,12 +1040,12 @@ describe.skipIf(!url)(
     });
     it("A086 Decimal previews match stored inclusive/exclusive fractional discounted GST and cess",async()=>{
       const line={lineType:"CUSTOM",itemName:"Rounding boundary",quantity:"3",rate:"0.335",taxRate:"18",cessRate:"2",discountType:"PERCENTAGE",discountValue:"33.335"};
-      for(const taxMode of ["INCLUSIVE","EXCLUSIVE"] as const){
-        const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",taxMode,lines:[line]});
-        const stored=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}}),preview=saleLineNumbers(line,taxMode==="INCLUSIVE"?"WITH":"WITHOUT");
+      for(const taxMode of ["INCLUSIVE","EXCLUSIVE"] as const)for(const row of [line,{...line,quantity:"1",rate:"0.03",cessRate:"0",discountValue:"0"}]){
+        const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",taxMode,lines:[row]});
+        const stored=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}}),preview=saleLineNumbers(row,taxMode==="INCLUSIVE"?"WITH":"WITHOUT");
         expect(stored.baseAmount.toFixed(2)).toBe(preview.base.toFixed(2));expect(stored.discountAmount.toFixed(2)).toBe(preview.disc.toFixed(2));expect(stored.taxableAmount.toFixed(2)).toBe(preview.taxable.toFixed(2));expect(stored.taxAmount.toFixed(2)).toBe(preview.tax.toFixed(2));expect(stored.cessAmount?.toFixed(2)).toBe(preview.cessTax.toFixed(2));expect(stored.lineTotal.toFixed(2)).toBe(preview.total.toFixed(2));
         await postCommercialDocumentForActor(actor,{documentId:doc.id});
-        const saved=await client.commercialDocument.findUniqueOrThrow({where:{id:doc.id}});expect(saved.grandTotal.toFixed(2)).toBe(preview.total.toFixed(2));expect(saved.journalEntryId).not.toBeNull();
+        const saved=await client.commercialDocument.findUniqueOrThrow({where:{id:doc.id}});expect(saved.grandTotal.toFixed(2)).toBe(salePreviewTotals([row],taxMode==="INCLUSIVE"?"WITH":"WITHOUT").total.toFixed(2));expect(saved.journalEntryId).not.toBeNull();
       }
     });
     it("A100 scheduled sweeps deduplicate, scope and suppress settled manual reminders", async () => {
