@@ -4422,7 +4422,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -4454,6 +4454,21 @@
             "src/lib/account/implementation.integration.test.ts"
           ],
           "implementation_commit": "73df4f06800bec12adc3720aa8455d4a7c66e660"
+        },
+        "independent_scope_verification_2026_10_16": {
+          "work": "Independently checked existing code against original finding and reran focused regressions. Regular new web/native entries explicitly request immediate paid posting; payment and review states are separate, and recurring payment controls remain capability-gated. Loan balances/history use full posted ledger before pagination, scope guards and fee-inclusive payments; web/native list/detail history present. No financial source code altered in this verification slice.",
+          "tests": "78 focused unit/real PostgreSQL tests PASS (6 files,10.35s),including paid-entry retry/rollback/account isolation and loan full-history/legacy guards.4 desktop/mobile Chromium scenarios PASS (1.2m):paid Save & New/review rejection/detail and loan creation/98000 balance/statement/metadata edit/AXE. Native source paths inspected;latest Android compile succeeds;no native device runtime executed.",
+          "remaining": "Code implementation of the original immediate-paid-entry correction is complete. Final complete implementation-head regression and Android runtime parity remain pending;not FIXED + VERIFIED.",
+          "files": [
+            "src/lib/account/expenses.ts",
+            "src/app/workspace/account/expenses/expense-editor.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
+            "src/lib/account/loan-overview.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/implementation.integration.test.ts",
+            "e2e/a049-a051-expenses.spec.ts",
+            "e2e/a090-settings.spec.ts"
+          ]
         }
       },
       "push_checkpoint_evidence": {
@@ -39284,6 +39299,21 @@
           "date": "2026-10-13",
           "work": "Shared legacy loan ledger balances are unknown/excluded rather than counted for each loan; repayments, top-ups and cancellation reject ambiguous ownership. Scoped history returns an explanatory state. Exact minor-unit summation retains cents for large aggregate balances.",
           "tests": "23 isolated financial tests passed including legacy duplicate ledger, company/branch/mutation guards; 32 grouped money sum, overview/history/accounting runtime tests passed; TypeScript and ESLint passed. Android compile at lifecycle head passed; newest native shared-ledger explanatory text awaits grouped/final compile."
+        },
+        {
+          "work": "Independently checked existing code against original finding and reran focused regressions. Regular new web/native entries explicitly request immediate paid posting; payment and review states are separate, and recurring payment controls remain capability-gated. Loan balances/history use full posted ledger before pagination, scope guards and fee-inclusive payments; web/native list/detail history present. No financial source code altered in this verification slice.",
+          "tests": "78 focused unit/real PostgreSQL tests PASS (6 files,10.35s),including paid-entry retry/rollback/account isolation and loan full-history/legacy guards.4 desktop/mobile Chromium scenarios PASS (1.2m):paid Save & New/review rejection/detail and loan creation/98000 balance/statement/metadata edit/AXE. Native source paths inspected;latest Android compile succeeds;no native device runtime executed.",
+          "remaining": "Final complete implementation-head regression and physical native runtime remain pending. A067-F01 retains original empty-state/reference-layout parity work;not promoted.",
+          "files": [
+            "src/lib/account/expenses.ts",
+            "src/app/workspace/account/expenses/expense-editor.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
+            "src/lib/account/loan-overview.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/implementation.integration.test.ts",
+            "e2e/a049-a051-expenses.spec.ts",
+            "e2e/a090-settings.spec.ts"
+          ]
         }
       ],
       "push_checkpoint_evidence": {
