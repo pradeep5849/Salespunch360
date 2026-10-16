@@ -21,4 +21,5 @@ class AccountReportDataTest {
     }
     @Test fun catalogueSearchAndFavouritesUseServerMetadata(){val options=Json.parseToJsonElement("""{"catalogue":[{"key":"profit-withdrawal","name":"Profit Withdrawal","group":"Owners & Partners"},{"key":"tax","name":"GST Report","group":"Tax"}],"favourites":["tax"]}""").jsonObject;assertEquals(listOf("profit-withdrawal"),accountReportCatalogue(options,"OWNERS").map{it.key});assertEquals(setOf("tax"),accountReportFavourites(options));assertTrue(accountReportCatalogue(options,"missing").isEmpty())}
     @Test fun legacyOptionsStillOfferReportNavigation(){val options=Json.parseToJsonElement("""{"reports":["profit-loss"]}""").jsonObject;assertEquals("profit-loss",accountReportCatalogue(options).single().key);assertTrue(accountReportFavourites(options).isEmpty())}
+    @Test fun rowLinksKeepPrimitiveUrlsAndTheirOriginalRowPositions(){val data=Json.parseToJsonElement("""{"rowLinks":[null,"/workspace/account/money/capital/owner"]}""").jsonObject;assertEquals(listOf("","/workspace/account/money/capital/owner"),accountReportLinks(data))}
 }

@@ -326,3 +326,7 @@ it("A084-F17 denies Accountant material costs even when material read is allowed
  await expect(runFinancialReportForActor({...actor,isActive:true,role:"ACCOUNT_USER",accountAccessActive:true,accountRole:"ACCOUNTANT"} as ProjectActor,"project-material-balance",{})).rejects.toThrow();
  expect(mocks.movements).not.toHaveBeenCalled();
 });
+
+it("rejects nonblank ignored filter dimensions before any financial read",async()=>{
+ await expect(runFinancialReportForActor({companyId:"company",accountRole:"ACCOUNT_ADMIN"} as never,"profit-loss",{customerId:"00000000-0000-0000-0000-000000000001"})).rejects.toThrow("REPORT_FILTER_NOT_SUPPORTED");
+});

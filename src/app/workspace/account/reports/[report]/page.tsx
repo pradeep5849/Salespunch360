@@ -1,4 +1,6 @@
-import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
+import {accountErrorMessage,isAccountDomainError} from "@/lib/account/action-feedback";
+import {ReportDateRange} from "@/components/account/report-date-range";
+import {ACCOUNT_REPORT_KEYS,reportSpecificFilters} from "@/lib/account/reports/catalogue";
 import { reportExportQuery } from "@/lib/account/reports/queries";
 import { reportCalendarDate, reportFinancialYearStart } from "@/lib/account/reports/dates";
 import { ReportTable } from "@/components/account/report-table";
@@ -22,7 +24,7 @@ export default async function Page({
   const q = await searchParams,
     options = await reportOptions(),
     projectLifetime = report === "projects" || report === "budget-vs-actual",
-    profitability = ["items", "invoices", "customers"].includes(report),
+    applicableFilters = reportSpecificFilters(report),
     to = q.to || q.asOf || reportCalendarDate(),
     from = q.from || iso(reportFinancialYearStart(new Date(to)));
   let data;
@@ -51,7 +53,7 @@ export default async function Page({
       title: report.replaceAll("-", " "),
       columns: [],
       rows: [],
-      note: e instanceof Error ? e.message : "Unable to load report",
+      note: isAccountDomainError(e)?accountErrorMessage((e as Error).message):e instanceof Error ? e.message : "Unable to load report",
     };
   }
   const query = reportExportQuery(q,from,to,projectLifetime);
@@ -67,16 +69,8 @@ export default async function Page({
               lifetime-to-date. Date filters do not apply.
             </p>
           ) : (
-            <>
-              <label>
-                From
-                <input name="from" type="date" defaultValue={from} />
-              </label>
-              <label>
-                To / As of
-                <input name="to" type="date" defaultValue={to} />
-              </label>
-            </>
+            <ReportDateRange initialFrom={from} initialTo={to} today={reportCalendarDate()}/>
+
           )}
           <Select
             name="branchId"
@@ -84,32 +78,32 @@ export default async function Page({
             value={q.branchId}
             rows={options.branches}
           />
-          <Select
+          {applicableFilters.includes("projectId")&&<Select
             name="projectId"
             label="Project"
             value={q.projectId}
             rows={options.projects}
-          />
+          />}
           {!projectLifetime && (
             <>
-              <Select
+              {applicableFilters.includes("customerId")&&<Select
                 name="customerId"
                 label="Customer"
                 value={q.customerId}
                 rows={options.customers}
-              />
-              {!profitability && <Select
+              />}
+              {applicableFilters.includes("vendorId") && <Select
                 name="vendorId"
                 label="Vendor"
                 value={q.vendorId}
                 rows={options.vendors}
               />}
-              <Select
+              {applicableFilters.includes("productId")&&<Select
                 name="productId"
                 label="Product"
                 value={q.productId}
                 rows={options.products}
-              />
+              />}
               {(report === "owner-capital" ||
                 report === "profit-withdrawal") && (
                 <Select
@@ -119,7 +113,7 @@ export default async function Page({
                   rows={options.owners}
                 />
               )}
-              {!profitability && <Select
+              {applicableFilters.includes("ledgerId") && <Select
                 name="ledgerId"
                 label="Ledger"
                 value={q.ledgerId}

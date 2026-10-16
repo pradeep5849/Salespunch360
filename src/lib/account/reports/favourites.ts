@@ -3,7 +3,7 @@ import { AuthorizationError } from "@/lib/auth/authorization";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { z } from "zod";
 import { enabledModulesForCompany } from "../modules";
-import { reportsForRole } from "./catalogue";
+import { reportCatalogueWithFilters, reportsForRole } from "./catalogue";
 type Actor = { id: string; companyId: string | null };
 async function principal(actor: Actor) {
   if (!actor.companyId) throw new AuthorizationError();
@@ -21,7 +21,7 @@ async function principal(actor: Actor) {
 export async function availableReportCatalogueForActor(actor: Actor) {
   const user = await principal(actor),
     modules = await enabledModulesForCompany(actor.companyId!);
-  return reportsForRole(user.accountRole).filter(
+  return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
       !["projects", "budget-vs-actual"].includes(x.key) ||
       (modules.includes("PROJECTS") &&

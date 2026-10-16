@@ -35,3 +35,29 @@ export function searchReportCatalogue(
     `${x.name} ${x.group} ${x.key}`.toLocaleLowerCase().includes(query),
   );
 }
+
+const specificFilters: Record<string, string[]> = {
+  "general-ledger": ["ledgerId"],
+  "customer-ledger": ["customerId"],
+  "vendor-ledger": ["vendorId"],
+  "purchase-register": ["vendorId"],
+  "owner-capital": ["ownerId"],
+  "profit-withdrawal": ["ownerId"],
+  projects: ["projectId"],
+  "budget-vs-actual": ["projectId"],
+  items: ["projectId", "customerId", "productId"],
+  invoices: ["projectId", "customerId", "productId"],
+  customers: ["projectId", "customerId", "productId"],
+  "project-material-balance": ["projectId", "productId"],
+  "material-consumption": ["projectId", "productId"],
+  "project-transfer": ["projectId", "productId"],
+};
+export function reportSpecificFilters(key: string) {
+  return specificFilters[key] ?? [];
+}
+export function reportCatalogueWithFilters(entries = REPORT_CATALOGUE) {
+  return entries.map((entry) => ({
+    ...entry,
+    filters: reportSpecificFilters(entry.key),
+  }));
+}

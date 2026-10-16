@@ -25,6 +25,7 @@ import com.salespunch360.mobile.account.accountReportCatalogue
 import com.salespunch360.mobile.account.accountReportFavourites
 import com.salespunch360.mobile.account.accountReportColumns
 import com.salespunch360.mobile.account.accountReportRows
+import com.salespunch360.mobile.account.accountReportLinks
 import com.salespunch360.mobile.account.array
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.ui.account.accounting.Option
@@ -73,15 +74,20 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
         return
     }
 
+    val applicable=com.salespunch360.mobile.account.accountReportSpecificFilters(state.options,state.report.orEmpty())
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
+        if(state.report !in listOf("projects","budget-vs-actual")){
+        var periodOpen by remember{mutableStateOf(false)}
+        Box{TextButton(onClick={periodOpen=true}){Text("Choose report period")};DropdownMenu(expanded=periodOpen,onDismissRequest={periodOpen=false}){listOf("TODAY" to "Today","THIS_MONTH" to "This month","LAST_MONTH" to "Last month","FINANCIAL_YEAR" to "Financial year").forEach{(key,label)->DropdownMenuItem(text={Text(label)},onClick={val range=com.salespunch360.mobile.account.accountReportPeriodBounds(key);vm.dates(range.first.toString(),range.second.toString());periodOpen=false})}}}
         Row {
             OutlinedTextField(state.from, { vm.dates(it, state.to) }, label = { Text("From") }, modifier = Modifier.weight(1f))
             OutlinedTextField(state.to, { vm.dates(state.from, it) }, label = { Text("To / as of") }, modifier = Modifier.weight(1f))
         }
+        }else Text("Lifetime to date; date filters do not apply.")
         Row {
             Option("Branch", state.branchId, state.options.array("branches")) { vm.filter("branch", it) }
-            Option("Project", state.projectId, state.options.array("projects")) { vm.filter("project", it) }
+            if(applicable?.contains("projectId")!=false)Option("Project", state.projectId, state.options.array("projects")) { vm.filter("project", it) }
         }
         when (state.report) {
             "owner-capital", "profit-withdrawal" -> Option("Owner / Partner", state.ownerId, state.options.array("owners")) { vm.filter("owner", it) }
@@ -105,7 +111,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
             LazyRow {
                 item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
-                itemsIndexed(accountReportRows(data)) { index, row -> val link=data.array("rowLinks").getOrNull(index)?.jsonPrimitive?.contentOrNull?.takeIf{it.startsWith("/workspace/account/money/capital/")};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
+                itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.takeIf{it.startsWith("/workspace/account/money/capital/")};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }
             }
         }

@@ -19,6 +19,7 @@ const messages: Record<string, string> = {
   ASSET_FUNDING_CHANGED:"The asset cost changed. Reload its current funding details before confirming the allocation.",
   ASSET_FUNDING_INVALID_STATE:"The saved funding amounts are inconsistent. Reconcile their recorded transactions before continuing.",
   OWNER_WITHDRAWAL_CLASSIFICATION_REQUIRED: "Choose Capital withdrawal or Profit distribution before posting a new withdrawal.",
+  REPORT_FILTER_NOT_SUPPORTED: "This filter is not supported by the selected report. Clear it and run the report again.",
   REPORT_PDF_UNSUPPORTED_CHARACTER: "This report contains a character not supported by the PDF fonts. Use Excel or CSV to preserve the original text.",
   ASSET_FUNDING_EXCEEDS_AVAILABLE:"This exceeds the contribution, asset cost or available unallocated owner capital.",
   INVALID_ASSET_FUNDING_SOURCE:"Choose a retained asset and posted investment for the same owner, company and branch, dated before this allocation.",

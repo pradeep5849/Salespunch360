@@ -107,7 +107,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "ownerId" to (if(report == "owner-capital" || report == "profit-withdrawal") _state.value.ownerId else ""),
             "productId" to _state.value.productId
         ).forEach { (key, value) ->
-            if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId")) put(key, value)
+            if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId") && (key=="branchId"||com.salespunch360.mobile.account.accountReportSpecificFilters(_state.value.options,report.orEmpty())?.contains(key)!=false)) put(key, value)
         }
     }
 

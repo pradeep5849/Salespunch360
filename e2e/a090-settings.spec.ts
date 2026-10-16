@@ -1,3 +1,4 @@
+import {reportCalendarDate,reportPeriodBounds} from "../src/lib/account/reports/dates";
 import {formatMoney,resolveDisplayPreferences} from "../src/lib/account/display-preferences";
 import {createExpenseForActor} from "../src/lib/account/expenses";
 import {extractPdfText} from "../tests/helpers/pdf-text";
@@ -2088,4 +2089,18 @@ test("A085 report hub searches groups and persists scoped favourites across web 
   await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});
   await page.goto(`/workspace/account/reports?branchId=${branchId}`);await expect(page.getByRole("link",{name:"Project Report",exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"Profit & Loss",exact:true})).toHaveCount(0);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountReportFavourite.deleteMany({where:{companyId,userId}});await db.accountSettings.update({where:{companyId},data:{enabledModules:previous.enabledModules}})}
+});
+
+
+test("A084 report periods apply to visible results and exports and ignored filters are rejected",async({page,request})=>{
+ test.setTimeout(120000);
+ const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"Report filters"}});expect(login.status()).toBe(200);const headers={authorization:`Bearer ${(await login.json()).accessToken}`};
+ const invalid=await request.get(`/api/v1/mobile/account/reports/profit-loss?customerId=${customerId}`,{headers});expect(invalid.status()).toBe(400);
+ settingsCookies=[];await signInSettings(page);await page.goto(`/workspace/account/reports/profit-withdrawal?branchId=${branchId}`);
+ await expect(page.getByLabel("Customer",{exact:true})).toHaveCount(0);await expect(page.getByLabel("Vendor",{exact:true})).toHaveCount(0);await expect(page.getByLabel("Ledger",{exact:true})).toHaveCount(0);await expect(page.getByLabel("Owner / Partner",{exact:true})).toBeVisible();
+ const range=reportPeriodBounds("THIS_MONTH",reportCalendarDate());await page.getByLabel("Report period",{exact:true}).selectOption("THIS_MONTH");
+ await expect(page.getByLabel("From",{exact:true})).toHaveValue(range.from);await expect(page.getByLabel("To / As of",{exact:true})).toHaveValue(range.to);
+ await page.getByRole("button",{name:"Run report",exact:true}).click();await expect(page).toHaveURL(new RegExp(`from=${range.from}.*to=${range.to}`),{timeout:20000});
+ const csv=page.getByRole("link",{name:"CSV",exact:true});await expect(csv).toHaveAttribute("href",new RegExp(`from=${range.from}.*to=${range.to}`));const exported=await page.request.get((await csv.getAttribute("href"))!);expect(exported.status()).toBe(200);
+ await expect(page.getByRole("region",{name:"Report results",exact:true})).toBeVisible();
 });

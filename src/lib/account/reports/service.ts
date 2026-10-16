@@ -1,3 +1,4 @@
+import {reportSpecificFilters} from "./catalogue";
 import { requireAccountModules } from "../modules";
 import { reportQuantity, reportUnitKey } from "./quantity";
 import { economicDocumentsAt } from "../commercial-report-policy";
@@ -199,6 +200,10 @@ export async function runFinancialReportForActor(
   name: string,
   raw: unknown,
 ): Promise<ReportResult> {
+  if(raw&&typeof raw==="object"){
+    const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
+    for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
+  }
   if (name === "projects" || name === "budget-vs-actual")
     return projectReport(name, raw, actor);
   if (
