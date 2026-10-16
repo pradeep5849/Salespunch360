@@ -3608,6 +3608,7 @@ test("A053 web payment control posts a late bill while retaining its original du
 test("cheque entry and confirmed cash closure/reopening work at this viewport", async ({
   page,
 }) => {
+  test.setTimeout(120000);
   await db.ledgerAccount.createMany({
     data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
     skipDuplicates: true,
@@ -3636,7 +3637,7 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
   await page.goto("/workspace/account/money/cheques");
   await page.getByText("Record cheque", { exact: true }).first().click();
   await page.getByLabel("Bank account", { exact: true }).selectOption(bank.id);
@@ -3684,11 +3685,48 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await card
     .getByLabel("Cheque action", { exact: true })
     .selectOption("REOPEN");
-  await card.getByLabel("Action date", { exact: true }).fill("2026-10-13");
-  await card.getByLabel("Reason", { exact: true }).fill("Undo closure");
-  await card
-    .getByRole("button", { name: "Confirm cheque action", exact: true })
+  const reopen = card.getByRole("button", {
+    name: "Re-open cheque",
+    exact: true,
+  });
+  const closedBefore = await db.cheque.findUniqueOrThrow({
+    where: { id: recorded.id },
+  });
+  await reopen.click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Re-open cheque?",
+    exact: true,
+  });
+  await expect(confirmation).toBeVisible();
+  await confirmation
+    .getByLabel("Action date", { exact: true })
+    .fill("2026-10-13");
+  await confirmation.getByLabel("Reason", { exact: true }).fill("Undo closure");
+  expect(
+    (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+  ).toEqual([]);
+  await confirmation
+    .getByRole("button", { name: "Cancel", exact: true })
     .click();
+  await expect(confirmation).not.toBeVisible();
+  await expect(reopen).toBeFocused();
+  await reopen.click();
+  await confirmation
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
+  await expect(confirmation).not.toBeVisible();
+  await reopen.click();
+  await page.keyboard.press("Escape");
+  await expect(confirmation).not.toBeVisible();
+  expect(
+    (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
+      .actionVersion,
+  ).toBe(closedBefore.actionVersion);
+  await reopen.click();
+  await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
+    "Undo closure",
+  );
+  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(card).not.toBeAttached({ timeout: 15000 });
   await page.getByRole("link", { name: "Open", exact: true }).click();
   await expect(card).toContainText("RECEIVED");

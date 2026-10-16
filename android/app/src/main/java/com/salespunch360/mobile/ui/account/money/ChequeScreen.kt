@@ -58,7 +58,7 @@ import kotlinx.serialization.json.*
  selected?.let{row->key(row.str("id"),selectedAction){
   var date by remember{mutableStateOf("")};var reason by remember{mutableStateOf("")};var destination by remember{mutableStateOf("")};var description by remember{mutableStateOf("")};var accountOffset by remember{mutableIntStateOf(0)};val requestKey=remember{UUID.randomUUID().toString()}
   val actionTitle=when(selectedAction){"CLOSE"->"Close cheque";"REOPEN"->"Re-open cheque";"BOUNCE"->"Record bounced cheque";else->"Cancel cheque"}
-  AlertDialog(onDismissRequest={if(!state.saving)selected=null},title={Text(actionTitle)},text={Column{
+  AlertDialog(onDismissRequest={if(!state.saving)selected=null},title={Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(actionTitle,modifier=Modifier.weight(1f));if(selectedAction=="REOPEN")TextButton({selected=null},enabled=!state.saving){Text("Close")}}},text={Column{
    Text(if(selectedAction=="CLOSE")"Confirm closure to post payment to the selected account and settle the invoice."else"This reverses the closure payment and restores the invoice's unpaid balance.")
    if(selectedAction=="CLOSE"){
     if(state.optionsLoading)LinearProgressIndicator()
@@ -70,6 +70,6 @@ import kotlinx.serialization.json.*
    OutlinedTextField(date,{date=it},label={Text("Action date (YYYY-MM-DD)")},singleLine=true,enabled=!state.saving)
    if(selectedAction!="CLOSE")OutlinedTextField(reason,{reason=it.take(500)},label={Text("Reason")},enabled=!state.saving)
    state.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
-  }},confirmButton={TextButton({vm.action(row,selectedAction,date,reason,requestKey,destination.takeIf{selectedAction=="CLOSE"},description){selected=null}},enabled=!state.saving&&date.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))&&(if(selectedAction=="CLOSE")destination.isNotBlank()&&!state.optionsLoading else reason.isNotBlank())){Text(if(state.saving)"Saving…"else"Confirm")}},dismissButton={TextButton({selected=null},enabled=!state.saving){Text("Cancel")}})
+  }},confirmButton={TextButton({vm.action(row,selectedAction,date,reason,requestKey,destination.takeIf{selectedAction=="CLOSE"},description){selected=null}},enabled=!state.saving&&date.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))&&(if(selectedAction=="CLOSE")destination.isNotBlank()&&!state.optionsLoading else reason.isNotBlank())){Text(if(state.saving)"Saving…"else if(selectedAction=="REOPEN")"Yes"else"Confirm")}},dismissButton={TextButton({selected=null},enabled=!state.saving){Text("Cancel")}})
  }}
 }
