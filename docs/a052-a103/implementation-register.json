@@ -11264,6 +11264,12 @@
             "A057",
             "A090"
           ]
+        },
+        "pricing_shared_2026_10_16": {
+          "implementation_commit": "8def76d0f8c8761a15347479adf37f821da4890e",
+          "primary_finding": "A058-F02",
+          "work": "New normalized master retail/discount consumption and saved wholesale-OFF mutation rejection are covered by the A058 pricing continuation.",
+          "remaining": "MRP tax policy,authorized sale-price updates and wholesale/customer catalogue consumption remain outstanding;A057-F03 remains PARTIAL."
         }
       },
       "intermediate_validation": {
@@ -12355,6 +12361,7 @@
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
+        "A057-F03",
         "A058-F01",
         "A058-F03",
         "A058-F04"
@@ -12537,6 +12544,56 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "pricing_persistence_2026_10_16": {
+          "implementation_commit": "8def76d0f8c8761a15347479adf37f821da4890e",
+          "work": "Web/native Add Item tax modes, discounts and wholesale inputs now feed a shared validated persisted pricing contract. Master rates normalize to tax-exclusive amounts; original entered prices/modes are retained without round-trip cent loss. Retail invoice defaults convert to document tax mode; percentage precision is retained and fixed master discounts apply per unit. User-edited line discounts keep the existing explicit line-total contract. Legacy editors preserve original pricing choices on rate changes. Exact raw price strings participate in creation retry identity. Wholesale price is saved/normalized but its application policy is pending; no automatic tier or discount-stacking rule invented.",
+          "modified_files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "e2e/a049-a051-expenses.spec.ts",
+            "prisma/migrations/20261016010000_item_master_pricing/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/account-masters.ts",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/item-opening.ts",
+            "src/lib/account/item-pricing.test.ts",
+            "src/lib/account/item-pricing.ts",
+            "src/lib/account/service.ts",
+            "src/lib/account/validation.ts",
+            "src/lib/mobile/account-master-data.ts"
+          ],
+          "models": [
+            "AccountProduct.pricing (nullable Json)",
+            "AccountService.pricing (nullable Json)"
+          ],
+          "migration": "20261016010000_item_master_pricing",
+          "verification": {
+            "focused_automated": "66 passed,0 failed,0 skipped in5 related unit/real PostgreSQL test files (5.84s);includes tax-basis/per-unit invoice posting and balanced journals",
+            "web_runtime": "PASS desktop Chromium Add Item pricing/save,invoice quantity/default discount,manual discount retention,API retry,legacy edit and wholesale-OFF rejection",
+            "responsive_web_runtime": "PASS same flow mobile Chromium;2/2 current browser scenarios passed (1.5m)",
+            "android_compile": "PASS compileDebugKotlin/testDebugUnitTest (2m26s)",
+            "android_jvm": "12 passed,0 failures/errors/skips:5 ItemMasterPricing +7 SalesPreview",
+            "android_device_runtime": "NOT RUN",
+            "typescript": "PASS",
+            "focused_eslint": "PASS",
+            "prisma_schema": "VALID",
+            "migration_local": "Applied new additive migration to isolated local settings_2ec7dea6_ci only",
+            "production_database": "NOT ACCESSED",
+            "final_head_regression": "NOT RUN"
+          },
+          "remaining": "Wholesale application requires pending user choices (manual selection versus threshold;discount stacking). Complete remaining purchase/UI/native coverage,device/offline/accessibility checks and final exact-head validation. Finding remains PARTIAL."
+        }
       }
     },
     {
@@ -64550,6 +64607,15 @@
       "finding": "A070-F02",
       "question": "All Transactions means only transaction notifications/alerts or all authorized business transactions?",
       "status": "Awaiting user reply; other checkpoint work continues."
+    },
+    "fixed_item_discount": {
+      "decision": "Fixed Disc. On Sale Price applies per unit:\u20b910\u00d73 units deducts\u20b930.",
+      "source": "Explicit user reply October16,2026 in this task",
+      "affected_findings": [
+        "A058-F02",
+        "A057-F03"
+      ],
+      "implementation_commit": "8def76d0f8c8761a15347479adf37f821da4890e"
     }
   },
   "push_checkpoint": {
@@ -64575,6 +64641,14 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Targeted CI only,not final complete199-finding validation"
+    },
+    {
+      "date": "2026-10-16",
+      "code_head": "1d3fe230c0b5229566f61e432c7a3d8b8e282de8",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/38885095731",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "scope": "Previous pushed checkpoint targeted CI;does not validate later pricing continuation"
     }
   ]
 }

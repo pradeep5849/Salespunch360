@@ -9436,3 +9436,14 @@ A054-F03 continuation October 16: independent native-facing warehouse/product pe
 A086-F01 continuation October16 (`5ba297cc`): web document preview sums rounded taxable/tax components to match persisted invoices; Android rounds base and discount before tax, and excludes cess as well as GST from reverse-charge payable. 39/39 focused unit/PostgreSQL tests,7/7 native preview JVM tests,Android compilation,TypeScript/focused lint and2/2 final slice desktop/mobile saved-sale edit workflows passed. Physical device/final complete-head verification pending. Counts160 implemented but not verified/37 partial/2 not started;all199 final statuses remain unset.
 
 Targeted GitHub CI Web and Android both passed on `4d4747f59068fa34bfe6a3afcfa8e733edb57095`,run38884055426. Later rounding changes require their own CI run; earlier CI does not establish final checkpoint validation.
+
+
+## October16 item-pricing continuation
+
+A058-F02 remains PARTIAL (`8def76d0f8c8761a15347479adf37f821da4890e`). Web/native Add Item pricing choices persist through a shared Decimal contract. Tax-exclusive master rates retain entered inclusive prices/modes,discounts and normalized wholesale prices. Confirmed fixed discounts apply per unit;explicit invoice line overrides remain line totals. Preserved percentage precision,exact price retry identity and legacy-editor round trips. Shared retail/default-discount consumption supports document tax modes without changing historical masters or posted documents.
+
+Validation:66 related unit/real PostgreSQL tests passed;2 desktop/mobile browser scenarios passed(1.5m);Android compilation and12 focused JVM tests passed(2m26s);TypeScript,focused ESLint andPrisma validate passed. New nullable AccountProduct/AccountService pricing columns are in additive migration20261016010000_item_master_pricing,applied only to the isolated local database.
+
+Remaining:Wholesale selection/threshold and discount-stacking decisions are pending;no rule invented. Broader purchase/native/device/offline/accessibility and final-head checks remain. A057-F03 shares this progress but remains PARTIAL for its original outstanding scope. Counts unchanged160 implemented but not finally verified/37 partial/2 not started;all199 original IDs preserved,zero final closures.
+
+Previous checkpoint `1d3fe230` Web+Android targeted CI passed(run38885095731). The later pricing code requires new exact-head CI;earlier CI is not final implementation evidence.
