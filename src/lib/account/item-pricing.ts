@@ -87,12 +87,18 @@ export function itemPriceForDocument(
   mode: string,
   purchase = false,
   quantity = "1",
+  priceKind: "RETAIL" | "WHOLESALE" = "RETAIL",
 ) {
   const p =
     pricing && typeof pricing === "object" && !Array.isArray(pricing)
       ? (pricing as Record<string, unknown>)
       : null;
-  const base = new Prisma.Decimal(rate ?? 0),
+  const wholesale = !purchase && priceKind === "WHOLESALE";
+  if (wholesale && (!p || typeof p.normalizedWholesalePrice !== "string"))
+    throw new Error("WHOLESALE_PRICE_UNAVAILABLE");
+  const base = new Prisma.Decimal(
+      wholesale ? String(p!.normalizedWholesalePrice) : (rate ?? 0),
+    ),
     tax = new Prisma.Decimal(taxRate ?? 0);
   if (!p || typeof p.enteredSalePrice !== "string")
     return {
@@ -124,7 +130,13 @@ export function itemPriceForDocument(
       : enteredDiscount
     : new Prisma.Decimal(raw);
   const enteredPrice =
-    p[purchase ? "enteredPurchasePrice" : "enteredSalePrice"];
+    p[
+      purchase
+        ? "enteredPurchasePrice"
+        : wholesale
+          ? "wholesalePrice"
+          : "enteredSalePrice"
+    ];
   const retainedGross =
     mode === "INCLUSIVE" &&
     p[purchase ? "purchaseTaxMode" : "saleTaxMode"] === "INCLUSIVE" &&

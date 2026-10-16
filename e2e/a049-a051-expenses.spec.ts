@@ -1,9 +1,11 @@
+import { extractPdfText } from "../tests/helpers/pdf-text";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import {
   createCommercialDocumentForActor,
   postCommercialDocumentForActor,
   createSettlementForActor,
+  documentOutstandingInTx,
   applyAdvanceForActor,
 } from "@/lib/account/commercial";
 import type { ProjectActor } from "@/lib/account/projects";
@@ -2020,7 +2022,7 @@ test("A065 independent owner identity and capital/profit entries work without us
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
   await page.goto("/workspace/account/money/capital");
   await page
     .getByRole("button", { name: "Add owner / partner", exact: true })
@@ -2114,7 +2116,9 @@ test("A065 independent owner identity and capital/profit entries work without us
     _sum: { credit: true, debit: true },
   });
   expect(Number(sums._sum.credit) - Number(sums._sum.debit)).toBe(90);
-  await expect(entry.locator("p").filter({hasText:"Remaining posted capital:"})).toContainText("90.00");
+  await expect(
+    entry.locator("p").filter({ hasText: "Remaining posted capital:" }),
+  ).toContainText("90.00");
   await page
     .getByRole("button", { name: "Edit Browser partner", exact: true })
     .click();
@@ -2191,7 +2195,12 @@ test("A065 independent owner identity and capital/profit entries work without us
   await expect(capitalSummary).toContainText(
     "Book value across accessible branches",
   );
-  await expect(capitalSummary.getByRole("heading",{name:"Posted company assets",exact:true})).toBeVisible();
+  await expect(
+    capitalSummary.getByRole("heading", {
+      name: "Posted company assets",
+      exact: true,
+    }),
+  ).toBeVisible();
   await capitalSummary
     .getByRole("link", { name: "View Capital & Drawings" })
     .click();
@@ -3927,58 +3936,596 @@ test("sale details distinguish receipts, credits, advances and aggregate party b
   ).toBe(true);
 });
 
-test("A054 native warehouse and product editors persist tracking metadata and deny unauthorized writes", async ({request}) => {
-  const suffix=randomUUID().slice(0,8),createdProducts:string[]=[],createdWarehouses:string[]=[];
-  const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"A054 native parity"}});
+test("A054 native warehouse and product editors persist tracking metadata and deny unauthorized writes", async ({
+  request,
+}) => {
+  const suffix = randomUUID().slice(0, 8),
+    createdProducts: string[] = [],
+    createdWarehouses: string[] = [];
+  const login = await request.post("/api/v1/mobile/auth/login", {
+    data: {
+      identifier: email,
+      password,
+      deviceId: randomUUID(),
+      deviceName: "A054 native parity",
+    },
+  });
   expect(login.status()).toBe(200);
-  const headers={authorization:`Bearer ${(await login.json()).accessToken}`};
+  const headers = {
+    authorization: `Bearer ${(await login.json()).accessToken}`,
+  };
   try {
-    const warehouse=await request.post("/api/v1/mobile/account/master-data/warehouses",{headers,data:{branchId,name:`Parity warehouse ${suffix}`,code:`PARITY-${suffix}`,address:"Native warehouse address",isDefault:true}});
-    expect(warehouse.status()).toBe(201);const savedWarehouse=await warehouse.json();createdWarehouses.push(savedWarehouse.id);
-    expect(await db.warehouse.findUniqueOrThrow({where:{id:savedWarehouse.id}})).toMatchObject({companyId,branchId,address:"Native warehouse address",isDefault:true,isActive:true});
-    for(const trackingMode of ["BATCH","SERIAL"] as const){
-      const product=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{name:`Parity ${trackingMode} ${suffix}`,description:"Native retained description",sellingRate:"25",cost:"12",trackInventory:true,trackingMode,lowStockThreshold:3}});
-      expect(product.status()).toBe(201);const saved=await product.json();createdProducts.push(saved.id);
-      expect(await db.accountProduct.findUniqueOrThrow({where:{id:saved.id}})).toMatchObject({companyId,description:"Native retained description",trackInventory:true,trackingMode});
-      const kind=trackingMode==="BATCH"?"batches":"serials",fields=trackingMode==="BATCH"?{batchNumber:`PARITY-${suffix}`,manufacturedDate:"2026-10-01"}:{serialNumber:`PARITY-${suffix}`};
-      const catalog=await request.post(`/api/v1/mobile/account/inventory/${kind}`,{headers,data:{productId:saved.id,...fields,expiryDate:"2027-10-01"}});
-      expect(catalog.status()).toBe(201);const row=await catalog.json();expect(row.expiryDate.slice(0,10)).toBe("2027-10-01");if(trackingMode==="BATCH")expect(row.manufacturedDate.slice(0,10)).toBe("2026-10-01");
-      const invalid=await request.post(`/api/v1/mobile/account/inventory/${kind}`,{headers,data:{productId:saved.id,...fields,expiryDate:"2026-02-30"}});expect(invalid.ok()).toBe(false);
+    const warehouse = await request.post(
+      "/api/v1/mobile/account/master-data/warehouses",
+      {
+        headers,
+        data: {
+          branchId,
+          name: `Parity warehouse ${suffix}`,
+          code: `PARITY-${suffix}`,
+          address: "Native warehouse address",
+          isDefault: true,
+        },
+      },
+    );
+    expect(warehouse.status()).toBe(201);
+    const savedWarehouse = await warehouse.json();
+    createdWarehouses.push(savedWarehouse.id);
+    expect(
+      await db.warehouse.findUniqueOrThrow({
+        where: { id: savedWarehouse.id },
+      }),
+    ).toMatchObject({
+      companyId,
+      branchId,
+      address: "Native warehouse address",
+      isDefault: true,
+      isActive: true,
+    });
+    for (const trackingMode of ["BATCH", "SERIAL"] as const) {
+      const product = await request.post(
+        "/api/v1/mobile/account/master-data/items",
+        {
+          headers,
+          data: {
+            name: `Parity ${trackingMode} ${suffix}`,
+            description: "Native retained description",
+            sellingRate: "25",
+            cost: "12",
+            trackInventory: true,
+            trackingMode,
+            lowStockThreshold: 3,
+          },
+        },
+      );
+      expect(product.status()).toBe(201);
+      const saved = await product.json();
+      createdProducts.push(saved.id);
+      expect(
+        await db.accountProduct.findUniqueOrThrow({ where: { id: saved.id } }),
+      ).toMatchObject({
+        companyId,
+        description: "Native retained description",
+        trackInventory: true,
+        trackingMode,
+      });
+      const kind = trackingMode === "BATCH" ? "batches" : "serials",
+        fields =
+          trackingMode === "BATCH"
+            ? {
+                batchNumber: `PARITY-${suffix}`,
+                manufacturedDate: "2026-10-01",
+              }
+            : { serialNumber: `PARITY-${suffix}` };
+      const catalog = await request.post(
+        `/api/v1/mobile/account/inventory/${kind}`,
+        {
+          headers,
+          data: { productId: saved.id, ...fields, expiryDate: "2027-10-01" },
+        },
+      );
+      expect(catalog.status()).toBe(201);
+      const row = await catalog.json();
+      expect(row.expiryDate.slice(0, 10)).toBe("2027-10-01");
+      if (trackingMode === "BATCH")
+        expect(row.manufacturedDate.slice(0, 10)).toBe("2026-10-01");
+      const invalid = await request.post(
+        `/api/v1/mobile/account/inventory/${kind}`,
+        {
+          headers,
+          data: { productId: saved.id, ...fields, expiryDate: "2026-02-30" },
+        },
+      );
+      expect(invalid.ok()).toBe(false);
     }
-    const deactivated=await request.patch(`/api/v1/mobile/account/master-data/warehouses/${savedWarehouse.id}`,{headers,data:{branchId,name:savedWarehouse.name,code:savedWarehouse.code,isActive:false,isDefault:true}});expect(deactivated.status()).toBe(200);
-    expect(await db.warehouse.findUniqueOrThrow({where:{id:savedWarehouse.id}})).toMatchObject({isActive:false,isDefault:false});
-    await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});
-    const denied=await request.post("/api/v1/mobile/account/master-data/warehouses",{headers,data:{branchId,name:"Denied warehouse",code:`DENIED-${suffix}`}});expect(denied.status()).toBe(403);
-    expect(await db.warehouse.count({where:{companyId,code:`DENIED-${suffix}`}})).toBe(0);
+    const deactivated = await request.patch(
+      `/api/v1/mobile/account/master-data/warehouses/${savedWarehouse.id}`,
+      {
+        headers,
+        data: {
+          branchId,
+          name: savedWarehouse.name,
+          code: savedWarehouse.code,
+          isActive: false,
+          isDefault: true,
+        },
+      },
+    );
+    expect(deactivated.status()).toBe(200);
+    expect(
+      await db.warehouse.findUniqueOrThrow({
+        where: { id: savedWarehouse.id },
+      }),
+    ).toMatchObject({ isActive: false, isDefault: false });
+    await db.user.update({
+      where: { id: userId },
+      data: { accountRole: "PROJECT_MANAGER" },
+    });
+    const denied = await request.post(
+      "/api/v1/mobile/account/master-data/warehouses",
+      {
+        headers,
+        data: { branchId, name: "Denied warehouse", code: `DENIED-${suffix}` },
+      },
+    );
+    expect(denied.status()).toBe(403);
+    expect(
+      await db.warehouse.count({
+        where: { companyId, code: `DENIED-${suffix}` },
+      }),
+    ).toBe(0);
   } finally {
-    await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});
-    await db.inventoryBatch.deleteMany({where:{companyId,productId:{in:createdProducts}}});await db.inventorySerialNumber.deleteMany({where:{companyId,productId:{in:createdProducts}}});
-    await db.accountProduct.deleteMany({where:{companyId,id:{in:createdProducts}}});await db.warehouse.deleteMany({where:{companyId,id:{in:createdWarehouses}}});
+    await db.user.update({
+      where: { id: userId },
+      data: { accountRole: "ACCOUNT_ADMIN" },
+    });
+    await db.inventoryBatch.deleteMany({
+      where: { companyId, productId: { in: createdProducts } },
+    });
+    await db.inventorySerialNumber.deleteMany({
+      where: { companyId, productId: { in: createdProducts } },
+    });
+    await db.accountProduct.deleteMany({
+      where: { companyId, id: { in: createdProducts } },
+    });
+    await db.warehouse.deleteMany({
+      where: { companyId, id: { in: createdWarehouses } },
+    });
   }
 });
 
-test("A058 entered inclusive pricing and discounts persist through web and native APIs",async({page,request})=>{
- test.setTimeout(120000);
- const suffix=randomUUID().slice(0,8),ids:string[]=[];
- const settings=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
- try{
-  await page.goto("/sign-in");await page.getByLabel("Email",{exact:true}).fill(email);await page.getByLabel("Password",{exact:true}).fill(password);await page.getByRole("button",{name:"Sign In",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
-  await page.goto("/workspace/account/inventory/items/new");await page.getByLabel("Item Name *",{exact:true}).fill(`Pricing web ${suffix}`);
-  await page.getByPlaceholder("Sale Price",{exact:true}).fill("118");await page.getByLabel("Sale Price Tax Mode",{exact:true}).selectOption("WITH");
-  await page.getByPlaceholder("Purchase Price",{exact:true}).fill("59");await page.getByLabel("Purchase Price Tax Mode",{exact:true}).selectOption("WITH");
-  await page.getByLabel("Tax Rate",{exact:true}).selectOption("18");await page.getByLabel("Sale Price Discount",{exact:true}).fill("11.8");await page.getByLabel("Sale Price Discount Type",{exact:true}).selectOption("AMOUNT");
-  await page.getByRole("button",{name:"＋ Add Wholesale Price",exact:true}).click();await page.getByLabel("Wholesale Price",{exact:true}).fill("106.2");await page.getByRole("button",{name:"Save",exact:true}).click();
-  await expect.poll(()=>db.accountProduct.count({where:{companyId,name:`Pricing web ${suffix}`}})).toBe(1);
-  const web=await db.accountProduct.findFirstOrThrow({where:{companyId,name:`Pricing web ${suffix}`}});ids.push(web.id);expect(web.salePrice?.toFixed(2)).toBe("100.00");expect(web.costPrice?.toFixed(2)).toBe("50.00");expect(web.pricing).toMatchObject({saleTaxMode:"INCLUSIVE",enteredSalePrice:"118.00",normalizedDiscountValue:"10",normalizedWholesalePrice:"90.00"});
-  await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");await page.getByRole("button",{name:/Add Items/}).click();await page.getByRole("button",{name:new RegExp(`Pricing web ${suffix}`)}).click();await expect(page.getByLabel("Rate (Price/Unit)",{exact:true})).toHaveValue("100");await page.getByLabel("Quantity",{exact:true}).fill("3");await expect(page.getByLabel("Item Discount",{exact:true})).toHaveValue("30");await page.getByLabel("Item Discount",{exact:true}).fill("5");await page.getByLabel("Quantity",{exact:true}).fill("4");await expect(page.getByLabel("Item Discount",{exact:true})).toHaveValue("5");
-  const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"Pricing parity"}});expect(login.status()).toBe(200);const headers={authorization:`Bearer ${(await login.json()).accessToken}`};
-  const payload={name:`Pricing native ${suffix}`,sellingRate:"118",cost:"59",taxRate:"18",pricing:{saleTaxMode:"INCLUSIVE",purchaseTaxMode:"INCLUSIVE",discountType:"PERCENTAGE",discountValue:"10",wholesalePrice:"106.20"},creationRequestKey:randomUUID()};
-  const first=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:payload});expect(first.status()).toBe(201);const native=await first.json();ids.push(native.id);expect(native.salePrice).toBe("100");expect(native.pricing).toMatchObject({normalizedDiscountValue:"10",normalizedWholesalePrice:"90.00"});
-  const replay=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:payload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(native.id);
-  const changed=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...payload,pricing:{...payload.pricing,discountValue:"11"}}});expect(changed.ok()).toBe(false);
-  const detail=await request.get(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers});expect(detail.status()).toBe(200);expect(JSON.stringify(await detail.json())).toContain("enteredSalePrice");
-  const edited=await request.patch(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers,data:{name:payload.name,sellingRate:"150",cost:"50",taxRate:"18"}});expect(edited.status()).toBe(200);expect(await db.accountProduct.findUniqueOrThrow({where:{id:native.id}})).toMatchObject({pricing:expect.objectContaining({enteredSalePrice:"177.00",saleTaxMode:"INCLUSIVE",discountType:"PERCENTAGE"})});
-  await db.accountSettings.update({where:{companyId},data:{itemSettings:{wholesalePrice:false}}});
-  const disabled=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...payload,name:"Forbidden pricing",creationRequestKey:randomUUID()}});expect(disabled.ok()).toBe(false);expect((await disabled.json()).error).toBe("WHOLESALE_PRICING_DISABLED");
- }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??{}}});await db.accountProduct.deleteMany({where:{companyId,OR:[{id:{in:ids}},{name:{in:[`Pricing web ${suffix}`,`Pricing native ${suffix}`]}}]}})}
+test("A058 entered inclusive pricing and discounts persist through web and native APIs", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(120000);
+  const suffix = randomUUID().slice(0, 8),
+    ids: string[] = [];
+  const settings = await db.accountSettings.findUniqueOrThrow({
+    where: { companyId },
+  });
+  try {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
+    await page.goto("/workspace/account/inventory/items/new");
+    await page
+      .getByLabel("Item Name *", { exact: true })
+      .fill(`Pricing web ${suffix}`);
+    await page.getByPlaceholder("Sale Price", { exact: true }).fill("118");
+    await page
+      .getByLabel("Sale Price Tax Mode", { exact: true })
+      .selectOption("WITH");
+    await page.getByPlaceholder("Purchase Price", { exact: true }).fill("59");
+    await page
+      .getByLabel("Purchase Price Tax Mode", { exact: true })
+      .selectOption("WITH");
+    await page.getByLabel("Tax Rate", { exact: true }).selectOption("18");
+    await page.getByLabel("Sale Price Discount", { exact: true }).fill("11.8");
+    await page
+      .getByLabel("Sale Price Discount Type", { exact: true })
+      .selectOption("AMOUNT");
+    await page
+      .getByRole("button", { name: "＋ Add Wholesale Price", exact: true })
+      .click();
+    await page.getByLabel("Wholesale Price", { exact: true }).fill("106.2");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(() =>
+        db.accountProduct.count({
+          where: { companyId, name: `Pricing web ${suffix}` },
+        }),
+      )
+      .toBe(1);
+    const web = await db.accountProduct.findFirstOrThrow({
+      where: { companyId, name: `Pricing web ${suffix}` },
+    });
+    ids.push(web.id);
+    expect(web.salePrice?.toFixed(2)).toBe("100.00");
+    expect(web.costPrice?.toFixed(2)).toBe("50.00");
+    expect(web.pricing).toMatchObject({
+      saleTaxMode: "INCLUSIVE",
+      enteredSalePrice: "118.00",
+      normalizedDiscountValue: "10",
+      normalizedWholesalePrice: "90.00",
+    });
+    await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
+    await page.getByRole("button", { name: /Add Items/ }).click();
+    await page
+      .getByRole("button", { name: new RegExp(`Pricing web ${suffix}`) })
+      .click();
+    await expect(
+      page.getByLabel("Rate (Price/Unit)", { exact: true }),
+    ).toHaveValue("100");
+    await page.getByLabel("Quantity", { exact: true }).fill("3");
+    await expect(page.getByLabel("Item Discount", { exact: true })).toHaveValue(
+      "30",
+    );
+    await page
+      .getByLabel("Price type", { exact: true })
+      .selectOption("WHOLESALE");
+    await expect(
+      page.getByLabel("Rate (Price/Unit)", { exact: true }),
+    ).toHaveValue("90");
+    await expect(page.getByLabel("Item Discount", { exact: true })).toHaveValue(
+      "30",
+    );
+    await page.getByLabel("Price type", { exact: true }).selectOption("RETAIL");
+    await expect(
+      page.getByLabel("Rate (Price/Unit)", { exact: true }),
+    ).toHaveValue("100");
+    await page.getByLabel("Item Discount", { exact: true }).fill("5");
+    await page.getByLabel("Quantity", { exact: true }).fill("4");
+    await expect(page.getByLabel("Item Discount", { exact: true })).toHaveValue(
+      "5",
+    );
+    const login = await request.post("/api/v1/mobile/auth/login", {
+      data: {
+        identifier: email,
+        password,
+        deviceId: randomUUID(),
+        deviceName: "Pricing parity",
+      },
+    });
+    expect(login.status()).toBe(200);
+    const headers = {
+      authorization: `Bearer ${(await login.json()).accessToken}`,
+    };
+    const payload = {
+      name: `Pricing native ${suffix}`,
+      sellingRate: "118",
+      cost: "59",
+      taxRate: "18",
+      pricing: {
+        saleTaxMode: "INCLUSIVE",
+        purchaseTaxMode: "INCLUSIVE",
+        discountType: "PERCENTAGE",
+        discountValue: "10",
+        wholesalePrice: "106.20",
+      },
+      creationRequestKey: randomUUID(),
+    };
+    const first = await request.post(
+      "/api/v1/mobile/account/master-data/items",
+      { headers, data: payload },
+    );
+    expect(first.status()).toBe(201);
+    const native = await first.json();
+    ids.push(native.id);
+    expect(native.salePrice).toBe("100");
+    expect(native.pricing).toMatchObject({
+      normalizedDiscountValue: "10",
+      normalizedWholesalePrice: "90.00",
+    });
+    const replay = await request.post(
+      "/api/v1/mobile/account/master-data/items",
+      { headers, data: payload },
+    );
+    expect(replay.status()).toBe(201);
+    expect((await replay.json()).id).toBe(native.id);
+    const changed = await request.post(
+      "/api/v1/mobile/account/master-data/items",
+      {
+        headers,
+        data: {
+          ...payload,
+          pricing: { ...payload.pricing, discountValue: "11" },
+        },
+      },
+    );
+    expect(changed.ok()).toBe(false);
+    const detail = await request.get(
+      `/api/v1/mobile/account/master-data/items/${native.id}`,
+      { headers },
+    );
+    expect(detail.status()).toBe(200);
+    expect(JSON.stringify(await detail.json())).toContain("enteredSalePrice");
+    const edited = await request.patch(
+      `/api/v1/mobile/account/master-data/items/${native.id}`,
+      {
+        headers,
+        data: {
+          name: payload.name,
+          sellingRate: "150",
+          cost: "50",
+          taxRate: "18",
+        },
+      },
+    );
+    expect(edited.status()).toBe(200);
+    expect(
+      await db.accountProduct.findUniqueOrThrow({ where: { id: native.id } }),
+    ).toMatchObject({
+      pricing: expect.objectContaining({
+        enteredSalePrice: "177.00",
+        saleTaxMode: "INCLUSIVE",
+        discountType: "PERCENTAGE",
+      }),
+    });
+    await db.accountSettings.update({
+      where: { companyId },
+      data: { itemSettings: { wholesalePrice: false } },
+    });
+    const disabled = await request.post(
+      "/api/v1/mobile/account/master-data/items",
+      {
+        headers,
+        data: {
+          ...payload,
+          name: "Forbidden pricing",
+          creationRequestKey: randomUUID(),
+        },
+      },
+    );
+    expect(disabled.ok()).toBe(false);
+    expect((await disabled.json()).error).toBe("WHOLESALE_PRICING_DISABLED");
+  } finally {
+    await db.accountSettings.update({
+      where: { companyId },
+      data: { itemSettings: settings.itemSettings ?? {} },
+    });
+    await db.accountProduct.deleteMany({
+      where: {
+        companyId,
+        OR: [
+          { id: { in: ids } },
+          {
+            name: { in: [`Pricing web ${suffix}`, `Pricing native ${suffix}`] },
+          },
+        ],
+      },
+    });
+  }
+});
+
+test("A066 View Txn opens multi-invoice payments and advances without recognizing pending cheques", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(120000);
+  const suffix = randomUUID().slice(0, 8),
+    oldSettings = await db.accountSettings.findUniqueOrThrow({
+      where: { companyId },
+    });
+  await db.accountSettings.update({
+    where: { companyId },
+    data: {
+      enabledModules: [
+        ...new Set([
+          ...oldSettings.enabledModules,
+          "CUSTOMER_ADVANCES" as const,
+        ]),
+      ],
+    },
+  });
+  try {
+    if (!(await db.financialYear.findFirst({ where: { companyId } })))
+      await db.financialYear.create({
+        data: {
+          companyId,
+          name: "Cheque navigation year",
+          startDate: new Date("2026-01-01"),
+          endDate: new Date("2026-12-31"),
+        },
+      });
+    for (const row of DEFAULT_LEDGER_ACCOUNTS)
+      await db.ledgerAccount.upsert({
+        where: { companyId_code: { companyId, code: row.code } },
+        create: {
+          companyId,
+          code: row.code,
+          name: `NAV ${row.name}`,
+          accountClass: row.accountClass,
+          normalBalance: row.normalBalance,
+          systemKey: row.systemKey,
+          isSystem: row.isSystem,
+        },
+        update: { systemKey: row.systemKey },
+      });
+    const actor = {
+      ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
+      companyId,
+      branchIds: [],
+    } as ProjectActor;
+    const customer = await db.customer.create({
+      data: {
+        companyId,
+        branchId,
+        name: `Cheque target ${suffix}`,
+        isAccountCustomer: true,
+      },
+    });
+    const ledger = await db.ledgerAccount.create({
+      data: {
+        companyId,
+        code: `NAV-${suffix}`,
+        name: "Cheque navigation bank",
+        accountClass: "ASSET",
+        normalBalance: "DEBIT",
+      },
+    });
+    const bank = await db.moneyAccount.create({
+      data: {
+        companyId,
+        branchId,
+        name: "Cheque navigation bank",
+        type: "BANK",
+        ledgerAccountId: ledger.id,
+      },
+    });
+    const invoices = [];
+    for (const rate of ["40", "60"]) {
+      const draft = await createCommercialDocumentForActor(actor, {
+        type: "SALES_INVOICE",
+        branchId,
+        partyId: customer.id,
+        issueDate: "2026-10-10",
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Pending cheque navigation",
+            quantity: "1",
+            rate,
+            taxRate: "0",
+          },
+        ],
+      });
+      await postCommercialDocumentForActor(actor, { documentId: draft.id });
+      invoices.push(draft);
+    }
+    const payment = await createSettlementForActor(actor, {
+      type: "CUSTOMER_RECEIPT",
+      branchId,
+      partyId: customer.id,
+      moneyAccountId: bank.id,
+      paymentMode: "CHEQUE",
+      chequeNumber: `MULTI-${suffix}`,
+      chequeDate: "2026-10-10",
+      transactionDate: "2026-10-10",
+      amount: "100",
+      idempotencyKey: randomUUID(),
+      allocations: invoices.map((x) => ({
+        documentId: x.id,
+        amount: x.grandTotal.toString(),
+      })),
+    });
+    const advance = await createSettlementForActor(actor, {
+      type: "CUSTOMER_ADVANCE",
+      branchId,
+      partyId: customer.id,
+      moneyAccountId: bank.id,
+      paymentMode: "CHEQUE",
+      chequeNumber: `ADVANCE-${suffix}`,
+      chequeDate: "2026-10-10",
+      transactionDate: "2026-10-10",
+      amount: "25",
+      idempotencyKey: randomUUID(),
+      allocations: [],
+    });
+    const login = await request.post("/api/v1/mobile/auth/login", {
+      data: {
+        identifier: email,
+        password,
+        deviceId: randomUUID(),
+        deviceName: "Cheque source navigation",
+      },
+    });
+    expect(login.status()).toBe(200);
+    const response = await request.get(
+      `/api/v1/mobile/account/money/cheques?branchId=${branchId}&q=${suffix}`,
+      {
+        headers: {
+          authorization: `Bearer ${(await login.json()).accessToken}`,
+        },
+      },
+    );
+    expect(response.status()).toBe(200);
+    const rows = (await response.json()).rows;
+    expect(
+      rows.find((x: { settlementId: string }) => x.settlementId === advance.id)
+        .sourceTransaction.nativeHref,
+    ).toBe(
+      `/workspace/account/settlements/${advance.id}?type=CUSTOMER_ADVANCE`,
+    );
+    const before = await db.journalEntry.count({ where: { companyId } });
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
+    for (const [number, settlement] of [
+      [`MULTI-${suffix}`, payment],
+      [`ADVANCE-${suffix}`, advance],
+    ] as const) {
+      await page.goto(
+        `/workspace/account/money/cheques?branchId=${branchId}&q=${number}`,
+      );
+      const card = page.getByRole("article", {
+        name: `Cheque ${number}`,
+        exact: true,
+      });
+      await expect(
+        card.getByRole("link", { name: "View Txn", exact: true }),
+      ).toHaveAttribute(
+        "href",
+        `/workspace/account/settlements/${settlement.id}`,
+      );
+      await card.getByRole("link", { name: "View Txn", exact: true }).click();
+      await expect(
+        page.getByRole("region", { name: "Payment details", exact: true }),
+      ).toContainText("PENDING_CHEQUE", { timeout: 20000 });
+    }
+    const pdf = await page.request.get(
+      `/api/account/print/CUSTOMER_ADVANCE/${advance.id}?format=pdf`,
+    );
+    expect(pdf.status()).toBe(200);
+    expect((await extractPdfText(await pdf.body())).text).toContain(
+      "PENDING CHEQUE",
+    );
+    expect(await db.journalEntry.count({ where: { companyId } })).toBe(before);
+    for (const doc of invoices) {
+      expect(
+        (
+          await db.$transaction((tx) =>
+            documentOutstandingInTx(tx, companyId, doc.id),
+          )
+        ).outstanding.toFixed(2),
+      ).toBe(doc.grandTotal.toFixed(2));
+    }
+    expect(
+      await db.accountSettlement.findUniqueOrThrow({
+        where: { id: advance.id },
+      }),
+    ).toMatchObject({ status: "PENDING_CHEQUE", journalEntryId: null });
+    await db.user.update({
+      where: { id: userId },
+      data: { branchAccessScope: "SELECTED_BRANCHES" },
+    });
+    const permittedBranch = await db.branch.create({
+      data: {
+        companyId,
+        code: `NAV-${suffix}`,
+        name: `Other cheque branch ${suffix}`,
+      },
+    });
+    await db.userBranchAccess.create({
+      data: { userId, branchId: permittedBranch.id },
+    });
+    const denied = await page.request.get(
+      `/workspace/account/settlements/${advance.id}`,
+    );
+    expect(denied.status()).toBe(404);
+  } finally {
+    await db.user.update({
+      where: { id: userId },
+      data: { accountRole: "ACCOUNT_ADMIN", branchAccessScope: "ALL_BRANCHES" },
+    });
+    await db.userBranchAccess.deleteMany({ where: { userId } });
+    await db.accountSettings.update({
+      where: { companyId },
+      data: { enabledModules: oldSettings.enabledModules },
+    });
+  }
 });

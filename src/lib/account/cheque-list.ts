@@ -1,3 +1,4 @@
+import {chequeTransactionTarget} from "./cheque-transaction-target";
 import { ChequeStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -103,6 +104,8 @@ export async function chequePageForActor(
         include: {
           settlement: {
             select: {
+              type:true,
+              openingAllocations:{take:1,select:{id:true}},
               allocations: {
                 take: 2,
                 orderBy: { id: "asc" },
@@ -167,6 +170,7 @@ export async function chequePageForActor(
       ),
     rows: rows.map((row) => ({
       ...row,
+      sourceTransaction:chequeTransactionTarget(row),
       sourceDocument:
         row.settlement?.allocations.length === 1
           ? {

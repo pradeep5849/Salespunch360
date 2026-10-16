@@ -99,7 +99,7 @@ it("converts normalized catalogue defaults into the document tax mode", () => {
   const normalized = normalizedItemPricing(
     {
       sellingRate: "118",
-      cost:"59",
+      cost: "59",
       taxRate: "18",
       pricing: pricing({ discountValue: "10" }),
     },
@@ -275,4 +275,61 @@ it("preserves entered inclusive cents instead of reconstructing them from rounde
     itemSettingsDefaults,
   );
   expect(edited?.pricing?.enteredSalePrice).toBe("120.00");
+});
+
+it("uses the manually selected wholesale rate and stacks the saved per-unit discount", () => {
+  const p = normalizedItemPricing(
+    {
+      sellingRate: "118",
+      cost: "59",
+      taxRate: "18",
+      pricing: pricing({
+        wholesalePrice: "94.40",
+        discountType: "FIXED",
+        discountValue: "11.80",
+      }),
+    },
+    { ...itemSettingsDefaults, wholesalePrice: true },
+  );
+  const exclusive = itemPriceForDocument(
+    p.saleRate,
+    "18",
+    p.pricing,
+    "EXCLUSIVE",
+    false,
+    "3",
+    "WHOLESALE",
+  );
+  expect(exclusive.rate.toString()).toBe("80");
+  expect(exclusive.discountValue.toString()).toBe("30");
+  const inclusive = itemPriceForDocument(
+    p.saleRate,
+    "18",
+    p.pricing,
+    "INCLUSIVE",
+    false,
+    "3",
+    "WHOLESALE",
+  );
+  expect(inclusive.rate.toString()).toBe("94.4");
+  expect(inclusive.discountValue.toString()).toBe("35.4");
+  expect(
+    itemPriceForDocument(
+      p.saleRate,
+      "18",
+      p.pricing,
+      "EXCLUSIVE",
+    ).rate.toString(),
+  ).toBe("100");
+  expect(() =>
+    itemPriceForDocument(
+      "100",
+      "18",
+      null,
+      "EXCLUSIVE",
+      false,
+      "1",
+      "WHOLESALE",
+    ),
+  ).toThrow("WHOLESALE_PRICE_UNAVAILABLE");
 });

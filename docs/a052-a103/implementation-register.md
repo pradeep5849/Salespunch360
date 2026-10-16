@@ -9447,3 +9447,11 @@ Validation:66 related unit/real PostgreSQL tests passed;2 desktop/mobile browser
 Remaining:Wholesale selection/threshold and discount-stacking decisions are pending;no rule invented. Broader purchase/native/device/offline/accessibility and final-head checks remain. A057-F03 shares this progress but remains PARTIAL for its original outstanding scope. Counts unchanged160 implemented but not finally verified/37 partial/2 not started;all199 original IDs preserved,zero final closures.
 
 Previous checkpoint `1d3fe230` Web+Android targeted CI passed(run38885095731). The later pricing code requires new exact-head CI;earlier CI is not final implementation evidence.
+
+## October 16 continuation: selected wholesale prices and cheque sources
+
+A058-F02 remains PARTIAL: explicit Retail/Wholesale choice now consumes the saved price on web and Android sale item entry and applies the saved discount to either price (fixed defaults per unit). Explicit web discount overrides remain unchanged; existing saved line amounts are not rewritten. Broader purchase/edited-line/native runtime coverage remains outstanding. The user resolved both wholesale policy questions; no quantity threshold was introduced.
+
+A066-F02/F04 remain PARTIAL: multi-invoice, advance and mixed opening/invoice cheques navigate to their actual payment source, with the correct native PDF type. Pending cheque PDFs carry pending status. Single invoice navigation remains direct; legacy response compatibility retained. Reopen reference sheet parity and final verification remain outstanding. An actor assigned no branches still encounters a pre-existing layout AuthorizationError/500; the tested unassigned-record case has a valid other assigned branch and returns404.
+
+Intermediate validation: 101 focused unit tests passed; four desktop/mobile Chromium scenarios passed (2.7m), including real local PostgreSQL pending cheque balance/journal assertions and branch isolation. Android compile and13 JVM tests passed (2m56s). No Android emulator/device runtime, final complete-suite or production validation is claimed. Prior browser failures (incorrect permission/core-module fixtures, missing branch code and omitted-setting default) are retained in local logs; corrected current-slice scenarios pass. All199 IDs remain intact; counts160 implemented but not verified,37 partial,2 not started.

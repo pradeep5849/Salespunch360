@@ -227,17 +227,7 @@ export default async function Page({
                   </details>
                 )}
               <p>Bank: {row.moneyAccount?.name ?? "Account unavailable"}</p>
-              {row.sourceDocument && (
-                <Link
-                  href={
-                    row.sourceDocument.type === "SALES_INVOICE"
-                      ? `/workspace/account/sales/${row.sourceDocument.id}`
-                      : `/workspace/account/transactions/${row.sourceDocument.id}`
-                  }
-                >
-                  View Txn
-                </Link>
-              )}
+              {row.sourceTransaction && <Link href={row.sourceTransaction.href}>View Txn</Link>}
               {row.reference && <p>Reference: {row.reference}</p>}
               {row.closureDescription && <p>Description: {row.closureDescription}</p>}
               {row.clearedDate && (

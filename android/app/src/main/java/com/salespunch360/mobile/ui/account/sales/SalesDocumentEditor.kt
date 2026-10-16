@@ -134,6 +134,7 @@ private fun DirectSaleInvoiceEditor(
 
     var itemName by remember{mutableStateOf("")}
     var itemQty by remember{mutableStateOf("1")}
+    var itemPriceKind by remember{mutableStateOf("RETAIL")}
     var freeQty by remember{mutableStateOf("0")}
     var itemBatchId by remember{mutableStateOf("")}
     var itemSerialId by remember{mutableStateOf("")}
@@ -150,7 +151,7 @@ private fun DirectSaleInvoiceEditor(
     if(barcodeCameraOpen&&options.transactionPreference("barcodeScanning"))BarcodeCameraDialog(onClose={barcodeCameraOpen=false},onDetected={value->
         barcodeCameraOpen=false
         val product=options.products.firstOrNull{it.barcode==value.trim()}
-        if(product==null){barcode=value;Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show()}else{itemName=product.name;itemRate=com.salespunch360.mobile.account.itemMasterPrice(product,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE").rate;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}
+        if(product==null){barcode=value;Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show()}else{itemName=product.name;itemPriceKind="RETAIL";itemRate=com.salespunch360.mobile.account.itemMasterPrice(product,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE").rate;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}
     })
 
     val states=listOf(
@@ -220,7 +221,7 @@ private fun DirectSaleInvoiceEditor(
         val product=options.products.firstOrNull{it.name.equals(name,true)}
         val service=if(product==null)options.services.firstOrNull{it.name.equals(name,true)} else null
         val unit=options.units.firstOrNull{it.id==itemUnitId}
-        val defaultPrice=com.salespunch360.mobile.account.itemMasterPrice(product?:service,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",discounts=options.itemWiseDiscount,quantity=itemQty.ifBlank{"1"})
+        val defaultPrice=com.salespunch360.mobile.account.itemMasterPrice(product?:service,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",discounts=options.itemWiseDiscount,quantity=itemQty.ifBlank{"1"},priceKind=itemPriceKind)
         val line=SalesLineDraft(
             lineType=if(product!=null)"PRODUCT" else if(service!=null)"SERVICE" else "CUSTOM",
             sourceId=product?.id?:service?.id.orEmpty(),
@@ -238,7 +239,7 @@ private fun DirectSaleInvoiceEditor(
         val entered=try{com.salespunch360.mobile.account.saleLinesWithFreeItem(line,if(options.transactionPreference("freeItemQuantity"))freeQty else "0",product?.trackingMode?:"NONE",freeSerialId)}catch(e:IllegalArgumentException){itemTrackingError=e.message;return}
         onDraft(draft.copy(taxMode=if(itemTaxMode=="WITH")"INCLUSIVE" else "EXCLUSIVE",lines=draft.lines.filter{it.sourceId.isNotBlank()||it.itemName.isNotBlank()}+entered))
         itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null
-        itemName="";itemQty="1";freeQty="0";itemUnitId="";itemRate="";itemTaxMode="WITHOUT";itemDescription=""
+        itemName="";itemPriceKind="RETAIL";itemQty="1";freeQty="0";itemUnitId="";itemRate="";itemTaxMode="WITHOUT";itemDescription=""
         if(!stay)addItemPage=false
     }
 
@@ -262,7 +263,7 @@ private fun DirectSaleInvoiceEditor(
                 Modifier.fillMaxSize().padding(padding).padding(16.dp),
                 verticalArrangement=Arrangement.spacedBy(16.dp)
             ){
-                if(options.transactionPreference("barcodeScanning"))item{Column{OutlinedTextField(barcode,{barcode=it},label={Text("Scan item barcode")},modifier=Modifier.fillMaxWidth());TextButton({val product=options.products.firstOrNull{it.barcode==barcode.trim()};if(product==null)Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show() else {itemName=product.name;itemRate=com.salespunch360.mobile.account.itemMasterPrice(product,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE").rate;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}}){Text("Find item")};TextButton({barcodeCameraOpen=true}){Text("Scan with Camera")}}}
+                if(options.transactionPreference("barcodeScanning"))item{Column{OutlinedTextField(barcode,{barcode=it},label={Text("Scan item barcode")},modifier=Modifier.fillMaxWidth());TextButton({val product=options.products.firstOrNull{it.barcode==barcode.trim()};if(product==null)Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show() else {itemName=product.name;itemPriceKind="RETAIL";itemRate=com.salespunch360.mobile.account.itemMasterPrice(product,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE").rate;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}}){Text("Find item")};TextButton({barcodeCameraOpen=true}){Text("Scan with Camera")}}}
                 itemTrackingError?.let{message->item{Text(message,color=MaterialTheme.colorScheme.error)}}
                 if(entryProduct?.trackingMode=="BATCH")item{SelectField("Batch",itemBatchId,options.batches.filter{it.str("productId")==entryProduct.id}.map{it.str("id") to it.str("batchNumber")}){itemBatchId=it}}
                 if(entryProduct?.trackingMode=="SERIAL"){
@@ -273,7 +274,7 @@ private fun DirectSaleInvoiceEditor(
                 item{
                     OutlinedTextField(
                         itemName,
-                        {itemName=it;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null},
+                        {itemName=it;itemPriceKind="RETAIL";itemRate="";itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null},
                         label={Text("Item Name")},
                         placeholder={Text("e.g. Chocolate Cake")},
                         modifier=Modifier.fillMaxWidth()
@@ -285,6 +286,8 @@ private fun DirectSaleInvoiceEditor(
                         SelectField("Unit",itemUnitId,options.units.map{it.id to "${it.name} (${it.symbol.orEmpty()})"},Modifier.weight(1f)){itemUnitId=it}
                     }
                 }
+                val priceMaster=entryProduct?:options.services.firstOrNull{it.name.equals(itemName.trim(),true)}
+                if(options.wholesalePrice&&priceMaster?.pricing?.str("normalizedWholesalePrice")?.toBigDecimalOrNull()!=null)item{SelectField("Price type",itemPriceKind,listOf("RETAIL" to "Retail","WHOLESALE" to "Wholesale")){kind->itemPriceKind=kind;itemRate=com.salespunch360.mobile.account.itemMasterPrice(priceMaster,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",priceKind=kind).rate}}
                 item{
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                         OutlinedTextField(itemRate,{itemRate=it},label={Text("Rate (Price/Unit)")},modifier=Modifier.weight(1f))

@@ -12592,8 +12592,32 @@
             "production_database": "NOT ACCESSED",
             "final_head_regression": "NOT RUN"
           },
-          "remaining": "Wholesale application requires pending user choices (manual selection versus threshold;discount stacking). Complete remaining purchase/UI/native coverage,device/offline/accessibility checks and final exact-head validation. Finding remains PARTIAL.",
+          "remaining": "Wholesale policy now resolved by user and implementation extended in manual_wholesale_selection_2026_10_16. Remaining purchase/UI/native coverage, device/offline/accessibility and final exact-head validation; PARTIAL retained.",
           "ci_workflow": ".github/workflows/targeted-validation.yml now includes item pricing and opening/retry unit regressions;exact-head run pending"
+        },
+        "manual_wholesale_selection_2026_10_16": {
+          "work": "Manual Retail/Wholesale selection in web and Android sale item entry consumes the saved normalized wholesale price and retains original inclusive gross without cent drift. The same saved sale discount applies; fixed defaults multiply quantity. Explicit web line discount overrides remain unchanged when quantity changes. Existing saved line rates are not rewritten. Wholesale control hidden when setting OFF or no saved wholesale price.",
+          "modified_files": [
+            "src/lib/account/item-pricing.ts",
+            "src/lib/account/item-pricing.test.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "e2e/a049-a051-expenses.spec.ts"
+          ],
+          "tests": {
+            "unit": "101 passed,0 failed,0 skipped in5 focused pricing/source/cheque-list/print test files (2.48s)",
+            "web_browser": "PASS desktop Chromium pricing choice/default stacking,master persistence/API retry/legacy edit;multi-invoice/advance View Txn,pending PDF,unchanged unpaid balances and unassigned-branch denial",
+            "responsive_browser": "PASS same flows mobile Chromium;4/4 browser scenarios passed (2.7m)",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS (2m56s);13 JVM tests:6 ItemMasterPricing +7 SalesPreview,0 failures/errors/skips",
+            "android_runtime": "NOT RUN;no emulator/device claim",
+            "final_head_complete_validation": "NOT RUN"
+          },
+          "remaining": "Broader purchase/native editor and edited-line coverage, runtime accessibility/device/offline checks and final-head regressions; PARTIAL retained.",
+          "commit": "pending checkpoint commit"
         }
       }
     },
@@ -35190,6 +35214,30 @@
           "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
           "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
           "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
+        },
+        "source_navigation_2026_10_16": {
+          "work": "Single invoice source links directly to that document. Multi-invoice, advance and mixed opening/invoice sources link to the canonical settlement; native destination carries settlement type. Legacy sourceDocument response remains additive-compatible. Pending cheque PDFs explicitly label pending status; navigation performs no posting. Settlement page renders recoverable permission/module denial, unknown or unassigned sources retain notFound.",
+          "modified_files": [
+            "src/lib/account/cheque-transaction-target.ts",
+            "src/lib/account/cheque-transaction-target.test.ts",
+            "src/lib/account/cheque-list.ts",
+            "src/app/workspace/account/money/cheques/page.tsx",
+            "src/app/workspace/account/settlements/[id]/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/ChequeScreen.kt",
+            "src/lib/account/print.ts",
+            "src/lib/account/y04-print-coverage.test.ts",
+            "e2e/a049-a051-expenses.spec.ts"
+          ],
+          "tests": {
+            "unit": "101 passed,0 failed,0 skipped in5 focused pricing/source/cheque-list/print test files (2.48s)",
+            "web_browser": "PASS desktop Chromium pricing choice/default stacking,master persistence/API retry/legacy edit;multi-invoice/advance View Txn,pending PDF,unchanged unpaid balances and unassigned-branch denial",
+            "responsive_browser": "PASS same flows mobile Chromium;4/4 browser scenarios passed (2.7m)",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS (2m56s);13 JVM tests:6 ItemMasterPricing +7 SalesPreview,0 failures/errors/skips",
+            "android_runtime": "NOT RUN;no emulator/device claim",
+            "final_head_complete_validation": "NOT RUN"
+          },
+          "remaining": "Reopen Cancel/Yes/Close reference sheet, native device runtime, unsupported posted legacy sources without proven identity, final-head verification. PARTIAL retained. An actor assigned no branches still receives layout AuthorizationError/500; scoped denial test uses a valid other assigned branch and returns404. This existing layout limitation is not claimed fixed.",
+          "commit": "pending checkpoint commit"
         }
       },
       "push_checkpoint_evidence": {
@@ -36149,6 +36197,30 @@
           "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
           "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
           "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
+        },
+        "source_navigation_2026_10_16": {
+          "work": "Single invoice source links directly to that document. Multi-invoice, advance and mixed opening/invoice sources link to the canonical settlement; native destination carries settlement type. Legacy sourceDocument response remains additive-compatible. Pending cheque PDFs explicitly label pending status; navigation performs no posting. Settlement page renders recoverable permission/module denial, unknown or unassigned sources retain notFound.",
+          "modified_files": [
+            "src/lib/account/cheque-transaction-target.ts",
+            "src/lib/account/cheque-transaction-target.test.ts",
+            "src/lib/account/cheque-list.ts",
+            "src/app/workspace/account/money/cheques/page.tsx",
+            "src/app/workspace/account/settlements/[id]/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/ChequeScreen.kt",
+            "src/lib/account/print.ts",
+            "src/lib/account/y04-print-coverage.test.ts",
+            "e2e/a049-a051-expenses.spec.ts"
+          ],
+          "tests": {
+            "unit": "101 passed,0 failed,0 skipped in5 focused pricing/source/cheque-list/print test files (2.48s)",
+            "web_browser": "PASS desktop Chromium pricing choice/default stacking,master persistence/API retry/legacy edit;multi-invoice/advance View Txn,pending PDF,unchanged unpaid balances and unassigned-branch denial",
+            "responsive_browser": "PASS same flows mobile Chromium;4/4 browser scenarios passed (2.7m)",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS (2m56s);13 JVM tests:6 ItemMasterPricing +7 SalesPreview,0 failures/errors/skips",
+            "android_runtime": "NOT RUN;no emulator/device claim",
+            "final_head_complete_validation": "NOT RUN"
+          },
+          "remaining": "Reopen Cancel/Yes/Close reference sheet, native device runtime, unsupported posted legacy sources without proven identity, final-head verification. PARTIAL retained. An actor assigned no branches still receives layout AuthorizationError/500; scoped denial test uses a valid other assigned branch and returns404. This existing layout limitation is not claimed fixed.",
+          "commit": "pending checkpoint commit"
         }
       },
       "push_checkpoint_evidence": {
@@ -64617,6 +64689,14 @@
         "A057-F03"
       ],
       "implementation_commit": "8def76d0f8c8761a15347479adf37f821da4890e"
+    },
+    "wholesale_sale_pricing": {
+      "decision": "User selects Retail or Wholesale for each item. Apply the saved sale discount to either price. No automatic quantity threshold.",
+      "source": "Explicit user replies in this task, October 16, 2026",
+      "affected_findings": [
+        "A058-F02",
+        "A057-F03"
+      ]
     }
   },
   "push_checkpoint": {

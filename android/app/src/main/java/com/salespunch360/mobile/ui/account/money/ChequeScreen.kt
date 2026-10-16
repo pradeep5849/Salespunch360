@@ -37,7 +37,9 @@ import kotlinx.serialization.json.*
      Text("Amount: ${row["amount"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)} ?: "Not recorded"}")
      Text("Date: ${accountDate(row.str("chequeDate"))}")
      Text("Bank: ${(row["moneyAccount"] as? JsonObject)?.str("name") ?: "Account unavailable"}")
-     (row["sourceDocument"] as? JsonObject)?.let{source->TextButton({onNavigate(if(source.str("type")=="SALES_INVOICE")"/workspace/account/sales/${source.str("id")}"else"/workspace/account/purchases/${source.str("id")}")}){Text("View Txn")}}
+     val transaction=row["sourceTransaction"] as? JsonObject
+     if(transaction!=null&&transaction.str("nativeHref").isNotBlank())TextButton({onNavigate(transaction.str("nativeHref"))}){Text("View Txn")}
+     else (row["sourceDocument"] as? JsonObject)?.let{source->TextButton({onNavigate(if(source.str("type")=="SALES_INVOICE")"/workspace/account/sales/${source.str("id")}"else"/workspace/account/purchases/${source.str("id")}")}){Text("View Txn")}}
      if(row["settlementId"]?.jsonPrimitive?.contentOrNull!=null){
       Row{if(state.canClose&&row.str("status") in listOf("ISSUED","RECEIVED"))TextButton({vm.entryOptions(row.str("branchId"),"ALL");selected=row;selectedAction="CLOSE"},enabled=!state.saving){Text("Close cheque")}
        if(state.canCorrect&&row.str("status") in listOf("CLEARED","DEPOSITED","BOUNCED"))TextButton({selected=row;selectedAction="REOPEN"},enabled=!state.saving){Text("Re-open")}}
