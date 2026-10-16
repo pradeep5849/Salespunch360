@@ -14065,6 +14065,18 @@
         "web_modal_validation": {
           "work": "Unit/category selectors, nested creation sheets and help overlays use labelled native modal dialogs with Escape, browser focus containment and original-trigger restoration. Capture trigger before child autofocus; pending Escape cannot dismiss an in-flight save. Main item Save invokes actual HTML input validity checks, retains draft values and focuses invalid controls before any server mutation.",
           "tests": "29/29 focused item/custom-field policy tests passed. Desktop/mobile dialog/nested Escape/Tab/Axe AA and negative-price focus/state/no-write regressions2/2 passed(32.8s). TypeScript/focused lint passed. Initial browser check caught category autofocus restoration timing and passed after correction. Remaining original native/numeric/overlay coverage and final-head checks pending; finding remains PARTIAL."
+        },
+        "native_validation_2026_10_16": {
+          "work": "Native Add Item validates API-aligned name/code/description/HSN/location lengths,non-negative bounded amounts,tax,opening date/precision,discount bounds and wholesale precision before API mutation. Failure leaves input/request identity intact. Errors now remain visible above Save and have a polite accessibility live region,instead of depending on an offscreen lazy-list item.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AddItemValidation.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AddItemValidationTest.kt"
+          ],
+          "tests": "Android compile+15 focused JVM tests PASS:6 AddItemValidation,6 ItemMasterPricing,3 BankMetadata;0 failures/errors/skips. TypeScript/full ESLint PASS. No native runtime claim.",
+          "remaining": "Native modal/focus/device verification and broader field-error coverage remain;PARTIAL retained",
+          "commit": "pending"
         }
       },
       "push_checkpoint_evidence": {
@@ -23520,7 +23532,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -23533,6 +23545,12 @@
           "work": "Persisted bank holder/branch/UPI and independent print opt-ins; conditional retained web create/edit and native fields/validation; active authorized invoice bank selection on web/native Settings; selected bank output fails closed outside company/compatible branch; existing global profile retained when unselected. Local additive migration 120 applied.",
           "tests": "15 grouped PostgreSQL tests passed, including bank metadata/retry/clearing and invoice selection authorization with no ledger effects. 55 print/profile tests passed with real parsed PDFs and QR image checks in A4/A5/thermal. 21 bank metadata/replay tests passed. 2 desktop/mobile-web bank validation/edit/accessibility and authenticated web/mobile invoice tests passed (1.0m). Native final compile and 3 bank-validation JVM tests passed; TypeScript/targeted ESLint/Prisma validation/generation/local migration deploy passed.",
           "remaining": "A064-F04 remains PARTIAL: saved audit explicitly leaves alternate account-number/UPI requirement unresolved. Clarification requested; final-head and physical device validation pending."
+        },
+        {
+          "work": "User explicitly resolved the account-number/UPI policy: name-only bank creation is valid and full optional details may be entered at creation or later. Existing server/native optional fields preserved;web/native hint makes this clear. Added real database create-name-only/update/clear/no-ledger-effect regression and web/browser name-only-to-edit scenario.",
+          "tests": "31 focused bank unit/real PostgreSQL tests PASS;4 desktop/mobile browser bank metadata and name-only create/edit scenarios PASS (1.2m);Android compile+15 focused JVM tests PASS (2m34s);TypeScript/full ESLint PASS",
+          "remaining": "Final199-finding exact-head regressions and physical Android runtime pending. Prior bank-account-number/UPI policy blocker resolved;optional fields available both at creation and editing.",
+          "commit": "pending"
         }
       ],
       "push_checkpoint_evidence": {
@@ -62726,6 +62744,18 @@
           ],
           "implementation_commit": "25bab1d2",
           "tests": "Currency lock confirmed in real local PostgreSQL; grouped currency/settings unit tests passed. Not final-head verification."
+        },
+        "inventory_exact_display_2026_10_16": {
+          "work": "Inventory prices and share text use company currency and display decimals directly from exact decimal strings. Sale detail rate/discount and quantity\u00d7rate use shared preference-aware Money and exact Decimal multiplication;fixed-discount button uses company currency symbol. No posted amount/currency conversion performed.",
+          "files": [
+            "src/components/account/items-screen.tsx",
+            "src/app/workspace/account/transactions/[id]/sale-invoice-detail.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "29 shared display/preview tests PASS;2 desktop/mobile Chromium large-cent USD/3-decimal inventory checks PASS (22.8s);TypeScript/full ESLint PASS",
+          "remaining": "Remaining display consumers and final-head validation;PARTIAL retained",
+          "commit": "pending"
         }
       },
       "intermediate_validation": {
@@ -64721,6 +64751,14 @@
       "affected_findings": [
         "A058-F02",
         "A057-F03"
+      ]
+    },
+    "bank_details_optional": {
+      "decision": "A bank account may be saved with its name only. All bank details can be added at account creation or later through Edit account details. Account number and UPI ID are optional unless enabling a feature requiring them (payment QR requires UPI).",
+      "source": "Explicit user replies October16,2026: With only name also can save...form to edit bank details;Later or at time of adding account they can add",
+      "affected_findings": [
+        "A064-F04",
+        "A064-F13"
       ]
     }
   },

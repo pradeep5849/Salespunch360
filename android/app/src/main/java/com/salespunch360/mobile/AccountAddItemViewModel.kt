@@ -92,6 +92,8 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         done:()->Unit
     )=viewModelScope.launch{
         if(_state.value.saving||!_state.value.configLoaded)return@launch
+        val validationError=com.salespunch360.mobile.account.addItemValidationError(name,code,description,sellingRate,cost,taxRate,hsnSac,if(service)"0"else lowStockThreshold,if(service)""else openingQuantity,openingPrice,openingDate,itemLocation,pricing)
+        if(validationError!=null){_state.value=_state.value.copy(error=validationError);return@launch}
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{
             api.saveAccountMaster(

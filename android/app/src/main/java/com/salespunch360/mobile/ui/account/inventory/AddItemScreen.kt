@@ -21,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountAddItemViewModel
@@ -140,6 +143,8 @@ fun AddItemScreen(
         },
         bottomBar={
             Surface(shadowElevation=6.dp){
+                Column{
+                s.error?.let{message->Text(message,color=MaterialTheme.colorScheme.error,modifier=Modifier.fillMaxWidth().padding(12.dp).semantics{liveRegion=LiveRegionMode.Polite})}
                 Row(Modifier.fillMaxWidth().navigationBarsPadding()){
                     TextButton(onClick=back,modifier=Modifier.weight(1f).height(64.dp)){Text("Cancel")}
                     Button(
@@ -177,6 +182,7 @@ fun AddItemScreen(
                         modifier=Modifier.weight(1f).height(64.dp),
                         shape=MaterialTheme.shapes.extraSmall
                     ){Text(if(s.saving)"Saving…" else "Save")}
+                }
                 }
             }
         }
@@ -341,8 +347,8 @@ fun AddItemScreen(
                     }
                 }
             }
-            s.error?.let{error->
-                item{Column(Modifier.padding(16.dp)){Text(error,color=MaterialTheme.colorScheme.error);if(!s.configLoaded)OutlinedButton(onClick={vm.load()}){Text("Retry item options")}}}
+            s.error?.let{
+                item{if(!s.configLoaded)OutlinedButton(onClick={vm.load()},modifier=Modifier.padding(16.dp)){Text("Retry item options")}}
             }
         }
     }

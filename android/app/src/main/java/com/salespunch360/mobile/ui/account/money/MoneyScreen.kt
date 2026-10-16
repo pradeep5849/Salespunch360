@@ -270,6 +270,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                 item{OutlinedTextField(name,{name=it},label={Text("Account name")},enabled=!saving)}
                 item{if(selected==null)PickText("Account type",type,listOf("CASH","BANK","PETTY_CASH"),enabled=!saving){type=it}else Text("Account type: ${moneyTypeLabel(type)} (cannot be changed)")}
                 if(type=="BANK"){
+                    item{Text("Bank details are optional. Add them now or edit this account later.")}
                     item{OutlinedTextField(bankName,{bankName=it},label={Text("Bank name")},isError=bankErrors.bankName!=null,supportingText={bankErrors.bankName?.let{Text(it)}},enabled=!saving)}
                     item{OutlinedTextField(accountHolder,{accountHolder=it},label={Text("Account holder name")},isError=bankErrors.holder!=null,supportingText={bankErrors.holder?.let{Text(it)}},enabled=!saving)}
                     item{OutlinedTextField(bankBranch,{bankBranch=it},label={Text("Bank branch name")},isError=bankErrors.branch!=null,supportingText={bankErrors.branch?.let{Text(it)}},enabled=!saving)}

@@ -1,3 +1,4 @@
+import {Prisma} from "@prisma/client";
 import {Money} from "@/components/account/account-ui";
 import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
@@ -9,8 +10,6 @@ type SaleInvoiceDetailProps={
   subtotal:string;discountTotal:string;taxTotal:string;roundOffAmount:string;grandTotal:string;received:string;balance:string;
   lines:SaleLine[];
 };
-const money=new Intl.NumberFormat("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
-const amount=(value:string)=>money.format(Number(value)||0);
 export function SaleInvoiceDetail(props:SaleInvoiceDetailProps){
   const reversalHref=`/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${props.id}`;
   return <main className={styles.root}>
@@ -33,8 +32,8 @@ export function SaleInvoiceDetail(props:SaleInvoiceDetailProps){
       {props.lines.map((line,index)=><article className={styles.billedCard} key={line.id}>
         <div className={styles.billedTop}><span><i>#{index+1}</i><strong>{line.itemName||"Item"}</strong></span><b><Money value={line.lineTotal}/></b></div>
         <div className={styles.billedGrid}>
-          <span>Item Subtotal</span><span>{line.quantity} {line.unitSymbol||"Nos"} x {amount(line.rate)} = <Money value={String((Number(line.quantity)||0)*(Number(line.rate)||0))}/></span>
-          <span className={styles.discount}>Discount: {amount(line.discountAmount)}</span><span className={styles.discount}><Money value={line.discountAmount}/></span>
+          <span>Item Subtotal</span><span>{line.quantity} {line.unitSymbol||"Nos"} x <Money value={line.rate}/> = <Money value={new Prisma.Decimal(line.quantity).mul(line.rate).toString()}/></span>
+          <span className={styles.discount}>Discount: <Money value={line.discountAmount}/></span><span className={styles.discount}><Money value={line.discountAmount}/></span>
           <span>Tax GST@{Number(line.taxRate)||0}%</span><span><Money value={line.taxAmount}/></span>
         </div>
       </article>)}

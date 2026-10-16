@@ -13,6 +13,8 @@ const client = new PrismaClient({
   datasources: {
     db: { url: url ?? "postgresql://test:test@127.0.0.1:55432/checkpoint_ci" },
   },
+
+
 });
 vi.mock("@/lib/db", () => ({
   db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
@@ -941,6 +943,16 @@ describe.skipIf(!url)(
           },
         }),
       ).toBe(1);
+    });
+    it("A064 creates a bank with its name only and adds or clears optional details later without posting",async()=>{
+      const before=await client.journalEntry.count({where:{companyId}});
+      const row=await createMoneyAccountForActor(actor,{type:"BANK",name:"Name only bank",branchId,creationRequestKey:randomUUID()});
+      expect(row).toMatchObject({name:"Name only bank",type:"BANK",printBankDetails:false,printUpiQr:false});
+      expect(row.upiId).toBeNull();expect(row.accountNumberMasked).toBeNull();
+      await updateMoneyAccountForActor(actor,row.id,{accountHolderName:"Holder",bankName:"Canara",bankBranchName:"Main",accountNumberMasked:"****4321",ifsc:"CNRB0001234"});
+      expect(await client.moneyAccount.findUniqueOrThrow({where:{id:row.id}})).toMatchObject({accountHolderName:"Holder",bankName:"Canara",accountNumberMasked:"****4321",ifsc:"CNRB0001234",upiId:null});
+      await updateMoneyAccountForActor(actor,row.id,{accountHolderName:"",bankName:"",bankBranchName:"",accountNumberMasked:"",ifsc:""});
+      expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
     });
   },
 );

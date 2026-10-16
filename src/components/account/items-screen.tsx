@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import {useDisplayPreferences} from "./display-preferences";
+import {formatMoney} from "@/lib/account/display-preferences";
 import { formatStockQuantity } from "@/lib/account/quantity-display";
 import {
   useEffect,
@@ -50,11 +52,7 @@ const links: {
     icon: "grid",
   },
 ];
-const currency = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
+
 function containDialogFocus(event: KeyboardEvent<HTMLDialogElement>) {
   if (event.key !== "Tab") return;
   const dialog = event.currentTarget;
@@ -97,6 +95,8 @@ export function ItemsScreen({
 }) {
   const catalogHref = (type: "PRODUCT" | "SERVICE") =>
     `/workspace/account/inventory/catalog?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(contextQuery)), type })}`;
+  const displayPreferences=useDisplayPreferences();
+  const currency={format:(value:string)=>formatMoney(value,displayPreferences)};
   const [q, setQ] = useState(""),
     [filterOpen, setFilterOpen] = useState(false),
     [moreOpen, setMoreOpen] = useState(false),
@@ -143,7 +143,7 @@ export function ItemsScreen({
     return next;
   };
   const share = async (item: Item) => {
-    const text = `${item.name}${item.code ? ` (${item.code})` : ""} · ${currency.format(Number(item.salePrice))}`;
+    const text = `${item.name}${item.code ? ` (${item.code})` : ""} · ${currency.format(item.salePrice)}`;
     setShareMessage("");
     try {
       if (navigator.share) await navigator.share({ title: item.name, text });
@@ -253,11 +253,11 @@ export function ItemsScreen({
               <dl>
                 <div>
                   <dt>Sale price</dt>
-                  <dd>{currency.format(Number(item.salePrice))}</dd>
+                  <dd>{currency.format(item.salePrice)}</dd>
                 </div>
                 <div>
                   <dt>Purchase price</dt>
-                  <dd>{currency.format(Number(item.purchasePrice))}</dd>
+                  <dd>{currency.format(item.purchasePrice)}</dd>
                 </div>
                 <div>
                   <dt>{item.type === "PRODUCT" ? "In Stock" : "Type"}</dt>

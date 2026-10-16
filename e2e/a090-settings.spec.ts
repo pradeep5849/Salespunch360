@@ -1,3 +1,4 @@
+import {formatMoney,resolveDisplayPreferences} from "../src/lib/account/display-preferences";
 import {createExpenseForActor} from "../src/lib/account/expenses";
 import {extractPdfText} from "../tests/helpers/pdf-text";
 import AxeBuilder from "@axe-core/playwright";
@@ -2013,5 +2014,52 @@ test("A052 category overview uses posted totals and items search pagination with
   await page.goto(`/workspace/account/expenses?branchId=${branchId}`);expect((await new AxeBuilder({page}).include(".employees-content").withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{
   await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;if(expenseId){const journals=await tx.journalEntry.findMany({where:{companyId,sourceId:expenseId},select:{id:true}}),ids=journals.map(x=>x.id);await tx.expenseTransaction.deleteMany({where:{companyId,id:expenseId}});await tx.accountingAuditEvent.deleteMany({where:{companyId,entityId:{in:ids}}});await tx.journalLine.deleteMany({where:{companyId,journalEntryId:{in:ids}}});await tx.journalEntry.deleteMany({where:{companyId,id:{in:ids}}});await tx.accountOperationalAudit.deleteMany({where:{companyId,entityId:expenseId}})}await tx.expenseItem.deleteMany({where:{companyId,name:{startsWith:itemPrefix}}});await tx.expenseCategory.deleteMany({where:{companyId,id:categoryId}});await tx.moneyAccount.deleteMany({where:{companyId,id:moneyId}});await tx.ledgerAccount.deleteMany({where:{companyId,id:{in:[cashLedger,expenseLedger]}}})})
+ }
+});
+
+test("A064 name-only bank can add full optional details later", async ({page}) => {
+  test.setTimeout(120000);
+  await signInSettings(page);
+  await page.goto(`/workspace/account/money/accounts?branchId=${branchId}`);
+  const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create account and asset ledger",exact:true})});
+  const name=`Name-only bank ${randomUUID().slice(0,8)}`;
+  await form.getByLabel("Account type",{exact:true}).selectOption("BANK");
+  await form.getByLabel("Account display name",{exact:true}).fill(name);
+  await form.getByLabel("Branch",{exact:true}).selectOption(branchId);
+  await form.getByRole("button",{name:"Create account and asset ledger",exact:true}).click();
+  await expect(form.getByRole("status")).toContainText("Money account created",{timeout:20000});
+  const bank=await db.moneyAccount.findFirstOrThrow({where:{companyId,name}});
+  expect(bank.upiId).toBeNull();expect(bank.accountNumberMasked??"").toBe("");
+  const journals=await db.journalEntry.count({where:{companyId}});
+  await page.goto(`/workspace/account/money/accounts/${bank.id}?branchId=${branchId}`);
+  const edit=page.locator("form").filter({has:page.getByRole("button",{name:"Save account details",exact:true})});
+  await edit.getByLabel("Bank name",{exact:true}).fill("Canara Bank");
+  await edit.getByLabel("Account holder name",{exact:true}).fill("Business holder");
+  await edit.getByLabel("Bank branch name",{exact:true}).fill("Main branch");
+  await edit.getByLabel("Masked account number",{exact:true}).fill("****4321");
+  await edit.getByLabel("IFSC",{exact:true}).fill("CNRB0001234");
+  await edit.getByRole("button",{name:"Save account details",exact:true}).click();
+  await expect(edit.getByRole("status")).toContainText("Account details saved",{timeout:20000});
+  expect(await db.moneyAccount.findUniqueOrThrow({where:{id:bank.id}})).toMatchObject({bankName:"Canara Bank",accountHolderName:"Business holder",bankBranchName:"Main branch",accountNumberMasked:"****4321",ifsc:"CNRB0001234",upiId:null});
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+});
+
+
+test("A090 inventory prices retain exact cents in selected company currency",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ const item=await db.accountProduct.findUniqueOrThrow({where:{id:productId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3}});
+  await db.accountProduct.update({where:{id:productId},data:{salePrice:"90071992547409.91",costPrice:"12.35"}});
+  await signInSettings(page);await page.goto("/workspace/account/inventory");
+  const card=page.getByRole("article").filter({has:page.getByRole("heading",{name:item.name,exact:true})});
+  const preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3});
+  await expect(card.getByText(formatMoney("90071992547409.91",preferences),{exact:true})).toBeVisible({timeout:20000});
+  await expect(card.getByText(formatMoney("12.35",preferences),{exact:true})).toBeVisible();
+  await expect(card).not.toContainText("₹");
+ }finally{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}});
+  await db.accountProduct.update({where:{id:productId},data:{salePrice:item.salePrice,costPrice:item.costPrice}});
  }
 });
