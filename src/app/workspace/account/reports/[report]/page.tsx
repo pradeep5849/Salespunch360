@@ -1,3 +1,4 @@
+import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
 import { reportExportQuery } from "@/lib/account/reports/queries";
 import { reportCalendarDate, reportFinancialYearStart } from "@/lib/account/reports/dates";
 import { ReportTable } from "@/components/account/report-table";
@@ -7,27 +8,7 @@ import {
   reportOptions,
   runFinancialReport,
 } from "@/lib/account/reports/service";
-const valid = new Set([
-    "profit-loss",
-    "balance-sheet",
-    "trial-balance",
-    "cash-flow",
-    "general-ledger",
-    "customer-ledger",
-    "vendor-ledger",
-    "receivable-aging",
-    "payable-aging",
-    "cash-bank",
-    "owner-capital",
-    "profit-withdrawal",
-    "projects",
-    "branches",
-    "items",
-    "invoices",
-    "customers",
-    "tax",
-    "budget-vs-actual",
-  ]),
+const valid = new Set(ACCOUNT_REPORT_KEYS),
   iso = (d: Date) => d.toISOString().slice(0, 10);
 export default async function Page({
   params,

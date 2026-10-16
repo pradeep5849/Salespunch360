@@ -2063,3 +2063,29 @@ test("A090 inventory prices retain exact cents in selected company currency",asy
   await db.accountProduct.update({where:{id:productId},data:{salePrice:item.salePrice,costPrice:item.costPrice}});
  }
 });
+
+test("A085 report hub searches groups and persists scoped favourites across web and mobile API",async({page,request})=>{
+ test.setTimeout(120000);
+ const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["ASSETS","PROJECTS","PROJECT_COSTING"]}});
+  const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"Report favourites"}});expect(login.status()).toBe(200);
+  const headers={authorization:`Bearer ${(await login.json()).accessToken}`};
+  const saved=await request.post("/api/v1/mobile/account/reports/favourites",{headers,data:{reportKey:"tax",favourite:true}});expect(saved.status()).toBe(200);expect((await saved.json()).favourites).toContain("tax");
+  const invalid=await request.post("/api/v1/mobile/account/reports/favourites",{headers,data:{reportKey:"tax",favourite:true,companyId:otherCompanyId}});expect(invalid.status()).toBe(400);
+  settingsCookies=[];await signInSettings(page);
+  await page.goto(`/workspace/account/reports?branchId=${branchId}&from=2026-04-01&to=2026-10-16`);
+  await expect(page.getByRole("region",{name:"Favourite reports",exact:true}).getByRole("link",{name:"GST / Tax Report",exact:true})).toBeVisible();
+  await page.getByLabel("Search reports",{exact:true}).fill("withdrawal");
+  const group=page.getByRole("region",{name:"Owners & Partners reports",exact:true});
+  await expect(group.getByRole("link",{name:"Profit Withdrawal",exact:true})).toHaveAttribute("href",new RegExp(`branchId=${branchId}.*from=2026-04-01.*to=2026-10-16`));
+  await group.getByRole("button",{name:"Add Profit Withdrawal to favourites",exact:true}).click();
+  await expect(group.getByRole("button",{name:"Remove Profit Withdrawal from favourites",exact:true})).toHaveAttribute("aria-pressed","true");
+  await page.reload();await expect(page.getByRole("region",{name:"Favourite reports",exact:true}).getByRole("link",{name:"Profit Withdrawal",exact:true})).toBeVisible();
+  await page.getByLabel("Search reports",{exact:true}).fill("no-such-report");await expect(page.getByText("No reports match your search.",{exact:true})).toBeVisible();await page.getByLabel("Search reports",{exact:true}).fill("");
+  expect((await new AxeBuilder({page}).include('section[aria-label="Report catalogue"]').analyze()).violations).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});
+  await page.goto(`/workspace/account/reports?branchId=${branchId}`);await expect(page.getByRole("link",{name:"Project Report",exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"Profit & Loss",exact:true})).toHaveCount(0);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountReportFavourite.deleteMany({where:{companyId,userId}});await db.accountSettings.update({where:{companyId},data:{enabledModules:previous.enabledModules}})}
+});

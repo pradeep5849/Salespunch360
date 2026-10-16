@@ -163,6 +163,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountTax(filters:Map<String,String> = emptyMap())=json.parseToJsonElement(call("api/v1/mobile/account/tax"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
  suspend fun saveAccountTax(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/tax","POST",payload.toString()))
  suspend fun accountUtility(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}")).jsonArray
+ suspend fun setAccountReportFavourite(reportKey:String,favourite:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/reports/favourites","POST",buildJsonObject{put("reportKey",reportKey);put("favourite",favourite)}.toString())).jsonObject
  suspend fun accountReportOptions()=json.parseToJsonElement(call("api/v1/mobile/account/reports/options")).jsonObject
  suspend fun accountReport(name:String,filters:Map<String,String>)=json.parseToJsonElement(call("api/v1/mobile/account/reports/${enc(name)}"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
  suspend fun accountReportExport(name:String,format:String,filters:Map<String,String>)=download("api/v1/mobile/account/reports/${enc(name)}/${enc(format)}"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})

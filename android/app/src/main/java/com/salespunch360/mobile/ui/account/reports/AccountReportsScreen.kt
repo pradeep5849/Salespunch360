@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,7 +21,8 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountReportViewModel
-import com.salespunch360.mobile.account.accountReportNames
+import com.salespunch360.mobile.account.accountReportCatalogue
+import com.salespunch360.mobile.account.accountReportFavourites
 import com.salespunch360.mobile.account.accountReportColumns
 import com.salespunch360.mobile.account.accountReportRows
 import com.salespunch360.mobile.account.array
@@ -51,12 +54,21 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     BackHandler(enabled=state.report!=null){vm.choose(null)}
 
     if (state.report == null) {
+        var search by remember{mutableStateOf("")}
+        val entries=accountReportCatalogue(state.options,search)
+        val favourites=accountReportFavourites(state.options)
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp)) {
             item { Text("Account reports", style = MaterialTheme.typography.headlineSmall) }
-            items(accountReportNames(state.options)) { report ->
-                val name = report
-                ListItem(headlineContent = { Text(name.replace('-', ' ').replaceFirstChar { it.uppercase() }) }, modifier = Modifier.clickable { vm.choose(name) })
+            item {OutlinedTextField(search,{search=it},label={Text("Search reports")},modifier=Modifier.fillMaxWidth())}
+            state.error?.let{message->item{Text(message,color=MaterialTheme.colorScheme.error)}}
+            val sections=buildList{val saved=entries.filter{it.key in favourites};if(saved.isNotEmpty())add("Favourites" to saved);addAll(entries.groupBy{it.group}.toList())}
+            sections.forEach{(group,reports)->
+                item(key="heading:$group"){Text(group,style=MaterialTheme.typography.titleMedium,modifier=Modifier.padding(vertical=12.dp))}
+                items(reports,key={"$group:${it.key}"}) { report ->
+                    ListItem(headlineContent={Text(report.name)},modifier=Modifier.clickable{vm.choose(report.key)},trailingContent={TextButton(onClick={vm.favourite(report.key,report.key !in favourites)},enabled=!state.favouriteSaving,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="${if(report.key in favourites)"Remove"else"Add"} ${report.name} ${if(report.key in favourites)"from"else"to"} favourites"}){Text(if(report.key in favourites)"★"else"☆")}})
+                }
             }
+            if(entries.isEmpty())item{Text("No reports match your search.")}
         }
         return
     }

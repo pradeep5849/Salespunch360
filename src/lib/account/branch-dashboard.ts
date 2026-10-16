@@ -64,6 +64,8 @@ export async function accountBranchDashboard(
     } as const;
   }
   const modules = await enabledModulesForCompany(actor.companyId!);
+  const itemPreferences=await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true}});
+  const inventoryEnabled=modules.includes("INVENTORY")&&(itemPreferences?.itemSettings as {enabled?:boolean}|null)?.enabled!==false;
   const [
     sr,
     pr,
@@ -300,7 +302,7 @@ export async function accountBranchDashboard(
       },
       select: { id: true, lowStockThreshold: true },
     }),
-    modules.includes("INVENTORY")
+    inventoryEnabled
       ? inventorySnapshotForActor(
           {
             ...actor,
@@ -362,7 +364,7 @@ export async function accountBranchDashboard(
           .div(previousMonthSales.abs())
           .mul(100)
           .toDecimalPlaces(1);
-  const lowStockPositions = modules.includes("INVENTORY")
+  const lowStockPositions = inventoryEnabled
     ? await lowStockSnapshotForActor(
         {
           ...actor,
@@ -381,7 +383,7 @@ export async function accountBranchDashboard(
     },
     select: { id: true, name: true },
   });
-  const stockValue = modules.includes("INVENTORY")
+  const stockValue = inventoryEnabled
     ? sum(inventoryPositions.map((row) => row.stockValue))
     : Z;
   const bankLedgerIds = new Set(

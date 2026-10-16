@@ -16,6 +16,7 @@ import kotlinx.serialization.json.*
 
 data class AccountReportState(
     val loading: Boolean = false,
+    val favouriteSaving:Boolean=false,
     val report: String? = null,
     val from: String = com.salespunch360.mobile.account.accountReportFinancialYearStart().toString(),
     val to: String = com.salespunch360.mobile.account.accountReportToday().toString(),
@@ -52,6 +53,14 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) {
             fail(e)
         }
+    }
+
+    fun favourite(key:String,selected:Boolean)=viewModelScope.launch{
+        if(_state.value.favouriteSaving)return@launch
+        _state.value=_state.value.copy(favouriteSaving=true,error=null)
+        try{val result=api.setAccountReportFavourite(key,selected);_state.value=_state.value.copy(favouriteSaving=false,options=JsonObject(_state.value.options.toMutableMap().apply{put("favourites",result["favourites"]?:JsonArray(emptyList()))}))}
+        catch(error:CancellationException){throw error}
+        catch(error:Exception){_state.value=_state.value.copy(favouriteSaving=false);fail(error)}
     }
 
     fun context(query:String) {

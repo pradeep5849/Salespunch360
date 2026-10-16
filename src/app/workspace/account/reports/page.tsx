@@ -1,28 +1,9 @@
+import {ReportHub} from "@/components/account/report-hub";
+import {availableReportCatalogueForActor,reportFavouritesForActor} from "@/lib/account/reports/favourites";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth/authorization";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { z } from "zod";
-const reports = [
-  "profit-loss",
-  "balance-sheet",
-  "trial-balance",
-  "cash-flow",
-  "general-ledger",
-  "customer-ledger",
-  "vendor-ledger",
-  "receivable-aging",
-  "payable-aging",
-  "cash-bank",
-  "owner-capital",
-  "profit-withdrawal",
-  "projects",
-  "branches",
-  "items",
-  "invoices",
-  "customers",
-  "tax",
-  "budget-vs-actual",
-];
 export default async function Page({
   searchParams,
 }: {
@@ -62,15 +43,8 @@ export default async function Page({
             : "Choose report dates in the report."}{" "}
           Project costing reports are lifetime-to-date.
         </p>
-        <nav className="employee-actions">
-          {(a.accountRole === "PROJECT_MANAGER" ? ["projects"] : reports).map(
-            (x) => (
-              <Link key={x} href={`/workspace/account/reports/${x}?${query}`}>
-                {x.replaceAll("-", " ")}
-              </Link>
-            ),
-          )}
-        </nav>
+        <ReportHub catalogue={await availableReportCatalogueForActor(a)} initialFavourites={await reportFavouritesForActor(a)} query={query.toString()}/>
+
         <Link href="/workspace/account/reports">
           Reset dates and choose current workspace scope
         </Link>

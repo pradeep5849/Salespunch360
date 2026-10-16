@@ -1,3 +1,5 @@
+import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
+import {availableReportCatalogueForActor,reportFavouritesForActor,setReportFavouriteForActor} from "@/lib/account/reports/favourites";
 import {reportExportRows} from "@/lib/account/reports/export-data";
 import {formatReport} from "@/lib/account/reports/display";
 import {resolveDisplayPreferences} from "@/lib/account/display-preferences";
@@ -14,27 +16,7 @@ import {
 import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
-export const ACCOUNT_REPORTS = [
-  "profit-loss",
-  "balance-sheet",
-  "trial-balance",
-  "cash-flow",
-  "general-ledger",
-  "customer-ledger",
-  "vendor-ledger",
-  "receivable-aging",
-  "payable-aging",
-  "cash-bank",
-  "owner-capital",
-  "profit-withdrawal",
-  "projects",
-  "branches",
-  "items",
-  "invoices",
-  "customers",
-  "tax",
-  "budget-vs-actual",
-] as const;
+export const ACCOUNT_REPORTS=ACCOUNT_REPORT_KEYS;
 function actor(u: MobileAppPrincipal) {
   const a = mobileAccountActor(u);
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_REPORTS"))
@@ -47,10 +29,11 @@ function valid(name: string) {
 }
 export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
   const a = actor(u),
-    options = await reportOptionsForActor(a);
+    options = await reportOptionsForActor(a),catalogue=await availableReportCatalogueForActor(a);
   return {
-    reports:
-      a.accountRole === "PROJECT_MANAGER" ? ["projects"] : ACCOUNT_REPORTS,
+    reports:catalogue.map(x=>x.key),
+    catalogue,
+    favourites:await reportFavouritesForActor(a),
     ...options,
   };
 }
@@ -106,3 +89,5 @@ export async function mobileAccountReportExport(
     };
   throw new Error("INVALID_FORMAT");
 }
+
+export async function mobileSetReportFavourite(u:MobileAppPrincipal,raw:unknown){return {favourites:await setReportFavouriteForActor(actor(u),raw)}}

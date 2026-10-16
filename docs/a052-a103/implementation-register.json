@@ -11270,6 +11270,16 @@
           "primary_finding": "A058-F02",
           "work": "New normalized master retail/discount consumption and saved wholesale-OFF mutation rejection are covered by the A058 pricing continuation.",
           "remaining": "MRP tax policy,authorized sale-price updates and wholesale/customer catalogue consumption remain outstanding;A057-F03 remains PARTIAL."
+        },
+        "dashboard_items_off_2026_10_16": {
+          "work": "Dashboard honors company Items OFF before inventory snapshot/low-stock service calls,avoiding the ITEMS_DISABLED crash introduced by shared inventory enforcement. Existing dashboard links remain hidden;no stock policy bypass.",
+          "files": [
+            "src/lib/account/branch-dashboard.ts",
+            "e2e/a048-dashboard.spec.ts"
+          ],
+          "tests": "Desktop/mobile baseline dashboard drilldown+OFF denial regression2/2 passed (51.1s). Fixture expected catalogue redirect and new report display title updated;cold sign-in/scenario wait budgets increased without dropping assertions.",
+          "remaining": "Other original saved-switch enforcement and final-head validation remain PARTIAL.",
+          "commit": "pending"
         }
       },
       "intermediate_validation": {
@@ -59201,7 +59211,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -59357,6 +59367,18 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "report_hub_2026_10_16": {
+          "work": "One shared supported-destination catalogue supplies web/native report names and groups. Search filters name/group/key. Favourites persist per authenticated company/user with a composite foreign key,unique key,idempotent insert/removal,strict input and fresh report permission checks. Project Manager sees only Project Report;disabled project modules hide destinations/favourites without deleting preferences. Web/native 44/48px controls,pending guard,confirmed-only updates and errors. New preferences included in isolated backup snapshots.",
+          "models": [
+            "AccountReportFavourite"
+          ],
+          "migration": "20261016160000_account_report_favourites;applied isolated local CI database only",
+          "tests": "22 focused report/service/export/backup and real PostgreSQL tests PASS;2 desktop/mobile hub+mobile API scenarios PASS (1.2m),including search/reload/favourites/role denial/AXE/overflow;2 dashboard compatibility cases PASS (51.1s) after related Items OFF crash fix;Android compile/JVM PASS,6 report data/date tests (4+2),0 failures/errors/skips;TypeScript/full ESLint PASS before final pure allowlist deduplication",
+          "remaining": "Final exact-head complete validation and physical Android runtime. Full46 reference destination implementations remain A085-F02;this hub advertises only19 supported service destinations.",
+          "commit": "pending"
+        }
       }
     },
     {
@@ -59612,6 +59634,13 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "shared_catalogue_2026_10_16": {
+          "work": "Web hub,web report destination allowlist and mobile options/validations now consume one typed supported catalogue instead of divergent literal lists. Search/groups/favourites use the same metadata. Only existing19 report services advertised;no unrelated table relabelled into a missing report.",
+          "remaining": "Complete all missing supplied46 report destinations and required computations/UI/export coverage. PARTIAL retained.",
+          "commit": "pending"
+        }
       }
     },
     {
@@ -62214,6 +62243,11 @@
         {
           "work": "Populated backup regression retains original IDs, exact amount strings and company-scoped records for transfer images and all four funding history models; private transfer image keys remain in administrator-only backup metadata.",
           "tests": "Focused populated-snapshot and admin-denial checks added. Complete restore/provider/blob verification remains pending."
+        },
+        {
+          "work": "Backup snapshots include new company/user-scoped report favourite identities with deterministic ordering;populated scoped snapshot regression added.",
+          "tests": "Shared22 report/service/export/backup tests passed,including populated favourite snapshot. Restore/provider/blob/final-head verification still pending.",
+          "commit": "pending"
         }
       ],
       "push_checkpoint_evidence": {

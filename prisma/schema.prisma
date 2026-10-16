@@ -739,6 +739,7 @@ enum ProjectAuditEventType {
 }
 
 model Company {
+  reportFavourites AccountReportFavourite[]
   fieldJobs FieldJob[]
   id                                  String                     @id @default(uuid()) @db.Uuid
   name                                String
@@ -851,6 +852,7 @@ model Company {
 }
 
 model User {
+  reportFavourites AccountReportFavourite[]
   loanOperations LoanOperation[] @relation("LoanOperationCreator")
 
   completedServiceReminders ServiceReminderCompletion[] @relation("ServiceReminderCompleter")
@@ -3624,4 +3626,15 @@ model ExpenseItem {
   @@unique([companyId, creationRequestKey])
   @@index([companyId, isActive, name])
   @@map("expense_items")
+}
+
+model AccountReportFavourite {
+ companyId String @db.Uuid
+ userId String @db.Uuid
+ reportKey String @db.VarChar(60)
+ createdAt DateTime @default(now())
+ company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+ user User @relation(fields:[companyId,userId],references:[companyId,id],onDelete:Cascade)
+ @@id([companyId,userId,reportKey])
+ @@map("account_report_favourites")
 }
