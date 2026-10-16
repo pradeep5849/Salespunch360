@@ -12614,10 +12614,12 @@
             "responsive_browser": "PASS same flows mobile Chromium;4/4 browser scenarios passed (2.7m)",
             "android": "compileDebugKotlin/testDebugUnitTest PASS (2m56s);13 JVM tests:6 ItemMasterPricing +7 SalesPreview,0 failures/errors/skips",
             "android_runtime": "NOT RUN;no emulator/device claim",
-            "final_head_complete_validation": "NOT RUN"
+            "final_head_complete_validation": "NOT RUN",
+            "typescript": "PASS",
+            "eslint": "PASS (npm run lint,0 warnings)"
           },
           "remaining": "Broader purchase/native editor and edited-line coverage, runtime accessibility/device/offline checks and final-head regressions; PARTIAL retained.",
-          "commit": "pending checkpoint commit"
+          "commit": "29eac6955208796223488eafac7cee78cc276dcd"
         }
       }
     },
@@ -35234,10 +35236,12 @@
             "responsive_browser": "PASS same flows mobile Chromium;4/4 browser scenarios passed (2.7m)",
             "android": "compileDebugKotlin/testDebugUnitTest PASS (2m56s);13 JVM tests:6 ItemMasterPricing +7 SalesPreview,0 failures/errors/skips",
             "android_runtime": "NOT RUN;no emulator/device claim",
-            "final_head_complete_validation": "NOT RUN"
+            "final_head_complete_validation": "NOT RUN",
+            "typescript": "PASS",
+            "eslint": "PASS (npm run lint,0 warnings)"
           },
           "remaining": "Reopen Cancel/Yes/Close reference sheet, native device runtime, unsupported posted legacy sources without proven identity, final-head verification. PARTIAL retained. An actor assigned no branches still receives layout AuthorizationError/500; scoped denial test uses a valid other assigned branch and returns404. This existing layout limitation is not claimed fixed.",
-          "commit": "pending checkpoint commit"
+          "commit": "29eac6955208796223488eafac7cee78cc276dcd"
         }
       },
       "push_checkpoint_evidence": {
@@ -36217,10 +36221,12 @@
             "responsive_browser": "PASS same flows mobile Chromium;4/4 browser scenarios passed (2.7m)",
             "android": "compileDebugKotlin/testDebugUnitTest PASS (2m56s);13 JVM tests:6 ItemMasterPricing +7 SalesPreview,0 failures/errors/skips",
             "android_runtime": "NOT RUN;no emulator/device claim",
-            "final_head_complete_validation": "NOT RUN"
+            "final_head_complete_validation": "NOT RUN",
+            "typescript": "PASS",
+            "eslint": "PASS (npm run lint,0 warnings)"
           },
           "remaining": "Reopen Cancel/Yes/Close reference sheet, native device runtime, unsupported posted legacy sources without proven identity, final-head verification. PARTIAL retained. An actor assigned no branches still receives layout AuthorizationError/500; scoped denial test uses a valid other assigned branch and returns404. This existing layout limitation is not claimed fixed.",
-          "commit": "pending checkpoint commit"
+          "commit": "29eac6955208796223488eafac7cee78cc276dcd"
         }
       },
       "push_checkpoint_evidence": {
@@ -64730,6 +64736,14 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Previous pushed checkpoint targeted CI;does not validate later pricing continuation"
+    },
+    {
+      "date": "2026-10-16",
+      "code_head": "29eac6955208796223488eafac7cee78cc276dcd",
+      "tests": "101 focused unit tests;4 desktop/mobile Chromium scenarios;13 Android JVM tests+compile;TypeScript+ESLint all PASS",
+      "scope": "Intermediate focused continuation,not final199-finding complete validation",
+      "new_migrations": 0,
+      "production_database": "NOT ACCESSED"
     }
   ]
 }
