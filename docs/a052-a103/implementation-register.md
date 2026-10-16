@@ -8305,7 +8305,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Inclusive 118; exclusive 100 + GST/cess; fixed/percentage discounts; rounding; preview equals posted gross.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Shared Add/Edit Sale form prefilled; inclusive GST/cess preview and footer clearance corrected; hidden header metadata retained server-side; full credit/replacement behavior tested.", "tests": "Own mobile+desktop Edit Sale/header retention/delete cases passed (2 of 6 corrected sales cases); related reverse-charge/tracked stock/custom-invoice cases passed. TypeScript and targeted ESLint passed. See follow-up for earlier failed runs.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9432,3 +9432,7 @@ A052-F13 remains PARTIAL pending full original parity verification: real foreign
 A052-F01 production remediation is BLOCKED by the explicit prohibition on production DB changes/deployment; local schema/preflight evidence cannot establish production recovery. All 199 IDs and existing statuses preserved. Counts remain 158 implemented but not verified,39 partial,2 not started; zero final closures.
 
 A054-F03 continuation October 16: independent native-facing warehouse/product persistence and tracking-date/denial checks passed in two Playwright API configurations (18.4s). 23 focused tests, TypeScript and targeted lint passed. Code status IMPLEMENTED BUT NOT VERIFIED; Android UI/device/keyboard and final-head validation remain outstanding. Counts159 implemented but not verified/38 partial/2 not started;199 IDs,zero final closures.
+
+A086-F01 continuation October16 (`5ba297cc`): web document preview sums rounded taxable/tax components to match persisted invoices; Android rounds base and discount before tax, and excludes cess as well as GST from reverse-charge payable. 39/39 focused unit/PostgreSQL tests,7/7 native preview JVM tests,Android compilation,TypeScript/focused lint and2/2 final slice desktop/mobile saved-sale edit workflows passed. Physical device/final complete-head verification pending. Counts160 implemented but not verified/37 partial/2 not started;all199 final statuses remain unset.
+
+Targeted GitHub CI Web and Android both passed on `4d4747f59068fa34bfe6a3afcfa8e733edb57095`,run38884055426. Later rounding changes require their own CI run; earlier CI does not establish final checkpoint validation.

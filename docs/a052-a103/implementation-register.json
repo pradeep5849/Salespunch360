@@ -3719,7 +3719,8 @@
             "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseCategoryScreen.kt",
             "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
             "e2e/a090-settings.spec.ts"
-          ]
+          ],
+          "implementation_commit": "73df4f06800bec12adc3720aa8455d4a7c66e660"
         }
       },
       "intermediate_validation": {
@@ -4451,7 +4452,8 @@
           "remaining": "Final-head financial regression, original complete native/web parity and Android device verification remain pending; no final verification status assigned.",
           "files": [
             "src/lib/account/implementation.integration.test.ts"
-          ]
+          ],
+          "implementation_commit": "73df4f06800bec12adc3720aa8455d4a7c66e660"
         }
       },
       "push_checkpoint_evidence": {
@@ -8221,7 +8223,8 @@
           "files": [
             "e2e/a049-a051-expenses.spec.ts"
           ],
-          "remaining": "Code implementation covered; physical/emulator Android editor interaction, keyboard/accessibility and complete final-head validation remain NOT RUN. No final status assigned."
+          "remaining": "Code implementation covered; physical/emulator Android editor interaction, keyboard/accessibility and complete final-head validation remain NOT RUN. No final status assigned.",
+          "implementation_commit": "4d4747f59068fa34bfe6a3afcfa8e733edb57095"
         }
       },
       "intermediate_validation": {
@@ -59825,7 +59828,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -59853,6 +59856,30 @@
             "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx"
           ],
           "tests": "61/61 focused commercial/tax/financial PostgreSQL tests passed (5 files,5.98s), including 10 new preview cases and stored inclusive/exclusive fractional discounted GST/cess parity. Checkpoint TypeScript and targeted ESLint passed. Latest slice browser/native/final-head validation not executed; original finding remains PARTIAL."
+        },
+        "rounding_continuation_2026_10_16": {
+          "implementation_commit": "5ba297cc",
+          "work": "Completed native rounded base/fixed/percentage discount parity and reverse-charge cess exclusion. Web document preview now aggregates rounded taxable and tax components exactly as persisted documents do; preserves separately rounded line totals and existing accounting behavior. Added inclusive tiny-price document boundary regression against real posted invoices.",
+          "files": [
+            "src/lib/account/sale-preview-calculation.ts",
+            "src/lib/account/sale-preview-calculation.test.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt"
+          ],
+          "verification": {
+            "code_implementation": "IMPLEMENTED",
+            "automated": "39/39 focused tax/preview/PostgreSQL tests passed;7/7 native preview JVM tests passed",
+            "web_browser": "PASS saved-sale edit/posted result desktop Chromium",
+            "responsive_web": "PASS same saved-sale edit workflow mobile Chromium;2/2 browser cases passed40.7s",
+            "android_compile": "PASS compileDebugKotlin/testDebugUnitTest1m45s",
+            "android_device_runtime": "NOT RUN",
+            "backend_database_runtime": "PASS isolated real PostgreSQL invoice/cheque financial regression;no production writes",
+            "typescript": "PASS",
+            "focused_lint": "PASS",
+            "final_head_complete_regression": "NOT RUN"
+          },
+          "remaining": "Complete final checkpoint-head regression and physical/emulator runtime verification remain pending. No final closure assigned."
         }
       },
       "push_checkpoint_evidence": {
@@ -64539,5 +64566,15 @@
     "final_validation": "NOT RUN; historical/intermediate results are evidence only",
     "pr_target": "main",
     "mapping_policy": "Per-finding commit provenance is the actual history of explicitly referenced changed files; shared changes are not completion evidence."
-  }
+  },
+  "continuation_validation": [
+    {
+      "date": "2026-10-16",
+      "code_head": "4d4747f59068fa34bfe6a3afcfa8e733edb57095",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/38884055426",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "scope": "Targeted CI only,not final complete199-finding validation"
+    }
+  ]
 }
