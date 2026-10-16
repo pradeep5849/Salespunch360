@@ -14076,7 +14076,7 @@
           ],
           "tests": "Android compile+15 focused JVM tests PASS:6 AddItemValidation,6 ItemMasterPricing,3 BankMetadata;0 failures/errors/skips. TypeScript/full ESLint PASS. No native runtime claim.",
           "remaining": "Native modal/focus/device verification and broader field-error coverage remain;PARTIAL retained",
-          "commit": "pending"
+          "commit": "3216efd6"
         }
       },
       "push_checkpoint_evidence": {
@@ -23550,7 +23550,7 @@
           "work": "User explicitly resolved the account-number/UPI policy: name-only bank creation is valid and full optional details may be entered at creation or later. Existing server/native optional fields preserved;web/native hint makes this clear. Added real database create-name-only/update/clear/no-ledger-effect regression and web/browser name-only-to-edit scenario.",
           "tests": "31 focused bank unit/real PostgreSQL tests PASS;4 desktop/mobile browser bank metadata and name-only create/edit scenarios PASS (1.2m);Android compile+15 focused JVM tests PASS (2m34s);TypeScript/full ESLint PASS",
           "remaining": "Final199-finding exact-head regressions and physical Android runtime pending. Prior bank-account-number/UPI policy blocker resolved;optional fields available both at creation and editing.",
-          "commit": "pending"
+          "commit": "3216efd6"
         }
       ],
       "push_checkpoint_evidence": {
@@ -62755,7 +62755,7 @@
           ],
           "tests": "29 shared display/preview tests PASS;2 desktop/mobile Chromium large-cent USD/3-decimal inventory checks PASS (22.8s);TypeScript/full ESLint PASS",
           "remaining": "Remaining display consumers and final-head validation;PARTIAL retained",
-          "commit": "pending"
+          "commit": "3216efd6"
         }
       },
       "intermediate_validation": {
@@ -64809,6 +64809,14 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Targeted CI for pushed pricing/source checkpoint;does not validate later Re-Open dialog changes"
+    },
+    {
+      "date": "2026-10-16",
+      "code_head": "84aed8ead7db04a25011eaf87a7a91bbbdb48f33",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/38895645534",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "scope": "Previous exact pushed head targeted CI;does not verify later optional-bank/native-validation/display changes"
     }
   ]
 }
