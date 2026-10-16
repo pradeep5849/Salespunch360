@@ -55965,9 +55965,9 @@
             "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
             "e2e/a090-settings.spec.ts"
           ],
-          "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m27s);no device runtime.",
+          "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m41s);no device runtime.",
           "remaining": "Other supplied catalogue destinations and report-specific layouts remain pending;PARTIAL retained. Physical native runtime and full final-head regression not executed.",
-          "commit": "See git history for expense report checkpoint commit."
+          "commit": "b949d3b3"
         }
       }
     },
@@ -59733,9 +59733,9 @@
             "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
             "e2e/a090-settings.spec.ts"
           ],
-          "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m27s);no device runtime.",
+          "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m41s);no device runtime.",
           "remaining": "Other supplied catalogue destinations and report-specific layouts remain pending;PARTIAL retained. Physical native runtime and full final-head regression not executed.",
-          "commit": "See git history for expense report checkpoint commit."
+          "commit": "b949d3b3"
         }
       }
     },
