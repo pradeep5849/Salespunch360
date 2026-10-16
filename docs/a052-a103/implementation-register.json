@@ -12592,7 +12592,8 @@
             "production_database": "NOT ACCESSED",
             "final_head_regression": "NOT RUN"
           },
-          "remaining": "Wholesale application requires pending user choices (manual selection versus threshold;discount stacking). Complete remaining purchase/UI/native coverage,device/offline/accessibility checks and final exact-head validation. Finding remains PARTIAL."
+          "remaining": "Wholesale application requires pending user choices (manual selection versus threshold;discount stacking). Complete remaining purchase/UI/native coverage,device/offline/accessibility checks and final exact-head validation. Finding remains PARTIAL.",
+          "ci_workflow": ".github/workflows/targeted-validation.yml now includes item pricing and opening/retry unit regressions;exact-head run pending"
         }
       }
     },
