@@ -55918,6 +55918,14 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "period_and_filter_controls_2026_10_16": {
+          "work": "Web/native periods implement Today,This Month,Last Month and April financial-year bounds,including leap/year transitions.Lifetime Project reports hide date controls.Shared report metadata exposes only consumed filter dimensions;native requests omit stale unsupported dimensions and backend returns clear400 rather than silently ignoring filters.Exports match applied range.",
+          "tests": "24 focused report/date/query/catalogue/service tests PASS;2 desktop/mobile period/run/export and unsupported-filter API400 scenarios PASS (1.2m);Android compile+8 report JVM tests PASS (2m55s);TypeScript/full ESLint PASS",
+          "remaining": "Report-specific computations,summary/tab/card/empty layouts and full catalogue remain;physical native and final-head validation pending.PARTIAL retained.",
+          "commit": "653c4786462a182b470ecfa20068b5e3e1b86136"
+        }
       }
     },
     {
@@ -56028,6 +56036,13 @@
         {
           "work": "Profitability applies scoped customer/project filters at document query and product filters both at document existence and included-line aggregation. Web removes irrelevant vendor/ledger controls and gives selectors stable accessible names; native exposes customer/product controls for all three profit reports.",
           "tests": "45/45 grouped PostgreSQL/unit/service/filter/export checks passed (6 files, 5.87s); desktop/mobile browser 2/2 passed (39.8s), including form filters, CSV/XLSX/PDF, native API, Axe and overflow. Android Kotlin compile and four report JVM tests passed (2m; zero failure/error/skip). TypeScript/lint passed. Final-head validation pending."
+        },
+        {
+          "shared_filter_metadata_2026_10_16": {
+            "work": "Available filters derive from consumed report-service dimensions.Unsupported nonblank API filters return400.Native stale state omitted using server metadata.",
+            "tests": "Shared24 focused tests and2 desktop/mobile/API scenarios passed",
+            "commit": "653c4786462a182b470ecfa20068b5e3e1b86136"
+          }
         }
       ],
       "push_checkpoint_evidence": {
@@ -59766,6 +59781,13 @@
         {
           "work": "Independently verified native report helpers retain primitive report names, columns and array row cells, including numbers and rupee text.",
           "tests": "AccountReportDataTest response parsing regression passes; Android compile and grouped report-data/date JVM run passes (4 tests,10s). Final-head validation remains pending."
+        },
+        {
+          "primitive_row_links_2026_10_16": {
+            "work": "Native report row links decode primitive URL strings and preserve blank/null row positions instead of discarding them through the object-array helper.Owner navigation retains safe internal prefix check.",
+            "tests": "JVM regression verifies null first row does not shift second owner URL;Android compile+8 report tests passed.No device runtime claim.",
+            "commit": "653c4786462a182b470ecfa20068b5e3e1b86136"
+          }
         }
       ],
       "push_checkpoint_evidence": {
