@@ -9422,3 +9422,11 @@ A058-F08 partial continuation: labelled native web unit/category/help dialogs, n
 
 
 Push checkpoint — A086-F01 partial Decimal preview: shared server/preview base-discount rounding, GST/cess decomposition and rounded-line totals preserved. 61/61 focused unit/real PostgreSQL tests passed (5.98s); checkpoint TypeScript/targeted lint passed. Latest slice browser/native/final-head validation not run. No status promoted. Counts158 implemented but not verified/39 partial/2 not started;199 unique findings retained.
+
+## October 16 expense overview continuation
+
+A052-F11 remains PARTIAL: scoped Categories/Items overview, posted totals, searchable/paginated company catalogue and direct web/native entry routes implemented. 40 focused tests, 4 desktop/mobile browser checks and Android compile plus 4 focused JVM tests passed on October 14. TypeScript, targeted lint and 40 focused tests passed again October 16. Original linked-entry arrangement and Android device/keyboard/TalkBack verification remain outstanding.
+
+A052-F13 remains PARTIAL pending full original parity verification: real foreign-company payment account/category/branch denial regression added; 32 PostgreSQL integrity tests passed October 14. No financial behavior changed.
+
+A052-F01 production remediation is BLOCKED by the explicit prohibition on production DB changes/deployment; local schema/preflight evidence cannot establish production recovery. All 199 IDs and existing statuses preserved. Counts remain 158 implemented but not verified,39 partial,2 not started; zero final closures.

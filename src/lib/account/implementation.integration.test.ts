@@ -251,6 +251,35 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     await expect(createExpenseForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchB]},{...request,requestKey})).rejects.toThrow();
     expect(await client.expenseTransaction.count({where:{companyId,creationRequestKey:requestKey}})).toBe(0);
   });
+  it("A052 paid entry excludes real foreign-company accounts, categories and branches without writes", async () => {
+    const foreignCompany=randomUUID(), foreignBranch=randomUUID(), foreignLedger=randomUUID(), foreignExpenseLedger=randomUUID(), foreignMoney=randomUUID(), foreignCategory=randomUUID();
+    await client.company.create({data:{id:foreignCompany,name:"Foreign paid expense fixture",slug:`paid-expense-${foreignCompany}`,productEdition:"SALESPUNCH360_ACCOUNT"}});
+    try {
+      await client.branch.create({data:{id:foreignBranch,companyId:foreignCompany,name:"Foreign branch",code:"FOREIGN"}});
+      await client.ledgerAccount.create({data:{id:foreignLedger,companyId:foreignCompany,code:"FOREIGN-CASH",name:"Foreign cash",accountClass:"ASSET",normalBalance:"DEBIT"}});
+      await client.moneyAccount.create({data:{id:foreignMoney,companyId:foreignCompany,branchId:foreignBranch,type:"CASH",name:"Foreign cash",ledgerAccountId:foreignLedger}});
+      await client.ledgerAccount.create({data:{id:foreignExpenseLedger,companyId:foreignCompany,code:"FOREIGN-EXPENSE",name:"Foreign expense",accountClass:"EXPENSE",normalBalance:"DEBIT"}});
+      await client.expenseCategory.create({data:{id:foreignCategory,companyId:foreignCompany,name:"Foreign category",scope:"EXPENSE",defaultLedgerAccountId:foreignExpenseLedger}});
+      const before={expenses:await client.expenseTransaction.count({where:{companyId}}),journals:await client.journalEntry.count({where:{companyId}}),audits:await client.accountOperationalAudit.count({where:{companyId}})};
+      const request={branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-09",taxableAmount:"25",recordAsPaid:true};
+      for(const override of [{moneyAccountId:foreignMoney},{categoryId:foreignCategory},{branchId:foreignBranch}]) {
+        const requestKey=randomUUID();
+        await expect(createExpenseForActor(actor,{...request,...override,requestKey})).rejects.toThrow();
+        expect(await client.expenseTransaction.count({where:{creationRequestKey:requestKey}})).toBe(0);
+      }
+      expect(await client.expenseTransaction.count({where:{companyId}})).toBe(before.expenses);
+      expect(await client.journalEntry.count({where:{companyId}})).toBe(before.journals);
+      expect(await client.accountOperationalAudit.count({where:{companyId}})).toBe(before.audits);
+      expect(await client.journalEntry.count({where:{companyId:foreignCompany}})).toBe(0);
+      expect(await client.moneyAccount.findUniqueOrThrow({where:{id:foreignMoney}})).toMatchObject({companyId:foreignCompany,branchId:foreignBranch,ledgerAccountId:foreignLedger});
+    } finally {
+      await client.expenseCategory.deleteMany({where:{companyId:foreignCompany}});
+      await client.moneyAccount.deleteMany({where:{companyId:foreignCompany}});
+      await client.ledgerAccount.deleteMany({where:{companyId:foreignCompany}});
+      await client.branch.deleteMany({where:{companyId:foreignCompany}});
+      await client.company.delete({where:{id:foreignCompany}});
+    }
+  });
   it("A052 paid entry rolls back its journal and expense when posting audit fails", async () => {
     const requestKey=randomUUID(),before=await client.journalEntry.count({where:{companyId}});
     await rejectAudit("EXPENSE_POSTED",async()=>{

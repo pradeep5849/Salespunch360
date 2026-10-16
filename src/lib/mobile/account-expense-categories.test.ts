@@ -32,4 +32,5 @@ describe("mobile expense category branch totals",()=>{
   await expect(mobileExpenseCategories(principal)).rejects.toThrow("MOBILE_FORBIDDEN");
   expect(m.context).not.toHaveBeenCalled();expect(m.summary).not.toHaveBeenCalled();
  });
+ it("exposes creation separately from category administration and view permission",async()=>{m.context.mockResolvedValue({context:{mode:"COMPANY"}});m.permission.mockImplementation((_actor,_edition,permission)=>permission==="ACCOUNT_EXPENSE_VIEW");const result=await mobileExpenseCategories(principal);expect(result.canCreateExpense).toBe(false);expect(result.canManage).toBe(false)});
 });

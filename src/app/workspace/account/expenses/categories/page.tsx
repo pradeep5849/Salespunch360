@@ -13,9 +13,9 @@ import { SaveSubmitButton } from "@/components/account/save-feedback";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; branchId?: string; scope?: string }>;
+  searchParams: Promise<{ q?: string; branchId?: string; scope?: string; create?: string }>;
 }) {
-  const { q = "", branchId, scope } = await searchParams,
+  const { q = "", branchId, scope, create } = await searchParams,
     a = await requirePermission("ACCOUNT_EXPENSE_VIEW"),
     o = await expenseCategoryOptionsForActor(
       { ...a, companyId: a.companyId! },
@@ -59,7 +59,7 @@ export default async function Page({
           </p>
         </section>
         {o.canManage && (
-          <details>
+          <details open={create==="true"}>
             <summary>Create category</summary>
             <ExpenseCategoryForm ledgers={o.ledgers} />
           </details>

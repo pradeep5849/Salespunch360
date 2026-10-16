@@ -836,7 +836,8 @@
       ],
       "checkpoint_work": {
         "status": "PARTIAL",
-        "summary": "Matched supplied production exception to existing additive migration. No production migration executed. Earlier user deferral preceded this new diagnostic evidence; production remediation and validation remain pending. Added read-only generated-client scalar-column verification after migration deployment; it detects missing columns and wrong/empty database targets. Existing historical migrations remain unchanged; no production migration or deployment performed."
+        "summary": "Matched supplied production exception to existing additive migration. No production migration executed. Earlier user deferral preceded this new diagnostic evidence; production remediation and validation remain pending. Added read-only generated-client scalar-column verification after migration deployment; it detects missing columns and wrong/empty database targets. Existing historical migrations remain unchanged; no production migration or deployment performed.",
+        "production_execution_blocker": "BLOCKED \u2014 production migration/remediation and validation are prohibited in this checkpoint. Provided P2022 identifies missing creationRequestKey; local migration/preflight work is not proof of production recovery."
       },
       "production_evidence": {
         "code": "P2022",
@@ -3699,7 +3700,27 @@
         },
         "catalogue_and_reversal_slice": "Reusable company catalogue and web/native item selection/photo persistence added to linked expense entry. Category/list reference layout dependencies still remain; no complete status inferred.",
         "slice_validation": "Intermediate:44 focused guard/capability/feedback tests pass;3 catalogue/input/photo tests pass; four desktop/mobile entry+paid API checks pass;two catalogue photo/retry/company-isolation API checks pass; Android compile/JVM146 pass;TypeScript/focused lint pass. Broader unit suite in progress; exact final PR-head tests not run.",
-        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head."
+        "slice_unit_regression": "2744 passed,107 skipped,0 failed;422 files passed,9 skipped. Intermediate implementation slice,not final checkpoint PR head.",
+        "expense_overview_continuation_2026_10_16": {
+          "work": "Added scoped expense overview with Categories/Items tabs, posted category totals, searchable paginated reusable item catalogue, Add Expenses and direct category creation on web/native. Existing transactions, Other Income and recurring workflows remain reachable. Native new-expense route opens its authorized entry form. Distinct Manage categories label avoids ambiguous tab navigation.",
+          "tests": "40 focused unit tests passed; 4 desktop/mobile-web overview/scope/access/Axe scenarios passed on October 14; Android compileDebugKotlin and 4 BranchQuery JVM tests passed. Resumed October 16 TypeScript, focused lint and 40 unit tests passed.",
+          "remaining": "Original linked-entry reference header/GST/settings/number/date/firm arrangement still requires completion; physical Android/keyboard/TalkBack and final-head validation not executed.",
+          "files": [
+            "src/components/account/expense-overview.tsx",
+            "src/components/account/expense-overview.module.css",
+            "src/app/workspace/account/expenses/page.tsx",
+            "src/app/workspace/account/expenses/categories/page.tsx",
+            "src/lib/mobile/account-expenses.ts",
+            "src/lib/mobile/account-expense-categories.test.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/ExpenseCategoryViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseOverviewScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseCategoryScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
+            "e2e/a090-settings.spec.ts"
+          ]
+        }
       },
       "intermediate_validation": {
         "expense_item_entry_slice": {
@@ -4423,6 +4444,14 @@
         "funding_dependency_followup": {
           "work": "Shared accounting correction guard rejects reversal-of-reversal for managed financial sources; original business correction must be used.",
           "tests": "Four focused managed-source cases passed in the 54/54 financial group. Final-head validation remains pending."
+        },
+        "expense_overview_continuation_2026_10_16": {
+          "work": "Added real foreign-company account/category/branch isolation regression to existing immediate-payment, approval-review, retry and rollback coverage; preserves paid-save implementation. No financial behavior changed in this slice.",
+          "tests": "32/32 real PostgreSQL integration tests passed October 14 after correcting the new foreign-category fixture ledger. Existing intermediate paid web/API evidence retained. Resumed TypeScript and targeted lint passed October 16.",
+          "remaining": "Final-head financial regression, original complete native/web parity and Android device verification remain pending; no final verification status assigned.",
+          "files": [
+            "src/lib/account/implementation.integration.test.ts"
+          ]
         }
       },
       "push_checkpoint_evidence": {

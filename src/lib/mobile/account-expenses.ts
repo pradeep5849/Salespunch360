@@ -168,7 +168,7 @@ export async function mobileExpenseCategories(
     expenseCategoryOptionsForActor(actor, q ?? ""),
     expenseSummaryForActor(actor, { branchId }, q ?? ""),
   ]);
-  return { ...options, summary, branchContext: scoped.context };
+  return { ...options, summary, branchContext: scoped.context, canCreateExpense:canUsePermission(actor,u.productEdition,"ACCOUNT_EXPENSE_ENTRY") };
 }
 export async function mobileSaveExpenseCategory(
   u: MobileAppPrincipal,

@@ -1,3 +1,4 @@
+import {createExpenseForActor} from "../src/lib/account/expenses";
 import {extractPdfText} from "../tests/helpers/pdf-text";
 import AxeBuilder from "@axe-core/playwright";
 import {mobileStockSummary,mobileStockSummaryExport} from "../src/lib/mobile/account-inventory";
@@ -1570,7 +1571,7 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   await page.goto(`/workspace/account/expenses?branchId=${second}`);
   await expect(page.getByRole("link",{name:"A052-SCOPE-1",exact:true})).toBeVisible();
   await expect(page.getByRole("link",{name:"A052-SCOPE-0",exact:true})).toHaveCount(0);
-  await page.getByRole("link",{name:"Categories",exact:true}).click();
+  await page.getByRole("link",{name:"Manage categories",exact:true}).click();
   await expect(page).toHaveURL(new RegExp(`categories\\?branchId=${second}`));
   await expect(page.getByRole("heading",{name:"Posted totals · Expense second branch · all history",exact:true})).toBeVisible();
   await page.getByLabel("Search categories",{exact:true}).fill("Expense scope");
@@ -1594,7 +1595,7 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   await expect(page.getByRole("heading",{name:"Expenses access unavailable",exact:true})).toBeVisible();
   await db.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
   await page.goto(`/workspace/account/expenses?branchId=${branchId}`);
-  await expect(page.getByRole("heading",{name:"Expenses & Other Income",exact:true})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Expenses",exact:true})).toBeVisible();
   await expect(page.getByRole("link",{name:/A052-SCOPE/})).toHaveCount(0);
 
  } finally {
@@ -1987,4 +1988,30 @@ test("A058 item dialogs restore focus and reject invalid numeric saves without l
   const newCategory=page.getByRole("dialog",{name:"Add New Category",exact:true});await newCategory.getByRole("textbox",{name:"Category Name",exact:true}).fill("Retained category draft");await page.keyboard.press("Escape");await expect(newCategory).not.toBeVisible();await expect(category.getByRole("button",{name:/Add New Category/})).toBeFocused();await page.keyboard.press("Escape");await expect(categoryTrigger).toBeFocused();
   const price=page.getByPlaceholder("Sale Price",{exact:true});await price.fill("-1");await page.getByRole("button",{name:"Save",exact:true}).click();await expect(price).toBeFocused();expect(await price.evaluate((node:HTMLInputElement)=>node.validity.rangeUnderflow)).toBe(true);await expect(name).toHaveValue("Retained invalid item draft");expect(await db.accountProduct.count({where:{companyId,name:"Retained invalid item draft"}})).toBe(0);
  }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:original.transactionDefaults??{}}})}
+});
+
+
+test("A052 category overview uses posted totals and items search pagination with scoped entry",async({page})=>{
+ test.setTimeout(180000);
+ const suffix=randomUUID().slice(0,8),categoryId=randomUUID(),cashLedger=randomUUID(),expenseLedger=randomUUID(),moneyId=randomUUID();let expenseId:string|undefined;
+ const itemPrefix=`Overview ${suffix}`;
+ await db.ledgerAccount.createMany({data:[{id:cashLedger,companyId,code:`OC-${suffix}`,name:`Overview cash ${suffix}`,accountClass:"ASSET",normalBalance:"DEBIT"},{id:expenseLedger,companyId,code:`OE-${suffix}`,name:`Overview expense ${suffix}`,accountClass:"EXPENSE",normalBalance:"DEBIT"}]});
+ await db.expenseCategory.create({data:{id:categoryId,companyId,name:`Overview category ${suffix}`,scope:"EXPENSE",defaultLedgerAccountId:expenseLedger}});
+ await db.moneyAccount.create({data:{id:moneyId,companyId,branchId,name:`Overview cash ${suffix}`,type:"CASH",ledgerAccountId:cashLedger}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Overview year",startDate:new Date("2026-04-01"),endDate:new Date("2027-03-31")}});
+ try{
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const created=await createExpenseForActor(actor,{type:"OFFICE_EXPENSE",branchId,categoryId,moneyAccountId:moneyId,transactionDate:"2026-10-13",taxableAmount:"12.34",recordAsPaid:true,requestKey:randomUUID()});expenseId=created.id;
+  await db.expenseItem.createMany({data:Array.from({length:26},(_,i)=>({companyId,name:`${itemPrefix} ${String(i).padStart(2,"0")}`,normalizedName:`${itemPrefix.toLowerCase()} ${String(i).padStart(2,"0")}`,creationRequestKey:randomUUID(),creationRequestHash:"0".repeat(64)}))});
+  await signInSettings(page);await page.goto(`/workspace/account/expenses?branchId=${branchId}`);
+  const overview=page.getByRole("region",{name:"Expense overview",exact:true});await expect(overview.getByRole("link",{name:"Categories",exact:true})).toHaveAttribute("aria-current","page");await expect(overview.locator("article").filter({hasText:`Overview category ${suffix}`})).toContainText("₹12.34");
+  await overview.getByRole("link",{name:"Items",exact:true}).click();await page.getByRole("textbox",{name:"Search items",exact:true}).fill(itemPrefix);await page.getByRole("button",{name:"Search overview",exact:true}).click();await expect(overview.locator("article")).toHaveCount(25);await overview.getByRole("link",{name:"Next items",exact:true}).click();await expect(overview.locator("article")).toHaveCount(1);await page.reload();await expect(overview.getByRole("link",{name:"Items",exact:true})).toHaveAttribute("aria-current","page");await expect(overview).toContainText(`${itemPrefix} 25`);
+  await page.getByRole("textbox",{name:"Search items",exact:true}).fill("not-existing-overview-item");await page.getByRole("button",{name:"Search overview",exact:true}).click();await expect(overview.getByRole("status")).toContainText("No expense items found");
+  await expect(overview.getByRole("link",{name:"＋ Add Expenses",exact:true})).toHaveAttribute("href",`/workspace/account/expenses/new?branchId=${branchId}`);
+  await overview.getByRole("link",{name:"＋ Add Expenses",exact:true}).click();await expect(page.getByRole("heading",{name:"New Expense / Income",exact:true})).toBeVisible();
+  await page.goto(`/workspace/account/expenses?branchId=${branchId}`);await overview.getByRole("link",{name:"＋ Add Expense / Income Category",exact:true}).click();await expect(page.getByRole("textbox",{name:"Category name",exact:true})).toBeVisible();
+  await page.goto(`/workspace/account/expenses?branchId=${branchId}`);expect((await new AxeBuilder({page}).include(".employees-content").withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{
+  await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;if(expenseId){const journals=await tx.journalEntry.findMany({where:{companyId,sourceId:expenseId},select:{id:true}}),ids=journals.map(x=>x.id);await tx.expenseTransaction.deleteMany({where:{companyId,id:expenseId}});await tx.accountingAuditEvent.deleteMany({where:{companyId,entityId:{in:ids}}});await tx.journalLine.deleteMany({where:{companyId,journalEntryId:{in:ids}}});await tx.journalEntry.deleteMany({where:{companyId,id:{in:ids}}});await tx.accountOperationalAudit.deleteMany({where:{companyId,entityId:expenseId}})}await tx.expenseItem.deleteMany({where:{companyId,name:{startsWith:itemPrefix}}});await tx.expenseCategory.deleteMany({where:{companyId,id:categoryId}});await tx.moneyAccount.deleteMany({where:{companyId,id:moneyId}});await tx.ledgerAccount.deleteMany({where:{companyId,id:{in:[cashLedger,expenseLedger]}}})})
+ }
 });

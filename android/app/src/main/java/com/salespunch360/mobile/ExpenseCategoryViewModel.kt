@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
-data class ExpenseCategoryState(val summary:JsonObject?=null,val scopeLabel:String="Selected scope",val canManage:Boolean=false,val message:String?=null,val loading:Boolean=false,val saving:Boolean=false,val query:String="",val categories:List<JsonObject> = emptyList(),val ledgers:List<JsonObject> = emptyList(),val editing:JsonObject?=null,val error:String?=null)
+data class ExpenseCategoryState(val itemTab:Boolean=false,val expenseItems:List<JsonObject> = emptyList(),val itemTotal:Int=0,val itemNextOffset:Int?=null,val canCreateExpense:Boolean=false,val summary:JsonObject?=null,val scopeLabel:String="Selected scope",val canManage:Boolean=false,val message:String?=null,val loading:Boolean=false,val saving:Boolean=false,val query:String="",val categories:List<JsonObject> = emptyList(),val ledgers:List<JsonObject> = emptyList(),val editing:JsonObject?=null,val error:String?=null)
 class ExpenseCategoryViewModel(app:Application):AndroidViewModel(app) {
     private val api=ApiClient(SecureSession(app))
     private val _state=MutableStateFlow(ExpenseCategoryState())
@@ -25,18 +25,22 @@ class ExpenseCategoryViewModel(app:Application):AndroidViewModel(app) {
         _state.value=ExpenseCategoryState()
         load()
     }
-    fun load() {
+    fun showItems(value:Boolean){if(_state.value.itemTab==value||_state.value.saving)return;_state.value=_state.value.copy(itemTab=value,query="");load()}
+    fun loadMoreItems(){if(_state.value.itemTab&&_state.value.itemNextOffset!=null&&!_state.value.loading)load(true)}
+    fun load(append:Boolean=false) {
         if(_state.value.saving)return
+        val snapshot=_state.value
         val request=++generation
         readJob?.cancel()
-        _state.value=_state.value.copy(loading=true,error=null,summary=null,categories=emptyList(),ledgers=emptyList(),canManage=false)
+        _state.value=_state.value.copy(loading=true,error=null,summary=null,categories=emptyList(),ledgers=emptyList(),canManage=false,canCreateExpense=false,expenseItems=if(append)snapshot.expenseItems else emptyList())
         readJob=viewModelScope.launch {
             try {
-                val x=api.expenseCategories(_state.value.query,contextQuery.orEmpty())
+                val x=api.expenseCategories(if(snapshot.itemTab)""else snapshot.query,contextQuery.orEmpty())
+                val items=if(snapshot.itemTab)api.expenseItems(snapshot.query,if(append)snapshot.itemNextOffset?:0 else 0)else null
                 if(request!=generation)return@launch
                 val scope=x["branchContext"] as? JsonObject
                 val label=if(scope?.get("mode")?.jsonPrimitive?.contentOrNull=="COMPANY")"Company consolidated" else scope?.get("branchName")?.jsonPrimitive?.contentOrNull?:"Selected branch"
-                _state.value=_state.value.copy(loading=false,scopeLabel=label,summary=x["summary"] as? JsonObject,canManage=x["canManage"]?.jsonPrimitive?.booleanOrNull==true,categories=x["categories"]?.jsonArray?.map{it.jsonObject}.orEmpty(),ledgers=x["ledgers"]?.jsonArray?.map{it.jsonObject}.orEmpty())
+                _state.value=_state.value.copy(loading=false,canCreateExpense=x["canCreateExpense"]?.jsonPrimitive?.booleanOrNull==true,expenseItems=(if(append)snapshot.expenseItems else emptyList())+(items?.get("rows") as? JsonArray)?.map{it.jsonObject}.orEmpty(),itemTotal=items?.get("total")?.jsonPrimitive?.intOrNull?:0,itemNextOffset=items?.get("nextOffset")?.jsonPrimitive?.intOrNull,scopeLabel=label,summary=x["summary"] as? JsonObject,canManage=x["canManage"]?.jsonPrimitive?.booleanOrNull==true,categories=x["categories"]?.jsonArray?.map{it.jsonObject}.orEmpty(),ledgers=x["ledgers"]?.jsonArray?.map{it.jsonObject}.orEmpty())
             } catch(e:CancellationException) { throw e } catch(e:Exception) { if(request==generation)fail(e) }
         }
     }

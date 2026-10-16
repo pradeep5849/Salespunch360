@@ -1,3 +1,6 @@
+import {ExpenseOverview} from "@/components/account/expense-overview";
+import {listExpenseItemsForActor} from "@/lib/account/expense-items";
+import {expenseSummaryForActor} from "@/lib/account/expenses";
 import { ClientMoney } from "@/components/account/display-preferences";
 import Link from "next/link";
 import {
@@ -49,6 +52,14 @@ async function loadExpensePage(
       ACCOUNT_ROLE_PERMISSIONS[actor.accountRole].includes(
         "ACCOUNT_EXPENSE_ENTRY",
       );
+    const overviewTab=query.overview==="items"?"items" as const:"categories" as const;
+    const overviewSearch=(query.overviewQ??"").trim().slice(0,160);
+    const [overviewTotals,overviewCategories,overviewItems]=await Promise.all([
+      expenseSummaryForActor({...actor,companyId:actor.companyId!},{branchId:filters.branchId},overviewTab==="categories"?overviewSearch:""),
+      db.expenseCategory.findMany({where:{companyId:actor.companyId!,...(overviewTab==="categories"&&overviewSearch?{name:{contains:overviewSearch,mode:"insensitive" as const}}:{})},select:{id:true,name:true,isActive:true},orderBy:{name:"asc"}}),
+      overviewTab==="items"?listExpenseItemsForActor({...actor,companyId:actor.companyId!},{q:overviewSearch,offset:query.itemOffset??0,limit:25}):Promise.resolve(null),
+    ]);
+    const overviewAmounts=new Map(overviewTotals.categories.map(row=>[row.categoryId,row]));
     const branches = new Map(scoped.branches.map((b) => [b.id, b.name]));
     const scopeQuery = scoped.context.mode === "BRANCH"
       ? `branchId=${scoped.context.branchId}`
@@ -81,6 +92,7 @@ async function loadExpensePage(
       categories,
       scopeQuery,
       summary: data.summary,
+      overview:{tab:overviewTab,search:overviewSearch,items:overviewItems,expense:overviewTotals.expense,income:overviewTotals.income,categories:overviewCategories.map(row=>({...row,expense:overviewAmounts.get(row.id)?.expense??"0.00",income:overviewAmounts.get(row.id)?.income??"0.00"})),canManage:actor.accountRole==="ACCOUNT_ADMIN"},
     };
   } catch (error) {
     if (
@@ -119,9 +131,11 @@ export default async function Page({
     <div className="employees-shell">
       <section className="employees-content">
         <WorkspacePageHeader
-          title="Expenses & Other Income"
+          title="Expenses"
           backHref="/workspace/account"
         />
+        <ExpenseOverview {...result.overview} canCreate={Boolean(canCreate)} scopeQuery={scopeQuery} scopeLabel={scoped.context.mode==="COMPANY"?"Company consolidated":scoped.context.branchName}/>
+        <details open={Boolean(query.q||query.status||query.type||query.categoryId||query.templateId||query.offset||query.branchId||query.scope)}><summary>Transactions, Other Income and recurring expenses</summary>
         <p>
           {canCreate && (
             <>
@@ -137,7 +151,7 @@ export default async function Page({
               ·{" "}
             </>
           )}
-          <Link href={`/workspace/account/expenses/categories?${scopeQuery}`}>Categories</Link>{" "}
+          <Link href={`/workspace/account/expenses/categories?${scopeQuery}`}>Manage categories</Link>{" "}
           · <Link href="/workspace/account/expenses/recurring">Recurring</Link>
         </p>
         <p>
@@ -293,6 +307,7 @@ export default async function Page({
             </>
           )}
         </nav>
+        </details>
       </section>
     </div>
   );
