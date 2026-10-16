@@ -11279,7 +11279,7 @@
           ],
           "tests": "Desktop/mobile baseline dashboard drilldown+OFF denial regression2/2 passed (51.1s). Fixture expected catalogue redirect and new report display title updated;cold sign-in/scenario wait budgets increased without dropping assertions.",
           "remaining": "Other original saved-switch enforcement and final-head validation remain PARTIAL.",
-          "commit": "pending"
+          "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
         }
       },
       "intermediate_validation": {
@@ -59375,9 +59375,9 @@
             "AccountReportFavourite"
           ],
           "migration": "20261016160000_account_report_favourites;applied isolated local CI database only",
-          "tests": "22 focused report/service/export/backup and real PostgreSQL tests PASS;2 desktop/mobile hub+mobile API scenarios PASS (1.2m),including search/reload/favourites/role denial/AXE/overflow;2 dashboard compatibility cases PASS (51.1s) after related Items OFF crash fix;Android compile/JVM PASS,6 report data/date tests (4+2),0 failures/errors/skips;TypeScript/full ESLint PASS before final pure allowlist deduplication",
+          "tests": "22 focused report/service/export/backup and real PostgreSQL tests PASS;2 desktop/mobile hub+mobile API scenarios PASS (1.2m),including search/reload/favourites/role denial/AXE/overflow;2 dashboard compatibility cases PASS (51.1s) after related Items OFF crash fix;Android compile/JVM PASS,6 report data/date tests (4+2),0 failures/errors/skips;TypeScript/full ESLint PASS before final pure allowlist deduplication;final slice TypeScript/full ESLint PASS after allowlist deduplication",
           "remaining": "Final exact-head complete validation and physical Android runtime. Full46 reference destination implementations remain A085-F02;this hub advertises only19 supported service destinations.",
-          "commit": "pending"
+          "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
         }
       }
     },
@@ -59639,7 +59639,7 @@
         "shared_catalogue_2026_10_16": {
           "work": "Web hub,web report destination allowlist and mobile options/validations now consume one typed supported catalogue instead of divergent literal lists. Search/groups/favourites use the same metadata. Only existing19 report services advertised;no unrelated table relabelled into a missing report.",
           "remaining": "Complete all missing supplied46 report destinations and required computations/UI/export coverage. PARTIAL retained.",
-          "commit": "pending"
+          "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
         }
       }
     },
@@ -62247,7 +62247,7 @@
         {
           "work": "Backup snapshots include new company/user-scoped report favourite identities with deterministic ordering;populated scoped snapshot regression added.",
           "tests": "Shared22 report/service/export/backup tests passed,including populated favourite snapshot. Restore/provider/blob/final-head verification still pending.",
-          "commit": "pending"
+          "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
         }
       ],
       "push_checkpoint_evidence": {
@@ -64851,6 +64851,14 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Previous exact pushed head targeted CI;does not verify later optional-bank/native-validation/display changes"
+    },
+    {
+      "date": "2026-10-16",
+      "code_head": "bcb2aae115f0a6fa8955875337cc6f947750c8ec",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/38920959448",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "scope": "Previous optional-bank/native-validation/display checkpoint;does not verify newer report-hub changes"
     }
   ]
 }
