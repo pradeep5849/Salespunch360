@@ -1,5 +1,7 @@
-/** Only verified report service destinations are advertised as available. */
+/** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["sale-report", "Sale Report", "Transaction"],
+  ["purchase-report", "Purchase Report", "Transaction"],
   ["profit-loss", "Profit & Loss", "Business"],
   ["balance-sheet", "Balance Sheet", "Business"],
   ["trial-balance", "Trial Balance", "Business"],
@@ -14,9 +16,9 @@ export const REPORT_CATALOGUE = [
   ["profit-withdrawal", "Profit Withdrawal", "Owners & Partners"],
   ["projects", "Project Report", "Projects"],
   ["branches", "Branch Report", "Business"],
-  ["items", "Item Profitability", "Items"],
-  ["invoices", "Invoice Report", "Sales"],
-  ["customers", "Customer Report", "Parties"],
+  ["items", "Item Wise Profit & Loss", "Item/Stock reports"],
+  ["invoices", "Bill Wise Profit", "Transaction"],
+  ["customers", "Party Wise Profit & Loss", "Party reports"],
   ["tax", "GST / Tax Report", "Tax"],
   ["budget-vs-actual", "Budget vs Actual", "Projects"],
 ].map(([key, name, group]) => ({ key, name, group }));
@@ -37,6 +39,8 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "sale-report": ["customerId", "projectId"],
+  "purchase-report": ["vendorId", "projectId"],
   "general-ledger": ["ledgerId"],
   "customer-ledger": ["customerId"],
   "vendor-ledger": ["vendorId"],

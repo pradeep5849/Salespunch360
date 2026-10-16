@@ -23561,6 +23561,11 @@
           "tests": "31 focused bank unit/real PostgreSQL tests PASS;4 desktop/mobile browser bank metadata and name-only create/edit scenarios PASS (1.2m);Android compile+15 focused JVM tests PASS (2m34s);TypeScript/full ESLint PASS",
           "remaining": "Final199-finding exact-head regressions and physical Android runtime pending. Prior bank-account-number/UPI policy blocker resolved;optional fields available both at creation and editing.",
           "commit": "3216efd6"
+        },
+        {
+          "work": "Bank details remain optional at creation or later editing, as reconfirmed by user. Native UPI pattern explicitly matches ASCII server contract; added valid dot/underscore/hyphen handles and invalid backslash regression.",
+          "tests": "BankMetadataInputTest4 PASS within14-test native group;compile PASS.",
+          "remaining": "Final-head and Android device runtime pending."
         }
       ],
       "push_checkpoint_evidence": {
@@ -55925,6 +55930,26 @@
           "tests": "24 focused report/date/query/catalogue/service tests PASS;2 desktop/mobile period/run/export and unsupported-filter API400 scenarios PASS (1.2m);Android compile+8 report JVM tests PASS (2m55s);TypeScript/full ESLint PASS",
           "remaining": "Report-specific computations,summary/tab/card/empty layouts and full catalogue remain;physical native and final-head validation pending.PARTIAL retained.",
           "commit": "653c4786462a182b470ecfa20068b5e3e1b86136"
+        },
+        "transaction_report_slice_2026_10_16": {
+          "work": "Sale and Purchase reports now calculate posted invoice/bill and signed return transactions with as-of invoice outstanding balances, transaction counts and financial summaries. Web has responsive cards, source links and illustrated empty state; native uses safe internal sale/purchase links and server-formatted summaries. Existing item/bill/party profitability destinations use their supplied names and Bill Wise Profit links to source documents. CSV/PDF data includes summaries. Table totals use a row header plus data cells, resolving the observed desktop AXE empty-header defect. No ledger writes are performed by reporting.",
+          "files": [
+            "src/lib/account/reports/transaction-reports.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/export-data.ts",
+            "src/components/account/report-summary.tsx",
+            "src/components/account/transaction-report-view.tsx",
+            "src/components/account/transaction-report-view.module.css",
+            "src/components/account/report-table.tsx",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+          ],
+          "tests": "38 focused unit/real PostgreSQL financial cases PASS;26 report/display/export/service tests PASS;2 desktop/mobile Chromium transaction summary/source/CSV/empty-state/AXE/overflow cases PASS (40.8s);Android compile and14 JVM tests PASS (2m22s). TypeScript/full ESLint recorded separately after latest table change.",
+          "remaining": "Other supplied report destinations and report-specific layouts remain;PARTIAL retained. Physical Android runtime and full final-head validation not executed.",
+          "commit": "See git history for transaction reports checkpoint commit."
         }
       }
     },
@@ -59655,6 +59680,26 @@
           "work": "Web hub,web report destination allowlist and mobile options/validations now consume one typed supported catalogue instead of divergent literal lists. Search/groups/favourites use the same metadata. Only existing19 report services advertised;no unrelated table relabelled into a missing report.",
           "remaining": "Complete all missing supplied46 report destinations and required computations/UI/export coverage. PARTIAL retained.",
           "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
+        },
+        "transaction_report_slice_2026_10_16": {
+          "work": "Sale and Purchase reports now calculate posted invoice/bill and signed return transactions with as-of invoice outstanding balances, transaction counts and financial summaries. Web has responsive cards, source links and illustrated empty state; native uses safe internal sale/purchase links and server-formatted summaries. Existing item/bill/party profitability destinations use their supplied names and Bill Wise Profit links to source documents. CSV/PDF data includes summaries. Table totals use a row header plus data cells, resolving the observed desktop AXE empty-header defect. No ledger writes are performed by reporting.",
+          "files": [
+            "src/lib/account/reports/transaction-reports.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/export-data.ts",
+            "src/components/account/report-summary.tsx",
+            "src/components/account/transaction-report-view.tsx",
+            "src/components/account/transaction-report-view.module.css",
+            "src/components/account/report-table.tsx",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+          ],
+          "tests": "38 focused unit/real PostgreSQL financial cases PASS;26 report/display/export/service tests PASS;2 desktop/mobile Chromium transaction summary/source/CSV/empty-state/AXE/overflow cases PASS (40.8s);Android compile and14 JVM tests PASS (2m22s). TypeScript/full ESLint recorded separately after latest table change.",
+          "remaining": "Other supplied report destinations and report-specific layouts remain;PARTIAL retained. Physical Android runtime and full final-head validation not executed.",
+          "commit": "See git history for transaction reports checkpoint commit."
         }
       }
     },
@@ -62812,6 +62857,11 @@
           "tests": "29 shared display/preview tests PASS;2 desktop/mobile Chromium large-cent USD/3-decimal inventory checks PASS (22.8s);TypeScript/full ESLint PASS",
           "remaining": "Remaining display consumers and final-head validation;PARTIAL retained",
           "commit": "3216efd6"
+        },
+        "transaction_report_slice_2026_10_16": {
+          "work": "Report summary/export monetary values use company preferences and preserve scientific Decimal aggregates exactly; identifiers remain unchanged.",
+          "tests": "26 focused report/display/export/service tests PASS",
+          "remaining": "Other display consumers and final-head verification pending."
         }
       },
       "intermediate_validation": {

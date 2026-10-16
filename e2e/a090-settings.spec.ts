@@ -2104,3 +2104,19 @@ test("A084 report periods apply to visible results and exports and ignored filte
  const csv=page.getByRole("link",{name:"CSV",exact:true});await expect(csv).toHaveAttribute("href",new RegExp(`from=${range.from}.*to=${range.to}`));const exported=await page.request.get((await csv.getAttribute("href"))!);expect(exported.status()).toBe(200);
  await expect(page.getByRole("region",{name:"Report results",exact:true})).toBeVisible();
 });
+
+test("A084 sale report summary,source navigation and empty purchase state use posted transactions",async({page})=>{
+ test.setTimeout(120000);
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Report verification year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:`REPORT ${row.name}`,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-10",idempotencyKey:randomUUID(),lines:[{lineType:"CUSTOM",itemName:"Report browser item",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+ const journals=await db.journalEntry.count({where:{companyId}});
+ await signInSettings(page);await page.goto(`/workspace/account/reports/sale-report?branchId=${branchId}&from=2026-10-10&to=2026-10-10`);
+ const summary=page.getByRole("region",{name:"Report summary",exact:true});await expect(summary.getByText("No. of Transactions",{exact:true}).locator("..")).toContainText("1");await expect(summary.getByText("Total Sale",{exact:true}).locator("..")).toContainText("100.00");await expect(summary.getByText("Balance Due",{exact:true}).locator("..")).toContainText("100.00");
+ const csv=await page.request.get((await page.getByRole("link",{name:"CSV",exact:true}).getAttribute("href"))!);expect(csv.status()).toBe(200);const csvText=await csv.text();expect(csvText).toContain("No. of Transactions");expect(csvText).toContain("Total Sale");
+ expect((await new AxeBuilder({page}).include('.employees-content').analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const source=page.getByRole("region",{name:"Report results",exact:true}).locator(`a[href="/workspace/account/sales/${sale.id}"]:visible`);await source.click();await expect(page).toHaveURL(new RegExp(`/sales/${sale.id}`),{timeout:20000});
+ await page.goto(`/workspace/account/reports/purchase-report?branchId=${branchId}&from=2026-10-10&to=2026-10-10`);await expect(page.getByRole("region",{name:"No report transactions",exact:true})).toContainText("No transactions for this period");expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ expect((await new AxeBuilder({page}).include('.employees-content').analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

@@ -49,7 +49,7 @@ const moneyColumns = new Set([
   "Budget Variance",
 ]);
 const dateColumns = new Set(["Date", "Due"]);
-const numeric = /^-?\d+(?:\.\d+)?$/;
+const numeric = /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 
 export function formatReportCell(
   column: string,
@@ -87,6 +87,7 @@ export function formatReport(
         )
       : data.columns,
     rows: data.rows.map(row),
+    ...(data.summary?{summary:data.summary.map(item=>({...item,displayValue:item.money?(exportValue?new Prisma.Decimal(item.value).toFixed(preferences.displayDecimalPlaces):formatMoney(item.value,preferences)):item.value}))}:{}),
     ...(data.totals ? { totals: row(data.totals) } : {}),
   };
 }

@@ -11,7 +11,7 @@ export function ReportTable({ data }: { data: ReportResult }) {
       <thead>
         <tr>
           {formatted.columns.map((column) => (
-            <th key={column}>{column}</th>
+            <th key={column} scope="col">{column}</th>
           ))}
         </tr>
       </thead>
@@ -32,7 +32,7 @@ export function ReportTable({ data }: { data: ReportResult }) {
         {formatted.totals && (
           <tr>
             {formatted.totals.map((cell, j) => (
-              <th key={j}>{cell}</th>
+              j === 0 ? <th key={j} scope="row">{cell || "Total"}</th> : <td key={j}>{cell}</td>
             ))}
           </tr>
         )}

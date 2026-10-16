@@ -1,3 +1,5 @@
+import {TransactionReportView} from "@/components/account/transaction-report-view";
+import {ReportSummary} from "@/components/account/report-summary";
 import {accountErrorMessage,isAccountDomainError} from "@/lib/account/action-feedback";
 import {ReportDateRange} from "@/components/account/report-date-range";
 import {ACCOUNT_REPORT_KEYS,reportSpecificFilters} from "@/lib/account/reports/catalogue";
@@ -128,6 +130,7 @@ export default async function Page({
           <a href={`/api/account/reports/${report}/xlsx?${query}`}>Excel</a> ·{" "}
           <a href={`/api/account/reports/${report}/pdf?${query}`}>PDF</a>
         </div>
+        {data.summary&&<ReportSummary items={data.summary}/>}
         {data.note && <p>{data.note}</p>}
         {data.columns.length > 0 && (
           <div
@@ -136,7 +139,7 @@ export default async function Page({
             role="region"
             aria-label="Report results"
           >
-            <ReportTable data={data} />
+            {["sale-report","purchase-report"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
           </div>
         )}
       </section>

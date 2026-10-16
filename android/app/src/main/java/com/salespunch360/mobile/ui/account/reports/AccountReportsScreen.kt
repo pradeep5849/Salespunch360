@@ -4,6 +4,8 @@ import android.content.Intent
 import java.io.File
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -75,7 +77,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     }
 
     val applicable=com.salespunch360.mobile.account.accountReportSpecificFilters(state.options,state.report.orEmpty())
-    Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+    Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
         if(state.report !in listOf("projects","budget-vs-actual")){
         var periodOpen by remember{mutableStateOf(false)}
@@ -94,6 +96,8 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             "general-ledger" -> Option("Ledger", state.ledgerId, state.options.array("ledgers")) { vm.filter("ledger", it) }
             "customer-ledger" -> Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
             "vendor-ledger" -> Option("Vendor", state.vendorId, state.options.array("vendors")) { vm.filter("vendor", it) }
+            "sale-report" -> Option("Customer",state.customerId,state.options.array("customers")){vm.filter("customer",it)}
+            "purchase-report" -> Option("Vendor",state.vendorId,state.options.array("vendors")){vm.filter("vendor",it)}
             "items", "invoices", "customers" -> {
                 Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
                 Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
@@ -106,12 +110,13 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.data?.let { data ->
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(data.array("summary")){summary->Card{Column(Modifier.padding(12.dp)){Text(summary.str("label"));Text(summary.str("displayValue").ifBlank{summary.str("value")},fontWeight=FontWeight.Bold)}}}}
             Text(data.str("title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             data.str("note").takeIf { it.isNotBlank() }?.let { Text(it) }
             state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
             LazyRow {
                 item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
-                itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.takeIf{it.startsWith("/workspace/account/money/capital/")};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
+                itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.let{com.salespunch360.mobile.account.accountReportDestination(it)};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }
             }
         }

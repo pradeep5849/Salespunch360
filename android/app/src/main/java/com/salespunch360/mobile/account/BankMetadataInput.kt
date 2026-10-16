@@ -1,6 +1,6 @@
 package com.salespunch360.mobile.account
 private val ifscPattern=Regex("^[A-Z]{4}0[A-Z0-9]{6}$",RegexOption.IGNORE_CASE)
-private val upiPattern=Regex("^[\\w.\\-]{2,256}@[A-Za-z]{2,64}$")
+private val upiPattern=Regex("^[A-Za-z0-9_.-]{2,256}@[A-Za-z]{2,64}$")
 data class BankMetadataErrors(val bankName:String?=null,val holder:String?=null,val branch:String?=null,val ifsc:String?=null,val upi:String?=null){val valid:Boolean get()=listOf(bankName,holder,branch,ifsc,upi).all{it==null}}
 fun bankMetadataErrors(bankName:String,holder:String,branch:String,ifsc:String,upi:String,printQr:Boolean):BankMetadataErrors=BankMetadataErrors(
  bankName=if(bankName.length>160)"Use no more than 160 characters."else null,

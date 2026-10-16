@@ -34,3 +34,9 @@ describe("report display preferences", () => {
     }
   });
 });
+
+it("preserves exact scientific aggregate cents and formats summary values without changing identifiers",()=>{
+ const preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:2});
+ const data=formatReport({title:"Large report",columns:["Reference","Amount"],rows:[["9e15","9.00719925474099101e15"]],summary:[{label:"Total Sale",value:"9007199254740991.01",money:true},{label:"No. of Transactions",value:"2",money:false}]},preferences,true);
+ expect(data.rows).toEqual([["9e15","9007199254740991.01"]]);expect(data.summary?.[0].displayValue).toBe("9007199254740991.01");expect(data.summary?.[1].displayValue).toBe("2");
+});

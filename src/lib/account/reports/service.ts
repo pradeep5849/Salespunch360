@@ -1,3 +1,4 @@
+import {TRANSACTION_REPORTS,transactionReport} from "./transaction-reports";
 import {reportSpecificFilters} from "./catalogue";
 import { requireAccountModules } from "../modules";
 import { reportQuantity, reportUnitKey } from "./quantity";
@@ -61,6 +62,8 @@ export type ReportResult = {
   columns: string[];
   rows: Array<Array<string | number>>;
   rowLinks?: string[];
+  nativeRowLinks?:string[];
+  summary?:Array<{label:string;value:string;money:boolean;displayValue?:string}>;
   totals?: Array<string | number>;
   note?: string;
 };
@@ -122,6 +125,8 @@ async function context(
         : {},
   };
 }
+
+export type FinancialReportContext=Awaited<ReturnType<typeof context>>;
 
 const sumPairMap = (
   rows: Array<{
@@ -204,6 +209,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
+  if(TRANSACTION_REPORTS.includes(name))return transactionReport(name,await context(raw,false,actor));
   if (name === "projects" || name === "budget-vs-actual")
     return projectReport(name, raw, actor);
   if (
@@ -805,6 +811,7 @@ export async function runFinancialReportForActor(
       },
       include: { lines: c.f.productId ? { where: { productId: c.f.productId } } : true },
     });
+    const docsById=new Map(docs.map(doc=>[doc.id,doc]));
     const movementGrouped = await db.stockMovement.groupBy({
       by: ["sourceLineId"],
       where: {
@@ -858,7 +865,7 @@ export async function runFinancialReportForActor(
         group.set(key, old);
       }
     return {
-      title: `${name} Profit`,
+      title: name==="items"?"Item Wise Profit & Loss":name==="invoices"?"Bill Wise Profit":"Party Wise Profit & Loss",
       columns: [
         name.slice(0, -1),
         "Quantity",
@@ -878,6 +885,7 @@ export async function runFinancialReportForActor(
           p.marginPercent.toFixed(2),
         ];
       }),
+      ...(name==="invoices"?{rowLinks:[...group.keys()].map(id=>{const doc=docsById.get(id)!;return doc.type==="SALES_INVOICE"?`/workspace/account/sales/${id}`:`/workspace/account/transactions/${id}`}),nativeRowLinks:[...group.keys()].map(id=>`/workspace/account/sales/${id}`)}:{}),
       note: "Tax-exclusive posted sales revenue less linked inventory movement cost; service cost is not fabricated. Quantities retain saved units; mixed units are not added or converted.",
     };
   }

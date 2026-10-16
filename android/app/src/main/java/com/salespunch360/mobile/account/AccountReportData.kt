@@ -21,10 +21,12 @@ fun accountReportCatalogue(options:JsonObject,search:String=""):List<AccountRepo
 }
 fun accountReportFavourites(options:JsonObject)= (options["favourites"] as? JsonArray)?.mapNotNull{(it as? JsonPrimitive)?.contentOrNull}.orEmpty().toSet()
 
-fun accountReportLinks(data:JsonObject)=(data["rowLinks"] as? JsonArray)?.map{(it as? JsonPrimitive)?.contentOrNull.orEmpty()}.orEmpty()
+fun accountReportLinks(data:JsonObject)=((data["nativeRowLinks"]?:data["rowLinks"]) as? JsonArray)?.map{(it as? JsonPrimitive)?.contentOrNull.orEmpty()}.orEmpty()
 
 fun accountReportSpecificFilters(options:JsonObject,key:String):Set<String>? {
  val metadata=options.array("catalogue").firstOrNull{it.str("key")==key}?:return null
  val filters=metadata["filters"] as? JsonArray?:return null
  return filters.mapNotNull{(it as? JsonPrimitive)?.contentOrNull}.toSet()
 }
+
+fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}

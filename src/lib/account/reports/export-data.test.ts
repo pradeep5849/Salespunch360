@@ -9,3 +9,5 @@ describe("A084 complete export contents", () => {
     expect(source.rows).toHaveLength(1);
   });
 });
+
+it("includes summary counts and values in exported rows",()=>{expect(reportExportRows({title:"Sales",columns:["Date","Total"],rows:[],summary:[{label:"No. of Transactions",value:"2",money:false},{label:"Total Sale",value:"50",money:true,displayValue:"50.00"}]},"Branch A")).toEqual([["No. of Transactions","2"],["Total Sale","50.00"],["Scope: Branch A",""]])});

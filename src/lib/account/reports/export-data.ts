@@ -6,6 +6,7 @@ export function reportExportRows(data: ReportResult, scope: string) {
   return [
     ...data.rows,
     ...(data.totals ? [data.totals] : []),
+    ...(data.summary?.map(item=>[item.label,item.displayValue??item.value,...Array(Math.max(0,data.columns.length-2)).fill("")])??[]),
     ...(data.note ? [noteRow(data.note)] : []),
     noteRow(`Scope: ${scope || "Current authorized company/branch scope"}`),
   ];

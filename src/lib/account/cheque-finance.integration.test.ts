@@ -1165,5 +1165,30 @@ describe.skipIf(!url)(
         expect(journal.lines.reduce((n,line)=>n+Number(line.debit),0).toFixed(2)).toBe(journal.lines.reduce((n,line)=>n+Number(line.credit),0).toFixed(2));
       }
     });
+    it("A084 sale reports net returns once and retain recognized invoice balances and scope",async()=>{
+      const party=await client.customer.create({data:{companyId,branchId,name:"Report-only customer",isAccountCustomer:true}});
+      const sale=await invoice("100",party.id);
+      const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+      const credit=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",branchId,partyId:party.id,sourceDocumentId:sale.id,issueDate:"2026-10-11",idempotencyKey:randomUUID(),lines:[{lineType:"CUSTOM",itemName:line.itemName,quantity:"0.5",rate:"100",taxRate:"0",sourceCommercialLineId:line.id,stockReturnQuantity:"0.5"}]});
+      await postCommercialDocumentForActor(actor,{documentId:credit.id});
+      const journals=await client.journalEntry.count({where:{companyId}});
+      const report=await runFinancialReportForActor(actor,"sale-report",{from:"2026-10-10",to:"2026-10-11",branchId,customerId:party.id});
+      expect(report.rows).toHaveLength(2);expect(report.totals?.slice(-2)).toEqual(["50","50"]);expect(report.summary).toContainEqual({label:"Balance Due",value:"50",money:true});
+      expect(report.nativeRowLinks?.[0]).toBe(`/workspace/account/sales/${sale.id}`);
+      expect((await runFinancialReportForActor(actor,"sale-report",{from:"2026-10-10",to:"2026-10-10",branchId,customerId:party.id})).totals?.slice(-2)).toEqual(["100","100"]);
+      expect(await client.journalEntry.count({where:{companyId}})).toBe(journals);
+      await expect(runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[otherBranch]},"sale-report",{from:"2026-10-10",to:"2026-10-11",branchId})).rejects.toThrow();
+      await expect(runFinancialReportForActor({...actor,accountRole:"PROJECT_MANAGER"},"sale-report",{})).rejects.toThrow();
+      expect((await runFinancialReportForActor(actor,"purchase-report",{from:"2026-10-10",to:"2026-10-11",branchId})).summary?.[0]).toMatchObject({label:"No. of Transactions"});
+    });
+
+    it("A084 purchase reports net debit notes once with exact remaining payable",async()=>{
+      const vendor=await client.vendor.create({data:{companyId,name:"Report purchase vendor"}});
+      const bill=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",purchasePurpose:"GENERAL_OFFICE",vendorInvoiceNumber:"REPORT-BILL",vendorInvoiceDate:"2026-10-10",branchId,partyId:vendor.id,issueDate:"2026-10-10",idempotencyKey:randomUUID(),lines:[{lineType:"CUSTOM",itemName:"Purchase report item",quantity:"1",rate:"200",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:bill.id});
+      const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:bill.id}});
+      const note=await createCommercialDocumentForActor(actor,{type:"DEBIT_NOTE",purchasePurpose:"GENERAL_OFFICE",sourceDocumentId:bill.id,branchId,partyId:vendor.id,issueDate:"2026-10-11",idempotencyKey:randomUUID(),lines:[{lineType:"CUSTOM",itemName:line.itemName,sourceCommercialLineId:line.id,quantity:"0.5",rate:"200",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:note.id});
+      const result=await runFinancialReportForActor(actor,"purchase-report",{from:"2026-10-10",to:"2026-10-11",branchId,vendorId:vendor.id});expect(result.rows).toHaveLength(2);expect(result.totals?.slice(-2)).toEqual(["100","100"]);expect(result.summary?.[0].value).toBe("2");expect(result.nativeRowLinks?.[0]).toBe(`/workspace/account/purchases/${bill.id}`);
+    });
+
   },
 );
