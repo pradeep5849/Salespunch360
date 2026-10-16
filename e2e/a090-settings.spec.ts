@@ -2003,7 +2003,7 @@ test("A052 category overview uses posted totals and items search pagination with
  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Overview year",startDate:new Date("2026-04-01"),endDate:new Date("2027-03-31")}});
  try{
   const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
-  const created=await createExpenseForActor(actor,{type:"OFFICE_EXPENSE",branchId,categoryId,moneyAccountId:moneyId,transactionDate:"2026-10-13",taxableAmount:"12.34",recordAsPaid:true,requestKey:randomUUID()});expenseId=created.id;
+  const created=await createExpenseForActor(actor,{type:"OFFICE_EXPENSE",branchId,categoryId,moneyAccountId:moneyId,transactionDate:"2026-10-13",taxableAmount:"12.34",billedItems:[{name:`Report bolts ${suffix}`,quantity:"2",rate:"6.17"}],recordAsPaid:true,requestKey:randomUUID()});expenseId=created.id;
   await db.expenseItem.createMany({data:Array.from({length:26},(_,i)=>({companyId,name:`${itemPrefix} ${String(i).padStart(2,"0")}`,normalizedName:`${itemPrefix.toLowerCase()} ${String(i).padStart(2,"0")}`,creationRequestKey:randomUUID(),creationRequestHash:"0".repeat(64)}))});
   await signInSettings(page);await page.goto(`/workspace/account/expenses?branchId=${branchId}`);
   const overview=page.getByRole("region",{name:"Expense overview",exact:true});await expect(overview.getByRole("link",{name:"Categories",exact:true})).toHaveAttribute("aria-current","page");await expect(overview.locator("article").filter({hasText:`Overview category ${suffix}`})).toContainText("₹12.34");
@@ -2012,6 +2012,17 @@ test("A052 category overview uses posted totals and items search pagination with
   await expect(overview.getByRole("link",{name:"＋ Add Expenses",exact:true})).toHaveAttribute("href",`/workspace/account/expenses/new?branchId=${branchId}`);
   await overview.getByRole("link",{name:"＋ Add Expenses",exact:true}).click();await expect(page.getByRole("heading",{name:"New Expense / Income",exact:true})).toBeVisible();
   await page.goto(`/workspace/account/expenses?branchId=${branchId}`);await overview.getByRole("link",{name:"＋ Add Expense / Income Category",exact:true}).click();await expect(page.getByRole("textbox",{name:"Category name",exact:true})).toBeVisible();
+  const journalsBefore=await db.journalEntry.count({where:{companyId}});
+  for(const report of ["expense-transactions","expense-category","expense-items"]){
+   await page.goto(`/workspace/account/reports/${report}?branchId=${branchId}&from=2026-10-13&to=2026-10-13`);
+   const results=page.getByRole("region",{name:"Report results",exact:true});await expect(results).toContainText("12.34");
+   if(report==="expense-items")await expect(results).toContainText(`Report bolts ${suffix}`);
+   if(report==="expense-category")await expect(results).toContainText(`Overview category ${suffix}`);
+   const csv=await page.request.get((await page.getByRole("link",{name:"CSV",exact:true}).getAttribute("href"))!);expect(csv.status()).toBe(200);expect(await csv.text()).toContain("12.34");
+   expect((await new AxeBuilder({page}).include(".employees-content").analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  await page.goto(`/workspace/account/reports/expense-transactions?branchId=${branchId}&from=2026-10-13&to=2026-10-13`);
+  await page.getByRole("region",{name:"Report results",exact:true}).locator(`a[href="/workspace/account/expenses/${expenseId}"]:visible`).click();await expect(page).toHaveURL(new RegExp(`/expenses/${expenseId}`),{timeout:20000});expect(await db.journalEntry.count({where:{companyId}})).toBe(journalsBefore);
   await page.goto(`/workspace/account/expenses?branchId=${branchId}`);expect((await new AxeBuilder({page}).include(".employees-content").withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{
   await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;if(expenseId){const journals=await tx.journalEntry.findMany({where:{companyId,sourceId:expenseId},select:{id:true}}),ids=journals.map(x=>x.id);await tx.expenseTransaction.deleteMany({where:{companyId,id:expenseId}});await tx.accountingAuditEvent.deleteMany({where:{companyId,entityId:{in:ids}}});await tx.journalLine.deleteMany({where:{companyId,journalEntryId:{in:ids}}});await tx.journalEntry.deleteMany({where:{companyId,id:{in:ids}}});await tx.accountOperationalAudit.deleteMany({where:{companyId,entityId:expenseId}})}await tx.expenseItem.deleteMany({where:{companyId,name:{startsWith:itemPrefix}}});await tx.expenseCategory.deleteMany({where:{companyId,id:categoryId}});await tx.moneyAccount.deleteMany({where:{companyId,id:moneyId}});await tx.ledgerAccount.deleteMany({where:{companyId,id:{in:[cashLedger,expenseLedger]}}})})

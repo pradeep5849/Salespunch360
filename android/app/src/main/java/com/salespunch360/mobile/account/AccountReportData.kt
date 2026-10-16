@@ -29,4 +29,4 @@ fun accountReportSpecificFilters(options:JsonObject,key:String):Set<String>? {
  return filters.mapNotNull{(it as? JsonPrimitive)?.contentOrNull}.toSet()
 }
 
-fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}
+fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases|expenses)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}

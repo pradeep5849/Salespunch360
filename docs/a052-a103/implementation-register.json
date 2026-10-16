@@ -55947,9 +55947,27 @@
             "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
             "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
           ],
-          "tests": "38 focused unit/real PostgreSQL financial cases PASS;26 report/display/export/service tests PASS;2 desktop/mobile Chromium transaction summary/source/CSV/empty-state/AXE/overflow cases PASS (40.8s);Android compile and14 JVM tests PASS (2m22s). TypeScript/full ESLint recorded separately after latest table change.",
+          "tests": "38 focused unit/real PostgreSQL financial cases PASS;26 report/display/export/service tests PASS;2 desktop/mobile Chromium transaction summary/source/CSV/empty-state/AXE/overflow cases PASS (40.8s);Android compile and14 JVM tests PASS (2m22s). TypeScript/full ESLint recorded separately after latest table change. Latest table TypeScript/full ESLint PASS. Exact source-head CI38928363624 Web and Android SUCCESS.",
           "remaining": "Other supplied report destinations and report-specific layouts remain;PARTIAL retained. Physical Android runtime and full final-head validation not executed.",
-          "commit": "See git history for transaction reports checkpoint commit."
+          "commit": "02a149ebf5cbb02f24afc4f6a2fb39cb6f0ee24a"
+        },
+        "expense_report_slice_2026_10_16": {
+          "work": "Added Expense Transactions, Expense Category and Expense Item report destinations to shared web/native catalogue. Only posted costs with journals effective at cutoff are included, including historical costs reversed after cutoff; drafts/other income excluded. Category totals include tax/charges; billed item totals explicitly exclude invoice tax/charges/round-off and flag malformed historical lines. Reads are limited to candidate expense journals. Web transactions use responsive cards/empty state and source links; native source links open existing expense detail. No financial writes or migrations.",
+          "files": [
+            "src/lib/account/reports/expense-reports.ts",
+            "src/lib/account/reports/expense-reports.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/implementation.integration.test.ts",
+            "src/components/account/transaction-report-view.tsx",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m27s);no device runtime.",
+          "remaining": "Other supplied catalogue destinations and report-specific layouts remain pending;PARTIAL retained. Physical native runtime and full final-head regression not executed.",
+          "commit": "See git history for expense report checkpoint commit."
         }
       }
     },
@@ -59697,9 +59715,27 @@
             "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
             "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
           ],
-          "tests": "38 focused unit/real PostgreSQL financial cases PASS;26 report/display/export/service tests PASS;2 desktop/mobile Chromium transaction summary/source/CSV/empty-state/AXE/overflow cases PASS (40.8s);Android compile and14 JVM tests PASS (2m22s). TypeScript/full ESLint recorded separately after latest table change.",
+          "tests": "38 focused unit/real PostgreSQL financial cases PASS;26 report/display/export/service tests PASS;2 desktop/mobile Chromium transaction summary/source/CSV/empty-state/AXE/overflow cases PASS (40.8s);Android compile and14 JVM tests PASS (2m22s). TypeScript/full ESLint recorded separately after latest table change. Latest table TypeScript/full ESLint PASS. Exact source-head CI38928363624 Web and Android SUCCESS.",
           "remaining": "Other supplied report destinations and report-specific layouts remain;PARTIAL retained. Physical Android runtime and full final-head validation not executed.",
-          "commit": "See git history for transaction reports checkpoint commit."
+          "commit": "02a149ebf5cbb02f24afc4f6a2fb39cb6f0ee24a"
+        },
+        "expense_report_slice_2026_10_16": {
+          "work": "Added Expense Transactions, Expense Category and Expense Item report destinations to shared web/native catalogue. Only posted costs with journals effective at cutoff are included, including historical costs reversed after cutoff; drafts/other income excluded. Category totals include tax/charges; billed item totals explicitly exclude invoice tax/charges/round-off and flag malformed historical lines. Reads are limited to candidate expense journals. Web transactions use responsive cards/empty state and source links; native source links open existing expense detail. No financial writes or migrations.",
+          "files": [
+            "src/lib/account/reports/expense-reports.ts",
+            "src/lib/account/reports/expense-reports.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/implementation.integration.test.ts",
+            "src/components/account/transaction-report-view.tsx",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m27s);no device runtime.",
+          "remaining": "Other supplied catalogue destinations and report-specific layouts remain pending;PARTIAL retained. Physical native runtime and full final-head regression not executed.",
+          "commit": "See git history for expense report checkpoint commit."
         }
       }
     },

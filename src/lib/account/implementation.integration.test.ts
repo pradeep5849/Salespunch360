@@ -203,6 +203,41 @@ describe.skipIf(!url)("A042/A045/A046 real PostgreSQL integrity", () => {
     await client.company.deleteMany({ where: { id: companyId } });
     await client.$disconnect();
   });
+  it("A084 expense reports reconcile posted costs, billed lines, historical reversals and tenant scope",async()=>{
+    const request={branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-08",taxableAmount:"25",billedItems:[{name:"Report item",quantity:"3",rate:"5"}],additionalCharges:"10",recordAsPaid:true,requestKey:randomUUID()};
+    const expense=await createExpenseForActor(actor,request);
+    try{
+      const journalCount=await client.journalEntry.count({where:{companyId}});
+      const filters={branchId:branchA,from:"2026-10-08",to:"2026-10-08"};
+      const transactions=await runFinancialReportForActor(actor,"expense-transactions",filters);
+      expect(transactions.rows).toHaveLength(1);expect(transactions.totals?.at(-1)).toBe("25");expect(transactions.rowLinks).toEqual([`/workspace/account/expenses/${expense.id}`]);
+      expect((await runFinancialReportForActor(actor,"expense-category",filters)).totals?.at(-1)).toBe("25");
+      const items=await runFinancialReportForActor(actor,"expense-items",filters);expect(items.rows).toEqual([["Report item","3","15"]]);expect(items.totals).toEqual(["Total Item Expense","","15"]);
+      expect((await runFinancialReportForActor(actor,"expense-transactions",{...filters,branchId:branchB})).rows).toEqual([]);
+      const foreign=await client.company.create({data:{name:"Foreign report tenant",slug:`report-${randomUUID()}`,productEdition:"SALESPUNCH360_ACCOUNT"}});
+      try{
+        expect((await runFinancialReportForActor({...actor,companyId:foreign.id,branchIds:[]},"expense-transactions",{from:"2026-10-08",to:"2026-10-08"})).rows).toEqual([]);
+        await client.company.update({where:{id:foreign.id},data:{productEdition:"SALESPUNCH360"}});
+        await expect(runFinancialReportForActor({...actor,companyId:foreign.id,branchIds:[]},"expense-items",{})).rejects.toThrow("MODULE_DISABLED:EXPENSES");
+      }finally{await client.company.delete({where:{id:foreign.id}});}
+      await expect(runFinancialReportForActor({...actor,accountRole:"PROJECT_MANAGER"},"expense-items",filters)).rejects.toThrow();
+      await expect(runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchB]},"expense-category",filters)).rejects.toThrow();
+      expect(await client.journalEntry.count({where:{companyId}})).toBe(journalCount);
+      await reverseExpenseForActor(actor,expense.id,new Date("2026-10-09"),"Report historical reversal verification");
+      expect((await runFinancialReportForActor(actor,"expense-transactions",filters)).totals?.at(-1)).toBe("25");
+      expect((await runFinancialReportForActor(actor,"expense-transactions",{...filters,to:"2026-10-09"})).rows).toEqual([]);
+    }finally{
+      await client.$transaction(async tx=>{
+        await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+        const row=await tx.expenseTransaction.findUniqueOrThrow({where:{id:expense.id}}),ids=[row.journalEntryId,row.reversalJournalId].filter((id):id is string=>!!id);
+        await tx.expenseTransaction.delete({where:{id:expense.id}});
+        await tx.accountingAuditEvent.deleteMany({where:{companyId,entityId:{in:ids}}});
+        await tx.journalLine.deleteMany({where:{companyId,journalEntryId:{in:ids}}});
+        await tx.journalEntry.deleteMany({where:{companyId,id:{in:ids}}});
+        await tx.accountOperationalAudit.deleteMany({where:{companyId,entityId:expense.id}});
+      });
+    }
+  });
   it("A052 paid entry posts once immediately while approval remains a review", async () => {
     await client.accountSettings.update({where:{companyId},data:{expenseApprovalRequired:true,expenseApprovalThreshold:"0"}});
     const request={branchId:branchA,categoryId,moneyAccountId:moneyId,type:"OFFICE_EXPENSE",transactionDate:"2026-10-09",taxableAmount:"25",recordAsPaid:true,requestKey:randomUUID()};

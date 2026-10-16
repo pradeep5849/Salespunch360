@@ -1,3 +1,4 @@
+import {EXPENSE_REPORTS,expenseReport} from "./expense-reports";
 import {TRANSACTION_REPORTS,transactionReport} from "./transaction-reports";
 import {reportSpecificFilters} from "./catalogue";
 import { requireAccountModules } from "../modules";
@@ -209,6 +210,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
+  if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(TRANSACTION_REPORTS.includes(name))return transactionReport(name,await context(raw,false,actor));
   if (name === "projects" || name === "budget-vs-actual")
     return projectReport(name, raw, actor);

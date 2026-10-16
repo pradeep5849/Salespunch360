@@ -1,5 +1,8 @@
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["expense-transactions", "Expense Transactions", "Expense reports"],
+  ["expense-category", "Expense Category Report", "Expense reports"],
+  ["expense-items", "Expense Item Report", "Expense reports"],
   ["sale-report", "Sale Report", "Transaction"],
   ["purchase-report", "Purchase Report", "Transaction"],
   ["profit-loss", "Profit & Loss", "Business"],
@@ -39,6 +42,9 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "expense-transactions": ["projectId"],
+  "expense-category": ["projectId"],
+  "expense-items": ["projectId"],
   "sale-report": ["customerId", "projectId"],
   "purchase-report": ["vendorId", "projectId"],
   "general-ledger": ["ledgerId"],

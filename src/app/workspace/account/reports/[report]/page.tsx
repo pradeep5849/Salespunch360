@@ -139,7 +139,7 @@ export default async function Page({
             role="region"
             aria-label="Report results"
           >
-            {["sale-report","purchase-report"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
+            {["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
           </div>
         )}
       </section>
