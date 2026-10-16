@@ -11295,6 +11295,10 @@
           "tests": "Desktop/mobile baseline dashboard drilldown+OFF denial regression2/2 passed (51.1s). Fixture expected catalogue redirect and new report display title updated;cold sign-in/scenario wait budgets increased without dropping assertions.",
           "remaining": "Other original saved-switch enforcement and final-head validation remain PARTIAL.",
           "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
+        },
+        "resolved_pricing_decisions_2026_10_16": {
+          "work": "User clarified taxOnMrp means entered MRP includes tax and updateSalePrice requires confirmation before changing saved retail price.",
+          "remaining": "Implement these consumers and corresponding permission/concurrency/retry/financial regressions. PARTIAL retained;decisions alone do not count as implementation."
         }
       },
       "intermediate_validation": {
@@ -39262,7 +39266,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -39314,6 +39318,16 @@
             "e2e/a049-a051-expenses.spec.ts",
             "e2e/a090-settings.spec.ts"
           ]
+        },
+        {
+          "work": "Completed missing web/native loan empty onboarding with Add Loan action and separate filtered/no-page results. Web action targets scoped loan entry; native respects manageLoans capability. Existing scoped list/details/history use full ledger balances before pagination and chronological fee-inclusive payments. Original finding code is implemented; no physical runtime completion claim.",
+          "files": [
+            "src/app/workspace/account/money/loans/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "78 focused unit/PostgreSQL loan/expense tests PASS;4 desktop/mobile paid-entry and loan scenarios PASS(1.2m). Latest onboarding/search-clear/detail/statement/edit/AXE/overflow2desktop/mobile scenarios PASS(1.5m);Android compileDebugKotlin and focused JVM tests PASS(2m56s):{'com.salespunch360.mobile.account.ExpenseLegacyJsonTest': {'tests': 2, 'failures': 0, 'skipped': 0}, 'com.salespunch360.mobile.account.ExpensePreviewTest': {'tests': 5, 'failures': 0, 'skipped': 0}, 'com.salespunch360.mobile.account.LoanPaymentTotalTest': {'tests': 2, 'failures': 0, 'skipped': 0}}. TypeScript/full ESLint results in a067-empty-types.log/a067-empty-lint.log.",
+          "remaining": "Final full implementation-head regressions and physical Android accessibility/device runtime pending. Not FIXED + VERIFIED."
         }
       ],
       "push_checkpoint_evidence": {
@@ -64932,6 +64946,13 @@
         "A064-F04",
         "A064-F13"
       ]
+    },
+    "item_mrp_and_sale_price_updates": {
+      "date": "2026-10-16",
+      "tax_on_mrp": "Entered MRP includes tax; do not calculate invoice tax on MRP when selling price is lower.",
+      "update_sale_price": "Ask for confirmation before changing the saved retail price.",
+      "source": "User async replies to call_7f8956ed234e4a828ba5a433542a72fd,items0and1",
+      "implementation": "Pending A057-F03 implementation;no final verification claimed."
     }
   },
   "push_checkpoint": {

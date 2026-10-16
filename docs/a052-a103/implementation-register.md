@@ -9493,3 +9493,9 @@ A084-F03/A085-F02 remain PARTIAL: implemented the three supplied expense destina
 ### Paid entry and loan verification continuation — 2026-10-16
 
 Independently checked A052-F13's existing immediate paid-entry implementation against its original scope: web/native explicitly request paid save for new regular entries, server payment posting is atomic/idempotent and approval is review; recurring controls remain separate. Focused unit/PostgreSQL group78 passed (10.35s); desktop/mobile paid Save & New/review/detail and loan balances/statement/metadata group4 passed (1.2m). A052-F13 is IMPLEMENTED BUT NOT VERIFIED; full final-head and native runtime remain pending. A067-F01 retains PARTIAL for its remaining empty-state/reference layout work despite passing financial/history/browser regressions.199 IDs retained:164 implemented but not finally verified,33 PARTIAL,2 NOT STARTED. No finding's final_status set by this slice.
+
+### Loan onboarding and pricing decisions — 2026-10-16
+
+A067-F01 now has Web/native loan onboarding with capability-gated Add Loan, distinct no-result states, web scoped form navigation and clearing filters. Existing list/detail/statement queries compute full-history balances before pagination. Latest desktop/mobile onboarding/search-clear/statement/metadata/accessibility scenarios:2 passed (1.5m). Android compile and focused loan/expense JVM tests passed (2m56s); exact counts preserved in JSON. Original code scope is IMPLEMENTED BUT NOT VERIFIED, with physical native and final complete-head verification pending. Counts:165 implemented but not finally verified,32 PARTIAL,2 NOT STARTED;all199 IDs retained.
+
+User resolved A057-F03: Tax on MRP means the entered MRP includes tax; Update Sale Price asks before changing saved retail price. These are decisions, not completed implementation; A057-F03 remains PARTIAL. Expense-report source/evidence checkpointdc903bd8 passed both Web and Android CI jobs in run38929848999.

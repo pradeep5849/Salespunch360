@@ -118,7 +118,14 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
                     if(accountMode&&can("postMoneyEntries")&&row["isActive"]?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.disableAccount(row.str("id"))},enabled=!s.saving){Text("Deactivate")}
                 }},modifier=if(accountMode)Modifier.clickable(enabled=!s.saving){vm.openMoneyHistory(row.str("id"))}else if(s.mode=="loans")Modifier.clickable(enabled=!s.saving){vm.openLoanHistory(row.str("id"))}else Modifier)
             }
-            if(rows.isEmpty()&&!s.loading&&s.error==null)item{Text(if(accountMode)"No accounts available."else "No transactions available.")}
+            if(rows.isEmpty()&&!s.loading&&s.error==null)item{
+                if(s.mode=="loans")Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    Icon(Icons.Default.AccountBalance,contentDescription=null,modifier=Modifier.size(64.dp),tint=MaterialTheme.colorScheme.primary)
+                    Text(if(s.loanSearch.isNotBlank())"No loans match your search"else if(s.loanOffset>0)"No loans on this page"else "No loans yet",style=MaterialTheme.typography.titleLarge)
+                    Text(if(s.loanSearch.isNotBlank())"Clear the search to see loans in this scope."else "Add a loan to track its outstanding balance, repayments and statement.")
+                    if(s.loanSearch.isNotBlank()||s.loanOffset>0)OutlinedButton({vm.searchLoans("");vm.loanPage(0)},enabled=!s.saving){Text("Clear loan search")}else if(canCreate)Button({vm.create("loans")},enabled=!s.saving){Text("Add Loan")}
+                }else Text(if(accountMode)"No accounts available."else "No transactions available.")
+            }
         }
     }
     if (s.historyOwnerId != null && correctionTransaction == null) {
