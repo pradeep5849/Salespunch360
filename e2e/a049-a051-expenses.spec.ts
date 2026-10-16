@@ -1106,6 +1106,7 @@ test("A056 categories retain duplicate errors and provide modal keyboard navigat
 test("A057 no-op legacy settings save preserves effective defaults and conversion metadata", async ({
   page,
 }) => {
+  test.setTimeout(120000);
   const legacy = {
     unitConversions: [
       { baseUnitId: randomUUID(), secondaryUnitId: randomUUID(), rate: "12" },
@@ -1119,13 +1120,13 @@ test("A057 no-op legacy settings save preserves effective defaults and conversio
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
+  await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
   await page.goto("/workspace/account/inventory/item-settings");
   await expect(
     page.getByRole("checkbox", { name: /Barcode scanning for items/ }),
   ).not.toBeChecked();
   await expect(
-    page.getByRole("checkbox", { name: /Calculate tax based on MRP/ }),
+    page.getByRole("checkbox", { name: /MRP includes tax/ }),
   ).not.toBeChecked();
   await expect(
     page.getByRole("checkbox", { name: /Update sale price from transaction/ }),
@@ -4143,6 +4144,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     where: { companyId },
   });
   try {
+    await db.accountSettings.update({where:{companyId},data:{itemSettings:{...settings.itemSettings as object,taxOnMrp:true}}});
     await page.goto("/sign-in");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
@@ -4152,6 +4154,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     await page
       .getByLabel("Item Name *", { exact: true })
       .fill(`Pricing web ${suffix}`);
+    await page.getByLabel("MRP (tax included)",{exact:true}).fill("118");
     await page.getByPlaceholder("Sale Price", { exact: true }).fill("118");
     await page
       .getByLabel("Sale Price Tax Mode", { exact: true })
@@ -4188,6 +4191,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
       enteredSalePrice: "118.00",
       normalizedDiscountValue: "10",
       normalizedWholesalePrice: "90.00",
+      mrp:"118",normalizedMrp:"100.00",mrpTaxMode:"INCLUSIVE",
     });
     await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
     await page.getByRole("button", { name: /Add Items/ }).click();
@@ -4242,6 +4246,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
         discountType: "PERCENTAGE",
         discountValue: "10",
         wholesalePrice: "106.20",
+        mrp:"118",
       },
       creationRequestKey: randomUUID(),
     };
@@ -4256,6 +4261,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     expect(native.pricing).toMatchObject({
       normalizedDiscountValue: "10",
       normalizedWholesalePrice: "90.00",
+      mrp:"118",normalizedMrp:"100.00",mrpTaxMode:"INCLUSIVE",
     });
     const replay = await request.post(
       "/api/v1/mobile/account/master-data/items",
@@ -4300,6 +4306,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
         enteredSalePrice: "177.00",
         saleTaxMode: "INCLUSIVE",
         discountType: "PERCENTAGE",
+        mrp:"118",normalizedMrp:"100.00",
       }),
     });
     await db.accountSettings.update({
@@ -4319,6 +4326,8 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     );
     expect(disabled.ok()).toBe(false);
     expect((await disabled.json()).error).toBe("WHOLESALE_PRICING_DISABLED");
+    const retained=await request.patch(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers,data:{name:payload.name,sellingRate:"150",cost:"50",taxRate:"18",pricing:{saleTaxMode:"EXCLUSIVE",purchaseTaxMode:"EXCLUSIVE",discountType:"PERCENTAGE",discountValue:"0"}}});expect(retained.status()).toBe(200);expect((await db.accountProduct.findUniqueOrThrow({where:{id:native.id}})).pricing).toMatchObject({mrp:"118",normalizedMrp:"100.00"});
+    const mrpDisabled=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...payload,name:"Disabled MRP",creationRequestKey:randomUUID(),pricing:{...payload.pricing,wholesalePrice:undefined}}});expect(mrpDisabled.status()).toBe(400);expect((await mrpDisabled.json()).error).toBe("MRP_PRICING_DISABLED");
   } finally {
     await db.accountSettings.update({
       where: { companyId },

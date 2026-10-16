@@ -29,8 +29,8 @@ const toggles = [
   ["itemWiseTax", "Item-wise tax", "Use the tax configured on each item."],
   [
     "taxOnMrp",
-    "Calculate tax based on MRP",
-    "Use MRP as the supported tax base.",
+    "MRP includes tax",
+    "Enable optional tax-inclusive MRP entry. Invoice tax still uses the selling price.",
   ],
   [
     "itemWiseDiscount",

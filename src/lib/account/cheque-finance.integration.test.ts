@@ -1,5 +1,7 @@
+import { itemPricingInput, normalizedItemPricing } from "./item-pricing";
+import { itemSettingsDefaults } from "./item-settings-policy";
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 const url = process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if (
@@ -1164,6 +1166,15 @@ describe.skipIf(!url)(
         const journal=await client.journalEntry.findUniqueOrThrow({where:{id:saved.journalEntryId!},include:{lines:true}});
         expect(journal.lines.reduce((n,line)=>n+Number(line.debit),0).toFixed(2)).toBe(journal.lines.reduce((n,line)=>n+Number(line.credit),0).toFixed(2));
       }
+    });
+    it("A057 tax-inclusive MRP never overrides actual selling-price tax or balanced posting",async()=>{
+      const price=normalizedItemPricing({sellingRate:"90",cost:"50",taxRate:"18",pricing:itemPricingInput.parse({mrp:"118"})},{...itemSettingsDefaults,taxOnMrp:true});
+      const product=await client.accountProduct.create({data:{companyId,name:"MRP distinct from sale",salePrice:price.saleRate,costPrice:price.costRate,taxRate:"18",pricing:price.pricing}});
+      const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",taxMode:"EXCLUSIVE",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1"}]});
+      const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});expect(line.taxableAmount.toFixed(2)).toBe("90.00");expect(doc.grandTotal.toFixed(2)).toBe("106.20");
+      await postCommercialDocumentForActor(actor,{documentId:doc.id});
+      const saved=await client.commercialDocument.findUniqueOrThrow({where:{id:doc.id}}),journal=await client.journalEntry.findUniqueOrThrow({where:{id:saved.journalEntryId!},include:{lines:true}});
+      expect(journal.lines.reduce((sum,row)=>sum.add(row.debit),new Prisma.Decimal(0)).toFixed(2)).toBe("106.20");expect(journal.lines.reduce((sum,row)=>sum.add(row.credit),new Prisma.Decimal(0)).toFixed(2)).toBe("106.20");
     });
     it("A084 sale reports net returns once and retain recognized invoice balances and scope",async()=>{
       const party=await client.customer.create({data:{companyId,branchId,name:"Report-only customer",isAccountCustomer:true}});

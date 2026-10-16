@@ -175,7 +175,7 @@ private fun ItemSettingsView(data:JsonElement,vm:AccountAdministrationViewModel)
             }
         }
         item{SwitchRow("Item wise tax",itemTax){itemTax=it}}
-        item{SwitchRow("Calculate tax based on MRP",taxOnMrp){taxOnMrp=it}}
+        item{SwitchRow("MRP includes tax",taxOnMrp){taxOnMrp=it};Text("Enable optional tax-inclusive MRP entry. Invoice tax still uses the selling price.")}
         item{SwitchRow("Item wise discount",itemDiscount){itemDiscount=it}}
         item{SwitchRow("Update sale price from transaction",updateSale){updateSale=it}}
         item{SwitchRow("Additional Item Fields",additionalFields){additionalFields=it}}

@@ -124,6 +124,7 @@ export function AddItemEditor({
     [hsn, setHsn] = useState(""),
     [tab, setTab] = useState<"PRICING" | "STOCK">("PRICING"),
     [salePrice, setSalePrice] = useState(""),
+    [mrp, setMrp] = useState(""),
     [saleTaxMode, setSaleTaxMode] = useState<"WITHOUT" | "WITH">("WITHOUT"),
     [discount, setDiscount] = useState(""),
     [discountMode, setDiscountMode] = useState<"PERCENTAGE" | "AMOUNT">(
@@ -239,7 +240,7 @@ export function AddItemEditor({
             description: enabled("description")
               ? description || undefined
               : undefined,
-            pricing:{saleTaxMode:saleTaxMode==="WITH"?"INCLUSIVE":"EXCLUSIVE",purchaseTaxMode:purchaseTaxMode==="WITH"?"INCLUSIVE":"EXCLUSIVE",discountType:discountMode==="AMOUNT"?"FIXED":"PERCENTAGE",discountValue:enabled("itemWiseDiscount")?discount||"0":"0",...(enabled("wholesalePrice")&&wholesaleOpen&&wholesale?{wholesalePrice:wholesale}:{})},
+            pricing:{...(enabled("taxOnMrp")&&mrp?{mrp}:{}),saleTaxMode:saleTaxMode==="WITH"?"INCLUSIVE":"EXCLUSIVE",purchaseTaxMode:purchaseTaxMode==="WITH"?"INCLUSIVE":"EXCLUSIVE",discountType:discountMode==="AMOUNT"?"FIXED":"PERCENTAGE",discountValue:enabled("itemWiseDiscount")?discount||"0":"0",...(enabled("wholesalePrice")&&wholesaleOpen&&wholesale?{wholesalePrice:wholesale}:{})},
             sellingRate: salePrice || "0",
             cost: purchasePrice || "0",
             taxRate: enabled("itemWiseTax") ? taxRate || "0" : "0",
@@ -456,6 +457,7 @@ export function AddItemEditor({
             </div>
             {tab === "PRICING" ? (
               <div className="item-tab-panel">
+                {enabled("taxOnMrp")&&<label>MRP (tax included)<input aria-label="MRP (tax included)" inputMode="decimal" value={mrp} onChange={event=>setMrp(event.target.value)} disabled={pending}/><small>Optional maximum retail price including tax. Invoice tax uses the selling price, not MRP.</small></label>}
                 <h3>Sale Price</h3>
                 <label>
                   Sale Price

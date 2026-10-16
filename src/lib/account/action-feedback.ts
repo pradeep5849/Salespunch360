@@ -109,6 +109,7 @@ const messages: Record<string, string> = {
     "Opening stock value is too large. Check the quantity and price per unit.",
   ITEM_DISCOUNT_DISABLED: "Item discounts are disabled in Item Settings.",
   INVALID_DISCOUNT: "Enter a discount within the item price or 0–100 percent.",
+  MRP_PRICING_DISABLED: "Enable Tax on MRP in Item Settings before entering an MRP.",
   WHOLESALE_PRICING_DISABLED: "Wholesale pricing is disabled in Item Settings.",
   CUSTOMER_PRICING_DISABLED: "Party-wise pricing is disabled in Item Settings.",
   INVALID_PRICE_DATES:

@@ -9,6 +9,7 @@ export const itemPricingInput = z
     discountType: z.enum(["PERCENTAGE", "FIXED"]).default("PERCENTAGE"),
     discountValue: amount.default("0"),
     wholesalePrice: amount.optional(),
+    mrp: amount.optional(),
   })
   .strict();
 export type ItemPricingInput = z.input<typeof itemPricingInput>;
@@ -47,6 +48,7 @@ export function normalizedItemPricing(
     throw new Error("ITEM_DISCOUNT_DISABLED");
   if (!settings.wholesalePrice && p.wholesalePrice !== undefined)
     throw new Error("WHOLESALE_PRICING_DISABLED");
+  if (p.mrp !== undefined && !settings.taxOnMrp) throw new Error("MRP_PRICING_DISABLED");
   if (
     (p.discountType === "PERCENTAGE" && discount.gt(100)) ||
     (p.discountType === "FIXED" && discount.gt(sale))
@@ -61,6 +63,7 @@ export function normalizedItemPricing(
     costRate = exclusive(cost, p.purchaseTaxMode);
   const pricing = {
     ...p,
+    ...(p.mrp !== undefined ? { mrp: new Prisma.Decimal(p.mrp).toString(), mrpTaxMode: "INCLUSIVE", normalizedMrp: exclusive(new Prisma.Decimal(p.mrp), "INCLUSIVE").toFixed(2) } : {}),
     enteredSalePrice: sale.toFixed(2),
     enteredPurchasePrice: cost.toFixed(2),
     discountValue: discount.toString(),
@@ -185,6 +188,7 @@ export function pricingForLegacyEdit(
     purchaseTaxMode: p.purchaseTaxMode,
     discountType: p.discountType,
     discountValue: p.discountValue,
+    ...(typeof p.mrp === "string" ? {mrp:p.mrp} : {}),
     ...(p.wholesalePrice === undefined
       ? {}
       : { wholesalePrice: p.wholesalePrice }),
@@ -233,6 +237,13 @@ export function pricingForLegacyEdit(
       taxRate: rate.toString(),
       pricing: choice,
     },
-    { ...settings, itemWiseDiscount: true, wholesalePrice: true },
+    { ...settings, itemWiseDiscount: true, wholesalePrice: true, taxOnMrp:true },
   );
+}
+
+/** Omitted optional MRP must survive partial price edits and a disabled entry switch. */
+export function retainItemMrp<T extends object>(next:T, previous:unknown, taxRate:Prisma.Decimal|string|number|null|undefined):T {
+  const old=previous&&typeof previous==="object"&&!Array.isArray(previous)?previous as Record<string,unknown>:null;
+  if("mrp" in next||!old||typeof old.mrp!=="string"||!amount.safeParse(old.mrp).success)return next;
+  return {...next,mrp:old.mrp,mrpTaxMode:"INCLUSIVE",normalizedMrp:new Prisma.Decimal(old.mrp).mul(100).div(new Prisma.Decimal(100).add(taxRate??0)).toFixed(2)};
 }

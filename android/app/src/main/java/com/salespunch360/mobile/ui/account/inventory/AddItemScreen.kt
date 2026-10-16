@@ -55,6 +55,7 @@ fun AddItemScreen(
     var hsnQuery by remember{mutableStateOf("")}
     var hsn by remember{mutableStateOf("")}
     var salePrice by remember{mutableStateOf("")}
+    var mrp by remember{mutableStateOf("")}
     var purchasePrice by remember{mutableStateOf("")}
     var saleTaxMode by remember{mutableStateOf("Without Tax")}
     var purchaseTaxMode by remember{mutableStateOf("Without Tax")}
@@ -157,6 +158,7 @@ fun AddItemScreen(
                                 code=code,
                                 description=if(enabled("description"))description else "",
                                 pricing=buildJsonObject{
+                                    if(enabled("taxOnMrp")&&mrp.isNotBlank())put("mrp",mrp)
                                     put("saleTaxMode",if(saleTaxMode=="With Tax")"INCLUSIVE" else "EXCLUSIVE")
                                     put("purchaseTaxMode",if(purchaseTaxMode=="With Tax")"INCLUSIVE" else "EXCLUSIVE")
                                     put("discountType",if(discountMode=="Amount")"FIXED" else "PERCENTAGE")
@@ -301,6 +303,10 @@ fun AddItemScreen(
                 if(tab=="PRICING"){
                     item{
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+                            if(enabled("taxOnMrp")){
+                                OutlinedTextField(mrp,{mrp=it},label={Text("MRP (tax included)")},enabled=!s.saving)
+                                Text("Optional maximum retail price including tax. Invoice tax uses the selling price, not MRP.")
+                            }
                             Text("Sale Price",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
                             PriceWithTaxField("Sale Price",salePrice,{salePrice=it},saleTaxMode,{saleTaxMode=it})
                             if(enabled("itemWiseDiscount"))DiscountField(discountValue,{discountValue=it},discountMode,{discountMode=it})

@@ -10,4 +10,5 @@ class AddItemValidationTest {
  @Test fun openingDateAndPrecisionAreValidatedWithoutRounding(){assertNull(validate(opening="1.1234"));assertNotNull(validate(opening="1.12345"));assertNotNull(validate(opening="1",date="2026-02-30"))}
  @Test fun discountsRespectSavedTypeAndSalePrice(){assertNotNull(validate(pricing=buildJsonObject{put("discountType","PERCENTAGE");put("discountValue","100.01")}));assertNotNull(validate(pricing=buildJsonObject{put("discountType","FIXED");put("discountValue","118.01")}));assertNull(validate(pricing=buildJsonObject{put("discountType","FIXED");put("discountValue","118")}))}
  @Test fun wholesalePrecisionIsNotSilentlyTruncated(){assertNotNull(validate(pricing=buildJsonObject{put("wholesalePrice","1.12345")}));assertNull(validate(pricing=buildJsonObject{put("wholesalePrice","94.4000")}))}
+ @Test fun mrpUsesExactNonnegativeAmountBounds(){assertNull(validate(pricing=buildJsonObject{put("mrp","118.0000")}));for(value in listOf("-1","1.12345","NaN","100000000000000"))assertNotNull(validate(pricing=buildJsonObject{put("mrp",value)}))}
 }

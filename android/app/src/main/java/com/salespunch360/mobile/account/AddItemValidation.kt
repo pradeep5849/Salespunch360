@@ -26,6 +26,8 @@ fun addItemValidationError(name:String,code:String,description:String,sale:Strin
         if(!decimal.matches(discount))return "Sale discount allows up to 14 digits and 4 decimal places."
         if(pricing.str("discountType")=="PERCENTAGE"&&BigDecimal(discount)>BigDecimal(100))return "Sale discount percentage cannot exceed 100."
         if(pricing.str("discountType")=="FIXED"&&BigDecimal(discount)>BigDecimal(sale.ifBlank{"0"}))return "Sale discount cannot exceed the sale price."
+        val mrp=pricing.str("mrp")
+        if(mrp.isNotEmpty()&&!decimal.matches(mrp))return "MRP allows up to 14 digits and 4 decimal places."
         val wholesale=pricing.str("wholesalePrice")
         if(wholesale.isNotEmpty()&&!decimal.matches(wholesale))return "Wholesale price allows up to 14 digits and 4 decimal places."
     }

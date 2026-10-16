@@ -6,6 +6,7 @@ import {
   normalizedItemPricing,
   itemPriceForDocument,
   pricingForLegacyEdit,
+  retainItemMrp,
 } from "./item-pricing";
 import { itemSettingsDefaults } from "./item-settings-policy";
 const pricing = (extra = {}) =>
@@ -333,3 +334,22 @@ it("uses the manually selected wholesale rate and stacks the saved per-unit disc
     ),
   ).toThrow("WHOLESALE_PRICE_UNAVAILABLE");
 });
+it("treats entered MRP as tax-inclusive without taxing a discounted invoice on MRP",()=>{
+ const result=normalizedItemPricing({sellingRate:"90",cost:"50",taxRate:"18",pricing:pricing({saleTaxMode:"EXCLUSIVE",mrp:"118"})},{...itemSettingsDefaults,taxOnMrp:true});
+ expect(result.pricing).toMatchObject({mrp:"118",mrpTaxMode:"INCLUSIVE",normalizedMrp:"100.00"});
+ expect(result.saleRate?.toString()).toBe("90");
+ expect(itemPriceForDocument(result.saleRate,"18",result.pricing,"INCLUSIVE").rate.toFixed(2)).toBe("106.20");
+ expect(()=>normalizedItemPricing({sellingRate:"90",taxRate:"18",pricing:pricing({mrp:"118"})},itemSettingsDefaults)).toThrow("MRP_PRICING_DISABLED");
+ expect(itemPricingInput.safeParse({mrp:"-1"}).success).toBe(false);
+});
+it("retains saved MRP through legacy master edits when the setting is switched off",()=>{
+ const original=normalizedItemPricing({sellingRate:"90",cost:"50",taxRate:"18",pricing:pricing({mrp:"118"})},{...itemSettingsDefaults,taxOnMrp:true});
+ const edit=pricingForLegacyEdit({saleRate:new Prisma.Decimal(original.saleRate!),costRate:new Prisma.Decimal(original.costRate!),taxRate:new Prisma.Decimal(18),pricing:original.pricing},{taxRate:"18"},itemSettingsDefaults);
+ expect(edit?.pricing).toMatchObject({mrp:"118",normalizedMrp:"100.00",mrpTaxMode:"INCLUSIVE"});
+});
+
+it("preserves omitted MRP on partial price edits without changing the selected sale rate",()=>{
+ const next={enteredSalePrice:"90.00",saleTaxMode:"EXCLUSIVE"};expect(retainItemMrp(next,{mrp:"118.00"},18)).toEqual({...next,mrp:"118.00",mrpTaxMode:"INCLUSIVE",normalizedMrp:"100.00"});expect(next).not.toHaveProperty("mrp");expect(retainItemMrp({mrp:"236.00"},{mrp:"118.00"},18)).toEqual({mrp:"236.00"});
+});
+
+it("retains entered four-decimal MRP without overflowing its accepted integer width",()=>{const mrp="99999999999999.9999";const result=normalizedItemPricing({pricing:pricing({mrp}),taxRate:"18"},{...itemSettingsDefaults,taxOnMrp:true});expect(result.pricing?.mrp).toBe(mrp);expect(itemPricingInput.safeParse({mrp:result.pricing?.mrp}).success).toBe(true);});

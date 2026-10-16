@@ -11299,6 +11299,34 @@
         "resolved_pricing_decisions_2026_10_16": {
           "work": "User clarified taxOnMrp means entered MRP includes tax and updateSalePrice requires confirmation before changing saved retail price.",
           "remaining": "Implement these consumers and corresponding permission/concurrency/retry/financial regressions. PARTIAL retained;decisions alone do not count as implementation."
+        },
+        "tax_inclusive_mrp_2026_10_16": {
+          "work": "Implemented user-confirmed tax-inclusive MRP semantics. Web/native Item Settings labels now explain that invoice tax still uses selling price;ON exposes optional MRP entry. Shared validated pricing stores exact entered MRP,INCLUSIVE basis and normalized net MRP without replacing sale price. OFF rejects newly supplied MRP with a friendly domain error/API400;legacy and partial explicit master edits preserve omitted saved MRP. Exact four-decimal entered amounts retained,including rounding-boundary values. Existing company/role/master write authorization retained;no posted document is changed.",
+          "files": [
+            "src/lib/account/item-pricing.ts",
+            "src/lib/account/item-pricing.test.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/app/workspace/account/inventory/item-settings/page.tsx",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AddItemValidation.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AddItemValidationTest.kt",
+            "e2e/a049-a051-expenses.spec.ts"
+          ],
+          "tests": {
+            "focused_unit_financial": "71 passed,0 failed,0 skipped in6 focused unit/real PostgreSQL files (6.64s);includes actual invoice90+18%GST=106.20 with MRP118 and balanced debit/credit106.20",
+            "web_responsive_runtime": "2 current desktop/mobile pricing/create/API replay/legacy edit/MRP-OFF400/partial-edit retention scenarios passed(44.1s). Separate renamed-settings no-op/audit preservation and pricing group4 passed(59.5s).",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(1m57s);20 JVM tests:7 AddItemValidation,6 ItemMasterPricing,7 SalesPreview;0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS npm run lint --max-warnings=0",
+            "migration": "None;existing pricing JSON fields extended",
+            "initial_failures": "Earlier settings-browser mobile login exceeded5s cold-start budget;rerun with20s navigation/120s scenario passed without dropping assertions. One new unit expected padded MRP after exact-preservation change;corrected expectation for retained historical118.00 and final71-test group passed."
+          },
+          "remaining": "A057-F03 remains PARTIAL:Update Sale Price confirmation and associated authorized concurrency/retry-safe master changes are not implemented. Complete catalogue pricing consumption,final exact-head validation and native device runtime remain pending. A058-F02 wider purchase/edited-line/native coverage remains PARTIAL.",
+          "commit": "See git history for tax-inclusive MRP checkpoint."
         }
       },
       "intermediate_validation": {
@@ -12649,6 +12677,34 @@
           },
           "remaining": "Broader purchase/native editor and edited-line coverage, runtime accessibility/device/offline checks and final-head regressions; PARTIAL retained.",
           "commit": "29eac6955208796223488eafac7cee78cc276dcd"
+        },
+        "tax_inclusive_mrp_2026_10_16": {
+          "work": "Implemented user-confirmed tax-inclusive MRP semantics. Web/native Item Settings labels now explain that invoice tax still uses selling price;ON exposes optional MRP entry. Shared validated pricing stores exact entered MRP,INCLUSIVE basis and normalized net MRP without replacing sale price. OFF rejects newly supplied MRP with a friendly domain error/API400;legacy and partial explicit master edits preserve omitted saved MRP. Exact four-decimal entered amounts retained,including rounding-boundary values. Existing company/role/master write authorization retained;no posted document is changed.",
+          "files": [
+            "src/lib/account/item-pricing.ts",
+            "src/lib/account/item-pricing.test.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/mobile/account-master-data.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/app/workspace/account/inventory/item-settings/page.tsx",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AddItemValidation.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AddItemValidationTest.kt",
+            "e2e/a049-a051-expenses.spec.ts"
+          ],
+          "tests": {
+            "focused_unit_financial": "71 passed,0 failed,0 skipped in6 focused unit/real PostgreSQL files (6.64s);includes actual invoice90+18%GST=106.20 with MRP118 and balanced debit/credit106.20",
+            "web_responsive_runtime": "2 current desktop/mobile pricing/create/API replay/legacy edit/MRP-OFF400/partial-edit retention scenarios passed(44.1s). Separate renamed-settings no-op/audit preservation and pricing group4 passed(59.5s).",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(1m57s);20 JVM tests:7 AddItemValidation,6 ItemMasterPricing,7 SalesPreview;0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS npm run lint --max-warnings=0",
+            "migration": "None;existing pricing JSON fields extended",
+            "initial_failures": "Earlier settings-browser mobile login exceeded5s cold-start budget;rerun with20s navigation/120s scenario passed without dropping assertions. One new unit expected padded MRP after exact-preservation change;corrected expectation for retained historical118.00 and final71-test group passed."
+          },
+          "remaining": "A057-F03 remains PARTIAL:Update Sale Price confirmation and associated authorized concurrency/retry-safe master changes are not implemented. Complete catalogue pricing consumption,final exact-head validation and native device runtime remain pending. A058-F02 wider purchase/edited-line/native coverage remains PARTIAL.",
+          "commit": "See git history for tax-inclusive MRP checkpoint."
         }
       }
     },
@@ -64952,7 +65008,7 @@
       "tax_on_mrp": "Entered MRP includes tax; do not calculate invoice tax on MRP when selling price is lower.",
       "update_sale_price": "Ask for confirmation before changing the saved retail price.",
       "source": "User async replies to call_7f8956ed234e4a828ba5a433542a72fd,items0and1",
-      "implementation": "Pending A057-F03 implementation;no final verification claimed."
+      "implementation": "Tax-inclusive MRP consumer implemented and focused checks passed;Update Sale Price confirmation remains pending A057-F03. No final verification claim."
     }
   },
   "push_checkpoint": {

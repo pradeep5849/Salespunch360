@@ -1,4 +1,4 @@
-import {normalizedItemPricing,pricingForLegacyEdit} from "@/lib/account/item-pricing";
+import {normalizedItemPricing,pricingForLegacyEdit,retainItemMrp} from "@/lib/account/item-pricing";
 import {assertItemUnitChangeInTx,assignUnitToItemsForActor,unitAssignmentOptionsForActor} from "@/lib/account/unit-assignment";
 import {
   assertUnitAccess,
@@ -579,7 +579,7 @@ export async function saveMobileAccountMaster(
               data: { ...pricedData, companyId: user.companyId },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) {if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.sellingRate,costRate:row.estimatedCost,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,sellingRate:kept.saleRate,estimatedCost:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);}await tx.accountService.update({ where: { id: row.id }, data:pricedData });}
+        if (id) {if(input.pricing&&price.pricing)pricedData={...pricedData,pricing:retainItemMrp(price.pricing,row.pricing,input.taxRate??row.taxRate)};if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.sellingRate,costRate:row.estimatedCost,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,sellingRate:kept.saleRate,estimatedCost:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);}await tx.accountService.update({ where: { id: row.id }, data:pricedData });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,
@@ -679,7 +679,7 @@ export async function saveMobileAccountMaster(
               },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) {if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.salePrice,costRate:row.costPrice,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,salePrice:kept.saleRate,costPrice:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);}await tx.accountProduct.update({ where: { id: row.id }, data:pricedData });}
+        if (id) {if(input.pricing&&price.pricing)pricedData={...pricedData,pricing:retainItemMrp(price.pricing,row.pricing,input.taxRate??row.taxRate)};if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.salePrice,costRate:row.costPrice,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,salePrice:kept.saleRate,costPrice:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);}await tx.accountProduct.update({ where: { id: row.id }, data:pricedData });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,
