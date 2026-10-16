@@ -3926,3 +3926,33 @@ test("sale details distinguish receipts, credits, advances and aggregate party b
     ),
   ).toBe(true);
 });
+
+test("A054 native warehouse and product editors persist tracking metadata and deny unauthorized writes", async ({request}) => {
+  const suffix=randomUUID().slice(0,8),createdProducts:string[]=[],createdWarehouses:string[]=[];
+  const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"A054 native parity"}});
+  expect(login.status()).toBe(200);
+  const headers={authorization:`Bearer ${(await login.json()).accessToken}`};
+  try {
+    const warehouse=await request.post("/api/v1/mobile/account/master-data/warehouses",{headers,data:{branchId,name:`Parity warehouse ${suffix}`,code:`PARITY-${suffix}`,address:"Native warehouse address",isDefault:true}});
+    expect(warehouse.status()).toBe(201);const savedWarehouse=await warehouse.json();createdWarehouses.push(savedWarehouse.id);
+    expect(await db.warehouse.findUniqueOrThrow({where:{id:savedWarehouse.id}})).toMatchObject({companyId,branchId,address:"Native warehouse address",isDefault:true,isActive:true});
+    for(const trackingMode of ["BATCH","SERIAL"] as const){
+      const product=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{name:`Parity ${trackingMode} ${suffix}`,description:"Native retained description",sellingRate:"25",cost:"12",trackInventory:true,trackingMode,lowStockThreshold:3}});
+      expect(product.status()).toBe(201);const saved=await product.json();createdProducts.push(saved.id);
+      expect(await db.accountProduct.findUniqueOrThrow({where:{id:saved.id}})).toMatchObject({companyId,description:"Native retained description",trackInventory:true,trackingMode});
+      const kind=trackingMode==="BATCH"?"batches":"serials",fields=trackingMode==="BATCH"?{batchNumber:`PARITY-${suffix}`,manufacturedDate:"2026-10-01"}:{serialNumber:`PARITY-${suffix}`};
+      const catalog=await request.post(`/api/v1/mobile/account/inventory/${kind}`,{headers,data:{productId:saved.id,...fields,expiryDate:"2027-10-01"}});
+      expect(catalog.status()).toBe(201);const row=await catalog.json();expect(row.expiryDate.slice(0,10)).toBe("2027-10-01");if(trackingMode==="BATCH")expect(row.manufacturedDate.slice(0,10)).toBe("2026-10-01");
+      const invalid=await request.post(`/api/v1/mobile/account/inventory/${kind}`,{headers,data:{productId:saved.id,...fields,expiryDate:"2026-02-30"}});expect(invalid.ok()).toBe(false);
+    }
+    const deactivated=await request.patch(`/api/v1/mobile/account/master-data/warehouses/${savedWarehouse.id}`,{headers,data:{branchId,name:savedWarehouse.name,code:savedWarehouse.code,isActive:false,isDefault:true}});expect(deactivated.status()).toBe(200);
+    expect(await db.warehouse.findUniqueOrThrow({where:{id:savedWarehouse.id}})).toMatchObject({isActive:false,isDefault:false});
+    await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});
+    const denied=await request.post("/api/v1/mobile/account/master-data/warehouses",{headers,data:{branchId,name:"Denied warehouse",code:`DENIED-${suffix}`}});expect(denied.status()).toBe(403);
+    expect(await db.warehouse.count({where:{companyId,code:`DENIED-${suffix}`}})).toBe(0);
+  } finally {
+    await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});
+    await db.inventoryBatch.deleteMany({where:{companyId,productId:{in:createdProducts}}});await db.inventorySerialNumber.deleteMany({where:{companyId,productId:{in:createdProducts}}});
+    await db.accountProduct.deleteMany({where:{companyId,id:{in:createdProducts}}});await db.warehouse.deleteMany({where:{companyId,id:{in:createdWarehouses}}});
+  }
+});

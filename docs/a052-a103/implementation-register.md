@@ -1432,7 +1432,7 @@ Intermediate verification:95 grouped tests;36 financial/unit tests including5 Po
 
 **Required tests:** Cross-platform warehouse/settings/batch dates/serial expiry/customer price workflows; denied roles and bad dates/customer scope.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A054_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -9430,3 +9430,5 @@ A052-F11 remains PARTIAL: scoped Categories/Items overview, posted totals, searc
 A052-F13 remains PARTIAL pending full original parity verification: real foreign-company payment account/category/branch denial regression added; 32 PostgreSQL integrity tests passed October 14. No financial behavior changed.
 
 A052-F01 production remediation is BLOCKED by the explicit prohibition on production DB changes/deployment; local schema/preflight evidence cannot establish production recovery. All 199 IDs and existing statuses preserved. Counts remain 158 implemented but not verified,39 partial,2 not started; zero final closures.
+
+A054-F03 continuation October 16: independent native-facing warehouse/product persistence and tracking-date/denial checks passed in two Playwright API configurations (18.4s). 23 focused tests, TypeScript and targeted lint passed. Code status IMPLEMENTED BUT NOT VERIFIED; Android UI/device/keyboard and final-head validation remain outstanding. Counts159 implemented but not verified/38 partial/2 not started;199 IDs,zero final closures.

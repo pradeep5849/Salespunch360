@@ -8187,7 +8187,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -8214,6 +8214,14 @@
           "implementation": "Native product editor exposes retained description/category/unit/tracking controls, respecting saved description/category/unit switches. Warehouse API accepts authorized ALL_BRANCHES actors without selected IDs while retaining active company-branch checks and selected assignment guards; deactivation clears isDefault. Existing native warehouse create/edit Active controls remain.",
           "tests": "35 reference/scope/inventory-option/action/policy tests and five new warehouse permission/branch/deactivation regressions passed; final Android compile, TypeScript and focused lint passed.",
           "remaining": "Independent real API persistence and native warehouse/product interactions, original complete parity and final-head/device checks remain pending. Finding remains PARTIAL."
+        },
+        "native_persistence_2026_10_16": {
+          "implementation": "Independently exercised existing native-facing warehouse and product APIs against the real local database: warehouse creation/address/default, product description/tracking, batch manufactured/expiry and serial expiry, invalid calendar date rejection, warehouse deactivation clears default, Project Manager write rejection leaves no row. Existing customer-price and native input implementation evidence retained.",
+          "tests": "Two Playwright API scenarios passed (desktop/mobile configurations,18.4s);23 focused warehouse/tracking/options/policy tests passed;TypeScript and targeted lint passed. These are API/runtime persistence checks, not Android UI interaction.",
+          "files": [
+            "e2e/a049-a051-expenses.spec.ts"
+          ],
+          "remaining": "Code implementation covered; physical/emulator Android editor interaction, keyboard/accessibility and complete final-head validation remain NOT RUN. No final status assigned."
         }
       },
       "intermediate_validation": {
