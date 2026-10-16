@@ -53,6 +53,12 @@ fun AddItemScreen(
     var hsn by remember{mutableStateOf("")}
     var salePrice by remember{mutableStateOf("")}
     var purchasePrice by remember{mutableStateOf("")}
+    var saleTaxMode by remember{mutableStateOf("Without Tax")}
+    var purchaseTaxMode by remember{mutableStateOf("Without Tax")}
+    var discountValue by remember{mutableStateOf("")}
+    var discountMode by remember{mutableStateOf("Percentage")}
+    var wholesaleOpen by remember{mutableStateOf(false)}
+    var wholesalePrice by remember{mutableStateOf("")}
     var taxRate by remember{mutableStateOf("")}
     val creationRequestKey=remember{java.util.UUID.randomUUID().toString()}
     var openingWarehouseId by remember{mutableStateOf("")}
@@ -145,6 +151,13 @@ fun AddItemScreen(
                                 categoryId=categoryId.takeIf{enabled("itemCategory")},
                                 code=code,
                                 description=if(enabled("description"))description else "",
+                                pricing=buildJsonObject{
+                                    put("saleTaxMode",if(saleTaxMode=="With Tax")"INCLUSIVE" else "EXCLUSIVE")
+                                    put("purchaseTaxMode",if(purchaseTaxMode=="With Tax")"INCLUSIVE" else "EXCLUSIVE")
+                                    put("discountType",if(discountMode=="Amount")"FIXED" else "PERCENTAGE")
+                                    put("discountValue",if(enabled("itemWiseDiscount"))discountValue.ifBlank{"0"}else "0")
+                                    if(enabled("wholesalePrice")&&wholesaleOpen&&wholesalePrice.isNotBlank())put("wholesalePrice",wholesalePrice)
+                                },
                                 sellingRate=salePrice,
                                 cost=purchasePrice,
                                 creationRequestKey=creationRequestKey,
@@ -283,12 +296,15 @@ fun AddItemScreen(
                     item{
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
                             Text("Sale Price",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
-                            PriceWithTaxField("Sale Price",salePrice,{salePrice=it})
-                            if(enabled("itemWiseDiscount"))DiscountField()
-                            if(enabled("wholesalePrice"))TextButton(onClick={}){Text("+ Add Wholesale Price")}
+                            PriceWithTaxField("Sale Price",salePrice,{salePrice=it},saleTaxMode,{saleTaxMode=it})
+                            if(enabled("itemWiseDiscount"))DiscountField(discountValue,{discountValue=it},discountMode,{discountMode=it})
+                            if(enabled("wholesalePrice")){
+                                TextButton(onClick={wholesaleOpen=true}){Text("+ Add Wholesale Price")}
+                                if(wholesaleOpen)OutlinedTextField(wholesalePrice,{wholesalePrice=it},label={Text("Wholesale Price")},enabled=!s.saving)
+                            }
                             HorizontalDivider()
                             Text("Purchase Price",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
-                            PriceWithTaxField("Purchase Price",purchasePrice,{purchasePrice=it})
+                            PriceWithTaxField("Purchase Price",purchasePrice,{purchasePrice=it},purchaseTaxMode,{purchaseTaxMode=it})
                             HorizontalDivider()
                             Text("Taxes",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
                             if(enabled("itemWiseTax"))TaxRateField(taxRate){taxRate=it}
@@ -365,8 +381,7 @@ fun AddItemScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PriceWithTaxField(label:String,value:String,onChange:(String)->Unit){
-    var mode by remember{mutableStateOf("Without Tax")}
+private fun PriceWithTaxField(label:String,value:String,onChange:(String)->Unit,mode:String,onMode:(String)->Unit){
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
         OutlinedTextField(value,onChange,label={Text(label)},modifier=Modifier.weight(1f))
         var open by remember{mutableStateOf(false)}
@@ -383,7 +398,7 @@ private fun PriceWithTaxField(label:String,value:String,onChange:(String)->Unit)
             )
             ExposedDropdownMenu(expanded=open,onDismissRequest={open=false}){
                 listOf("Without Tax","With Tax").forEach{x->
-                    DropdownMenuItem({Text(x)},{mode=x;open=false})
+                    DropdownMenuItem({Text(x)},{onMode(x);open=false})
                 }
             }
         }
@@ -392,13 +407,11 @@ private fun PriceWithTaxField(label:String,value:String,onChange:(String)->Unit)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DiscountField(){
-    var amount by remember{mutableStateOf("")}
-    var mode by remember{mutableStateOf("Percentage")}
+private fun DiscountField(amount:String,onAmount:(String)->Unit,mode:String,onMode:(String)->Unit){
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
         OutlinedTextField(
             amount,
-            {amount=it},
+            onAmount,
             label={Text("Disc. On Sale Price")},
             modifier=Modifier.weight(1f)
         )
@@ -412,7 +425,7 @@ private fun DiscountField(){
             )
             ExposedDropdownMenu(expanded=open,onDismissRequest={open=false}){
                 listOf("Percentage","Amount").forEach{x->
-                    DropdownMenuItem({Text(x)},{mode=x;open=false})
+                    DropdownMenuItem({Text(x)},{onMode(x);open=false})
                 }
             }
         }

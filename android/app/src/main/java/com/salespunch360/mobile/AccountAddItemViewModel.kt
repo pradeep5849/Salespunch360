@@ -88,6 +88,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         openingDate:String="",
         openingPrice:String="0",
         itemLocation:String="",
+        pricing:JsonObject?=null,
         done:()->Unit
     )=viewModelScope.launch{
         if(_state.value.saving||!_state.value.configLoaded)return@launch
@@ -103,6 +104,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
                     unitId?.let{put("unitId",it)}
                     categoryId?.let{put("categoryId",it)}
                     put("description",description)
+                    pricing?.let{put("pricing",it)}
                     put("sellingRate",sellingRate.ifBlank{"0"})
                     put("cost",cost.ifBlank{"0"})
                     put("taxRate",taxRate.ifBlank{"0"})

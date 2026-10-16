@@ -1,3 +1,4 @@
+import {normalizedItemPricing} from "./item-pricing";
 import {resolveAccountBranchContext} from "./branch-context";
 import {
   assertUnitAccess,
@@ -611,7 +612,7 @@ export async function createProduct(
     d = itemSchema.parse(raw),
     extras = itemCreationExtras.parse(raw),
     requestHash = extras.creationRequestKey
-      ? itemCreationHash(d, customValues, extras)
+      ? itemCreationHash(d, customValues, extras,raw)
       : undefined;
   await assertInventoryAvailable(a);
   await refs(a.companyId!, d, "PRODUCT");
@@ -652,6 +653,7 @@ export async function createProduct(
         (extras.openingStock || extras.itemLocation)
       )
         throw new Error("STOCK_FIELDS_DISABLED");
+      const price=normalizedItemPricing(d,policy,raw);
       const row = await tx.accountProduct.create({
         data: {
           companyId: a.companyId!,
@@ -663,8 +665,9 @@ export async function createProduct(
           categoryId: d.categoryId,
           unitId: d.unitId,
           description: d.description,
-          salePrice: d.sellingRate,
-          costPrice: d.cost,
+          salePrice: price.saleRate,
+          ...(price.pricing?{pricing:price.pricing}:{}),
+          costPrice: price.costRate,
           taxRate: d.taxRate,
           hsnCode: d.hsnSacCode,
           barcode: d.barcode,
@@ -710,6 +713,7 @@ export async function createService(
         ...d,
         customFields: customValues,
       });
+      const price=normalizedItemPricing(d,policy,raw);
       const row = await tx.accountService.create({
         data: {
           companyId: a.companyId!,
@@ -718,8 +722,9 @@ export async function createService(
           categoryId: d.categoryId,
           unitId: d.unitId,
           description: d.description,
-          sellingRate: d.sellingRate,
-          estimatedCost: d.cost,
+          sellingRate: price.saleRate,
+          ...(price.pricing?{pricing:price.pricing}:{}),
+          estimatedCost: price.costRate,
           taxRate: d.taxRate,
           sacCode: d.hsnSacCode,
         },

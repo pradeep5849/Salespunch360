@@ -1,3 +1,4 @@
+import {itemPriceForDocument} from "./item-pricing";
 import {commercialLineAmounts} from "./commercial-line-amounts";
 import { effectiveAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
 import { createHash } from "node:crypto";
@@ -504,6 +505,7 @@ async function snapshotLine(
   itemSettings: ItemSettings = resolveItemSettings(null),
   purchaseInventory = true,
   transactionDefaults?:Prisma.JsonValue,
+  documentTaxMode: "EXCLUSIVE"|"INCLUSIVE"="EXCLUSIVE",
 ) {
   assertCommercialItemLine(itemSettings, row);
   const purchase = policies[type].party === "vendor",
@@ -517,6 +519,7 @@ async function snapshotLine(
     code: string | null;
     description: string | null;
     rate: Prisma.Decimal | null;
+    pricing?: Prisma.JsonValue;
     tax: Prisma.Decimal | null;
     hsnSacCode: string | null;
     trackInventory: boolean;
@@ -536,6 +539,7 @@ async function snapshotLine(
         code: x.code,
         description: x.description,
         rate: selectMasterRate(purchase, x.salePrice, x.costPrice),
+        pricing:x.pricing,
         tax: x.taxRate,
         hsnSacCode: x.hsnCode,
         trackInventory:
@@ -562,6 +566,7 @@ async function snapshotLine(
         code: x.code,
         description: x.description,
         rate: selectMasterRate(purchase, x.sellingRate, x.estimatedCost),
+        pricing:x.pricing,
         tax: x.taxRate,
         hsnSacCode: x.sacCode,
         trackInventory: false,
@@ -591,13 +596,15 @@ async function snapshotLine(
   }
   if (row.lineType !== "CUSTOM" && !master)
     throw new Error("INVALID_LINE_SOURCE");
+  const defaultPricing=itemPriceForDocument(master?.rate,master?.tax,master?.pricing,documentTaxMode,purchase,row.quantity);
   const quantity = new D(row.quantity),
-    rate = new D(row.rate ?? master?.rate ?? 0),
+    rate = new D(row.rate ?? defaultPricing.rate),
     taxRate = resolveCommercialTaxRate(row.taxRate, master?.tax ?? null),
-    discountValue = new D(row.discountValue ?? 0);
+    discountValue = new D(row.discountValue ?? (row.discountType===undefined&&itemSettings.itemWiseDiscount?defaultPricing.discountValue:0));
+  const effectiveDiscountType=row.discountType===undefined&&itemSettings.itemWiseDiscount?defaultPricing.discountType:row.discountType;
   if (quantity.lte(0) || rate.lt(0) || taxRate.lt(0) || discountValue.lt(0))
     throw new Error("INVALID_AMOUNT");
-  const {baseAmount,discountAmount}=commercialLineAmounts(quantity,rate,row.discountType,discountValue);
+  const {baseAmount,discountAmount}=commercialLineAmounts(quantity,rate,effectiveDiscountType,discountValue);
   if (
     master?.trackInventory &&
     ["PURCHASE_BILL", "SALES_INVOICE", "CREDIT_NOTE", "DEBIT_NOTE"].includes(
@@ -745,7 +752,7 @@ async function snapshotLine(
     unitSymbol: row.unitSymbol ?? master?.unit?.symbol,
     quantity,
     rate,
-    discountType: row.discountType,
+    discountType: effectiveDiscountType,
     discountValue: row.discountValue,
     taxRate: sourceTax?.taxRate ?? taxRate,
     cessRate: sourceTax?.cessRate ?? new D(row.cessRate ?? 0),
@@ -1076,6 +1083,7 @@ export async function createCommercialDocumentForActor(
                         row.allocationType === "PROJECT",
                     )),
                 settings?.transactionDefaults??undefined,
+                d.taxMode,
               ),
             ),
           ),
@@ -3340,6 +3348,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         code: true,
         barcode: true,
         salePrice: true,
+        pricing:true,
         costPrice: true,
         taxRate: true,
         trackInventory: true,
@@ -3380,6 +3389,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         name: true,
         code: true,
         sellingRate: true,
+        pricing:true,
         taxRate: true,
       },
     }),

@@ -130,6 +130,7 @@ export function AddItemEditor({
       "PERCENTAGE",
     ),
     [wholesale, setWholesale] = useState(""),
+    [wholesaleOpen,setWholesaleOpen]=useState(false),
     [purchasePrice, setPurchasePrice] = useState(""),
     [purchaseTaxMode, setPurchaseTaxMode] = useState<"WITHOUT" | "WITH">(
       "WITHOUT",
@@ -238,6 +239,7 @@ export function AddItemEditor({
             description: enabled("description")
               ? description || undefined
               : undefined,
+            pricing:{saleTaxMode:saleTaxMode==="WITH"?"INCLUSIVE":"EXCLUSIVE",purchaseTaxMode:purchaseTaxMode==="WITH"?"INCLUSIVE":"EXCLUSIVE",discountType:discountMode==="AMOUNT"?"FIXED":"PERCENTAGE",discountValue:enabled("itemWiseDiscount")?discount||"0":"0",...(enabled("wholesalePrice")&&wholesaleOpen&&wholesale?{wholesalePrice:wholesale}:{})},
             sellingRate: salePrice || "0",
             cost: purchasePrice || "0",
             taxRate: enabled("itemWiseTax") ? taxRate || "0" : "0",
@@ -467,6 +469,7 @@ export function AddItemEditor({
                       placeholder="Sale Price"
                     />
                     <select
+                      aria-label="Sale Price Tax Mode"
                       value={saleTaxMode}
                       onChange={(e) =>
                         setSaleTaxMode(e.target.value as "WITHOUT" | "WITH")
@@ -485,10 +488,12 @@ export function AddItemEditor({
                         type="number"
                         min="0"
                         step=".01"
+                        aria-label="Sale Price Discount"
                         value={discount}
                         onChange={(e) => setDiscount(e.target.value)}
                       />
                       <select
+                        aria-label="Sale Price Discount Type"
                         value={discountMode}
                         onChange={(e) =>
                           setDiscountMode(
@@ -504,11 +509,12 @@ export function AddItemEditor({
                 )}
                 {enabled("wholesalePrice") && (
                   <>
-                    <button type="button" className="link-button">
+                    <button type="button" className="link-button" onClick={()=>setWholesaleOpen(true)}>
                       ＋ Add Wholesale Price
                     </button>
-                    {wholesale && (
+                    {wholesaleOpen && (
                       <input
+                        aria-label="Wholesale Price" type="number" min="0" step="0.01"
                         value={wholesale}
                         onChange={(e) => setWholesale(e.target.value)}
                       />
@@ -528,6 +534,7 @@ export function AddItemEditor({
                       placeholder="Purchase Price"
                     />
                     <select
+                      aria-label="Purchase Price Tax Mode"
                       value={purchaseTaxMode}
                       onChange={(e) =>
                         setPurchaseTaxMode(e.target.value as "WITHOUT" | "WITH")
@@ -544,6 +551,7 @@ export function AddItemEditor({
                     <label>
                       Tax Rate
                       <select
+                        aria-label="Tax Rate"
                         value={taxRate}
                         onChange={(e) => setTaxRate(e.target.value)}
                       >

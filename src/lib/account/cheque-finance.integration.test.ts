@@ -1152,5 +1152,18 @@ describe.skipIf(!url)(
         });
       }
     });
+    it("A058 normalized catalogue prices retain invoice tax and discount parity",async()=>{
+      const product=await client.accountProduct.create({data:{companyId,name:"Normalized inclusive pricing",salePrice:"100",costPrice:"50",taxRate:"18",pricing:{saleTaxMode:"INCLUSIVE",purchaseTaxMode:"INCLUSIVE",enteredSalePrice:"118.00",enteredPurchasePrice:"59.00",discountType:"PERCENTAGE",discountValue:"10",normalizedDiscountValue:"10"}}});
+      for(const discountType of ["PERCENTAGE","FIXED"] as const)for(const taxMode of ["INCLUSIVE","EXCLUSIVE"] as const){
+        await client.accountProduct.update({where:{id:product.id},data:{pricing:{saleTaxMode:"EXCLUSIVE",enteredSalePrice:"100.00",discountType,discountValue:"10",normalizedDiscountValue:"10"}}});
+        const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",taxMode,lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"3"}]});
+        const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});
+        expect(line.rate.toFixed(2)).toBe(taxMode==="INCLUSIVE"?"118.00":"100.00");expect(line.discountType).toBe(discountType);expect(line.taxableAmount.toFixed(2)).toBe("270.00");expect(doc.grandTotal.toFixed(2)).toBe("318.60");
+        await postCommercialDocumentForActor(actor,{documentId:doc.id});
+        const saved=await client.commercialDocument.findUniqueOrThrow({where:{id:doc.id}});
+        const journal=await client.journalEntry.findUniqueOrThrow({where:{id:saved.journalEntryId!},include:{lines:true}});
+        expect(journal.lines.reduce((n,line)=>n+Number(line.debit),0).toFixed(2)).toBe(journal.lines.reduce((n,line)=>n+Number(line.credit),0).toFixed(2));
+      }
+    });
   },
 );

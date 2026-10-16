@@ -3956,3 +3956,29 @@ test("A054 native warehouse and product editors persist tracking metadata and de
     await db.accountProduct.deleteMany({where:{companyId,id:{in:createdProducts}}});await db.warehouse.deleteMany({where:{companyId,id:{in:createdWarehouses}}});
   }
 });
+
+test("A058 entered inclusive pricing and discounts persist through web and native APIs",async({page,request})=>{
+ test.setTimeout(120000);
+ const suffix=randomUUID().slice(0,8),ids:string[]=[];
+ const settings=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await page.goto("/sign-in");await page.getByLabel("Email",{exact:true}).fill(email);await page.getByLabel("Password",{exact:true}).fill(password);await page.getByRole("button",{name:"Sign In",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
+  await page.goto("/workspace/account/inventory/items/new");await page.getByLabel("Item Name *",{exact:true}).fill(`Pricing web ${suffix}`);
+  await page.getByPlaceholder("Sale Price",{exact:true}).fill("118");await page.getByLabel("Sale Price Tax Mode",{exact:true}).selectOption("WITH");
+  await page.getByPlaceholder("Purchase Price",{exact:true}).fill("59");await page.getByLabel("Purchase Price Tax Mode",{exact:true}).selectOption("WITH");
+  await page.getByLabel("Tax Rate",{exact:true}).selectOption("18");await page.getByLabel("Sale Price Discount",{exact:true}).fill("11.8");await page.getByLabel("Sale Price Discount Type",{exact:true}).selectOption("AMOUNT");
+  await page.getByRole("button",{name:"＋ Add Wholesale Price",exact:true}).click();await page.getByLabel("Wholesale Price",{exact:true}).fill("106.2");await page.getByRole("button",{name:"Save",exact:true}).click();
+  await expect.poll(()=>db.accountProduct.count({where:{companyId,name:`Pricing web ${suffix}`}})).toBe(1);
+  const web=await db.accountProduct.findFirstOrThrow({where:{companyId,name:`Pricing web ${suffix}`}});ids.push(web.id);expect(web.salePrice?.toFixed(2)).toBe("100.00");expect(web.costPrice?.toFixed(2)).toBe("50.00");expect(web.pricing).toMatchObject({saleTaxMode:"INCLUSIVE",enteredSalePrice:"118.00",normalizedDiscountValue:"10",normalizedWholesalePrice:"90.00"});
+  await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");await page.getByRole("button",{name:/Add Items/}).click();await page.getByRole("button",{name:new RegExp(`Pricing web ${suffix}`)}).click();await expect(page.getByLabel("Rate (Price/Unit)",{exact:true})).toHaveValue("100");await page.getByLabel("Quantity",{exact:true}).fill("3");await expect(page.getByLabel("Item Discount",{exact:true})).toHaveValue("30");await page.getByLabel("Item Discount",{exact:true}).fill("5");await page.getByLabel("Quantity",{exact:true}).fill("4");await expect(page.getByLabel("Item Discount",{exact:true})).toHaveValue("5");
+  const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"Pricing parity"}});expect(login.status()).toBe(200);const headers={authorization:`Bearer ${(await login.json()).accessToken}`};
+  const payload={name:`Pricing native ${suffix}`,sellingRate:"118",cost:"59",taxRate:"18",pricing:{saleTaxMode:"INCLUSIVE",purchaseTaxMode:"INCLUSIVE",discountType:"PERCENTAGE",discountValue:"10",wholesalePrice:"106.20"},creationRequestKey:randomUUID()};
+  const first=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:payload});expect(first.status()).toBe(201);const native=await first.json();ids.push(native.id);expect(native.salePrice).toBe("100");expect(native.pricing).toMatchObject({normalizedDiscountValue:"10",normalizedWholesalePrice:"90.00"});
+  const replay=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:payload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(native.id);
+  const changed=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...payload,pricing:{...payload.pricing,discountValue:"11"}}});expect(changed.ok()).toBe(false);
+  const detail=await request.get(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers});expect(detail.status()).toBe(200);expect(JSON.stringify(await detail.json())).toContain("enteredSalePrice");
+  const edited=await request.patch(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers,data:{name:payload.name,sellingRate:"150",cost:"50",taxRate:"18"}});expect(edited.status()).toBe(200);expect(await db.accountProduct.findUniqueOrThrow({where:{id:native.id}})).toMatchObject({pricing:expect.objectContaining({enteredSalePrice:"177.00",saleTaxMode:"INCLUSIVE",discountType:"PERCENTAGE"})});
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{wholesalePrice:false}}});
+  const disabled=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...payload,name:"Forbidden pricing",creationRequestKey:randomUUID()}});expect(disabled.ok()).toBe(false);expect((await disabled.json()).error).toBe("WHOLESALE_PRICING_DISABLED");
+ }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??{}}});await db.accountProduct.deleteMany({where:{companyId,OR:[{id:{in:ids}},{name:{in:[`Pricing web ${suffix}`,`Pricing native ${suffix}`]}}]}})}
+});

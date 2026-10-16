@@ -40,7 +40,10 @@ export function itemCreationHash(
   data: unknown,
   customValues: Record<string, unknown>,
   extras: z.infer<typeof itemCreationExtras>,
+  rawPrices?:unknown,
 ) {
+  const original=rawPrices&&typeof rawPrices==="object"?rawPrices as Record<string,unknown>:{};
+  const parsed=data&&typeof data==="object"?data as Record<string,unknown>:{};
   return createHash("sha256")
     .update(
       JSON.stringify([
@@ -58,6 +61,7 @@ export function itemCreationHash(
               ).toString(),
             }
           : null,
+        ...(parsed.pricing?[{sellingRate:new Prisma.Decimal(String(original.sellingRate||parsed.sellingRate||0)).toString(),cost:new Prisma.Decimal(String(original.cost||parsed.cost||0)).toString()}]:[]),
       ]),
     )
     .digest("hex");

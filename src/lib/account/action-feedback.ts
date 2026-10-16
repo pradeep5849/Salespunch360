@@ -106,6 +106,8 @@ const messages: Record<string, string> = {
     "Opening stock requires an inventory-tracked item without batch or serial tracking.",
   OPENING_VALUE_OUT_OF_RANGE:
     "Opening stock value is too large. Check the quantity and price per unit.",
+  ITEM_DISCOUNT_DISABLED: "Item discounts are disabled in Item Settings.",
+  INVALID_DISCOUNT: "Enter a discount within the item price or 0–100 percent.",
   WHOLESALE_PRICING_DISABLED: "Wholesale pricing is disabled in Item Settings.",
   CUSTOMER_PRICING_DISABLED: "Party-wise pricing is disabled in Item Settings.",
   INVALID_PRICE_DATES:

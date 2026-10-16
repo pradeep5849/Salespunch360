@@ -59,6 +59,7 @@ export type CreateAccountItemInput = {
   code?: string;
   barcode?: string;
   description?: string;
+  pricing?: import("@/lib/account/item-pricing").ItemPricingInput;
   sellingRate?: string;
   cost?: string;
   taxRate?: string;
@@ -82,6 +83,7 @@ export async function createAccountItemAction(raw: CreateAccountItemInput) {
       code: raw.code ?? "",
       barcode: raw.barcode,
       description: raw.description ?? "",
+      pricing:raw.pricing,
       sellingRate: raw.sellingRate ?? "0",
       cost: raw.cost ?? "0",
       taxRate: raw.taxRate ?? "0",

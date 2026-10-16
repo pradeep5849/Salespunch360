@@ -1,3 +1,4 @@
+import {normalizedItemPricing,pricingForLegacyEdit} from "@/lib/account/item-pricing";
 import {assertItemUnitChangeInTx,assignUnitToItemsForActor,unitAssignmentOptionsForActor} from "@/lib/account/unit-assignment";
 import {
   assertUnitAccess,
@@ -568,15 +569,17 @@ export async function saveMobileAccountMaster(
         });
         const policy = resolveItemSettings(settings?.itemSettings);
         if (!id) assertItemMasterCreation(policy, "SERVICE", input);
+        const price=normalizedItemPricing(input,policy,raw);
+        let pricedData={...data,sellingRate:price.saleRate,estimatedCost:price.costRate,...(price.pricing?{pricing:price.pricing}:{})};
         const row = id
           ? await tx.accountService.findFirst({
               where: { id, companyId: user.companyId },
             })
           : await tx.accountService.create({
-              data: { ...data, companyId: user.companyId },
+              data: { ...pricedData, companyId: user.companyId },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) {if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);}await tx.accountService.update({ where: { id: row.id }, data });}
+        if (id) {if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.sellingRate,costRate:row.estimatedCost,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,sellingRate:kept.saleRate,estimatedCost:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);}await tx.accountService.update({ where: { id: row.id }, data:pricedData });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,
@@ -599,7 +602,7 @@ export async function saveMobileAccountMaster(
     if (id && (extras.openingStock || extras.creationRequestKey))
       throw new Error("OPENING_CREATE_ONLY");
     const requestHash = extras.creationRequestKey
-      ? itemCreationHash(itemSchema.parse(raw), input.customFields, extras)
+      ? itemCreationHash(itemSchema.parse(raw), input.customFields, extras,raw)
       : undefined;
     await validateMobileItemReferences(user.companyId, input, "PRODUCT");
     if (!input.trackInventory && input.trackingMode !== "NONE")
@@ -655,6 +658,8 @@ export async function saveMobileAccountMaster(
         });
         const policy = resolveItemSettings(settings?.itemSettings);
         if (!id) assertItemMasterCreation(policy, "PRODUCT", input);
+        const price=normalizedItemPricing(input,policy,raw);
+        let pricedData={...data,salePrice:price.saleRate,costPrice:price.costRate,...(price.pricing?{pricing:price.pricing}:{})};
         if (
           !policy.stockMaintenance &&
           (extras.openingStock || extras.itemLocation)
@@ -666,7 +671,7 @@ export async function saveMobileAccountMaster(
             })
           : await tx.accountProduct.create({
               data: {
-                ...data,
+                ...pricedData,
                 companyId: user.companyId,
                 creationRequestKey: extras.creationRequestKey,
                 creationRequestHash: requestHash,
@@ -674,7 +679,7 @@ export async function saveMobileAccountMaster(
               },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) {if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);}await tx.accountProduct.update({ where: { id: row.id }, data });}
+        if (id) {if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.salePrice,costRate:row.costPrice,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,salePrice:kept.saleRate,costPrice:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);}await tx.accountProduct.update({ where: { id: row.id }, data:pricedData });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,

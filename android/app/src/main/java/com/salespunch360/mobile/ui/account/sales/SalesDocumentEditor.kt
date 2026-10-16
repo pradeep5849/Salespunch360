@@ -150,7 +150,7 @@ private fun DirectSaleInvoiceEditor(
     if(barcodeCameraOpen&&options.transactionPreference("barcodeScanning"))BarcodeCameraDialog(onClose={barcodeCameraOpen=false},onDetected={value->
         barcodeCameraOpen=false
         val product=options.products.firstOrNull{it.barcode==value.trim()}
-        if(product==null){barcode=value;Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show()}else{itemName=product.name;itemRate=product.rate.orEmpty();itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}
+        if(product==null){barcode=value;Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show()}else{itemName=product.name;itemRate=com.salespunch360.mobile.account.itemMasterPrice(product,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE").rate;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}
     })
 
     val states=listOf(
@@ -220,6 +220,7 @@ private fun DirectSaleInvoiceEditor(
         val product=options.products.firstOrNull{it.name.equals(name,true)}
         val service=if(product==null)options.services.firstOrNull{it.name.equals(name,true)} else null
         val unit=options.units.firstOrNull{it.id==itemUnitId}
+        val defaultPrice=com.salespunch360.mobile.account.itemMasterPrice(product?:service,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",discounts=options.itemWiseDiscount,quantity=itemQty.ifBlank{"1"})
         val line=SalesLineDraft(
             lineType=if(product!=null)"PRODUCT" else if(service!=null)"SERVICE" else "CUSTOM",
             sourceId=product?.id?:service?.id.orEmpty(),
@@ -228,7 +229,8 @@ private fun DirectSaleInvoiceEditor(
             unitName=unit?.name.orEmpty(),
             unitSymbol=unit?.symbol.orEmpty(),
             quantity=itemQty.ifBlank{"1"},
-            rate=itemRate.ifBlank{product?.rate?:service?.rate.orEmpty()},
+            rate=itemRate.ifBlank{defaultPrice.rate},
+            discountType=defaultPrice.discountType,discountValue=defaultPrice.discountValue,
             taxRate=product?.taxRate?:service?.taxRate?:"0",
             batchId=itemBatchId,serialNumberId=itemSerialId,
             warehouseId=if(product?.trackInventory==true)options.warehouses.filter{it.branchId==draft.branchId}.sortedByDescending{it.isDefault}.firstOrNull()?.id.orEmpty() else "",
@@ -260,7 +262,7 @@ private fun DirectSaleInvoiceEditor(
                 Modifier.fillMaxSize().padding(padding).padding(16.dp),
                 verticalArrangement=Arrangement.spacedBy(16.dp)
             ){
-                if(options.transactionPreference("barcodeScanning"))item{Column{OutlinedTextField(barcode,{barcode=it},label={Text("Scan item barcode")},modifier=Modifier.fillMaxWidth());TextButton({val product=options.products.firstOrNull{it.barcode==barcode.trim()};if(product==null)Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show() else {itemName=product.name;itemRate=product.rate.orEmpty();itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}}){Text("Find item")};TextButton({barcodeCameraOpen=true}){Text("Scan with Camera")}}}
+                if(options.transactionPreference("barcodeScanning"))item{Column{OutlinedTextField(barcode,{barcode=it},label={Text("Scan item barcode")},modifier=Modifier.fillMaxWidth());TextButton({val product=options.products.firstOrNull{it.barcode==barcode.trim()};if(product==null)Toast.makeText(context,"No item matches this barcode.",Toast.LENGTH_SHORT).show() else {itemName=product.name;itemRate=com.salespunch360.mobile.account.itemMasterPrice(product,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE").rate;itemBatchId="";itemSerialId="";freeSerialId="";itemTrackingError=null;barcode=""}}){Text("Find item")};TextButton({barcodeCameraOpen=true}){Text("Scan with Camera")}}}
                 itemTrackingError?.let{message->item{Text(message,color=MaterialTheme.colorScheme.error)}}
                 if(entryProduct?.trackingMode=="BATCH")item{SelectField("Batch",itemBatchId,options.batches.filter{it.str("productId")==entryProduct.id}.map{it.str("id") to it.str("batchNumber")}){itemBatchId=it}}
                 if(entryProduct?.trackingMode=="SERIAL"){
@@ -698,13 +700,13 @@ private fun SalesLineEditor(
             if (line.lineType == "CUSTOM") {
                 OutlinedTextField(line.itemName, { onLine(index, line.copy(itemName = it)) }, label = { Text("Item name") })
             } else {
-                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; onLine(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
+                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; val price=com.salespunch360.mobile.account.itemMasterPrice(master,draft.taxMode,draft.type in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE"),options.itemWiseDiscount,line.quantity); onLine(index, line.copy(sourceId = id, rate = price.rate,discountType=price.discountType,discountValue=price.discountValue, taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedTextField(line.quantity, { onLine(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))
                 OutlinedTextField(line.rate, { onLine(index, line.copy(rate = it)) }, label = { Text("Rate") }, modifier = Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if(options.itemWiseDiscount)Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 SelectField("Discount", line.discountType, listOf("" to "None", "PERCENTAGE" to "%", "FIXED" to "Fixed"), Modifier.weight(1f)) { onLine(index, line.copy(discountType = it)) }
                 OutlinedTextField(line.discountValue, { onLine(index, line.copy(discountValue = it)) }, label = { Text("Discount") }, modifier = Modifier.weight(1f))
             }
