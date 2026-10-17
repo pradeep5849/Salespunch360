@@ -289,9 +289,10 @@ export default async function Page({
           {scoped.context.mode === "COMPANY"
             ? "Company consolidated"
             : scoped.context.branchName}{" "}
-          · As of {query.asOf ?? "today"}. Warehouse positions with recorded
+          · As of {query.asOf ? <AccountDate value={query.asOf} /> : "today"}. Warehouse positions with recorded
           movements; active warehouses only.
         </p>
+        <div role="region" aria-label="Warehouse stock positions" tabIndex={0} style={{maxWidth:"100%",overflowX:"auto"}}>
         <table>
           <thead>
             <tr>
@@ -308,12 +309,13 @@ export default async function Page({
                 <td>{products.get(x.productId)?.name}</td>
                 <td>{warehouses.get(x.warehouseId)?.name}</td>
                 <td>{x.quantity.toFixed(4)}</td>
-                <td>{x.averageUnitCost.toFixed(4)}</td>
-                <td>{x.stockValue.toFixed(2)}</td>
+                <td><Money value={x.averageUnitCost} /></td>
+                <td><Money value={x.stockValue} /></td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </Shell>
     );
   }

@@ -2406,3 +2406,25 @@ test("A084 Cash Bank report applies account tabs to summaries exports and native
  const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});const headers={authorization:`Bearer ${token}`};const response=await page.request.get(`/api/v1/mobile/account/reports/cash-bank?${query}&accountType=BANK`,{headers});expect(response.status()).toBe(200);const native=await response.json();expect(native.rows.some((row:string[])=>row[0]===cash.name)).toBe(false);expect(native.summary.map((x:{value:string})=>x.value)).toEqual(["100","20","0","120"]);
  await tabs.getByRole("link",{name:"Cash",exact:true}).click();await expect(page.locator("tbody")).toContainText(cash.name);await expect(page.locator("tbody")).not.toContainText(bank.name);await expect(page.locator("tbody tr").filter({hasText:cash.name})).toContainText("₹30.00");await tabs.getByRole("link",{name:"Petty cash",exact:true}).click();await expect(page.locator("tbody tr").filter({hasText:petty.name})).toContainText("₹5.00");await tabs.getByRole("link",{name:"All accounts",exact:true}).click();await expect(page).not.toHaveURL(/accountType=/);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await expect(new AxeBuilder({page}).include('nav[aria-label="Cash and bank account types"]').withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).resolves.toMatchObject({violations:[]});expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
 });
+
+test("A090 warehouse stock amounts and as-of date use saved display preferences",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ const warehouse=await db.warehouse.create({data:{companyId,branchId,name:`Display warehouse ${randomUUID().slice(0,8)}`,code:`DSP-${randomUUID().slice(0,8)}`}});
+ const product=await db.accountProduct.create({data:{companyId,name:`Display stock ${randomUUID().slice(0,8)}`,trackInventory:true,costPrice:"12.34",lowStockThreshold:"3"}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["INVENTORY"],itemSettings:{...before.itemSettings as object,enabled:true},baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"2",unitCost:"12.34",movementDate:"2026-10-13",sourceType:"OPENING",sourceId:randomUUID()});
+  const preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3});
+  await signInSettings(page);
+  for(const section of ["stock","low-stock"]){
+   await page.goto(`/workspace/account/inventory/${section}?branchId=${branchId}&asOf=2026-10-13`);
+   const region=page.getByRole("region",{name:"Warehouse stock positions",exact:true}),row=region.getByRole("row").filter({hasText:product.name});
+   await expect(page.getByText(/As of 10\/13\/2026/)).toBeVisible();
+   await expect(row).toContainText(formatMoney("12.34",preferences));await expect(row).toContainText(formatMoney("24.68",preferences));await expect(row).toContainText("2.0000");
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  }
+  expect((await db.accountProduct.findUniqueOrThrow({where:{id:product.id}})).costPrice?.toString()).toBe("12.34");
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}})}
+});
