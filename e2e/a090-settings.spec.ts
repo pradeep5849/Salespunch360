@@ -2157,5 +2157,17 @@ test("A057 saved sale prices require explicit consent and leave invoice journals
   expect((await request.post(`/api/v1/mobile/account/transactions/${apiSale.id}/sale-price`,{headers,data:body})).status()).toBe(200);expect((await db.accountProduct.findUniqueOrThrow({where:{id:product.id}})).salePrice?.toString()).toBe("140");expect((await request.post(`/api/v1/mobile/account/transactions/${apiSale.id}/sale-price`,{headers,data:body})).status()).toBe(200);expect(await db.journalEntry.count({where:{companyId}})).toBe(apiJournals);
 
   await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});expect((await request.get(`/api/v1/mobile/account/transactions/${source.id}/sale-price`,{headers})).status()).toBe(403);expect((await request.post(`/api/v1/mobile/account/transactions/${source.id}/sale-price`,{headers,data:{confirmed:true,lineId:randomUUID(),expectedUpdatedAt:new Date().toISOString(),requestKey:randomUUID()}})).status()).toBe(403);
- }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{},enabledModules:previous.enabledModules}});}
+ }finally{settingsCookies=[];await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{},enabledModules:previous.enabledModules}});}
+});
+
+test("A058 item validation retains fields and unit dialog traps keyboard focus without nested landmarks",async({page})=>{
+ test.setTimeout(120000);const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),name=`Validation ${randomUUID()}`;
+ await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,taxOnMrp:true,itemUnits:true}}});
+ try{
+  await signInSettings(page);await page.goto("/workspace/account/inventory/items/new");await page.getByLabel("Item Name *",{exact:true}).fill(name);const sale=page.getByPlaceholder("Sale Price",{exact:true}),mrp=page.getByLabel("MRP (tax included)",{exact:true});
+  await sale.fill("-1");await page.getByRole("button",{name:"Save",exact:true}).click();await expect(sale).toBeFocused();await expect(sale).toHaveValue("-1");expect(await db.accountProduct.count({where:{companyId,name}})).toBe(0);
+  await sale.fill("1");await mrp.fill("1.12345");await page.getByRole("button",{name:"Save",exact:true}).click();await expect(mrp).toBeFocused();await expect(mrp).toHaveValue("1.12345");expect(await db.accountProduct.count({where:{companyId,name}})).toBe(0);await mrp.fill("1.18");
+  const unit=page.getByRole("button",{name:"Select Unit",exact:true});await unit.click();const dialog=page.getByRole("dialog",{name:"Add Item Unit",exact:true});await expect(dialog).toBeVisible();for(let i=0;i<8;i++){await page.keyboard.press("Tab");expect(await page.evaluate(()=>Boolean(document.activeElement?.closest('dialog[open]')))).toBe(true);}await page.keyboard.press("Escape");await expect(dialog).not.toBeVisible();await expect(unit).toBeFocused();await expect(page.getByLabel("Item Name *",{exact:true})).toHaveValue(name);expect(await page.locator("main main").count()).toBe(0);
+  expect((await new AxeBuilder({page}).include('.add-item-page').analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{}}});}
 });

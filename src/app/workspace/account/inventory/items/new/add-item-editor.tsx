@@ -1,4 +1,5 @@
 "use client";
+import {trapDialogFocus} from "@/components/account/dialog-keyboard";
 import { generateItemCode } from "@/lib/account/item-identifiers";
 import type { CustomFieldDefinition } from "@prisma/client";
 import { CustomFieldInput } from "@/components/account/custom-field-input";
@@ -39,7 +40,7 @@ function ItemEditorDialog({children,label,className,onClose,pending=false}:{chil
     const current=dialog.current;current?.showModal();
     return ()=>{current?.close();if(previous?.isConnected)previous.focus()};
   },[]);
-  return <dialog ref={dialog} aria-label={label} className={className} onCancel={event=>{event.preventDefault();if(!pending)onClose()}} style={{margin:0,border:0,padding:0,width:"100vw",height:"100dvh",maxWidth:"none",maxHeight:"none",borderRadius:0}}>{children}</dialog>;
+  return <dialog ref={dialog} onKeyDown={trapDialogFocus} aria-label={label} className={className} onCancel={event=>{event.preventDefault();if(!pending)onClose()}} style={{margin:0,border:0,padding:0,width:"100vw",height:"100dvh",maxWidth:"none",maxHeight:"none",borderRadius:0}}>{children}</dialog>;
 }
 function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
   return (
@@ -304,7 +305,7 @@ export function AddItemEditor({
     });
   }
   return (
-    <main ref={editorRoot} className="add-item-page">
+    <section ref={editorRoot} aria-label="Add Item editor" className="add-item-page">
       <SaveFeedback state={mutation.feedback} />
       <header>
         <Link href="/workspace/account/inventory" aria-label="Back">
@@ -353,6 +354,7 @@ export function AddItemEditor({
           <div className="add-item-name-unit-row">
             <input
               id="add-item-name"
+              maxLength={200}
               autoFocus
               required
               value={name}
@@ -457,8 +459,8 @@ export function AddItemEditor({
             </div>
             {tab === "PRICING" ? (
               <div className="item-tab-panel">
-                {enabled("taxOnMrp")&&<label>MRP (tax included)<input aria-label="MRP (tax included)" inputMode="decimal" value={mrp} onChange={event=>setMrp(event.target.value)} disabled={pending}/><small>Optional maximum retail price including tax. Invoice tax uses the selling price, not MRP.</small></label>}
-                <h3>Sale Price</h3>
+                {enabled("taxOnMrp")&&<label>MRP (tax included)<input aria-label="MRP (tax included)" pattern={"\\d{1,14}(\\.\\d{1,4})?"} maxLength={19} inputMode="decimal" value={mrp} onChange={event=>setMrp(event.target.value)} disabled={pending}/><small>Optional maximum retail price including tax. Invoice tax uses the selling price, not MRP.</small></label>}
+                <h2>Sale Price</h2>
                 <label>
                   Sale Price
                   <div className="price-row">
@@ -523,7 +525,7 @@ export function AddItemEditor({
                     )}
                   </>
                 )}
-                <h3>Purchase Price</h3>
+                <h2>Purchase Price</h2>
                 <label>
                   Purchase Price
                   <div className="price-row">
@@ -982,6 +984,6 @@ export function AddItemEditor({
           <SaveFeedback state={mutation.feedback} />
         </dialog>
       )}
-    </main>
+    </section>
   );
 }

@@ -766,3 +766,8 @@ body:has(.account-shell) > .workspace-header{display:none}
 .units-conversion .manager-bottom-actions button:first-child{color:#344054}.units-conversion .manager-bottom-actions button:last-child{background:#075fbd;color:#fff}
 
 .owner-history-content{overflow-wrap:anywhere}.owner-history-content input,.owner-history-content textarea{max-width:100%;min-width:0}
+
+/* Add Item controls retain readable contrast at desktop and mobile sizes. */
+.add-item-page{--account-muted:#475569}
+.add-item-page .party-detail-tabs button[aria-pressed="false"]{color:#475569}
+.add-item-page .item-tab-panel h2{font-size:18px;margin:8px 0 0;padding-bottom:10px;border-bottom:1px solid var(--line)}

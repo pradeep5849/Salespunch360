@@ -20,7 +20,7 @@
     z-index: 2;
     padding: 0 5px;
     background: #fff;
-    color: #1687d9;
+    color: #0066a4;
     font-size: 14px;
     line-height: 20px;
     font-weight: 500;
@@ -55,7 +55,7 @@
     border-radius: 999px;
     background: #eef7ff;
     box-shadow: 0 3px 12px #0000001a;
-    color: #1185d4;
+    color: #0066a4;
     font-size: 16px;
     font-weight: 500;
     white-space: nowrap;
@@ -147,7 +147,7 @@
   }
 
   .add-unit-full .unit-dropdown-menu .unit-add-option {
-    color: #1185d4;
+    color: #0066a4;
     font-weight: 600;
   }
 
