@@ -11397,6 +11397,26 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Retain PARTIAL: broader price catalogue consumption/required output matrix and full final-head/device validation are not closed by this slice. A058-F02 purchase/edited-line parity remains separate."
+        },
+        "purchase_preview_2026_10_17": {
+          "implementation_commit": "b45cfd9997362fef4b6dfe8e94766fd795e6541b",
+          "work": "Purchase/commercial line preview resolves omitted master cost/rate/tax through shared item pricing and inclusive/exclusive rounded line totals; explicit typed overrides retained. Service/work-package option data includes estimated purchase cost. Saved sale discounts remain sale-only. Totals labelled as line totals, not complete document charge/withholding total. Uses company Money formatting. Removed incompatible manual memoization after React Compiler lint rejected it.",
+          "files": [
+            "src/lib/account/commercial-editor-pricing.ts",
+            "src/lib/account/commercial-editor-pricing.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "53 passed across5 pricing/preview/lineage files;34 passed across7 related purchase files;0 failed/skipped",
+            "browser": "2 passed desktop/mobile Chromium (32.5s), inclusive service master59\u00d73=177,taxable150/tax27,no purchase sale discount,explicit override118\u00d73=354,restored default and actual saved draft match.",
+            "typescript": "PASS",
+            "eslint": "PASS after removing incompatible manual useMemo; no lint suppression",
+            "initial_browser": "Mobile test timed out on incorrect Item trailing-space selector; stopped redundant desktop run and corrected exact accessible name before final2/2 pass.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A058-F02 edited-line/native purchase pricing matrix remains PARTIAL; A057-F03 broader price catalogue consumption remains PARTIAL. No ledger/posting/valuation change, Android source change or device verification in this slice."
         }
       },
       "intermediate_validation": {
@@ -12840,6 +12860,26 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Retain PARTIAL: broader price catalogue consumption/required output matrix and full final-head/device validation are not closed by this slice. A058-F02 purchase/edited-line parity remains separate."
+        },
+        "purchase_preview_2026_10_17": {
+          "implementation_commit": "b45cfd9997362fef4b6dfe8e94766fd795e6541b",
+          "work": "Purchase/commercial line preview resolves omitted master cost/rate/tax through shared item pricing and inclusive/exclusive rounded line totals; explicit typed overrides retained. Service/work-package option data includes estimated purchase cost. Saved sale discounts remain sale-only. Totals labelled as line totals, not complete document charge/withholding total. Uses company Money formatting. Removed incompatible manual memoization after React Compiler lint rejected it.",
+          "files": [
+            "src/lib/account/commercial-editor-pricing.ts",
+            "src/lib/account/commercial-editor-pricing.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "53 passed across5 pricing/preview/lineage files;34 passed across7 related purchase files;0 failed/skipped",
+            "browser": "2 passed desktop/mobile Chromium (32.5s), inclusive service master59\u00d73=177,taxable150/tax27,no purchase sale discount,explicit override118\u00d73=354,restored default and actual saved draft match.",
+            "typescript": "PASS",
+            "eslint": "PASS after removing incompatible manual useMemo; no lint suppression",
+            "initial_browser": "Mobile test timed out on incorrect Item trailing-space selector; stopped redundant desktop run and corrected exact accessible name before final2/2 pass.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A058-F02 edited-line/native purchase pricing matrix remains PARTIAL; A057-F03 broader price catalogue consumption remains PARTIAL. No ledger/posting/valuation change, Android source change or device verification in this slice."
         }
       }
     },
@@ -65784,6 +65824,23 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Earlier sale checkpoint targeted CI; does not verify subsequent display changes"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "b45cfd9997362fef4b6dfe8e94766fd795e6541b",
+      "finding_ids": [
+        "A058-F02",
+        "A057-F03"
+      ],
+      "evidence": {
+        "focused": "53 passed across5 pricing/preview/lineage files;34 passed across7 related purchase files;0 failed/skipped",
+        "browser": "2 passed desktop/mobile Chromium (32.5s), inclusive service master59\u00d73=177,taxable150/tax27,no purchase sale discount,explicit override118\u00d73=354,restored default and actual saved draft match.",
+        "typescript": "PASS",
+        "eslint": "PASS after removing incompatible manual useMemo; no lint suppression",
+        "initial_browser": "Mobile test timed out on incorrect Item trailing-space selector; stopped redundant desktop run and corrected exact accessible name before final2/2 pass.",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate focused purchase-preview continuation; final checkpoint validation pending"
     }
   ]
 }

@@ -9602,3 +9602,7 @@ A090-F01 code `73b6fe1dd2bc68f43fd19ef39fe08e679c95a719`: expense detail/list, r
 ## GST display continuation — 17 October 2026
 
 A090-F01 / linked A084-F03 code `590d7cd1cd1eda140b051ba2f5dd71a924f5a6d4`: GST rows/summaries use saved monetary/date display; accessible filter labels and bounded keyboard-scrollable table. Desktop/mobile browser 2/2 passed (25.1s), with normal financial posting fixture and unchanged source values, Axe AA and page overflow checks. 32 focused tax/display tests and TypeScript/focused lint passed. Initial missing-journal fixture and Branch label failures corrected before passing rerun. Both findings remain PARTIAL; counts unchanged 176/21/2. Targeted web/Android CI passed at earlier `7e6a18b7`; latest display code requires own CI.
+
+## Purchase master-price preview continuation — 17 October 2026
+
+A058-F02 / linked A057-F03 code `b45cfd9997362fef4b6dfe8e94766fd795e6541b`: omitted master purchase costs/tax defaults and inclusive/exclusive preview now match shared save behavior. Services/work packages expose purchase cost to the existing authorized editor. Explicit line overrides retained; saved sale discounts do not apply to purchases. Summary explicitly labels line totals. Passed 53 focused +34 related purchase tests and 2 desktop/mobile actual draft checks (32.5s); TypeScript/lint passed after removing incompatible manual memoization. Initial test selector corrected; final-head/device/native purchase matrix remains pending. Both findings PARTIAL; counts unchanged176/21/2.
