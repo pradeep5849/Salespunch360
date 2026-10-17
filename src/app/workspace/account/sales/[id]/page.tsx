@@ -40,14 +40,15 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       <div className={styles.billedHeader}><span>⌄　Billed Items</span><span>{sale.taxMode==="INCLUSIVE"?"Rate incl. tax":"Rate excl. tax"}⌄</span></div>
       {sale.lines.map((line,index)=><article className={styles.billedCard} key={line.id}>
         <div className={styles.lineTop}><div className={styles.lineTitle}><span className={styles.lineNo}>#{index+1}</span><strong>{line.itemName}</strong></div><b><Money value={line.lineTotal}/></b></div>
+        {(line.itemCode||line.description||line.specification)&&<dl className={styles.lineMeta}>{line.itemCode&&<><dt>Item code</dt><dd>{line.itemCode}</dd></>}{line.description&&<><dt>Description</dt><dd style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{line.description}</dd></>}{line.specification&&<><dt>Specification</dt><dd style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{line.specification}</dd></>}</dl>}
         <div className={styles.lineMeta}>
-          <span>Item Subtotal</span><span>{line.quantity.toString()} {line.unitSymbol??"Nos"} × {line.rate.toString()} = {line.baseAmount.toString()}</span>
-          <span className={styles.orange}>Discount</span><span className={styles.orange}>{line.discountAmount.toString()}</span>
-          <span>Tax GST@{line.taxRate.toString()}%</span><span>{line.taxAmount.toString()}</span>
-          {!line.cessAmount.isZero()&&<><span>Cess @{line.cessRate.toString()}%</span><span>{line.cessAmount.toString()}</span></>}
+          <span>Item Subtotal</span><span>{line.quantity.toString()} {line.unitSymbol??"Nos"} × <Money value={line.rate}/> = <Money value={line.baseAmount}/></span>
+          <span className={styles.orange}>Discount</span><span className={styles.orange}><Money value={line.discountAmount}/></span>
+          <span>Tax GST@{line.taxRate.toString()}%</span><span><Money value={line.taxAmount}/></span>
+          {!line.cessAmount.isZero()&&<><span>Cess @{line.cessRate.toString()}%</span><span><Money value={line.cessAmount}/></span></>}
         </div>
       </article>)}
-      <section className={styles.charges}><h2>Charges</h2>{!sale.freightAmount.isZero()&&<div className={styles.round}><span>Freight</span><Money value={sale.freightAmount}/></div>}{!sale.otherChargesAmount.isZero()&&<div className={styles.round}><span>Other charges</span><Money value={sale.otherChargesAmount}/></div>}<div className={styles.round}><span>{sale.roundOffAmount.isZero()?"☐":"☑"} Round Off</span><strong>{sale.roundOffAmount.toString()}</strong></div></section>
+      <section className={styles.charges}><h2>Charges</h2>{!sale.freightAmount.isZero()&&<div className={styles.round}><span>Freight</span><Money value={sale.freightAmount}/></div>}{!sale.otherChargesAmount.isZero()&&<div className={styles.round}><span>Other charges</span><Money value={sale.otherChargesAmount}/></div>}<div className={styles.round}><span>{sale.roundOffAmount.isZero()?"☐":"☑"} Round Off</span><strong><Money value={sale.roundOffAmount}/></strong></div></section>
       <section className={styles.totals}>
         <div className={styles.totalRow}><span>Total Amount</span><strong><Money value={base}/></strong></div>
         {sale.reverseCharge&&<div className={styles.totalRow}><span>GST payable by recipient (reverse charge)</span><Money value={sale.taxTotal}/></div>}
@@ -60,6 +61,12 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       </section>
       {receipts.map(row=><div className={styles.field} key={row.id}><label>Payment Type / Payment Ref No.</label><strong>{row.settlement.paymentMode}{row.settlement.reference?` · ${row.settlement.reference}`:""}</strong></div>)}
       {sale.stateOfSupplyCode&&<div className={styles.field}><label>State of Supply</label><strong>{sale.stateOfSupplyName}</strong></div>}
+      {sale.dueDate&&<div className={styles.field}><label>Due date</label><AccountDate value={sale.dueDate.toISOString()}/></div>}
+      {sale.projectReference&&<div className={styles.field}><label>Project reference</label><strong>{sale.projectReference}</strong></div>}
+      {sale.paymentTerms&&<div className={styles.field}><label>Payment terms</label><p style={{whiteSpace:"pre-wrap"}}>{sale.paymentTerms}</p></div>}
+      {sale.customerPoNumber&&<div className={styles.field}><label>Purchase order number</label><strong>{sale.customerPoNumber}</strong>{sale.customerPoDate&&<AccountDate value={sale.customerPoDate.toISOString()}/>}</div>}
+      {sale.ewayBillNumber&&<div className={styles.field}><label>E-way bill number</label><strong>{sale.ewayBillNumber}</strong></div>}
+      {sale.transactionTime&&<div className={styles.field}><label>Transaction time</label><strong>{sale.transactionTime}</strong></div>}
       {sale.notes&&<div className={styles.field}><label>Terms & Conditions / Description</label><p style={{whiteSpace:"pre-wrap"}}>{sale.notes}</p></div>}
     </section>
     {(messaging.sendToParty||messaging.copyToSelf)&&<section className={styles.body}>{messaging.sendToParty&&<ManualMessage message={message} phone={party?.phone}/ >}{messaging.copyToSelf&&<><h3>Copy to Self</h3><ManualMessage message={message} phone={company?.primaryPhone}/></>}{messaging.includeInvoiceLink&&<p><Link href={`/api/account/print/${sale.type}/${sale.id}?format=pdf`}>Download invoice to attach</Link></p>}</section>}
