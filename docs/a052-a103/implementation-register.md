@@ -9610,3 +9610,7 @@ A058-F02 / linked A057-F03 code `b45cfd9997362fef4b6dfe8e94766fd795e6541b`: omit
 ## Sale Details retained display continuation — 17 October 2026
 
 A087-F02 / linked A090-F01 code `42105b3f7d4f5b508b457e51b92589ac56c1a97b`: supported historical invoice/item metadata now visible and line monetary values use company settings. Passed 4 desktop/mobile edit/retention/delete/cancelled-state cases (52.6s),29 tests in2 actual preview/display files,TypeScript/focused lint. No native runtime or final-head claim. Full action/parity/shipping/attachment scope remains PARTIAL; counts176/21/2. Purchase-pricing focused tests added to targeted CI.
+
+## Purchase Register catalogue continuation — 17 October 2026
+
+A085-F02 / linked A084-F03 code `a4d38279e9543c3a5c52d4a8eea8c36e3a0d3dd9`: existing register mapped through shared web/native catalogue,filters/favourites/routes; requires core Purchases,authorized company/branch/vendor scope,effective-journal cutoff and same-date debt. Source links select correct web/native detail. Passed35 focused/local PostgreSQL checks,2 desktop/mobile browser+CSV+native API cases(1.4m),Android compile and8 JVM tests(54s),TypeScript/focused lint. Reports created no journals. No migration or production write. Remaining catalogue/layout/final-head/device scope keeps findings PARTIAL;counts176/21/2.

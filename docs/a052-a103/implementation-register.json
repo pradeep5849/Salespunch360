@@ -56712,6 +56712,29 @@
             "unit": "32 passed in tax/display/report display files;0 failed/skipped"
           },
           "remaining": "A090-F01 remaining display consumers and A084-F03 report-specific scope remain PARTIAL; no device verification claimed."
+        },
+        "purchase_register_2026_10_17": {
+          "implementation_commit": "a4d38279e9543c3a5c52d4a8eea8c36e3a0d3dd9",
+          "work": "Existing Purchase Register computation now mapped once through shared web/native catalogue,valid routes,vendor filter and favourites. Requires Purchases; optional module changes preserve core Purchases. Reads company/authorized-branch/vendor bills with journal-effective cutoff and same-date outstanding,including historically cancelled posted documents. Explicit historical note; web/native-specific source routes retained. Reports/exports read only.",
+          "files": [
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/purchase-register.test.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt"
+          ],
+          "tests": {
+            "focused_database": "35 passed across5 files including real local PostgreSQL favourites/company/user/core-module tests;service query scope,cutoff and defensive module-denial mocked tests",
+            "browser": "2 passed desktop/mobile Chromium (1.4m):normal purchase create/post,hub destination,register values177/tax27,vendor filter,CSV,actual authenticated native API,purchase source link and no report journal writes",
+            "android": "compileDebugKotlin and8 AccountReportData JVM tests PASS(54s),0 failures/errors/skips;native destination/filter metadata regression;no device runtime",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A085-F02 / linked A084-F03 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device verification. No migrations or production changes."
         }
       }
     },
@@ -60480,6 +60503,29 @@
           "tests": "49 focused unit/real PostgreSQL tests PASS (5 files,17.87s),including exact totals,scope,role,module-denial,historical reversal and no report ledger writes;2 desktop/mobile expense overview+report/CSV/source/AXE/overflow cases PASS (1.9m);TypeScript/full ESLint PASS. Android result recorded after completion. Android compileDebugKotlin and7 AccountReportData JVM tests PASS (2m41s);no device runtime.",
           "remaining": "Other supplied catalogue destinations and report-specific layouts remain pending;PARTIAL retained. Physical native runtime and full final-head regression not executed.",
           "commit": "b949d3b3"
+        },
+        "purchase_register_2026_10_17": {
+          "implementation_commit": "a4d38279e9543c3a5c52d4a8eea8c36e3a0d3dd9",
+          "work": "Existing Purchase Register computation now mapped once through shared web/native catalogue,valid routes,vendor filter and favourites. Requires Purchases; optional module changes preserve core Purchases. Reads company/authorized-branch/vendor bills with journal-effective cutoff and same-date outstanding,including historically cancelled posted documents. Explicit historical note; web/native-specific source routes retained. Reports/exports read only.",
+          "files": [
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/purchase-register.test.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt"
+          ],
+          "tests": {
+            "focused_database": "35 passed across5 files including real local PostgreSQL favourites/company/user/core-module tests;service query scope,cutoff and defensive module-denial mocked tests",
+            "browser": "2 passed desktop/mobile Chromium (1.4m):normal purchase create/post,hub destination,register values177/tax27,vendor filter,CSV,actual authenticated native API,purchase source link and no report journal writes",
+            "android": "compileDebugKotlin and8 AccountReportData JVM tests PASS(54s),0 failures/errors/skips;native destination/filter metadata regression;no device runtime",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A085-F02 / linked A084-F03 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device verification. No migrations or production changes."
         }
       }
     },
@@ -65891,6 +65937,23 @@
         "final_complete_head": "NOT RUN"
       },
       "scope": "Intermediate Sale Details presentation regression; final checkpoint validation pending"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "a4d38279e9543c3a5c52d4a8eea8c36e3a0d3dd9",
+      "finding_ids": [
+        "A085-F02",
+        "A084-F03"
+      ],
+      "evidence": {
+        "focused_database": "35 passed across5 files including real local PostgreSQL favourites/company/user/core-module tests;service query scope,cutoff and defensive module-denial mocked tests",
+        "browser": "2 passed desktop/mobile Chromium (1.4m):normal purchase create/post,hub destination,register values177/tax27,vendor filter,CSV,actual authenticated native API,purchase source link and no report journal writes",
+        "android": "compileDebugKotlin and8 AccountReportData JVM tests PASS(54s),0 failures/errors/skips;native destination/filter metadata regression;no device runtime",
+        "typescript": "PASS",
+        "eslint": "PASS focused",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate catalogue/register continuation;full final checkpoint validation pending"
     }
   ]
 }
