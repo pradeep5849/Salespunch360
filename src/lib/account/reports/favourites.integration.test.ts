@@ -173,3 +173,9 @@ it.skipIf(!url)(
     await client.accountSettings.delete({ where: { companyId } });
   },
 );
+it.skipIf(!url)("keeps Purchase Register available under core accounting even when optional modules are empty",async()=>{
+ const actor={id:a,companyId};await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});
+ await client.accountSettings.upsert({where:{companyId},create:{companyId,enabledModules:["PURCHASES"]},update:{enabledModules:["PURCHASES"]}});
+ expect((await availableReportCatalogueForActor(actor)).find(x=>x.key==="purchase-register")).toMatchObject({filters:["vendorId"]});await setReportFavouriteForActor(actor,{reportKey:"purchase-register",favourite:true});
+ await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}});expect((await availableReportCatalogueForActor(actor)).some(x=>x.key==="purchase-register")).toBe(true);expect(await reportFavouritesForActor(actor)).toContain("purchase-register");expect(await client.accountReportFavourite.count({where:{companyId,userId:a,reportKey:"purchase-register"}})).toBe(1);
+});

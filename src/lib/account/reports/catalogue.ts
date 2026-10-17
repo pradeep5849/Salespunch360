@@ -5,6 +5,7 @@ export const REPORT_CATALOGUE = [
   ["expense-items", "Expense Item Report", "Expense reports"],
   ["sale-report", "Sale Report", "Transaction"],
   ["purchase-report", "Purchase Report", "Transaction"],
+  ["purchase-register", "Purchase Register", "Transaction"],
   ["profit-loss", "Profit & Loss", "Business"],
   ["balance-sheet", "Balance Sheet", "Business"],
   ["trial-balance", "Trial Balance", "Business"],

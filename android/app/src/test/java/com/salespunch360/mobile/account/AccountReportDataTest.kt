@@ -24,4 +24,12 @@ class AccountReportDataTest {
     @Test fun rowLinksKeepPrimitiveUrlsAndTheirOriginalRowPositions(){val data=Json.parseToJsonElement("""{"rowLinks":[null,"/workspace/account/money/capital/owner"]}""").jsonObject;assertEquals(listOf("","/workspace/account/money/capital/owner"),accountReportLinks(data))}
     @Test fun reportDestinationsAllowInternalDocumentsAndRejectExternalOrMalformedPaths(){val id="00000000-0000-0000-0000-000000000001";assertEquals("/workspace/account/sales/$id",accountReportDestination("/workspace/account/sales/$id"));assertEquals("/workspace/account/purchases/$id",accountReportDestination("/workspace/account/purchases/$id"));assertEquals("/workspace/account/expenses/$id",accountReportDestination("/workspace/account/expenses/$id"));assertNull(accountReportDestination("https://example.test/sales/$id"));assertNull(accountReportDestination("/workspace/account/sales/../../settings"))}
     @Test fun reportFilterMetadataDoesNotReintroduceIgnoredDimensions(){val options=Json.parseToJsonElement("""{"catalogue":[{"key":"tax","filters":[]},{"key":"profit-withdrawal","filters":["ownerId"]}]}""").jsonObject;assertEquals(emptySet<String>(),accountReportSpecificFilters(options,"tax"));assertEquals(setOf("ownerId"),accountReportSpecificFilters(options,"profit-withdrawal"));assertNull(accountReportSpecificFilters(buildJsonObject{},"tax"))}
+    @Test fun purchaseRegisterUsesServerVendorFilterAndNativePurchaseDestination() {
+        val id="00000000-0000-4000-8000-000000000001"
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"purchase-register","name":"Purchase Register","group":"Transaction","filters":["vendorId"]}]}""").jsonObject
+        assertEquals("purchase-register",accountReportCatalogue(options,"register").single().key)
+        assertEquals(setOf("vendorId"),accountReportSpecificFilters(options,"purchase-register"))
+        val data=Json.parseToJsonElement("""{"rowLinks":["/workspace/account/transactions/$id"],"nativeRowLinks":["/workspace/account/purchases/$id"]}""").jsonObject
+        assertEquals("/workspace/account/purchases/$id",accountReportDestination(accountReportLinks(data).single()))
+    }
 }

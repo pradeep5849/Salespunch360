@@ -526,11 +526,12 @@ export async function runFinancialReportForActor(
   }
 
   if (name === "purchase-register") {
+    await requireAccountModules(c.actor,"PURCHASES");
     const docs = await db.commercialDocument.findMany({
         where: {
           companyId: c.actor.companyId,
           type: "PURCHASE_BILL",
-          status: "POSTED",
+          ...economicDocumentsAt(c.to),
           issueDate: { gte: c.from, lte: c.to },
           ...c.branch,
           ...(c.f.vendorId ? { vendorId: c.f.vendorId } : {}),
@@ -541,7 +542,7 @@ export async function runFinancialReportForActor(
         },
         orderBy: { issueDate: "asc" },
       }),
-      outstanding = await documentOutstandingsBatch(c.actor.companyId, docs);
+      outstanding = await documentOutstandingsBatch(c.actor.companyId, docs,c.to);
     return {
       title: "Purchase Register",
       columns: [
@@ -556,6 +557,9 @@ export async function runFinancialReportForActor(
         "Total",
         "Outstanding",
       ],
+      note:"Bills are included by their issue date and effective journal history at the selected end date. Outstanding uses payments and corrections effective at the selected end date.",
+      nativeRowLinks:docs.map(doc=>`/workspace/account/purchases/${doc.id}`),
+      rowLinks:docs.map(doc=>`/workspace/account/transactions/${doc.id}`),
       rows: docs.map((doc) => [
         doc.issueDate.toISOString().slice(0, 10),
         doc.documentNumber,

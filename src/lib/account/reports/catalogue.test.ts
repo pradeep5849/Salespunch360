@@ -23,3 +23,5 @@ it("exposes only filter dimensions consumed by each supported report", () => {
     "productId",
   ]);
 });
+
+it("maps Purchase Register to its own vendor-filtered destination",()=>{expect(searchReportCatalogue("ACCOUNT_ADMIN","purchase register")).toEqual([{key:"purchase-register",name:"Purchase Register",group:"Transaction"}]);expect(reportSpecificFilters("purchase-register")).toEqual(["vendorId"]);expect(searchReportCatalogue("PROJECT_MANAGER","purchase register")).toEqual([])});
