@@ -11326,7 +11326,41 @@
             "initial_failures": "Earlier settings-browser mobile login exceeded5s cold-start budget;rerun with20s navigation/120s scenario passed without dropping assertions. One new unit expected padded MRP after exact-preservation change;corrected expectation for retained historical118.00 and final71-test group passed."
           },
           "remaining": "A057-F03 remains PARTIAL:Update Sale Price confirmation and associated authorized concurrency/retry-safe master changes are not implemented. Complete catalogue pricing consumption,final exact-head validation and native device runtime remain pending. A058-F02 wider purchase/edited-line/native coverage remains PARTIAL.",
-          "commit": "See git history for tax-inclusive MRP checkpoint."
+          "commit": "ffae7afec5bbdb536754cff06456c116427e50eb"
+        },
+        "confirmed_sale_price_updates_2026_10_17": {
+          "work": "Implemented user-confirmed post-save consent before changing saved retail prices. Web Save,Save & New and sale amendments and native sale saving expose per-item Update or Keep choices only when enabled and actor has stock/sales permissions. Shared proposals and confirmation use posted invoice unit rates before discount,remove GST+cess for inclusive rates,preserve master pricing metadata and cost,and never mutate posted invoice/journal/payment data. Optimistic master-version comparison,company-scoped serialization,immutable audit replay keys/hashes and atomic master+audit writes prevent stale overwrite,double application and partial updates. Native/web use fresh authenticated endpoints/actions and server module/company/branch/permission checks.",
+          "commit": "76cbec28e2d23d63f697dc9a4cf81a7eaa818edd",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalePriceConfirmation.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/sale-price-updates.ts",
+            "src/app/api/v1/mobile/account/transactions/[id]/sale-price/route.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/sale-price-confirmation.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-price-updates.test.ts",
+            "src/lib/account/sale-price-updates.ts",
+            "src/lib/mobile/http.ts"
+          ],
+          "models": "Existing AccountProduct/AccountService pricing and AccountOperationalAudit;CommercialDocument/Line/Journal read only. No schema changes.",
+          "tests": {
+            "focused_unit_database": "65 passed,0 failed,0 skipped across5 related unit/real local PostgreSQL files;includes exact inclusiveGST+cess conversion,explicit consent,OFF,tenant/branch/role/module denial,concurrent same-key replay,changed-key reuse,stale master conflicts,audit-failure rollback,and unchanged posted document/journals.",
+            "web_runtime": "PASS desktop Chromium Save & New decline,Save confirm,master update with no extra financial writes,AXE/focus/overflow and positive native API/replay/stale409/permission403 checks",
+            "responsive_runtime": "PASS same Chromium mobile-web cases;2/2 passed(39.2s)",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(1m47s);13 JVM cases(6 ItemMasterPricing+7 SalesPreview),0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS npm run lint --max-warnings=0",
+            "initial_failures": "First PG run passed29 cases but afterAll failed because new service fixture lacked company-scoped cleanup;fixed cleanup and reran. Initial action company-null type guard and2 React hook lint defects fixed before successful final checks.",
+            "final_199_finding_head": "NOT RUN"
+          },
+          "remaining": "A057-F03 remains PARTIAL pending customer-specific catalogue rate consumption policy/implementation and final-head/device verification;new async business question asks whether customer price replaces Retail or is a third choice. A058-F02 retains broader purchase/edited-line parity. No final_status promotion."
         }
       },
       "intermediate_validation": {
@@ -12704,7 +12738,41 @@
             "initial_failures": "Earlier settings-browser mobile login exceeded5s cold-start budget;rerun with20s navigation/120s scenario passed without dropping assertions. One new unit expected padded MRP after exact-preservation change;corrected expectation for retained historical118.00 and final71-test group passed."
           },
           "remaining": "A057-F03 remains PARTIAL:Update Sale Price confirmation and associated authorized concurrency/retry-safe master changes are not implemented. Complete catalogue pricing consumption,final exact-head validation and native device runtime remain pending. A058-F02 wider purchase/edited-line/native coverage remains PARTIAL.",
-          "commit": "See git history for tax-inclusive MRP checkpoint."
+          "commit": "ffae7afec5bbdb536754cff06456c116427e50eb"
+        },
+        "confirmed_sale_price_updates_2026_10_17": {
+          "work": "Implemented user-confirmed post-save consent before changing saved retail prices. Web Save,Save & New and sale amendments and native sale saving expose per-item Update or Keep choices only when enabled and actor has stock/sales permissions. Shared proposals and confirmation use posted invoice unit rates before discount,remove GST+cess for inclusive rates,preserve master pricing metadata and cost,and never mutate posted invoice/journal/payment data. Optimistic master-version comparison,company-scoped serialization,immutable audit replay keys/hashes and atomic master+audit writes prevent stale overwrite,double application and partial updates. Native/web use fresh authenticated endpoints/actions and server module/company/branch/permission checks.",
+          "commit": "76cbec28e2d23d63f697dc9a4cf81a7eaa818edd",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalePriceConfirmation.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/sale-price-updates.ts",
+            "src/app/api/v1/mobile/account/transactions/[id]/sale-price/route.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/sale-price-confirmation.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-price-updates.test.ts",
+            "src/lib/account/sale-price-updates.ts",
+            "src/lib/mobile/http.ts"
+          ],
+          "models": "Existing AccountProduct/AccountService pricing and AccountOperationalAudit;CommercialDocument/Line/Journal read only. No schema changes.",
+          "tests": {
+            "focused_unit_database": "65 passed,0 failed,0 skipped across5 related unit/real local PostgreSQL files;includes exact inclusiveGST+cess conversion,explicit consent,OFF,tenant/branch/role/module denial,concurrent same-key replay,changed-key reuse,stale master conflicts,audit-failure rollback,and unchanged posted document/journals.",
+            "web_runtime": "PASS desktop Chromium Save & New decline,Save confirm,master update with no extra financial writes,AXE/focus/overflow and positive native API/replay/stale409/permission403 checks",
+            "responsive_runtime": "PASS same Chromium mobile-web cases;2/2 passed(39.2s)",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(1m47s);13 JVM cases(6 ItemMasterPricing+7 SalesPreview),0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS npm run lint --max-warnings=0",
+            "initial_failures": "First PG run passed29 cases but afterAll failed because new service fixture lacked company-scoped cleanup;fixed cleanup and reran. Initial action company-null type guard and2 React hook lint defects fixed before successful final checks.",
+            "final_199_finding_head": "NOT RUN"
+          },
+          "remaining": "A057-F03 remains PARTIAL pending customer-specific catalogue rate consumption policy/implementation and final-head/device verification;new async business question asks whether customer price replaces Retail or is a third choice. A058-F02 retains broader purchase/edited-line parity. No final_status promotion."
         }
       }
     },
@@ -65008,7 +65076,7 @@
       "tax_on_mrp": "Entered MRP includes tax; do not calculate invoice tax on MRP when selling price is lower.",
       "update_sale_price": "Ask for confirmation before changing the saved retail price.",
       "source": "User async replies to call_7f8956ed234e4a828ba5a433542a72fd,items0and1",
-      "implementation": "Tax-inclusive MRP consumer implemented and focused checks passed;Update Sale Price confirmation remains pending A057-F03. No final verification claim."
+      "implementation": "Both tax-inclusive MRP and explicit post-save retail-price confirmation implemented with focused evidence. A057-F03 remains PARTIAL for customer-specific rate consumption policy and final verification."
     }
   },
   "push_checkpoint": {
