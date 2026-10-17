@@ -35530,7 +35530,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -35573,6 +35573,21 @@
           },
           "remaining": "Reopen Cancel/Yes/Close reference sheet, native device runtime, unsupported posted legacy sources without proven identity, final-head verification. PARTIAL retained. An actor assigned no branches still receives layout AuthorizationError/500; scoped denial test uses a valid other assigned branch and returns404. This existing layout limitation is not claimed fixed.",
           "commit": "29eac6955208796223488eafac7cee78cc276dcd"
+        },
+        "independent_source_completion_2026_10_17": {
+          "commit": "9101e21d59522b2b787c318c9fceb01299c01159",
+          "work": "Independently checked original F02 amount/source contract in existing implementation. New strict source regression rejects zero/negative/excess precision,another party invoice and foreign-company actor without creating cheque,settlement or journal. Actual legacy source completion and multi-invoice/advance View Txn browser/API journeys pass. New records carry exact amount,party identity,pending settlement/cheque link and posted journal only after closure;unposted legacy source completion requires explicit party/amount and no automatic guessed financial history. Legacy posted entries lacking a provable normalized source remain protected/read-only and require reconciliation;not silently migrated to arbitrary journals. No application service/schema changes in this test-only slice.",
+          "files": [
+            "src/lib/account/cheque-finance.integration.test.ts"
+          ],
+          "tests": {
+            "focused_unit_postgresql": "53 passed,0 failed,0 skipped across3 finance/source-target/legacy-runtime files(6.67s),including actual source-completion replay/foreign branch denial,new source precision/party isolation,no duplicate financial writes and protection against arbitrary-journal legacy transitions.",
+            "browser_mobile_api": "4 passed desktop/mobile Chromium(49.0s):legacy explicit-source completion and multi-invoice/advance source navigation,including actual mobile source descriptors/API and branch denial. No emulator/device navigation claimed.",
+            "typescript": "PASS",
+            "eslint": "PASS changed test file",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Complete final199-head validation and native device runtime pending. Production legacy posted records with missing provenance need reconciliation;no amount/source guessed and no production data modified. Other cheque list/native findings keep separate statuses."
         }
       },
       "push_checkpoint_evidence": {
@@ -35885,7 +35900,7 @@
             "record": "Final exact-head complete validation remains pending. Device/live-production checks are not claimed. Preserve original required tests and all limitations in recorded work."
           }
         ],
-        "verification_status": "PARTIAL",
+        "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
       }
     },
