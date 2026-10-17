@@ -22,4 +22,18 @@ class ItemMasterPricingTest {
  assertEquals("80",options.customerPrice("item","party","2026-10-01"));assertEquals("80",options.customerPrice("item","party","2026-10-31"))
  assertNull(options.customerPrice("item","other","2026-10-01"));assertNull(options.customerPrice("item","party","2026-11-01"))
  }
+
+ @Test fun wholesaleCatalogueWinsWithoutReusingMasterGrossAndFallsBack(){
+ val item=master("FIXED").copy(pricing=buildJsonObject{put("enteredSalePrice","118");put("saleTaxMode","INCLUSIVE");put("normalizedWholesalePrice","90");put("wholesalePrice","106.20");put("discountType","FIXED");put("discountValue","11.80")})
+ val selected=itemMasterPrice(item,"INCLUSIVE",quantity="3",priceKind="WHOLESALE",wholesaleRate="70")
+ assertEquals("82.60",selected.rate);assertEquals("35.4",selected.discountValue)
+ assertEquals("106.20",itemMasterPrice(item,"INCLUSIVE",priceKind="WHOLESALE").rate)
+ assertEquals("82.60",itemMasterPrice(SalesOption("old","Old",rate="100",taxRate="18"),"INCLUSIVE",priceKind="WHOLESALE",wholesaleRate="70").rate)
+ }
+ @Test fun wholesaleDatesAreInclusiveAndSettingDisablesCatalogue(){
+ val rows=listOf(buildJsonObject{put("productId","item");put("rate","70");put("effectiveFrom","2026-10-01");put("effectiveTo","2026-10-31")})
+ val options=SalesOptions(wholesalePrices=rows)
+ assertEquals("70",options.wholesaleRate("item","2026-10-01"));assertEquals("70",options.wholesaleRate("item","2026-10-31"))
+ assertNull(options.wholesaleRate("item","2026-11-01"));assertNull(options.wholesaleRate("other","2026-10-01"));assertNull(options.copy(wholesalePrice=false).wholesaleRate("item","2026-10-01"))
+ }
 }

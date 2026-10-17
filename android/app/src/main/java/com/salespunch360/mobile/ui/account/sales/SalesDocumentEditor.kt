@@ -1,5 +1,6 @@
 package com.salespunch360.mobile.ui.account.sales
 
+import com.salespunch360.mobile.account.wholesaleRate
 import com.salespunch360.mobile.account.customerPrice
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -222,7 +223,7 @@ private fun DirectSaleInvoiceEditor(
         val product=options.products.firstOrNull{it.name.equals(name,true)}
         val service=if(product==null)options.services.firstOrNull{it.name.equals(name,true)} else null
         val unit=options.units.firstOrNull{it.id==itemUnitId}
-        val defaultPrice=com.salespunch360.mobile.account.itemMasterPrice(product?:service,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",discounts=options.itemWiseDiscount,quantity=itemQty.ifBlank{"1"},priceKind=itemPriceKind,customerRate=product?.let{options.customerPrice(it.id,draft.customerId,draft.issueDate)})
+        val defaultPrice=com.salespunch360.mobile.account.itemMasterPrice(product?:service,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",discounts=options.itemWiseDiscount,quantity=itemQty.ifBlank{"1"},priceKind=itemPriceKind,customerRate=product?.let{options.customerPrice(it.id,draft.customerId,draft.issueDate)},wholesaleRate=product?.let{options.wholesaleRate(it.id,draft.issueDate)})
         val line=SalesLineDraft(
             lineType=if(product!=null)"PRODUCT" else if(service!=null)"SERVICE" else "CUSTOM",
             sourceId=product?.id?:service?.id.orEmpty(),
@@ -289,8 +290,9 @@ private fun DirectSaleInvoiceEditor(
                 }
                 val priceMaster=entryProduct?:options.services.firstOrNull{it.name.equals(itemName.trim(),true)}
                 val customerRate=entryProduct?.let{options.customerPrice(it.id,draft.customerId,draft.issueDate)}
-                val hasWholesale=options.wholesalePrice&&priceMaster?.pricing?.str("normalizedWholesalePrice")?.toBigDecimalOrNull()!=null
-                if(hasWholesale||customerRate!=null)item{SelectField("Price type",itemPriceKind,listOf("RETAIL" to "Retail")+(if(hasWholesale)listOf("WHOLESALE" to "Wholesale")else emptyList())+(if(customerRate!=null)listOf("CUSTOMER" to "Customer Price")else emptyList())){kind->itemPriceKind=kind;itemRate=com.salespunch360.mobile.account.itemMasterPrice(priceMaster,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",priceKind=kind,customerRate=customerRate).rate}}
+                val wholesaleRate=entryProduct?.let{options.wholesaleRate(it.id,draft.issueDate)}
+                val hasWholesale=options.wholesalePrice&&(wholesaleRate!=null||priceMaster?.pricing?.str("normalizedWholesalePrice")?.toBigDecimalOrNull()!=null)
+                if(hasWholesale||customerRate!=null)item{SelectField("Price type",itemPriceKind,listOf("RETAIL" to "Retail")+(if(hasWholesale)listOf("WHOLESALE" to "Wholesale")else emptyList())+(if(customerRate!=null)listOf("CUSTOMER" to "Customer Price")else emptyList())){kind->itemPriceKind=kind;itemRate=com.salespunch360.mobile.account.itemMasterPrice(priceMaster,if(itemTaxMode=="WITH")"INCLUSIVE"else "EXCLUSIVE",priceKind=kind,customerRate=customerRate,wholesaleRate=wholesaleRate).rate}}
                 item{
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                         OutlinedTextField(itemRate,{itemRate=it},label={Text("Rate (Price/Unit)")},modifier=Modifier.weight(1f))

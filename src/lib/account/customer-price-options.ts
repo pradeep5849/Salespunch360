@@ -13,3 +13,14 @@ export async function customerPriceOptionsForActor(actor: Pick<ProjectActor,"com
     orderBy:[{createdAt:"desc"},{id:"desc"}],select:{id:true,productId:true,customerId:true,rate:true,effectiveFrom:true,effectiveTo:true}});
   return rows.map(row=>({...row,rate:row.rate.toFixed(2),effectiveFrom:row.effectiveFrom?.toISOString().slice(0,10)??null,effectiveTo:row.effectiveTo?.toISOString().slice(0,10)??null}));
 }
+
+/** Wholesale rates are company product prices, never customer-specific rates. */
+export async function wholesalePriceOptionsForActor(actor: Pick<ProjectActor,"companyId"|"accountRole">, enabled: boolean) {
+  if (!enabled || !actor.companyId || actor.accountRole === "PROJECT_MANAGER") return [];
+  const products = await db.accountProduct.findMany({where:{companyId:actor.companyId,isActive:true},select:{id:true}});
+  if (!products.length) return [];
+  const rows = await db.productPrice.findMany({where:{companyId:actor.companyId,isActive:true,priceType:"WHOLESALE",
+    customerId:null,productId:{in:products.map(row=>row.id)}},
+    orderBy:[{createdAt:"desc"},{id:"desc"}],select:{id:true,productId:true,rate:true,effectiveFrom:true,effectiveTo:true}});
+  return rows.map(row=>({...row,rate:row.rate.toFixed(2),effectiveFrom:row.effectiveFrom?.toISOString().slice(0,10)??null,effectiveTo:row.effectiveTo?.toISOString().slice(0,10)??null}));
+}

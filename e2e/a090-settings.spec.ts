@@ -2232,13 +2232,14 @@ test("A057 Customer Price is separate from Retail and respects active dates",asy
  const product=await db.accountProduct.create({data:{companyId,name,salePrice:"100",taxRate:"0",pricing:{enteredSalePrice:"100",saleTaxMode:"EXCLUSIVE",discountType:"FIXED",discountValue:"10",normalizedDiscountValue:"10",normalizedWholesalePrice:"90",wholesalePrice:"90"}}});
  const date=new Date().toISOString().slice(0,10),customer=await db.customer.findUniqueOrThrow({where:{id:customerId}});
  await db.productPrice.create({data:{companyId,productId:product.id,customerId,priceType:"CUSTOMER",rate:"80",effectiveFrom:new Date(date),effectiveTo:new Date(date)}});
+ await db.productPrice.create({data:{companyId,productId:product.id,priceType:"WHOLESALE",rate:"70",effectiveFrom:new Date(date),effectiveTo:new Date(date)}});
  try{
   await signInSettings(page);await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
   await page.getByPlaceholder("Search customer name or phone").fill(customer.name);await page.getByRole("button",{name:new RegExp(customer.name)}).click();
   await page.getByRole("button",{name:/Add Items/}).click();await page.getByText(name,{exact:true}).click();
   const type=page.getByRole("combobox",{name:"Price type",exact:true}),rate=page.getByRole("spinbutton",{name:"Rate (Price/Unit)",exact:true});
   await expect(type).toHaveValue("RETAIL");await expect(rate).toHaveValue("100");
-  await type.selectOption("WHOLESALE");await expect(rate).toHaveValue("90");
+  await type.selectOption("WHOLESALE");await expect(rate).toHaveValue("70");
   await type.selectOption("CUSTOMER");await expect(rate).toHaveValue("80");
   await page.getByRole("spinbutton",{name:"Quantity",exact:true}).fill("3");
   const picker=page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})});await picker.getByRole("button",{name:"Save",exact:true}).click();

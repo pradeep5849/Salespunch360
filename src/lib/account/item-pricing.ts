@@ -92,6 +92,7 @@ export function itemPriceForDocument(
   quantity = "1",
   priceKind: "RETAIL" | "WHOLESALE" | "CUSTOMER" = "RETAIL",
   customerRate?: string,
+  wholesaleRate?: string,
 ) {
   const p =
     pricing && typeof pricing === "object" && !Array.isArray(pricing)
@@ -100,15 +101,17 @@ export function itemPriceForDocument(
   const customer = !purchase && priceKind === "CUSTOMER";
   if (customer && (customerRate === undefined || !/^\d+(\.\d+)?$/.test(customerRate))) throw new Error("CUSTOMER_PRICE_UNAVAILABLE");
   const wholesale = !purchase && priceKind === "WHOLESALE";
-  if (wholesale && (!p || typeof p.normalizedWholesalePrice !== "string"))
+  if (wholesaleRate !== undefined && !/^\d+(\.\d+)?$/.test(wholesaleRate)) throw new Error("WHOLESALE_PRICE_UNAVAILABLE");
+  const catalogueWholesale = wholesale && wholesaleRate !== undefined;
+  if (wholesale && !catalogueWholesale && (!p || typeof p.normalizedWholesalePrice !== "string"))
     throw new Error("WHOLESALE_PRICE_UNAVAILABLE");
   const base = new Prisma.Decimal(
-      customer ? customerRate! : wholesale ? String(p!.normalizedWholesalePrice) : (rate ?? 0),
+      customer ? customerRate! : wholesale ? (wholesaleRate ?? String(p!.normalizedWholesalePrice)) : (rate ?? 0),
     ),
     tax = new Prisma.Decimal(taxRate ?? 0);
   if (!p || typeof p.enteredSalePrice !== "string")
     return {
-      rate: customer && mode === "INCLUSIVE" ? base.mul(new Prisma.Decimal(100).add(tax)).div(100).toDecimalPlaces(2) : base,
+      rate: (customer || wholesale) && mode === "INCLUSIVE" ? base.mul(new Prisma.Decimal(100).add(tax)).div(100).toDecimalPlaces(2) : base,
       discountType: undefined,
       discountValue: new Prisma.Decimal(0),
     };
@@ -144,7 +147,7 @@ export function itemPriceForDocument(
           : "enteredSalePrice"
     ];
   const retainedGross =
-    !customer && mode === "INCLUSIVE" &&
+    !customer && !catalogueWholesale && mode === "INCLUSIVE" &&
     p[purchase ? "purchaseTaxMode" : "saleTaxMode"] === "INCLUSIVE" &&
     typeof enteredPrice === "string" &&
     /^\d+(\.\d+)?$/.test(enteredPrice)

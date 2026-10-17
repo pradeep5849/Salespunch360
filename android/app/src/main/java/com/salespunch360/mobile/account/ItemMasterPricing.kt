@@ -4,19 +4,21 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 data class ItemMasterPrice(val rate:String,val discountType:String="",val discountValue:String="0")
-fun itemMasterPrice(master:SalesOption?,taxMode:String,purchase:Boolean=false,discounts:Boolean=true,quantity:String="1",priceKind:String="RETAIL",customerRate:String?=null):ItemMasterPrice {
+fun itemMasterPrice(master:SalesOption?,taxMode:String,purchase:Boolean=false,discounts:Boolean=true,quantity:String="1",priceKind:String="RETAIL",customerRate:String?=null,wholesaleRate:String?=null):ItemMasterPrice {
     val rate=master?.rate.orEmpty()
     val customer=!purchase&&priceKind=="CUSTOMER"
     require(!customer||customerRate?.toBigDecimalOrNull()?.signum()?.let{it>=0}==true){"CUSTOMER_PRICE_UNAVAILABLE"}
+    val wholesale=!purchase&&priceKind=="WHOLESALE"
+    val catalogueWholesale=wholesale&&wholesaleRate!=null
+    require(wholesaleRate==null||wholesaleRate.toBigDecimalOrNull()?.signum()?.let{it>=0}==true){"WHOLESALE_PRICE_UNAVAILABLE"}
     val p=master?.pricing
     if(p==null||p.str("enteredSalePrice").isBlank()){
-        if(!customer)return ItemMasterPrice(rate)
+        if(!customer&&!catalogueWholesale)return ItemMasterPrice(rate)
         val factor=if(taxMode=="INCLUSIVE")BigDecimal.ONE+(master?.taxRate?.toBigDecimalOrNull()?:BigDecimal.ZERO).divide(BigDecimal(100)) else BigDecimal.ONE
-        return ItemMasterPrice(customerRate!!.toBigDecimal().multiply(factor).setScale(2,RoundingMode.HALF_UP).toPlainString())
+        return ItemMasterPrice((if(customer)customerRate!! else wholesaleRate!!).toBigDecimal().multiply(factor).setScale(2,RoundingMode.HALF_UP).toPlainString())
     }
-    val wholesale=!purchase&&priceKind=="WHOLESALE"
-    require(!wholesale||p.str("normalizedWholesalePrice").toBigDecimalOrNull()!=null){"WHOLESALE_PRICE_UNAVAILABLE"}
-    val base=(if(customer)customerRate else if(wholesale)p.str("normalizedWholesalePrice")else rate)?.toBigDecimalOrNull()?:BigDecimal.ZERO
+    require(!wholesale||catalogueWholesale||p.str("normalizedWholesalePrice").toBigDecimalOrNull()!=null){"WHOLESALE_PRICE_UNAVAILABLE"}
+    val base=(if(customer)customerRate else if(wholesale)(wholesaleRate?:p.str("normalizedWholesalePrice"))else rate)?.toBigDecimalOrNull()?:BigDecimal.ZERO
     val tax=master.taxRate?.toBigDecimalOrNull()?:BigDecimal.ZERO
     val factor=if(taxMode=="INCLUSIVE")BigDecimal.ONE+tax.divide(BigDecimal(100)) else BigDecimal.ONE
     val type=if(discounts&&!purchase)p.str("discountType").takeIf{it in listOf("PERCENTAGE","FIXED")}.orEmpty()else ""
@@ -24,6 +26,6 @@ fun itemMasterPrice(master:SalesOption?,taxMode:String,purchase:Boolean=false,di
     val fixedBase=if(original!=null){if(p.str("saleTaxMode")=="INCLUSIVE")original.multiply(BigDecimal(100)).divide(BigDecimal(100)+tax,12,RoundingMode.HALF_UP)else original}else p.str("normalizedDiscountValue").toBigDecimalOrNull()?:BigDecimal.ZERO
     val discount=when(type){"FIXED"->fixedBase.multiply(factor).multiply(quantity.toBigDecimalOrNull()?:BigDecimal.ZERO);"PERCENTAGE"->p.str("normalizedDiscountValue").toBigDecimalOrNull()?:BigDecimal.ZERO;else->BigDecimal.ZERO}
     val entered=p.str(if(purchase)"enteredPurchasePrice"else if(wholesale)"wholesalePrice"else "enteredSalePrice").toBigDecimalOrNull()
-    val shown=if(!customer&&taxMode=="INCLUSIVE"&&p.str(if(purchase)"purchaseTaxMode"else "saleTaxMode")=="INCLUSIVE"&&entered!=null)entered else base.multiply(factor)
+    val shown=if(!customer&&!catalogueWholesale&&taxMode=="INCLUSIVE"&&p.str(if(purchase)"purchaseTaxMode"else "saleTaxMode")=="INCLUSIVE"&&entered!=null)entered else base.multiply(factor)
     return ItemMasterPrice(shown.setScale(2,RoundingMode.HALF_UP).toPlainString(),type,(if(type=="FIXED")discount.setScale(2,RoundingMode.HALF_UP)else discount).stripTrailingZeros().toPlainString())
 }
