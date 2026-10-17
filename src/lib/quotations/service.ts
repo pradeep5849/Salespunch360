@@ -1,3 +1,4 @@
+import {quotationStockOptionsForActor} from "./stock-options";
 import {canUsePermission} from "@/lib/auth/permissions";
 import {resolvePartySettings} from "@/lib/account/party-settings";
 import {commercialCreationHash} from "@/lib/account/commercial-request-identity";
@@ -163,21 +164,22 @@ export async function quotationEditorOptionsForActor(actor: Actor) {
   const [branches, customers, products, services, workPackages, units] = await Promise.all([
     db.branch.findMany({ where: scopedBranchWhere(actor), select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
     db.customer.findMany({ where: { companyId: actor.companyId!, isActive: true, isAccountCustomer: true, ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {}) }, select: { id: true, name: true, contactPerson: true, phone:true, branchId: true }, orderBy: { name: "asc" } }),
-    db.accountProduct.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, salePrice: true, ...(canCost ? { costPrice: true } : {}), taxRate: true, description: true } }),
+    db.accountProduct.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, salePrice: true, trackInventory:true, ...(canCost ? { costPrice: true } : {}), taxRate: true, description: true } }),
     db.accountService.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, sellingRate: true, ...(canCost ? { estimatedCost: true } : {}), taxRate: true, description: true } }),
     db.workPackage.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, code: true, unitId: true, sellingRate: true, ...(canCost ? { estimatedCost: true } : {}), description: true } }),
     db.accountUnit.findMany({ where: { companyId: actor.companyId!, isActive: true }, select: { id: true, name: true, symbol: true } }),
   ]);
   let leads: Array<{ id: string; title: string; companyName: string | null; contactName: string | null; branchId: string }> = [];
   if (company.productEdition === "SALESPUNCH360_PLUS" && actor.salesAccessActive && actor.salesRole) leads = await db.lead.findMany({ where: { companyId: actor.companyId!, ...visibilityWhere(actor as never), ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {}) }, select: { id: true, title: true, companyName: true, contactName: true, branchId: true }, orderBy: { updatedAt: "desc" }, take: 500 });
-  const safeProducts = products.map(item => { if (canCost) return item; const { costPrice: _cost, ...safe } = item as typeof item & { costPrice?: unknown }; void _cost; return safe; });
-  const safeServices = services.map(item => { if (canCost) return item; const { estimatedCost: _cost, ...safe } = item as typeof item & { estimatedCost?: unknown }; void _cost; return safe; });
-  const safeWorkPackages = workPackages.map(item => { if (canCost) return item; const { estimatedCost: _cost, ...safe } = item as typeof item & { estimatedCost?: unknown }; void _cost; return safe; });
+  const exactText=(value:unknown)=>value==null?null:String(value);
+  const safeProducts = products.map(item => {const {costPrice,...safe}=item as typeof item & {costPrice?:unknown};return {...safe,salePrice:exactText(item.salePrice),taxRate:exactText(item.taxRate),...(canCost?{costPrice:exactText(costPrice)}:{})};});
+  const safeServices = services.map(item => {const {estimatedCost,...safe}=item as typeof item & {estimatedCost?:unknown};return {...safe,sellingRate:exactText(item.sellingRate),taxRate:exactText(item.taxRate),...(canCost?{estimatedCost:exactText(estimatedCost)}:{})};});
+  const safeWorkPackages = workPackages.map(item => {const {estimatedCost,...safe}=item as typeof item & {estimatedCost?:unknown};return {...safe,sellingRate:exactText(item.sellingRate),...(canCost?{estimatedCost:exactText(estimatedCost)}:{})};});
   const partyCreation=canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS")?{
     fields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"CUSTOMER",isActive:true},orderBy:[{position:"asc"},{id:"asc"}]}),
     settings:resolvePartySettings((await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true}}))?.transactionDefaults),
   }:undefined;
-  return { partyCreation, customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
+  return { stock:await quotationStockOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,products.filter(row=>row.trackInventory).map(row=>row.id)), partyCreation, customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
 }
 
 export async function createQuotation(raw:unknown){return createQuotationForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT"),raw)}

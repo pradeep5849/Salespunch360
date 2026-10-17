@@ -180,6 +180,10 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
             } else {
                 SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; vm.line(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty())) }
             }
+            if(line.lineType=="PRODUCT"&&state.stockAvailable&&masters.firstOrNull{it.id==line.sourceId}?.trackInventory==true){
+                val quantity=state.stockPositions.firstOrNull{it.str("productId")==line.sourceId&&it.str("branchId")==state.draft?.branchId}?.str("quantity")?:"0.0000"
+                Text("Recorded stock in selected branch (primary unit): $quantity")
+            }
             Row {
                 OutlinedTextField(line.quantity, { vm.line(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))
                 OutlinedTextField(line.rate, { vm.line(index, line.copy(rate = it)) }, label = { Text("Rate") }, modifier = Modifier.weight(1f))

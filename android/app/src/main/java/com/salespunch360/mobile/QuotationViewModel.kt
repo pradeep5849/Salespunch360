@@ -50,6 +50,8 @@ data class QuotationRow(
 data class QuotationState(
     val canCreate:Boolean=false,
     val canCreateParty:Boolean=false,
+    val stockAvailable:Boolean=false,
+    val stockPositions:List<JsonObject> = emptyList(),
     val customFields:List<JsonObject> = emptyList(),
     val loading: Boolean = true,
     val saving: Boolean = false,
@@ -108,6 +110,8 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
                 canCreateParty=options["partyCreation"] is JsonObject,
+                stockAvailable=options["stock"] is JsonObject,
+                stockPositions=(options["stock"] as? JsonObject)?.array("positions").orEmpty(),
                 canCreate=options["canCreate"]?.jsonPrimitive?.booleanOrNull==true,
                 loading = false,
                 rows = rows,

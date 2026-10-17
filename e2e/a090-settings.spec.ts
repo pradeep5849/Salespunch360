@@ -2508,3 +2508,28 @@ test("A082 native party creation returns scoped identity and creates an estimate
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.customFieldDefinition.update({where:{id:field.id},data:{isRequired:false,isActive:false}});await db.branch.delete({where:{id:foreign}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
 });
+
+test("A082 estimate stock metadata follows the selected branch and never reserves stock",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),second=randomUUID(),name=`Quotation stock ${randomUUID().slice(0,8)}`;
+ await db.branch.create({data:{id:second,companyId,name:"Quotation stock second branch",code:`QST-${randomUUID().slice(0,8)}`}});
+ const warehouses=await Promise.all([branchId,branchId,second].map((branch,index)=>db.warehouse.create({data:{companyId,branchId:branch,name:`Quotation stock ${index}`,code:`QS-${randomUUID().slice(0,8)}`}})));
+ const product=await db.accountProduct.create({data:{companyId,name,trackInventory:true,salePrice:"70",costPrice:"50",taxRate:"18"}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["QUOTATIONS_BOQ","INVENTORY"],itemSettings:{...before.itemSettings as object,enabled:true,stockMaintenance:true}}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  for(const [index,quantity] of ["10","5","7"].entries())await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouses[index].id,productId:product.id,quantity,unitCost:"50",movementDate:"2026-10-17",sourceType:"OPENING",sourceId:randomUUID()});
+  const stockCount=await db.stockMovement.count({where:{companyId}}),journals=await db.journalEntry.count({where:{companyId}});
+  await signInSettings(page);await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");await page.getByLabel("Branch",{exact:true}).selectOption(branchId);
+  await page.getByLabel("Line type",{exact:true}).selectOption("PRODUCT");await page.getByLabel("Master item",{exact:true}).selectOption(product.id);
+  const stock=page.getByText(/Recorded stock in selected branch:/);await expect(stock).toContainText("15.0000");await page.getByLabel("Quantity",{exact:true}).fill("999");await expect(stock).toContainText("15.0000");
+  await page.getByLabel("Branch",{exact:true}).selectOption(second);await expect(stock).toContainText("7.0000");await page.getByLabel("Branch",{exact:true}).selectOption(branchId);await page.getByLabel("Customer",{exact:true}).selectOption(customerId);await expect(stock).toContainText("15.0000");
+  const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  const response=await page.request.get("/api/v1/mobile/account/quotations/options",{headers});expect(response.status()).toBe(200);const native=await response.json();expect(native.stock.positions.filter((row:{productId:string})=>row.productId===product.id)).toEqual(expect.arrayContaining([{productId:product.id,branchId,quantity:"15.0000"},{productId:product.id,branchId:second,quantity:"7.0000"}]));for(const row of native.stock.positions)expect(Object.keys(row).sort()).toEqual(["branchId","productId","quantity"]);
+  await page.getByRole("button",{name:"Save & New",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"New estimate ready"})).toBeVisible({timeout:20000});
+  expect(await db.stockMovement.count({where:{companyId}})).toBe(stockCount);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+  await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});const denied=await page.request.get("/api/v1/mobile/account/quotations/options",{headers});expect(denied.status()).toBe(200);const safe=await denied.json();expect(safe.stock).toBeNull();expect(safe.products.find((row:{id:string})=>row.id===product.id)).not.toHaveProperty("costPrice");
+  await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{itemSettings:{...before.itemSettings as object,enabled:false}}});expect((await (await page.request.get("/api/v1/mobile/account/quotations/options",{headers})).json()).stock).toBeNull();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{}}})}
+});

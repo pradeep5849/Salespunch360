@@ -1,3 +1,4 @@
+vi.mock("./stock-options",()=>({quotationStockOptionsForActor:vi.fn(async()=>null)}));
 import {requireAccountModules} from "@/lib/account/modules";
 import {beforeEach,describe,expect,it,vi} from "vitest";import {Prisma} from "@prisma/client";
 const C="11111111-1111-4111-8111-111111111111",B="22222222-2222-4222-8222-222222222222",ID="33333333-3333-4333-8333-333333333333",R="44444444-4444-4444-8444-444444444444";
@@ -90,5 +91,14 @@ describe("A082 inline party creation eligibility",()=>{
  it("does not expose creation fields/settings to Project Managers",async()=>{
   m.auth.mockResolvedValue(actor("PROJECT_MANAGER"));expect((await quotationEditorOptions()).partyCreation).toBeUndefined();expect(customModels.accountSettings.findUnique).not.toHaveBeenCalled();
   expect(customModels.customFieldDefinition.findMany).not.toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({entityType:"CUSTOMER"})}));
+ });
+});
+
+describe("A082 client-safe exact item selector amounts",()=>{
+ it("returns exact strings for product/service/package money and taxes instead of Decimal instances",async()=>{
+  m.products.mockResolvedValue([{id:ID,name:"Product",salePrice:new Prisma.Decimal("90071992547409.91"),costPrice:new Prisma.Decimal("60.12"),taxRate:new Prisma.Decimal("18")}]);
+  m.services.mockResolvedValue([{id:ID,name:"Service",sellingRate:new Prisma.Decimal("118.01"),estimatedCost:new Prisma.Decimal("50.02"),taxRate:new Prisma.Decimal("18")}]);
+  m.works.mockResolvedValue([{id:ID,name:"Package",sellingRate:new Prisma.Decimal("333.33"),estimatedCost:new Prisma.Decimal("222.22")}]);
+  const result=await quotationEditorOptions();expect(result.products[0]).toMatchObject({salePrice:"90071992547409.91",costPrice:"60.12",taxRate:"18"});expect(result.services[0]).toMatchObject({sellingRate:"118.01",estimatedCost:"50.02",taxRate:"18"});expect(result.workPackages[0]).toMatchObject({sellingRate:"333.33",estimatedCost:"222.22"});
  });
 });
