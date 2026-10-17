@@ -98,6 +98,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(
             draft = PurchaseDraft(
                 type = type,
+                taxMode=purchaseInitialTaxMode(_state.value.accountSettings),
                 branchId = project?.branchId ?: _state.value.branches.firstOrNull()?.id.orEmpty(),
                 purpose=if(projectId.isNullOrBlank())"INVENTORY_SALES" else "PROJECT",
                 projectId=projectId.orEmpty(),

@@ -115,7 +115,7 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
             } else {
                 SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id ->
                     val master = masters.first { it.id == id }
-                    vm.line(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty(), batchId = "", serialNumberId = "", sourceCommercialLineId = "", purchaseAllocations = emptyList()))
+                    vm.line(index, purchaseMasterLine(line,master,draft.taxMode))
                 }
             }
             Row {
