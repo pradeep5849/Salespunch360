@@ -110,6 +110,27 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 item { OutlinedTextField(draft.validUntil, { vm.editDraft(draft.copy(validUntil = it)) }, label = { Text("Valid until") }) }
                 itemsIndexed(draft.lines) { index, line -> QuotationLine(index, line, state, vm) }
                 item { OutlinedButton(onClick = vm::addLine) { Text("Add line") } }
+                itemsIndexed(draft.adjustments) { index, adjustment ->
+                    fun value(key:String)=(adjustment[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
+                    fun change(key:String,next:JsonElement){vm.editDraft(draft.copy(adjustments=draft.adjustments.mapIndexed { n,row -> if(n==index)JsonObject(row+mapOf(key to next))else row }))}
+                    ElevatedCard {
+                        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                            Text("Adjustment ${index+1}",style=MaterialTheme.typography.titleSmall)
+                            SelectField("Adjustment type",value("type"),listOf("DISCOUNT" to "Discount","ADDITIONAL_CHARGE" to "Additional charge")){change("type",JsonPrimitive(it))}
+                            OutlinedTextField(value("label"),{change("label",JsonPrimitive(it))},label={Text("Adjustment label")})
+                            SelectField("Adjustment value type",value("valueType"),listOf("FIXED" to "Fixed amount","PERCENTAGE" to "Percentage")){change("valueType",JsonPrimitive(it))}
+                            OutlinedTextField(value("value"),{change("value",JsonPrimitive(it))},label={Text("Adjustment value")})
+                            if(value("type")=="ADDITIONAL_CHARGE") {
+                                FilterChip(selected=(adjustment["taxable"] as? JsonPrimitive)?.booleanOrNull==true,onClick={change("taxable",JsonPrimitive((adjustment["taxable"] as? JsonPrimitive)?.booleanOrNull!=true))},label={Text("Taxable charge")})
+                                OutlinedTextField(value("taxRate").ifBlank{"0"},{change("taxRate",JsonPrimitive(it))},label={Text("Charge tax %")})
+                            }
+                            TextButton({vm.editDraft(draft.copy(adjustments=draft.adjustments.filterIndexed { n,_ -> n!=index }))}){Text("Remove adjustment")}
+                        }
+                    }
+                }
+                item {
+                    OutlinedButton({vm.editDraft(draft.copy(adjustments=draft.adjustments+buildJsonObject{put("type","DISCOUNT");put("label","Discount");put("valueType","FIXED");put("value","0")}))}){Text("Add discount / charge")}
+                }
                 item { OutlinedTextField(draft.terms, { vm.editDraft(draft.copy(terms = it)) }, label = { Text("Terms") }, minLines = 2) }
                 item { OutlinedTextField(draft.inclusions, { vm.editDraft(draft.copy(inclusions = it)) }, label = { Text("Inclusions") }) }
                 item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") }) }
@@ -147,6 +168,8 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
                 OutlinedTextField(line.rate, { vm.line(index, line.copy(rate = it)) }, label = { Text("Rate") }, modifier = Modifier.weight(1f))
             }
             OutlinedTextField(line.taxRate, { vm.line(index, line.copy(taxRate = it)) }, label = { Text("GST %") })
+            SelectField("Line discount type",line.discountType,listOf("" to "None","PERCENTAGE" to "Percentage","FIXED" to "Fixed amount")){vm.line(index,line.copy(discountType=it))}
+            if(line.discountType.isNotBlank())OutlinedTextField(line.discountValue,{vm.line(index,line.copy(discountValue=it))},label={Text("Line discount value")})
             if ((state.draft?.lines?.size ?: 0) > 1) TextButton(onClick = { vm.removeLine(index) }) { Text("Remove") }
         }
     }
