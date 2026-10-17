@@ -28,6 +28,8 @@ jobs:
         run: npx vitest run src/app/actions/commercial.test.ts src/lib/account/sale-invoice-save.runtime.test.ts src/lib/account/sale-warehouse.test.ts src/lib/account/commercial-action-errors.test.ts src/lib/account/commercial.runtime.test.ts src/lib/account/reports/catalogue.test.ts src/lib/account/backup-snapshot.runtime.test.ts src/lib/account/item-pricing.test.ts src/lib/account/sale-price-updates.test.ts src/lib/account/customer-price-options.test.ts src/lib/account/customer-price-selection.test.ts src/lib/account/item-photo-upload.test.ts src/lib/account/expense-items.test.ts src/lib/account/item-opening.test.ts src/lib/account/cheque-transaction-target.test.ts src/lib/account/cheque-list.test.ts src/lib/account/y04-print-coverage.test.ts src/lib/account/invoice-print-toggle-consumers.test.ts src/lib/account/commercial.contract.test.ts src/lib/account/inventory.test.ts src/lib/account/inventory-policy.test.ts src/lib/account/project-purchase-inventory.runtime.test.ts src/lib/account/tax.test.ts src/lib/accounting/service.runtime.test.ts
       - name: Money mutation validation boundaries
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
+      - name: Exact unit quantity and immutable snapshot guards
+        run: npx vitest run src/lib/account/unit-quantities.test.ts src/lib/account/commercial-unit-snapshot.test.ts
       - run: npm run typecheck
       - run: npm run lint
 
