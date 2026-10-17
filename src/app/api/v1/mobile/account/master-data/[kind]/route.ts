@@ -1,4 +1,4 @@
-import { z } from "zod";
+import {masterValidationFeedback} from "@/lib/mobile/master-validation-feedback";
 import { authenticateMobileToken } from "@/lib/mobile/auth";
 import {
   listMobileAccountMaster,
@@ -13,20 +13,7 @@ import {
   mobileUnexpected,
 } from "@/lib/mobile/http";
 
-const invalid = (error: unknown) =>
-  error instanceof z.ZodError ||
-  (error instanceof Error && error.message === "INVALID_INPUT")
-    ? mobileJson(
-        {
-          error: "INVALID_INPUT",
-          fields:
-            error instanceof z.ZodError
-              ? error.flatten().fieldErrors
-              : undefined,
-        },
-        400,
-      )
-    : null;
+const invalid = (error: unknown) => {const feedback=masterValidationFeedback(error);return feedback?mobileJson(feedback,400):null};
 export async function GET(
   request: Request,
   context: { params: Promise<{ kind: string }> },

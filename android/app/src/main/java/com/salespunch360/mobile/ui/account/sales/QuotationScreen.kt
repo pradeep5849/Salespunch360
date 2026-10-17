@@ -23,6 +23,10 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.quotationPreview
+import com.salespunch360.mobile.AccountMasterViewModel
+import com.salespunch360.mobile.ui.account.AccountMasterScreen
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.salespunch360.mobile.QuotationDraft
 import com.salespunch360.mobile.QuotationState
 import com.salespunch360.mobile.QuotationViewModel
@@ -89,6 +93,17 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
 
 @Composable
 private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: QuotationViewModel) {
+    var newPartyOpen by remember { mutableStateOf(false) }
+    var partyQuery by remember { mutableStateOf("") }
+    if(newPartyOpen){
+        val partyVm:AccountMasterViewModel=viewModel(key="quotation-party-${draft.creationRequestKey}")
+        Dialog(onDismissRequest={if(!partyVm.state.value.saving)newPartyOpen=false},properties=DialogProperties(usePlatformDefaultWidth=false)){
+            Surface(Modifier.fillMaxSize()){
+                AccountMasterScreen("customers",PaddingValues(0.dp),vm=partyVm,initialCreate=true,canCreate=state.canCreateParty,initialBranchId=draft.branchId,lockCreateBranch=true,cancelLabel="Return to estimate",onCancel={newPartyOpen=false},onCreatedRecord={party->vm.selectCreatedParty(party);partyQuery="";newPartyOpen=false})
+            }
+        }
+        return
+    }
     AlertDialog(
         onDismissRequest = vm::closeDraft,
         title = { Text(when { draft.id == null -> "New quotation"; draft.revision -> "New revision"; else -> "Edit quotation" }) },
@@ -99,8 +114,10 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 state.error?.let { error -> item { Text(error,color=MaterialTheme.colorScheme.error) } }
                 if(draft.id==null) {
                 item { SelectField("Type", draft.documentType, listOf("QUOTATION" to "Quotation", "ESTIMATE" to "Estimate", "BOQ" to "BOQ")) { vm.editDraft(draft.copy(documentType = it)) } }
-                item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { vm.editDraft(draft.copy(branchId = it, customerId = "")) } }
-                item { SelectField("Customer", draft.customerId, state.customers.filter { it.branchId==draft.branchId }.map { it.id to it.name }) { vm.editDraft(draft.copy(customerId = it)) } }
+                item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { partyQuery="";vm.editDraft(draft.copy(branchId = it, customerId = "")) } }
+                item { OutlinedTextField(partyQuery,{partyQuery=it},label={Text("Search saved parties")},modifier=Modifier.fillMaxWidth()) }
+                item { SelectField("Customer", draft.customerId, state.customers.filter { it.branchId==draft.branchId&&(it.id==draft.customerId||"${it.name} ${it.phone.orEmpty()}".contains(partyQuery.trim(),ignoreCase=true)) }.map { it.id to it.name }) { vm.editDraft(draft.copy(customerId = it)) } }
+                if(state.canCreateParty)item { OutlinedButton({newPartyOpen=true},enabled=draft.branchId.isNotBlank()&&!state.saving){Text("Add new party")} }
                 } else {
                     item { Text("Type: ${draft.documentType}") }
                     item { Text("Branch: ${state.branches.firstOrNull{it.id==draft.branchId}?.name?:draft.branchId}") }

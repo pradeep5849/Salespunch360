@@ -2485,3 +2485,26 @@ test("A082 inline party creation preserves estimate draft and required fields",a
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
  }finally{await db.customFieldDefinition.update({where:{id:quoteField.id},data:{isActive:false}});await db.customFieldDefinition.update({where:{id:field.id},data:{isActive:false,isRequired:false}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
 });
+
+test("A082 native party creation returns scoped identity and creates an estimate without posting",async({request})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),name=`Native quotation party ${randomUUID().slice(0,8)}`,key=`native_quote_${randomUUID().replaceAll("-","").slice(0,10)}`,foreign=randomUUID();
+ const field=await db.customFieldDefinition.create({data:{companyId,entityType:"CUSTOMER",fieldKey:key,label:"Native required confirmation",dataType:"BOOLEAN",isRequired:true,isActive:true}});
+ await db.branch.create({data:{id:foreign,companyId:otherCompanyId,name:"Foreign native party branch",code:`NQP-${randomUUID().slice(0,8)}`}});
+ const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+ const journals=await db.journalEntry.count({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["QUOTATIONS_BOQ"]}});
+  const options=await request.get("/api/v1/mobile/account/quotations/options",{headers});expect(options.status()).toBe(200);expect((await options.json()).partyCreation.fields.some((row:{fieldKey:string})=>row.fieldKey===key)).toBe(true);
+  const invalid=await request.post("/api/v1/mobile/account/master-data/customers",{headers,data:{branchId,name}});expect(invalid.status()).toBe(400);expect((await invalid.json()).fields[`customFields.${key}`]).toBeTruthy();expect(await db.customer.count({where:{companyId,name}})).toBe(0);
+  const deniedBranch=await request.post("/api/v1/mobile/account/master-data/customers",{headers,data:{branchId:foreign,name,customFields:{[key]:"false"}}});expect(deniedBranch.status()).toBe(403);expect(await db.customer.count({where:{name}})).toBe(0);
+  const created=await request.post("/api/v1/mobile/account/master-data/customers",{headers,data:{branchId,name,phone:"9000000001",customFields:{[key]:"false"}}});expect(created.status()).toBe(201);const body=await created.json(),party=body.record??body;expect(party).toMatchObject({branchId,name,isActive:true});expect(party.id).toBeTruthy();
+  expect((await db.customFieldValue.findFirstOrThrow({where:{companyId,definitionId:field.id,entityId:party.id}})).value).toBe(false);
+  const payload={creationRequestKey:randomUUID(),branchId,customerId:party.id,documentType:"ESTIMATE",issueDate:"2026-10-17",notes:"Retained native estimate",lines:[{lineType:"CUSTOM",itemName:`Native retained ${name}`,quantity:"5",rate:"70",taxRate:"18"}]};
+  const saved=await request.post("/api/v1/mobile/account/quotations",{headers,data:payload});expect(saved.status()).toBe(201);const quotation=await saved.json();expect(quotation.id).toBeTruthy();const retried=await request.post("/api/v1/mobile/account/quotations",{headers,data:payload});expect(retried.status()).toBe(201);expect((await retried.json()).id).toBe(quotation.id);
+  const row=await db.quotationDocument.findUniqueOrThrow({where:{id:quotation.id},include:{revisions:true}});expect(row.customerId).toBe(party.id);expect(row.revisions[0].grandTotal.toString()).toBe("413");expect(row.revisions[0].notes).toBe(payload.notes);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});const roleOptions=await request.get("/api/v1/mobile/account/quotations/options",{headers});expect(roleOptions.status()).toBe(200);expect((await roleOptions.json()).partyCreation).toBeUndefined();const deniedRole=await request.post("/api/v1/mobile/account/master-data/customers",{headers,data:{branchId,name:`Denied ${name}`,customFields:{[key]:"false"}}});expect(deniedRole.status()).toBe(403);expect(await db.customer.count({where:{companyId,name:`Denied ${name}`}})).toBe(0);
+  await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{enabledModules:[]}});expect((await request.get("/api/v1/mobile/account/quotations/options",{headers})).status()).toBe(200); // Quotations belong to included Basic Accounting, not optional modules.
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.customFieldDefinition.update({where:{id:field.id},data:{isRequired:false,isActive:false}});await db.branch.delete({where:{id:foreign}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
+});

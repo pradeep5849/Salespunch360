@@ -49,6 +49,7 @@ data class QuotationRow(
 
 data class QuotationState(
     val canCreate:Boolean=false,
+    val canCreateParty:Boolean=false,
     val customFields:List<JsonObject> = emptyList(),
     val loading: Boolean = true,
     val saving: Boolean = false,
@@ -106,6 +107,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
 
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
+                canCreateParty=options["partyCreation"] is JsonObject,
                 canCreate=options["canCreate"]?.jsonPrimitive?.booleanOrNull==true,
                 loading = false,
                 rows = rows,
@@ -145,6 +147,14 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         if(_state.value.saving)return
         val previous=_state.value.draft
         _state.value = _state.value.copy(draft = previous?.let{editedQuotationDraft(it,draft)}?:draft)
+    }
+
+    fun selectCreatedParty(record:AccountMasterRecord){
+        val current=_state.value;val draft=current.draft?:return
+        val selected=if(current.canCreateParty)quotationWithCreatedParty(draft,record)else null
+        if(selected==null){_state.value=current.copy(error="The party was saved but cannot be selected for this estimate branch. Your estimate draft was retained.");return}
+        val option=SalesOption(id=record.id,name=record.name,branchId=record.branchId,phone=record.phone)
+        _state.value=current.copy(draft=selected,customers=current.customers.filterNot{it.id==record.id}+option,error=null)
     }
 
     fun closeDraft() {
