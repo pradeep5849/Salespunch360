@@ -2356,3 +2356,19 @@ test("A090 GST report uses saved monetary and calendar display without changing 
   await db.accountSettings.update({where:{companyId},data:{baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}});
  }
 });
+
+test("A058 purchase preview resolves inclusive master cost and matches saved draft",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),vendor=await db.vendor.create({data:{companyId,name:`Pricing supplier ${randomUUID().slice(0,8)}`}});
+ const service=await db.accountService.create({data:{companyId,name:`Inclusive purchase ${randomUUID().slice(0,8)}`,sellingRate:"100",estimatedCost:"50",taxRate:"18",pricing:{saleTaxMode:"INCLUSIVE",purchaseTaxMode:"INCLUSIVE",enteredSalePrice:"118",enteredPurchasePrice:"59",discountType:"FIXED",discountValue:"11.8",normalizedDiscountValue:"10"}}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["PURCHASES","INVENTORY"],defaultTaxMode:"INCLUSIVE"}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Purchase pricing year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  await signInSettings(page);await page.goto("/workspace/account/transactions/new?type=PURCHASE_BILL");await page.getByText("Advanced purchase purpose",{exact:true}).click();await page.getByRole("combobox",{name:/^Purpose/}).selectOption("GENERAL_OFFICE");await page.getByRole("combobox",{name:/^Vendor/}).selectOption(vendor.id);await page.getByLabel("Vendor invoice number",{exact:true}).fill("PRICING-1");await page.getByLabel("Vendor invoice date",{exact:true}).fill("2026-10-13");
+  await page.getByRole("combobox",{name:/^Line type/}).selectOption("SERVICE");await page.getByRole("combobox",{name:"Item",exact:true}).selectOption(service.id);await page.getByLabel("Quantity",{exact:true}).fill("3");
+  const totals=page.getByLabel("Line totals",{exact:true});await expect(totals).toContainText("Tax ₹27.00");await expect(totals).toContainText("Line total ₹177.00");await expect(page.getByLabel("Rate",{exact:true})).toHaveValue("");
+  await page.getByLabel("Rate",{exact:true}).fill("118");await expect(totals).toContainText("Line total ₹354.00");await page.getByLabel("Rate",{exact:true}).fill("");await expect(totals).toContainText("Line total ₹177.00");
+  await page.getByRole("button",{name:"Create Draft",exact:true}).click();await expect(page).toHaveURL(/\/transactions\/[a-f0-9-]+$/,{timeout:20000});const id=page.url().split("/").at(-1)!;
+  const saved=await db.commercialDocument.findUniqueOrThrow({where:{id},include:{lines:true}});expect(saved).toMatchObject({status:"DRAFT",taxMode:"INCLUSIVE"});expect(saved.grandTotal.toString()).toBe("177");expect(saved.lines[0].rate.toString()).toBe("59");expect(saved.discountTotal.toString()).toBe("0");expect(saved.taxableTotal.toString()).toBe("150");expect(saved.taxTotal.toString()).toBe("27");
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,defaultTaxMode:before.defaultTaxMode}})}
+});

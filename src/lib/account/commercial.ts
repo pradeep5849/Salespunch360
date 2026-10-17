@@ -3392,13 +3392,14 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         name: true,
         code: true,
         sellingRate: true,
+        estimatedCost:true,
         pricing:true,
         taxRate: true,
       },
     }),
     workPackages: await db.workPackage.findMany({
       where: { companyId: actor.companyId, isActive: true },
-      select: { id: true, name: true, code: true, sellingRate: true },
+      select: { id: true, name: true, code: true, sellingRate: true, estimatedCost:true },
     }),
   };
 }
