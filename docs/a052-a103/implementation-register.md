@@ -9580,3 +9580,8 @@ Code `3b6c9f55cad485bc1f71366c2bc14bf33488ef79`: cash destination labels correct
 ### A058-F06 / A062-F02 explicit secondary-unit persistence — 2026-10-17
 
 Code `c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e`: explicit item-specific secondary unit/factor snapshots, web/native form/action/API persistence, active company-owned references, paired FK/check constraints and audited stale-map clearing. Passed 50 database/policy tests + 31 related tests, 2 desktop/mobile/native-API scenarios, Android compilation + 8 JVM tests, TypeScript/full lint/Prisma. Two additive migrations applied locally (130 total); no historical migration or production change. Both findings remain PARTIAL: transaction conversion/valuation/returns and immutable document snapshots still pending. Backup dependency mapped to A088-F01. Counts unchanged: 175 implemented / 22 partial / 2 not started.
+
+
+### A062-F02 exact conversion arithmetic foundation — 2026-10-17
+
+Code `eb269e567d44d12eb7d39e9099303eeba04859b9`: 12 arithmetic tests, TypeScript and focused lint passed. Forty-eight-digit intermediate precision preserves large quantities; non-representable four-decimal stock quantities are rejected rather than silently rounded. Existing two-decimal rate precision retained. No production consumer wired yet; A062-F02 remains PARTIAL.

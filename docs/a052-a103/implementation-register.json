@@ -19138,6 +19138,17 @@
             "Nullable SQL check strengthened by a new follow-up migration; applied migration was preserved."
           ],
           "remaining": "PARTIAL retained. Transaction secondary-unit selectors, immutable document factor/base-quantity snapshots, purchase/sale/return stock quantity and valuation conversion, and historical factor behavior remain A062-F02 work. Native device/emulator/TalkBack and full final-head validation not executed."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "eb269e567d44d12eb7d39e9099303eeba04859b9",
+          "work": "Added exact bounded conversion arithmetic with 48-digit intermediate precision: quantity in base units and selected-unit rate. Rejects quantities not exactly representable at existing four-decimal stock precision, invalid/missing factors and stock/rate overflow. Existing two-decimal currency rate rounding retained. This arithmetic layer is not yet wired to document/posting paths; no live quantity or ledger behavior changed.",
+          "files": [
+            "src/lib/account/unit-quantities.ts",
+            "src/lib/account/unit-quantities.test.ts"
+          ],
+          "tests": "12 focused tests passed: bundle/piece equivalence, fractional factors, large exact values, overflow, invalid input/factors and non-representable fractions. TypeScript and focused ESLint passed.",
+          "remaining": "PARTIAL \u2014 immutable commercial-line/allocation snapshots, source-preserving sale edits/returns, inventory and project-purchase valuation consumers and web/native transaction selectors remain to implement and verify."
         }
       ],
       "push_checkpoint_evidence": {
