@@ -95,6 +95,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
 private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: QuotationViewModel) {
     var newPartyOpen by remember { mutableStateOf(false) }
     var partyQuery by remember { mutableStateOf("") }
+    LaunchedEffect(draft.customerId,draft.branchId,state.canViewPartyBalance){vm.loadPartyBalance(draft.customerId,draft.branchId)}
     if(newPartyOpen){
         val partyVm:AccountMasterViewModel=viewModel(key="quotation-party-${draft.creationRequestKey}")
         Dialog(onDismissRequest={if(!partyVm.state.value.saving)newPartyOpen=false},properties=DialogProperties(usePlatformDefaultWidth=false)){
@@ -122,6 +123,14 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                     item { Text("Type: ${draft.documentType}") }
                     item { Text("Branch: ${state.branches.firstOrNull{it.id==draft.branchId}?.name?:draft.branchId}") }
                     item { Text("Customer: ${state.customers.firstOrNull{it.id==draft.customerId}?.name?:state.detail?.array("revisions")?.firstOrNull()?.str("customerName").orEmpty()}") }
+                }
+                if(state.canViewPartyBalance&&draft.customerId.isNotBlank())item {
+                    val balance=state.partyBalance?.takeIf{it.str("partyId")==draft.customerId&&it.str("branchId")==draft.branchId}
+                    val amount=balance?.str("balance")?.takeIf{it.isNotBlank()}
+                    Column {
+                        Text("Party balance: ${if(amount!=null)accountMoney(amount)else if(balance?.get("error")?.jsonPrimitive?.booleanOrNull==true)"Unavailable"else "Loading…"}")
+                        if(balance?.get("error")?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.loadPartyBalance(draft.customerId,draft.branchId)}){Text("Retry party balance")}
+                    }
                 }
                 item { OutlinedTextField(draft.issueDate, { vm.editDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date") }) }
                 item { OutlinedTextField(draft.validUntil, { vm.editDraft(draft.copy(validUntil = it)) }, label = { Text("Valid until") }) }

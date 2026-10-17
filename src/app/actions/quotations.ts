@@ -11,3 +11,11 @@ export async function updateDraft(id:string,_:QuotationActionState,form:FormData
 export async function transitionQuotationAction(form:FormData){const id=String(form.get("id"));try{await transitionQuotation(id,String(form.get("to")) as never,String(form.get("note")??""));redirect(`/workspace/account/quotations/${id}?updated=1`);}catch(error){if(isRedirect(error))throw error;redirect(`/workspace/account/quotations/${id}?error=${encodeURIComponent(safe(error))}`)}}
 export async function shareQuotationAction(form:FormData){const id=String(form.get("id"));try{const token=await createShare(id,form.get("expiresAt")?new Date(String(form.get("expiresAt"))):undefined);redirect(`/workspace/account/quotations/${id}?share=${encodeURIComponent(token)}`);}catch(error){if(isRedirect(error))throw error;redirect(`/workspace/account/quotations/${id}?error=${encodeURIComponent(safe(error))}`)}}
 export async function revokeQuotationShareAction(form:FormData){const id=String(form.get("id"));try{await revokeShare(String(form.get("shareId")));redirect(`/workspace/account/quotations/${id}?revoked=1`);}catch(error){if(isRedirect(error))throw error;redirect(`/workspace/account/quotations/${id}?error=${encodeURIComponent(safe(error))}`)}}
+
+export async function getQuotationPartyBalanceAction(raw:unknown){
+ try{
+  const {requirePermission}=await import("@/lib/auth/authorization");
+  const {quotationPartyBalanceForActor}=await import("@/lib/quotations/party-balance");
+  return {ok:true as const,...await quotationPartyBalanceForActor(await requirePermission("ACCOUNT_QUOTATION_VIEW") as import("@/lib/account/projects").ProjectActor,raw)};
+ }catch{return {ok:false as const}};
+}

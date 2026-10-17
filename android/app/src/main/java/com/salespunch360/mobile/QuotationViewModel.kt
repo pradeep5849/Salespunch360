@@ -50,6 +50,8 @@ data class QuotationRow(
 data class QuotationState(
     val canCreate:Boolean=false,
     val canCreateParty:Boolean=false,
+    val canViewPartyBalance:Boolean=false,
+    val partyBalance:JsonObject?=null,
     val stockAvailable:Boolean=false,
     val stockPositions:List<JsonObject> = emptyList(),
     val customFields:List<JsonObject> = emptyList(),
@@ -74,6 +76,8 @@ data class QuotationState(
 )
 
 class QuotationViewModel(app: Application) : AndroidViewModel(app) {
+    private var partyBalanceJob:Job?=null
+
     private val api = ApiClient(SecureSession(app))
     private val _state = MutableStateFlow(QuotationState())
     val state: StateFlow<QuotationState> = _state
@@ -110,6 +114,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
                 canCreateParty=options["partyCreation"] is JsonObject,
+                canViewPartyBalance=options["canViewPartyBalance"]?.jsonPrimitive?.booleanOrNull==true,
                 stockAvailable=options["stock"] is JsonObject,
                 stockPositions=(options["stock"] as? JsonObject)?.array("positions").orEmpty(),
                 canCreate=options["canCreate"]?.jsonPrimitive?.booleanOrNull==true,
@@ -161,9 +166,29 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         _state.value=current.copy(draft=selected,customers=current.customers.filterNot{it.id==record.id}+option,error=null)
     }
 
+    fun loadPartyBalance(partyId:String,branchId:String){
+        partyBalanceJob?.cancel()
+        fun pending(error:Boolean=false)=buildJsonObject{put("partyId",partyId);put("branchId",branchId);put(if(error)"error"else "loading",true)}
+        if(!_state.value.canViewPartyBalance||partyId.isBlank()||branchId.isBlank()){_state.value=_state.value.copy(partyBalance=null);return}
+        _state.value=_state.value.copy(partyBalance=pending())
+        partyBalanceJob=viewModelScope.launch{
+            try{
+                val response=api.quotationPartyBalance(partyId,branchId);currentCoroutineContext().ensureActive()
+                val current=_state.value;val draft=current.draft
+                if(draft?.customerId==partyId&&draft.branchId==branchId&&current.canViewPartyBalance){
+                    val amount=quotationBalanceForDraft(draft,response)
+                    _state.value=current.copy(partyBalance=if(amount==null)pending(true)else response)
+                }
+            }catch(error:CancellationException){throw error}catch(_:Exception){
+                val current=_state.value;if(current.draft?.customerId==partyId&&current.draft.branchId==branchId&&current.canViewPartyBalance)_state.value=current.copy(partyBalance=pending(true))
+            }
+        }
+    }
+
     fun closeDraft() {
         if(_state.value.saving)return
-        _state.value = _state.value.copy(draft = null)
+        partyBalanceJob?.cancel()
+        _state.value = _state.value.copy(draft = null,partyBalance=null)
     }
 
     fun line(index: Int, line: SalesLineDraft) {

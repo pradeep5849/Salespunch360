@@ -1,3 +1,4 @@
+import {currentPartyBalanceForActor} from "../src/lib/account/party-balance";
 import {reportCalendarDate,reportPeriodBounds} from "../src/lib/account/reports/dates";
 import {formatMoney,resolveDisplayPreferences} from "../src/lib/account/display-preferences";
 import {createExpenseForActor} from "../src/lib/account/expenses";
@@ -2532,4 +2533,39 @@ test("A082 estimate stock metadata follows the selected branch and never reserve
   await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{itemSettings:{...before.itemSettings as object,enabled:false}}});expect((await (await page.request.get("/api/v1/mobile/account/quotations/options",{headers})).json()).stock).toBeNull();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{}}})}
+});
+
+test("A082 party balance is exact scoped recoverable and ignores stale selections",async({page})=>{
+ test.setTimeout(150000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),other=randomUUID(),foreign=randomUUID(),foreignBranch=randomUUID();
+ await db.customer.create({data:{id:other,companyId,branchId,name:`Zero balance ${randomUUID().slice(0,8)}`,isAccountCustomer:true}});
+ await db.branch.create({data:{id:foreignBranch,companyId:otherCompanyId,name:"Foreign balance branch",code:`QBAL-${randomUUID().slice(0,8)}`}});
+ await db.customer.create({data:{id:foreign,companyId:otherCompanyId,branchId:foreignBranch,name:"Foreign balance party",isAccountCustomer:true}});
+ let release:()=>void=()=>{},held=false,delay=false,failOnce=true;
+ const gate=new Promise<void>(resolve=>{release=resolve});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","QUOTATIONS_BOQ"]}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Party balance verification year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const base=await currentPartyBalanceForActor(actor,customerId),sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-17",lines:[{lineType:"CUSTOM",itemName:"Party balance fixture",quantity:"1",rate:"25",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  const expectedBalance=new (await import("@prisma/client")).Prisma.Decimal(base).add("25").toFixed(2),preferences=resolveDisplayPreferences(before),expectedText=formatMoney(expectedBalance,preferences),zeroText=formatMoney("0",preferences),journals=await db.journalEntry.count({where:{companyId}});
+  await signInSettings(page);
+  await page.route("**/workspace/account/quotations/new**",async route=>{
+   const req=route.request();if(req.method()==="POST"&&req.headers()["next-action"]&&req.postData()?.includes(customerId)){
+    if(failOnce){await route.abort("failed");return}
+    if(delay){delay=false;const response=await route.fetch();held=true;await gate;await route.fulfill({response});return}
+   }
+   await route.continue();
+  });
+  await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");await page.getByLabel("Branch",{exact:true}).selectOption(branchId);await page.getByLabel("Customer",{exact:true}).selectOption(customerId);
+  const balance=page.locator("p").filter({hasText:/^Party balance:/});await expect(balance).toContainText("Unavailable");await expect(balance).not.toContainText(zeroText);failOnce=false;await page.getByRole("button",{name:"Retry party balance",exact:true}).click();await expect(balance).toContainText(expectedText,{timeout:20000});
+  await page.getByLabel("Customer",{exact:true}).selectOption(other);await expect(balance).toContainText(zeroText,{timeout:20000});delay=true;await page.getByLabel("Customer",{exact:true}).selectOption(customerId);await expect.poll(()=>held).toBe(true);await page.getByLabel("Customer",{exact:true}).selectOption(other);await expect(balance).not.toContainText(expectedText);release();await expect(balance).toContainText(zeroText,{timeout:20000});
+  const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});const headers={authorization:`Bearer ${token}`},url=`/api/v1/mobile/account/quotations/party-balance?partyId=${customerId}&branchId=${branchId}`;
+  const response=await page.request.get(url,{headers});expect(response.status()).toBe(200);expect(response.headers()["cache-control"]).toContain("no-store");expect(await response.json()).toEqual({partyId:customerId,branchId,balance:expectedBalance});
+  expect((await page.request.get(url)).status()).toBe(401);expect((await page.request.get(`/api/v1/mobile/account/quotations/party-balance?partyId=${foreign}&branchId=${branchId}`,{headers})).status()).toBe(403);expect((await page.request.get(`/api/v1/mobile/account/quotations/party-balance?partyId=${customerId}&branchId=${foreignBranch}`,{headers})).status()).toBe(403);expect((await page.request.get(`/api/v1/mobile/account/quotations/party-balance?partyId=bad&branchId=${branchId}`,{headers})).status()).toBe(400);
+  await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});expect((await page.request.get(url,{headers})).status()).toBe(200);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(url,{headers})).status()).toBe(403);await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");await page.getByLabel("Customer",{exact:true}).selectOption(customerId);await expect(page.locator("p").filter({hasText:/^Party balance:/})).toHaveCount(0);
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+ }finally{release();await db.customer.deleteMany({where:{id:foreign,companyId:otherCompanyId}});await db.branch.deleteMany({where:{id:foreignBranch,companyId:otherCompanyId}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
 });
