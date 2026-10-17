@@ -32,7 +32,8 @@ data class QuotationDraft(
     val lines: List<SalesLineDraft> = listOf(SalesLineDraft()),
     val lineMetadata: List<JsonObject> = emptyList(),
     val adjustments: List<JsonObject> = emptyList(),
-    val paymentSchedule: List<JsonObject> = emptyList()
+    val paymentSchedule: List<JsonObject> = emptyList(),
+    val creationRequestKey: String = java.util.UUID.randomUUID().toString()
 )
 
 data class QuotationRow(
@@ -65,7 +66,8 @@ data class QuotationState(
     val pdf: ByteArray? = null,
     val shareToken: String? = null,
     val error: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    val preview: Boolean = false
 )
 
 class QuotationViewModel(app: Application) : AndroidViewModel(app) {
@@ -166,9 +168,13 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun payload(draft: QuotationDraft) = quotationDraftPayload(draft)
 
-    fun save() {
+    fun save() = saveDraft(false)
+    fun saveAndNew() = saveDraft(true)
+
+    private fun saveDraft(startNew: Boolean) {
         if(_state.value.saving)return
         val draft = _state.value.draft ?: return
+        if(startNew && draft.id != null)return
         _state.value = _state.value.copy(saving = true,error=null)
         viewModelScope.launch {
             try {
@@ -182,15 +188,17 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // The write is confirmed. A failed detail reload must never retain
                 // this form as an unsaved revision that could be submitted again.
-                _state.value = _state.value.copy(saving=false,draft=null,detail=null,message="Quotation saved with server totals.")
-                open(savedId)
+                _state.value = _state.value.copy(saving=false,draft=if(startNew) freshQuotationAfterSave(draft) else null,detail=null,preview=false,message="Quotation saved with server totals.")
+                if(!startNew) openDetail(savedId, draft.id == null)
                 refresh()
             } catch(e:Exception) { fail(e) }
         }
     }
 
-    fun open(id:String) {
+    fun open(id:String) = openDetail(id, false)
+    private fun openDetail(id:String, preview:Boolean) {
         detailTarget=id
+        _state.value=_state.value.copy(preview=preview)
         viewModelScope.launch {
             _state.value=_state.value.copy(loading=true,error=null)
             try {
@@ -199,11 +207,11 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
             } catch(e:Exception) {if(detailTarget==id)fail(e)}
         }
     }
-    fun retry() {detailTarget?.let{open(it)}?:refresh()}
+    fun retry() {detailTarget?.let{openDetail(it,_state.value.preview)}?:refresh()}
 
     fun close() {
         detailTarget=null
-        _state.value = _state.value.copy(detail = null)
+        _state.value = _state.value.copy(detail = null, preview = false)
     }
 
     fun transition(to: String, note: String = "") = viewModelScope.launch {

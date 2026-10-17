@@ -2214,6 +2214,8 @@ model AccountingAuditEvent {
 model QuotationDocument {
   id                    String                @id @default(uuid()) @db.Uuid
   companyId             String                @db.Uuid
+  creationRequestKey     String?               @db.Uuid
+  creationRequestHash    String?               @db.VarChar(64)
   branchId              String                @db.Uuid
   documentType          QuotationDocumentType
   documentNumber        String                @db.VarChar(80)
@@ -2238,6 +2240,7 @@ model QuotationDocument {
   revisions             QuotationRevision[]
   audits                QuotationAuditEvent[]
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, branchId, documentType, documentNumber])
   @@index([companyId, branchId, status])

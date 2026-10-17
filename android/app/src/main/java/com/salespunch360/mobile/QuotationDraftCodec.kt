@@ -59,7 +59,10 @@ internal fun savedQuotationDraft(document: JsonObject, revision: JsonObject): Qu
     )
 }
 
+internal fun freshQuotationAfterSave(draft: QuotationDraft) = QuotationDraft(branchId=draft.branchId,documentType=draft.documentType)
+
 internal fun quotationDraftPayload(draft: QuotationDraft) = buildJsonObject {
+    if(draft.id==null) put("creationRequestKey",draft.creationRequestKey)
     put("branchId", draft.branchId); put("documentType", draft.documentType); put("customerId", draft.customerId)
     put("issueDate", draft.issueDate)
     draft.validUntil.takeIf { it.isNotBlank() }?.let { put("validUntil", it) }
@@ -85,4 +88,4 @@ internal fun quotationDraftPayload(draft: QuotationDraft) = buildJsonObject {
 }
 
 internal fun editedQuotationDraft(previous:QuotationDraft, replacement:QuotationDraft):QuotationDraft =
-    if(previous.id==null) replacement else replacement.copy(id=previous.id,revision=previous.revision,branchId=previous.branchId,customerId=previous.customerId,documentType=previous.documentType)
+    if(previous.id==null) replacement.copy(creationRequestKey=previous.creationRequestKey) else replacement.copy(id=previous.id,revision=previous.revision,branchId=previous.branchId,customerId=previous.customerId,documentType=previous.documentType)

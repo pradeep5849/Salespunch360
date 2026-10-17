@@ -1,0 +1,9 @@
+import Link from "next/link";
+import {getCustomerQuotation} from "@/lib/quotations/service";
+import {Money} from "@/components/account/account-ui";
+import {AccountDate} from "@/components/account/display-preferences";
+/** A read-only saved preview. Closing it never changes the document lifecycle. */
+export default async function Page({params}:{params:Promise<{id:string}>}){
+ const {id}=await params,revision=await getCustomerQuotation(id);
+ return <section aria-label="Saved document preview" className="account-card"><header><h1>{revision.document.documentType.toLowerCase()} preview</h1><p>{revision.document.documentNumber} · Revision {revision.revisionNumber}</p><p>Saved document · {revision.customerName}</p></header><p>Date: <AccountDate value={revision.issueDate.toISOString()}/></p>{revision.lines.map((line,index)=><article key={index}><h2>{line.itemName}</h2><p>{line.quantity.toString()} {line.unitSymbol} × <Money value={line.rate.toString()}/> = <Money value={line.lineTotal.toString()}/></p>{line.description&&<p>{line.description}</p>}</article>)}<p>Tax: <Money value={revision.taxTotal.toString()}/></p><p>Total: <Money value={revision.grandTotal.toString()}/></p>{revision.terms&&<p style={{whiteSpace:"pre-wrap"}}>{revision.terms}</p>}<nav aria-label="Preview actions"><Link href={`/workspace/account/quotations/${id}/pdf`}>Download PDF</Link>{" · "}<Link href={`/workspace/account/quotations/${id}`}>Document details</Link>{" · "}<Link href="/workspace/account/quotations">Close preview</Link></nav></section>;
+}

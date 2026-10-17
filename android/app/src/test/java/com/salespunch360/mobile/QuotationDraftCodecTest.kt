@@ -62,4 +62,16 @@ class QuotationDraftCodecTest {
         val changed=editedQuotationDraft(prior,prior.copy(branchId="branch-b",customerId="party-b",documentType="ESTIMATE"))
         assertEquals("branch-b",changed.branchId);assertEquals("party-b",changed.customerId);assertEquals("ESTIMATE",changed.documentType)
     }
+    @Test fun creationRetryKeySurvivesEditsAndSaveNewStartsClean() {
+        val draft=QuotationDraft(branchId="branch",customerId="party",documentType="ESTIMATE",notes="Saved note")
+        val edited=editedQuotationDraft(draft,draft.copy(notes="Retry" ,creationRequestKey="replacement"))
+        assertEquals(draft.creationRequestKey,edited.creationRequestKey)
+        assertEquals(draft.creationRequestKey,quotationDraftPayload(edited)["creationRequestKey"]!!.jsonPrimitive.content)
+        val fresh=freshQuotationAfterSave(edited)
+        assertNotEquals(draft.creationRequestKey,fresh.creationRequestKey)
+        assertEquals("branch",fresh.branchId);assertEquals("ESTIMATE",fresh.documentType)
+        assertEquals("",fresh.customerId);assertEquals("",fresh.notes)
+        assertNull(quotationDraftPayload(draft.copy(id="saved"))["creationRequestKey"])
+    }
+
 }

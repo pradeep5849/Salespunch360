@@ -83,7 +83,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     }
 
     state.draft?.let { QuotationEditor(it, state, vm) }
-    state.detail?.let { QuotationDetail(it, vm) }
+    state.detail?.let { QuotationDetail(it, vm, state.preview) }
 }
 
 @Composable
@@ -91,10 +91,11 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
     AlertDialog(
         onDismissRequest = vm::closeDraft,
         title = { Text(when { draft.id == null -> "New quotation"; draft.revision -> "New revision"; else -> "Edit quotation" }) },
-        confirmButton = { Button(enabled = !state.saving && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields) && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text("Save") } },
-        dismissButton = { TextButton(onClick = vm::closeDraft) { Text("Cancel") } },
+        confirmButton = { Column { if(draft.id==null) TextButton(enabled=!state.saving && draft.customerId.isNotBlank() && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields),onClick=vm::saveAndNew) { Text("Save & New") }; Button(enabled = !state.saving && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields) && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text(if(state.saving) "Saving…" else "Save") } } },
+        dismissButton = { TextButton(enabled=!state.saving,onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                state.error?.let { error -> item { Text(error,color=MaterialTheme.colorScheme.error) } }
                 if(draft.id==null) {
                 item { SelectField("Type", draft.documentType, listOf("QUOTATION" to "Quotation", "ESTIMATE" to "Estimate", "BOQ" to "BOQ")) { vm.editDraft(draft.copy(documentType = it)) } }
                 item { SelectField("Branch", draft.branchId, state.branches.map { it.id to it.name }) { vm.editDraft(draft.copy(branchId = it, customerId = "")) } }
@@ -141,7 +142,7 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
 }
 
 @Composable
-private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel) {
+private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, preview: Boolean) {
     val revision = quotation.array("revisions").firstOrNull()
     val capabilities=quotation["capabilities"] as? JsonObject
     val allowedTransitions = quotation["allowedTransitions"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
@@ -149,7 +150,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel) {
         onDismissRequest = vm::close,
         title = { Text(quotation.str("documentNumber")) },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = vm::close) { Text("Close") } },
+        dismissButton = { TextButton(onClick = vm::close) { Text(if(preview) "Close preview" else "Close") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
@@ -159,11 +160,11 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel) {
                 }
                 revision?.array("lines")?.let { lines -> items(lines) { line -> Text("${line.str("itemName")} · ${line.str("quantity")} × ${accountMoney(line.str("rate"))} = ${accountMoney(line.str("lineTotal"))}") } }
                 item {
-                    allowedTransitions.forEach { target -> Button(onClick = { vm.transition(target) }, modifier = Modifier.fillMaxWidth()) { Text(target.replace('_', ' ')) } }
-                    if (capabilities?.get("canEdit")?.jsonPrimitive?.booleanOrNull==true || capabilities?.get("canRevise")?.jsonPrimitive?.booleanOrNull==true) {
+                    if(!preview) allowedTransitions.forEach { target -> Button(onClick = { vm.transition(target) }, modifier = Modifier.fillMaxWidth()) { Text(target.replace('_', ' ')) } }
+                    if (!preview && (capabilities?.get("canEdit")?.jsonPrimitive?.booleanOrNull==true || capabilities?.get("canRevise")?.jsonPrimitive?.booleanOrNull==true)) {
                         OutlinedButton(onClick = vm::revise, modifier = Modifier.fillMaxWidth()) { Text(if (quotation.str("status") == "DRAFT") "Edit" else "Create revision") }
                     }
-                    if (capabilities?.get("canShare")?.jsonPrimitive?.booleanOrNull==true) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
+                    if (!preview && capabilities?.get("canShare")?.jsonPrimitive?.booleanOrNull==true) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
                     OutlinedButton(onClick = vm::download, modifier = Modifier.fillMaxWidth()) { Text("Download / share PDF") }
                 }
             }

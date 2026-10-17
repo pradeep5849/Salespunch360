@@ -61,4 +61,20 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   const page=await listQuotationsForActor(actor,{q:"Paged party",limit:51});expect(page).toHaveLength(51);expect((await listQuotationsForActor(actor,{q:"Paged party",limit:51,offset:50}))[0].id).toBe(page[50].id);
  });
 
+ it("replays concurrent creation once, rejects changed intent, and rechecks branch access",async()=>{
+  const creationRequestKey=randomUUID();
+  const request={...input,documentType:"ESTIMATE",creationRequestKey};
+  const [first,replay]=await Promise.all([createQuotationForActor(actor,request),createQuotationForActor(actor,request)]);
+  expect(replay.id).toBe(first.id);
+  expect(first).not.toHaveProperty("creationRequestKey");expect(first).not.toHaveProperty("creationRequestHash");
+  expect(await client.quotationDocument.count({where:{companyId,creationRequestKey}})).toBe(1);
+  expect(await client.quotationRevision.count({where:{documentId:first.id}})).toBe(1);
+  expect(await client.quotationAuditEvent.count({where:{documentId:first.id,eventType:"CREATED"}})).toBe(1);
+  await expect(createQuotationForActor(actor,{...request,notes:"Changed after uncertain response"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+  await expect(createQuotationForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},request)).rejects.toThrow();
+  const next=await createQuotationForActor(actor,{...request,creationRequestKey:randomUUID()});
+  expect(next.id).not.toBe(first.id);expect(next.documentNumber).not.toBe(first.documentNumber);
+  expect((await getQuotationForActor(actor,first.id)).status).toBe("DRAFT");
+ });
+
 });
