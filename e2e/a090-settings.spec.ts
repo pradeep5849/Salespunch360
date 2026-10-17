@@ -2334,3 +2334,25 @@ test("A090 expense detail schedules and money directory honor saved currency pre
   await db.recurringExpenseTemplate.delete({where:{id:templateId}});await db.expenseTransaction.delete({where:{id:expenseId}});await db.expenseCategory.delete({where:{id:categoryId}});await db.moneyAccount.delete({where:{id:moneyId}});await db.ledgerAccount.delete({where:{id:ledgerId}});
  }
 });
+
+test("A090 GST report uses saved monetary and calendar display without changing source values",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"GST display year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-13",lines:[{lineType:"CUSTOM",itemName:"Display GST service",quantity:"1",rate:"123.45",taxRate:"18"}]});
+ await postCommercialDocumentForActor(actor,{documentId:sale.id});const id=sale.id,number=sale.documentNumber;
+ const original=await db.commercialDocument.findUniqueOrThrow({where:{id}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});
+  await signInSettings(page);await page.goto(`/workspace/account/tax/reports?from=2026-10-01&to=2026-10-31&branchId=${branchId}`);
+  const row=page.getByRole("row").filter({has:page.getByRole("cell",{name:number,exact:true})});
+  await expect(row.getByRole("cell",{name:"10/13/2026",exact:true})).toBeVisible();await expect(row.getByRole("cell",{name:formatMoney("123.45",resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3})),exact:true})).toBeVisible();await expect(row).not.toContainText("₹");
+  await expect(page.getByLabel("From date",{exact:true})).toHaveValue("2026-10-01");await expect(page.getByLabel("To date",{exact:true})).toHaveValue("2026-10-31");await expect(page.getByLabel("Branch",{exact:true})).toHaveValue(branchId);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await expect(new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).resolves.toMatchObject({violations:[]});
+  const saved=await db.commercialDocument.findUniqueOrThrow({where:{id}});expect(saved.taxableTotal.toString()).toBe("123.45");expect(saved.cgstTotal.toString()).toBe(original.cgstTotal.toString());
+ }finally{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}});
+ }
+});
