@@ -1279,5 +1279,14 @@ describe.skipIf(!url)(
       expect(await outstanding(doc.id)).toBe("100.00");expect(await bankEffect(cheque.id)).toBe(0);expect(await client.journalEntry.count({where:{companyId}})).toBe(before);expect((await client.cheque.findUniqueOrThrow({where:{id:cheque.id}})).actionVersion).toBe(0);const source=await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id}});expect(source.status).toBe("PENDING_CHEQUE");expect(source.journalEntryId).toBeNull();
     });
 
+    it("A066 source linkage rejects excess precision, nonpositive amounts and another party's invoice without writes",async()=>{
+      const otherParty=await client.customer.create({data:{companyId,branchId,name:"Different cheque source customer",isAccountCustomer:true}}),otherDoc=await invoice("100",otherParty.id);
+      const data={branchId,moneyAccountId:bankId,partyId:customerId,status:"RECEIVED",chequeNumber:randomUUID().slice(0,8),chequeDate:"2026-10-10",amount:"100",requestKey:randomUUID()},before=await client.cheque.count({where:{companyId}}),journals=await client.journalEntry.count({where:{companyId}}),settlements=await client.accountSettlement.count({where:{companyId}});
+      for(const amount of ["0","0.001","100.999","-1"]){await expect(createChequeForActor(actor,{...data,amount,requestKey:randomUUID()})).rejects.toThrow()}
+      await expect(createChequeForActor(actor,{...data,sourceDocumentId:otherDoc.id})).rejects.toThrow();
+      await expect(createChequeForActor({...actor,companyId:randomUUID()},{...data,sourceDocumentId:otherDoc.id})).rejects.toThrow();
+      expect(await client.cheque.count({where:{companyId}})).toBe(before);expect(await client.accountSettlement.count({where:{companyId}})).toBe(settlements);expect(await client.journalEntry.count({where:{companyId}})).toBe(journals);expect(await outstanding(otherDoc.id)).toBe("100.00");
+    });
+
   },
 );
