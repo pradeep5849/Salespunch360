@@ -62869,6 +62869,23 @@
         "sale_detail_fields_and_actions": {
           "work": "State of Supply now displays a friendly retained code label, native rate label follows saved tax mode, and action eligibility uses stored payment/adjustment history rather than filtered receipt arrays.",
           "remaining": "Shipping/attachment retention and complete paid-sale correction/share/menu behavior still pending; no completion claimed."
+        },
+        "sale_detail_retained_display_2026_10_17": {
+          "implementation_commit": "42105b3f7d4f5b508b457e51b92589ac56c1a97b",
+          "work": "Sale Details renders retained item code/description/specification,due date,payment terms,customer PO/date,e-way number and time. Rates/base/discount/GST/cess/rounding now use shared Money formatting. Existing permission-scoped read and correction/share routes retained. Added purchase pricing helper tests to targeted CI.",
+          "files": [
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "browser": "4 passed desktop/mobile Chromium (52.6s),full sale edit/native service retention/Sale Details/delete workflow and cancelled unpaid balance regression.",
+            "unit": "29 passed across actual sale-preview-calculation and display-preferences files (2 files); nonexistent sale-correction test filter names were not executed and are not evidence.",
+            "typescript": "PASS after correcting model field names to customerPoNumber/customerPoDate",
+            "focused_eslint": "PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A087-F02 remains PARTIAL for full reference actions and unsupported attachment/shipping fields/native parity. A090-F01 other display consumers remain PARTIAL. No new native/device verification or financial posting change."
         }
       },
       "push_checkpoint_evidence": {
@@ -63709,6 +63726,23 @@
             "unit": "32 passed in tax/display/report display files;0 failed/skipped"
           },
           "remaining": "A090-F01 remaining display consumers and A084-F03 report-specific scope remain PARTIAL; no device verification claimed."
+        },
+        "sale_detail_retained_display_2026_10_17": {
+          "implementation_commit": "42105b3f7d4f5b508b457e51b92589ac56c1a97b",
+          "work": "Sale Details renders retained item code/description/specification,due date,payment terms,customer PO/date,e-way number and time. Rates/base/discount/GST/cess/rounding now use shared Money formatting. Existing permission-scoped read and correction/share routes retained. Added purchase pricing helper tests to targeted CI.",
+          "files": [
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "browser": "4 passed desktop/mobile Chromium (52.6s),full sale edit/native service retention/Sale Details/delete workflow and cancelled unpaid balance regression.",
+            "unit": "29 passed across actual sale-preview-calculation and display-preferences files (2 files); nonexistent sale-correction test filter names were not executed and are not evidence.",
+            "typescript": "PASS after correcting model field names to customerPoNumber/customerPoDate",
+            "focused_eslint": "PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A087-F02 remains PARTIAL for full reference actions and unsupported attachment/shipping fields/native parity. A090-F01 other display consumers remain PARTIAL. No new native/device verification or financial posting change."
         }
       },
       "intermediate_validation": {
@@ -65841,6 +65875,22 @@
         "final_complete_head": "NOT RUN"
       },
       "scope": "Intermediate focused purchase-preview continuation; final checkpoint validation pending"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "42105b3f7d4f5b508b457e51b92589ac56c1a97b",
+      "finding_ids": [
+        "A087-F02",
+        "A090-F01"
+      ],
+      "evidence": {
+        "browser": "4 passed desktop/mobile Chromium (52.6s),full sale edit/native service retention/Sale Details/delete workflow and cancelled unpaid balance regression.",
+        "unit": "29 passed across actual sale-preview-calculation and display-preferences files (2 files); nonexistent sale-correction test filter names were not executed and are not evidence.",
+        "typescript": "PASS after correcting model field names to customerPoNumber/customerPoDate",
+        "focused_eslint": "PASS",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate Sale Details presentation regression; final checkpoint validation pending"
     }
   ]
 }
