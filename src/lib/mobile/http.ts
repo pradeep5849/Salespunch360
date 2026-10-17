@@ -53,6 +53,8 @@ export function mobileUnexpected(category: string, error: unknown) {
         "IDEMPOTENCY_KEY_REUSED",
         "IDEMPOTENCY_CONFLICT",
         "LOAN_CHANGED",
+        "SALE_PRICE_CHANGED",
+        "SALE_PRICE_DOCUMENT_CHANGED",
         "CHEQUE_CHANGED",
         "CHEQUE_NUMBER_EXISTS",
         "INVALID_CHEQUE_SOURCE",

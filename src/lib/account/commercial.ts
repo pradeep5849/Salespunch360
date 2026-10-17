@@ -3297,6 +3297,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
     (permission) => canUsePermission(actor, company.productEdition, permission),
   );
   return {
+    canUpdateSalePrices: actor.accountRole!=="PROJECT_MANAGER"&&enabledModules.includes("INVENTORY")&&canUsePermission(actor,company.productEdition,"ACCOUNT_STOCK")&&canUsePermission(actor,company.productEdition,"ACCOUNT_SALES_ENTRY"),
     customerAdvances,
     recentSalePrices:await recentSalePrices(actor,storedPreferences.lastFiveSalePrices===true),
     sourceDocuments,

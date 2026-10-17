@@ -51,6 +51,8 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun saveQuickItemSetting(key:String,value:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/settings/item-settings-quick","POST",buildJsonObject{put("key",key);put("value",value)}.toString())).jsonObject
  suspend fun saveSalesInvoicePrefix(branchId:String,prefix:String)=json.parseToJsonElement(call("api/v1/mobile/account/settings/sales-invoice-prefix","POST",buildJsonObject{put("branchId",branchId);put("prefix",prefix)}.toString())).jsonObject
  suspend fun accountSalesDocuments(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/transactions"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun salePriceProposals(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}/sale-price")).jsonArray
+ suspend fun confirmSalePrice(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}/sale-price","POST",payload.toString())).jsonObject
  suspend fun accountSalesDocument(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}")).jsonObject
  suspend fun createAccountSalesDocument(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions","POST",payload.toString())).jsonObject
  suspend fun postAccountSalesDocument(id:String)=call("api/v1/mobile/account/transactions/${enc(id)}/post","POST")

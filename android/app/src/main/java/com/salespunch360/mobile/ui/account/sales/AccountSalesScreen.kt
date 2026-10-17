@@ -68,5 +68,6 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
     }
     state.editor?.let { SalesDocumentEditor(it, state.options, state.saving, vm::editDraft, vm::addLine, vm::updateLine, vm::removeLine, vm::closeEditor, vm::save,vm::updateInvoicePrefix,vm::createSaleCustomer,navigate) }
     state.detail?.let { SalesDocumentDetail(it, state.saving, vm::closeDetail, vm::requestPost, vm::editSavedSale, vm::deleteSavedSale) }
+    state.salePriceDocumentId?.let{SalePriceConfirmation(it,vm::closePriceConfirmation)}
     state.postingId?.let { AlertDialog(onDismissRequest = vm::cancelPost,title = { Text("Post document?") },text = { Text("Posting is authoritative and may create ledger and stock movements. This requires server confirmation.") },confirmButton = { Button(onClick = vm::confirmPost) { Text("Post") } },dismissButton = { TextButton(onClick = vm::cancelPost) { Text("Cancel") } }) }
 }

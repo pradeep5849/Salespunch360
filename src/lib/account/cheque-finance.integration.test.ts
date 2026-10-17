@@ -1,3 +1,4 @@
+import { salePriceProposalsForActor, confirmSalePriceForActor } from "./sale-price-updates";
 import { itemPricingInput, normalizedItemPricing } from "./item-pricing";
 import { itemSettingsDefaults } from "./item-settings-policy";
 import { randomUUID } from "node:crypto";
@@ -257,6 +258,7 @@ describe.skipIf(!url)(
           await tx.inventoryBatch.deleteMany({where:{companyId}});
           await tx.inventorySerialNumber.deleteMany({where:{companyId}});
           await tx.accountProduct.deleteMany({where:{companyId}});
+          await tx.accountService.deleteMany({where:{companyId}});
           await tx.warehouse.deleteMany({where:{companyId}});
           await tx.commercialDocument.deleteMany({ where: { companyId } });
         await tx.project.deleteMany({where:{companyId}});
@@ -1166,6 +1168,56 @@ describe.skipIf(!url)(
         const journal=await client.journalEntry.findUniqueOrThrow({where:{id:saved.journalEntryId!},include:{lines:true}});
         expect(journal.lines.reduce((n,line)=>n+Number(line.debit),0).toFixed(2)).toBe(journal.lines.reduce((n,line)=>n+Number(line.credit),0).toFixed(2));
       }
+    });
+    it("A057 confirmed master updates are scoped idempotent and do not mutate posted financial history",async()=>{
+      const previous=(await client.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings;
+      const product=await client.accountProduct.create({data:{companyId,name:"Confirmed retail price",salePrice:"100",costPrice:"50",taxRate:"18",pricing:{saleTaxMode:"INCLUSIVE",purchaseTaxMode:"EXCLUSIVE",enteredSalePrice:"118.00",enteredPurchasePrice:"50.00",discountType:"PERCENTAGE",discountValue:"0",mrp:"236",normalizedMrp:"200.00",mrpTaxMode:"INCLUSIVE"}}});
+      const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",taxMode:"INCLUSIVE",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"141.60"}]});await postCommercialDocumentForActor(actor,{documentId:doc.id});
+      try{
+        expect(await salePriceProposalsForActor(actor,doc.id)).toEqual([]);
+        await client.accountSettings.update({where:{companyId},data:{itemSettings:{...previous as object,updateSalePrice:true}}});
+        const proposals=await salePriceProposalsForActor(actor,doc.id);expect(proposals).toHaveLength(1);expect(proposals[0]).toMatchObject({oldPrice:"100",newPrice:"120"});
+        const journals=await client.journalEntry.count({where:{companyId}}),posted=await client.commercialDocument.findUniqueOrThrow({where:{id:doc.id}});
+        const request={documentId:doc.id,lineId:proposals[0].lineId,expectedUpdatedAt:proposals[0].expectedUpdatedAt,requestKey:randomUUID(),confirmed:true};
+        await expect(confirmSalePriceForActor(actor,{...request,confirmed:false})).rejects.toThrow();
+        await expect(confirmSalePriceForActor({...actor,accountRole:"DATA_ENTRY"},request)).rejects.toThrow();
+        await expect(confirmSalePriceForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[otherBranch]},request)).rejects.toThrow();
+        await Promise.all([confirmSalePriceForActor(actor,request),confirmSalePriceForActor(actor,request)]);
+        const updated=await client.accountProduct.findUniqueOrThrow({where:{id:product.id}});expect(updated.salePrice?.toString()).toBe("120");expect(updated.costPrice?.toString()).toBe("50");expect(updated.pricing).toMatchObject({mrp:"236",enteredSalePrice:"141.60"});
+        expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_MASTER_PRICE_CONFIRMED",entityId:product.id}})).toBe(1);
+        await confirmSalePriceForActor(actor,request);expect((await client.accountProduct.findUniqueOrThrow({where:{id:product.id}})).updatedAt).toEqual(updated.updatedAt);
+        await expect(confirmSalePriceForActor(actor,{...request,lineId:randomUUID()})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+        expect(await client.journalEntry.count({where:{companyId}})).toBe(journals);expect(await client.commercialDocument.findUniqueOrThrow({where:{id:doc.id}})).toEqual(posted);
+        expect(await salePriceProposalsForActor(actor,doc.id)).toEqual([]);
+      }finally{await client.accountSettings.update({where:{companyId},data:{itemSettings:previous??{}}});}
+    });
+    it("A057 stale master versions and disabled price updates cannot overwrite current prices",async()=>{
+      const previous=(await client.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings;
+      const service=await client.accountService.create({data:{companyId,name:"Confirmed service price",sellingRate:"100",estimatedCost:"50",taxRate:"18"}});
+      const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",lines:[{lineType:"SERVICE",sourceId:service.id,quantity:"1",rate:"120"}]});await postCommercialDocumentForActor(actor,{documentId:doc.id});
+      try{
+       await client.accountSettings.update({where:{companyId},data:{itemSettings:{...previous as object,updateSalePrice:true}}});
+       const p=(await salePriceProposalsForActor(actor,doc.id))[0],request={documentId:doc.id,lineId:p.lineId,expectedUpdatedAt:p.expectedUpdatedAt,requestKey:randomUUID(),confirmed:true};
+       await client.accountService.update({where:{id:service.id},data:{sellingRate:"130",updatedAt:new Date(Date.now()+1000)}});
+       await expect(confirmSalePriceForActor(actor,request)).rejects.toThrow("SALE_PRICE_CHANGED");expect((await client.accountService.findUniqueOrThrow({where:{id:service.id}})).sellingRate?.toString()).toBe("130");
+       await client.accountSettings.update({where:{companyId},data:{itemSettings:{...previous as object,updateSalePrice:false}}});
+       await expect(confirmSalePriceForActor(actor,request)).rejects.toThrow("SALE_PRICE_UPDATE_DISABLED");expect(await salePriceProposalsForActor(actor,doc.id)).toEqual([]);
+       const foreign=await client.company.create({data:{name:"Foreign price tenant",slug:`price-${randomUUID()}`,productEdition:"SALESPUNCH360_ACCOUNT"}});try{await expect(salePriceProposalsForActor({...actor,companyId:foreign.id},doc.id)).rejects.toThrow();}finally{await client.company.delete({where:{id:foreign.id}});}
+      }finally{await client.accountSettings.update({where:{companyId},data:{itemSettings:previous??{}}});}
+    });
+    it("A057 a failed price audit rolls back the master change without touching invoice posting",async()=>{
+      const previous=(await client.accountSettings.findUniqueOrThrow({where:{companyId}})).itemSettings;
+      const product=await client.accountProduct.create({data:{companyId,name:"Audit rollback retail price",salePrice:"100",taxRate:"0"}});
+      const doc=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"120",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:doc.id});
+      const fn=`price_fail_${randomUUID().replaceAll("-","")}`;let installed=false;
+      try{
+       await client.accountSettings.update({where:{companyId},data:{itemSettings:{...previous as object,updateSalePrice:true}}});
+       const p=(await salePriceProposalsForActor(actor,doc.id))[0],before=await client.accountProduct.findUniqueOrThrow({where:{id:product.id}}),journals=await client.journalEntry.count({where:{companyId}});
+       await client.$executeRawUnsafe(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."companyId"='${companyId}'::uuid AND NEW."eventType"='SALE_MASTER_PRICE_CONFIRMED' THEN RAISE EXCEPTION 'price audit failure'; END IF; RETURN NEW; END $$`);
+       await client.$executeRawUnsafe(`CREATE TRIGGER ${fn} BEFORE INSERT ON account_operational_audits FOR EACH ROW EXECUTE FUNCTION ${fn}()`);installed=true;
+       await expect(confirmSalePriceForActor(actor,{documentId:doc.id,lineId:p.lineId,expectedUpdatedAt:p.expectedUpdatedAt,requestKey:randomUUID(),confirmed:true})).rejects.toThrow();
+       expect(await client.accountProduct.findUniqueOrThrow({where:{id:product.id}})).toEqual(before);expect(await client.journalEntry.count({where:{companyId}})).toBe(journals);expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_MASTER_PRICE_CONFIRMED",entityId:product.id}})).toBe(0);
+      }finally{if(installed)await client.$executeRawUnsafe(`DROP TRIGGER ${fn} ON account_operational_audits`);await client.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${fn}()`);await client.accountSettings.update({where:{companyId},data:{itemSettings:previous??{}}});}
     });
     it("A057 tax-inclusive MRP never overrides actual selling-price tax or balanced posting",async()=>{
       const price=normalizedItemPricing({sellingRate:"90",cost:"50",taxRate:"18",pricing:itemPricingInput.parse({mrp:"118"})},{...itemSettingsDefaults,taxOnMrp:true});

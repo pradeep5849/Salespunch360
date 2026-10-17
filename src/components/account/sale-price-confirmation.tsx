@@ -1,0 +1,16 @@
+"use client";
+import { useCallback,useEffect,useRef,useState } from "react";
+import { salePriceProposalsAction,confirmSalePriceAction } from "@/app/actions/sale-price-updates";
+import type { SalePriceProposal } from "@/lib/account/sale-price-updates";
+import { Money } from "./account-ui";
+export function SalePriceConfirmation({documentId,onFinished}:{documentId:string;onFinished:()=>void}){
+ const dialog=useRef<HTMLDialogElement>(null),done=useRef(onFinished),generation=useRef(0);
+ useEffect(()=>{done.current=onFinished},[onFinished]);
+ const [rows,setRows]=useState<SalePriceProposal[]>([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState("");
+ const keys=useRef(new Map<string,string>());
+ const invalidate=useCallback(()=>{generation.current++;},[]);
+ const load=useCallback(()=>{const request=++generation.current;return salePriceProposalsAction(documentId).then(result=>{if(request!==generation.current)return;setLoading(false);if(!result.ok)setError(result.message);else if(!result.proposals.length)done.current();else{keys.current.clear();setRows(result.proposals);}},()=>{if(request!==generation.current)return;setLoading(false);setError("Invoice saved. Price choices could not be loaded. Retry or keep saved prices.");});},[documentId]);
+ useEffect(()=>{const previous=document.activeElement as HTMLElement|null,current=dialog.current;current?.showModal();void load();return()=>{invalidate();current?.close();previous?.focus();};},[load,invalidate]);
+ async function update(row:SalePriceProposal){if(saving)return;generation.current++;setSaving(true);setError("");try{let key=keys.current.get(row.lineId);if(!key){key=crypto.randomUUID();keys.current.set(row.lineId,key);}const result=await confirmSalePriceAction({documentId,lineId:row.lineId,expectedUpdatedAt:row.expectedUpdatedAt,requestKey:key,confirmed:true});if(!result.ok){setError(result.message);return;}const remaining=rows.filter(r=>r.sourceKey!==row.sourceKey);setRows(remaining);if(!remaining.length)done.current();}catch{setError("Invoice saved. Price update was not confirmed. Retry with the same request or keep remaining prices.");}finally{setSaving(false);}}
+ return <dialog ref={dialog} aria-label="Update saved retail prices" onCancel={event=>{event.preventDefault();if(!saving)done.current();}} style={{width:"min(560px,calc(100vw - 32px))",maxHeight:"85dvh",overflowY:"auto",border:0,borderRadius:16,padding:24}}><h2>Invoice saved</h2><p>Update saved retail prices for future sales? Prices below exclude tax and are before discounts. This invoice and its payments will stay unchanged.</p>{loading?<p role="status">Loading price choices…</p>:rows.map(row=><article key={row.lineId} className="account-panel"><h3>{row.name}</h3><p><Money value={row.oldPrice}/> → <Money value={row.newPrice}/></p><button disabled={saving} onClick={()=>void update(row)} style={{minHeight:44}}>Update retail price for {row.name}</button></article>)}{error&&<p role="alert">{error}</p>}{!loading&&!saving&&error&&<button onClick={()=>{setLoading(true);setError("");void load()}} style={{minHeight:44}}>Refresh price choices</button>}<button disabled={saving} onClick={()=>done.current()} style={{minHeight:44}}>Keep remaining saved prices</button></dialog>;
+}
