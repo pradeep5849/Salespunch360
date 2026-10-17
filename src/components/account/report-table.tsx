@@ -7,7 +7,7 @@ import { useDisplayPreferences } from "./display-preferences";
 export function ReportTable({ data }: { data: ReportResult }) {
   const formatted = formatReport(data, useDisplayPreferences());
   return (
-    <table>
+    <><table>
       <thead>
         <tr>
           {formatted.columns.map((column) => (
@@ -38,5 +38,6 @@ export function ReportTable({ data }: { data: ReportResult }) {
         )}
       </tbody>
     </table>
+    {formatted.breakdown&&<section aria-label="Ledger breakdown">{formatted.breakdown.map(group=><details key={group.title}><summary>{group.title} — {group.total}</summary>{group.rows.length?<ul>{group.rows.map(row=><li key={row.code} style={{overflowWrap:"anywhere"}}>{row.code} {row.name} — {row.amount}</li>)}</ul>:<p>No ledger balances in this section.</p>}</details>)}</section>}</>
   );
 }

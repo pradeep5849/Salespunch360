@@ -87,6 +87,7 @@ export function formatReport(
         )
       : data.columns,
     rows: data.rows.map(row),
+    ...(data.breakdown?{breakdown:data.breakdown.map(group=>({...group,total:String(formatReportCell("Amount",group.total,preferences,exportValue)),rows:group.rows.map(item=>({...item,amount:String(formatReportCell("Amount",item.amount,preferences,exportValue))}))}))}:{}),
     ...(data.summary?{summary:data.summary.map(item=>({...item,displayValue:item.money?(exportValue?new Prisma.Decimal(item.value).toFixed(preferences.displayDecimalPlaces):formatMoney(item.value,preferences)):item.value}))}:{}),
     ...(data.totals ? { totals: row(data.totals) } : {}),
   };

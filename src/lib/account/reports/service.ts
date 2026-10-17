@@ -1,3 +1,4 @@
+import {financialLedgerBreakdown,type LedgerBreakdown} from "./ledger-breakdown";
 import {EXPENSE_REPORTS,expenseReport} from "./expense-reports";
 import {TRANSACTION_REPORTS,transactionReport} from "./transaction-reports";
 import {reportSpecificFilters} from "./catalogue";
@@ -59,6 +60,7 @@ const D = Prisma.Decimal,
 
 export type ReportFilter = z.infer<typeof filterSchema>;
 export type ReportResult = {
+  breakdown?:LedgerBreakdown[];
   title: string;
   columns: string[];
   rows: Array<Array<string | number>>;
@@ -269,6 +271,7 @@ export async function runFinancialReportForActor(
       const p = profitAndLoss(d.lines);
       return {
         title: name === "branches" ? "Branch Profit & Loss" : "Profit & Loss",
+        breakdown:financialLedgerBreakdown(d.lines,false),
         columns: ["Section", "Amount"],
         rows: [
           ["Income", n(p.income)],
@@ -281,6 +284,7 @@ export async function runFinancialReportForActor(
       const b = balanceSheet(d.lines);
       return {
         title: "Balance Sheet",
+        breakdown:financialLedgerBreakdown(d.lines,true),
         columns: ["Section", "Amount"],
         rows: [
           ["Assets", n(b.assets)],

@@ -119,6 +119,24 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                 itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.let{com.salespunch360.mobile.account.accountReportDestination(it)};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }
             }
+            data.array("breakdown").forEach { group -> ReportLedgerGroup(group) }
+        }
+    }
+}
+
+@Composable
+private fun ReportLedgerGroup(group: JsonObject) {
+    var expanded by remember(group) { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            TextButton(onClick = { expanded = !expanded }) {
+                Text("${if (expanded) "Hide" else "Show"} ${group.str("title")} — ${group.str("total")}")
+            }
+            if (expanded) {
+                val rows = group.array("rows")
+                if (rows.isEmpty()) Text("No ledger balances in this section.")
+                if (rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) { items(rows) { row -> Text("${row.str("code")} ${row.str("name")} — ${row.str("amount")}") } }
+            }
         }
     }
 }
