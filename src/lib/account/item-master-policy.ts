@@ -2,6 +2,8 @@ import type { ItemSettings } from "./item-settings-policy";
 
 type ItemMasterInput = {
   unitId?: string;
+  secondaryUnitId?: string;
+  secondaryUnitsPerBase?: string;
   categoryId?: string;
   description?: string;
   hsnSacCode?: string;
@@ -21,7 +23,7 @@ export function assertItemMasterCreation(
     throw new Error("SERVICES_DISABLED");
   if (settings.itemType === "SERVICES" && kind === "PRODUCT")
     throw new Error("PRODUCTS_DISABLED");
-  if (!settings.itemUnits && input.unitId)
+  if (!settings.itemUnits && (input.unitId || input.secondaryUnitId || input.secondaryUnitsPerBase))
     throw new Error("ITEM_UNITS_DISABLED");
   if (!settings.itemCategory && input.categoryId)
     throw new Error("ITEM_CATEGORY_DISABLED");

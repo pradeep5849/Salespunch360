@@ -64,6 +64,7 @@ fun AddItemScreen(
     val categoryOptions=if(service)s.serviceCategories else s.categories
     var primaryUnit by remember{mutableStateOf<String?>(null)}
     var secondaryUnit by remember{mutableStateOf<String?>(null)}
+    var secondaryUnitsPerBase by remember{mutableStateOf("")}
     var code by remember{mutableStateOf("")}
     var categoryId by remember{mutableStateOf<String?>(null)}
     var description by remember{mutableStateOf("")}
@@ -98,9 +99,11 @@ fun AddItemScreen(
             units=s.units,
             primary=primaryUnit,
             secondary=secondaryUnit,
+            conversionRate=secondaryUnitsPerBase,
             saving=s.saving,
             onBack={unitPage=false},
-            onSave={pUnit,sUnit->
+            onSave={pUnit,sUnit,factor->
+                secondaryUnitsPerBase=if(sUnit==null)""else factor
                 primaryUnit=pUnit
                 secondaryUnit=sUnit
                 unitPage=false
@@ -172,6 +175,8 @@ fun AddItemScreen(
                                 service=service,photoBytes=photoBytes,photoMime=photoMime,
                                 name=name,
                                 unitId=primaryUnit.takeIf{enabled("itemUnits")},
+                                secondaryUnitId=secondaryUnit.takeIf{enabled("itemUnits")},
+                                secondaryUnitsPerBase=secondaryUnitsPerBase,
                                 categoryId=categoryId.takeIf{enabled("itemCategory")},
                                 code=code,
                                 description=if(enabled("description"))description else "",
@@ -509,13 +514,15 @@ private fun AddItemUnitScreen(
     units:List<AccountOption>,
     primary:String?,
     secondary:String?,
+    conversionRate:String,
     saving:Boolean,
     onBack:()->Unit,
-    onSave:(String?,String?)->Unit,
+    onSave:(String?,String?,String)->Unit,
     onCreateUnit:(String,String,(AccountOption)->Unit)->Unit
 ){
     var p by remember(primary){mutableStateOf(primary)}
     var s by remember(secondary){mutableStateOf(secondary)}
+    var factor by remember(conversionRate){mutableStateOf(conversionRate)}
     var addUnitTarget by remember{mutableStateOf<String?>(null)}
     var unitName by remember{mutableStateOf("")}
     var unitSymbol by remember{mutableStateOf("")}
@@ -526,7 +533,7 @@ private fun AddItemUnitScreen(
                 title={Text("Add Item Unit")},
                 navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}},
                 colors=TopAppBarDefaults.topAppBarColors(
-                    containerColor=Color(0xFF1685AD),
+                    containerColor=Color(0xFF087AA5),
                     titleContentColor=Color.White,
                     navigationIconContentColor=Color.White
                 )
@@ -536,8 +543,8 @@ private fun AddItemUnitScreen(
             Row(Modifier.fillMaxWidth().navigationBarsPadding()){
                 TextButton(onClick=onBack,modifier=Modifier.weight(1f).height(64.dp)){Text("Cancel")}
                 Button(
-                    onClick={ onSave(p,s) },
-                    enabled=!p.isNullOrBlank(),
+                    onClick={ onSave(p,s,factor) },
+                    enabled=!saving&&!p.isNullOrBlank()&&(s==null||(p!=s&&com.salespunch360.mobile.account.validUnitConversionRate(factor))),
                     modifier=Modifier.weight(1f).height(64.dp),
                     shape=MaterialTheme.shapes.extraSmall
                 ){Text("Save")}
@@ -564,6 +571,7 @@ private fun AddItemUnitScreen(
                 onSelect={s=it},
                 onAddUnit={addUnitTarget="SECONDARY"}
             )
+            if(s!=null){OutlinedTextField(factor,{factor=it},label={Text("Secondary units per primary unit")},isError=factor.isNotBlank()&&!com.salespunch360.mobile.account.validUnitConversionRate(factor),enabled=!saving);Text("1 ${units.firstOrNull{it.id==p}?.symbol.orEmpty()} = ${factor.ifBlank{"?"}} ${units.firstOrNull{it.id==s}?.symbol.orEmpty()}")}
             Spacer(Modifier.weight(1f))
         }
     }

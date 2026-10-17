@@ -278,5 +278,13 @@ describe.skipIf(!url)(
       const quotation=await createQuotationForActor(actor,{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",lines:[{lineType:"PRODUCT",sourceId:recorded.id,quantity:"2",rate:"100"}]});const before=await client.quotationLine.findFirstOrThrow({where:{companyId,productId:recorded.id}});
       await expect(assignUnitToItemsForActor(actor,{kind:"PRODUCT",itemIds:[recorded.id,fresh.id],unitId:units[1]})).rejects.toThrow("UNIT_HAS_TRANSACTION_HISTORY");expect((await client.accountProduct.findUniqueOrThrow({where:{id:fresh.id}})).unitId).toBeNull();expect((await client.accountProduct.findUniqueOrThrow({where:{id:recorded.id}})).unitId).toBe(units[0]);expect(await client.quotationLine.findUniqueOrThrow({where:{id:before.id}})).toEqual(before);expect(before.unitId).toBe(units[0]);expect(before.quantity.toString()).toBe("2");expect((await client.quotationRevision.findUniqueOrThrow({where:{id:before.revisionId}})).documentId).toBe(quotation.id);
     });
+    it("clears stale secondary mapping when an unused item changes base unit and audits the prior factor",async()=>{
+      const primary=await client.accountUnit.create({data:{companyId,name:"Snapshot bundle",symbol:"snap-b"}}),secondary=await client.accountUnit.create({data:{companyId,name:"Snapshot piece",symbol:"snap-p"}}),next=await client.accountUnit.create({data:{companyId,name:"Snapshot carton",symbol:"snap-c"}});
+      const product=await client.accountProduct.create({data:{companyId,name:"Unused converted item",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"10"}});
+      await assignUnitToItemsForActor(actor,{kind:"PRODUCT",itemIds:[product.id],unitId:next.id});
+      expect(await client.accountProduct.findUniqueOrThrow({where:{id:product.id}})).toMatchObject({unitId:next.id,secondaryUnitId:null,secondaryUnitsPerBase:null});
+      const audit=await client.accountOperationalAudit.findFirstOrThrow({where:{companyId,eventType:"ITEM_UNITS_ASSIGNED",entityId:next.id}});
+      expect(audit.metadata).toMatchObject({items:[{id:product.id,beforeSecondaryUnitId:secondary.id,beforeSecondaryUnitsPerBase:"10",afterSecondaryUnitId:null,afterSecondaryUnitsPerBase:null}]});
+    });
   },
 );

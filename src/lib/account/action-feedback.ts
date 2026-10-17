@@ -8,6 +8,7 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_ITEM_UNIT_CONVERSION:"Select two different active units and enter a positive conversion factor with at most four decimal places.",
   INVALID_OWNER_HISTORY_SCOPE:"Choose a branch or all authorized branches, then reload the owner history.",
   OWNER_CORRECTION_ALREADY_POSTED: "This transaction already has a correction. Open its recorded history; retry only with the same date and reason.",
   OWNER_CORRECTION_BEFORE_TRANSACTION: "The correction date cannot precede the original transaction date.",

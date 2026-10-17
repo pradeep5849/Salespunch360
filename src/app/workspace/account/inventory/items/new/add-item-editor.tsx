@@ -1,4 +1,5 @@
 "use client";
+import {validUnitConversionRate} from "@/lib/account/unit-conversion-rate";
 import {saveItemPhotoAction} from "@/app/actions/item-photos";
 import {trapDialogFocus} from "@/components/account/dialog-keyboard";
 import { generateItemCode } from "@/lib/account/item-identifiers";
@@ -105,6 +106,7 @@ export function AddItemEditor({
     [categories, setCategories] = useState(initialCategories),
     mutation = useSaveMutation(),
     pending = transitionPending || mutation.pending;
+  const [secondaryUnitsPerBase,setSecondaryUnitsPerBase]=useState(""),[unitDraftRate,setUnitDraftRate]=useState("");
   const [unitError, setUnitError] = useState("");
   const [unitPage, setUnitPage] = useState(false),
     [unitTarget, setUnitTarget] = useState<"PRIMARY" | "SECONDARY" | null>(
@@ -181,10 +183,14 @@ export function AddItemEditor({
   function openUnits() {
     setUnitDraftPrimary(primaryUnit);
     setUnitDraftSecondary(secondaryUnit);
+    setUnitDraftRate(secondaryUnitsPerBase);
+    setUnitError("");
     setUnitPage(true);
     setUnitTarget(null);
   }
   function saveUnits() {
+    if(unitDraftSecondary&&(unitDraftSecondary===unitDraftPrimary||!validUnitConversionRate(unitDraftRate))){setUnitError("Choose different units and enter a positive conversion factor.");return;}
+    setSecondaryUnitsPerBase(unitDraftSecondary?unitDraftRate:"");
     setPrimaryUnit(unitDraftPrimary);
     setSecondaryUnit(unitDraftSecondary);
     setUnitPage(false);
@@ -240,6 +246,8 @@ export function AddItemEditor({
             customFields,
             name: name.trim(),
             unitId: enabled("itemUnits") ? primaryUnit || undefined : undefined,
+            secondaryUnitId:enabled("itemUnits")?secondaryUnit||undefined:undefined,
+            secondaryUnitsPerBase:enabled("itemUnits")&&secondaryUnit?secondaryUnitsPerBase:undefined,
             categoryId: enabled("itemCategory")
               ? categoryId || undefined
               : undefined,
@@ -803,9 +811,11 @@ export function AddItemEditor({
               )}
             </div>
           </div>
+          {unitDraftSecondary&&<div className="unit-conversion-input"><label>Secondary units per primary unit<input inputMode="decimal" value={unitDraftRate} onChange={event=>setUnitDraftRate(event.target.value)} required/></label><p>1 {units.find(unit=>unit.id===unitDraftPrimary)?.symbol||"primary unit"} = {unitDraftRate||"?"} {units.find(unit=>unit.id===unitDraftSecondary)?.symbol||"secondary units"}</p></div>}
+          {unitError&&<p role="alert">{unitError}</p>}
           <footer className="sale-fullscreen-footer">
             <button onClick={() => setUnitPage(false)}>Cancel</button>
-            <button disabled={!unitDraftPrimary} onClick={saveUnits}>
+            <button disabled={!unitDraftPrimary||!!unitDraftSecondary&&(unitDraftSecondary===unitDraftPrimary||!validUnitConversionRate(unitDraftRate))} onClick={saveUnits}>
               Save
             </button>
           </footer>

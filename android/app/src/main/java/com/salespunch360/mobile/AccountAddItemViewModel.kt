@@ -100,6 +100,8 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         pricing:JsonObject?=null,
         photoBytes:ByteArray?=null,
         photoMime:String="image/jpeg",
+        secondaryUnitId:String?=null,
+        secondaryUnitsPerBase:String="",
         done:()->Unit
     )=viewModelScope.launch{
         if(_state.value.saving||_state.value.photoPending||!_state.value.configLoaded)return@launch
@@ -115,6 +117,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
                     putJsonObject("customFields"){customFields.forEach{put(it.key,it.value)}}
                     put("code",code.trim())
                     unitId?.let{put("unitId",it)}
+                    secondaryUnitId?.let{put("secondaryUnitId",it);put("secondaryUnitsPerBase",secondaryUnitsPerBase)}
                     categoryId?.let{put("categoryId",it)}
                     put("description",description)
                     pricing?.let{put("pricing",it)}

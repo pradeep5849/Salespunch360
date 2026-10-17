@@ -34,15 +34,15 @@ export async function assignUnitToItemsForActor(actor:ProjectActor,raw:unknown){
   }
   if(!unit)throw new Error("INVALID_UNIT");
   const where={companyId:actor.companyId,id:{in:ids},isActive:true};
-  const items=d.kind==="PRODUCT"?await tx.accountProduct.findMany({where,select:{id:true,unitId:true}}):await tx.accountService.findMany({where,select:{id:true,unitId:true}});
+  const items=d.kind==="PRODUCT"?await tx.accountProduct.findMany({where,select:{id:true,unitId:true,secondaryUnitId:true,secondaryUnitsPerBase:true}}):await tx.accountService.findMany({where,select:{id:true,unitId:true,secondaryUnitId:true,secondaryUnitsPerBase:true}});
   if(items.length!==ids.length)throw new AuthorizationError();
   const changed=items.filter(item=>item.unitId!==unit.id);
   await assertItemsHaveNoUnitHistory(tx,actor.companyId,d.kind,changed.map(item=>item.id));
   if(changed.length){
    const changedWhere={...where,id:{in:changed.map(item=>item.id)}};
-   const updated=d.kind==="PRODUCT"?await tx.accountProduct.updateMany({where:changedWhere,data:{unitId:unit.id}}):await tx.accountService.updateMany({where:changedWhere,data:{unitId:unit.id}});
+   const updated=d.kind==="PRODUCT"?await tx.accountProduct.updateMany({where:changedWhere,data:{unitId:unit.id,secondaryUnitId:null,secondaryUnitsPerBase:null}}):await tx.accountService.updateMany({where:changedWhere,data:{unitId:unit.id,secondaryUnitId:null,secondaryUnitsPerBase:null}});
    if(updated.count!==changed.length)throw new AuthorizationError();
-   await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"ITEM_UNITS_ASSIGNED",entityType:d.kind,entityId:unit.id,metadata:{items:changed.map(item=>({id:item.id,beforeUnitId:item.unitId,afterUnitId:unit.id}))}}});
+   await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"ITEM_UNITS_ASSIGNED",entityType:d.kind,entityId:unit.id,metadata:{items:changed.map(item=>({id:item.id,beforeUnitId:item.unitId,beforeSecondaryUnitId:item.secondaryUnitId,beforeSecondaryUnitsPerBase:item.secondaryUnitsPerBase?.toString()??null,afterUnitId:unit.id,afterSecondaryUnitId:null,afterSecondaryUnitsPerBase:null}))}}});
   }
   const affected=[...new Set([unit.id,...changed.map(item=>item.unitId).filter((id):id is string=>!!id)])];
   const counters=await tx.accountUnit.findMany({where:{companyId:actor.companyId,id:{in:affected},isActive:true},select:{id:true,name:true,symbol:true,_count:{select:{products:true,services:true}}}});

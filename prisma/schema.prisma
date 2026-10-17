@@ -1790,6 +1790,8 @@ model AccountUnit {
   symbol       String           @db.VarChar(20)
   isActive     Boolean          @default(true)
   products     AccountProduct[]
+  secondaryProducts AccountProduct[] @relation("ProductSecondaryUnit")
+  secondaryServices AccountService[] @relation("ServiceSecondaryUnit")
   services     AccountService[]
   workPackages WorkPackage[]
   createdAt    DateTime         @default(now())
@@ -1833,6 +1835,9 @@ model AccountProduct {
   creationRequestKey String? @db.Uuid
   creationRequestHash String? @db.VarChar(64)
   itemLocation String? @db.VarChar(240)
+  secondaryUnitId String? @db.Uuid
+  secondaryUnit AccountUnit? @relation("ProductSecondaryUnit",map:"account_products_secondary_unit_fkey",fields:[companyId,secondaryUnitId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  secondaryUnitsPerBase Decimal? @db.Decimal(18,4)
   name        String
   code        String?          @db.VarChar(60)
   photoObjectKey String? @db.VarChar(512)
@@ -1869,6 +1874,9 @@ model AccountService {
   category      AccountCategory? @relation(fields: [companyId, categoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId        String?          @db.Uuid
   unit          AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  secondaryUnitId String? @db.Uuid
+  secondaryUnit AccountUnit? @relation("ServiceSecondaryUnit",map:"account_services_secondary_unit_fkey",fields:[companyId,secondaryUnitId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  secondaryUnitsPerBase Decimal? @db.Decimal(18,4)
   name          String
   code          String?          @db.VarChar(60)
   photoObjectKey String? @db.VarChar(512)

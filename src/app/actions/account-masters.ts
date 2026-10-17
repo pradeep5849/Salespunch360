@@ -55,6 +55,8 @@ export type CreateAccountItemInput = {
   };
   name: string;
   unitId?: string;
+  secondaryUnitId?: string;
+  secondaryUnitsPerBase?: string;
   categoryId?: string;
   code?: string;
   barcode?: string;
@@ -79,6 +81,8 @@ export async function createAccountItemAction(raw: CreateAccountItemInput) {
       itemLocation: raw.type === "products" ? raw.itemLocation : undefined,
       openingStock: raw.type === "products" ? raw.openingStock : undefined,
       unitId: raw.unitId,
+      secondaryUnitId:raw.secondaryUnitId,
+      secondaryUnitsPerBase:raw.secondaryUnitsPerBase,
       categoryId: raw.categoryId,
       code: raw.code ?? "",
       barcode: raw.barcode,

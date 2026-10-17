@@ -100,7 +100,7 @@ vi.mock("@/lib/db", () => ({
     },
   ),
 }));
-import { createProduct } from "./service";
+import { createProduct,createService } from "./service";
 import { createProductPriceForActor } from "./inventory";
 const input = (key = randomUUID(), quantity = "2.1250") => ({
   name: `Opening ${key}`,
@@ -173,6 +173,8 @@ describe.skipIf(!url)("A058 atomic item opening stock", () => {
         await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
         await tx.productPrice.deleteMany({ where: { companyId } });
         await tx.accountProduct.deleteMany({ where: { companyId } });
+        await tx.accountService.deleteMany({where:{companyId}});
+        await tx.accountUnit.deleteMany({where:{companyId}});
         await tx.warehouse.deleteMany({ where: { companyId } });
         await tx.accountSettings.deleteMany({ where: { companyId } });
         await tx.user.deleteMany({ where: { companyId } });
@@ -367,4 +369,29 @@ describe.skipIf(!url)("A058 atomic item opening stock", () => {
       }),
     ).toBe(0);
   });
+  it("persists explicit secondary units for product/service and rejects invalid pairs without stock writes",async()=>{
+    const primary=await client.accountUnit.create({data:{companyId,name:"Bundle",symbol:"bndl"}}),secondary=await client.accountUnit.create({data:{companyId,name:"Piece",symbol:"pc"}});
+    const originalSettings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+    await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemUnits:true,stockMaintenance:true}}});
+    try{
+      const raw={...input(),unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"10.0000"};
+      const product=await createProduct(raw),replay=await createProduct(raw);
+      expect(replay.id).toBe(product.id);expect(product.secondaryUnitId).toBe(secondary.id);expect(product.secondaryUnitsPerBase?.toString()).toBe("10");
+      expect((await client.stockMovement.findFirstOrThrow({where:{companyId,productId:product.id}})).quantity.toString()).toBe("2.125");
+      const service=await createService({name:"Bundle service",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"2.5"});
+      expect(service.secondaryUnitId).toBe(secondary.id);expect(service.secondaryUnitsPerBase?.toString()).toBe("2.5");
+      const before=await client.stockMovement.count({where:{companyId}});
+      for(const replacement of [{secondaryUnitsPerBase:undefined},{secondaryUnitsPerBase:"0"},{secondaryUnitsPerBase:"-2"},{secondaryUnitsPerBase:"1.00001"},{secondaryUnitId:primary.id},{secondaryUnitId:randomUUID()}]){
+        await expect(createProduct({...raw,creationRequestKey:randomUUID(),...replacement})).rejects.toThrow();
+      }
+      await client.accountUnit.update({where:{id:secondary.id},data:{isActive:false}});
+      await expect(createProduct({...raw,creationRequestKey:randomUUID()})).rejects.toThrow("INVALID_ITEM_UNIT_CONVERSION");
+      await client.accountUnit.update({where:{id:secondary.id},data:{isActive:true}});
+      await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemUnits:false,stockMaintenance:true}}});
+      await expect(createProduct({...raw,creationRequestKey:randomUUID()})).rejects.toThrow("ITEM_UNITS_DISABLED");
+      expect(await client.stockMovement.count({where:{companyId}})).toBe(before);
+      await expect(client.accountProduct.create({data:{companyId,name:"Missing factor must fail",unitId:primary.id,secondaryUnitId:secondary.id}})).rejects.toThrow();
+    }finally{await client.accountSettings.update({where:{companyId},data:{itemSettings:originalSettings.itemSettings as Prisma.InputJsonValue}});}
+  });
+
 });

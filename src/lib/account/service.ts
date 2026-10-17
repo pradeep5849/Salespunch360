@@ -1,3 +1,4 @@
+import {itemSecondaryUnitInTx} from "./item-secondary-unit";
 import {normalizedItemPricing} from "./item-pricing";
 import {resolveAccountBranchContext} from "./branch-context";
 import {
@@ -653,6 +654,7 @@ export async function createProduct(
         (extras.openingStock || extras.itemLocation)
       )
         throw new Error("STOCK_FIELDS_DISABLED");
+      const secondary=await itemSecondaryUnitInTx(tx,a.companyId!,policy,d);
       const price=normalizedItemPricing(d,policy,raw);
       const row = await tx.accountProduct.create({
         data: {
@@ -664,6 +666,7 @@ export async function createProduct(
           code: d.code,
           categoryId: d.categoryId,
           unitId: d.unitId,
+          ...secondary,
           description: d.description,
           salePrice: price.saleRate,
           ...(price.pricing?{pricing:price.pricing}:{}),
@@ -713,6 +716,7 @@ export async function createService(
         ...d,
         customFields: customValues,
       });
+      const secondary=await itemSecondaryUnitInTx(tx,a.companyId!,policy,d);
       const price=normalizedItemPricing(d,policy,raw);
       const row = await tx.accountService.create({
         data: {
@@ -721,6 +725,7 @@ export async function createService(
           code: d.code,
           categoryId: d.categoryId,
           unitId: d.unitId,
+          ...secondary,
           description: d.description,
           sellingRate: price.saleRate,
           ...(price.pricing?{pricing:price.pricing}:{}),

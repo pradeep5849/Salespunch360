@@ -774,3 +774,6 @@ body:has(.account-shell) > .workspace-header{display:none}
 
 /* Keep startup-disabled money forms readable, including nested fieldsets. */
 .account-main .action-feedback-fields:disabled button{opacity:1;background:#64748b;border-color:#64748b;color:#fff}
+
+.sale-fullscreen-panel.add-unit-full .sale-fullscreen-footer button:last-child{background:#0870bd;color:#fff}
+.unit-conversion-input{padding:12px 18px 76px}.unit-conversion-input label{display:grid;gap:6px}

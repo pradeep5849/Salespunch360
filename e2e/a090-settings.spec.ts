@@ -2277,3 +2277,35 @@ test("A058 native item photo API enforces company role and Items OFF and strips 
   await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});expect((await request.get(path,{headers})).status()).toBe(403);expect((await request.post(path,{headers,multipart:{photo:{name:"blue.png",mimeType:"image/png",buffer:bytes}}})).status()).toBe(403);
  }finally{settingsCookies=[];await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});const row=await db.accountService.findUnique({where:{id:service.id}});if(row?.photoObjectKey)await privateStorage().delete(row.photoObjectKey).catch(()=>{});await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{}}})}
 });
+
+test("A058 secondary units require an explicit factor and persist through web and native item creation",async({page})=>{
+ test.setTimeout(180000);
+ const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),tag=randomUUID().slice(0,8);
+ const primary=await db.accountUnit.create({data:{companyId,name:`Bundle ${tag}`,symbol:`B${tag}`}}),secondary=await db.accountUnit.create({data:{companyId,name:`Piece ${tag}`,symbol:`P${tag}`}});
+ const foreignCompany=await db.company.create({data:{name:"Foreign secondary fixture",slug:`secondary-${tag}`,productEdition:"SALESPUNCH360_ACCOUNT"}});
+ const foreign=await db.accountUnit.create({data:{companyId:foreignCompany.id,name:"Foreign piece",symbol:"foreign"}});
+ await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,itemUnits:true,enabled:true}}});
+ try{
+  await signInSettings(page);await page.goto("/workspace/account/inventory/items/new");
+  await page.getByRole("textbox",{name:"Item Name *",exact:true}).fill(`Secondary ${tag}`);
+  await page.locator(".add-item-unit-pill").click();const dialog=page.getByRole("dialog",{name:"Add Item Unit",exact:true});
+  await dialog.getByRole("button",{name:/Primary Unit/}).click();await dialog.getByRole("button",{name:`${primary.name.toUpperCase()} ( ${primary.symbol} )`,exact:true}).click();
+  await dialog.getByRole("button",{name:/Secondary Unit/}).click();await dialog.getByRole("button",{name:`${secondary.name.toUpperCase()} ( ${secondary.symbol} )`,exact:true}).click();
+  await expect(dialog.getByRole("button",{name:"Save",exact:true})).toBeDisabled();
+  await dialog.getByLabel("Secondary units per primary unit",{exact:true}).fill("0");await expect(dialog.getByRole("button",{name:"Save",exact:true})).toBeDisabled();
+  await dialog.getByLabel("Secondary units per primary unit",{exact:true}).fill("10");await dialog.getByRole("button",{name:"Save",exact:true}).click();
+  await page.locator(".add-item-unit-pill").click();await expect(dialog.getByLabel("Secondary units per primary unit",{exact:true})).toHaveValue("10");
+  expect((await new AxeBuilder({page}).include('dialog[aria-label="Add Item Unit"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
+  await dialog.getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account\/inventory$/,{timeout:20000});
+  const saved=await db.accountProduct.findFirstOrThrow({where:{companyId,name:`Secondary ${tag}`}});expect(saved.unitId).toBe(primary.id);expect(saved.secondaryUnitId).toBe(secondary.id);expect(saved.secondaryUnitsPerBase?.toString()).toBe("10");
+  const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  const data={name:`Native secondary ${tag}`,unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"10",sellingRate:"10",cost:"5",taxRate:"0",creationRequestKey:randomUUID()};
+  const response=await page.request.post("/api/v1/mobile/account/master-data/items",{headers,data});expect(response.status()).toBe(201);const native=await response.json();
+  expect((await page.request.post("/api/v1/mobile/account/master-data/items",{headers,data})).status()).toBe(201);expect(await db.accountProduct.count({where:{companyId,creationRequestKey:data.creationRequestKey}})).toBe(1);
+  const read=await page.request.get(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers});expect(read.status()).toBe(200);expect(await read.json()).toMatchObject({record:{secondaryUnitId:secondary.id,secondaryUnitsPerBase:"10"}});
+  for(const replacement of [{secondaryUnitsPerBase:undefined},{secondaryUnitsPerBase:"0"},{secondaryUnitId:primary.id},{secondaryUnitId:foreign.id}])expect((await page.request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...data,...replacement,creationRequestKey:randomUUID()}})).status()).toBe(400);
+  const service=await page.request.post("/api/v1/mobile/account/master-data/services",{headers,data:{...data,name:`Service secondary ${tag}`}});expect(service.status()).toBe(201);expect((await service.json()).secondaryUnitId).toBe(secondary.id);
+  const changed=await page.request.patch(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers,data:{name:data.name,unitId:secondary.id,sellingRate:"10",cost:"5",taxRate:"0"}});expect(changed.status()).toBe(200);expect(await db.accountProduct.findUniqueOrThrow({where:{id:native.id}})).toMatchObject({unitId:secondary.id,secondaryUnitId:null,secondaryUnitsPerBase:null});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{}}});await db.accountUnit.delete({where:{id:foreign.id}});await db.company.delete({where:{id:foreignCompany.id}});}
+});

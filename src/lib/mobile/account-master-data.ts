@@ -1,3 +1,4 @@
+import {itemSecondaryUnitInTx} from "@/lib/account/item-secondary-unit";
 import {normalizedItemPricing,pricingForLegacyEdit,retainItemMrp} from "@/lib/account/item-pricing";
 import {assertItemUnitChangeInTx,assignUnitToItemsForActor,unitAssignmentOptionsForActor} from "@/lib/account/unit-assignment";
 import {
@@ -569,8 +570,9 @@ export async function saveMobileAccountMaster(
         });
         const policy = resolveItemSettings(settings?.itemSettings);
         if (!id) assertItemMasterCreation(policy, "SERVICE", input);
+        const secondary=await itemSecondaryUnitInTx(tx,user.companyId,policy,input);
         const price=normalizedItemPricing(input,policy,raw);
-        let pricedData={...data,sellingRate:price.saleRate,estimatedCost:price.costRate,...(price.pricing?{pricing:price.pricing}:{})};
+        let pricedData={...data,...secondary,sellingRate:price.saleRate,estimatedCost:price.costRate,...(price.pricing?{pricing:price.pricing}:{})};
         const row = id
           ? await tx.accountService.findFirst({
               where: { id, companyId: user.companyId },
@@ -579,7 +581,7 @@ export async function saveMobileAccountMaster(
               data: { ...pricedData, companyId: user.companyId },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) {if(input.pricing&&price.pricing)pricedData={...pricedData,pricing:retainItemMrp(price.pricing,row.pricing,input.taxRate??row.taxRate)};if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.sellingRate,costRate:row.estimatedCost,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,sellingRate:kept.saleRate,estimatedCost:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);}await tx.accountService.update({ where: { id: row.id }, data:pricedData });}
+        if (id) {if(input.secondaryUnitId!==undefined||input.secondaryUnitsPerBase!==undefined){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,JSON.stringify([row.unitId,row.secondaryUnitId,row.secondaryUnitsPerBase?.toString()]),JSON.stringify([input.unitId??row.unitId,secondary.secondaryUnitId,secondary.secondaryUnitsPerBase?.toString()]));}if(input.pricing&&price.pricing)pricedData={...pricedData,pricing:retainItemMrp(price.pricing,row.pricing,input.taxRate??row.taxRate)};if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.sellingRate,costRate:row.estimatedCost,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,sellingRate:kept.saleRate,estimatedCost:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"SERVICE",row.id,row.unitId,data.unitId);if(input.secondaryUnitId===undefined)pricedData={...pricedData,secondaryUnitId:null,secondaryUnitsPerBase:null};}await tx.accountService.update({ where: { id: row.id }, data:pricedData });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,
@@ -658,8 +660,9 @@ export async function saveMobileAccountMaster(
         });
         const policy = resolveItemSettings(settings?.itemSettings);
         if (!id) assertItemMasterCreation(policy, "PRODUCT", input);
+        const secondary=await itemSecondaryUnitInTx(tx,user.companyId,policy,input);
         const price=normalizedItemPricing(input,policy,raw);
-        let pricedData={...data,salePrice:price.saleRate,costPrice:price.costRate,...(price.pricing?{pricing:price.pricing}:{})};
+        let pricedData={...data,...secondary,salePrice:price.saleRate,costPrice:price.costRate,...(price.pricing?{pricing:price.pricing}:{})};
         if (
           !policy.stockMaintenance &&
           (extras.openingStock || extras.itemLocation)
@@ -679,7 +682,7 @@ export async function saveMobileAccountMaster(
               },
             });
         if (!row) throw new Error("MOBILE_FORBIDDEN");
-        if (id) {if(input.pricing&&price.pricing)pricedData={...pricedData,pricing:retainItemMrp(price.pricing,row.pricing,input.taxRate??row.taxRate)};if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.salePrice,costRate:row.costPrice,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,salePrice:kept.saleRate,costPrice:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);}await tx.accountProduct.update({ where: { id: row.id }, data:pricedData });}
+        if (id) {if(input.secondaryUnitId!==undefined||input.secondaryUnitsPerBase!==undefined){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,JSON.stringify([row.unitId,row.secondaryUnitId,row.secondaryUnitsPerBase?.toString()]),JSON.stringify([input.unitId??row.unitId,secondary.secondaryUnitId,secondary.secondaryUnitsPerBase?.toString()]));}if(input.pricing&&price.pricing)pricedData={...pricedData,pricing:retainItemMrp(price.pricing,row.pricing,input.taxRate??row.taxRate)};if(!input.pricing){const kept=pricingForLegacyEdit({pricing:row.pricing,saleRate:row.salePrice,costRate:row.costPrice,taxRate:row.taxRate},input,policy,raw);if(kept)pricedData={...pricedData,salePrice:kept.saleRate,costPrice:kept.costRate,...(kept.pricing?{pricing:kept.pricing}:{})};}if(data.unitId!==undefined&&data.unitId!==row.unitId){await assertUnitAccess(actor(user,"units",true),tx);await assertItemUnitChangeInTx(tx,user.companyId,"PRODUCT",row.id,row.unitId,data.unitId);if(input.secondaryUnitId===undefined)pricedData={...pricedData,secondaryUnitId:null,secondaryUnitsPerBase:null};}await tx.accountProduct.update({ where: { id: row.id }, data:pricedData });}
         if (policy.customFields)
           await saveCustomFieldValuesInTx(
             tx,

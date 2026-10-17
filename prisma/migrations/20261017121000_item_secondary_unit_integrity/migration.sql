@@ -1,0 +1,4 @@
+ALTER TABLE "account_products" DROP CONSTRAINT "account_products_secondary_unit_pair";
+ALTER TABLE "account_products" ADD CONSTRAINT "account_products_secondary_unit_pair" CHECK (("secondaryUnitId" IS NULL AND "secondaryUnitsPerBase" IS NULL) OR ("secondaryUnitId" IS NOT NULL AND "secondaryUnitsPerBase" IS NOT NULL AND "secondaryUnitsPerBase" > 0 AND "unitId" IS NOT NULL AND "secondaryUnitId" <> "unitId"));
+ALTER TABLE "account_services" DROP CONSTRAINT "account_services_secondary_unit_pair";
+ALTER TABLE "account_services" ADD CONSTRAINT "account_services_secondary_unit_pair" CHECK (("secondaryUnitId" IS NULL AND "secondaryUnitsPerBase" IS NULL) OR ("secondaryUnitId" IS NOT NULL AND "secondaryUnitsPerBase" IS NOT NULL AND "secondaryUnitsPerBase" > 0 AND "unitId" IS NOT NULL AND "secondaryUnitId" <> "unitId"));
