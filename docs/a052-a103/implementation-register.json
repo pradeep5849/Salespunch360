@@ -49849,6 +49849,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F02 remains PARTIAL: native inline party parity, Add New Item return flow, authorized stock/balance metadata and remaining original selector coverage. A071-F04 regression evidence does not promote final status."
+        },
+        "native_quotation_party_2026_10_18": {
+          "implementation_commit": "4b3b66970cc32cb5d7c725f60d8e845a6b95ac13",
+          "work": "Android quotations reuse the full Account party form with selected-branch lock and existing role capability, then select the committed active party while retaining the same estimate snapshots/request key. Saved quotation/revision identity cannot change; wrong-branch/inactive results are not selected. Search supports name/phone. Shared master HTTP client now treats blank unsaved IDs as collection POST, preserving PATCH for existing records; saved records are returned to callers. Pending writes block dismissal/edit races and master errors are visible inside the editor with inputs retained. Native master POST/PATCH custom-field validation now returns safe structured400 instead of unexpected500; authorization and unknown/database errors retain their proper paths.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMasterViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPartySelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/AccountMasterRequest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPartySelectionTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/data/AccountMasterRequestTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/api/v1/mobile/account/master-data/[kind]/[id]/route.ts",
+            "src/app/api/v1/mobile/account/master-data/[kind]/route.ts",
+            "src/lib/mobile/master-validation-feedback.test.ts",
+            "src/lib/mobile/master-validation-feedback.ts"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin plus19 JVM tests PASS (1m52s):3 master request routing,3 quotation party selection/retention,7 draft codec,6 quotation preview;0 failures/errors/skips. Earlier first build also passed; final evidence uses last build.",
+            "focused": "66 tests across5 TypeScript action/service/feedback/validation files PASS.",
+            "native_api": "2 authenticated API cases under desktop/mobile Playwright projects PASS (15.3s), not native UI rendering: required-field400 rolls back party, foreign-branch403, committed party/false custom value, estimate413 and retained notes, idempotent retry same ID, Project Manager denied creation/no creation metadata, included core Quotations remain available with optional modules empty, no journal posting.",
+            "typescript": "PASS final run",
+            "eslint": "PASS focused API/helper/test files",
+            "initial_api": "Both initial cases assumed core Quotations could be disabled with an empty optional-module list. Corrected assertion to existing included Basic Accounting policy; no module policy changed. All other initial API checks passed; final complete cases pass.",
+            "device_runtime": "NOT RUN; no emulator/device/TalkBack available.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F02 remains PARTIAL for Add New Item return flow, authorized stock/balance metadata, remaining original selector parity and final device/runtime verification. A071-F04 keeps its previous code status; native source/JVM/API evidence is not device verification. No migration, production operation or ledger rule change."
         }
       },
       "push_checkpoint_evidence": {
@@ -54949,6 +54981,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F02 remains PARTIAL: native inline party parity, Add New Item return flow, authorized stock/balance metadata and remaining original selector coverage. A071-F04 regression evidence does not promote final status."
+        },
+        "native_quotation_party_2026_10_18": {
+          "implementation_commit": "4b3b66970cc32cb5d7c725f60d8e845a6b95ac13",
+          "work": "Android quotations reuse the full Account party form with selected-branch lock and existing role capability, then select the committed active party while retaining the same estimate snapshots/request key. Saved quotation/revision identity cannot change; wrong-branch/inactive results are not selected. Search supports name/phone. Shared master HTTP client now treats blank unsaved IDs as collection POST, preserving PATCH for existing records; saved records are returned to callers. Pending writes block dismissal/edit races and master errors are visible inside the editor with inputs retained. Native master POST/PATCH custom-field validation now returns safe structured400 instead of unexpected500; authorization and unknown/database errors retain their proper paths.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMasterViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPartySelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/AccountMasterRequest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPartySelectionTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/data/AccountMasterRequestTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/api/v1/mobile/account/master-data/[kind]/[id]/route.ts",
+            "src/app/api/v1/mobile/account/master-data/[kind]/route.ts",
+            "src/lib/mobile/master-validation-feedback.test.ts",
+            "src/lib/mobile/master-validation-feedback.ts"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin plus19 JVM tests PASS (1m52s):3 master request routing,3 quotation party selection/retention,7 draft codec,6 quotation preview;0 failures/errors/skips. Earlier first build also passed; final evidence uses last build.",
+            "focused": "66 tests across5 TypeScript action/service/feedback/validation files PASS.",
+            "native_api": "2 authenticated API cases under desktop/mobile Playwright projects PASS (15.3s), not native UI rendering: required-field400 rolls back party, foreign-branch403, committed party/false custom value, estimate413 and retained notes, idempotent retry same ID, Project Manager denied creation/no creation metadata, included core Quotations remain available with optional modules empty, no journal posting.",
+            "typescript": "PASS final run",
+            "eslint": "PASS focused API/helper/test files",
+            "initial_api": "Both initial cases assumed core Quotations could be disabled with an empty optional-module list. Corrected assertion to existing included Basic Accounting policy; no module policy changed. All other initial API checks passed; final complete cases pass.",
+            "device_runtime": "NOT RUN; no emulator/device/TalkBack available.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F02 remains PARTIAL for Add New Item return flow, authorized stock/balance metadata, remaining original selector parity and final device/runtime verification. A071-F04 keeps its previous code status; native source/JVM/API evidence is not device verification. No migration, production operation or ledger rule change."
         }
       },
       "push_checkpoint_evidence": {

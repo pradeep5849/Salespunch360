@@ -9678,3 +9678,11 @@ Web quotations search company/branch-authorized saved parties by name/contact/ph
 62 focused tests in4 files pass;4 desktop/mobile checks pass (47.0s), including foreign-branch denial, required custom value persistence, focus/AXE/overflow, selected new party, draft retention and saved estimate413. Final TypeScript/focused ESLint pass. Initial focus/name errors fixed before pass; old standalone Home selector updated to the actual Add New Party label with exact destination assertions retained. A transient generated Next type-file failure cleared on regeneration; no source failure described as pass.
 
 A082-F02 remains PARTIAL for native return flow, Add New Item/stock/balance scope and final platform verification. No final-status promotion, migration or production operation. Previous-head targeted CI at16a1c200 passed both web and Android jobs.
+
+### A082-F02 / A071-F04 — native return-to-estimate and shared master creation,18 October2026
+
+Native quotations reuse the full Account party form, lock its selected branch and return the committed active party to the same draft without changing saved quotation identity or losing snapshots/replay identity. Shared master requests now POST for blank/new IDs and PATCH existing IDs. Pending-save races are guarded; errors display inside the editor. Native master custom-field failures return safe400 responses; authorization/database failures are not hidden.
+
+Final Android compilation+19 JVM tests pass (1m52s), zero failures/errors/skips;66 focused TypeScript tests pass.2 authenticated native API cases pass (15.3s) for required-field rollback, foreign-branch/role denial, false custom value, party selection, saved estimate413, retry identity and no journal posting. These API cases do not verify native UI rendering. Initial optional-module assertion corrected to preserve included core Quotations behavior. Final TypeScript/focused ESLint pass.
+
+A082-F02 remains PARTIAL for Add New Item/stock/balance and remaining original parity/runtime checks. No device/TalkBack/full-final-head claim, migration, production operation or A104 work. All199 original IDs retained.
