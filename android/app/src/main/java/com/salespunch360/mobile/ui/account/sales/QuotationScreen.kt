@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.quotationPreview
 import com.salespunch360.mobile.QuotationDraft
 import com.salespunch360.mobile.QuotationState
 import com.salespunch360.mobile.QuotationViewModel
@@ -114,7 +115,17 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") }) }
                 item { InvoiceCustomFields(state.customFields,"QUOTATION",draft.customFields,state.saving){vm.editDraft(draft.copy(customFields=it))} }
                 item { OutlinedTextField(draft.notes, { vm.editDraft(draft.copy(notes = it)) }, label = { Text("Notes") }) }
-                item { Text("All totals and lifecycle validation are calculated by the server.", style = MaterialTheme.typography.bodySmall) }
+                item {
+                    val totals=quotationPreview(draft)
+                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text("Totals",style=MaterialTheme.typography.titleMedium)
+                        Text("Rates exclude tax. Totals are recalculated when you save.",style=MaterialTheme.typography.bodySmall)
+                        if(totals==null)Text("Enter valid quantities, rates, discounts and GST percentages to preview totals.")
+                        else listOf("Subtotal" to totals.subtotal,"Discount" to totals.discount,"Additional charges" to totals.charges,"Taxable amount" to totals.taxable,"Tax" to totals.tax,"Total amount" to totals.total).forEach { (label,amount) ->
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,modifier=Modifier.weight(1f));Text(accountMoney(amount))}
+                        }
+                    }
+                }
             }
         }
     )
