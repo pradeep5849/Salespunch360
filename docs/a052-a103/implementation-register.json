@@ -54934,7 +54934,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -55052,7 +55052,48 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
-      }
+      },
+      "checkpoint_work": [
+        {
+          "date": "2026-10-17",
+          "commit": "78430009d530e7a0305c4a27403d74cd25993db2",
+          "implementation": "Web and Android Save & New reset only after confirmed creation; Save opens read-only saved preview with PDF and navigation-only close. Stable company-scoped creation keys and payload hashes protect retries; concurrent same-key writes allocate one number/revision/audit. Changed retry intent rejected. Web network failures preserve draft, custom fields, party/branch and retry identity; React automatic reset explicitly prevented. Native new drafts rotate identity only after confirmed Save & New; edit/revision payloads omit creation identity.",
+          "modified_files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationDraftCodec.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationDraftCodecTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261017060000_quotation_creation_identity/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/quotations.ts",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/app/workspace/account/quotations/new/page.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "focused_unit_and_local_postgres": "67 passed across calculation, service runtime and draft audit integration files; includes concurrent retries, changed intent, fresh numbers, denied branch retry, private key stripping.",
+            "browser": "2 passed desktop/mobile-web, including failed POST retaining fields/key, successful retry, Save & New reset, distinct numbers, preview close leaves DRAFT.",
+            "android": "compileDebugKotlin and 7 QuotationDraftCodecTest JVM tests passed; BUILD SUCCESSFUL in 2m19s.",
+            "typescript": "tsc --noEmit passed.",
+            "lint": "Changed quotation source, integration and browser files ESLint passed.",
+            "prisma": "Schema validation passed; isolated local database up to date, 128 migrations. Additive creation identity migration applied locally only."
+          },
+          "limitations": [
+            "Android emulator/device preview and failure runtime not executed.",
+            "A080 themed/reference preview and A082 metadata/totals remain separate outstanding findings.",
+            "Full final-head 199-finding validation remains pending."
+          ],
+          "initial_failures_corrected": [
+            "Lint declaration order corrected.",
+            "Failed POST originally reached error boundary; client catches uncertain save failures.",
+            "React implicit form reset changed party/branch after handled failure; prevented until explicit confirmed Save & New remount.",
+            "Alert test narrowed to application message to exclude Next route announcer."
+          ]
+        }
+      ]
     },
     {
       "finding_id": "A083-F01",

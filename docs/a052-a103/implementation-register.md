@@ -9543,3 +9543,10 @@ Focused group57/57 passed(8.23s),TypeScript/changed-file ESLint passed. This is 
 Existing amount/normalized pending-payment linkage and explicit legacy-source completion were independently checked. New test rejects zero/negative/excess precision,wrong-party invoice and foreign-company actor without any cheque/settlement/journal creation. Unposted legacy completion requires explicit confirmed party/amount;posted legacy history without proven source remains protected for reconciliation rather than guessed migration. No application service/schema change.
 
 53 focused unit/real PostgreSQL cases passed(6.67s);4 desktop/mobile legacy-completion and multi-invoice/advance View Txn/browser/mobile-API cases passed(49.0s);TypeScript/changed-file ESLint passed. No emulator/device navigation or complete199-head validation claimed. A066-F02 is IMPLEMENTED BUT NOT VERIFIED;legacy production reconciliation limitation retained. Counts:170 implemented awaiting final verification,27 PARTIAL,2 NOT STARTED;199 unique findings retained;no final_status set.
+
+
+### A082-F04 save outcomes checkpoint — 2026-10-17
+
+Implementation commit `78430009d530e7a0305c4a27403d74cd25993db2`: retry-safe Web/Android Save & New, saved preview and navigation-only Close. Failed web request retains values, party/branch and retry key. Concurrent retries create one document/number/revision/audit. Additive migration `20261017060000_quotation_creation_identity` applied to isolated local database only.
+
+Validation: 67 focused unit/PostgreSQL tests; 2 desktop/mobile-web scenarios; Android compilation and 7 codec JVM tests passed; TypeScript, changed-file ESLint and Prisma validation passed. Native emulator/device runtime and full final-head regression remain pending. Status: IMPLEMENTED BUT NOT VERIFIED. A080 themed preview and A082 other findings remain separate.
