@@ -28838,6 +28838,18 @@
           "primary_finding": "A066-F10",
           "commit": "86fc2113d3d3e82cb37589fedba45979204f5d32",
           "work": "Shared ActionFeedbackForm success callback now runs before server refresh can remove source form. Transfer/owner-correction cases in6-case desktop/mobile group pass. Transfer test invariant updated to reject enabled same-account destinations,including filtered-out source accounts. A064-F13 remains PARTIAL;no other money-screen completion inferred."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "fb201dee844c109b304980a9c321d3a37b3d4302",
+          "work": "Receive-loan, repayment, top-up and lifecycle editors remount their entry controls only after confirmed success. Repayment clears loan/account selections, entered principal/interest/charges and total; failed or uncertain requests retain fields and stable key. No accounting/service/schema changes. Native existing success path already closes editor; no device execution claimed.",
+          "files": [
+            "src/components/account/loan-forms.tsx",
+            "src/components/account/loan-lifecycle-forms.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "23 focused loan operation/input/total/action-feedback tests passed; 2 desktop/mobile-web workflow scenarios passed (53.7s) with invalid repayment, injected failed POST, retained values/key, successful repayment reset, top-up reset, ledger balances and AXE. TypeScript and changed-file ESLint passed.",
+          "remaining": "A064-F13 remains PARTIAL: remaining money-form coverage and complete final-head validation/device runtime still pending."
         }
       ],
       "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change.",

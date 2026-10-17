@@ -9550,3 +9550,8 @@ Existing amount/normalized pending-payment linkage and explicit legacy-source co
 Implementation commit `78430009d530e7a0305c4a27403d74cd25993db2`: retry-safe Web/Android Save & New, saved preview and navigation-only Close. Failed web request retains values, party/branch and retry key. Concurrent retries create one document/number/revision/audit. Additive migration `20261017060000_quotation_creation_identity` applied to isolated local database only.
 
 Validation: 67 focused unit/PostgreSQL tests; 2 desktop/mobile-web scenarios; Android compilation and 7 codec JVM tests passed; TypeScript, changed-file ESLint and Prisma validation passed. Native emulator/device runtime and full final-head regression remain pending. Status: IMPLEMENTED BUT NOT VERIFIED. A080 themed preview and A082 other findings remain separate.
+
+
+### A064-F13 loan-form recovery slice — 2026-10-17
+
+Code `fb201dee844c109b304980a9c321d3a37b3d4302`: clear confirmed receive-loan, repayment, top-up/lifecycle entry controls; preserve failed inputs/request keys. Passed 23 focused tests, 2 desktop/mobile-web ledger/AXE workflows (53.7s), TypeScript and changed-file lint. No financial service/schema changes. Finding remains PARTIAL; final-head and native device runtime pending.
