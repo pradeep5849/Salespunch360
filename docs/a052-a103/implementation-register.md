@@ -9670,3 +9670,11 @@ Native draft editor now exposes existing line fixed/percentage discounts and doc
 A057-F03 and A058-F02 move from PARTIAL to IMPLEMENTED BUT NOT VERIFIED after their original code gaps are covered by the individually mapped persistence/MRP/confirmation/pricing-consumer/purchase slices and the user's approved dated Wholesale precedence.56 grouped pricing/settings/editor tests pass;5 local PostgreSQL financial checks pass (30 unrelated cases filtered). Prior runtime evidence is retained, not treated as final-head verification. Full final-head matrix and device runtime are pending; final_status remains null.
 
 Current authoritative199-ID counts:178 IMPLEMENTED BUT NOT VERIFIED;19 PARTIAL;2 NOT STARTED. No final-status promotion, skipped ID or A104 work.
+
+### A082-F02 / A071-F04 — inline quotation party selection,18 October2026
+
+Web quotations search company/branch-authorized saved parties by name/contact/phone and create/select parties inline using the full existing Account form/service, including required custom fields and party settings. Cancel/failure retain the estimate; pending saves prevent dismissal; focus returns correctly. Per-form field IDs avoid collisions when both entities use the same field key. Standalone Account party creation retains its destination and guards.
+
+62 focused tests in4 files pass;4 desktop/mobile checks pass (47.0s), including foreign-branch denial, required custom value persistence, focus/AXE/overflow, selected new party, draft retention and saved estimate413. Final TypeScript/focused ESLint pass. Initial focus/name errors fixed before pass; old standalone Home selector updated to the actual Add New Party label with exact destination assertions retained. A transient generated Next type-file failure cleared on regeneration; no source failure described as pass.
+
+A082-F02 remains PARTIAL for native return flow, Add New Item/stock/balance scope and final platform verification. No final-status promotion, migration or production operation. Previous-head targeted CI at16a1c200 passed both web and Android jobs.

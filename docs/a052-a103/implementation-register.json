@@ -49823,7 +49823,33 @@
       "checkpoint_work": {
         "implementation": "New Account-only web party route/action/form with explicit authorized branch and atomic customer/custom-value creation; GST/shipping settings respected; Home creation links hide without Account permission and carry scope. Added scoped Account party directory landing. Native New Party opens authorized creation directly, preserves Home party mode, cancels stale master loads and returns/refreshes Home after success.",
         "tests": "8 focused party/master tests passed. Desktop/mobile Chromium 2 passed against PostgreSQL: Account-only creation, explicit branch, required-field rollback, required Boolean false persistence, forged foreign branch rejection/draft retention, new party on Home and scoped directory, denied Project Manager and zero Axe violations including failed-save feedback. Latest Android compile, TypeScript and focused ESLint passed. Intermediate only.",
-        "remaining": "Final checkpoint-head regression; physical native creation/back/retry UI not verified."
+        "remaining": "Final checkpoint-head regression; physical native creation/back/retry UI not verified.",
+        "inline_quotation_party_2026_10_18": {
+          "implementation_commit": "d4ef3b4ad9c68955888f5c63982e568579d77db3",
+          "work": "Web quotation/estimate editor searches authorized saved parties by name/contact/phone and creates/selects a party inline through the full existing Account party form and mutation service. Required custom fields and company party settings are retained; creation uses only the selected branch and existing ACCOUNT_ACCOUNTS permission. Cancel/failed validation retain the estimate, modal close restores focus, pending save prevents dismissal. Per-form custom field IDs prevent collisions with quotation fields sharing the same key. Existing standalone party flow retained; obsolete Home-button test selector updated to current Add New Party label without changing exact destination/security assertions.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/account-masters.ts",
+            "src/app/actions/account-party-creation.test.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/components/account/custom-field-input.tsx",
+            "src/components/account/new-party-form.tsx",
+            "src/components/account/quotation-party-dialog.tsx",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "focused": "62 tests across4 action/service/feedback/party-boundary files PASS; includes committed identity only, validation/authorization failure exposes no created identity, company/active/authorized branch scope, Boolean false custom value and role-gated creation metadata.",
+            "browser": "4 desktop/mobile Chromium checks PASS (47.0s): standalone party flow including forged foreign branch rejection; inline cancel/draft retention, required custom value persisted, returned party selected, name/contact/phone search, distinct custom-field IDs, focus trap/restoration, scoped AXE, no horizontal overflow, estimate saved413 and no premature estimate save.",
+            "typescript": "PASS after Next dev regenerated types; earlier generated .next/dev/types/validator.ts syntax failure was transient build output, not a source pass.",
+            "eslint": "PASS focused sources/tests",
+            "initial_browser": "Focus restoration and unstable Notes accessible name failures corrected; rerun passed. Earlier standalone regression stopped on obsolete + New Party label; selector updated to actual + Add New Party while retaining exact route and guard assertions.",
+            "android": "NOT IMPLEMENTED by this web slice; native inline return flow remains next.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F02 remains PARTIAL: native inline party parity, Add New Item return flow, authorized stock/balance metadata and remaining original selector coverage. A071-F04 regression evidence does not promote final status."
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "Web floating action points to /workspace/customers/new, which requires SALES_CUSTOMERS plus PRIMARY_ADMIN/ADMIN sales role. Native action opens Account customers list, not direct creation.",
@@ -54897,6 +54923,32 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F03 remains PARTIAL: inclusive tax/rounding/supply context persistence and native live preview remain outstanding. A082-F02 retains remaining original scope; naming fix alone does not complete it."
+        },
+        "inline_quotation_party_2026_10_18": {
+          "implementation_commit": "d4ef3b4ad9c68955888f5c63982e568579d77db3",
+          "work": "Web quotation/estimate editor searches authorized saved parties by name/contact/phone and creates/selects a party inline through the full existing Account party form and mutation service. Required custom fields and company party settings are retained; creation uses only the selected branch and existing ACCOUNT_ACCOUNTS permission. Cancel/failed validation retain the estimate, modal close restores focus, pending save prevents dismissal. Per-form custom field IDs prevent collisions with quotation fields sharing the same key. Existing standalone party flow retained; obsolete Home-button test selector updated to current Add New Party label without changing exact destination/security assertions.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/account-masters.ts",
+            "src/app/actions/account-party-creation.test.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/components/account/custom-field-input.tsx",
+            "src/components/account/new-party-form.tsx",
+            "src/components/account/quotation-party-dialog.tsx",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "focused": "62 tests across4 action/service/feedback/party-boundary files PASS; includes committed identity only, validation/authorization failure exposes no created identity, company/active/authorized branch scope, Boolean false custom value and role-gated creation metadata.",
+            "browser": "4 desktop/mobile Chromium checks PASS (47.0s): standalone party flow including forged foreign branch rejection; inline cancel/draft retention, required custom value persisted, returned party selected, name/contact/phone search, distinct custom-field IDs, focus trap/restoration, scoped AXE, no horizontal overflow, estimate saved413 and no premature estimate save.",
+            "typescript": "PASS after Next dev regenerated types; earlier generated .next/dev/types/validator.ts syntax failure was transient build output, not a source pass.",
+            "eslint": "PASS focused sources/tests",
+            "initial_browser": "Focus restoration and unstable Notes accessible name failures corrected; rerun passed. Earlier standalone regression stopped on obsolete + New Party label; selector updated to actual + Add New Party while retaining exact route and guard assertions.",
+            "android": "NOT IMPLEMENTED by this web slice; native inline return flow remains next.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F02 remains PARTIAL: native inline party parity, Add New Item return flow, authorized stock/balance metadata and remaining original selector coverage. A071-F04 regression evidence does not promote final status."
         }
       },
       "push_checkpoint_evidence": {
