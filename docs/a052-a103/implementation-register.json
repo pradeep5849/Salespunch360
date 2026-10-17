@@ -35999,7 +35999,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -36020,6 +36020,23 @@
           "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
           "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
           "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
+        },
+        "independent_lifecycle_completion_2026_10_17": {
+          "commit": "6ee3904d8a2444720bbd1019c88d78e9fc760f0d",
+          "implementation_source_commit": "1398da331b44e25d1d50f1f723866bbbdd4f29d9",
+          "work": "Independently completed remaining verification of existing manual closure implementation against original F03. Added real PostgreSQL issued-vendor cheque/Cash-destination case:pending cheque leaves invoice unpaid and ledger unchanged;two concurrent closure calls create exactlyone balanced75 cash payment,leave25payable and preserve posted bill;reopen restores100payable without duplicating bill. Added actual period-lock rejection and final CHEQUE_FINANCIAL_ACTION audit trigger failure,proving receipt,journal,allocation and version rollback together. Existing receivedBank concurrent closure1593/retry/stale/scope/source tests and legacy completed-state/arbitrary-journal guard tests remain covered. No application service code or schema changed in this verification-only slice.",
+          "files": [
+            "src/lib/account/cheque-finance.integration.test.ts"
+          ],
+          "tests": {
+            "focused_unit_postgresql": "57 passed,0 failed,0 skipped across4 cheque finance/transitions PostgreSQL/runtime/scope files(8.23s),including3 new lifecycle regressions. Tests use isolated local *_ci DB only;fault triggers and period locks cleaned in finally.",
+            "typescript": "PASS",
+            "eslint": "PASS focused changed test file",
+            "web_responsive_prior_same_app_head": "Most recent actual application-code check at86fc2113:6 desktop/mobile cheque/transfer/owner cases passed plus last overlapping cheque pair2/2 passed(28.0s). No new browser execution for this test-only commit;final exact199 head still pending.",
+            "android": "No Android changes in this test-only slice;prior latest app build+4 cheque JVM cases passed(2m42s). No native device runtime.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Complete final199-head validation and native physical/device runtime pending. F03 code requirements are implemented;F02 legacy source andF05 native navigation/reference checks retain their own statuses. No final_status set."
         }
       },
       "push_checkpoint_evidence": {
@@ -36402,7 +36419,7 @@
             "record": "Final exact-head complete validation remains pending. Device/live-production checks are not claimed. Preserve original required tests and all limitations in recorded work."
           }
         ],
-        "verification_status": "PARTIAL",
+        "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
       }
     },
