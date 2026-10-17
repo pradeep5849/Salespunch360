@@ -9654,3 +9654,9 @@ Both findings remain PARTIAL. Inclusive-tax/rounding/supply persistence, native 
 Native editor now previews subtotal/discount/charges/taxable/tax/total using BigDecimal and the existing server fixture allocation/rounding behavior. Invalid input clears preview; unresolved blank master rates/taxes are not guessed. Draft payload and authoritative save remain unchanged, and no internal costs are exposed.
 
 Android compilation plus13 JVM tests pass (1m39s):6 preview and7 codec, zero failures/errors/skips. No emulator/device verification. A082-F03 remains PARTIAL for tax-mode/rounding/supply persistence and final output/runtime checks. Quotation calculation/service/PDF regressions added to targeted CI.
+
+### A087-F02 — canonical Sale Details entry, 2026-10-17
+
+Generic transaction invoice URLs now reach the existing scoped Sale Details page after unchanged document/ledger checks. This removes the active duplicate presentation with lossy Number subtraction, omitted metadata and placeholder balances/self-navigation. Non-sale transactions unchanged.
+
+4 desktop/mobile checks pass (59.5s), including redirect, retained metadata, edit/save/delete and cancelled/credit states.1 focused local PostgreSQL receipt/discount/credit/advance/party snapshot test passes (34 unrelated cases filtered out);5 pricing financial checks pass separately (30 filtered out). TypeScript/focused ESLint pass. A087-F02 remains PARTIAL for its remaining original action/attachment/shipping scope and final runtime parity.

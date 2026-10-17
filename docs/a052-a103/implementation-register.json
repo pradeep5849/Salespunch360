@@ -63180,6 +63180,22 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A087-F02 remains PARTIAL for full reference actions and unsupported attachment/shipping fields/native parity. A090-F01 other display consumers remain PARTIAL. No new native/device verification or financial posting change."
+        },
+        "canonical_sale_entry_2026_10_17": {
+          "implementation_commit": "c18524ba2d666f5eaad2078e864a011dbef605cb",
+          "work": "Generic transaction invoice entry redirects to canonical Sale Details after existing document/ledger checks. Removes the active duplicate renderer that used Number subtraction for received amounts, omitted retained metadata and used placeholder balance/self-navigation. Existing canonical receipt/discount/credit/advance/party snapshot is reused; generic non-sale views unchanged.",
+          "files": [
+            "src/app/workspace/account/transactions/[id]/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "browser": "4 desktop/mobile Chromium checks PASS (59.5s): generic invoice URLs reach canonical detail; edit/save/delete, retained header/item metadata, credits and cancelled balance/action states remain correct.",
+            "database": "1 focused local PostgreSQL sale-detail receipt/discount/credit/advance/party-balance test PASS;34 unrelated cases excluded by filter. Separate5 pricing financial tests PASS;30 cases excluded by filter. No full-suite claim.",
+            "typescript": "PASS",
+            "eslint": "PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A087-F02 remains PARTIAL for remaining original actions/shipping/attachments and final runtime parity. No migration/posting behavior changes."
         }
       },
       "push_checkpoint_evidence": {
