@@ -11436,6 +11436,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A058-F02 and linked A057-F03 remain PARTIAL for remaining catalogue/pricing matrix and final-head/device verification. Asked user which rate to use when item wholesale and active dated Wholesale Price List both exist;do not invent precedence."
+        },
+        "dated_wholesale_precedence_2026_10_17": {
+          "implementation_commit": "ff19a6ea91596bc724ada6adb6911f6acdb671a4",
+          "decision": "User approved active dated Wholesale Price List rate first, falling back to saved item wholesale price. Retail and Customer Price remain explicit separate choices.",
+          "work": "Company/active-product scoped catalogue options, deterministic newest-first ordering, inclusive date selector, web and native Wholesale selection. Catalogue net rate converts to document tax mode without stale master gross; saved per-unit sale discount applies. No automatic rewrite of existing billed lines, posting or master prices.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/customer-price-options.test.ts",
+            "src/lib/account/customer-price-options.ts",
+            "src/lib/account/customer-price-selection.test.ts",
+            "src/lib/account/customer-price-selection.ts",
+            "src/lib/account/item-pricing.ts"
+          ],
+          "tests": {
+            "focused": "27 tests in 3 files PASS; date endpoints, expired/no-match, master fallback, tax conversion, saved fixed discount, company/product query scoping, disabled/PM gates.",
+            "browser": "2 desktop/mobile Chromium cases PASS (1.0m): Retail100, dated Wholesale70 overriding master90, explicit Customer80, quantity3 discount30 and total210; no master price mutation/no horizontal overflow.",
+            "android": "compileDebugKotlin and 10 ItemMasterPricing JVM tests PASS (2m20s), 0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS focused source/test files",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Both original findings remain PARTIAL pending the remaining original pricing matrix and final-head/runtime verification. No migration or production operation."
         }
       },
       "intermediate_validation": {
@@ -12918,6 +12947,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A058-F02 and linked A057-F03 remain PARTIAL for remaining catalogue/pricing matrix and final-head/device verification. Asked user which rate to use when item wholesale and active dated Wholesale Price List both exist;do not invent precedence."
+        },
+        "dated_wholesale_precedence_2026_10_17": {
+          "implementation_commit": "ff19a6ea91596bc724ada6adb6911f6acdb671a4",
+          "decision": "User approved active dated Wholesale Price List rate first, falling back to saved item wholesale price. Retail and Customer Price remain explicit separate choices.",
+          "work": "Company/active-product scoped catalogue options, deterministic newest-first ordering, inclusive date selector, web and native Wholesale selection. Catalogue net rate converts to document tax mode without stale master gross; saved per-unit sale discount applies. No automatic rewrite of existing billed lines, posting or master prices.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/customer-price-options.test.ts",
+            "src/lib/account/customer-price-options.ts",
+            "src/lib/account/customer-price-selection.test.ts",
+            "src/lib/account/customer-price-selection.ts",
+            "src/lib/account/item-pricing.ts"
+          ],
+          "tests": {
+            "focused": "27 tests in 3 files PASS; date endpoints, expired/no-match, master fallback, tax conversion, saved fixed discount, company/product query scoping, disabled/PM gates.",
+            "browser": "2 desktop/mobile Chromium cases PASS (1.0m): Retail100, dated Wholesale70 overriding master90, explicit Customer80, quantity3 discount30 and total210; no master price mutation/no horizontal overflow.",
+            "android": "compileDebugKotlin and 10 ItemMasterPricing JVM tests PASS (2m20s), 0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS focused source/test files",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Both original findings remain PARTIAL pending the remaining original pricing matrix and final-head/runtime verification. No migration or production operation."
         }
       }
     },

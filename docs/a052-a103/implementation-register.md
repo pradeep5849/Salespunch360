@@ -9630,3 +9630,9 @@ A084-F03 / linked A090-F01 code `79fee310b469465cd618dc4c90949bbe81532d4b`: serv
 ## Native purchase default/cost parity — 17 October 2026
 
 A058-F02 / linked A057-F03 code `7c12a743e5e36e38837b65606ff79132668f3557`: native purchase draft uses saved company tax mode;explicit item selection converts normalized purchase cost and preserves manual discounts/source-history isolation. Passed Android compile+22 JVM tests(5+8+9,1m48s),2 desktop/mobile web/native-create/retry and retained report cases(1.1m),TypeScript/focused e2e lint. Actual native draft177 matches web;idempotent request yields one draft and no journal. Dated wholesale-vs-item price precedence asked asynchronously;other pricing/final-head/device scope remains PARTIAL. Counts176/21/2.
+
+### A057-F03 / A058-F02 — dated Wholesale selection, 2026-10-17
+
+Source commit `ff19a6ea`: active dated company Wholesale Price List rate wins; saved item wholesale price is fallback, as approved. Web and native selectors preserve separate Retail/Customer choices, inclusive tax conversion and saved per-unit discount. No posting, migration or master-price mutation.
+
+Validation: 27 focused tests pass; 2 desktop/mobile Chromium checks pass (1.0m); Android compilation and 10 pricing JVM tests pass (2m20s), zero failures/errors/skips; TypeScript and focused ESLint pass. No device runtime or complete final-head validation claimed. Both findings remain PARTIAL pending their broader original scope. All 199 IDs retained.
