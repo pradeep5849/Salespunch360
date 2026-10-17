@@ -9636,3 +9636,9 @@ A058-F02 / linked A057-F03 code `7c12a743e5e36e38837b65606ff79132668f3557`: nati
 Source commit `ff19a6ea`: active dated company Wholesale Price List rate wins; saved item wholesale price is fallback, as approved. Web and native selectors preserve separate Retail/Customer choices, inclusive tax conversion and saved per-unit discount. No posting, migration or master-price mutation.
 
 Validation: 27 focused tests pass; 2 desktop/mobile Chromium checks pass (1.0m); Android compilation and 10 pricing JVM tests pass (2m20s), zero failures/errors/skips; TypeScript and focused ESLint pass. No device runtime or complete final-head validation claimed. Both findings remain PARTIAL pending their broader original scope. All 199 IDs retained.
+
+### A090-F01 — warehouse Stock/Low Stock display, 2026-10-17
+
+Source `26bed7a0`: saved company currency/decimal/date formats now apply to warehouse stock cost/value and as-of date; quantities retain stock precision. Labelled, keyboard-focusable table scrolling contains mobile overflow. No accounting calculations changed.
+
+18 formatting unit tests and2 desktop/mobile browser checks pass (28.9s); TypeScript/focused ESLint pass. Initial test fixture assumed precision beyond existing persistence; corrected to representable12.34 before final pass. A090 remains PARTIAL; no Android device/full-head verification claimed.

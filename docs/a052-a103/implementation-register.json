@@ -64031,6 +64031,24 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03 other report layouts/computations and A090-F01 remaining display consumers/final-head/device verification remain PARTIAL. No migrations,posting rule changes or production access."
+        },
+        "warehouse_stock_display_2026_10_17": {
+          "implementation_commit": "26bed7a0e3414a19566c16f585b95e8707b71936",
+          "work": "Stock/Low Stock warehouse tables use company-scoped Money and AccountDate. Quantity remains stock precision; table has labelled keyboard-focusable horizontal overflow region. No accounting or numeric input conversion.",
+          "files": [
+            "src/app/workspace/account/inventory/[section]/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "unit": "18 display-preference tests PASS",
+            "browser": "2 desktop/mobile Chromium cases PASS (28.9s), both Stock and Low Stock USD3-decimal display/date context, unchanged master cost, no document overflow.",
+            "typescript": "PASS",
+            "eslint": "PASS",
+            "initial_browser": "Initial fixture assumed higher precision than existing stock persistence and failed 2 checks. Corrected fixture to representable12.34; no inventory calculation changed.",
+            "android": "Not changed by this web slice; no device claim.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090 remains PARTIAL for remaining display consumers and final-head/runtime checks. Hindi intentionally deferred by user."
         }
       },
       "intermediate_validation": {
