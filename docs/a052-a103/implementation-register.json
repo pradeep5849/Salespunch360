@@ -19149,6 +19149,14 @@
           ],
           "tests": "12 focused tests passed: bundle/piece equivalence, fractional factors, large exact values, overflow, invalid input/factors and non-representable fractions. TypeScript and focused ESLint passed.",
           "remaining": "PARTIAL \u2014 immutable commercial-line/allocation snapshots, source-preserving sale edits/returns, inventory and project-purchase valuation consumers and web/native transaction selectors remain to implement and verify."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "d2842592875c5d42d6b4d8958746c1949354f0dd",
+          "work": "Added validated immutable source-unit snapshot resolver. Return metadata uses saved factor and labels, not current item names/rates or active state; malformed snapshots and source-unit changes are rejected. Legacy source rows retain original unit meaning and cannot acquire an inferred secondary conversion. Added focused guards to CI. This resolver is not wired to document writes yet.",
+          "tests": "16 combined arithmetic/snapshot tests passed; TypeScript and focused lint passed. No live posting changes.",
+          "decision_pending": "Asked whether stock should be counted in the smallest unit (e.g. pieces for 1 box=12 pieces) or the primary unit at existing four-decimal precision. Awaiting user answer before choosing canonical stock basis or altering inventory posting/valuation. Continue independent findings meanwhile.",
+          "remaining": "PARTIAL; commercial line/allocation persistence, inventory/project receipt and return consumers, price-update conversion, reports and web/native transaction unit selection still pending."
         }
       ],
       "push_checkpoint_evidence": {

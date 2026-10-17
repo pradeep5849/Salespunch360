@@ -9585,3 +9585,8 @@ Code `c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e`: explicit item-specific secondar
 ### A062-F02 exact conversion arithmetic foundation — 2026-10-17
 
 Code `eb269e567d44d12eb7d39e9099303eeba04859b9`: 12 arithmetic tests, TypeScript and focused lint passed. Forty-eight-digit intermediate precision preserves large quantities; non-representable four-decimal stock quantities are rejected rather than silently rounded. Existing two-decimal rate precision retained. No production consumer wired yet; A062-F02 remains PARTIAL.
+
+
+### A062-F02 immutable source-unit resolver — 2026-10-17
+
+Code `d2842592875c5d42d6b4d8958746c1949354f0dd`: 16 combined arithmetic/snapshot tests, TypeScript and focused lint passed. Source factors/labels remain authoritative for returns and legacy rows acquire no guessed conversion. Resolver is not wired to document writes. Stock basis question is pending (smallest unit versus primary unit with four-decimal quantities); no inventory-posting rule chosen while waiting. Independent findings continue.
