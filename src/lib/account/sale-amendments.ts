@@ -285,6 +285,7 @@ export function replacePostedSaleForActor(
           transactionTime: sale.transactionTime ?? undefined,
           ewayBillNumber: sale.ewayBillNumber ?? undefined,
           notes: sale.notes ?? undefined,
+          paymentTerms:sale.paymentTerms??undefined,
           dueDate: sale.dueDate?.toISOString().slice(0, 10),
           projectId: sale.projectId ?? undefined,
           projectReference: sale.projectReference ?? undefined,
@@ -373,6 +374,13 @@ export function replacePostedSaleForActor(
         );
         if (replacement.id === sale.id || replacement.status !== "DRAFT")
           throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
+        // A renamed project must not rewrite an unedited invoice reference.
+        // This value comes only from the authorized original document.
+        if(payload.projectId===sale.projectId&&(raw as Record<string,unknown>).projectReference===undefined){
+          const kept=await tx.commercialDocument.updateMany({where:{id:replacement.id,companyId:actor.companyId,status:"DRAFT"},data:{projectReference:sale.projectReference}});
+          if(kept.count!==1)throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
+        }
+
         await ensureOpenFinancialYearForDate(
           actor.companyId,
           replacement.issueDate,

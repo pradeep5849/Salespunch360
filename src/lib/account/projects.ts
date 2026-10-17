@@ -186,9 +186,9 @@ export async function authorizeProjectForCommercial(
     await client.$queryRaw`SELECT "id" FROM "projects" WHERE "id"=${projectId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
   const project = await client.project.findFirst({
     where: {
+      ...projectRecordScope(actor, ids),
       id: projectId,
       branchId,
-      ...projectRecordScope(actor, ids),
       status: { notIn: [...FINAL_PROJECT_STATUSES] },
       ...(customerId ? { customerId } : {}),
     },

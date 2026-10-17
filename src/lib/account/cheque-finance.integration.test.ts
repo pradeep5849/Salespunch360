@@ -1288,5 +1288,32 @@ describe.skipIf(!url)(
       expect(await client.cheque.count({where:{companyId}})).toBe(before);expect(await client.accountSettlement.count({where:{companyId}})).toBe(settlements);expect(await client.journalEntry.count({where:{companyId}})).toBe(journals);expect(await outstanding(otherDoc.id)).toBe("100.00");
     });
 
+    it("A086 retains unedited header/project snapshots and net ledger effects across sale replacement",async()=>{
+      const previous=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+      await client.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+      try{
+        const project=await client.project.create({data:{companyId,branchId,customerId,projectNumber:randomUUID(),name:"Original invoice project",createdById:userId}});
+        const otherProject=await client.project.create({data:{companyId,branchId:otherBranch,customerId,projectNumber:randomUUID(),name:"Other branch project",createdById:userId}});
+        const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,projectId:project.id,issueDate:"2026-10-10",dueDate:"2026-10-25",paymentTerms:"Net 15 days",notes:"Retained invoice note",billingName:"Retained billing site",customerPoNumber:"ORIGINAL-PO",customerPoDate:"2026-10-09",transactionTime:"10:15",ewayBillNumber:"123456789012",stateOfSupplyCode:"29",freightAmount:"20",otherChargesAmount:"10",roundOffAmount:"-0.25",lines:[{lineType:"CUSTOM",itemName:"Original metadata service",itemCode:"META-1",description:"Retained description",specification:"Retained specification",unitName:"Square foot",unitSymbol:"sqft",quantity:"1",rate:"100",taxRate:"0"}]});
+        await postCommercialDocumentForActor(actor,{documentId:sale.id});
+        const original=await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id},include:{lines:true}});
+        const originalJournal=await client.journalLine.findMany({where:{companyId,journalEntry:{sourceId:sale.id,status:"POSTED"}}});
+        await client.project.update({where:{id:project.id},data:{name:"Project renamed after invoice"}});
+        const patch={idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-10",lines:[{originalLineId:original.lines[0].id,lineType:"CUSTOM",quantity:"1",rate:"100"}]};
+        await expect(replacePostedSaleForActor(actor,sale.id,{...patch,projectId:otherProject.id})).rejects.toThrow();
+        expect(await client.commercialDocument.count({where:{companyId,sourceDocumentId:sale.id,type:"CREDIT_NOTE"}})).toBe(0);
+        const replacement=await replacePostedSaleForActor(actor,sale.id,patch);
+        const saved=await client.commercialDocument.findUniqueOrThrow({where:{id:replacement.id},include:{lines:true}});
+        for(const field of ["projectId","projectReference","dueDate","paymentTerms","notes","billingName","customerPoNumber","customerPoDate","transactionTime","ewayBillNumber","stateOfSupplyCode","freightAmount","otherChargesAmount","roundOffAmount","grandTotal"] as const)expect(saved[field]).toEqual(original[field]);
+        expect(saved.lines[0]).toMatchObject({itemName:"Original metadata service",itemCode:"META-1",description:"Retained description",specification:"Retained specification",unitName:"Square foot",unitSymbol:"sqft"});
+        expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id},include:{lines:true}})).toEqual(original);
+        const credit=await client.commercialDocument.findFirstOrThrow({where:{companyId,sourceDocumentId:sale.id,type:"CREDIT_NOTE",status:"POSTED"}});
+        const combined=await client.journalLine.findMany({where:{companyId,journalEntry:{sourceId:{in:[sale.id,credit.id,replacement.id]},status:"POSTED"}}});
+        const totals=(lines:typeof combined)=>{const sums=new Map<string,Prisma.Decimal>();for(const line of lines)sums.set(line.ledgerAccountId,(sums.get(line.ledgerAccountId)??new Prisma.Decimal(0)).add(line.debit).sub(line.credit));return [...sums].filter(([,value])=>!value.isZero()).map(([id,value])=>[id,value.toFixed(2)]).sort()};
+        expect(totals(combined)).toEqual(totals(originalJournal));
+        expect((await replacePostedSaleForActor(actor,sale.id,patch)).id).toBe(replacement.id);
+      }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:previous.enabledModules}});}
+    });
+
   },
 );
