@@ -9622,3 +9622,7 @@ A084-F03 / linked A090-F01 code `fcb476a069bd581f55f082a8215e2dae4885f1eb`: scop
 ## Project report destinations and native declared filters — 17 October 2026
 
 A085-F02 / linked A084-F03 code `68a2882672ebf634e0c8ee315a14f6321ed478be`: existing Material Consumption/Project Transfer now discoverable;optional module/role scope retained. Android renders declared entity selectors,including Purchase Register Vendor,and keeps legacy fallback. Passed29 focused/local PostgreSQL tests,2 desktop/mobile hub/API/module/role/Axe/no-write cases(56.2s),Android compile+8 JVM tests(1m49s),TypeScript/focused lint. Native device/runtime and complete-head validation pending. Remaining report scope PARTIAL;counts176/21/2.
+
+## Cash/Bank scoped tabs and equation — 17 October 2026
+
+A084-F03 / linked A090-F01 code `79fee310b469465cd618dc4c90949bbe81532d4b`: server-validated All/Cash/Bank/Petty tabs,matching exports/native scope,opening/receipts/payments/closing summary and Reports Back context. High-precision shared read aggregates preserve cents. Native cold metadata requests keep explicit money type and exclude stale dimensions. Passed76 focused/local PostgreSQL tests(7 files,13.65s),final desktop/mobile real-journal tabs/CSV/native/Axe/no-write2/2(39.2s),final Android compile+10 JVM tests(1m51s),TypeScript/focused lint. No migration or production change. Other report/display/device/final-head scope remains PARTIAL;counts176/21/2. Targeted CI passed at prior9d027b8f(run39041409690);newer source needs CI.

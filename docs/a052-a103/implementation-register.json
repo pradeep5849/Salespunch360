@@ -56780,6 +56780,34 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A085-F02/A084-F03 other supplied computations/layouts remain PARTIAL. No balance-report relabelling,stock basis change,migration or production write."
+        },
+        "cash_bank_tabs_2026_10_17": {
+          "implementation_commit": "79fee310b469465cd618dc4c90949bbe81532d4b",
+          "work": "Cash/Bank type selector (All,Cash,Bank,Petty Cash) is validated/applied by shared report service and retained by exports. Summary shows opening+receipts-payments=closing. Web links retain branch/period; Back returns scoped Reports hub. Native chips and request builder retain explicit account type before metadata loads,omit stale/unsupported entity scopes and keep invalid explicit money scope for server validation instead of widening. Shared report-service aggregates use48-digit Decimal precision. Added new focused report regressions to targeted CI.",
+          "files": [
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/cash-bank.test.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/app/workspace/account/reports/[report]/cash-bank-tabs.module.css",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "financial_database": "76 passed across7 focused/local PostgreSQL files(13.65s),including account-type query bounds,invalid filters,empty summaries,large aggregate cents and existing financial workflows;0 failed/skipped",
+            "browser": "Final2 desktop/mobile Chromium PASS(39.2s),real opening journals100 bank/50 cash/5 petty and20 cash-to-bank transfer;bank closing120,cash30,petty5;selected tabs/CSV/native API/source scope/Back context/Axe/overflow/no extra journal writes",
+            "android": "Final compileDebugKotlin and10 AccountReportData JVM tests PASS(1m51s),0 failures/errors/skips;includes cold metadata/filter scope contract. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 other report layouts/computations and A090-F01 remaining display consumers/final-head/device verification remain PARTIAL. No migrations,posting rule changes or production access."
         }
       }
     },
@@ -63879,6 +63907,34 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03 remains PARTIAL: other report-specific layouts/filter/computation scope outstanding. A090-F01 other display consumers/final-head verification remain PARTIAL."
+        },
+        "cash_bank_tabs_2026_10_17": {
+          "implementation_commit": "79fee310b469465cd618dc4c90949bbe81532d4b",
+          "work": "Cash/Bank type selector (All,Cash,Bank,Petty Cash) is validated/applied by shared report service and retained by exports. Summary shows opening+receipts-payments=closing. Web links retain branch/period; Back returns scoped Reports hub. Native chips and request builder retain explicit account type before metadata loads,omit stale/unsupported entity scopes and keep invalid explicit money scope for server validation instead of widening. Shared report-service aggregates use48-digit Decimal precision. Added new focused report regressions to targeted CI.",
+          "files": [
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/cash-bank.test.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/app/workspace/account/reports/[report]/cash-bank-tabs.module.css",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "financial_database": "76 passed across7 focused/local PostgreSQL files(13.65s),including account-type query bounds,invalid filters,empty summaries,large aggregate cents and existing financial workflows;0 failed/skipped",
+            "browser": "Final2 desktop/mobile Chromium PASS(39.2s),real opening journals100 bank/50 cash/5 petty and20 cash-to-bank transfer;bank closing120,cash30,petty5;selected tabs/CSV/native API/source scope/Back context/Axe/overflow/no extra journal writes",
+            "android": "Final compileDebugKotlin and10 AccountReportData JVM tests PASS(1m51s),0 failures/errors/skips;includes cold metadata/filter scope contract. No emulator/device runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 other report layouts/computations and A090-F01 remaining display consumers/final-head/device verification remain PARTIAL. No migrations,posting rule changes or production access."
         }
       },
       "intermediate_validation": {
@@ -66086,6 +66142,31 @@
         "final_complete_head": "NOT RUN"
       },
       "scope": "Intermediate existing Project report destinations/native declared filters;final validation pending"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "79fee310b469465cd618dc4c90949bbe81532d4b",
+      "finding_ids": [
+        "A084-F03",
+        "A090-F01"
+      ],
+      "evidence": {
+        "financial_database": "76 passed across7 focused/local PostgreSQL files(13.65s),including account-type query bounds,invalid filters,empty summaries,large aggregate cents and existing financial workflows;0 failed/skipped",
+        "browser": "Final2 desktop/mobile Chromium PASS(39.2s),real opening journals100 bank/50 cash/5 petty and20 cash-to-bank transfer;bank closing120,cash30,petty5;selected tabs/CSV/native API/source scope/Back context/Axe/overflow/no extra journal writes",
+        "android": "Final compileDebugKotlin and10 AccountReportData JVM tests PASS(1m51s),0 failures/errors/skips;includes cold metadata/filter scope contract. No emulator/device runtime.",
+        "typescript": "PASS",
+        "eslint": "PASS focused",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate Cash/Bank scope/summary/formatting parity;no final verification promotion"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "9d027b8f0fdb1d910c38dd7a2aab32f94a7333cc",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39041409690",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "scope": "Prior grouped-ledger checkpoint;does not verify later catalogue/CashBank continuation"
     }
   ]
 }
