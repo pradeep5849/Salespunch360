@@ -55265,6 +55265,22 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F03 remains PARTIAL: inclusive tax/rounding/supply context persistence and native live preview remain outstanding. A082-F02 retains remaining original scope; naming fix alone does not complete it."
+        },
+        "native_quotation_preview_2026_10_17": {
+          "implementation_commit": "9b27d7fd7a49f07719b552485e5384994be4aeb9",
+          "work": "Native quotation editor previews exclusive-tax subtotal/discount/charges/taxable/tax/total with BigDecimal, matching existing server fixture rounding and proportional document discount allocation. Invalid/incomplete values clear preview, unresolved blank master rates/taxes are not guessed. No cost/profit data exposed; saving unchanged and server-authoritative. Quotation calculator/service/PDF tests added to targeted CI.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPreview.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPreviewTest.kt",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin plus13 JVM tests PASS (1m39s):6 preview+7 draft codec,0 failures/errors/skips; quantity/tax, fixed/percentage discounts, mixed GST allocation/remainder, taxable charges, invalid recovery/unchanged draft, unknown master tax.",
+            "device_runtime": "NOT RUN; no emulator/device available",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 stays PARTIAL for inclusive-tax/rounding/supply persistence and final runtime/output verification; JVM parity does not certify device rendering."
         }
       }
     },

@@ -9648,3 +9648,9 @@ Source `26bed7a0`: saved company currency/decimal/date formats now apply to ware
 Web editor now previews through the authoritative Decimal quotation calculator, recovers invalid input without stale totals, and respects cost visibility. Branch/Customer/discount controls have explicit accessible names.68 grouped calculation/service/PDF tests and4 isolated local PostgreSQL audit tests pass.2 desktop/mobile browser checks pass (24.4s), including413 before discount,371.70 after10% discount, saved server agreement, no journal posting, scoped accessibility and overflow. TypeScript/focused ESLint pass. Initial ambiguous-label timeout corrected before final run.
 
 Both findings remain PARTIAL. Inclusive-tax/rounding/supply persistence, native live totals and remaining original selector scope are not claimed complete.
+
+### A082-F03 — native exclusive-tax quotation preview, 2026-10-17
+
+Native editor now previews subtotal/discount/charges/taxable/tax/total using BigDecimal and the existing server fixture allocation/rounding behavior. Invalid input clears preview; unresolved blank master rates/taxes are not guessed. Draft payload and authoritative save remain unchanged, and no internal costs are exposed.
+
+Android compilation plus13 JVM tests pass (1m39s):6 preview and7 codec, zero failures/errors/skips. No emulator/device verification. A082-F03 remains PARTIAL for tax-mode/rounding/supply persistence and final output/runtime checks. Quotation calculation/service/PDF regressions added to targeted CI.
