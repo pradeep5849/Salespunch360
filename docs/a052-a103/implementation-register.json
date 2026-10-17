@@ -56759,6 +56759,27 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03 remains PARTIAL: other report-specific layouts/filter/computation scope outstanding. A090-F01 other display consumers/final-head verification remain PARTIAL."
+        },
+        "project_movement_catalogue_2026_10_17": {
+          "implementation_commit": "68a2882672ebf634e0c8ee315a14f6321ed478be",
+          "work": "Existing Material Consumption and Project Transfer computations now map through shared catalogue and consume Project/Product filters. Optional Projects+Project Costing gate catalogue availability; existing endpoint permissions/branch/company gates retained. Android renders declared owner/ledger/customer/vendor/product selectors from server metadata,including Purchase Register vendor control;legacy fallback retained.",
+          "files": [
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+          ],
+          "tests": {
+            "focused_database": "29 passed across4 catalogue/local PostgreSQL favourites/service boundary/material report files;0 failed/skipped",
+            "browser": "2 desktop/mobile Chromium cases PASS(56.2s),hub search/favourites/source pages,actual native API200 when enabled/403 when disabled,hidden disabled destinations,Project Manager restrictions,AXE/overflow and no ledger writes",
+            "android": "compileDebugKotlin and8 AccountReportData JVM tests PASS(1m49s),0 failures/errors/skips;native selector rendering is source/compile verification,no device runtime",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A085-F02/A084-F03 other supplied computations/layouts remain PARTIAL. No balance-report relabelling,stock basis change,migration or production write."
         }
       }
     },
@@ -60550,6 +60571,27 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A085-F02 / linked A084-F03 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device verification. No migrations or production changes."
+        },
+        "project_movement_catalogue_2026_10_17": {
+          "implementation_commit": "68a2882672ebf634e0c8ee315a14f6321ed478be",
+          "work": "Existing Material Consumption and Project Transfer computations now map through shared catalogue and consume Project/Product filters. Optional Projects+Project Costing gate catalogue availability; existing endpoint permissions/branch/company gates retained. Android renders declared owner/ledger/customer/vendor/product selectors from server metadata,including Purchase Register vendor control;legacy fallback retained.",
+          "files": [
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+          ],
+          "tests": {
+            "focused_database": "29 passed across4 catalogue/local PostgreSQL favourites/service boundary/material report files;0 failed/skipped",
+            "browser": "2 desktop/mobile Chromium cases PASS(56.2s),hub search/favourites/source pages,actual native API200 when enabled/403 when disabled,hidden disabled destinations,Project Manager restrictions,AXE/overflow and no ledger writes",
+            "android": "compileDebugKotlin and8 AccountReportData JVM tests PASS(1m49s),0 failures/errors/skips;native selector rendering is source/compile verification,no device runtime",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A085-F02/A084-F03 other supplied computations/layouts remain PARTIAL. No balance-report relabelling,stock basis change,migration or production write."
         }
       }
     },
@@ -66027,6 +66069,23 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Prior Purchase Register checkpoint;does not verify later ledger breakdown slice"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "68a2882672ebf634e0c8ee315a14f6321ed478be",
+      "finding_ids": [
+        "A085-F02",
+        "A084-F03"
+      ],
+      "evidence": {
+        "focused_database": "29 passed across4 catalogue/local PostgreSQL favourites/service boundary/material report files;0 failed/skipped",
+        "browser": "2 desktop/mobile Chromium cases PASS(56.2s),hub search/favourites/source pages,actual native API200 when enabled/403 when disabled,hidden disabled destinations,Project Manager restrictions,AXE/overflow and no ledger writes",
+        "android": "compileDebugKotlin and8 AccountReportData JVM tests PASS(1m49s),0 failures/errors/skips;native selector rendering is source/compile verification,no device runtime",
+        "typescript": "PASS",
+        "eslint": "PASS focused",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate existing Project report destinations/native declared filters;final validation pending"
     }
   ]
 }
