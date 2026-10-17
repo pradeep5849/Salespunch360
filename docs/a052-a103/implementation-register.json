@@ -61586,7 +61586,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -61604,7 +61604,29 @@
           "src/app/workspace/account/transactions/new/commercial-editor.tsx",
           "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
           "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt"
-        ]
+        ],
+        "retained_header_and_exact_branch_2026_10_17": {
+          "date": "2026-10-17",
+          "implementation_commit": "735a581e177644500210711961e573c951c94ec0",
+          "work": "Preserve omitted paymentTerms and original Project reference when linked Project is renamed. Revalidate exact invoice branch after tenant/assignment scope; fixed spread order that previously allowed another authorized branch Project. Original posted sale and journals remain immutable; retry resolves same replacement.",
+          "files": [
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/projects.ts",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/projects.security.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "financial": "45 passed across cheque-finance.integration,projects.security,a6-closure.contract (6.99s). Real PostgreSQL unchanged metadata/lines, ledger equivalence, wrong-branch rollback and retry tested.",
+            "projects": "56 passed across project-workflow.integration,project-purchase-inventory.runtime,projects.authorization,commercial-project-input (7.47s); ACCOUNT_INTEGRATION_DATABASE_URL supplied for real local DB. Earlier run skipped41 without correct env and is not claimed as database evidence.",
+            "browser": "2 passed desktop/mobile Chromium (44.5s), retained invoice and native-service payload snapshots including paymentTerms.",
+            "android": "compileDebugKotlin and 11 SalesEditSnapshot/SalesPreview JVM tests passed,0 failures/errors/skips (20s). No device runtime.",
+            "typescript": "PASS",
+            "changed_file_eslint": "PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Complete final-head regression and native device runtime pending. Paid editing and shipping/attachments remain separate A086-F05/F06 findings."
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "Actual edit-page initial and save payload omit projectId, dueDate, notes, freight/other charges, itemCode and specification. Saving an unchanged invoice creates a replacement with omitted values/defaults; project attribution and due-date/print information can be lost.",
@@ -61759,7 +61781,7 @@
             "record": "Final exact-head complete validation remains pending. Device/live-production checks are not claimed. Preserve original required tests and all limitations in recorded work."
           }
         ],
-        "verification_status": "PARTIAL",
+        "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
       }
     },
@@ -65671,6 +65693,23 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Previous optional-bank/native-validation/display checkpoint;does not verify newer report-hub changes"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "735a581e177644500210711961e573c951c94ec0",
+      "finding_ids": [
+        "A086-F03"
+      ],
+      "evidence": {
+        "financial": "45 passed across cheque-finance.integration,projects.security,a6-closure.contract (6.99s). Real PostgreSQL unchanged metadata/lines, ledger equivalence, wrong-branch rollback and retry tested.",
+        "projects": "56 passed across project-workflow.integration,project-purchase-inventory.runtime,projects.authorization,commercial-project-input (7.47s); ACCOUNT_INTEGRATION_DATABASE_URL supplied for real local DB. Earlier run skipped41 without correct env and is not claimed as database evidence.",
+        "browser": "2 passed desktop/mobile Chromium (44.5s), retained invoice and native-service payload snapshots including paymentTerms.",
+        "android": "compileDebugKotlin and 11 SalesEditSnapshot/SalesPreview JVM tests passed,0 failures/errors/skips (20s). No device runtime.",
+        "typescript": "PASS",
+        "changed_file_eslint": "PASS",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate supported metadata and shared Project authorization regression; no final verification promotion"
     }
   ]
 }

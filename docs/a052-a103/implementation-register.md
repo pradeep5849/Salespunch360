@@ -8398,7 +8398,7 @@ Checkpoint evidence: atomic source-bound amendment and reversal replay; full cre
 
 **Required tests:** Unchanged edit retains project/due date/notes/charges/code/specification; changed line and authorized target checks; posted financial equivalence.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Own supplied-reference/source audit complete. Shared Add/Edit Sale form prefilled; inclusive GST/cess preview and footer clearance corrected; hidden header metadata retained server-side; full credit/replacement behavior tested.", "tests": "Own mobile+desktop Edit Sale/header retention/delete cases passed (2 of 6 corrected sales cases); related reverse-charge/tracked stock/custom-invoice cases passed. TypeScript and targeted ESLint passed. See follow-up for earlier failed runs.", "finding_status": null, "evidence": ["SalesPunch360_Sale_Edit_Checkpoint.md", "SalesPunch360_A086-A089_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -9590,3 +9590,7 @@ Code `eb269e567d44d12eb7d39e9099303eeba04859b9`: 12 arithmetic tests, TypeScript
 ### A062-F02 immutable source-unit resolver — 2026-10-17
 
 Code `d2842592875c5d42d6b4d8958746c1949354f0dd`: 16 combined arithmetic/snapshot tests, TypeScript and focused lint passed. Source factors/labels remain authoritative for returns and legacy rows acquire no guessed conversion. Resolver is not wired to document writes. Stock basis question is pending (smallest unit versus primary unit with four-decimal quantities); no inventory-posting rule chosen while waiting. Independent findings continue.
+
+## Sale retained metadata and exact Project branch — 17 October 2026
+
+Code `735a581e177644500210711961e573c951c94ec0`: A086-F03 supported retained metadata is implemented. Payment terms and historical Project reference now survive routine correction; shared Project authorization requires exact document branch after tenant/assignment scoping. Real PostgreSQL tests prove unchanged header/line snapshots, financial equivalence, original immutability, cross-branch rollback and retry. Passed 45 financial/security checks + 56 related Project checks; desktop/mobile web 2/2; Android compile and 11 JVM tests; TypeScript and focused lint. Earlier Project run skipped 41 without its integration URL; corrected real-database run passed all 56. No final-head or device verification claimed. Counts: 176 IMPLEMENTED BUT NOT VERIFIED / 21 PARTIAL / 2 NOT STARTED. Paid editing and attachments remain separate open findings.
