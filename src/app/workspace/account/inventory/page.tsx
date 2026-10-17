@@ -64,6 +64,7 @@ export default async function Page({
   );
   const items = [
     ...products.map((p) => ({
+      hasPhoto:!!p.photoObjectKey,
       id: p.id,
       type: "PRODUCT" as const,
       name: p.name,
@@ -75,6 +76,7 @@ export default async function Page({
       stock: quantities.get(p.id)?.toString() ?? "0",
     })),
     ...services.map((s) => ({
+      hasPhoto:!!s.photoObjectKey,
       id: s.id,
       type: "SERVICE" as const,
       name: s.name,

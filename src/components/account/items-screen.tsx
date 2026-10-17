@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import {useDisplayPreferences} from "./display-preferences";
 import {formatMoney} from "@/lib/account/display-preferences";
@@ -13,6 +14,7 @@ import {
 import { AccountIcon, type AccountIconName } from "./account-icons";
 
 type Item = {
+  hasPhoto?:boolean;
   id: string;
   type: "PRODUCT" | "SERVICE";
   name: string;
@@ -238,6 +240,7 @@ export function ItemsScreen({
           visible.map((item) => (
             <article className="account-item-card" key={item.id}>
               <div>
+                {item.hasPhoto&&<Image unoptimized src={`/api/account/item-photos/${item.type==="PRODUCT"?"products":"services"}/${item.id}`} width={56} height={56} alt={`${item.name} photo`}/>}
                 <h2>{item.name}</h2>
                 {item.category && (
                   <span className="account-category">{item.category}</span>

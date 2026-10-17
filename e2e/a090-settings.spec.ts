@@ -2195,3 +2195,37 @@ test("A057 Customer Price is separate from Retail and respects active dates",asy
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
  } finally {await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{},enabledModules:previous.enabledModules,defaultTaxMode:previous.defaultTaxMode}})}
 });
+
+test("A058 private item photos persist and upload recovery never recreates an item",async({page})=>{
+ test.setTimeout(150000);
+ const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),name=`Item photo ${randomUUID().slice(0,8)}`,recoveryName=`Photo recovery ${randomUUID().slice(0,8)}`;
+ await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,enabled:true},enabledModules:["INVENTORY"]}});
+ const bytes=await (await import("sharp")).default({create:{width:60,height:40,channels:3,background:"red"}}).png().toBuffer();
+ try{
+  await signInSettings(page);await page.goto("/workspace/account/inventory/items/new");await page.getByRole("textbox",{name:"Item Name *",exact:true}).fill(name);
+  const picker=page.getByLabel("Item photo",{exact:true});await picker.setInputFiles({name:"bad.txt",mimeType:"text/plain",buffer:Buffer.from("plain")});await expect(page.getByText("Choose an image up to 5 MB.",{exact:true})).toBeVisible();expect(await db.accountProduct.count({where:{companyId,name}})).toBe(0);
+  await picker.setInputFiles({name:"red.png",mimeType:"image/png",buffer:bytes});await expect(page.getByText("Photo selected: red.png",{exact:false})).toBeVisible();await page.getByRole("button",{name:"Remove photo",exact:true}).click();await expect(page.getByRole("button",{name:"Remove photo",exact:true})).toHaveCount(0);
+  await picker.setInputFiles({name:"red.png",mimeType:"image/png",buffer:bytes});await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/account\/inventory$/,{timeout:20000});
+  const row=await db.accountProduct.findFirstOrThrow({where:{companyId,name}});expect(await db.accountProduct.count({where:{companyId,name}})).toBe(1);expect(row.photoObjectKey).toBeTruthy();
+  const image=page.getByRole("img",{name:`${name} photo`,exact:true});await expect(image).toBeVisible();await expect.poll(()=>image.evaluate(node=>(node as HTMLImageElement).naturalWidth)).toBe(60);
+  const response=await page.request.get(`/api/account/item-photos/products/${row.id}`);expect(response.status()).toBe(200);expect(response.headers()["content-type"]).toBe("image/webp");expect(response.headers()["cache-control"]).toBe("private, no-store");expect((await page.request.get(`/api/account/item-photos/products/${randomUUID()}`)).status()).toBe(404);
+  await page.goto("/workspace/account/inventory/items/new");await page.getByRole("textbox",{name:"Item Name *",exact:true}).fill(recoveryName);await page.getByLabel("Item photo",{exact:true}).setInputFiles({name:"corrupt.jpg",mimeType:"image/jpeg",buffer:Buffer.from("not an image")});await page.getByRole("button",{name:"Save",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Item saved",exact:true})).toBeVisible({timeout:20000});expect(await db.accountProduct.count({where:{companyId,name:recoveryName}})).toBe(1);const target=await db.accountProduct.findFirstOrThrow({where:{companyId,name:recoveryName}});expect(target.photoObjectKey).toBeNull();
+  await page.getByLabel("Replacement item photo",{exact:true}).setInputFiles({name:"replacement.png",mimeType:"image/png",buffer:bytes});expect((await new AxeBuilder({page}).include('section[aria-label="Item photo recovery"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);await page.getByRole("button",{name:"Retry photo upload",exact:true}).click();await expect(page).toHaveURL(/\/account\/inventory$/,{timeout:20000});expect(await db.accountProduct.count({where:{companyId,name:recoveryName}})).toBe(1);expect((await db.accountProduct.findUniqueOrThrow({where:{id:target.id}})).photoObjectKey).toBeTruthy();expect(await db.accountOperationalAudit.count({where:{companyId,eventType:"ITEM_PHOTO_SAVED",entityId:target.id}})).toBe(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+ }finally{const photos=await db.accountProduct.findMany({where:{companyId,name:{in:[name,recoveryName]}},select:{photoObjectKey:true}});for(const row of photos)if(row.photoObjectKey)await privateStorage().delete(row.photoObjectKey).catch(()=>{});await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{},enabledModules:previous.enabledModules}})}
+});
+
+test("A058 native item photo API enforces company role and Items OFF and strips storage keys",async({request})=>{
+ test.setTimeout(120000);const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),service=await db.accountService.create({data:{companyId,name:`Native photo ${randomUUID().slice(0,8)}`}});
+ await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,enabled:true}}});
+ const bytes=await (await import("sharp")).default({create:{width:10,height:10,channels:3,background:"blue"}}).png().toBuffer();
+ try{
+  const login=await request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"Item photo API"}});expect(login.status()).toBe(200);const headers={authorization:`Bearer ${(await login.json()).accessToken}`},path=`/api/v1/mobile/account/item-photos/services/${service.id}`;
+  expect((await request.get(path)).status()).toBe(401);const upload=await request.post(path,{headers,multipart:{photo:{name:"blue.png",mimeType:"image/png",buffer:bytes}}});expect(upload.status()).toBe(200);expect(await upload.json()).toMatchObject({id:service.id,hasPhoto:true});expect((await request.get(path,{headers})).status()).toBe(200);
+  const list=await request.get(`/api/v1/mobile/account/master-data/services/${service.id}`,{headers});expect(list.status()).toBe(200);const raw=await list.text();expect(raw).not.toContain("photoObjectKey");expect(raw).toContain('"hasPhoto":true');
+  expect((await request.post(`/api/v1/mobile/account/item-photos/services/${randomUUID()}`,{headers,multipart:{photo:{name:"blue.png",mimeType:"image/png",buffer:bytes}}})).status()).toBe(404);
+  expect((await request.post(path,{headers,multipart:{photo:{name:"bad.jpg",mimeType:"image/jpeg",buffer:Buffer.from("bad")}}})).status()).toBe(400);
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,enabled:false}}});expect((await request.post(path,{headers,multipart:{photo:{name:"blue.png",mimeType:"image/png",buffer:bytes}}})).status()).toBe(403);await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,enabled:true}}});
+  await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});expect((await request.get(path,{headers})).status()).toBe(403);expect((await request.post(path,{headers,multipart:{photo:{name:"blue.png",mimeType:"image/png",buffer:bytes}}})).status()).toBe(403);
+ }finally{settingsCookies=[];await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});const row=await db.accountService.findUnique({where:{id:service.id}});if(row?.photoObjectKey)await privateStorage().delete(row.photoObjectKey).catch(()=>{});await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{}}})}
+});

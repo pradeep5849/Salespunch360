@@ -133,6 +133,7 @@ fun AccountItemsScreen(
                 ElevatedCard(Modifier.fillMaxWidth()){
                     Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                            if(r.hasPhoto)ItemPhotoViewer(if(item.kind=="PRODUCT")"products"else "services",r.id,r.name)
                             Text(r.name,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
                             IconButton(onClick={
                                 shareError=null

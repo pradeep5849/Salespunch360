@@ -1,5 +1,11 @@
 package com.salespunch360.mobile.ui.account.inventory
 import kotlinx.serialization.json.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -39,6 +45,16 @@ fun AddItemScreen(
     initialService:Boolean=false
 ){
     val s=vm.state.collectAsStateWithLifecycle().value
+    val context=LocalContext.current
+    val photoScope=rememberCoroutineScope()
+    var photoBytes by remember{mutableStateOf<ByteArray?>(null)}
+    var photoMime by remember{mutableStateOf("image/jpeg")}
+    var photoError by remember{mutableStateOf<String?>(null)}
+    var photoLoading by remember{mutableStateOf(false)}
+    val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->if(uri!=null){photoLoading=true;photoScope.launch{
+        runCatching{withContext(Dispatchers.IO){val mime=context.contentResolver.getType(uri).orEmpty();require(mime.startsWith("image/"));val bytes=context.contentResolver.openInputStream(uri)?.use{input->val output=java.io.ByteArrayOutputStream();val chunk=ByteArray(8192);while(true){val count=input.read(chunk);if(count<0)break;require(output.size()+count<=5*1024*1024);output.write(chunk,0,count)};output.toByteArray()}?:error("Unable to read image");require(bytes.isNotEmpty()&&bytes.size<=5*1024*1024);mime to bytes}}.onSuccess{photoMime=it.first;photoBytes=it.second;photoError=null}.onFailure{photoBytes=null;photoError="Choose a readable image up to 5 MB."};photoLoading=false
+    }}}
+    if(s.photoPending){Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Item saved",style=MaterialTheme.typography.headlineSmall);Text(s.error?:"Uploading item photo…");photoError?.let{Text(it,color=MaterialTheme.colorScheme.error)};TextButton(enabled=!s.saving&&!photoLoading,onClick={photoPicker.launch("image/*")}){Text("Choose replacement photo")};Button(enabled=!s.saving,onClick={vm.retryPhoto(back,photoBytes?.let{photoMime to it})}){Text("Retry photo upload")};TextButton(enabled=!s.saving,onClick=back){Text("Continue without photo")}};return}
     var service by remember(initialService){mutableStateOf(initialService)}
     var name by remember{mutableStateOf("")}
     var customValues by remember(service){mutableStateOf<Map<String,String>>(emptyMap())}
@@ -137,7 +153,7 @@ fun AddItemScreen(
                 title={Text("Add Item")},
                 navigationIcon={IconButton(onClick=back){Icon(Icons.Default.ArrowBack,"Back")}},
                 actions={
-                    IconButton(onClick={}){Icon(Icons.Default.AddAPhoto,"Add item image")}
+                    IconButton(enabled=!s.saving&&!photoLoading,onClick={photoPicker.launch("image/*")}){Icon(Icons.Default.AddAPhoto,"Add item image")}
                     IconButton(onClick={settings=true}){Icon(Icons.Default.Settings,"Item settings")}
                 }
             )
@@ -145,13 +161,15 @@ fun AddItemScreen(
         bottomBar={
             Surface(shadowElevation=6.dp){
                 Column{
+                photoError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+                if(photoBytes!=null)Row{Text("Photo selected");TextButton(enabled=!s.saving,onClick={photoBytes=null}){Text("Remove photo")}}
                 s.error?.let{message->Text(message,color=MaterialTheme.colorScheme.error,modifier=Modifier.fillMaxWidth().padding(12.dp).semantics{liveRegion=LiveRegionMode.Polite})}
                 Row(Modifier.fillMaxWidth().navigationBarsPadding()){
                     TextButton(onClick=back,modifier=Modifier.weight(1f).height(64.dp)){Text("Cancel")}
                     Button(
                         onClick={
                             vm.save(
-                                service=service,
+                                service=service,photoBytes=photoBytes,photoMime=photoMime,
                                 name=name,
                                 unitId=primaryUnit.takeIf{enabled("itemUnits")},
                                 categoryId=categoryId.takeIf{enabled("itemCategory")},
@@ -180,7 +198,7 @@ fun AddItemScreen(
                                 customFields=if(enabled("customFields"))customValues else emptyMap(),
                             ){back()}
                         },
-                        enabled=name.isNotBlank()&&s.configLoaded&&!s.loading&&!s.saving&&customFields.filter{it.isRequired}.all{!customValues[it.fieldKey].isNullOrBlank()},
+                        enabled=!photoLoading&&name.isNotBlank()&&s.configLoaded&&!s.loading&&!s.saving&&customFields.filter{it.isRequired}.all{!customValues[it.fieldKey].isNullOrBlank()},
                         modifier=Modifier.weight(1f).height(64.dp),
                         shape=MaterialTheme.shapes.extraSmall
                     ){Text(if(s.saving)"Saving…" else "Save")}

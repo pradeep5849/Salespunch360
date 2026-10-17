@@ -50,11 +50,11 @@ const warehouseSchema = z.object({
   isActive: z.boolean().optional(),
 });
 function publicItem<T extends object>(row: T) {
-  return Object.fromEntries(
+  return {...Object.fromEntries(
     Object.entries(row).filter(
-      ([key]) => !["creationRequestKey", "creationRequestHash"].includes(key),
+      ([key]) => !["creationRequestKey", "creationRequestHash", "photoObjectKey"].includes(key),
     ),
-  ) as Omit<T, "creationRequestKey" | "creationRequestHash">;
+  ),hasPhoto:"photoObjectKey" in row&&!!row.photoObjectKey} as Omit<T, "creationRequestKey" | "creationRequestHash" | "photoObjectKey"> & {hasPhoto:boolean};
 }
 const itemMobileSchema = itemSchema.extend({
   barcode: z.string().trim().max(120).optional(),
@@ -245,7 +245,7 @@ export async function listMobileAccountMaster(
       skip: offset,
     });
     return rows.map((row) => ({
-      ...row,
+      ...publicItem(row),
       salePrice: text(row.sellingRate),
       costPrice: text(row.estimatedCost),
       taxRate: text(row.taxRate),

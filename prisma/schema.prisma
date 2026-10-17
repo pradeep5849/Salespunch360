@@ -1835,6 +1835,7 @@ model AccountProduct {
   itemLocation String? @db.VarChar(240)
   name        String
   code        String?          @db.VarChar(60)
+  photoObjectKey String? @db.VarChar(512)
   pricing     Json?
   description String?
   salePrice   Decimal?         @db.Decimal(18, 2)
@@ -1870,6 +1871,7 @@ model AccountService {
   unit          AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   name          String
   code          String?          @db.VarChar(60)
+  photoObjectKey String? @db.VarChar(512)
   pricing       Json?
   description   String?
   sellingRate   Decimal?         @db.Decimal(18, 2)

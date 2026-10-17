@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
 data class AddItemState(
+    val photoPending:Boolean=false,
     val loading:Boolean=true,
     val saving:Boolean=false,
     val configLoaded:Boolean=false,
@@ -29,6 +30,14 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
     private val _state=MutableStateFlow(AddItemState())
     val state=_state.asStateFlow()
 
+    private var pendingPhoto:Triple<String,String,Pair<String,ByteArray>>?=null
+    fun retryPhoto(done:()->Unit,replacement:Pair<String,ByteArray>?=null)=viewModelScope.launch{
+        if(replacement!=null)pendingPhoto=pendingPhoto?.copy(third=replacement)
+        val pending=pendingPhoto?:return@launch
+        if(_state.value.saving)return@launch
+        _state.value=_state.value.copy(saving=true,error=null)
+        runCatching{api.uploadItemPhoto(pending.first,pending.second,pending.third.first,pending.third.second)}.onSuccess{pendingPhoto=null;_state.value=_state.value.copy(saving=false,photoPending=false);done()}.onFailure{_state.value=_state.value.copy(saving=false,error="Item saved. Photo upload failed. Retry or continue without photo.")}
+    }
     init{load()}
 
     fun load()=viewModelScope.launch{
@@ -89,9 +98,11 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         openingPrice:String="0",
         itemLocation:String="",
         pricing:JsonObject?=null,
+        photoBytes:ByteArray?=null,
+        photoMime:String="image/jpeg",
         done:()->Unit
     )=viewModelScope.launch{
-        if(_state.value.saving||!_state.value.configLoaded)return@launch
+        if(_state.value.saving||_state.value.photoPending||!_state.value.configLoaded)return@launch
         val validationError=com.salespunch360.mobile.account.addItemValidationError(name,code,description,sellingRate,cost,taxRate,hsnSac,if(service)"0"else lowStockThreshold,if(service)""else openingQuantity,openingPrice,openingDate,itemLocation,pricing)
         if(validationError!=null){_state.value=_state.value.copy(error=validationError);return@launch}
         _state.value=_state.value.copy(saving=true,error=null)
@@ -122,9 +133,12 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
                     }
                 }
             )
-        }.onSuccess{
-            _state.value=_state.value.copy(saving=false)
-            done()
+        }.onSuccess{row->
+            if(photoBytes!=null){
+                pendingPhoto=Triple(if(service)"services"else "products",row.id,photoMime to photoBytes)
+                _state.value=_state.value.copy(saving=false,photoPending=true)
+                retryPhoto(done)
+            }else{_state.value=_state.value.copy(saving=false);done()}
         }.onFailure{_state.value=_state.value.copy(saving=false,error=(it as? ApiException)?.serverMessage?:"Item could not be saved.")}
     }
 }

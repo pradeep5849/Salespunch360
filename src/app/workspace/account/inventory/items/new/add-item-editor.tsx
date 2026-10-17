@@ -1,4 +1,5 @@
 "use client";
+import {saveItemPhotoAction} from "@/app/actions/item-photos";
 import {trapDialogFocus} from "@/components/account/dialog-keyboard";
 import { generateItemCode } from "@/lib/account/item-identifiers";
 import type { CustomFieldDefinition } from "@prisma/client";
@@ -192,7 +193,13 @@ export function AddItemEditor({
   function assignCode() {
     if (!code) setCode(generateItemCode(kind));
   }
+  const [photo,setPhoto]=useState<File|null>(null),[photoError,setPhotoError]=useState(""),[savedPhotoItem,setSavedPhotoItem]=useState(false);
+  const photoInput=useRef<HTMLInputElement>(null),savedItem=useRef<{id:string;kind:"products"|"services"}|null>(null);
+  function selectPhoto(file?:File){if(!file)return;if(!file.type.startsWith("image/")||file.size===0||file.size>5*1024*1024){setPhoto(null);setPhotoError("Choose an image up to 5 MB.");return}setPhoto(file);setPhotoError("")}
+  async function uploadSelectedPhoto(){if(!photo||!savedItem.current)return;const form=new FormData();form.set("photo",photo);const result=await saveItemPhotoAction(savedItem.current.kind,savedItem.current.id,form);if(!result.ok)throw new Error(result.message)}
+  function retryPhoto(){startTransition(async()=>{const ok=await mutation.run(uploadSelectedPhoto,"Item photo saved");if(ok)router.push("/workspace/account/inventory")})}
   function save() {
+    if(savedItem.current){retryPhoto();return}
     if (pending || !name.trim()) return;
     const inputs=editorRoot.current?.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>("input,select,textarea")??[];
     if(Array.from(inputs).some(control=>!control.reportValidity()))return;
@@ -207,8 +214,8 @@ export function AddItemEditor({
     );
     startTransition(async () => {
       const saved = await mutation.run(
-        () =>
-          createAccountItemAction({
+        async () => {
+          const row=await createAccountItemAction({
             type: kind,
             creationRequestKey:
               kind === "products"
@@ -255,7 +262,10 @@ export function AddItemEditor({
               enabled("stockMaintenance") && kind === "products"
                 ? minStock || "0"
                 : "0",
-          }),
+          });
+          savedItem.current={id:row.id,kind};setSavedPhotoItem(true);
+          try{await uploadSelectedPhoto()}catch(error){setPhotoError("Item saved. The photo could not be uploaded. Retry the photo or continue without it.");throw error}
+        },
         "Item created successfully",
       );
       if (saved)
@@ -304,6 +314,7 @@ export function AddItemEditor({
       setAddCategoryOpen(false);
     });
   }
+  if(savedPhotoItem)return <section className="add-item-page" aria-label="Item photo recovery"><h1>Item saved</h1><p role={photoError?"alert":"status"}>{photoError||"Your item has been created."}</p><input aria-label="Replacement item photo" type="file" accept="image/*" disabled={pending} onChange={event=>selectPhoto(event.target.files?.[0])}/><SaveFeedback state={mutation.feedback}/><button type="button" disabled={pending||!photo} onClick={retryPhoto}>Retry photo upload</button><Link href="/workspace/account/inventory">Continue without photo</Link></section>;
   return (
     <section ref={editorRoot} aria-label="Add Item editor" className="add-item-page">
       <SaveFeedback state={mutation.feedback} />
@@ -315,11 +326,15 @@ export function AddItemEditor({
         <button
           type="button"
           aria-label="Add item image"
-          disabled
-          title="Image upload unavailable"
+          disabled={pending}
+          onClick={()=>photoInput.current?.click()}
+          title="Select item photo (up to 5 MB)"
         >
           📷
         </button>
+        <input ref={photoInput} aria-label="Item photo" type="file" accept="image/*" hidden onChange={event=>selectPhoto(event.target.files?.[0])}/>
+        {photo&&<span role="status">Photo selected: {photo.name}<button type="button" disabled={pending} onClick={()=>{setPhoto(null);if(photoInput.current)photoInput.current.value=""}}>Remove photo</button></span>}
+        {photoError&&<p role="alert">{photoError}</p>}
         <button
           type="button"
           ref={settingsTrigger}
