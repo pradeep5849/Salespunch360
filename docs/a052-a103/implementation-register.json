@@ -11366,6 +11366,37 @@
           "primary_finding": "A058-F08",
           "commit": "45cd8d13145af1c2e5cd9956c0ca929ec7faa6da",
           "work": "Shared focus wrapping also covers the retail-price confirmation;positive/decline/API/AXE desktop+mobile checks pass in the same4-case group. Original F03 remains PARTIAL for customer-price policy/consumption."
+        },
+        "explicit_customer_price_2026_10_17": {
+          "commit": "d2635026f07e692af9884f67e8e33b7f63601dcb",
+          "policy": "User: separate Customer Price choice alongside Retail and Wholesale; do not implicitly replace Retail.",
+          "work": "Commercial editor options expose active company customer prices only for accessible active customer branches and active company products, with inventory/party-wise-rate OFF and project-manager guards. Explicit Customer Price selection matches product/customer and inclusive DATE validity; newest existing catalogue row wins deterministic ordering. Web/native selectors retain Retail default and Wholesale; selected customer net rate converts to document tax mode and retains existing saved item discount semantics. Master retail and posted document history are untouched. No migration.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/customer-price-options.test.ts",
+            "src/lib/account/customer-price-options.ts",
+            "src/lib/account/customer-price-selection.test.ts",
+            "src/lib/account/customer-price-selection.ts",
+            "src/lib/account/item-pricing.ts"
+          ],
+          "tests": {
+            "grouped_unit": "69 passed,0 failed,0 skipped across7 focused pricing/commercial/action files",
+            "browser": "2 passed desktop/mobile Chromium (27.4s):Retail100,Wholesale90,explicitCustomer80,quantity3,fixeddiscount30,total210,no master mutation,no horizontal overflow",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(2m1s),8 ItemMasterPricing JVM tests,0 failures/errors/skips; no device/emulator runtime",
+            "typescript": "PASS",
+            "eslint": "PASS full eslint . --max-warnings=0",
+            "initial_failures": "Initial browser test incorrectly expected new-sale Edit item action (only existing-sale edit provides it); corrected assertions against actual billed line. Added company price fixture cleanup before customer deletion. Initial test actor types corrected before passing TypeScript. Interrupted redundant desktop first run; final desktop/mobile rerun passed.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Retain PARTIAL: broader price catalogue consumption/required output matrix and full final-head/device validation are not closed by this slice. A058-F02 purchase/edited-line parity remains separate."
         }
       },
       "intermediate_validation": {
@@ -12778,6 +12809,37 @@
             "final_199_finding_head": "NOT RUN"
           },
           "remaining": "A057-F03 remains PARTIAL pending customer-specific catalogue rate consumption policy/implementation and final-head/device verification;new async business question asks whether customer price replaces Retail or is a third choice. A058-F02 retains broader purchase/edited-line parity. No final_status promotion."
+        },
+        "explicit_customer_price_2026_10_17": {
+          "commit": "d2635026f07e692af9884f67e8e33b7f63601dcb",
+          "policy": "User: separate Customer Price choice alongside Retail and Wholesale; do not implicitly replace Retail.",
+          "work": "Commercial editor options expose active company customer prices only for accessible active customer branches and active company products, with inventory/party-wise-rate OFF and project-manager guards. Explicit Customer Price selection matches product/customer and inclusive DATE validity; newest existing catalogue row wins deterministic ordering. Web/native selectors retain Retail default and Wholesale; selected customer net rate converts to document tax mode and retains existing saved item discount semantics. Master retail and posted document history are untouched. No migration.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/customer-price-options.test.ts",
+            "src/lib/account/customer-price-options.ts",
+            "src/lib/account/customer-price-selection.test.ts",
+            "src/lib/account/customer-price-selection.ts",
+            "src/lib/account/item-pricing.ts"
+          ],
+          "tests": {
+            "grouped_unit": "69 passed,0 failed,0 skipped across7 focused pricing/commercial/action files",
+            "browser": "2 passed desktop/mobile Chromium (27.4s):Retail100,Wholesale90,explicitCustomer80,quantity3,fixeddiscount30,total210,no master mutation,no horizontal overflow",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(2m1s),8 ItemMasterPricing JVM tests,0 failures/errors/skips; no device/emulator runtime",
+            "typescript": "PASS",
+            "eslint": "PASS full eslint . --max-warnings=0",
+            "initial_failures": "Initial browser test incorrectly expected new-sale Edit item action (only existing-sale edit provides it); corrected assertions against actual billed line. Added company price fixture cleanup before customer deletion. Initial test actor types corrected before passing TypeScript. Interrupted redundant desktop first run; final desktop/mobile rerun passed.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Retain PARTIAL: broader price catalogue consumption/required output matrix and full final-head/device validation are not closed by this slice. A058-F02 purchase/edited-line parity remains separate."
         }
       }
     },
