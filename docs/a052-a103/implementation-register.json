@@ -55013,6 +55013,31 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F02 remains PARTIAL for Add New Item return flow, authorized stock/balance metadata, remaining original selector parity and final device/runtime verification. A071-F04 keeps its previous code status; native source/JVM/API evidence is not device verification. No migration, production operation or ledger rule change."
+        },
+        "quotation_recorded_stock_2026_10_18": {
+          "implementation_commit": "154a3addb2605899d1a7a7c5a120c9c223a8125b",
+          "work": "Quotation/estimate options include quantity-only recorded stock by company-authorized branch/product for tracked items and stock-view roles. SQL groups quantities once by warehouse/product/direction in repeatable read, reusing inventory signed-quantity rules and exact48-digit aggregation; no valuation/cost reads, reservation or posting. Default matches existing all-recorded inventory snapshot semantics; no new business-date rule. Items OFF or stock maintenance OFF/unauthorized roles omit stock. Web/native render selected-branch primary-unit quantities. Editor master money/tax options are exact strings, removing unsupported Decimal props while preserving cost-visibility guards.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/stock-options.test.ts",
+            "src/lib/quotations/stock-options.ts"
+          ],
+          "tests": {
+            "grouped": "74 focused TypeScript tests across6 action/service/quantity/validation files PASS; includes7 scoped stock-option tests and exact client-safe large-money strings.",
+            "browser_api": "Final2 desktop/mobile Chromium checks PASS (29.5s):15 vs7 branch quantities, estimate999 units creates no stock/journal movement, native options agree and expose only product/branch/quantity in stock positions, Data Entry stock/cost denied, Items OFF omits stock, no horizontal overflow. No Decimal/Only plain objects warnings in final log. Initial same cases passed (56.9s) but surfaced Decimal prop warnings, corrected and rerun.",
+            "android": "compileDebugKotlin plus19 focused quotation/master-request JVM tests PASS (2m25s),0 failures/errors/skips; no device rendering/TalkBack claim.",
+            "typescript": "PASS final run",
+            "eslint": "PASS final focused run",
+            "initial_unit": "Incomplete/inactive fixture and Data Entry role incorrectly expected stock permission; corrected full authorized actor fixture and explicit Data Entry denial. No authorization widened.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F02 remains PARTIAL for Add New Item return path, eligible party balance display, remaining original selector parity and final runtime/device verification. No migration or production operation. Stock-primary-unit conversion policy remains unchanged."
         }
       },
       "push_checkpoint_evidence": {

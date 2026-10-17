@@ -9686,3 +9686,11 @@ Native quotations reuse the full Account party form, lock its selected branch an
 Final Android compilation+19 JVM tests pass (1m52s), zero failures/errors/skips;66 focused TypeScript tests pass.2 authenticated native API cases pass (15.3s) for required-field rollback, foreign-branch/role denial, false custom value, party selection, saved estimate413, retry identity and no journal posting. These API cases do not verify native UI rendering. Initial optional-module assertion corrected to preserve included core Quotations behavior. Final TypeScript/focused ESLint pass.
 
 A082-F02 remains PARTIAL for Add New Item/stock/balance and remaining original parity/runtime checks. No device/TalkBack/full-final-head claim, migration, production operation or A104 work. All199 original IDs retained.
+
+### A082-F02 — read-only stock and exact selector amounts,18 October2026
+
+Web/native quotations display authorized recorded stock by selected branch in the item's primary unit. Quantity-only grouped SQL uses existing direction rules and a repeatable-read snapshot; costs/valuations are not queried or returned in stock metadata. Items/stock-maintenance OFF and unauthorized roles omit stock. No reservation/posting or new date/unit conversion policy. Master money/tax options now use exact strings instead of unsupported Decimal client props.
+
+74 grouped tests in6 files pass; final2 desktop/mobile checks pass (29.5s), covering15/7 branch quantities,999-unit estimate without stock/journal posting, matching native API payloads, Data Entry cost/stock denial, Items OFF and overflow. Final log has no Decimal prop warnings; initial passing run surfaced the warnings and was corrected/rerun. Android compilation+19 focused JVM tests pass (2m25s), zero failures/errors/skips; no device rendering claim. Final TypeScript/focused ESLint pass.
+
+A082-F02 stays PARTIAL for Add New Item, eligible party balances and remaining original/runtime scope. All199 IDs preserved; no migration, production or A104 work. Previous-head targeted CI cadb3c3f passed both jobs.
