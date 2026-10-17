@@ -2309,3 +2309,28 @@ test("A058 secondary units require an explicit factor and persist through web an
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{}}});await db.accountUnit.delete({where:{id:foreign.id}});await db.company.delete({where:{id:foreignCompany.id}});}
 });
+
+test("A090 expense detail schedules and money directory honor saved currency precision and dates",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),categoryId=randomUUID(),expenseId=randomUUID(),templateId=randomUUID(),ledgerId=randomUUID(),moneyId=randomUUID(),suffix=randomUUID().slice(0,8);
+ await db.ledgerAccount.create({data:{id:ledgerId,companyId,code:`DISPLAY-${suffix}`,name:`Display account ${suffix}`,accountClass:"ASSET",normalBalance:"DEBIT"}});
+ await db.expenseCategory.create({data:{id:categoryId,companyId,name:`Display category ${suffix}`,scope:"EXPENSE",defaultLedgerAccountId:ledgerId}});
+ await db.moneyAccount.create({data:{id:moneyId,companyId,branchId,name:`Display bank ${suffix}`,type:"BANK",ledgerAccountId:ledgerId}});
+ await db.expenseTransaction.create({data:{id:expenseId,companyId,branchId,categoryId,type:"OFFICE_EXPENSE",status:"DRAFT",transactionNumber:`DISPLAY-${suffix}`,transactionDate:new Date("2026-10-13"),taxableAmount:"123.45",totalAmount:"123.45",createdById:userId}});
+ await db.recurringExpenseTemplate.create({data:{id:templateId,companyId,branchId,categoryId,frequency:"MONTHLY",nextDueDate:new Date("2026-10-13"),amount:"90071992547409.91",createdById:userId,isActive:false}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});
+  const preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"});
+  await signInSettings(page);await page.goto(`/workspace/account/expenses/${expenseId}`);
+  const details=page.locator("dl").first();await expect(details.locator("div").filter({has:page.getByText("Total",{exact:true})}).locator("dd")).toHaveText(formatMoney("123.45",preferences));
+  await expect(details.locator("div").filter({has:page.getByText("Date",{exact:true})}).locator("dd")).toHaveText("10/13/2026");
+  await page.goto("/workspace/account/expenses/recurring");const schedule=page.getByRole("region",{name:`Schedule ${templateId}`,exact:true});await expect(schedule).toContainText(formatMoney("90071992547409.91",preferences));await expect(schedule).toContainText("Next due 10/13/2026");
+  await page.goto(`/workspace/account/money/accounts?branchId=${branchId}`);const row=page.getByRole("listitem").filter({has:page.getByRole("link",{name:`Display bank ${suffix}`,exact:true})});await expect(row).toContainText(formatMoney("0",preferences));await expect(row).not.toContainText("₹");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await expect(new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).resolves.toMatchObject({violations:[]});
+  expect((await db.expenseTransaction.findUniqueOrThrow({where:{id:expenseId}})).totalAmount.toString()).toBe("123.45");
+ }finally{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}});
+  await db.recurringExpenseTemplate.delete({where:{id:templateId}});await db.expenseTransaction.delete({where:{id:expenseId}});await db.expenseCategory.delete({where:{id:categoryId}});await db.moneyAccount.delete({where:{id:moneyId}});await db.ledgerAccount.delete({where:{id:ledgerId}});
+ }
+});

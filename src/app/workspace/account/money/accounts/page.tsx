@@ -1,3 +1,4 @@
+import { Money } from "@/components/account/account-ui";
 import Link from "next/link";
 import {
   isMoneyReadScopeError,
@@ -56,7 +57,7 @@ export default async function Page({
               >
                 {x.name}
               </Link>{" "}
-              · {x.type} · {x.balance.toFixed(2)}
+              · {x.type} · <Money value={x.balance} />
             </li>
           ))}
         </ul>

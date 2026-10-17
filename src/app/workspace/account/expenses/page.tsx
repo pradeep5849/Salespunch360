@@ -1,7 +1,7 @@
 import {ExpenseOverview} from "@/components/account/expense-overview";
 import {listExpenseItemsForActor} from "@/lib/account/expense-items";
 import {expenseSummaryForActor} from "@/lib/account/expenses";
-import { ClientMoney } from "@/components/account/display-preferences";
+import { AccountDate, ClientMoney } from "@/components/account/display-preferences";
 import Link from "next/link";
 import {
   ExpenseTransactionStatus,
@@ -279,9 +279,9 @@ export default async function Page({
                     </td>
                     <td>{branches.get(x.branchId) ?? "Branch"}</td>
                     <td>{x.type}</td>
-                    <td>{x.transactionDate.toISOString().slice(0, 10)}</td>
+                    <td><AccountDate value={x.transactionDate.toISOString().slice(0, 10)} /></td>
                     <td>{x.status}</td>
-                    <td>{x.totalAmount.toFixed(2)}</td>
+                    <td><ClientMoney value={x.totalAmount.toString()} /></td>
                   </tr>
                 ))}
               </tbody>

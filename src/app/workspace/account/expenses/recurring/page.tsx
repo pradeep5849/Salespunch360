@@ -1,3 +1,5 @@
+import { Money } from "@/components/account/account-ui";
+import { AccountDate } from "@/components/account/display-preferences";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import { recurringAction } from "@/app/actions/expenses";
@@ -58,8 +60,8 @@ export default async function Page() {
                 ?.name ?? "Expense schedule"}
             </h3>
             <p>
-              {template.frequency.toLowerCase()} · {template.amount.toFixed(2)}{" "}
-              · Next due {template.nextDueDate.toISOString().slice(0, 10)} ·{" "}
+              {template.frequency.toLowerCase()} · <Money value={template.amount} />{" "}
+              · Next due <AccountDate value={template.nextDueDate.toISOString().slice(0, 10)} /> ·{" "}
               {template.isActive ? "Active" : "Paused"}
               {template.isActive &&
                 ` · ${classifyDueDate(template.nextDueDate).toLowerCase()}`}

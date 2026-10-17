@@ -1,3 +1,4 @@
+import { AccountDate } from "@/components/account/display-preferences";
 import { Money } from "@/components/account/account-ui";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
@@ -44,10 +45,10 @@ export default async function Page({
           {Object.entries({
             Type: x.type,
             Status: x.status,
-            Date: x.transactionDate.toISOString().slice(0, 10),
+            Date: <AccountDate value={x.transactionDate.toISOString().slice(0, 10)} />,
             ...(x.paidDate
               ? {
-                  "Payment date": x.paidDate.toISOString().slice(0, 10),
+                  "Payment date": <AccountDate value={x.paidDate.toISOString().slice(0, 10)} />,
                   "Approval review": x.approvalReviewStatus ?? "Not required",
                   "Review reason": x.approvalReviewReason ?? "None",
                 }
@@ -60,18 +61,18 @@ export default async function Page({
               (x.type === "REIMBURSEMENT"
                 ? "Reimbursement payable"
                 : "Not recorded"),
-            "Taxable amount": x.taxableAmount.toFixed(2),
+            "Taxable amount": <Money value={x.taxableAmount} />,
             "Tax mode": x.taxMode,
             "Tax rate": x.taxRate.toFixed(2),
-            CGST: x.cgstAmount.toFixed(2),
-            SGST: x.sgstAmount.toFixed(2),
-            IGST: x.igstAmount.toFixed(2),
-            CESS: x.cessAmount.toFixed(2),
+            CGST: <Money value={x.cgstAmount} />,
+            SGST: <Money value={x.sgstAmount} />,
+            IGST: <Money value={x.igstAmount} />,
+            CESS: <Money value={x.cessAmount} />,
             "Input tax credit": x.taxCreditTreatment,
             "State of supply": x.stateOfSupplyCode ?? "Not recorded",
-            Charges: x.additionalCharges.toFixed(2),
-            "Round off": x.roundOffAmount.toFixed(2),
-            Total: x.totalAmount.toFixed(2),
+            Charges: <Money value={x.additionalCharges} />,
+            "Round off": <Money value={x.roundOffAmount} />,
+            Total: <Money value={x.totalAmount} />,
             Reference: x.reference ?? "None",
             Notes: x.notes ?? "None",
             Creator: who(x.createdById),
