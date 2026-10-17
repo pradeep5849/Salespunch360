@@ -1,3 +1,4 @@
+import {customerPriceOptionsForActor} from "./customer-price-options";
 import {itemPriceForDocument} from "./item-pricing";
 import {commercialLineAmounts} from "./commercial-line-amounts";
 import { effectiveAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
@@ -3297,6 +3298,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
     (permission) => canUsePermission(actor, company.productEdition, permission),
   );
   return {
+    customerPrices: await customerPriceOptionsForActor(actor,enabledModules.includes("INVENTORY")&&resolveItemSettings(editorSettings?.itemSettings).partyWiseRate),
     canUpdateSalePrices: actor.accountRole!=="PROJECT_MANAGER"&&enabledModules.includes("INVENTORY")&&canUsePermission(actor,company.productEdition,"ACCOUNT_STOCK")&&canUsePermission(actor,company.productEdition,"ACCOUNT_SALES_ENTRY"),
     customerAdvances,
     recentSalePrices:await recentSalePrices(actor,storedPreferences.lastFiveSalePrices===true),

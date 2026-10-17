@@ -152,6 +152,7 @@ test.afterAll(async () => {
   await tx.quotationRevision.deleteMany({where:{companyId}});
   await tx.quotationDocument.deleteMany({where:{companyId}});
   });
+  await db.productPrice.deleteMany({where:{companyId}});
   await db.customer.deleteMany({where:{companyId}});
   await db.vendor.deleteMany({where:{companyId}});
   await db.inventorySerialNumber.deleteMany({where:{companyId}});
@@ -2170,4 +2171,27 @@ test("A058 item validation retains fields and unit dialog traps keyboard focus w
   const unit=page.getByRole("button",{name:"Select Unit",exact:true});await unit.click();const dialog=page.getByRole("dialog",{name:"Add Item Unit",exact:true});await expect(dialog).toBeVisible();for(let i=0;i<8;i++){await page.keyboard.press("Tab");expect(await page.evaluate(()=>Boolean(document.activeElement?.closest('dialog[open]')))).toBe(true);}await page.keyboard.press("Escape");await expect(dialog).not.toBeVisible();await expect(unit).toBeFocused();await expect(page.getByLabel("Item Name *",{exact:true})).toHaveValue(name);expect(await page.locator("main main").count()).toBe(0);
   expect((await new AxeBuilder({page}).include('.add-item-page').analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{}}});}
+});
+
+test("A057 Customer Price is separate from Retail and respects active dates",async({page})=>{
+ test.setTimeout(120000);
+ const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),name=`Customer price ${randomUUID().slice(0,8)}`;
+ await db.accountSettings.update({where:{companyId},data:{itemSettings:{...previous.itemSettings as object,partyWiseRate:true,itemWiseDiscount:true,wholesalePrice:true},enabledModules:["SALES","INVENTORY"],defaultTaxMode:"EXCLUSIVE"}});
+ const product=await db.accountProduct.create({data:{companyId,name,salePrice:"100",taxRate:"0",pricing:{enteredSalePrice:"100",saleTaxMode:"EXCLUSIVE",discountType:"FIXED",discountValue:"10",normalizedDiscountValue:"10",normalizedWholesalePrice:"90",wholesalePrice:"90"}}});
+ const date=new Date().toISOString().slice(0,10),customer=await db.customer.findUniqueOrThrow({where:{id:customerId}});
+ await db.productPrice.create({data:{companyId,productId:product.id,customerId,priceType:"CUSTOMER",rate:"80",effectiveFrom:new Date(date),effectiveTo:new Date(date)}});
+ try{
+  await signInSettings(page);await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
+  await page.getByPlaceholder("Search customer name or phone").fill(customer.name);await page.getByRole("button",{name:new RegExp(customer.name)}).click();
+  await page.getByRole("button",{name:/Add Items/}).click();await page.getByText(name,{exact:true}).click();
+  const type=page.getByRole("combobox",{name:"Price type",exact:true}),rate=page.getByRole("spinbutton",{name:"Rate (Price/Unit)",exact:true});
+  await expect(type).toHaveValue("RETAIL");await expect(rate).toHaveValue("100");
+  await type.selectOption("WHOLESALE");await expect(rate).toHaveValue("90");
+  await type.selectOption("CUSTOMER");await expect(rate).toHaveValue("80");
+  await page.getByRole("spinbutton",{name:"Quantity",exact:true}).fill("3");
+  const picker=page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})});await picker.getByRole("button",{name:"Save",exact:true}).click();
+  const billed=page.locator("article").filter({has:page.getByText(name,{exact:true})});await expect(billed).toContainText("3 Nos");await expect(billed).toContainText("80.00");await expect(billed).toContainText("30.00");await expect(billed).toContainText("210.00");
+  expect((await db.accountProduct.findUniqueOrThrow({where:{id:product.id}})).salePrice?.toString()).toBe("100");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+ } finally {await db.accountSettings.update({where:{companyId},data:{itemSettings:previous.itemSettings??{},enabledModules:previous.enabledModules,defaultTaxMode:previous.defaultTaxMode}})}
 });
