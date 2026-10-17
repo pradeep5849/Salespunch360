@@ -13069,7 +13069,26 @@
       "root_cause": "Reference controls implemented as placeholders rather than working integrations.",
       "affected_files": [
         "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
-        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AccountItemsScreen.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemPhotoViewer.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/migrations/20261017040000_item_master_photos/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/actions/item-photos.ts",
+        "src/app/api/account/item-photos/[kind]/[id]/route.ts",
+        "src/app/api/v1/mobile/account/item-photos/[kind]/[id]/route.ts",
+        "src/app/workspace/account/inventory/page.tsx",
+        "src/components/account/items-screen.tsx",
+        "src/lib/account/item-photo-upload.test.ts",
+        "src/lib/account/item-photo-upload.ts",
+        "src/lib/account/item-photos.integration.test.ts",
+        "src/lib/account/item-photos.ts",
+        "src/lib/mobile/account-master-data.ts"
       ],
       "affected_services_apis_actions": [
         "createAccountItemAction/createProduct/createService",
@@ -13154,7 +13173,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -13163,10 +13182,53 @@
         "A058-F06"
       ],
       "checkpoint_work": {
-        "implementation_status": "PARTIAL",
+        "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "User confirmed company saved HSN/SAC lookup. Web suggestions and Android searchable selector now use distinct active company product/service codes, with manual entry retained. Mobile options expose this catalogue only for item/service workflows when HSN/SAC is ON; no official classification data is represented. Explicit accessible web field label verified after initial locator failure.",
-        "remaining_work": "Scoped image attachment/camera/gallery handling remains unimplemented; final-head regression, native device selector and offline rendering verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "remaining_work": "Full final-head199 validation, native physical/emulator image picker/viewer/offline/TalkBack checks remain. Private storage must be backed up alongside DB object references;A088-F01 retains broader backup/blob/restore work. No final_status set.",
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "private_item_photos_2026_10_17": {
+          "commit": "3dd76d30be26a8bf3cbfff90ff82616124ab1ffb",
+          "work": "Implemented private company-scoped product/service photos. Web Add Item supports file selection/remove, client bounds, private catalogue display and separate upload recovery; saved item identity is retained so retries/replacement never recreate a product/service or opening stock. Native OS image picker uses bounded IO, retains optional selected bytes and saved identity, supports retry/replacement/continue and authenticated catalogue photo viewing. Backend normalizes decodable images to metadata-free WebP <=720px/20M input pixels/5MiB input, bounds chunked multipart bodies, checks stock permission/Items ON/company active master, serializes pointer+audit update, replays equal hashes without extra audit, cleans staged failures and superseded unique objects. Private GET requires authorization and no-store/nosniff; mobile DTOs expose hasPhoto without storage keys. No ledger writes. Existing HSN/SAC saved-company lookup remains preserved.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AccountItemsScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/ItemPhotoViewer.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261017040000_item_master_photos/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/item-photos.ts",
+            "src/app/api/account/item-photos/[kind]/[id]/route.ts",
+            "src/app/api/v1/mobile/account/item-photos/[kind]/[id]/route.ts",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "src/app/workspace/account/inventory/page.tsx",
+            "src/components/account/items-screen.tsx",
+            "src/lib/account/item-photo-upload.test.ts",
+            "src/lib/account/item-photo-upload.ts",
+            "src/lib/account/item-photos.integration.test.ts",
+            "src/lib/account/item-photos.ts",
+            "src/lib/mobile/account-master-data.ts"
+          ],
+          "models": [
+            "AccountProduct.photoObjectKey nullable VARCHAR(512)",
+            "AccountService.photoObjectKey nullable VARCHAR(512)",
+            "Existing AccountOperationalAudit event ITEM_PHOTO_SAVED"
+          ],
+          "migration": "20261017040000_item_master_photos: two additive nullable columns;127 total migrations applied only to isolated local *_ci database;Prisma generate/validate/deploy passed. No historical migration edited or production DB touched.",
+          "tests": {
+            "focused_unit_database": "36 passed,0 failed,0 skipped in5 files(1.60s),including6 actual PostgreSQL photo tests:concurrent equal uploads,service replacement,role/company/Items-OFF,corrupt/non-image/empty/oversized rejection,partial-storage failure cleanup,audit-fault transaction rollback and zero journals. Multipart chunked-size/malformed-body tests included.",
+            "browser_mobile_api": "4 passed (44.3s),desktop/mobile Chromium real private upload/display/natural dimensions,selection removal,invalid-type no-write,corrupt server rejection,replacement-photo retry with exactly1 item/1photo audit,AXE recovery/overflow. Native API actual authenticated multipart/read,401unauthenticated,400corrupt,404source,403Items-OFF and revokedrole,public DTO no storage-key exposure.",
+            "android": "Latest compileDebugKotlin/testDebugUnitTest PASS(2m55s),7 AddItemValidation JVM tests,0 errors/failures/skips. Includes native upload/recovery/viewer code compilation;no emulator/device/gallery/TalkBack runtime. Earlier compile passed3m58s before final viewer/API additions;not substituted for latest build.",
+            "typescript": "PASS",
+            "eslint": "PASS full eslint . --max-warnings=0",
+            "initial_failures": "First module-OFF test incorrectly tried disabling core Inventory through module arrays;replaced with actual Items-OFF setting and kept enforced core module policy unchanged. Initial browser locator matched Next route announcer too;targeted visible error message fixed. React ref rendering replaced with explicit saved-item state;failed TS auth-null guards corrected before passing checks.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "Full final-head199 validation, native physical/emulator image picker/viewer/offline/TalkBack checks remain. Private storage must be backed up alongside DB object references;A088-F01 retains broader backup/blob/restore work. No final_status set."
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "Web image button disabled; native image IconButton onClick empty. Both HSN search decorations have no lookup action. Manual HSN/SAC input persists.",
@@ -13289,7 +13351,7 @@
             "record": "Final exact-head complete validation remains pending. Device/live-production checks are not claimed. Preserve original required tests and all limitations in recorded work."
           }
         ],
-        "verification_status": "PARTIAL",
+        "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
       }
     },
@@ -62607,6 +62669,11 @@
           "work": "Backup snapshots include new company/user-scoped report favourite identities with deterministic ordering;populated scoped snapshot regression added.",
           "tests": "Shared22 report/service/export/backup tests passed,including populated favourite snapshot. Restore/provider/blob/final-head verification still pending.",
           "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
+        },
+        {
+          "primary_finding": "A058-F04",
+          "commit": "3dd76d30be26a8bf3cbfff90ff82616124ab1ffb",
+          "work": "New item photoObjectKey references use companies/<companyId>/item-photos private objects. Existing backup snapshot warning requires retaining private-storage backup. Carry new product/service photo bytes into remaining blob-aware backup/restore coverage;this dependency does not complete A088-F01."
         }
       ],
       "push_checkpoint_evidence": {
