@@ -33,7 +33,7 @@ import {
   reverseJournalForActor,
   postJournalInTx,
 } from "@/lib/accounting/service";
-import { createChequeForActor } from "./money";
+import { createChequeForActor,createMoneyAccountForActor } from "./money";
 import { saleDetailForActor } from "./sale-detail";
 import { currentPartyBalanceForActor } from "./party-balance";
 import {
@@ -1251,6 +1251,32 @@ describe.skipIf(!url)(
       const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:bill.id}});
       const note=await createCommercialDocumentForActor(actor,{type:"DEBIT_NOTE",purchasePurpose:"GENERAL_OFFICE",sourceDocumentId:bill.id,branchId,partyId:vendor.id,issueDate:"2026-10-11",idempotencyKey:randomUUID(),lines:[{lineType:"CUSTOM",itemName:line.itemName,sourceCommercialLineId:line.id,quantity:"0.5",rate:"200",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:note.id});
       const result=await runFinancialReportForActor(actor,"purchase-report",{from:"2026-10-10",to:"2026-10-11",branchId,vendorId:vendor.id});expect(result.rows).toHaveLength(2);expect(result.totals?.slice(-2)).toEqual(["100","100"]);expect(result.summary?.[0].value).toBe("2");expect(result.nativeRowLinks?.[0]).toBe(`/workspace/account/purchases/${bill.id}`);
+    });
+
+    it("A066 issued cheque closes once into Cash without paying its vendor bill until closure",async()=>{
+      const vendor=await client.vendor.create({data:{companyId,name:"Issued cheque vendor"}});
+      const cash=await createMoneyAccountForActor(actor,{type:"CASH",branchId,name:"Issued cheque cash",creationRequestKey:randomUUID(),openingBalance:"300",openingDate:"2026-10-01",openingBranchId:branchId});
+      const bill=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",purchasePurpose:"GENERAL_OFFICE",vendorInvoiceNumber:`ISSUED-${randomUUID().slice(0,8)}`,vendorInvoiceDate:"2026-10-10",idempotencyKey:randomUUID(),branchId,partyId:vendor.id,issueDate:"2026-10-10",lines:[{lineType:"CUSTOM",itemName:"Issued cheque purchase",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:bill.id});
+      const original=await client.commercialDocument.findUniqueOrThrow({where:{id:bill.id}}),before=await client.journalEntry.count({where:{companyId}});
+      const pending=await createSettlementForActor(actor,{type:"VENDOR_PAYMENT",idempotencyKey:randomUUID(),branchId,partyId:vendor.id,moneyAccountId:bankId,paymentMode:"CHEQUE",chequeNumber:randomUUID().slice(0,8),chequeDate:"2026-10-10",transactionDate:"2026-10-10",amount:"75",allocations:[{documentId:bill.id,amount:"75"}]});
+      const cheque=await client.cheque.findFirstOrThrow({where:{companyId,settlementId:pending.id}});expect(cheque.status).toBe("ISSUED");expect(pending.journalEntryId).toBeNull();expect(await outstanding(bill.id)).toBe("100.00");expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+      const request={action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:cash.id,description:"Paid vendor by cashed cheque"};
+      const closed=await Promise.all([chequeFinancialActionForActor(actor,cheque.id,request),chequeFinancialActionForActor(actor,cheque.id,request)]);expect(closed[0].journalEntryId).toBe(closed[1].journalEntryId);expect(await outstanding(bill.id)).toBe("25.00");expect(await client.journalEntry.count({where:{companyId}})).toBe(before+1);
+      const journal=await client.journalEntry.findUniqueOrThrow({where:{id:closed[0].journalEntryId!},include:{lines:true}});expect(journal.lines).toHaveLength(2);expect(journal.lines.find(line=>line.ledgerAccountId===cash.ledgerAccountId)?.credit.toFixed(2)).toBe("75.00");expect(journal.lines.reduce((n,line)=>n.add(line.debit).sub(line.credit),new Prisma.Decimal(0)).toString()).toBe("0");
+      expect(await client.commercialDocument.findUniqueOrThrow({where:{id:bill.id}})).toEqual(original);
+      const reopened=await chequeFinancialActionForActor(actor,cheque.id,{action:"REOPEN",requestKey:randomUUID(),expectedVersion:1,actionDate:"2026-10-13",reason:"Undo issued cheque closure"});expect(reopened.status).toBe("ISSUED");expect(await outstanding(bill.id)).toBe("100.00");expect(await client.commercialDocument.count({where:{companyId,vendorId:vendor.id,type:"PURCHASE_BILL"}})).toBe(1);
+    });
+    it("A066 closure respects the accounting period lock without changing bank, source or cheque",async()=>{
+      const doc=await invoice(),{receipt,cheque}=await record(doc.id),before=await client.journalEntry.count({where:{companyId}}),year=await client.financialYear.findFirstOrThrow({where:{companyId}});
+      await client.accountingPeriodLock.create({data:{companyId,financialYearId:year.id,lockedThrough:new Date("2026-10-12"),updatedById:userId}});
+      try{await expect(chequeFinancialActionForActor(actor,cheque.id,{action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:bankId})).rejects.toThrow("PERIOD_LOCKED")}finally{await client.accountingPeriodLock.deleteMany({where:{companyId}})}
+      expect(await outstanding(doc.id)).toBe("100.00");expect(await bankEffect(cheque.id)).toBe(0);expect(await client.journalEntry.count({where:{companyId}})).toBe(before);expect((await client.cheque.findUniqueOrThrow({where:{id:cheque.id}})).actionVersion).toBe(0);expect((await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id}})).status).toBe("PENDING_CHEQUE");
+    });
+    it("A066 failed closure audit rolls back the posted receipt, allocation and version together",async()=>{
+      const doc=await invoice(),{receipt,cheque}=await record(doc.id),before=await client.journalEntry.count({where:{companyId}}),fn=`closure_fail_${randomUUID().replaceAll('-','')}`;
+      await client.$executeRawUnsafe(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."companyId"='${companyId}'::uuid AND NEW."eventType"='CHEQUE_FINANCIAL_ACTION' THEN RAISE EXCEPTION 'CLOSURE_AUDIT_FAULT'; END IF; RETURN NEW; END $$`);await client.$executeRawUnsafe(`CREATE TRIGGER ${fn} BEFORE INSERT ON account_operational_audits FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+      try{await expect(chequeFinancialActionForActor(actor,cheque.id,{action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-10-12",moneyAccountId:bankId})).rejects.toThrow()}finally{await client.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${fn} ON account_operational_audits`);await client.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${fn}()`)}
+      expect(await outstanding(doc.id)).toBe("100.00");expect(await bankEffect(cheque.id)).toBe(0);expect(await client.journalEntry.count({where:{companyId}})).toBe(before);expect((await client.cheque.findUniqueOrThrow({where:{id:cheque.id}})).actionVersion).toBe(0);const source=await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id}});expect(source.status).toBe("PENDING_CHEQUE");expect(source.journalEntryId).toBeNull();
     });
 
   },
