@@ -954,5 +954,35 @@ describe.skipIf(!url)(
       await updateMoneyAccountForActor(actor,row.id,{accountHolderName:"",bankName:"",bankBranchName:"",accountNumberMasked:"",ifsc:""});
       expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
     });
+    it("A064 account history reconciles empty bank, cash, transfers, receipts, payments and paged balances",async()=>{
+      const {moneyAccountHistoryForActor}=await import("./money-account-history");
+      const {postMoneyAdjustmentForActor}=await import("./money-adjustment");
+      await client.financialYear.create({data:{companyId,name:"History matrix year",startDate:new Date("2035-01-01"),endDate:new Date("2035-12-31")}});
+      const cash=await createMoneyAccountForActor(actor,{type:"CASH",name:"History matrix cash",branchId,creationRequestKey:randomUUID(),openingBalance:"1000",openingDate:"2035-01-01"});
+      const bank=await createMoneyAccountForActor(actor,{type:"BANK",name:"History matrix bank",branchId,creationRequestKey:randomUUID()});
+      const empty=await moneyAccountHistoryForActor(actor,bank.id,{branchId});
+      expect(empty).toMatchObject({total:0,opening:"0.00",debit:"0.00",credit:"0.00",closing:"0.00",rows:[]});
+      const transfer={branchId,idempotencyKey:randomUUID(),sourceAccountId:cash.id,destinationAccountId:bank.id,amount:"100",transferDate:"2035-01-02"};
+      await createMoneyTransferForActor(actor,transfer);
+      await createMoneyTransferForActor(actor,{...transfer,idempotencyKey:randomUUID(),sourceAccountId:bank.id,destinationAccountId:cash.id,amount:"25",transferDate:"2035-01-03"});
+      const expense=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"GENERAL_EXPENSES"}});
+      await postMoneyAdjustmentForActor(actor,{moneyAccountId:bank.id,branchId,direction:"REDUCE",offsetLedgerId:expense.id,amount:"10",date:"2035-01-04",reason:"Bank correction verified",idempotencyKey:randomUUID()});
+      const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"History matrix lender",loanType:"TERM",principal:"200",startDate:"2035-01-05",moneyAccountId:bank.id,idempotencyKey:randomUUID()});
+      await postLoanPaymentForActor(actor,{loanId:loan.id,moneyAccountId:bank.id,paymentDate:"2035-01-06",principal:"50",interest:"5",charges:"0",idempotencyKey:randomUUID()});
+      const all=await moneyAccountHistoryForActor(actor,bank.id,{branchId});
+      expect(all).toMatchObject({total:5,opening:"0.00",debit:"300.00",credit:"90.00",closing:"210.00"});
+      expect(all.rows.map(row=>row.balance)).toEqual(["210.00","265.00","65.00","75.00","100.00"]);
+      const ids:string[]=[];
+      for(const offset of [0,2,4]){const page=await moneyAccountHistoryForActor(actor,bank.id,{branchId,offset,limit:2});expect(page.closing).toBe("210.00");ids.push(...page.rows.map(row=>row.id));}
+      expect(ids).toEqual(all.rows.map(row=>row.id));expect(new Set(ids).size).toBe(5);
+      const filtered=await moneyAccountHistoryForActor(actor,bank.id,{branchId,from:"2035-01-05",to:"2035-01-06"});
+      expect(filtered).toMatchObject({total:2,opening:"65.00",debit:"200.00",credit:"55.00",closing:"210.00"});
+      expect((await moneyAccountHistoryForActor(actor,cash.id,{branchId})).closing).toBe("925.00");
+      const dashboard=await moneyDashboardForActor(actor);expect(dashboard.accounts.find(row=>row.id===bank.id)?.balance.toFixed(2)).toBe(all.closing);
+      await expect(moneyAccountHistoryForActor({...actor,companyId:otherCompany},bank.id,{scope:"all"})).rejects.toThrow();
+      await expect(moneyAccountHistoryForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},bank.id,{branchId})).rejects.toThrow();
+      await deactivateMoneyAccountForActor(actor,bank.id);
+      expect((await moneyAccountHistoryForActor(actor,bank.id,{branchId})).closing).toBe("210.00");
+    });
   },
 );

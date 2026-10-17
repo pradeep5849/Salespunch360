@@ -2083,6 +2083,7 @@ test("A064 name-only bank can add full optional details later", async ({page}) =
   expect(bank.upiId).toBeNull();expect(bank.accountNumberMasked??"").toBe("");
   const journals=await db.journalEntry.count({where:{companyId}});
   await page.goto(`/workspace/account/money/accounts/${bank.id}?branchId=${branchId}`);
+  await expect(page.getByText("No posted entries match these dates.",{exact:true})).toBeVisible();
   const edit=page.locator("form").filter({has:page.getByRole("button",{name:"Save account details",exact:true})});
   await edit.getByLabel("Bank name",{exact:true}).fill("Canara Bank");
   await edit.getByLabel("Account holder name",{exact:true}).fill("Business holder");
@@ -2093,6 +2094,17 @@ test("A064 name-only bank can add full optional details later", async ({page}) =
   await expect(edit.getByRole("status")).toContainText("Account details saved",{timeout:20000});
   expect(await db.moneyAccount.findUniqueOrThrow({where:{id:bank.id}})).toMatchObject({bankName:"Canara Bank",accountHolderName:"Business holder",bankBranchName:"Main branch",accountNumberMasked:"****4321",ifsc:"CNRB0001234",upiId:null});
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+  const nativeToken=createSessionToken(),nativeUser=await db.user.findUniqueOrThrow({where:{id:userId}});
+  await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(nativeToken),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:nativeUser.sessionVersion}});
+  const headers={authorization:`Bearer ${nativeToken}`};
+  const history=await page.request.get(`/api/v1/mobile/account/money/accounts/${bank.id}/history?branchId=${branchId}`,{headers});
+  expect(history.status()).toBe(200);expect(history.headers()["cache-control"]).toBe("no-store");
+  expect(await history.json()).toMatchObject({account:{id:bank.id,bankName:"Canara Bank",accountHolderName:"Business holder"},closing:"0.00",rows:[]});
+  expect((await page.request.get(`/api/v1/mobile/account/money/accounts/${randomUUID()}/history?branchId=${branchId}`,{headers})).status()).toBe(403);
+  expect((await page.request.get(`/api/v1/mobile/account/money/accounts/${bank.id}/history?branchId=${branchId}`)).status()).toBe(401);
+  await page.getByRole("link",{name:"Back to parent page",exact:true}).click();
+  await expect(page).toHaveURL(new RegExp(`/money/bank-accounts\\?branchId=${branchId}$`));
+  await expect(page.getByText(name,{exact:true}).first()).toBeVisible();
 });
 
 
