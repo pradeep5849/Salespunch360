@@ -179,3 +179,10 @@ it.skipIf(!url)("keeps Purchase Register available under core accounting even wh
  expect((await availableReportCatalogueForActor(actor)).find(x=>x.key==="purchase-register")).toMatchObject({filters:["vendorId"]});await setReportFavouriteForActor(actor,{reportKey:"purchase-register",favourite:true});
  await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}});expect((await availableReportCatalogueForActor(actor)).some(x=>x.key==="purchase-register")).toBe(true);expect(await reportFavouritesForActor(actor)).toContain("purchase-register");expect(await client.accountReportFavourite.count({where:{companyId,userId:a,reportKey:"purchase-register"}})).toBe(1);
 });
+
+it.skipIf(!url)("hides Project material report destinations when optional modules are disabled",async()=>{
+ const actor={id:a,companyId};await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});await client.accountSettings.upsert({where:{companyId},create:{companyId,enabledModules:["PROJECTS","PROJECT_COSTING"]},update:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+ expect((await availableReportCatalogueForActor(actor)).map(x=>x.key)).toEqual(expect.arrayContaining(["material-consumption","project-transfer"]));
+ await client.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS"]}});const noCost=(await availableReportCatalogueForActor(actor)).map(x=>x.key);expect(noCost).toContain("projects");expect(noCost).not.toContain("material-consumption");expect(noCost).not.toContain("project-transfer");
+ await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}});expect((await availableReportCatalogueForActor(actor)).map(x=>x.key)).not.toContain("projects");
+});

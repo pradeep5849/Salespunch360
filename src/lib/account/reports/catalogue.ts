@@ -19,6 +19,8 @@ export const REPORT_CATALOGUE = [
   ["owner-capital", "Owner / Partner Capital", "Owners & Partners"],
   ["profit-withdrawal", "Profit Withdrawal", "Owners & Partners"],
   ["projects", "Project Report", "Projects"],
+  ["material-consumption", "Material Consumption", "Projects"],
+  ["project-transfer", "Project Transfer", "Projects"],
   ["branches", "Branch Report", "Business"],
   ["items", "Item Wise Profit & Loss", "Item/Stock reports"],
   ["invoices", "Bill Wise Profit", "Transaction"],

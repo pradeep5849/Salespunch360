@@ -2129,7 +2129,7 @@ test("A090 inventory prices retain exact cents in selected company currency",asy
 });
 
 test("A085 report hub searches groups and persists scoped favourites across web and mobile API",async({page,request})=>{
- test.setTimeout(120000);
+ test.setTimeout(180000);
  const previous=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
  try{
   await db.accountSettings.update({where:{companyId},data:{enabledModules:["ASSETS","PROJECTS","PROJECT_COSTING"]}});
@@ -2147,6 +2147,9 @@ test("A085 report hub searches groups and persists scoped favourites across web 
   await expect(group.getByRole("button",{name:"Remove Profit Withdrawal from favourites",exact:true})).toHaveAttribute("aria-pressed","true");
   await page.reload();await expect(page.getByRole("region",{name:"Favourite reports",exact:true}).getByRole("link",{name:"Profit Withdrawal",exact:true})).toBeVisible();
   await page.getByLabel("Search reports",{exact:true}).fill("no-such-report");await expect(page.getByText("No reports match your search.",{exact:true})).toBeVisible();await page.getByLabel("Search reports",{exact:true}).fill("");
+  const sourceUser=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:sourceUser.sessionVersion}});const materialHeaders={authorization:`Bearer ${token}`},journalCount=await db.journalEntry.count({where:{companyId}});
+  for(const [key,title] of [["material-consumption","Material Consumption"],["project-transfer","Project Transfer"]]){await expect(page.getByRole("link",{name:title,exact:true})).toBeVisible();const result=await page.request.get(`/api/v1/mobile/account/reports/${key}?branchId=${branchId}`,{headers:materialHeaders});expect(result.status()).toBe(200);expect(await result.json()).toMatchObject({title,rows:[]});await page.goto(`/workspace/account/reports/${key}?branchId=${branchId}`);await expect(page.getByRole("heading",{name:title,exact:true})).toBeVisible();await page.goto(`/workspace/account/reports?branchId=${branchId}&from=2026-04-01&to=2026-10-16`);}
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["ASSETS"]}});await page.reload();for(const key of ["material-consumption","project-transfer"]){expect((await page.request.get(`/api/v1/mobile/account/reports/${key}?branchId=${branchId}`,{headers:materialHeaders})).status()).toBe(403)}await expect(page.getByRole("link",{name:"Material Consumption",exact:true})).toHaveCount(0);await expect(page.getByRole("link",{name:"Project Transfer",exact:true})).toHaveCount(0);expect(await db.journalEntry.count({where:{companyId}})).toBe(journalCount);await db.accountSettings.update({where:{companyId},data:{enabledModules:["ASSETS","PROJECTS","PROJECT_COSTING"]}});await page.reload();
   expect((await new AxeBuilder({page}).include('section[aria-label="Report catalogue"]').analyze()).violations).toEqual([]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});

@@ -25,3 +25,5 @@ it("exposes only filter dimensions consumed by each supported report", () => {
 });
 
 it("maps Purchase Register to its own vendor-filtered destination",()=>{expect(searchReportCatalogue("ACCOUNT_ADMIN","purchase register")).toEqual([{key:"purchase-register",name:"Purchase Register",group:"Transaction"}]);expect(reportSpecificFilters("purchase-register")).toEqual(["vendorId"]);expect(searchReportCatalogue("PROJECT_MANAGER","purchase register")).toEqual([])});
+
+it("maps implemented Project movement reports with only consumed filters",()=>{for(const key of ["material-consumption","project-transfer"]){expect(REPORT_CATALOGUE.some(x=>x.key===key)).toBe(true);expect(reportSpecificFilters(key)).toEqual(["projectId","productId"]);expect(searchReportCatalogue("PROJECT_MANAGER",key)).toEqual([])}});

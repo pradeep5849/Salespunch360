@@ -91,13 +91,19 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             Option("Branch", state.branchId, state.options.array("branches")) { vm.filter("branch", it) }
             if(applicable?.contains("projectId")!=false)Option("Project", state.projectId, state.options.array("projects")) { vm.filter("project", it) }
         }
-        when (state.report) {
+        if (applicable != null) {
+            if ("ownerId" in applicable) Option("Owner / Partner", state.ownerId, state.options.array("owners")) { vm.filter("owner", it) }
+            if ("ledgerId" in applicable) Option("Ledger", state.ledgerId, state.options.array("ledgers")) { vm.filter("ledger", it) }
+            if ("customerId" in applicable) Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
+            if ("vendorId" in applicable) Option("Vendor", state.vendorId, state.options.array("vendors")) { vm.filter("vendor", it) }
+            if ("productId" in applicable) Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
+        } else when (state.report) {
             "owner-capital", "profit-withdrawal" -> Option("Owner / Partner", state.ownerId, state.options.array("owners")) { vm.filter("owner", it) }
             "general-ledger" -> Option("Ledger", state.ledgerId, state.options.array("ledgers")) { vm.filter("ledger", it) }
             "customer-ledger" -> Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
             "vendor-ledger" -> Option("Vendor", state.vendorId, state.options.array("vendors")) { vm.filter("vendor", it) }
             "sale-report" -> Option("Customer",state.customerId,state.options.array("customers")){vm.filter("customer",it)}
-            "purchase-report" -> Option("Vendor",state.vendorId,state.options.array("vendors")){vm.filter("vendor",it)}
+            "purchase-report", "purchase-register" -> Option("Vendor",state.vendorId,state.options.array("vendors")){vm.filter("vendor",it)}
             "items", "invoices", "customers" -> {
                 Option("Customer", state.customerId, state.options.array("customers")) { vm.filter("customer", it) }
                 Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }

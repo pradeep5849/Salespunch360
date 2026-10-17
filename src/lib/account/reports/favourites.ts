@@ -24,9 +24,9 @@ export async function availableReportCatalogueForActor(actor: Actor) {
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
-      (!["projects", "budget-vs-actual"].includes(x.key) ||
+      (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||
       (modules.includes("PROJECTS") &&
-        (x.key !== "budget-vs-actual" || modules.includes("PROJECT_COSTING")))),
+        (x.key === "projects" || modules.includes("PROJECT_COSTING")))),
   );
 }
 export async function reportFavouritesForActor(actor: Actor) {
