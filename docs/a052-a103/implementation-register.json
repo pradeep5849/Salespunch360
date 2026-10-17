@@ -55060,7 +55060,8 @@
           ],
           "tests": "95 focused tests across 8 files passed; TypeScript and focused ESLint passed; 2 desktop/mobile-web browser cases passed (35.4s): real posted invoice balance, failed request + retry, delayed stale response after selection, native API 401/400/403 and allowed role, foreign company/branch rejection, no journal mutation, no horizontal overflow. Android Kotlin compile and 22 focused JVM tests passed, 0 failures/errors/skips.",
           "remaining": "Add New Item return path and original remaining selector functionality plus final exact-head validation remain pending. Android emulator/device runtime NOT RUN. No migration or production data change.",
-          "status": "PARTIAL"
+          "status": "PARTIAL",
+          "additional_tests": "9 balance-helper tests passed, including explicit module-OFF rejection before any transaction and permitted Data Entry exact reads; focused lint passed."
         }
       },
       "push_checkpoint_evidence": {

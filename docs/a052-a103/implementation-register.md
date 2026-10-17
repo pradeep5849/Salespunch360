@@ -9702,3 +9702,5 @@ Source commit `286bb1108891189b77b7df5b0b0b4d396f04b206`. Web and Android quotat
 95 focused tests across 8 files passed; TypeScript and focused ESLint passed; 2 desktop/mobile-web browser cases passed (35.4s): real posted invoice balance, failed request + retry, delayed stale response after selection, native API 401/400/403 and allowed role, foreign company/branch rejection, no journal mutation, no horizontal overflow. Android Kotlin compile and 22 focused JVM tests passed, 0 failures/errors/skips.
 
 Status remains PARTIAL. Add New Item return path and original remaining selector functionality plus final exact-head validation remain pending. Android emulator/device runtime NOT RUN. No migration or production data change.
+
+A082-F02 balance boundary follow-up: 9 focused helper tests passed, including module-OFF rejection before querying and permitted Data Entry exact reads. Focused lint passed.

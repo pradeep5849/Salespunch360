@@ -33,3 +33,10 @@ it("does not replace backend failures with a fabricated zero balance",async()=>{
 it("checks branch company membership independently before resolving the customer",async()=>{
  m.branch.mockResolvedValue(null);await expect(quotationPartyBalanceForActor(actor,{partyId:party,branchId:branch})).rejects.toThrow();expect(m.branch).toHaveBeenCalledWith({where:{id:branch,companyId:"company"},select:{id:true}});expect(m.customer).not.toHaveBeenCalled();expect(m.balance).not.toHaveBeenCalled();
 });
+it("does not query balances when the quotation module is disabled",async()=>{
+ m.modules.mockRejectedValue(new Error("MODULE_DISABLED"));await expect(quotationPartyBalanceForActor(actor,{partyId:party,branchId:branch})).rejects.toThrow("MODULE_DISABLED");expect(m.transaction).not.toHaveBeenCalled();
+});
+it("allows data-entry customer balance reads without granting stock or cost access",async()=>{
+ const entry={...actor,accountRole:"DATA_ENTRY"} as ProjectActor;
+ expect(await quotationPartyBalanceForActor(entry,{partyId:party,branchId:branch})).toEqual({partyId:party,branchId:branch,balance:"-90071992547409.91"});expect(m.balance).toHaveBeenCalledWith(entry,party,true,tx);
+});
