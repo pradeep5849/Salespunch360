@@ -55038,6 +55038,29 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F02 remains PARTIAL for Add New Item return path, eligible party balance display, remaining original selector parity and final runtime/device verification. No migration or production operation. Stock-primary-unit conversion policy remains unchanged."
+        },
+        "quotation_party_balance_2026_10_18": {
+          "commit": "286bb1108891189b77b7df5b0b0b4d396f04b206",
+          "work": "Web and Android quotation editors show exact posted customer balance using the existing shared party balance definition. Company, selected branch, quotation, global customer and ledger permissions enforced. Loading, failure and retry states avoid fabricated zero; identity validation and cancellation ignore stale responses. Read-only native API uses the same helper.",
+          "modified_files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPartySelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPartySelectionTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/quotations.ts",
+            "src/app/api/v1/mobile/account/quotations/party-balance/route.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/components/account/quotation-party-balance.tsx",
+            "src/lib/quotations/party-balance.test.ts",
+            "src/lib/quotations/party-balance.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": "95 focused tests across 8 files passed; TypeScript and focused ESLint passed; 2 desktop/mobile-web browser cases passed (35.4s): real posted invoice balance, failed request + retry, delayed stale response after selection, native API 401/400/403 and allowed role, foreign company/branch rejection, no journal mutation, no horizontal overflow. Android Kotlin compile and 22 focused JVM tests passed, 0 failures/errors/skips.",
+          "remaining": "Add New Item return path and original remaining selector functionality plus final exact-head validation remain pending. Android emulator/device runtime NOT RUN. No migration or production data change.",
+          "status": "PARTIAL"
         }
       },
       "push_checkpoint_evidence": {

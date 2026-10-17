@@ -9694,3 +9694,11 @@ Web/native quotations display authorized recorded stock by selected branch in th
 74 grouped tests in6 files pass; final2 desktop/mobile checks pass (29.5s), covering15/7 branch quantities,999-unit estimate without stock/journal posting, matching native API payloads, Data Entry cost/stock denial, Items OFF and overflow. Final log has no Decimal prop warnings; initial passing run surfaced the warnings and was corrected/rerun. Android compilation+19 focused JVM tests pass (2m25s), zero failures/errors/skips; no device rendering claim. Final TypeScript/focused ESLint pass.
 
 A082-F02 stays PARTIAL for Add New Item, eligible party balances and remaining original/runtime scope. All199 IDs preserved; no migration, production or A104 work. Previous-head targeted CI cadb3c3f passed both jobs.
+
+### A082-F02 — quotation party balance (2026-10-18)
+
+Source commit `286bb1108891189b77b7df5b0b0b4d396f04b206`. Web and Android quotation editors show exact posted customer balance using the existing shared party balance definition. Company, selected branch, quotation, global customer and ledger permissions enforced. Loading, failure and retry states avoid fabricated zero; identity validation and cancellation ignore stale responses. Read-only native API uses the same helper.
+
+95 focused tests across 8 files passed; TypeScript and focused ESLint passed; 2 desktop/mobile-web browser cases passed (35.4s): real posted invoice balance, failed request + retry, delayed stale response after selection, native API 401/400/403 and allowed role, foreign company/branch rejection, no journal mutation, no horizontal overflow. Android Kotlin compile and 22 focused JVM tests passed, 0 failures/errors/skips.
+
+Status remains PARTIAL. Add New Item return path and original remaining selector functionality plus final exact-head validation remain pending. Android emulator/device runtime NOT RUN. No migration or production data change.
