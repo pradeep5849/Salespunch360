@@ -28850,6 +28850,18 @@
           ],
           "tests": "23 focused loan operation/input/total/action-feedback tests passed; 2 desktop/mobile-web workflow scenarios passed (53.7s) with invalid repayment, injected failed POST, retained values/key, successful repayment reset, top-up reset, ledger balances and AXE. TypeScript and changed-file ESLint passed.",
           "remaining": "A064-F13 remains PARTIAL: remaining money-form coverage and complete final-head validation/device runtime still pending."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "0dbb02f5d363a63624eb028d2abf085498b105ef",
+          "work": "Add/Reduce Balance controls have stable explicit accessible names, aria-invalid and unique aria-describedby links to active field errors. Entry is disabled until hydration completes, preventing early typed values from being replaced by initial state after a failed server validation. Existing pending/retry/key rotation and balanced posting preserved.",
+          "files": [
+            "src/components/account/money-adjustment-form.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "2 desktop/mobile-web scenarios passed (43.8s): whitespace reason rejected/focused/associated, amount and key retained, no journal on failure; corrected request posts exactly one adjustment and shows correct balance. Includes account opening OBE journal and AXE checks. TypeScript and changed-file ESLint passed.",
+          "initial_failures": "Both viewports initially lost amount after invalid reason; hydration guard resolves the regression. Render-prop wrapper replaced with explicit field props while diagnosing; not independently claimed as the root cause.",
+          "remaining": "Finding remains PARTIAL; other money-form coverage, full final-head validation and native device runtime remain pending."
         }
       ],
       "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change.",

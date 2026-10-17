@@ -9555,3 +9555,8 @@ Validation: 67 focused unit/PostgreSQL tests; 2 desktop/mobile-web scenarios; An
 ### A064-F13 loan-form recovery slice — 2026-10-17
 
 Code `fb201dee844c109b304980a9c321d3a37b3d4302`: clear confirmed receive-loan, repayment, top-up/lifecycle entry controls; preserve failed inputs/request keys. Passed 23 focused tests, 2 desktop/mobile-web ledger/AXE workflows (53.7s), TypeScript and changed-file lint. No financial service/schema changes. Finding remains PARTIAL; final-head and native device runtime pending.
+
+
+### A064-F13 adjustment validation slice — 2026-10-17
+
+Code `0dbb02f5d363a63624eb028d2abf085498b105ef`: explicit accessible field-error associations and hydration guard prevent early-entry loss after validation errors. Two desktop/mobile-web account/OBE/adjustment workflows passed (43.8s), including preserved amount/key, focused invalid reason, no write on failure and one balanced correction; TypeScript and changed-file lint passed. Initial retention failures were corrected before commit. Finding remains PARTIAL; full final-head/native runtime pending.
