@@ -2428,3 +2428,29 @@ test("A090 warehouse stock amounts and as-of date use saved display preferences"
   expect((await db.accountProduct.findUniqueOrThrow({where:{id:product.id}})).costPrice?.toString()).toBe("12.34");
  }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}})}
 });
+
+test("A082 quotation live totals agree with saved server calculation",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),name=`Live quotation ${randomUUID().slice(0,8)}`;
+ const journalCount=await db.journalEntry.count({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["QUOTATIONS_BOQ"],baseCurrency:"USD",displayDecimalPlaces:3}});
+  await signInSettings(page);await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");
+  await page.getByLabel("Branch",{exact:true}).selectOption(branchId);await page.getByLabel("Customer",{exact:true}).selectOption(customerId);
+  const line=page.locator("article").filter({has:page.getByLabel("Item name",{exact:true})});
+  await line.getByLabel("Item name",{exact:true}).fill(name);await line.getByLabel("Quantity",{exact:true}).fill("5");await line.getByLabel("Rate",{exact:true}).fill("70");await line.getByLabel("Tax %",{exact:true}).fill("18");
+  const preview=page.getByRole("region",{name:"Quotation totals",exact:true}),preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3});
+  const total=preview.locator("dl > div").filter({has:page.locator("dt").filter({hasText:/^Total amount$/})});
+  await expect(total).toContainText(formatMoney("413",preferences));
+  await line.getByRole("combobox",{name:"Line discount type",exact:true}).selectOption("PERCENTAGE");await line.getByRole("spinbutton",{name:"Line discount value",exact:true}).fill("10");
+  await expect(total).toContainText(formatMoney("371.70",preferences));
+  await line.getByLabel("Quantity",{exact:true}).fill("0");await expect(preview.getByRole("status")).toContainText("Enter valid");await expect(preview.locator("dl")).toHaveCount(0);
+  await line.getByLabel("Quantity",{exact:true}).fill("5");await expect(total).toContainText(formatMoney("371.70",preferences));
+  expect((await new AxeBuilder({page}).include('[aria-label="Quotation totals"]').analyze()).violations).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  await page.getByRole("button",{name:"Save & New",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"New estimate ready"})).toBeVisible({timeout:20000});
+  const saved=await db.quotationLine.findFirstOrThrow({where:{companyId,itemName:name},include:{revision:true}});
+  expect(saved.revision.grandTotal.toString()).toBe("371.7");expect(saved.revision.taxTotal.toString()).toBe("56.7");
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journalCount);
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
+});
