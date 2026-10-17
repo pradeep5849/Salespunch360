@@ -9642,3 +9642,9 @@ Validation: 27 focused tests pass; 2 desktop/mobile Chromium checks pass (1.0m);
 Source `26bed7a0`: saved company currency/decimal/date formats now apply to warehouse stock cost/value and as-of date; quantities retain stock precision. Labelled, keyboard-focusable table scrolling contains mobile overflow. No accounting calculations changed.
 
 18 formatting unit tests and2 desktop/mobile browser checks pass (28.9s); TypeScript/focused ESLint pass. Initial test fixture assumed precision beyond existing persistence; corrected to representable12.34 before final pass. A090 remains PARTIAL; no Android device/full-head verification claimed.
+
+### A082-F03 / A082-F02 — web quotation live totals and control names, 2026-10-17
+
+Web editor now previews through the authoritative Decimal quotation calculator, recovers invalid input without stale totals, and respects cost visibility. Branch/Customer/discount controls have explicit accessible names.68 grouped calculation/service/PDF tests and4 isolated local PostgreSQL audit tests pass.2 desktop/mobile browser checks pass (24.4s), including413 before discount,371.70 after10% discount, saved server agreement, no journal posting, scoped accessibility and overflow. TypeScript/focused ESLint pass. Initial ambiguous-label timeout corrected before final run.
+
+Both findings remain PARTIAL. Inclusive-tax/rounding/supply persistence, native live totals and remaining original selector scope are not claimed complete.

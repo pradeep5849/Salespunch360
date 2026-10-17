@@ -54855,7 +54855,27 @@
       "checkpoint_work": {
         "implementation": "Quotation customer option DTO now includes safe branch identity. Web/native customer lists filter to the selected branch; web branch changes clear the selected customer/lead. Existing server branch/company/party checks and cost-field exclusion retained.",
         "tests": "48 shared quotation service tests passed; 2 desktop/mobile tests passed (25.8s) for branch switch/reset, correct draft persistence and server rejection of mismatched party; Android compile, clean Node22 TypeScript and focused lint passed.",
-        "remaining": "Other original saved-party/item selection, purchase-price display/native interaction and final-head validation remain pending; PARTIAL retained."
+        "remaining": "Other original saved-party/item selection, purchase-price display/native interaction and final-head validation remain pending; PARTIAL retained.",
+        "quotation_live_preview_2026_10_17": {
+          "implementation_commit": "e43bd8e8184add50b64eddec8321d19b1cefabcc",
+          "work": "Web quotation/estimate editor previews subtotal, line/document discounts, additional charges, taxable amount, tax and total using the same Decimal calculator as save. Internal-cost/profit preview requires existing canCost capability. Invalid numeric input clears stale totals with recoverable message. Saving remains server-authoritative; no new tax mode/rounding or posting behavior. Branch/Customer and discount controls receive explicit accessible names.",
+          "files": [
+            "src/components/account/quotation-totals-preview.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "grouped": "68 quotation calculation/service/PDF tests PASS",
+            "database": "4 isolated local PostgreSQL draft-audit tests PASS; no production database touched",
+            "browser": "2 desktop/mobile Chromium checks PASS (24.4s):5x70+18%=413,10% discount=371.70, invalid/recovered quantity, USD3 decimals, scoped AXE/no overflow, saved revision total371.70/tax56.70, no journal posting",
+            "typescript": "PASS",
+            "eslint": "PASS",
+            "initial_browser": "First mobile check timed out on ambiguous Branch label; cancelled redundant desktop run, added explicit accessible names and reran both successfully.",
+            "android": "NOT CHANGED; native live-preview parity remains pending",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 remains PARTIAL: inclusive tax/rounding/supply context persistence and native live preview remain outstanding. A082-F02 retains remaining original scope; naming fix alone does not complete it."
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "Editors use plain selects with no Add new party/Add New Item search flow or stock display. Customer options omit branchId, phone and balance; both editors therefore cannot filter customers to selected Branch. Backend correctly rejects mismatched Branch. Products expose no stock summary.",
@@ -55224,6 +55244,28 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "quotation_live_preview_2026_10_17": {
+          "implementation_commit": "e43bd8e8184add50b64eddec8321d19b1cefabcc",
+          "work": "Web quotation/estimate editor previews subtotal, line/document discounts, additional charges, taxable amount, tax and total using the same Decimal calculator as save. Internal-cost/profit preview requires existing canCost capability. Invalid numeric input clears stale totals with recoverable message. Saving remains server-authoritative; no new tax mode/rounding or posting behavior. Branch/Customer and discount controls receive explicit accessible names.",
+          "files": [
+            "src/components/account/quotation-totals-preview.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "grouped": "68 quotation calculation/service/PDF tests PASS",
+            "database": "4 isolated local PostgreSQL draft-audit tests PASS; no production database touched",
+            "browser": "2 desktop/mobile Chromium checks PASS (24.4s):5x70+18%=413,10% discount=371.70, invalid/recovered quantity, USD3 decimals, scoped AXE/no overflow, saved revision total371.70/tax56.70, no journal posting",
+            "typescript": "PASS",
+            "eslint": "PASS",
+            "initial_browser": "First mobile check timed out on ambiguous Branch label; cancelled redundant desktop run, added explicit accessible names and reran both successfully.",
+            "android": "NOT CHANGED; native live-preview parity remains pending",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 remains PARTIAL: inclusive tax/rounding/supply context persistence and native live preview remain outstanding. A082-F02 retains remaining original scope; naming fix alone does not complete it."
+        }
       }
     },
     {
