@@ -1,9 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import { saveMoneyAdjustmentAction } from "@/app/actions/money";
-import { ActionFeedbackForm, AccountFieldError } from "./action-feedback-form";
+import { ActionFeedbackForm, AccountFieldError, useAccountFieldError } from "./action-feedback-form";
 import { SavePendingFields, SaveSubmitButton } from "./save-feedback";
+const subscribeHydration=()=>()=>{};
+function AdjustmentField({name,label,value,onChange,type="text",multiline=false,children,defaultValue,pattern}:{name:string;label:string;value?:string;onChange?:(value:string)=>void;type?:string;multiline?:boolean;children?:React.ReactNode;defaultValue?:string;pattern?:string}){
+ const error=useAccountFieldError(name),id=useId();
+ const attributes={name,"aria-invalid":!!error,"aria-describedby":error?id:undefined,"aria-label":label,required:true};
+ return <label>{label}{children?<select {...attributes} defaultValue={defaultValue}>{children}</select>:multiline?<textarea {...attributes} value={value} onChange={event=>onChange?.(event.target.value)} minLength={3} maxLength={1000}/>:<input {...attributes} type={type} value={value} onChange={event=>onChange?.(event.target.value)} pattern={pattern} inputMode={name==="amount"?"decimal":undefined}/>}<AccountFieldError name={name} id={id}/></label>;
+}
 export function MoneyAdjustmentForm({
   accountId,
   branches,
@@ -17,6 +23,7 @@ export function MoneyAdjustmentForm({
   requestKey: string;
   selectedBranch?: string;
 }) {
+  const hydrated=useSyncExternalStore(subscribeHydration,()=>true,()=>false);
   const [key, setKey] = useState(requestKey);
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
@@ -40,77 +47,16 @@ export function MoneyAdjustmentForm({
       >
         <input type="hidden" name="moneyAccountId" value={accountId} />
         <input type="hidden" name="idempotencyKey" value={key} />
-        <SavePendingFields>
-          <label>
-            Posting branch
-            <select
-              name="branchId"
-              aria-label="Posting branch"
-              required
-              defaultValue={selectedBranch ?? branches[0]?.id}
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <AccountFieldError name="branchId" />
-          </label>
-          <label>
-            Adjustment
-            <select name="direction" aria-label="Adjustment">
-              <option value="ADD">Add balance</option>
-              <option value="REDUCE">Reduce balance</option>
-            </select>
-          </label>
-          <label>
-            Offset ledger
-            <select
-              name="offsetLedgerId"
-              aria-label="Offset ledger"
-              required
-              defaultValue=""
-            >
-              <option value="">Select the reason’s ledger</option>
-              {ledgers.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name} ({l.accountClass})
-                </option>
-              ))}
-            </select>
-            <AccountFieldError name="offsetLedgerId" />
-          </label>
-          <label>
-            Amount
-            <input
-              name="amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              inputMode="decimal"
-              required
-              pattern="[0-9]{1,16}(\.[0-9]{1,2})?"
-            />
-            <AccountFieldError name="amount" />
-          </label>
-          <label>
-            Date
-            <input name="date" type="date" required />
-            <AccountFieldError name="date" />
-          </label>
-          <label>
-            Reason
-            <textarea
-              name="reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              minLength={3}
-              maxLength={1000}
-              required
-            />
-            <AccountFieldError name="reason" />
-          </label>
-        </SavePendingFields>
+        <fieldset disabled={!hydrated} style={{display:"contents"}}><SavePendingFields>
+          <AdjustmentField name="branchId" label="Posting branch" defaultValue={selectedBranch ?? branches[0]?.id}>
+            {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.name}</option>)}
+          </AdjustmentField>
+          <AdjustmentField name="direction" label="Adjustment" defaultValue="ADD"><option value="ADD">Add balance</option><option value="REDUCE">Reduce balance</option></AdjustmentField>
+          <AdjustmentField name="offsetLedgerId" label="Offset ledger" defaultValue=""><option value="">Select the reason’s ledger</option>{ledgers.map(ledger=><option key={ledger.id} value={ledger.id}>{ledger.name} ({ledger.accountClass})</option>)}</AdjustmentField>
+          <AdjustmentField name="amount" label="Amount" value={amount} onChange={setAmount} pattern="[0-9]{1,16}(\.[0-9]{1,2})?"/>
+          <AdjustmentField name="date" label="Date" type="date"/>
+          <AdjustmentField name="reason" label="Reason" value={reason} onChange={setReason} multiline/>
+        </SavePendingFields></fieldset>
         <SaveSubmitButton disabled={!branches.length || !ledgers.length}>
           Post adjustment
         </SaveSubmitButton>
