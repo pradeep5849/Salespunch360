@@ -11417,6 +11417,25 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A058-F02 edited-line/native purchase pricing matrix remains PARTIAL; A057-F03 broader price catalogue consumption remains PARTIAL. No ledger/posting/valuation change, Android source change or device verification in this slice."
+        },
+        "native_purchase_cost_2026_10_17": {
+          "implementation_commit": "7c12a743e5e36e38837b65606ff79132668f3557",
+          "work": "Native new purchases honor company default tax mode. Explicit item selection resolves normalized saved cost into the document mode using shared native ItemMasterPrice;retains manual line discounts and clears old tracking/source identities. Historical source-line selection stays separate and preserves original rates.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountPurchaseViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseMasterPricing.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseMasterPricingTest.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin and22 JVM tests PASS(1m48s):5 PurchaseMasterPricing,8 ItemMasterPricing,9 PurchaseRequest;0 failures/errors/skips. Includes inclusive59 vs exclusive50,manual discount,cent retention,legacy/source rates and payload contract. No device runtime.",
+            "browser_api": "2 desktop/mobile Chromium cases PASS(1.1m),web draft177 and actual authenticated native purchase create/retry177 withrate59,quantity3,tax18 inclusive;no sale discount,no duplicate request/no draft journal posting;existing register/grouped financial regressions retained.",
+            "typescript": "PASS",
+            "eslint": "PASS focused e2e",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A058-F02 and linked A057-F03 remain PARTIAL for remaining catalogue/pricing matrix and final-head/device verification. Asked user which rate to use when item wholesale and active dated Wholesale Price List both exist;do not invent precedence."
         }
       },
       "intermediate_validation": {
@@ -12880,6 +12899,25 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A058-F02 edited-line/native purchase pricing matrix remains PARTIAL; A057-F03 broader price catalogue consumption remains PARTIAL. No ledger/posting/valuation change, Android source change or device verification in this slice."
+        },
+        "native_purchase_cost_2026_10_17": {
+          "implementation_commit": "7c12a743e5e36e38837b65606ff79132668f3557",
+          "work": "Native new purchases honor company default tax mode. Explicit item selection resolves normalized saved cost into the document mode using shared native ItemMasterPrice;retains manual line discounts and clears old tracking/source identities. Historical source-line selection stays separate and preserves original rates.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountPurchaseViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseMasterPricing.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseMasterPricingTest.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin and22 JVM tests PASS(1m48s):5 PurchaseMasterPricing,8 ItemMasterPricing,9 PurchaseRequest;0 failures/errors/skips. Includes inclusive59 vs exclusive50,manual discount,cent retention,legacy/source rates and payload contract. No device runtime.",
+            "browser_api": "2 desktop/mobile Chromium cases PASS(1.1m),web draft177 and actual authenticated native purchase create/retry177 withrate59,quantity3,tax18 inclusive;no sale discount,no duplicate request/no draft journal posting;existing register/grouped financial regressions retained.",
+            "typescript": "PASS",
+            "eslint": "PASS focused e2e",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A058-F02 and linked A057-F03 remain PARTIAL for remaining catalogue/pricing matrix and final-head/device verification. Asked user which rate to use when item wholesale and active dated Wholesale Price List both exist;do not invent precedence."
         }
       }
     },
@@ -66167,6 +66205,22 @@
       "web": "SUCCESS",
       "android": "SUCCESS",
       "scope": "Prior grouped-ledger checkpoint;does not verify later catalogue/CashBank continuation"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "7c12a743e5e36e38837b65606ff79132668f3557",
+      "finding_ids": [
+        "A058-F02",
+        "A057-F03"
+      ],
+      "evidence": {
+        "android": "compileDebugKotlin and22 JVM tests PASS(1m48s):5 PurchaseMasterPricing,8 ItemMasterPricing,9 PurchaseRequest;0 failures/errors/skips. Includes inclusive59 vs exclusive50,manual discount,cent retention,legacy/source rates and payload contract. No device runtime.",
+        "browser_api": "2 desktop/mobile Chromium cases PASS(1.1m),web draft177 and actual authenticated native purchase create/retry177 withrate59,quantity3,tax18 inclusive;no sale discount,no duplicate request/no draft journal posting;existing register/grouped financial regressions retained.",
+        "typescript": "PASS",
+        "eslint": "PASS focused e2e",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate native purchase default/cost parity;no final verification promotion"
     }
   ]
 }

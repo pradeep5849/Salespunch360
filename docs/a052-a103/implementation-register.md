@@ -9626,3 +9626,7 @@ A085-F02 / linked A084-F03 code `68a2882672ebf634e0c8ee315a14f6321ed478be`: exis
 ## Cash/Bank scoped tabs and equation — 17 October 2026
 
 A084-F03 / linked A090-F01 code `79fee310b469465cd618dc4c90949bbe81532d4b`: server-validated All/Cash/Bank/Petty tabs,matching exports/native scope,opening/receipts/payments/closing summary and Reports Back context. High-precision shared read aggregates preserve cents. Native cold metadata requests keep explicit money type and exclude stale dimensions. Passed76 focused/local PostgreSQL tests(7 files,13.65s),final desktop/mobile real-journal tabs/CSV/native/Axe/no-write2/2(39.2s),final Android compile+10 JVM tests(1m51s),TypeScript/focused lint. No migration or production change. Other report/display/device/final-head scope remains PARTIAL;counts176/21/2. Targeted CI passed at prior9d027b8f(run39041409690);newer source needs CI.
+
+## Native purchase default/cost parity — 17 October 2026
+
+A058-F02 / linked A057-F03 code `7c12a743e5e36e38837b65606ff79132668f3557`: native purchase draft uses saved company tax mode;explicit item selection converts normalized purchase cost and preserves manual discounts/source-history isolation. Passed Android compile+22 JVM tests(5+8+9,1m48s),2 desktop/mobile web/native-create/retry and retained report cases(1.1m),TypeScript/focused e2e lint. Actual native draft177 matches web;idempotent request yields one draft and no journal. Dated wholesale-vs-item price precedence asked asynchronously;other pricing/final-head/device scope remains PARTIAL. Counts176/21/2.
