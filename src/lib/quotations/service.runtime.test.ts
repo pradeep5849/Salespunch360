@@ -3,7 +3,7 @@ import {beforeEach,describe,expect,it,vi} from "vitest";import {Prisma} from "@p
 const C="11111111-1111-4111-8111-111111111111",B="22222222-2222-4222-8222-222222222222",ID="33333333-3333-4333-8333-333333333333",R="44444444-4444-4444-8444-444444444444";
 const m=vi.hoisted(()=>({auth:vi.fn(),allocate:vi.fn(),visibility:vi.fn(()=>({assignedUserId:"actor"})),txRun:vi.fn(),branch:vi.fn(),customer:vi.fn(),company:vi.fn(),lead:vi.fn(),product:vi.fn(),service:vi.fn(),work:vi.fn(),unit:vi.fn(),docCreate:vi.fn(),docFind:vi.fn(),docMany:vi.fn(),docUpdateMany:vi.fn(),revisionCreate:vi.fn(),revisionFind:vi.fn(),revisionUpdate:vi.fn(),revisionDelete:vi.fn(),lineCreate:vi.fn(),lineDelete:vi.fn(),adjustCreate:vi.fn(),adjustDelete:vi.fn(),paymentCreate:vi.fn(),paymentDelete:vi.fn(),auditCreate:vi.fn(),shareCreate:vi.fn(),shareFind:vi.fn(),shareUpdateMany:vi.fn(),raw:vi.fn(),listDocs:vi.fn(),branches:vi.fn(),customers:vi.fn(),products:vi.fn(),services:vi.fn(),works:vi.fn(),units:vi.fn(),leads:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({requirePermission:m.auth,requirePermissionForMutation:m.auth}));vi.mock("@/lib/account/numbering",()=>({allocateDocumentNumberInTx:m.allocate}));vi.mock("@/lib/account/modules",()=>({requireAccountModules:vi.fn()}));vi.mock("@/lib/leads/policy",()=>({visibilityWhere:m.visibility}));
-const customModels=vi.hoisted(()=>({customFieldDefinition:{findMany:vi.fn(async()=>[])},customFieldValue:{findMany:vi.fn(async()=>[]),deleteMany:vi.fn(async()=>({count:0}))}}));
+const customModels=vi.hoisted(()=>({accountSettings:{findUnique:vi.fn(async()=>null)},customFieldDefinition:{findMany:vi.fn(async()=>[])},customFieldValue:{findMany:vi.fn(async()=>[]),deleteMany:vi.fn(async()=>({count:0}))}}));
 const tx={...customModels,branch:{findFirst:m.branch},customer:{findFirst:m.customer},company:{findUnique:m.company},lead:{findFirst:m.lead},accountProduct:{findFirst:m.product},accountService:{findFirst:m.service},workPackage:{findFirst:m.work},accountUnit:{findFirst:m.unit},quotationDocument:{create:m.docCreate,findFirst:m.docFind,updateMany:m.docUpdateMany},quotationRevision:{create:m.revisionCreate,findFirst:m.revisionFind,update:m.revisionUpdate,delete:m.revisionDelete},quotationLine:{createMany:m.lineCreate,deleteMany:m.lineDelete},quotationAdjustment:{createMany:m.adjustCreate,deleteMany:m.adjustDelete},quotationPaymentSchedule:{createMany:m.paymentCreate,deleteMany:m.paymentDelete},quotationAuditEvent:{create:m.auditCreate},quotationShare:{create:m.shareCreate,findFirst:m.shareFind,updateMany:m.shareUpdateMany},$queryRaw:m.raw};
 vi.mock("@/lib/db",()=>({db:{...customModels,$transaction:m.txRun,quotationDocument:{findMany:m.listDocs,findFirst:m.docFind,fields:{currentRevisionNumber:"currentRevisionNumber"}},quotationRevision:{findFirst:m.revisionFind},quotationShare:{findFirst:m.shareFind},company:{findUniqueOrThrow:m.company},branch:{findMany:m.branches},customer:{findMany:m.customers},accountProduct:{findMany:m.products},accountService:{findMany:m.services},workPackage:{findMany:m.works},accountUnit:{findMany:m.units},lead:{findMany:m.leads}}}));
 import {createQuotation,createQuotationRevision,createShare,getPublicQuotation,getQuotation,listQuotations,quotationEditorOptions,revokeShare,transitionQuotation,updateQuotationDraft} from "./service";
@@ -29,7 +29,7 @@ describe("Account Customer Branch options",()=>{
  it("cannot include another Branch through a crafted selector",async()=>{m.auth.mockResolvedValue(actor("ACCOUNT_ADMIN",{branchAccessScope:"SELECTED_BRANCHES",branchIds:[B]}));await quotationEditorOptions();expect(m.customers.mock.calls[0][0].where.branchId).toEqual({in:[B]})});
  it("includes safe branch identity in customer choices for client-side branch selection",async()=>{
   await quotationEditorOptions();
-  expect(m.customers.mock.calls[0][0].select).toEqual({id:true,name:true,contactPerson:true,branchId:true});
+  expect(m.customers.mock.calls[0][0].select).toEqual({id:true,name:true,contactPerson:true,phone:true,branchId:true});
  });
  it("retains all company Account customers for ALL_BRANCHES",async()=>{const rows=[{id:ID,name:"A"},{id:R,name:"B"}];m.customers.mockResolvedValue(rows);const result=await quotationEditorOptions();expect(result.customers).toEqual(rows);expect(m.customers.mock.calls[0][0].where).toEqual({companyId:C,isActive:true,isAccountCustomer:true})});
 });
@@ -78,5 +78,17 @@ describe("A083 authenticated quotation read module boundary",()=>{
   const operation=mode==="list"?listQuotationsForActor(actor()):mode==="detail"?getQuotationForActor(actor(),ID):mode==="options"?quotationEditorOptionsForActor(actor()):getCustomerQuotationForActor(actor(),ID);
   await expect(operation).rejects.toThrow("MODULE_DISABLED:QUOTATIONS_BOQ");
   expect(m.docFind).not.toHaveBeenCalled();expect(m.docMany).not.toHaveBeenCalled();expect(m.listDocs).not.toHaveBeenCalled();expect(m.products).not.toHaveBeenCalled();expect(m.revisionFind).not.toHaveBeenCalled();
+ });
+});
+
+describe("A082 inline party creation eligibility",()=>{
+ it("includes required active company customer fields only for a master-writing role",async()=>{
+  m.auth.mockResolvedValue(actor("ACCOUNT_ADMIN"));const result=await quotationEditorOptions();expect(result.partyCreation).toBeDefined();
+  expect(customModels.customFieldDefinition.findMany).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:C,entityType:"CUSTOMER",isActive:true}}));
+  expect(customModels.accountSettings.findUnique).toHaveBeenCalledWith({where:{companyId:C},select:{transactionDefaults:true}});
+ });
+ it("does not expose creation fields/settings to Project Managers",async()=>{
+  m.auth.mockResolvedValue(actor("PROJECT_MANAGER"));expect((await quotationEditorOptions()).partyCreation).toBeUndefined();expect(customModels.accountSettings.findUnique).not.toHaveBeenCalled();
+  expect(customModels.customFieldDefinition.findMany).not.toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({entityType:"CUSTOMER"})}));
  });
 });

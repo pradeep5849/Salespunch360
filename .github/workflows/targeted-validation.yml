@@ -33,7 +33,7 @@ jobs:
       - name: Report selectors and exact financial breakdowns
         run: npx vitest run src/lib/account/reports/cash-bank.test.ts src/lib/account/reports/ledger-breakdown.test.ts src/lib/account/reports/purchase-register.test.ts src/lib/account/reports/queries.test.ts
       - name: Quotation preview and authoritative calculation regression
-        run: npx vitest run src/lib/quotations/calculation.test.ts src/lib/quotations/service.runtime.test.ts src/lib/quotations/pdf.test.ts
+        run: npx vitest run src/app/actions/account-party-creation.test.ts src/lib/account/party-create.runtime.test.ts src/lib/quotations/calculation.test.ts src/lib/quotations/service.runtime.test.ts src/lib/quotations/pdf.test.ts
       - name: Purchase master pricing preview
         run: npx vitest run src/lib/account/commercial-editor-pricing.test.ts src/lib/account/item-pricing.test.ts src/lib/account/purchase-editor-lineage.test.ts
       - run: npm run typecheck

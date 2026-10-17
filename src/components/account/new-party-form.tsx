@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect,useId,useState } from "react";
+import {useFormStatus} from "react-dom";
 import { useRouter } from "next/navigation";
 import type { CustomFieldDefinition } from "@prisma/client";
 import type { PartySettings } from "@/lib/account/party-settings";
@@ -16,24 +17,30 @@ export function NewAccountPartyForm({
   initialBranchId,
   fields,
   settings,
+  onCreated,
+  onPendingChange,
 }: {
   branches: Array<{ id: string; name: string }>;
   initialBranchId: string;
   fields: Field[];
   settings: PartySettings;
+  onCreated?: (party:{id:string;name:string;contactPerson:string|null;phone:string|null;branchId:string})=>void;
+  onPendingChange?: (pending:boolean)=>void;
 }) {
+  const fieldNamespace=useId();
   const router = useRouter(),
     [branch, setBranch] = useState(initialBranchId);
   return (
     <ActionFeedbackForm
-      action={saveNewAccountPartyAction}
+      action={async form=>{const result=await saveNewAccountPartyAction(form);if(result.kind==="success"&&result.createdParty)onCreated?.(result.createdParty);return result}}
       className="account-form"
       onSuccess={() =>
-        router.push(
+        !onCreated && router.push(
           `/workspace/account?tab=parties&branchId=${encodeURIComponent(branch)}`,
         )
       }
     >
+      {onPendingChange&&<PartyPendingState onChange={onPendingChange}/>}
       <SavePendingFields>
         <label>
           Branch
@@ -118,10 +125,12 @@ export function NewAccountPartyForm({
           <textarea name="notes" maxLength={2000} />
         </label>
         {fields.map((f) => (
-          <CustomFieldInput key={f.fieldKey} field={f} />
+          <CustomFieldInput key={f.fieldKey} field={f} idPrefix={fieldNamespace}/>
         ))}
       </SavePendingFields>
       <SaveSubmitButton disabled={!branch}>Create party</SaveSubmitButton>
     </ActionFeedbackForm>
   );
 }
+
+function PartyPendingState({onChange}:{onChange:(pending:boolean)=>void}){const {pending}=useFormStatus();useEffect(()=>{onChange(pending)},[pending,onChange]);return null}
