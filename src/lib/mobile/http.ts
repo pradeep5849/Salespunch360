@@ -1,3 +1,4 @@
+import {moneyValidationFeedback} from "./money-validation-feedback";
 import { ZodError } from "zod";
 import {
   accountErrorMessage,
@@ -43,6 +44,8 @@ export const mobileAuthorizationFailure = (error: unknown) =>
     ? mobileJson({ error: "FORBIDDEN" }, 403)
     : null;
 export function mobileUnexpected(category: string, error: unknown) {
+  if(error instanceof ZodError && /^MOBILE_(MONEY|LOAN|OWNER|CHEQUE|ASSET_FUNDING)/.test(category))
+    return mobileJson(moneyValidationFeedback(error),400);
   if (error instanceof ZodError || error instanceof SyntaxError)
     return mobileJson({ error: "INVALID_INPUT" }, 400);
   if (isAccountDomainError(error))

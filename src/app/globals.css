@@ -771,3 +771,6 @@ body:has(.account-shell) > .workspace-header{display:none}
 .add-item-page{--account-muted:#475569}
 .add-item-page .party-detail-tabs button[aria-pressed="false"]{color:#475569}
 .add-item-page .item-tab-panel h2{font-size:18px;margin:8px 0 0;padding-bottom:10px;border-bottom:1px solid var(--line)}
+
+/* Keep startup-disabled money forms readable, including nested fieldsets. */
+.account-main .action-feedback-fields:disabled button{opacity:1;background:#64748b;border-color:#64748b;color:#fff}

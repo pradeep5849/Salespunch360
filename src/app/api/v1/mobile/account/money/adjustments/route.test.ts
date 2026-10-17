@@ -42,8 +42,11 @@ describe("mobile money adjustment boundary", () => {
     expect((await POST(request())).status).toBe(403);
   });
   it("returns invalid input and retry conflict without a generic success", async () => {
-    mock.post.mockRejectedValueOnce(z.string().uuid().safeParse("bad").error);
-    expect((await POST(request())).status).toBe(400);
+    mock.post.mockRejectedValueOnce(z.object({reason:z.string().min(3)}).safeParse({reason:" "}).error);
+    const invalid=await POST(request());
+    expect(invalid.status).toBe(400);
+    expect(invalid.headers.get("cache-control")).toBe("no-store");
+    expect(await invalid.json()).toMatchObject({error:"INVALID_INPUT",message:"Enter a valid reason within the allowed length.",fieldErrors:{reason:"Enter a valid reason within the allowed length."}});
     mock.post.mockRejectedValueOnce(new Error("IDEMPOTENCY_CONFLICT"));
     expect((await POST(request())).status).toBe(409);
   });

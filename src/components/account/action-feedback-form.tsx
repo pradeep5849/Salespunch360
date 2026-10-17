@@ -5,9 +5,11 @@ import {
   useContext,
   useEffect,
   useRef,
+  useSyncExternalStore,
 } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountActionResult } from "@/lib/account/action-feedback";
+const subscribeHydration=()=>()=>{};
 const FeedbackContext = createContext<AccountActionResult | null>(null);
 export function useAccountActionFeedback(){return useContext(FeedbackContext)}
 export function useAccountFieldError(name: string) {
@@ -32,6 +34,7 @@ export function ActionFeedbackForm({
   className?: string;
   onSuccess?: () => void;
 }) {
+  const hydrated=useSyncExternalStore(subscribeHydration,()=>true,()=>false);
   const router = useRouter(), formRef=useRef<HTMLFormElement>(null),feedbackRef=useRef<HTMLParagraphElement>(null);
   const successCallback = useRef(onSuccess);
   useEffect(() => {
@@ -82,7 +85,7 @@ export function ActionFeedbackForm({
             {state.message}
           </p>
         )}
-        {children}
+        <fieldset className="action-feedback-fields" disabled={!hydrated} style={{display:"contents"}}>{children}</fieldset>
       </form>
     </FeedbackContext.Provider>
   );

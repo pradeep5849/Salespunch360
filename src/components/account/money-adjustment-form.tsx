@@ -1,10 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useId, useState, useSyncExternalStore } from "react";
+import { useId, useState } from "react";
 import { saveMoneyAdjustmentAction } from "@/app/actions/money";
 import { ActionFeedbackForm, AccountFieldError, useAccountFieldError } from "./action-feedback-form";
 import { SavePendingFields, SaveSubmitButton } from "./save-feedback";
-const subscribeHydration=()=>()=>{};
 function AdjustmentField({name,label,value,onChange,type="text",multiline=false,children,defaultValue,pattern}:{name:string;label:string;value?:string;onChange?:(value:string)=>void;type?:string;multiline?:boolean;children?:React.ReactNode;defaultValue?:string;pattern?:string}){
  const error=useAccountFieldError(name),id=useId();
  const attributes={name,"aria-invalid":!!error,"aria-describedby":error?id:undefined,"aria-label":label,required:true};
@@ -23,7 +22,6 @@ export function MoneyAdjustmentForm({
   requestKey: string;
   selectedBranch?: string;
 }) {
-  const hydrated=useSyncExternalStore(subscribeHydration,()=>true,()=>false);
   const [key, setKey] = useState(requestKey);
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
@@ -47,7 +45,7 @@ export function MoneyAdjustmentForm({
       >
         <input type="hidden" name="moneyAccountId" value={accountId} />
         <input type="hidden" name="idempotencyKey" value={key} />
-        <fieldset disabled={!hydrated} style={{display:"contents"}}><SavePendingFields>
+        <SavePendingFields>
           <AdjustmentField name="branchId" label="Posting branch" defaultValue={selectedBranch ?? branches[0]?.id}>
             {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.name}</option>)}
           </AdjustmentField>
@@ -56,7 +54,7 @@ export function MoneyAdjustmentForm({
           <AdjustmentField name="amount" label="Amount" value={amount} onChange={setAmount} pattern="[0-9]{1,16}(\.[0-9]{1,2})?"/>
           <AdjustmentField name="date" label="Date" type="date"/>
           <AdjustmentField name="reason" label="Reason" value={reason} onChange={setReason} multiline/>
-        </SavePendingFields></fieldset>
+        </SavePendingFields>
         <SaveSubmitButton disabled={!branches.length || !ledgers.length}>
           Post adjustment
         </SaveSubmitButton>
