@@ -28782,7 +28782,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -28862,6 +28862,42 @@
           "tests": "2 desktop/mobile-web scenarios passed (43.8s): whitespace reason rejected/focused/associated, amount and key retained, no journal on failure; corrected request posts exactly one adjustment and shows correct balance. Includes account opening OBE journal and AXE checks. TypeScript and changed-file ESLint passed.",
           "initial_failures": "Both viewports initially lost amount after invalid reason; hydration guard resolves the regression. Render-prop wrapper replaced with explicit field props while diagnosing; not independently claimed as the root cause.",
           "remaining": "Finding remains PARTIAL; other money-form coverage, full final-head validation and native device runtime remain pending."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "f0806efe46debec6ce64fd548e1620ff55033431",
+          "implementation": "Shared feedback forms block entry until hydration and preserve controlled/uncontrolled drafts, pending guards and retry identities on rejection. Disabled nested controls retain readable contrast. Web account/adjustment, transfer, loan and owner/cheque recovery completed in prior and current slices. Money-scoped mobile schema failures now return allowlisted field help and structured errors; values, unknown field names and validator messages are never echoed. Native editor consumes safe server help and gives actionable offline, expired-session and forbidden feedback without discarding entries. Existing native labeled controls, pending guards, active-editor error region, retry/cancel and confirmed-success close path reviewed against the original finding.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountMoneyViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/MoneyMutationFeedback.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/MoneyMutationFeedbackTest.kt",
+            "src/app/api/v1/mobile/account/money/adjustments/route.test.ts",
+            "src/app/globals.css",
+            "src/components/account/action-feedback-form.tsx",
+            "src/components/account/money-adjustment-form.tsx",
+            "src/lib/mobile/http.ts",
+            "src/lib/mobile/money-validation-feedback.test.ts",
+            "src/lib/mobile/money-validation-feedback.ts"
+          ],
+          "verification": {
+            "code_implementation": "IMPLEMENTED",
+            "automated": "43 unit/API tests passed in 13 files, including authenticated adjustment validation/no-store response, permission/retry boundaries and non-disclosure tests.",
+            "web_browser_runtime": "8 grouped desktop/mobile checks passed (1.6m): account/OBE/adjustment, transfer, loan receipt/payment/top-up/lifecycle, cheque closure/reopen. Owner correction additional 2 passed (37.7s). Focus, retention, pending, single balanced postings and AXE checks included.",
+            "responsive_web_runtime": "Same scenarios executed in mobile Chromium and desktop Chromium.",
+            "android_automated": "compileDebugKotlin and 23 JVM tests passed; 0 failure/error/skip, BUILD SUCCESSFUL in 1m55s.",
+            "android_emulator_device_runtime": "NOT EXECUTED \u2014 no emulator/device available.",
+            "backend_database_runtime": "Browser scenarios executed real isolated local PostgreSQL posting paths; mobile validation boundary tested through real HTTP handler with mocked authenticated service. No production calls or data changes.",
+            "typescript": "tsc --noEmit passed.",
+            "lint": "Changed-file ESLint passed; full repository lint running at evidence preparation."
+          },
+          "initial_failures_corrected": "First grouped run had 6 passes / 2 loan AXE contrast failures during hydration. Scoped disabled button contrast fixed; repeated complete 8-scenario group passed without weakening assertions.",
+          "remaining_limitations": [
+            "Final exact-head complete 199-finding regression, production build and all required validations pending.",
+            "Android device/TalkBack runtime unavailable; no runtime verification claimed.",
+            "No migration or accounting policy change in this slice."
+          ],
+          "status_rationale": "Original money-form labels, structured safe errors, retained draft, pending/retry/cancel and active native error visibility implemented and checked independently; promotion is code implementation only, not final verification."
         }
       ],
       "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change.",

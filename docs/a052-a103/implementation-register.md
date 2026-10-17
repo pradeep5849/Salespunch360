@@ -9560,3 +9560,8 @@ Code `fb201dee844c109b304980a9c321d3a37b3d4302`: clear confirmed receive-loan, r
 ### A064-F13 adjustment validation slice — 2026-10-17
 
 Code `0dbb02f5d363a63624eb028d2abf085498b105ef`: explicit accessible field-error associations and hydration guard prevent early-entry loss after validation errors. Two desktop/mobile-web account/OBE/adjustment workflows passed (43.8s), including preserved amount/key, focused invalid reason, no write on failure and one balanced correction; TypeScript and changed-file lint passed. Initial retention failures were corrected before commit. Finding remains PARTIAL; full final-head/native runtime pending.
+
+
+### A064-F13 money-form implementation closure — 2026-10-17
+
+Code `f0806efe46debec6ce64fd548e1620ff55033431`: shared hydration-safe retained entry and readable disabled controls; safe field-specific mobile validation and native offline/authorization feedback. Passed 43 unit/API tests, 8 grouped desktop/mobile workflows plus 2 owner-correction cases, TypeScript, focused lint, Android compilation and 23 JVM tests (0 failed/skipped). Initial grouped contrast failures were fixed and the whole group passed. Original finding promoted to IMPLEMENTED BUT NOT VERIFIED; device/TalkBack runtime and complete final-head validation remain pending. Counts: 172 implemented but not fully verified / 25 partial / 2 not started; all 199 IDs retained.
