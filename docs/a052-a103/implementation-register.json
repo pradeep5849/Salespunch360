@@ -56735,6 +56735,30 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A085-F02 / linked A084-F03 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device verification. No migrations or production changes."
+        },
+        "ledger_breakdown_2026_10_17": {
+          "implementation_commit": "fcb476a069bd581f55f082a8215e2dae4885f1eb",
+          "work": "Profit & Loss/branch P&L and Balance Sheet keep original summary rows and add scoped ledger sections. Closing vs period signs preserve contra balances and current earnings. Web expandable groups,formatted exports and native expandable bounded lazy ledger lists share metadata. Report arithmetic uses48-digit Decimal context so large ledger aggregates retain cents in summaries,trial balances and running ledgers; no financial posting mutation.",
+          "files": [
+            "src/lib/account/reports/ledger-breakdown.ts",
+            "src/lib/account/reports/ledger-breakdown.test.ts",
+            "src/lib/account/financial-reports.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/export-data.ts",
+            "src/components/account/report-table.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+          ],
+          "tests": {
+            "financial_database": "71 passed across6 files (12.73s),including actual local PostgreSQL implementation workflows,exact aggregate/contra/opening/closing/running ledger checks,export/display/service boundaries;0 failures/skips",
+            "browser": "2 passed desktop/mobile Chromium (2.2m) covering purchase->register->P&L/Balance Sheet expansion,CSV,native API sections,Axe AA/overflow,no extra journal writes. Browser run preceded Decimal precision and native lazy-list follow-up; latter changes verified by final focused financial/JVM/type/lint checks,not new browser/device runtime.",
+            "android": "Final compileDebugKotlin/testDebugUnitTest PASS(1m49s),8 AccountReportData JVM tests,0 failures/errors/skips;no emulator/device runtime",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remains PARTIAL: other report-specific layouts/filter/computation scope outstanding. A090-F01 other display consumers/final-head verification remain PARTIAL."
         }
       }
     },
@@ -63789,6 +63813,30 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A087-F02 remains PARTIAL for full reference actions and unsupported attachment/shipping fields/native parity. A090-F01 other display consumers remain PARTIAL. No new native/device verification or financial posting change."
+        },
+        "ledger_breakdown_2026_10_17": {
+          "implementation_commit": "fcb476a069bd581f55f082a8215e2dae4885f1eb",
+          "work": "Profit & Loss/branch P&L and Balance Sheet keep original summary rows and add scoped ledger sections. Closing vs period signs preserve contra balances and current earnings. Web expandable groups,formatted exports and native expandable bounded lazy ledger lists share metadata. Report arithmetic uses48-digit Decimal context so large ledger aggregates retain cents in summaries,trial balances and running ledgers; no financial posting mutation.",
+          "files": [
+            "src/lib/account/reports/ledger-breakdown.ts",
+            "src/lib/account/reports/ledger-breakdown.test.ts",
+            "src/lib/account/financial-reports.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/export-data.ts",
+            "src/components/account/report-table.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+          ],
+          "tests": {
+            "financial_database": "71 passed across6 files (12.73s),including actual local PostgreSQL implementation workflows,exact aggregate/contra/opening/closing/running ledger checks,export/display/service boundaries;0 failures/skips",
+            "browser": "2 passed desktop/mobile Chromium (2.2m) covering purchase->register->P&L/Balance Sheet expansion,CSV,native API sections,Axe AA/overflow,no extra journal writes. Browser run preceded Decimal precision and native lazy-list follow-up; latter changes verified by final focused financial/JVM/type/lint checks,not new browser/device runtime.",
+            "android": "Final compileDebugKotlin/testDebugUnitTest PASS(1m49s),8 AccountReportData JVM tests,0 failures/errors/skips;no emulator/device runtime",
+            "typescript": "PASS",
+            "eslint": "PASS focused",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remains PARTIAL: other report-specific layouts/filter/computation scope outstanding. A090-F01 other display consumers/final-head verification remain PARTIAL."
         }
       },
       "intermediate_validation": {
@@ -65954,6 +66002,31 @@
         "final_complete_head": "NOT RUN"
       },
       "scope": "Intermediate catalogue/register continuation;full final checkpoint validation pending"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "fcb476a069bd581f55f082a8215e2dae4885f1eb",
+      "finding_ids": [
+        "A084-F03",
+        "A090-F01"
+      ],
+      "evidence": {
+        "financial_database": "71 passed across6 files (12.73s),including actual local PostgreSQL implementation workflows,exact aggregate/contra/opening/closing/running ledger checks,export/display/service boundaries;0 failures/skips",
+        "browser": "2 passed desktop/mobile Chromium (2.2m) covering purchase->register->P&L/Balance Sheet expansion,CSV,native API sections,Axe AA/overflow,no extra journal writes. Browser run preceded Decimal precision and native lazy-list follow-up; latter changes verified by final focused financial/JVM/type/lint checks,not new browser/device runtime.",
+        "android": "Final compileDebugKotlin/testDebugUnitTest PASS(1m49s),8 AccountReportData JVM tests,0 failures/errors/skips;no emulator/device runtime",
+        "typescript": "PASS",
+        "eslint": "PASS focused",
+        "final_complete_head": "NOT RUN"
+      },
+      "scope": "Intermediate grouped financial presentation/exact report arithmetic;no final verification promotion"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "7e302362d8bf355daba17890904da5d3ddd78cad",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39040582104",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "scope": "Prior Purchase Register checkpoint;does not verify later ledger breakdown slice"
     }
   ]
 }

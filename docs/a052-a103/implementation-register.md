@@ -9614,3 +9614,7 @@ A087-F02 / linked A090-F01 code `42105b3f7d4f5b508b457e51b92589ac56c1a97b`: supp
 ## Purchase Register catalogue continuation — 17 October 2026
 
 A085-F02 / linked A084-F03 code `a4d38279e9543c3a5c52d4a8eea8c36e3a0d3dd9`: existing register mapped through shared web/native catalogue,filters/favourites/routes; requires core Purchases,authorized company/branch/vendor scope,effective-journal cutoff and same-date debt. Source links select correct web/native detail. Passed35 focused/local PostgreSQL checks,2 desktop/mobile browser+CSV+native API cases(1.4m),Android compile and8 JVM tests(54s),TypeScript/focused lint. Reports created no journals. No migration or production write. Remaining catalogue/layout/final-head/device scope keeps findings PARTIAL;counts176/21/2.
+
+## Grouped financial ledger presentation — 17 October 2026
+
+A084-F03 / linked A090-F01 code `fcb476a069bd581f55f082a8215e2dae4885f1eb`: scoped P&L/Balance Sheet ledger sections accompany unchanged summary rows;web expansion,exports,native bounded lazy expansion. Read-only48-digit report arithmetic preserves large aggregate cents,contra and closing/period signs. Passed71 focused/local PostgreSQL checks(6 files,12.73s);desktop/mobile expansion/CSV/native API/Axe/no-write2/2(2.2m,preceded precision/native lazy follow-up);final Android compilation+8 JVM tests(1m49s),TypeScript/focused lint PASS. Full final-head/device verification pending. Other report/display requirements keep findings PARTIAL;counts176/21/2. Prior pushed head7e302362 passed targeted Web+Android CI39040582104.
