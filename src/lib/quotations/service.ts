@@ -1,3 +1,4 @@
+import {resolveItemSettings} from "@/lib/account/item-settings-policy";
 import {quotationStockOptionsForActor} from "./stock-options";
 import {canUsePermission} from "@/lib/auth/permissions";
 import {resolvePartySettings} from "@/lib/account/party-settings";
@@ -175,11 +176,14 @@ export async function quotationEditorOptionsForActor(actor: Actor) {
   const safeProducts = products.map(item => {const {costPrice,...safe}=item as typeof item & {costPrice?:unknown};return {...safe,salePrice:exactText(item.salePrice),taxRate:exactText(item.taxRate),...(canCost?{costPrice:exactText(costPrice)}:{})};});
   const safeServices = services.map(item => {const {estimatedCost,...safe}=item as typeof item & {estimatedCost?:unknown};return {...safe,sellingRate:exactText(item.sellingRate),taxRate:exactText(item.taxRate),...(canCost?{estimatedCost:exactText(estimatedCost)}:{})};});
   const safeWorkPackages = workPackages.map(item => {const {estimatedCost,...safe}=item as typeof item & {estimatedCost?:unknown};return {...safe,sellingRate:exactText(item.sellingRate),...(canCost?{estimatedCost:exactText(estimatedCost)}:{})};});
+  const itemWriter=canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_STOCK")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS");
+  const itemCreationSettings=itemWriter?await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true,enabledModules:true}}):null;
+  const canCreateItem=canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_STOCK")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS")&&Boolean(itemCreationSettings?.enabledModules?.includes("INVENTORY"))&&resolveItemSettings(itemCreationSettings?.itemSettings).enabled;
   const partyCreation=canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS")?{
     fields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"CUSTOMER",isActive:true},orderBy:[{position:"asc"},{id:"asc"}]}),
     settings:resolvePartySettings((await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true}}))?.transactionDefaults),
   }:undefined;
-  return { canViewPartyBalance:canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LEDGER_VIEW")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS"), stock:await quotationStockOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,products.filter(row=>row.trackInventory).map(row=>row.id)), partyCreation, customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
+  return { canCreateItem, canViewPartyBalance:canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LEDGER_VIEW")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS"), stock:await quotationStockOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,products.filter(row=>row.trackInventory).map(row=>row.id)), partyCreation, customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
 }
 
 export async function createQuotation(raw:unknown){return createQuotationForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT"),raw)}

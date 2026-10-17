@@ -5,7 +5,7 @@ import {trapDialogFocus} from "@/components/account/dialog-keyboard";
 import { generateItemCode } from "@/lib/account/item-identifiers";
 import type { CustomFieldDefinition } from "@prisma/client";
 import { CustomFieldInput } from "@/components/account/custom-field-input";
-import { useRef, useEffect, type ReactNode } from "react";
+import { useRef, useEffect, useId, type ReactNode } from "react";
 import { updateQuickItemSettingAction } from "@/app/actions/account-settings";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
@@ -24,6 +24,8 @@ type Unit = { id: string; name: string; symbol: string };
 type Category = { id: string; name: string; scope: string };
 type Props = {
   initialKind?: "products" | "services";
+  onCreated?:(item:{id:string;kind:"products"|"services"})=>Promise<void>|void;
+  onCancel?:()=>void;
   units: Unit[];
   warehouses?: Array<{ id: string; name: string }>;
   categories: Category[];
@@ -65,6 +67,7 @@ function HelpDialog({ text, onClose }: { text: string; onClose: () => void }) {
   );
 }
 export function AddItemEditor({
+  onCreated, onCancel,
   units: initialUnits,
   warehouses = [],
   categories: initialCategories,
@@ -74,6 +77,7 @@ export function AddItemEditor({
   hsnCodes = [],
   initialKind = "products",
 }: Props) {
+  const customFieldPrefix=useId();
   const [settings, setSettings] = useState(initialSettings);
   const settingsDialog = useRef<HTMLDialogElement>(null);
   const settingsTrigger = useRef<HTMLButtonElement>(null);
@@ -203,7 +207,9 @@ export function AddItemEditor({
   const photoInput=useRef<HTMLInputElement>(null),savedItem=useRef<{id:string;kind:"products"|"services"}|null>(null);
   function selectPhoto(file?:File){if(!file)return;if(!file.type.startsWith("image/")||file.size===0||file.size>5*1024*1024){setPhoto(null);setPhotoError("Choose an image up to 5 MB.");return}setPhoto(file);setPhotoError("")}
   async function uploadSelectedPhoto(){if(!photo||!savedItem.current)return;const form=new FormData();form.set("photo",photo);const result=await saveItemPhotoAction(savedItem.current.kind,savedItem.current.id,form);if(!result.ok)throw new Error(result.message)}
-  function retryPhoto(){startTransition(async()=>{const ok=await mutation.run(uploadSelectedPhoto,"Item photo saved");if(ok)router.push("/workspace/account/inventory")})}
+  async function finishCreated(){if(onCreated&&savedItem.current){try{await onCreated(savedItem.current)}catch(error){setPhotoError("Item saved. Returning to the quotation failed. Retry returning; the item will not be created again.");throw error}}else router.push("/workspace/account/inventory")}
+  function continueCreated(){startTransition(async()=>{await mutation.run(finishCreated,"Item ready")})}
+  function retryPhoto(){startTransition(async()=>{await mutation.run(async()=>{await uploadSelectedPhoto();await finishCreated()},"Item photo saved")})}
   function save() {
     if(savedItem.current){retryPhoto();return}
     if (pending || !name.trim()) return;
@@ -276,11 +282,7 @@ export function AddItemEditor({
         },
         "Item created successfully",
       );
-      if (saved)
-        window.setTimeout(
-          () => router.push("/workspace/account/inventory"),
-          600,
-        );
+      if(saved)await mutation.run(finishCreated,"Item ready");
     });
   }
   function createUnitNow() {
@@ -322,14 +324,12 @@ export function AddItemEditor({
       setAddCategoryOpen(false);
     });
   }
-  if(savedPhotoItem)return <section className="add-item-page" aria-label="Item photo recovery"><h1>Item saved</h1><p role={photoError?"alert":"status"}>{photoError||"Your item has been created."}</p><input aria-label="Replacement item photo" type="file" accept="image/*" disabled={pending} onChange={event=>selectPhoto(event.target.files?.[0])}/><SaveFeedback state={mutation.feedback}/><button type="button" disabled={pending||!photo} onClick={retryPhoto}>Retry photo upload</button><Link href="/workspace/account/inventory">Continue without photo</Link></section>;
+  if(savedPhotoItem)return <section className="add-item-page" aria-label="Item photo recovery"><h1>Item saved</h1><p role={photoError?"alert":"status"}>{photoError||"Your item has been created."}</p><input aria-label="Replacement item photo" type="file" accept="image/*" disabled={pending} onChange={event=>selectPhoto(event.target.files?.[0])}/><SaveFeedback state={mutation.feedback}/><button type="button" disabled={pending||!photo} onClick={retryPhoto}>Retry photo upload</button>{onCreated?<button type="button" disabled={pending} onClick={continueCreated}>Return to quotation</button>:<Link href="/workspace/account/inventory">Continue without photo</Link>}</section>;
   return (
     <section ref={editorRoot} aria-label="Add Item editor" className="add-item-page">
       <SaveFeedback state={mutation.feedback} />
       <header>
-        <Link href="/workspace/account/inventory" aria-label="Back">
-          ‹
-        </Link>
+        {onCancel?<button type="button" aria-label="Cancel adding item" disabled={pending} onClick={onCancel}>‹</button>:<Link href="/workspace/account/inventory" aria-label="Back">‹</Link>}
         <h1>Add Item</h1>
         <button
           type="button"
@@ -700,7 +700,7 @@ export function AddItemEditor({
                     (kind === "products" ? "PRODUCT" : "SERVICE"),
                 )
                 .map((field) => (
-                  <CustomFieldInput key={field.id} field={field} />
+                  <CustomFieldInput key={field.id} field={field} idPrefix={customFieldPrefix} />
                 ))}
             </div>
           </div>
@@ -995,13 +995,13 @@ export function AddItemEditor({
           ))}
           {canManageSettings && (
             <>
-              <Link href="/workspace/account/settings/custom-fields">
+              <Link href="/workspace/account/settings/custom-fields" target={onCreated?"_blank":undefined} rel={onCreated?"noopener noreferrer":undefined} title={onCreated?"Opens in a new tab; your quotation is retained":undefined}>
                 Manage Item Custom Fields
               </Link>
-              <Link href="/workspace/account/settings/reminders/service">
+              <Link href="/workspace/account/settings/reminders/service" target={onCreated?"_blank":undefined} rel={onCreated?"noopener noreferrer":undefined} title={onCreated?"Opens in a new tab; your quotation is retained":undefined}>
                 Service Reminders
               </Link>
-              <Link href="/workspace/account/inventory/item-settings">
+              <Link href="/workspace/account/inventory/item-settings" target={onCreated?"_blank":undefined} rel={onCreated?"noopener noreferrer":undefined} title={onCreated?"Opens in a new tab; your quotation is retained":undefined}>
                 More Settings
               </Link>
             </>

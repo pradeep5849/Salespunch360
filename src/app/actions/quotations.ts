@@ -19,3 +19,13 @@ export async function getQuotationPartyBalanceAction(raw:unknown){
   return {ok:true as const,...await quotationPartyBalanceForActor(await requirePermission("ACCOUNT_QUOTATION_VIEW") as import("@/lib/account/projects").ProjectActor,raw)};
  }catch{return {ok:false as const}};
 }
+
+export async function getQuotationItemCreationOptionsAction(){
+ const {requirePermissionForMutation}=await import("@/lib/auth/authorization");
+ await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT");
+ const {addItemEditorOptions}=await import("@/lib/account/add-item-editor-options");
+ return addItemEditorOptions();
+}
+export async function refreshQuotationEditorOptionsAction(){
+ const {quotationEditorOptions}=await import("@/lib/quotations/service");return quotationEditorOptions();
+}

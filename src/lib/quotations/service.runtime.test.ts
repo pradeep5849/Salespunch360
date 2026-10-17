@@ -102,3 +102,16 @@ describe("A082 client-safe exact item selector amounts",()=>{
   const result=await quotationEditorOptions();expect(result.products[0]).toMatchObject({salePrice:"90071992547409.91",costPrice:"60.12",taxRate:"18"});expect(result.services[0]).toMatchObject({sellingRate:"118.01",estimatedCost:"50.02",taxRate:"18"});expect(result.workPackages[0]).toMatchObject({sellingRate:"333.33",estimatedCost:"222.22"});
  });
 });
+
+describe("A082 full item creation eligibility",()=>{
+ it("requires both inventory module and enabled Items",async()=>{
+  m.auth.mockResolvedValue(actor("ACCOUNT_ADMIN"));customModels.accountSettings.findUnique.mockResolvedValue({enabledModules:["INVENTORY"],itemSettings:{enabled:true}} as never);
+  expect((await quotationEditorOptions()).canCreateItem).toBe(true);
+  customModels.accountSettings.findUnique.mockResolvedValue({enabledModules:[],itemSettings:{enabled:true}} as never);expect((await quotationEditorOptions()).canCreateItem).toBe(false);
+  customModels.accountSettings.findUnique.mockResolvedValue({enabledModules:["INVENTORY"],itemSettings:{enabled:false}} as never);expect((await quotationEditorOptions()).canCreateItem).toBe(false);
+ });
+ it("does not grant item creation to a quotation-only or data-entry role",async()=>{
+  customModels.accountSettings.findUnique.mockResolvedValue({enabledModules:["INVENTORY"],itemSettings:{enabled:true}} as never);
+  for(const role of ["PROJECT_MANAGER","DATA_ENTRY"] as const){m.auth.mockResolvedValue(actor(role));expect((await quotationEditorOptions()).canCreateItem).toBe(false)}
+ });
+});
