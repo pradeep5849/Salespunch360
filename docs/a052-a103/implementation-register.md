@@ -9565,3 +9565,8 @@ Code `0dbb02f5d363a63624eb028d2abf085498b105ef`: explicit accessible field-error
 ### A064-F13 money-form implementation closure — 2026-10-17
 
 Code `f0806efe46debec6ce64fd548e1620ff55033431`: shared hydration-safe retained entry and readable disabled controls; safe field-specific mobile validation and native offline/authorization feedback. Passed 43 unit/API tests, 8 grouped desktop/mobile workflows plus 2 owner-correction cases, TypeScript, focused lint, Android compilation and 23 JVM tests (0 failed/skipped). Initial grouped contrast failures were fixed and the whole group passed. Original finding promoted to IMPLEMENTED BUT NOT VERIFIED; device/TalkBack runtime and complete final-head validation remain pending. Counts: 172 implemented but not fully verified / 25 partial / 2 not started; all 199 IDs retained.
+
+
+### A064-F02 account-history matrix — 2026-10-17
+
+Verification commit `67737c77bff97ad779eca3b77364c3dbea61e0c1`: 28 database/API tests and 4 desktop/mobile-web checks passed, with exact balance/paging/carry-forward reconciliation, native API authentication and no-store, metadata editing and scoped navigation. TypeScript and focused lint passed. Account history is IMPLEMENTED BUT NOT VERIFIED; native device interaction and full final-head validation pending. Counts: 173 implemented / 24 partial / 2 not started. No application financial/schema change.

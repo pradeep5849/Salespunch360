@@ -22944,7 +22944,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -22957,6 +22957,22 @@
         {
           "work": "Added authorized web account metadata editing with associated labels, retained typed feedback and pending guard. Type/branch identity remains outside this edit form.",
           "tests": "Shared focused bank slice verification above; this does not independently close the original finding."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "67737c77bff97ad779eca3b77364c3dbea61e0c1",
+          "work": "Independently verified the original account-history matrix against actual posted sources: empty bank, cash opening equity, cash-to-bank and bank-to-cash transfers, selected-ledger adjustment, loan receipt and principal/interest payment. Detail metadata editing and Deposit/Withdraw/Adjust navigation already implemented under linked findings were exercised rather than inferred.",
+          "tests": "28 PostgreSQL/history-API tests passed (6.4s). New matrix asserts exact 210.00 bank / 925.00 cash balances, 65.00 date carry-forward, 5 distinct paged journals and per-row running balances, dashboard reconciliation, company/branch rejection and inactive historical reads. Four desktop/mobile-web checks passed (56.9s), including empty history, full bank metadata, authorized native API/no-store results, unknown-account 403, unauthenticated 401, scoped back navigation and transfer-mode details. TypeScript and focused ESLint passed.",
+          "files": [
+            "src/lib/account/money-edit.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+          "remaining_limitations": [
+            "Native account-history route/UI is implemented and prior compilation evidence retained; emulator/device history interaction not executed.",
+            "Complete exact-head checkpoint validation and all required final checks pending."
+          ],
+          "scope": "Verification/test additions only; no financial service, accounting policy, schema or production-data change."
         }
       ],
       "push_checkpoint_evidence": {
