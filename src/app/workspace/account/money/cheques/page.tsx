@@ -227,7 +227,7 @@ export default async function Page({
                     />
                   </details>
                 )}
-              <p>Bank: {row.moneyAccount?.name ?? "Account unavailable"}</p>
+              <p>{row.moneyAccount?.type === "CASH" ? "Cash account" : "Bank"}: {row.moneyAccount?.name ?? "Account unavailable"}</p>
               {row.sourceTransaction && <Link href={row.sourceTransaction.href}>View Txn</Link>}
               {row.reference && <p>Reference: {row.reference}</p>}
               {row.closureDescription && <p>Description: {row.closureDescription}</p>}

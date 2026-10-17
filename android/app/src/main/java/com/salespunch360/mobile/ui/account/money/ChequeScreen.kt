@@ -40,7 +40,8 @@ import kotlinx.serialization.json.*
      Text("Cheque ${row.str("chequeNumber")} · ${row.str("status")}")
      Text("Amount: ${row["amount"]?.jsonPrimitive?.contentOrNull?.let{accountMoney(it)} ?: "Not recorded"}")
      Text("Date: ${accountDate(row.str("chequeDate"))}")
-     Text("Bank: ${(row["moneyAccount"] as? JsonObject)?.str("name") ?: "Account unavailable"}")
+     val account=row["moneyAccount"] as? JsonObject
+     Text("${if(account?.str("type")=="CASH")"Cash account"else"Bank"}: ${account?.str("name") ?: "Account unavailable"}")
      val transaction=row["sourceTransaction"] as? JsonObject
      if(transaction!=null&&transaction.str("nativeHref").isNotBlank())TextButton({onNavigate(transaction.str("nativeHref"))}){Text("View Txn")}
      else (row["sourceDocument"] as? JsonObject)?.let{source->TextButton({onNavigate(if(source.str("type")=="SALES_INVOICE")"/workspace/account/sales/${source.str("id")}"else"/workspace/account/purchases/${source.str("id")}")}){Text("View Txn")}}

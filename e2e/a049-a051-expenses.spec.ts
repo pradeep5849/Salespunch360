@@ -3640,6 +3640,14 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
   await page.goto("/workspace/account/money/cheques");
+  for(const [tab,heading] of [["Open","No open cheques"],["Closed","No closed cheques"],["All","No cheques"]]){
+    await page.getByRole("navigation",{name:"Cheque status tabs"}).getByRole("link",{name:tab,exact:true}).click();
+    await expect(page.getByRole("heading",{name:heading,exact:true})).toBeVisible();
+  }
+  await page.getByRole("link",{name:"Open",exact:true}).click();
+  await page.getByRole("link",{name:"Date order: newest first",exact:true}).click();
+  await expect(page.getByRole("link",{name:"Date order: oldest first",exact:true})).toBeVisible();
+
   await page.getByText("Record cheque", { exact: true }).first().click();
   await page.getByLabel("Bank account", { exact: true }).selectOption(bank.id);
   const number = randomUUID().slice(0, 8);
@@ -3664,6 +3672,15 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await expect(recordForm.getByLabel("Amount",{exact:true})).toHaveValue("");
   await expect(recordForm.locator('input[name="requestKey"]')).not.toHaveValue(originalKey);
 
+  await page.getByRole("link",{name:"All",exact:true}).click();
+  await expect(card).toBeVisible();
+  await page.getByLabel("Search cheques",{exact:true}).fill("unmatched-cheque-reference");
+  await page.getByRole("button",{name:"Search",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"No cheques match this search",exact:true})).toBeVisible();
+  await page.getByLabel("Search cheques",{exact:true}).fill(number);
+  await page.getByRole("button",{name:"Search",exact:true}).click();
+  await expect(card).toBeVisible();
+  await page.getByRole("link",{name:"Open",exact:true}).click();
   const recorded = await db.cheque.findFirstOrThrow({
     where: { companyId, chequeNumber: number },
   });
@@ -3689,6 +3706,8 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await page.getByRole("link", { name: "Closed", exact: true }).click();
   await expect(card).toContainText("CLEARED");
   await expect(card).toContainText("Cash closure reference");
+  await expect(card).toContainText("Cash account:");
+  await expect(card.getByText("Bank:",{exact:false})).toHaveCount(0);
   await card
     .getByLabel("Cheque action", { exact: true })
     .selectOption("REOPEN");
