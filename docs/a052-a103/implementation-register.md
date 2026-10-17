@@ -9704,3 +9704,11 @@ Source commit `286bb1108891189b77b7df5b0b0b4d396f04b206`. Web and Android quotat
 Status remains PARTIAL. Add New Item return path and original remaining selector functionality plus final exact-head validation remain pending. Android emulator/device runtime NOT RUN. No migration or production data change.
 
 A082-F02 balance boundary follow-up: 9 focused helper tests passed, including module-OFF rejection before querying and permitted Data Entry exact reads. Focused lint passed.
+
+### A082-F02 — full web item creation return (2026-10-18)
+
+Source commit `eb30ea51ec298f38a7745db7aae613fe853aafa8`. Web quotation Add New Item opens the full existing item editor, using shared authenticated options with standalone Add Item. Cancel retains the quotation. Committed product/service identity refreshes canonical quotation masters and stock/unit options, selects the item and preserves quantity, notes and custom fields. Failed post-save return has an explicit retry that does not create again. Company Items/Inventory settings and stock/master permissions gate creation. Instance-specific custom-field IDs prevent embedded collisions; settings links retain the draft in its original tab. Existing standalone photo recovery remains intact.
+
+99 focused tests PASS; TypeScript/focused ESLint PASS. Four balance/item browser regressions PASS (43.5s); final two custom-field/return-recovery desktop/mobile cases PASS (31.0s). Four standalone required-field/private-photo browser regressions PASS (49.0s).
+
+A082-F02 remains PARTIAL for native Add New Item return flow, remaining original selector scope and final-head/device verification. No migrations, posting-rule changes or production data access.

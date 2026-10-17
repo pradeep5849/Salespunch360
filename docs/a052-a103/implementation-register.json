@@ -55062,6 +55062,29 @@
           "remaining": "Add New Item return path and original remaining selector functionality plus final exact-head validation remain pending. Android emulator/device runtime NOT RUN. No migration or production data change.",
           "status": "PARTIAL",
           "additional_tests": "9 balance-helper tests passed, including explicit module-OFF rejection before any transaction and permitted Data Entry exact reads; focused lint passed."
+        },
+        "quotation_full_item_return_2026_10_18": {
+          "implementation_commit": "eb30ea51ec298f38a7745db7aae613fe853aafa8",
+          "work": "Web quotation Add New Item opens the full existing item editor, using shared authenticated options with standalone Add Item. Cancel retains the quotation. Committed product/service identity refreshes canonical quotation masters and stock/unit options, selects the item and preserves quantity, notes and custom fields. Failed post-save return has an explicit retry that does not create again. Company Items/Inventory settings and stock/master permissions gate creation. Instance-specific custom-field IDs prevent embedded collisions; settings links retain the draft in its original tab. Existing standalone photo recovery remains intact.",
+          "modified_files": [
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/quotations.ts",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "src/app/workspace/account/inventory/items/new/page.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/components/account/quotation-item-dialog.tsx",
+            "src/lib/account/add-item-editor-options.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "focused": "99 tests across 8 files PASS; includes inventory module OFF, Items OFF and denied creation roles. TypeScript and focused ESLint PASS.",
+            "browser": "4 grouped desktop/mobile balance+inline-item cases PASS (43.5s), then final 2 inline-item cases PASS (31.0s) with equal quotation/product custom field keys, distinct DOM IDs, reusable saved custom metadata, cancellation/focus restore, retained quote custom values, simulated post-commit return failure/retry, exactly one item, no quotation/journal writes and Data Entry exclusion. Initial extra metadata assertion used an incorrect test-only Prisma field; corrected to JSON value and rerun passed.",
+            "standalone_regression": "4 desktop/mobile cases PASS (49.0s): required product/service custom fields and private photo validation, persistence, replacement retry without recreation, access/storage behavior, recovery accessibility and responsive overflow.",
+            "android": "No Android implementation/runtime change in this web slice. Native Add New Item return path remains pending.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F02 remains PARTIAL for native Add New Item return flow, remaining original selector scope and final-head/device verification. No migrations, posting-rule changes or production data access."
         }
       },
       "push_checkpoint_evidence": {
