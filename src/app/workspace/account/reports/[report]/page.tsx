@@ -1,3 +1,5 @@
+import tabsStyles from "./cash-bank-tabs.module.css";
+import Link from "next/link";
 import {TransactionReportView} from "@/components/account/transaction-report-view";
 import {ReportSummary} from "@/components/account/report-summary";
 import {accountErrorMessage,isAccountDomainError} from "@/lib/account/action-feedback";
@@ -47,6 +49,7 @@ export default async function Page({
             productId: q.productId,
             ledgerId: q.ledgerId,
             ownerId: q.ownerId,
+            accountType:q.accountType,
           },
     );
   } catch (e) {
@@ -59,9 +62,11 @@ export default async function Page({
     };
   }
   const query = reportExportQuery(q,from,to,projectLifetime);
+  const hubQuery=new URLSearchParams([...new URLSearchParams(query)].filter(([key])=>["scope","from","to","asOf","branchId"].includes(key))).toString();
   return (
     <div className="employees-shell">
       <section className="employees-content">
+        <Link className={tabsStyles.back} href={`/workspace/account/reports?${hubQuery}`} aria-label="Back to reports">← Reports</Link>
         <h1>{data.title}</h1>
         <form method="get" className="stack">
           {q.scope === "all" ? <input type="hidden" name="scope" value="all" /> : null}
@@ -123,6 +128,7 @@ export default async function Page({
               />}
             </>
           )}
+          {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
           <button>Run report</button>
         </form>
         <div>
@@ -130,6 +136,7 @@ export default async function Page({
           <a href={`/api/account/reports/${report}/xlsx?${query}`}>Excel</a> ·{" "}
           <a href={`/api/account/reports/${report}/pdf?${query}`}>PDF</a>
         </div>
+        {report==="cash-bank"&&<nav aria-label="Cash and bank account types" className={tabsStyles.tabs}>{[["","All accounts"],["CASH","Cash"],["BANK","Bank"],["PETTY_CASH","Petty cash"]].map(([value,label])=>{const tab=new URLSearchParams(query);if(value)tab.set("accountType",value);else tab.delete("accountType");return <Link key={value} href={`/workspace/account/reports/cash-bank?${tab.toString()}`} aria-current={(q.accountType??"")===value?"page":undefined}>{label}</Link>})}</nav>}
         {data.summary&&<ReportSummary items={data.summary}/>}
         {data.note && <p>{data.note}</p>}
         {data.columns.length > 0 && (

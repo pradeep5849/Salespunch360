@@ -45,6 +45,7 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "cash-bank":["accountType"],
   "expense-transactions": ["projectId"],
   "expense-category": ["projectId"],
   "expense-items": ["projectId"],

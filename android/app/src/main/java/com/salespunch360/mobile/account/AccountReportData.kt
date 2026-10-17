@@ -30,3 +30,17 @@ fun accountReportSpecificFilters(options:JsonObject,key:String):Set<String>? {
 }
 
 fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases|expenses)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}
+
+/** Preserve an explicit money-type scope on the initial request before metadata arrives. */
+fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<String,String>):Map<String,String> {
+ val supported=accountReportSpecificFilters(options,report)
+ val lifetime=report=="projects"||report=="budget-vs-actual"
+ val known=setOf("from","to","branchId","projectId","ledgerId","customerId","vendorId","ownerId","productId","accountType")
+ return candidates.filter{(key,value)->
+  value.isNotBlank()&&key in known&&
+  (!lifetime||key=="branchId"||key=="projectId")&&
+  (key!="accountType"||report=="cash-bank")&&
+  (key!="ownerId"||report=="owner-capital"||report=="profit-withdrawal")&&
+  (key in setOf("from","to","branchId")||(key=="accountType"&&report=="cash-bank")||supported?.contains(key)!=false)
+ }
+}

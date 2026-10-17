@@ -40,7 +40,7 @@ import { documentOutstandingsBatch } from "../commercial";
 const blankFilter = (value: unknown) =>
   typeof value === "string" && !value.trim() ? undefined : value;
 
-const D = Prisma.Decimal,
+const D = Prisma.Decimal.clone({precision:48}),
   Z = new D(0),
   filterSchema = z
     .object({
@@ -55,6 +55,7 @@ const D = Prisma.Decimal,
       productId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ledgerId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ownerId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      accountType:z.preprocess(blankFilter,z.enum(["CASH","BANK","PETTY_CASH"]).optional()),
     })
     .strict();
 
@@ -589,6 +590,7 @@ export async function runFinancialReportForActor(
     const accounts = await db.moneyAccount.findMany({
       where: {
         companyId: c.actor.companyId,
+        ...(c.f.accountType?{type:c.f.accountType}:{}),
         ...(c.f.branchId
           ? { OR: [{ branchId: null }, { branchId: c.f.branchId }] }
           : c.actor.branchAccessScope === "SELECTED_BRANCHES"
@@ -632,23 +634,13 @@ export async function runFinancialReportForActor(
     ]);
     const opening = sumPairMap(openingGrouped),
       period = sumPairMap(periodGrouped);
+    const rows=accounts.map((a)=>{const o=opening.get(a.ledgerAccountId),p=period.get(a.ledgerAccountId),start=(o?.debit??Z).sub(o?.credit??Z),receipts=p?.debit??Z,payments=p?.credit??Z;return[a.name,n(start),n(receipts),n(payments),n(start.add(receipts).sub(payments))]});
     return {
       title: "Cash / Bank Book",
       columns: ["Account", "Opening", "Receipts", "Payments", "Closing"],
-      rows: accounts.map((a) => {
-        const o = opening.get(a.ledgerAccountId),
-          p = period.get(a.ledgerAccountId),
-          openingBalance = (o?.debit ?? Z).sub(o?.credit ?? Z),
-          receipts = p?.debit ?? Z,
-          payments = p?.credit ?? Z;
-        return [
-          a.name,
-          n(openingBalance),
-          n(receipts),
-          n(payments),
-          n(openingBalance.add(receipts).sub(payments)),
-        ];
-      }),
+      rows,
+      summary:["Opening","Receipts","Payments","Closing"].map((label,index)=>({label,value:rows.reduce((sum,row)=>sum.add(row[index+1]),new D(0)).toString(),money:true})),
+      note:"Opening + receipts − payments = closing. Values follow the selected account type, branch and report period.",
     };
   }
 

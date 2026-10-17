@@ -109,6 +109,11 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                 Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
             }
         }
+        if (state.report=="cash-bank" && applicable?.contains("accountType")==true) {
+            LazyRow { items(listOf("" to "All accounts", "CASH" to "Cash", "BANK" to "Bank", "PETTY_CASH" to "Petty cash")) { (value,label) ->
+                FilterChip(selected=state.accountType==value,onClick={vm.filter("accountType",value);vm.run()},label={Text(label)})
+            } }
+        }
         Row {
             Button(onClick = vm::run) { Text("Run") }
             listOf("csv", "xlsx", "pdf").forEach { format -> TextButton(onClick = { vm.export(format) }) { Text(format.uppercase()) } }

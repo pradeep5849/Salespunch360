@@ -32,4 +32,16 @@ class AccountReportDataTest {
         val data=Json.parseToJsonElement("""{"rowLinks":["/workspace/account/transactions/$id"],"nativeRowLinks":["/workspace/account/purchases/$id"]}""").jsonObject
         assertEquals("/workspace/account/purchases/$id",accountReportDestination(accountReportLinks(data).single()))
     }
+    @Test fun moneyTypeIsRetainedBeforeMetadataArrivesAndNeverLeaksToAnotherReport() {
+        val input=mapOf("from" to "2026-10-01","to" to "2026-10-31","accountType" to "BANK","branchId" to "branch")
+        assertEquals("BANK",accountReportRequestFilters(buildJsonObject{},"cash-bank",input)["accountType"])
+        assertFalse(accountReportRequestFilters(buildJsonObject{},"profit-loss",input).containsKey("accountType"))
+        assertEquals("INVALID",accountReportRequestFilters(buildJsonObject{},"cash-bank",mapOf("accountType" to "INVALID"))["accountType"])
+    }
+    @Test fun reportRequestFiltersEnforceDeclaredDimensionsAndLifetimeProjectDates() {
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"cash-bank","filters":["accountType"]},{"key":"projects","filters":["projectId"]}]}""").jsonObject
+        val input=mapOf("from" to "2026-10-01","to" to "2026-10-31","branchId" to "branch","projectId" to "project","accountType" to "CASH","vendorId" to "vendor","ownerId" to "owner","companyId" to "foreign")
+        assertEquals(setOf("from","to","branchId","accountType"),accountReportRequestFilters(options,"cash-bank",input).keys)
+        assertEquals(mapOf("branchId" to "branch","projectId" to "project"),accountReportRequestFilters(options,"projects",input))
+    }
 }

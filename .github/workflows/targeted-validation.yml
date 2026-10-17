@@ -30,6 +30,8 @@ jobs:
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
       - name: Exact unit quantity and immutable snapshot guards
         run: npx vitest run src/lib/account/unit-quantities.test.ts src/lib/account/commercial-unit-snapshot.test.ts
+      - name: Report selectors and exact financial breakdowns
+        run: npx vitest run src/lib/account/reports/cash-bank.test.ts src/lib/account/reports/ledger-breakdown.test.ts src/lib/account/reports/purchase-register.test.ts src/lib/account/reports/queries.test.ts
       - name: Purchase master pricing preview
         run: npx vitest run src/lib/account/commercial-editor-pricing.test.ts src/lib/account/item-pricing.test.ts src/lib/account/purchase-editor-lineage.test.ts
       - run: npm run typecheck

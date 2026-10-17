@@ -5,3 +5,5 @@ it("preserves company intent and displayed default dates while dropping navigati
  expect(Object.fromEntries(q)).toEqual({scope:"all",branchId:"branch",from:"2025-04-01",to:"2026-01-10"});
 });
 it("keeps lifetime reports free of period bounds",()=>{expect(reportExportQuery({from:"2020-01-01",asOf:"2021-01-01",projectId:"project",scope:"all"},"2025-04-01","2026-01-10",true)).toBe("projectId=project&scope=all")});
+
+it("keeps the visible Cash/Bank account type on exports",()=>{expect(new URLSearchParams(reportExportQuery({accountType:"BANK",branchId:"branch"},"2026-10-01","2026-10-31")).get("accountType")).toBe("BANK")});

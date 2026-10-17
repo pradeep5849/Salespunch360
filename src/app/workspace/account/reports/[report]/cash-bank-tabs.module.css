@@ -1,0 +1,7 @@
+.tabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-block:1rem}
+.tabs a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.5rem .85rem;border:1px solid #cbd5e1;border-radius:999px;color:#075985;background:#fff;text-decoration:none;font-weight:600}
+.tabs a[aria-current=page]{background:#075985;color:#fff;border-color:#075985}
+.tabs a:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+
+.back{display:inline-flex;align-items:center;min-height:44px;padding:.5rem 0;color:#075985;font-weight:600}
+.back:focus-visible{outline:3px solid #2563eb;outline-offset:3px}

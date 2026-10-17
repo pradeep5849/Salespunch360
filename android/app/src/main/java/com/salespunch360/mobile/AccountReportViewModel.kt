@@ -27,6 +27,7 @@ data class AccountReportState(
     val vendorId: String = "",
     val productId: String = "",
     val ownerId: String = "",
+    val accountType:String="",
     val options: JsonObject = buildJsonObject {},
     val data: JsonObject? = null,
     val appliedFilters: Map<String,String> = emptyMap(),
@@ -65,7 +66,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun context(query:String) {
         val q=android.net.Uri.parse("https://internal.invalid/?$query")
-        _state.value=_state.value.copy(branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
+        _state.value=_state.value.copy(accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
     }
     fun choose(report: String?) {
         requestGeneration++
@@ -88,28 +89,20 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "customer" -> _state.value.copy(customerId = value)
             "vendor" -> _state.value.copy(vendorId = value)
             "owner" -> _state.value.copy(ownerId = value)
+            "accountType" -> _state.value.copy(accountType=value)
             else -> _state.value.copy(productId = value)
         }
     }
 
-    private fun filters(report: String? = _state.value.report) = buildMap {
-        val lifetimeProject = report == "projects" || report == "budget-vs-actual"
-        if (!lifetimeProject) {
-            put("from", _state.value.from)
-            put("to", _state.value.to)
-        }
-        listOf(
-            "branchId" to _state.value.branchId,
-            "projectId" to _state.value.projectId,
-            "ledgerId" to _state.value.ledgerId,
-            "customerId" to _state.value.customerId,
-            "vendorId" to _state.value.vendorId,
-            "ownerId" to (if(report == "owner-capital" || report == "profit-withdrawal") _state.value.ownerId else ""),
-            "productId" to _state.value.productId
-        ).forEach { (key, value) ->
-            if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId") && (key=="branchId"||com.salespunch360.mobile.account.accountReportSpecificFilters(_state.value.options,report.orEmpty())?.contains(key)!=false)) put(key, value)
-        }
-    }
+    private fun filters(report: String? = _state.value.report) = com.salespunch360.mobile.account.accountReportRequestFilters(
+        _state.value.options,report.orEmpty(),mapOf(
+            "from" to _state.value.from,"to" to _state.value.to,
+            "branchId" to _state.value.branchId,"projectId" to _state.value.projectId,
+            "ledgerId" to _state.value.ledgerId,"customerId" to _state.value.customerId,
+            "vendorId" to _state.value.vendorId,"ownerId" to _state.value.ownerId,
+            "productId" to _state.value.productId,"accountType" to _state.value.accountType
+        )
+    )
 
     fun run() {
         val report = _state.value.report ?: return
