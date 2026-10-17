@@ -11262,7 +11262,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -11465,6 +11465,17 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Both original findings remain PARTIAL pending the remaining original pricing matrix and final-head/runtime verification. No migration or production operation."
+        },
+        "pricing_code_scope_review_2026_10_17": {
+          "work": "Original implementation gaps are now covered by the mapped item pricing persistence, tax-inclusive MRP, explicit authorized/retry-safe price confirmation, retail/wholesale/customer selection, approved dated wholesale precedence, purchase preview/native normalized cost, and disabled-setting service guards. Marked code implemented, not finally verified; no final_status assigned. All prior slice evidence retained.",
+          "tests": {
+            "grouped": "56 current focused tests across8 pricing/settings/editor files PASS (1.03s).",
+            "financial": "5 focused local PostgreSQL A057/A058 financial tests PASS (4.20s;30 unrelated cases filtered):normalized exclusive/inclusive fixed/percentage invoices and balanced journals, scoped/idempotent/stale/audit-failure master updates, MRP tax base remains actual sale price.",
+            "prior_runtime": "Earlier separately recorded desktop/mobile and native API/JVM evidence remains evidence of those slices only.",
+            "final_complete_head": "NOT RUN",
+            "device_runtime": "NOT RUN"
+          },
+          "remaining": "Complete final-head regression/output matrix and Android emulator/device/offline/accessibility runtime verification remain pending; neither finding is FIXED + VERIFIED."
         }
       },
       "intermediate_validation": {
@@ -12552,7 +12563,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -12976,6 +12987,17 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Both original findings remain PARTIAL pending the remaining original pricing matrix and final-head/runtime verification. No migration or production operation."
+        },
+        "pricing_code_scope_review_2026_10_17": {
+          "work": "Original implementation gaps are now covered by the mapped item pricing persistence, tax-inclusive MRP, explicit authorized/retry-safe price confirmation, retail/wholesale/customer selection, approved dated wholesale precedence, purchase preview/native normalized cost, and disabled-setting service guards. Marked code implemented, not finally verified; no final_status assigned. All prior slice evidence retained.",
+          "tests": {
+            "grouped": "56 current focused tests across8 pricing/settings/editor files PASS (1.03s).",
+            "financial": "5 focused local PostgreSQL A057/A058 financial tests PASS (4.20s;30 unrelated cases filtered):normalized exclusive/inclusive fixed/percentage invoices and balanced journals, scoped/idempotent/stale/audit-failure master updates, MRP tax base remains actual sale price.",
+            "prior_runtime": "Earlier separately recorded desktop/mobile and native API/JVM evidence remains evidence of those slices only.",
+            "final_complete_head": "NOT RUN",
+            "device_runtime": "NOT RUN"
+          },
+          "remaining": "Complete final-head regression/output matrix and Android emulator/device/offline/accessibility runtime verification remain pending; neither finding is FIXED + VERIFIED."
         }
       }
     },
@@ -55281,6 +55303,19 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F03 stays PARTIAL for inclusive-tax/rounding/supply persistence and final runtime/output verification; JVM parity does not certify device rendering."
+        },
+        "native_quotation_adjustments_2026_10_17": {
+          "implementation_commit": "21317fb5e4f1050a7cd6eaa40172104a37d9bf21",
+          "work": "Native quotation draft editor now exposes line fixed/percentage discounts and add/edit/remove document discounts/additional charges with existing fixed/percentage values and taxable charge GST. Existing payload codec retains typed JSON; accessible labelled Material FilterChip controls taxable state. Preview uses the previously tested calculator; server revalidates saves.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin +13 preview/codec JVM tests PASS (1m42s); final labelled taxable-chip rendering change compiled successfully separately (1m23s).0 failures/errors/skips in13 JVM tests.",
+            "device_runtime": "NOT RUN; controls not certified on emulator/device/TalkBack",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 remains PARTIAL for inclusive-tax/rounding/supply persistence and final platform/output verification."
         }
       }
     },

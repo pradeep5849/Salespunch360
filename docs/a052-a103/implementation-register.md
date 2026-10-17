@@ -9660,3 +9660,13 @@ Android compilation plus13 JVM tests pass (1m39s):6 preview and7 codec, zero fai
 Generic transaction invoice URLs now reach the existing scoped Sale Details page after unchanged document/ledger checks. This removes the active duplicate presentation with lossy Number subtraction, omitted metadata and placeholder balances/self-navigation. Non-sale transactions unchanged.
 
 4 desktop/mobile checks pass (59.5s), including redirect, retained metadata, edit/save/delete and cancelled/credit states.1 focused local PostgreSQL receipt/discount/credit/advance/party snapshot test passes (34 unrelated cases filtered out);5 pricing financial checks pass separately (30 filtered out). TypeScript/focused ESLint pass. A087-F02 remains PARTIAL for its remaining original action/attachment/shipping scope and final runtime parity.
+
+### A082-F03 — native discount/charge controls, 2026-10-17
+
+Native draft editor now exposes existing line fixed/percentage discounts and document discount/charge add/edit/remove controls, including taxable-charge GST and a labelled Material toggle. Existing codec and server validation remain authoritative. Compilation+13 preview/codec JVM tests pass (1m42s); final accessible taxable-chip change compiles (1m23s). No emulator/device/TalkBack claim. A082-F03 remains PARTIAL for inclusive-tax/rounding/supply persistence and final verification.
+
+### Current pricing implementation checkpoint — 2026-10-17
+
+A057-F03 and A058-F02 move from PARTIAL to IMPLEMENTED BUT NOT VERIFIED after their original code gaps are covered by the individually mapped persistence/MRP/confirmation/pricing-consumer/purchase slices and the user's approved dated Wholesale precedence.56 grouped pricing/settings/editor tests pass;5 local PostgreSQL financial checks pass (30 unrelated cases filtered). Prior runtime evidence is retained, not treated as final-head verification. Full final-head matrix and device runtime are pending; final_status remains null.
+
+Current authoritative199-ID counts:178 IMPLEMENTED BUT NOT VERIFIED;19 PARTIAL;2 NOT STARTED. No final-status promotion, skipped ID or A104 work.
