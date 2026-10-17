@@ -11361,6 +11361,11 @@
             "final_199_finding_head": "NOT RUN"
           },
           "remaining": "A057-F03 remains PARTIAL pending customer-specific catalogue rate consumption policy/implementation and final-head/device verification;new async business question asks whether customer price replaces Retail or is a third choice. A058-F02 retains broader purchase/edited-line parity. No final_status promotion."
+        },
+        "shared_confirmation_focus_2026_10_17": {
+          "primary_finding": "A058-F08",
+          "commit": "45cd8d13145af1c2e5cd9956c0ca929ec7faa6da",
+          "work": "Shared focus wrapping also covers the retail-price confirmation;positive/decline/API/AXE desktop+mobile checks pass in the same4-case group. Original F03 remains PARTIAL for customer-price policy/consumption."
         }
       },
       "intermediate_validation": {
@@ -14203,7 +14208,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -14230,6 +14235,27 @@
           "tests": "Android compile+15 focused JVM tests PASS:6 AddItemValidation,6 ItemMasterPricing,3 BankMetadata;0 failures/errors/skips. TypeScript/full ESLint PASS. No native runtime claim.",
           "remaining": "Native modal/focus/device verification and broader field-error coverage remain;PARTIAL retained",
           "commit": "3216efd6"
+        },
+        "completed_dialog_validation_2026_10_17": {
+          "work": "Completed Add Item web modal containment and validation semantics:shared active-dialog Tab/Shift+Tab wrapping excludes hidden/disabled controls and retains nested-modal ownership;Escape/trigger restoration remain. Root is a labelled section inside AccountShell main,not a nested main. Name length matches API;MRP exact decimal pattern blocks invalid precision before mutation. Corrected Add Item heading hierarchy and scoped contrast for segmented/stock controls,unit/name labels and mobile Save. Shared trap also covers new retail-price confirmation. Existing native validated submission,retained state,accessible Material controls and visible live errors independently retained;physical runtime not claimed.",
+          "commit": "45cd8d13145af1c2e5cd9956c0ca929ec7faa6da",
+          "files": [
+            "e2e/a090-settings.spec.ts",
+            "src/app/globals.css",
+            "src/app/workspace/account/add-item-unit-inline-fix.css",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "src/app/workspace/account/reference-parity.css",
+            "src/components/account/dialog-keyboard.ts",
+            "src/components/account/sale-price-confirmation.tsx"
+          ],
+          "tests": {
+            "web_desktop_responsive": "4/4 Chromium desktop/mobile Add Item and saved-price scenarios PASS(53.7s);negative price/overprecision focus and retention,no writes,8 Tab cycles contained,Escape restoration,no nested main,full Add Item AXE/overflow;confirmed/declined price and native API regressions also passed.",
+            "typescript": "PASS",
+            "eslint": "PASS npm run lint --max-warnings=0",
+            "native_evidence": "Existing AddItemValidation7 and pricing/preview13 JVM cases passed at MRP checkpoint;latest native confirmation source compile+13 pricing/preview cases passed(1m47s). No device/TalkBack runtime or final full-head Android validation.",
+            "initial_failures": "New test reproduced native-HTML dialog Tab escape;fixed shared trap. Grouped test initially reused web cookies invalidated by the native login;explicitly cleared that test cache after login. Broader AXE then exposed contrast/heading defects;fixed colors/headings and reran all4 with assertions intact."
+          },
+          "remaining": "Original code correction implemented. Final complete implementation-head regression and physical native keyboard/TalkBack/runtime remain pending;not FIXED + VERIFIED."
         }
       },
       "push_checkpoint_evidence": {
