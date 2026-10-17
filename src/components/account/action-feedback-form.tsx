@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import type { AccountActionResult } from "@/lib/account/action-feedback";
 const FeedbackContext = createContext<AccountActionResult | null>(null);
+export function useAccountActionFeedback(){return useContext(FeedbackContext)}
 export function useAccountFieldError(name: string) {
   return useContext(FeedbackContext)?.fieldErrors?.[name];
 }
@@ -39,7 +40,9 @@ export function ActionFeedbackForm({
   const [state, formAction] = useActionState(
     async (_previous: AccountActionResult, form: FormData) => {
       try {
-        return await action(form);
+        const result=await action(form);
+        if(result.kind==="success"&&result.message)successCallback.current?.();
+        return result;
       } catch {
         return {
           kind: "error",
@@ -59,7 +62,6 @@ export function ActionFeedbackForm({
     if (state.kind === "success" && state.message) {
       if (state.redirectTo) router.push(state.redirectTo);
       else router.refresh();
-      successCallback.current?.();
     }
   }, [state, router]);
   return (

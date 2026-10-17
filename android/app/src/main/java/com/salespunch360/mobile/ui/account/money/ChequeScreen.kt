@@ -3,6 +3,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,8 +29,9 @@ import kotlinx.serialization.json.*
   OutlinedTextField(state.q,vm::search,label={Text("Search cheques")},modifier=Modifier.fillMaxWidth())
   Row { TextButton(vm::sort){Text(if(state.order=="desc")"Date ↓"else"Date ↑")};TextButton(vm::refresh){Text("Refresh")}}
   if(state.canClose)TextButton({vm.entryOptions();legacyEntry=null;entryOpen=true},enabled=!state.saving){Text("Record cheque")}
+  state.message?.let{message->Row(Modifier.semantics{liveRegion=LiveRegionMode.Polite}){Text(message,Modifier.weight(1f));TextButton(vm::dismissMessage){Text("Dismiss")}}}
   if(state.loading)LinearProgressIndicator(Modifier.fillMaxWidth())
-  state.error?.let{Text(it,color=MaterialTheme.colorScheme.error);TextButton(vm::refresh){Text("Retry")}}
+  state.error?.let{Text(it,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics{liveRegion=LiveRegionMode.Assertive});TextButton(vm::refresh){Text("Retry")}}
   if(!state.loading&&state.error==null&&state.rows.isEmpty())Text(if(state.q.isBlank())if(state.tab=="ALL")"No cheques."else"No ${state.tab.lowercase()} cheques."else"No cheques match this search.")
   LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
    items(state.rows,key={it.str("id")}) {row->
@@ -69,7 +73,7 @@ import kotlinx.serialization.json.*
    }
    OutlinedTextField(date,{date=it},label={Text("Action date (YYYY-MM-DD)")},singleLine=true,enabled=!state.saving)
    if(selectedAction!="CLOSE")OutlinedTextField(reason,{reason=it.take(500)},label={Text("Reason")},enabled=!state.saving)
-   state.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+   state.error?.let{Text(it,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics{liveRegion=LiveRegionMode.Assertive})}
   }},confirmButton={TextButton({vm.action(row,selectedAction,date,reason,requestKey,destination.takeIf{selectedAction=="CLOSE"},description){selected=null}},enabled=!state.saving&&date.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))&&(if(selectedAction=="CLOSE")destination.isNotBlank()&&!state.optionsLoading else reason.isNotBlank())){Text(if(state.saving)"Saving…"else if(selectedAction=="REOPEN")"Yes"else"Confirm")}},dismissButton={TextButton({selected=null},enabled=!state.saving){Text("Cancel")}})
  }}
 }

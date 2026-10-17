@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { saveChequeAction, searchChequeParties } from "@/app/actions/money";
 import { ActionFeedbackForm, AccountFieldError } from "./action-feedback-form";
-import { SaveSubmitButton } from "./save-feedback";
+import { SaveSubmitButton,SavePendingFields } from "./save-feedback";
 export function ChequeRecordForm({
   branches,
   accounts,
@@ -12,16 +12,18 @@ export function ChequeRecordForm({
 }) {
   const [branch, setBranch] = useState(branches[0]?.id ?? "");
   const [direction, setDirection] = useState<"RECEIVED" | "ISSUED">("RECEIVED");
-  const [requestKey] = useState(() => crypto.randomUUID());
+  const [requestKey,setRequestKey] = useState(() => crypto.randomUUID());
+  const [number,setNumber]=useState(""),[date,setDate]=useState(""),[amount,setAmount]=useState(""),[reference,setReference]=useState("");
   const [search, setSearch] = useState("");
   const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
+  const [searching,setSearching]=useState(false);
   const [searchError, setSearchError] = useState("");
   const searchGeneration = useRef(0);
   async function findParties(nextOffset = 0) {
     const generation = ++searchGeneration.current;
-    setSearchError("");
+    setSearchError("");setSearching(true);
     try {
       const result = await searchChequeParties({
         branchId: branch,
@@ -38,13 +40,14 @@ export function ChequeRecordForm({
       setSearchError(
         "Unable to load parties. Check your branch access and try again.",
       );
-    }
+    } finally {if(generation===searchGeneration.current)setSearching(false)}
   }
   const compatible = accounts.filter(
     (account) => !account.branchId || account.branchId === branch,
   );
   return (
-    <ActionFeedbackForm action={saveChequeAction} className="stack">
+    <ActionFeedbackForm action={saveChequeAction} className="stack" onSuccess={()=>{setRequestKey(crypto.randomUUID());setNumber("");setDate("");setAmount("");setReference("");setSearch("");setParties([]);setOffset(0);setMore(false);setSearching(false);searchGeneration.current++}}>
+      <SavePendingFields>
       <input type="hidden" name="requestKey" value={requestKey} />
       <label>
         Branch
@@ -56,7 +59,7 @@ export function ChequeRecordForm({
           onChange={(event) => {
             searchGeneration.current++;
             setBranch(event.target.value);
-            setParties([]);
+            setParties([]);setOffset(0);setMore(false);setSearching(false);setSearchError("");
           }}
         >
           {branches.map((row) => (
@@ -86,12 +89,12 @@ export function ChequeRecordForm({
       </label>
       <label>
         Cheque number
-        <input name="chequeNumber" required maxLength={80} />
+        <input name="chequeNumber" value={number} onChange={event=>setNumber(event.target.value)} required maxLength={80} />
         <AccountFieldError name="chequeNumber" />
       </label>
       <label>
         Cheque date
-        <input type="date" name="chequeDate" required />
+        <input type="date" name="chequeDate" value={date} onChange={event=>setDate(event.target.value)} required />
         <AccountFieldError name="chequeDate" />
       </label>
       <label>
@@ -103,7 +106,7 @@ export function ChequeRecordForm({
           onChange={(event) => {
             searchGeneration.current++;
             setDirection(event.target.value as "RECEIVED" | "ISSUED");
-            setParties([]);
+            setParties([]);setOffset(0);setMore(false);setSearching(false);setSearchError("");
           }}
         >
           <option value="RECEIVED">Received from customer</option>
@@ -118,7 +121,7 @@ export function ChequeRecordForm({
           maxLength={160}
         />
       </label>
-      <button type="button" onClick={() => void findParties()}>
+      <button type="button" disabled={searching} onClick={() => void findParties()}>
         Find parties
       </button>
       {searchError && <p role="alert">{searchError}</p>}
@@ -128,7 +131,7 @@ export function ChequeRecordForm({
           aria-label="Party"
           name="partyId"
           required
-          key={`${branch}:${direction}`}
+          key={`${branch}:${direction}:${requestKey}`}
           defaultValue=""
         >
           <option value="">Select party</option>
@@ -142,6 +145,7 @@ export function ChequeRecordForm({
       {offset > 0 && (
         <button
           type="button"
+          disabled={searching}
           onClick={() => void findParties(Math.max(0, offset - 25))}
         >
           Previous parties
@@ -155,6 +159,7 @@ export function ChequeRecordForm({
       <label>
         Amount
         <input
+          value={amount} onChange={event=>setAmount(event.target.value)}
           name="amount"
           inputMode="decimal"
           required
@@ -168,9 +173,10 @@ export function ChequeRecordForm({
       </p>
       <label>
         Reference
-        <input name="reference" maxLength={160} />
+        <input name="reference" value={reference} onChange={event=>setReference(event.target.value)} maxLength={160} />
       </label>
-      <SaveSubmitButton>Record cheque</SaveSubmitButton>
+      <SaveSubmitButton disabled={searching}>Record cheque</SaveSubmitButton>
+      </SavePendingFields>
     </ActionFeedbackForm>
   );
 }

@@ -1,9 +1,17 @@
 "use client";
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { saveChequeFinancialAction } from "@/app/actions/money";
-import { ActionFeedbackForm } from "./action-feedback-form";
+import {useChequeSuccess} from "./cheque-feedback-provider";
+import {trapDialogFocus} from "./dialog-keyboard";
+import { ActionFeedbackForm, useAccountActionFeedback } from "./action-feedback-form";
 import { SavePendingFields, SaveSubmitButton } from "./save-feedback";
+
+function ReopenFeedback(){
+ const state=useAccountActionFeedback(),ref=useRef<HTMLParagraphElement>(null);
+ useEffect(()=>{if(state?.kind==="error"&&state.message&&!Object.keys(state.fieldErrors??{}).length)ref.current?.focus()},[state]);
+ return state?.kind==="error"&&state.message?<p ref={ref} tabIndex={-1} role="alert">{state.message}</p>:null;
+}
 
 function ReopenButtons({ close }: { close: () => void }) {
   const { pending } = useFormStatus();
@@ -36,17 +44,19 @@ export function ChequeFinancialActionForm({
   actions: string[];
   accounts: { id: string; name: string }[];
 }) {
+  const notifySuccess=useChequeSuccess();
   const [action, setAction] = useState(actions[0]);
   const dialog = useRef<HTMLDialogElement>(null),
-    titleId = useId();
-  const close = () => dialog.current?.close();
+    titleId = useId(),trigger=useRef<HTMLButtonElement>(null);
+  const close = () => {dialog.current?.close();trigger.current?.focus()};
   const [requestKey] = useState(() => crypto.randomUUID());
   return (
     <ActionFeedbackForm
       action={saveChequeFinancialAction}
       className="stack"
-      onSuccess={close}
+      onSuccess={()=>{notifySuccess("Cheque updated");close()}}
     >
+      <SavePendingFields>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="requestKey" value={requestKey} />
@@ -73,12 +83,13 @@ export function ChequeFinancialActionForm({
       </label>
       {action === "REOPEN" ? (
         <>
-          <button type="button" onClick={() => dialog.current?.showModal()}>
+          <button ref={trigger} type="button" onClick={() => dialog.current?.showModal()}>
             Re-open cheque
           </button>
           <dialog
             ref={dialog}
             aria-labelledby={titleId}
+            onKeyDown={trapDialogFocus}
             onCancel={(event) => {
               if (dialog.current?.querySelector('[data-pending="true"]'))
                 event.preventDefault();
@@ -92,6 +103,7 @@ export function ChequeFinancialActionForm({
             }}
           >
             <h2 id={titleId}>Re-open cheque?</h2>
+            <ReopenFeedback/>
             <p>
               This reverses the closure payment and restores the invoice&apos;s
               unpaid balance. The original sale is retained.
@@ -156,6 +168,7 @@ export function ChequeFinancialActionForm({
           <SaveSubmitButton>Confirm cheque action</SaveSubmitButton>
         </>
       )}
+      </SavePendingFields>
     </ActionFeedbackForm>
   );
 }

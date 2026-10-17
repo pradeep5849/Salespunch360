@@ -3654,11 +3654,16 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   ).toBeAttached({ timeout: 15000 });
   await page.getByLabel("Party", { exact: true }).selectOption(party.id);
   await page.getByLabel("Amount", { exact: true }).fill("1593.00");
+  const recordForm=page.locator("form").filter({has:page.getByRole("button",{name:"Record cheque",exact:true})});const originalKey=await recordForm.locator('input[name="requestKey"]').inputValue();
   await page
     .getByRole("button", { name: "Record cheque", exact: true })
     .click();
   const card = page.getByRole("article", { name: `Cheque ${number}` });
   await expect(card).toBeVisible({ timeout: 15000 });
+  await expect(recordForm.getByLabel("Cheque number",{exact:true})).toHaveValue("");
+  await expect(recordForm.getByLabel("Amount",{exact:true})).toHaveValue("");
+  await expect(recordForm.locator('input[name="requestKey"]')).not.toHaveValue(originalKey);
+
   const recorded = await db.cheque.findFirstOrThrow({
     where: { companyId, chequeNumber: number },
   });
@@ -3680,6 +3685,7 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
     .getByRole("button", { name: "Confirm cheque action", exact: true })
     .click();
   await expect(card).not.toBeAttached({ timeout: 15000 });
+  await expect(page.getByRole("status",{name:"Cheque notification",exact:true})).toContainText("Cheque updated");
   await page.getByRole("link", { name: "Closed", exact: true }).click();
   await expect(card).toContainText("CLEARED");
   await expect(card).toContainText("Cash closure reference");
@@ -3703,6 +3709,18 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
     .getByLabel("Action date", { exact: true })
     .fill("2026-10-13");
   await confirmation.getByLabel("Reason", { exact: true }).fill("Undo closure");
+  const journalsBeforeInvalid=await db.journalEntry.count({where:{companyId}});
+  await confirmation.getByLabel("Action date",{exact:true}).fill("2026-10-11");
+  await confirmation.getByRole("button",{name:"Yes",exact:true}).click();
+  const correctionError=confirmation.getByRole("alert");
+  await expect(correctionError).toHaveText("The correction date cannot be before the original payment date.");
+  await expect(correctionError).toBeFocused();
+  await expect(confirmation.getByLabel("Reason",{exact:true})).toHaveValue("Undo closure");
+  await expect(confirmation.getByLabel("Action date",{exact:true})).toHaveValue("2026-10-11");
+  expect((await db.cheque.findUniqueOrThrow({where:{id:recorded.id}})).actionVersion).toBe(closedBefore.actionVersion);
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journalsBeforeInvalid);
+  for(let tab=0;tab<8;tab++){await page.keyboard.press("Tab");expect(await confirmation.evaluate(node=>node.contains(document.activeElement))).toBe(true)}
+  await confirmation.getByLabel("Action date",{exact:true}).fill("2026-10-13");
   expect(
     (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
   ).toEqual([]);
@@ -3727,8 +3745,25 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
     "Undo closure",
   );
+  let releaseFailure:()=>void=()=>{};
+  const failureGate=new Promise<void>(resolve=>{releaseFailure=resolve});
+  const holdAction=async(route:import("@playwright/test").Route)=>{if(route.request().method()==="POST"&&route.request().headers()["next-action"]){await failureGate;await route.abort("failed")}else await route.continue()};
+  await page.route("**/workspace/account/money/cheques**",holdAction);
+  const seen=page.waitForRequest(request=>request.method()==="POST"&&!!request.headers()["next-action"]);
+  try{
+   await confirmation.getByRole("button",{name:"Yes",exact:true}).click();await seen;
+   await expect(confirmation.getByLabel("Reason",{exact:true})).toBeDisabled();
+   await expect(card.getByLabel("Cheque action",{exact:true})).toBeDisabled();
+   await expect(confirmation.locator('button[type="submit"]')).toBeDisabled();
+  }finally{releaseFailure()}
+  await expect(confirmation.getByRole("alert")).toHaveText("Connection interrupted. Your inputs were kept; try again when online.");
+  await expect(confirmation.getByRole("alert")).toBeFocused();
+  await expect(confirmation.getByLabel("Reason",{exact:true})).toHaveValue("Undo closure");
+  expect((await db.cheque.findUniqueOrThrow({where:{id:recorded.id}})).actionVersion).toBe(closedBefore.actionVersion);
+  await page.unroute("**/workspace/account/money/cheques**",holdAction);
   await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(card).not.toBeAttached({ timeout: 15000 });
+  await expect(page.getByRole("status",{name:"Cheque notification",exact:true})).toContainText("Cheque updated");
   await page.getByRole("link", { name: "Open", exact: true }).click();
   await expect(card).toContainText("RECEIVED");
   expect(

@@ -1,11 +1,12 @@
 "use client";
+import {useChequeSuccess} from "./cheque-feedback-provider";
 import { useState } from "react";
 import {
   saveLegacyChequeSourceAction,
   searchChequeParties,
 } from "@/app/actions/money";
 import { ActionFeedbackForm } from "./action-feedback-form";
-import { SaveSubmitButton } from "./save-feedback";
+import { SaveSubmitButton,SavePendingFields } from "./save-feedback";
 
 export function LegacyChequeSourceForm({
   id,
@@ -18,6 +19,7 @@ export function LegacyChequeSourceForm({
   branchId: string;
   direction: "RECEIVED" | "ISSUED";
 }) {
+  const notifySuccess=useChequeSuccess();
   const [key] = useState(() => crypto.randomUUID());
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<{ id: string; name: string }[]>([]);
@@ -46,7 +48,8 @@ export function LegacyChequeSourceForm({
     }
   }
   return (
-    <ActionFeedbackForm action={saveLegacyChequeSourceAction} className="stack">
+    <ActionFeedbackForm action={saveLegacyChequeSourceAction} className="stack" onSuccess={()=>notifySuccess("Cheque source details saved")}>
+      <SavePendingFields>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="requestKey" value={key} />
@@ -112,6 +115,7 @@ export function LegacyChequeSourceForm({
         />
       </label>
       <SaveSubmitButton>Confirm source details</SaveSubmitButton>
+      </SavePendingFields>
     </ActionFeedbackForm>
   );
 }

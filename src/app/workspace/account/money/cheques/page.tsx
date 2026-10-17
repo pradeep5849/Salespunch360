@@ -1,3 +1,4 @@
+import {ChequeFeedbackProvider} from "@/components/account/cheque-feedback-provider";
 import Link from "next/link";
 import { z } from "zod";
 import {
@@ -100,7 +101,7 @@ export default async function Page({
     return `/workspace/account/money/cheques?${params}`;
   };
   return (
-    <main className="employees-shell">
+    <ChequeFeedbackProvider><section aria-label="Cheques" className="employees-shell">
       <section className="employees-content">
         <WorkspacePageHeader
           title="Cheques"
@@ -279,6 +280,6 @@ export default async function Page({
           )}
         </nav>
       </section>
-    </main>
+    </section></ChequeFeedbackProvider>
   );
 }
