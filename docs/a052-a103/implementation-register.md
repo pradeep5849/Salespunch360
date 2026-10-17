@@ -9575,3 +9575,8 @@ Verification commit `67737c77bff97ad779eca3b77364c3dbea61e0c1`: 28 database/API 
 ### A066-F01 / A066-F05 cheque list and native routes — 2026-10-17
 
 Code `3b6c9f55cad485bc1f71366c2bc14bf33488ef79`: cash destination labels corrected on web/native; original state/query/action/navigation requirements independently checked. Passed 26 focused tests, 4 desktop/mobile-web cases (1.9m), Android compilation and 6 cheque JVM tests (0 failed/skipped), TypeScript and focused lint. Both findings IMPLEMENTED BUT NOT VERIFIED. Native device/TalkBack and complete final-head validation pending; unresolved posted legacy sources remain intentionally protected. Counts: 175 implemented / 22 partial / 2 not started; all 199 IDs retained.
+
+
+### A058-F06 / A062-F02 explicit secondary-unit persistence — 2026-10-17
+
+Code `c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e`: explicit item-specific secondary unit/factor snapshots, web/native form/action/API persistence, active company-owned references, paired FK/check constraints and audited stale-map clearing. Passed 50 database/policy tests + 31 related tests, 2 desktop/mobile/native-API scenarios, Android compilation + 8 JVM tests, TypeScript/full lint/Prisma. Two additive migrations applied locally (130 total); no historical migration or production change. Both findings remain PARTIAL: transaction conversion/valuation/returns and immutable document snapshots still pending. Backup dependency mapped to A088-F01. Counts unchanged: 175 implemented / 22 partial / 2 not started.

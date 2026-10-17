@@ -13926,7 +13926,60 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
-      }
+      },
+      "checkpoint_work": [
+        {
+          "date": "2026-10-17",
+          "commit": "c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e",
+          "work": "Product/service masters persist an explicit secondary-unit snapshot: one primary unit equals N secondary units. Web/native unit selectors require a positive exact factor and different units. Web action and both native master save paths preserve these fields. Shared validation requires active company-owned references; DB composite foreign keys and paired positive-factor checks protect direct writes. New base-unit assignment clears stale secondary mappings and audits prior mapping/factor. Historical item unit changes remain prohibited after stock/document history. No factor inferred from names and no historical quantities reinterpreted.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261017120000_item_secondary_units/migration.sql",
+            "prisma/migrations/20261017121000_item_secondary_unit_integrity/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/account-masters.ts",
+            "src/app/globals.css",
+            "src/app/workspace/account/add-item-unit-inline-fix.css",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/item-master-policy.ts",
+            "src/lib/account/item-opening.integration.test.ts",
+            "src/lib/account/item-secondary-unit.ts",
+            "src/lib/account/service.ts",
+            "src/lib/account/unit-assignment.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/validation.ts",
+            "src/lib/mobile/account-master-data.ts"
+          ],
+          "migrations": [
+            "20261017120000_item_secondary_units",
+            "20261017121000_item_secondary_unit_integrity"
+          ],
+          "models": [
+            "AccountProduct.secondaryUnitId/secondaryUnitsPerBase",
+            "AccountService.secondaryUnitId/secondaryUnitsPerBase",
+            "AccountUnit inverse relations"
+          ],
+          "tests": {
+            "database_and_policy": "50 tests passed in 4 files (6.97s): actual product/service persistence, exact factor, safe retry, invalid/missing/zero/precision/same/missing/inactive unit rejection, Units OFF, no failed stock writes, direct-DB missing-factor denial and audited stale-map clearing.",
+            "related_regressions": "31 tests passed in 6 files (mobile references, item activation/opening/settings).",
+            "browser": "2 desktop/mobile-web scenarios passed (35.7s): required factor, zero prevention, retained dialog value, web save, native API create/retry/read/service, foreign/same/missing-factor rejection, clearing after unused base-unit change, AXE and overflow.",
+            "android": "compileDebugKotlin and 8 AddItemValidation/UnitConversionRate JVM tests passed; 0 failure/error/skip, 2m29s.",
+            "static": "TypeScript, full repository ESLint, Prisma generate/validate passed.",
+            "migration": "Both new additive migrations applied to isolated local PostgreSQL only; 130 migrations up to date. No historical migration edited or production data touched."
+          },
+          "initial_failures_corrected": [
+            "Web action initially omitted new fields; forwarding/type corrected.",
+            "Native unit label used code instead of symbol; compilation corrected.",
+            "Mobile header contrast override corrected in the existing important mobile stylesheet; AXE retained.",
+            "Native read test corrected to its existing record response envelope.",
+            "Nullable SQL check strengthened by a new follow-up migration; applied migration was preserved."
+          ],
+          "remaining": "PARTIAL retained. Transaction secondary-unit selectors, immutable document factor/base-quantity snapshots, purchase/sale/return stock quantity and valuation conversion, and historical factor behavior remain A062-F02 work. Native device/emulator/TalkBack and full final-head validation not executed."
+        }
+      ]
     },
     {
       "finding_id": "A058-F07",
@@ -19034,6 +19087,57 @@
         {
           "date": "2026-10-13",
           "work": "Assignment and immutable-base-history guards are implemented. Existing conversion rules remain stored; transaction-level secondary-unit resolution, historical factor snapshots and quantity/value application remain pending. This finding is NOT closed by unit setup tests."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e",
+          "work": "Product/service masters persist an explicit secondary-unit snapshot: one primary unit equals N secondary units. Web/native unit selectors require a positive exact factor and different units. Web action and both native master save paths preserve these fields. Shared validation requires active company-owned references; DB composite foreign keys and paired positive-factor checks protect direct writes. New base-unit assignment clears stale secondary mappings and audits prior mapping/factor. Historical item unit changes remain prohibited after stock/document history. No factor inferred from names and no historical quantities reinterpreted.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261017120000_item_secondary_units/migration.sql",
+            "prisma/migrations/20261017121000_item_secondary_unit_integrity/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/account-masters.ts",
+            "src/app/globals.css",
+            "src/app/workspace/account/add-item-unit-inline-fix.css",
+            "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/item-master-policy.ts",
+            "src/lib/account/item-opening.integration.test.ts",
+            "src/lib/account/item-secondary-unit.ts",
+            "src/lib/account/service.ts",
+            "src/lib/account/unit-assignment.ts",
+            "src/lib/account/units.integration.test.ts",
+            "src/lib/account/validation.ts",
+            "src/lib/mobile/account-master-data.ts"
+          ],
+          "migrations": [
+            "20261017120000_item_secondary_units",
+            "20261017121000_item_secondary_unit_integrity"
+          ],
+          "models": [
+            "AccountProduct.secondaryUnitId/secondaryUnitsPerBase",
+            "AccountService.secondaryUnitId/secondaryUnitsPerBase",
+            "AccountUnit inverse relations"
+          ],
+          "tests": {
+            "database_and_policy": "50 tests passed in 4 files (6.97s): actual product/service persistence, exact factor, safe retry, invalid/missing/zero/precision/same/missing/inactive unit rejection, Units OFF, no failed stock writes, direct-DB missing-factor denial and audited stale-map clearing.",
+            "related_regressions": "31 tests passed in 6 files (mobile references, item activation/opening/settings).",
+            "browser": "2 desktop/mobile-web scenarios passed (35.7s): required factor, zero prevention, retained dialog value, web save, native API create/retry/read/service, foreign/same/missing-factor rejection, clearing after unused base-unit change, AXE and overflow.",
+            "android": "compileDebugKotlin and 8 AddItemValidation/UnitConversionRate JVM tests passed; 0 failure/error/skip, 2m29s.",
+            "static": "TypeScript, full repository ESLint, Prisma generate/validate passed.",
+            "migration": "Both new additive migrations applied to isolated local PostgreSQL only; 130 migrations up to date. No historical migration edited or production data touched."
+          },
+          "initial_failures_corrected": [
+            "Web action initially omitted new fields; forwarding/type corrected.",
+            "Native unit label used code instead of symbol; compilation corrected.",
+            "Mobile header contrast override corrected in the existing important mobile stylesheet; AXE retained.",
+            "Native read test corrected to its existing record response envelope.",
+            "Nullable SQL check strengthened by a new follow-up migration; applied migration was preserved."
+          ],
+          "remaining": "PARTIAL retained. Transaction secondary-unit selectors, immutable document factor/base-quantity snapshots, purchase/sale/return stock quantity and valuation conversion, and historical factor behavior remain A062-F02 work. Native device/emulator/TalkBack and full final-head validation not executed."
         }
       ],
       "push_checkpoint_evidence": {
@@ -62920,6 +63024,11 @@
           "primary_finding": "A058-F04",
           "commit": "3dd76d30be26a8bf3cbfff90ff82616124ab1ffb",
           "work": "New item photoObjectKey references use companies/<companyId>/item-photos private objects. Existing backup snapshot warning requires retaining private-storage backup. Carry new product/service photo bytes into remaining blob-aware backup/restore coverage;this dependency does not complete A088-F01."
+        },
+        {
+          "date": "2026-10-17",
+          "commit": "c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e",
+          "dependency": "Backup/restore must retain optional item secondary-unit IDs and exact factors, with units restored before item references. No backup completion inferred from this item save slice."
         }
       ],
       "push_checkpoint_evidence": {
