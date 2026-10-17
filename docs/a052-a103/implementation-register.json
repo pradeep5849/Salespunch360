@@ -63617,6 +63617,24 @@
           "work": "Report summary/export monetary values use company preferences and preserve scientific Decimal aggregates exactly; identifiers remain unchanged.",
           "tests": "26 focused report/display/export/service tests PASS",
           "remaining": "Other display consumers and final-head verification pending."
+        },
+        "expense_directory_display_2026_10_17": {
+          "implementation_commit": "73b6fe1dd2bc68f43fd19ef39fe08e679c95a719",
+          "work": "Expense detail monetary fields, recurring schedule amount/date, expense list amount/date and money-account directory balance now use company display context. Numeric form values and stored ledger amounts unchanged.",
+          "files": [
+            "src/app/workspace/account/expenses/[id]/page.tsx",
+            "src/app/workspace/account/expenses/page.tsx",
+            "src/app/workspace/account/expenses/recurring/page.tsx",
+            "src/app/workspace/account/money/accounts/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "unit": "39 passed in4 display/report/stock/quantity files,0 failures/skips",
+            "browser": "2 passed desktop/mobile Chromium (36.1s);USD/3 decimals/MM-DD date preference;90071992547409.91 exact scheduled amount;unchanged stored expense;Axe AA/overflow checks",
+            "typescript": "PASS",
+            "focused_eslint": "PASS"
+          },
+          "remaining": "Other display consumers and final complete-head validation still pending; A090-F01 remains PARTIAL. No Android source changed or new Android runtime verification."
         }
       },
       "intermediate_validation": {
@@ -65710,6 +65728,20 @@
         "final_complete_head": "NOT RUN"
       },
       "scope": "Intermediate supported metadata and shared Project authorization regression; no final verification promotion"
+    },
+    {
+      "date": "2026-10-17",
+      "code_head": "73b6fe1dd2bc68f43fd19ef39fe08e679c95a719",
+      "finding_ids": [
+        "A090-F01"
+      ],
+      "evidence": {
+        "unit": "39 passed in4 display/report/stock/quantity files,0 failures/skips",
+        "browser": "2 passed desktop/mobile Chromium (36.1s);USD/3 decimals/MM-DD date preference;90071992547409.91 exact scheduled amount;unchanged stored expense;Axe AA/overflow checks",
+        "typescript": "PASS",
+        "focused_eslint": "PASS"
+      },
+      "scope": "Intermediate display consumer continuation only"
     }
   ]
 }
