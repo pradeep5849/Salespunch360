@@ -28833,6 +28833,11 @@
           "work": "Shared ActionFeedbackForm focuses the active named invalid field, or its own error message when that field is absent. Owner browser insufficient-funds case verifies feedback focus; other money-screen remaining scope is unchanged.",
           "tests": "53/53 focused PostgreSQL/unit/API/permission/funding/scope tests passed in 7 files (12.07s), including concurrent retry, changed retry denial, date/branch/company/role denial, audit rollback, loan receipt funds and selected-branch totals. Four desktop/mobile identity/capital/profit/correction/long-name cases passed (1.6m); final real native-default-scope/correction pair rerun 2/2 passed (44.3s), overlapping the correction cases. Android final compile + 4 focused JVM tests passed (1m41s; zero failure/error/skip). TypeScript/focused lint passed. Physical device/TalkBack and complete checkpoint-head validation pending.",
           "finding_status_unchanged": true
+        },
+        {
+          "primary_finding": "A066-F10",
+          "commit": "86fc2113d3d3e82cb37589fedba45979204f5d32",
+          "work": "Shared ActionFeedbackForm success callback now runs before server refresh can remove source form. Transfer/owner-correction cases in6-case desktop/mobile group pass. Transfer test invariant updated to reject enabled same-account destinations,including filtered-out source accounts. A064-F13 remains PARTIAL;no other money-screen completion inferred."
         }
       ],
       "shared_feedback_contrast_work": "A071-F04 corrects shared save/error toast contrast inside Account paragraph styles; original finding remains independently tracked and is not closed by this CSS change.",
@@ -39072,7 +39077,18 @@
         "src/app/actions/money.ts",
         "src/lib/account/cheque-finance.ts",
         "src/lib/account/settlement-policy.ts",
-        "src/lib/account/commercial.ts"
+        "src/lib/account/commercial.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ChequeViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/ChequeFeedback.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/ChequeScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ChequeFeedbackTest.kt",
+        "e2e/a049-a051-expenses.spec.ts",
+        "e2e/a090-settings.spec.ts",
+        "src/components/account/action-feedback-form.tsx",
+        "src/components/account/cheque-feedback-provider.tsx",
+        "src/components/account/cheque-financial-action-form.tsx",
+        "src/components/account/cheque-record-form.tsx",
+        "src/components/account/legacy-cheque-source-form.tsx"
       ],
       "affected_services_apis_actions": [
         "GET /workspace/account/money/cheques",
@@ -39163,7 +39179,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -39188,6 +39204,35 @@
           "work": "Explicit unposted legacy-source completion links a confirmed party and positive amount exactly once without ledger posting; original posted/closed legacy entries without a normalized source remain protected. Web and Android entry support authorized paged party/account choices, close destination, description, reopen, bounce and cancel. Native sale payload preserves cheque details. Forward migration 20261012133000 restores required journals for posted settlements while permitting journal-free pending cheques.",
           "tests": "Intermediate current-slice evidence: 44 grouped financial/database/API/read/retry tests passed (including 12 real PostgreSQL lifecycle/fault tests); 4 desktop/mobile-web tests passed with AXE/overflow assertions; Android compilation and 4 focused payload/action tests passed. Earlier grouped Android JVM run: 148 passed. TypeScript passed. Not final PR-head validation.",
           "remaining": "Full supplied reference parity, multi-invoice/advance View Txn destinations, posted legacy records without proven normalized financial source, final-head regression and native device/browser limitations. No final status claimed."
+        },
+        "cheque_feedback_completion_2026_10_17": {
+          "commit": "86fc2113d3d3e82cb37589fedba45979204f5d32",
+          "work": "Completed cheque form feedback/accessibility and retry recovery. Reopen generic/offline errors now render and receive focus within the active modal, Tab stays inside,Cancel/Close/Escape retain fields and restore trigger focus. All cheque entry/action/source controls disable while pending;party searches clear stale pagination/loading on branch/direction changes,prevent recording during lookup,and reset form transaction fields/rotate request key only after confirmed success. Shared feedback executes success callbacks at response completion before server-revalidated rows unmount;scoped page provider keeps cheque success notices visible after filtered row removal. Removed nested main landmark. Android retains guarded entry/action dialogs and exposes persistent dismissible success and live error announcements with actionable safe error-code translation. No accounting/schema changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ChequeViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ChequeFeedback.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/ChequeScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ChequeFeedbackTest.kt",
+            "e2e/a049-a051-expenses.spec.ts",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/money/cheques/page.tsx",
+            "src/components/account/action-feedback-form.tsx",
+            "src/components/account/cheque-feedback-provider.tsx",
+            "src/components/account/cheque-financial-action-form.tsx",
+            "src/components/account/cheque-record-form.tsx",
+            "src/components/account/legacy-cheque-source-form.tsx"
+          ],
+          "tests": {
+            "focused_unit_database": "57 passed,0 failed,0 skipped across4 cheque financial/list/target/action-feedback files(6.22s);includes actual isolated PostgreSQL concurrent closure,reopen/advance undo,scope/version/replay/audit rollback and amount checks.",
+            "grouped_browser": "6 passed desktop/mobile Chromium(1.1m):cheque entry/close/reopen plus transfer and owner-correction shared-feedback regressions. Actual rejected pre-payment correction keeps date/reason,focuses visible modal error,and preserves action version/journal count. Intercepted offline request proves pending fields/submit disabled,input preservation and successful retry;success notice persists after row removal,keyboard/AXE/overflow checked.",
+            "last_browser_rerun": "2 cheque desktop/mobile cases passed(28.0s) after final party-search reset/record-disabled refinements;overlaps grouped6,not8 unique cases.",
+            "android": "compileDebugKotlin/testDebugUnitTest PASS(2m42s);4 JVM tests(2 ChequeActions,2 ChequeFeedback),0 failures/errors/skips. No device/TalkBack runtime.",
+            "typescript": "PASS",
+            "eslint": "PASS full eslint . --max-warnings=0",
+            "initial_failures": "Toast runtime assertion exposed existing onSuccess effect being lost when server refresh removed its form;callbacks now run at completed action response and final runtime verifies notice. First native edit had missing brace;fixed before passing compile. Pending-button test expected Yes while actual label correctly changes to Saving;assert now targets submit control. Prior transfer test expected disabled source option while later correct transfer mode filters remove it;assert now verifies no enabled same-account destination. Final6 group and final2 overlapping cheque rerun passed.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "Final complete199-head validation and native emulator/device/TalkBack runtime remain. Other A066 source/lifecycle/native route/list parity findings keep independent statuses;this does not close those pages by shared code alone."
         }
       },
       "intermediate_validation": {
@@ -39419,7 +39464,7 @@
             "record": "Final exact-head complete validation remains pending. Device/live-production checks are not claimed. Preserve original required tests and all limitations in recorded work."
           }
         ],
-        "verification_status": "PARTIAL",
+        "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
       }
     },
