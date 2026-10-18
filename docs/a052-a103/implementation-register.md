@@ -6886,7 +6886,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Accounting financial impact:** Estimate non-posting; resulting draft uses existing posting/accounting workflow. Keep Plus acceptance→Project behavior distinct.
 
-**Required fix:** Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert.
+**Required fix (user clarification supersedes persisted Sale draft):** Convert to Sale opens an unsaved prefilled Add Sale form and writes nothing. Explicit Save posts the real Sale with stable source revision/linkage and replay identity in the existing atomic transaction. Close the estimate only after Sale posting or Sale Order confirmation; retain detailed lifecycle/history. Leaving before Save creates nothing.
 
 **Required tests:** Sale/order field carryover; source authorization and target permission/module; Branch consistency; replay/cancel/failure; no duplicate posting.
 
@@ -9732,3 +9732,12 @@ Convert-to-Sale must only open prefilled Add Sale. No Sale draft is persisted; t
 58 focused tests PASS;83 local PostgreSQL cheque/project regressions PASS (15.10s);2 native API cases PASS; final2 desktop/mobile-web cases PASS (52.6s), including actual web Save to POSTED20. Clean TypeScript/focused lint PASS. API profiles do not establish native-device runtime.
 
 Shared user-rule prerequisite only. A080-F02/A083-F01 remain PARTIAL for conversion entry/return/source linkage and Closed projection on posting/confirmation. No migration, production operation or A104. No unrelated original finding is closed by this shared change. Counts unchanged:179 code implemented awaiting final verification;18 partial;2 not started.
+
+
+### 2026-10-18 — A080/A083 exact conversion prefill prerequisite
+
+Code commit `3a934530c1e0bd50f6948198dba0b414be023478` adds pure mapping for canonical items, negotiated prices, line/document discounts and labelled taxable/non-taxable charges, with independent target-total reconciliation. Excess lines or unrepresentable precision fail rather than silently dropping values. No internal costs, stock/payment/source-line identities are copied.
+
+38 tests in3 files PASS,0 failures/skips: quotation conversion prefill, quotation calculation and Sale preview. Grouped regression: 101 passed (101); quotation prefill/calculation/service runtime and Sale preview/submit,5 files. TypeScript, focused ESLint and diff check pass. Browser/device/DB runtime not run for this pure helper; no migration. The helper is not yet connected to conversion UI or persistence.
+
+A080-F02/A083-F01 remain PARTIAL: authorized conversion entry/prefill return, immutable source-revision linkage, replay/concurrency protection, Sale Save/order-confirm closure, Web/native controls and end-to-end verification remain pending. Counts unchanged:179 implemented awaiting final verification,18 partial,2 not started; all199 original IDs retained. Prior-head targeted CI39092777204 succeeded at34b028c7; final-head full validation remains pending.
