@@ -2685,3 +2685,23 @@ test("A080 conversion preview API is scoped, exact and never persists a target",
   expect(await counts()).toEqual(initial);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:source.id}})).status).toBe("DRAFT");
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
 });
+
+
+test("A090 quotation details applies company money and date display without changing snapshots",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["QUOTATIONS_BOQ"],baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"YYYY-MM-DD"}});
+  const actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const source=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-18",validUntil:"2026-11-01",lines:[{lineType:"CUSTOM",itemName:"Formatted estimate line",quantity:"2.5",rate:"12.34",taxRate:"18",internalUnitCost:"4"}]});
+  const snapshot=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:source.id}}),journalCount=await db.journalEntry.count({where:{companyId}}),preferences=resolveDisplayPreferences({...before,baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"YYYY-MM-DD"});
+  await signInSettings(page);await page.goto(`/workspace/account/quotations/${source.id}`);
+  await expect(page.getByText(/Issued 2026-10-18/)).toContainText("Valid until 2026-11-01");
+  const totals=page.getByText(/^Subtotal /);await expect(totals).toContainText(formatMoney(snapshot.subtotal.toString(),preferences));await expect(totals).toContainText(formatMoney(snapshot.taxTotal.toString(),preferences));await expect(totals).toContainText(formatMoney(snapshot.grandTotal.toString(),preferences));
+  await expect(page.getByText(/^Internal cost /)).toContainText(formatMoney(snapshot.internalCostTotal.toString(),preferences));
+  await expect(page.locator("article").filter({hasText:"Formatted estimate line"})).toContainText(formatMoney("12.34",preferences));
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});await page.reload();await expect(page.getByText(/^Internal cost /)).toHaveCount(0);await expect(page.getByText(/^Subtotal /)).toContainText(formatMoney(snapshot.grandTotal.toString(),preferences));
+  expect((await db.quotationRevision.findUniqueOrThrow({where:{id:snapshot.id}})).grandTotal.toString()).toBe(snapshot.grandTotal.toString());expect(await db.journalEntry.count({where:{companyId}})).toBe(journalCount);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}})}
+});
