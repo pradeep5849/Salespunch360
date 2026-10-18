@@ -56977,7 +56977,9 @@
         "src/lib/account/reports/bank-statement.test.ts",
         "src/lib/account/reports/bank-statement.ts",
         "src/lib/account/reports/display.ts",
-        "src/lib/account/reports/favourites.ts"
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/stock-level.test.ts",
+        "src/lib/account/reports/stock-level.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -57505,6 +57507,37 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification."
+        },
+        "stock_level_reports_2026_10_18": {
+          "implementation_commit": "c4f896014a95da1d3482fdf04729adc5ad4988e6",
+          "work": "Mapped Stock Summary Report and Low Stock Summary Report as distinct authorized shared destinations using existing inventory movement snapshots and current primary-unit low-stock thresholds. As-of includes all prior history;current category/status filters plus Stock Summary AVAILABLE/LOW/NEGATIVE filter validated. Low includes quantity<=threshold,including negative stock. Per-product unit quantities stay separate;no aggregate mixed quantity or secondary-unit conversion. Web As-of/select controls and Android native As-of/filter controls added;API options/catalogue/favourites hide all stock reports when Inventory/Items/role unavailable without deleting saved favourites. Business money formatting and four quantity decimals retained. No migration,financial write or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-level.test.ts",
+            "src/lib/account/reports/stock-level.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "114 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases now covering all4 stock report destinations. Final focused stock-level6/6 rerun PASS after strengthening the zero-decimal money export assertion;overlaps the group.",
+            "browser_api_export": "Final2 desktop/mobile Chromium cases PASS(1.4m): Stock Detail remains correct;Stock Summary and Low Stock Summary each return only selected inactive/category item,quantity-1.7499 and underlying stock value-17.50;CSV follows business money precision0 (-18) while quantity keeps4 decimals;AVAILABLE empty/NEGATIVE selection works;native HTTP summaries;Axe AA/no overflow;Items-OFF hides all stock destinations;unchanged stock and journal counts. New destinations directly exercised CSV;existing Stock Detail CSV/XLSX/PDF also rerun. No new-destination binary-format/device runtime claim.",
+            "android": "compileDebugKotlin +15 AccountReportData JVM tests PASS(3m17s),0 failures/errors/skips;new stock-family/category/status/level filter scope contracts. Emulator/device runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "initial_browser_correction": "Initial2 profiles failed an assertion expecting two decimal money exports while the fixture requires business precision0. Existing formatter correctly emitted-18 from raw-17.50;assertion corrected to preserve that existing contract,not the implementation. Final2 profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned."
         }
       }
     },
@@ -61010,7 +61043,9 @@
         "src/lib/account/reports/bank-statement.test.ts",
         "src/lib/account/reports/bank-statement.ts",
         "src/lib/account/reports/display.ts",
-        "src/lib/account/reports/favourites.ts"
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/stock-level.test.ts",
+        "src/lib/account/reports/stock-level.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -61459,6 +61494,37 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification."
+        },
+        "stock_level_reports_2026_10_18": {
+          "implementation_commit": "c4f896014a95da1d3482fdf04729adc5ad4988e6",
+          "work": "Mapped Stock Summary Report and Low Stock Summary Report as distinct authorized shared destinations using existing inventory movement snapshots and current primary-unit low-stock thresholds. As-of includes all prior history;current category/status filters plus Stock Summary AVAILABLE/LOW/NEGATIVE filter validated. Low includes quantity<=threshold,including negative stock. Per-product unit quantities stay separate;no aggregate mixed quantity or secondary-unit conversion. Web As-of/select controls and Android native As-of/filter controls added;API options/catalogue/favourites hide all stock reports when Inventory/Items/role unavailable without deleting saved favourites. Business money formatting and four quantity decimals retained. No migration,financial write or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-level.test.ts",
+            "src/lib/account/reports/stock-level.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "114 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases now covering all4 stock report destinations. Final focused stock-level6/6 rerun PASS after strengthening the zero-decimal money export assertion;overlaps the group.",
+            "browser_api_export": "Final2 desktop/mobile Chromium cases PASS(1.4m): Stock Detail remains correct;Stock Summary and Low Stock Summary each return only selected inactive/category item,quantity-1.7499 and underlying stock value-17.50;CSV follows business money precision0 (-18) while quantity keeps4 decimals;AVAILABLE empty/NEGATIVE selection works;native HTTP summaries;Axe AA/no overflow;Items-OFF hides all stock destinations;unchanged stock and journal counts. New destinations directly exercised CSV;existing Stock Detail CSV/XLSX/PDF also rerun. No new-destination binary-format/device runtime claim.",
+            "android": "compileDebugKotlin +15 AccountReportData JVM tests PASS(3m17s),0 failures/errors/skips;new stock-family/category/status/level filter scope contracts. Emulator/device runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "initial_browser_correction": "Initial2 profiles failed an assertion expecting two decimal money exports while the fixture requires business precision0. Existing formatter correctly emitted-18 from raw-17.50;assertion corrected to preserve that existing contract,not the implementation. Final2 profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned."
         }
       }
     },
@@ -64584,7 +64650,10 @@
         "src/lib/account/reports/queries.test.ts",
         "src/lib/account/reports/queries.ts",
         "src/lib/account/reports/service.ts",
-        "src/lib/mobile/account-reports.ts"
+        "src/lib/mobile/account-reports.ts",
+        "src/lib/account/reports/favourites.integration.test.ts",
+        "src/lib/account/reports/stock-level.test.ts",
+        "src/lib/account/reports/stock-level.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -64902,6 +64971,37 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification."
+        },
+        "stock_level_reports_2026_10_18": {
+          "implementation_commit": "c4f896014a95da1d3482fdf04729adc5ad4988e6",
+          "work": "Mapped Stock Summary Report and Low Stock Summary Report as distinct authorized shared destinations using existing inventory movement snapshots and current primary-unit low-stock thresholds. As-of includes all prior history;current category/status filters plus Stock Summary AVAILABLE/LOW/NEGATIVE filter validated. Low includes quantity<=threshold,including negative stock. Per-product unit quantities stay separate;no aggregate mixed quantity or secondary-unit conversion. Web As-of/select controls and Android native As-of/filter controls added;API options/catalogue/favourites hide all stock reports when Inventory/Items/role unavailable without deleting saved favourites. Business money formatting and four quantity decimals retained. No migration,financial write or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-level.test.ts",
+            "src/lib/account/reports/stock-level.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "114 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases now covering all4 stock report destinations. Final focused stock-level6/6 rerun PASS after strengthening the zero-decimal money export assertion;overlaps the group.",
+            "browser_api_export": "Final2 desktop/mobile Chromium cases PASS(1.4m): Stock Detail remains correct;Stock Summary and Low Stock Summary each return only selected inactive/category item,quantity-1.7499 and underlying stock value-17.50;CSV follows business money precision0 (-18) while quantity keeps4 decimals;AVAILABLE empty/NEGATIVE selection works;native HTTP summaries;Axe AA/no overflow;Items-OFF hides all stock destinations;unchanged stock and journal counts. New destinations directly exercised CSV;existing Stock Detail CSV/XLSX/PDF also rerun. No new-destination binary-format/device runtime claim.",
+            "android": "compileDebugKotlin +15 AccountReportData JVM tests PASS(3m17s),0 failures/errors/skips;new stock-family/category/status/level filter scope contracts. Emulator/device runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "initial_browser_correction": "Initial2 profiles failed an assertion expecting two decimal money exports while the fixture requires business precision0. Existing formatter correctly emitted-18 from raw-17.50;assertion corrected to preserve that existing contract,not the implementation. Final2 profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned."
         }
       },
       "intermediate_validation": {
@@ -67349,6 +67449,28 @@
         "status": "completed",
         "conclusion": "success",
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39146286206"
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "c4f896014a95da1d3482fdf04729adc5ad4988e6",
+      "scope": "A084/A085 Stock Summary and Low Stock Summary with A090 display reuse",
+      "tests": {
+        "grouped_unit_database": "114 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases now covering all4 stock report destinations. Final focused stock-level6/6 rerun PASS after strengthening the zero-decimal money export assertion;overlaps the group.",
+        "browser_api_export": "Final2 desktop/mobile Chromium cases PASS(1.4m): Stock Detail remains correct;Stock Summary and Low Stock Summary each return only selected inactive/category item,quantity-1.7499 and underlying stock value-17.50;CSV follows business money precision0 (-18) while quantity keeps4 decimals;AVAILABLE empty/NEGATIVE selection works;native HTTP summaries;Axe AA/no overflow;Items-OFF hides all stock destinations;unchanged stock and journal counts. New destinations directly exercised CSV;existing Stock Detail CSV/XLSX/PDF also rerun. No new-destination binary-format/device runtime claim.",
+        "android": "compileDebugKotlin +15 AccountReportData JVM tests PASS(3m17s),0 failures/errors/skips;new stock-family/category/status/level filter scope contracts. Emulator/device runtime NOT RUN.",
+        "typescript": "Final PASS after browser runtime.",
+        "eslint": "Final focused PASS;git diff --check PASS.",
+        "initial_browser_correction": "Initial2 profiles failed an assertion expecting two decimal money exports while the fixture requires business precision0. Existing formatter correctly emitted-18 from raw-17.50;assertion corrected to preserve that existing contract,not the implementation. Final2 profiles PASS.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned.",
+      "prior_head_ci": {
+        "head": "47e3b919989b651cb255dd17414ba360c691350b",
+        "run_id": 39148051913,
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39148051913"
       }
     }
   ]
