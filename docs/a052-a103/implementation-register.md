@@ -9781,3 +9781,9 @@ A084-F03/A085-F02 remain PARTIAL: Stock Detail category/status controls and the 
 Code `43f645b893b5a40e934bc8ba040b4459e89563e8` maps once to A084-F03/A085-F02. Company-scoped category lookup, Uncategorized and Active/Inactive/All filters now apply on Web, native requests and exports; clearing filters restores All. Category options enforce stock/report/module access. Current category/status metadata is identified in report notes. No financial writes or migrations.
 
 Validation:99 grouped unit/local PostgreSQL tests PASS;2 desktop/mobile Chromium cases PASS;13 Android JVM tests and compileDebugKotlin PASS;final TypeScript,focused ESLint and diff check PASS. No emulator/device runtime or checkpoint-wide final validation. Both broad findings remain PARTIAL;179 implemented-but-not-finally-verified,18 partial,2 not started. All199 IDs/52 pages retained;A104/merge/deploy remain on hold.
+
+## 18 October — Bank Statement
+
+Code `ff2f7820a87e973028522489047c28915a0e5ff9` maps to A084-F03/A085-F02 and the shared A090-F01 display consumer. Added company/branch-scoped bank selector and true posted-ledger statement: opening + deposits − withdrawals = balance,including reversals and inactive historical bank accounts. Web/native/API/exports share the service;native cold-start/report-switch bank scope retained safely. No migrations or financial writes.
+
+Validation:107 grouped report/stock/database tests PASS;final13 focused bank/PostgreSQL favourite tests PASS(overlap);2 desktop/mobile browser/API/CSV-XLSX-PDF cases PASS;14 Android JVM tests +compileDebugKotlin PASS;final TypeScript,focused ESLint and diff check PASS. No emulator/device runtime or full final-head checkpoint validation. Counts stay179 implemented-but-not-finally-verified/18 partial/2 not started;199 IDs/52 pages retained. Previous exact-head CI c08cc3bb passed Web/Android. A104/merge/deploy remain on hold.

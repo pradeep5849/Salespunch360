@@ -56973,7 +56973,11 @@
         "src/lib/account/reports/stock-detail-options.test.ts",
         "src/lib/account/reports/stock-detail-options.ts",
         "src/lib/account/reports/stock-detail.test.ts",
-        "src/lib/account/reports/stock-detail.ts"
+        "src/lib/account/reports/stock-detail.ts",
+        "src/lib/account/reports/bank-statement.test.ts",
+        "src/lib/account/reports/bank-statement.ts",
+        "src/lib/account/reports/display.ts",
+        "src/lib/account/reports/favourites.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -57469,6 +57473,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report layouts/computations and final-head/device validation. Stock Detail category/status controls are completed for this slice; all199 final finding statuses remain unset pending checkpoint-wide validation."
+        },
+        "bank_statement_2026_10_18": {
+          "implementation_commit": "ff2f7820a87e973028522489047c28915a0e5ff9",
+          "work": "Added real Bank Statement destination to shared catalogue/Web/native/API/export routes. Explicit company/branch-authorized BANK account selector; no selection prompts rather than combining accounts. Repeatable-read snapshot reads opening and paginated period ledger lines using shared POSTED/REVERSED policy,so reversals remain correct. Debit deposits/credit withdrawals reconcile opening to closing;future and unposted activity excluded. Company display formatter recognizes deposit/withdrawal columns;native options reveal only bank IDs/names and retain inactive historical accounts. Native request codec preserves explicit bank scope and drops it on other reports. No schema,migration,financial write or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/bank-statement.test.ts",
+            "src/lib/account/reports/bank-statement.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "107 tests across18 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user cases. Final focused bank(7)+PostgreSQL favourites(6) rerun13/13 PASS after final changes;includes an additional opening-only/overdraft regression added after the grouped run. Counts overlap and are not additive.",
+            "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(2.0m): scoped hub and bank selector,prompt/clear,inactive bank history,posted100 opening,20 deposit,20 reversal+5 withdrawal,95 closing,future9 excluded,CSV/XLSX/PDF95.00,native HTTP rows/summaries/options,nonbank/unknown/unauthorized-branch403,AXE AA/no overflow,unchanged journal count. No emulator/device claim.",
+            "android": "compileDebugKotlin +14 AccountReportData JVM tests PASS(3m26s),0 failures/errors/skips. Bank scope retained before metadata loads and removed on report switch. Device/emulator runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification."
         }
       }
     },
@@ -60970,7 +61006,11 @@
         "src/lib/account/reports/stock-detail-options.test.ts",
         "src/lib/account/reports/stock-detail-options.ts",
         "src/lib/account/reports/stock-detail.test.ts",
-        "src/lib/account/reports/stock-detail.ts"
+        "src/lib/account/reports/stock-detail.ts",
+        "src/lib/account/reports/bank-statement.test.ts",
+        "src/lib/account/reports/bank-statement.ts",
+        "src/lib/account/reports/display.ts",
+        "src/lib/account/reports/favourites.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -61387,6 +61427,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report layouts/computations and final-head/device validation. Stock Detail category/status controls are completed for this slice; all199 final finding statuses remain unset pending checkpoint-wide validation."
+        },
+        "bank_statement_2026_10_18": {
+          "implementation_commit": "ff2f7820a87e973028522489047c28915a0e5ff9",
+          "work": "Added real Bank Statement destination to shared catalogue/Web/native/API/export routes. Explicit company/branch-authorized BANK account selector; no selection prompts rather than combining accounts. Repeatable-read snapshot reads opening and paginated period ledger lines using shared POSTED/REVERSED policy,so reversals remain correct. Debit deposits/credit withdrawals reconcile opening to closing;future and unposted activity excluded. Company display formatter recognizes deposit/withdrawal columns;native options reveal only bank IDs/names and retain inactive historical accounts. Native request codec preserves explicit bank scope and drops it on other reports. No schema,migration,financial write or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/bank-statement.test.ts",
+            "src/lib/account/reports/bank-statement.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "107 tests across18 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user cases. Final focused bank(7)+PostgreSQL favourites(6) rerun13/13 PASS after final changes;includes an additional opening-only/overdraft regression added after the grouped run. Counts overlap and are not additive.",
+            "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(2.0m): scoped hub and bank selector,prompt/clear,inactive bank history,posted100 opening,20 deposit,20 reversal+5 withdrawal,95 closing,future9 excluded,CSV/XLSX/PDF95.00,native HTTP rows/summaries/options,nonbank/unknown/unauthorized-branch403,AXE AA/no overflow,unchanged journal count. No emulator/device claim.",
+            "android": "compileDebugKotlin +14 AccountReportData JVM tests PASS(3m26s),0 failures/errors/skips. Bank scope retained before metadata loads and removed on report switch. Device/emulator runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification."
         }
       }
     },
@@ -64495,7 +64567,24 @@
         "src/lib/account/settings.ts",
         "src/components/account/general-settings-form.tsx",
         "src/components/account/account-ui.tsx",
-        "src/app/workspace/account/sales/[id]/page.tsx"
+        "src/app/workspace/account/sales/[id]/page.tsx",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/reports/[report]/page.tsx",
+        "src/lib/account/reports/bank-statement.test.ts",
+        "src/lib/account/reports/bank-statement.ts",
+        "src/lib/account/reports/catalogue.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/display.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/queries.test.ts",
+        "src/lib/account/reports/queries.ts",
+        "src/lib/account/reports/service.ts",
+        "src/lib/mobile/account-reports.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -64781,6 +64870,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work."
+        },
+        "bank_statement_2026_10_18": {
+          "implementation_commit": "ff2f7820a87e973028522489047c28915a0e5ff9",
+          "work": "Added real Bank Statement destination to shared catalogue/Web/native/API/export routes. Explicit company/branch-authorized BANK account selector; no selection prompts rather than combining accounts. Repeatable-read snapshot reads opening and paginated period ledger lines using shared POSTED/REVERSED policy,so reversals remain correct. Debit deposits/credit withdrawals reconcile opening to closing;future and unposted activity excluded. Company display formatter recognizes deposit/withdrawal columns;native options reveal only bank IDs/names and retain inactive historical accounts. Native request codec preserves explicit bank scope and drops it on other reports. No schema,migration,financial write or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/bank-statement.test.ts",
+            "src/lib/account/reports/bank-statement.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "107 tests across18 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user cases. Final focused bank(7)+PostgreSQL favourites(6) rerun13/13 PASS after final changes;includes an additional opening-only/overdraft regression added after the grouped run. Counts overlap and are not additive.",
+            "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(2.0m): scoped hub and bank selector,prompt/clear,inactive bank history,posted100 opening,20 deposit,20 reversal+5 withdrawal,95 closing,future9 excluded,CSV/XLSX/PDF95.00,native HTTP rows/summaries/options,nonbank/unknown/unauthorized-branch403,AXE AA/no overflow,unchanged journal count. No emulator/device claim.",
+            "android": "compileDebugKotlin +14 AccountReportData JVM tests PASS(3m26s),0 failures/errors/skips. Bank scope retained before metadata loads and removed on report switch. Device/emulator runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification."
         }
       },
       "intermediate_validation": {
@@ -67207,6 +67328,27 @@
         "conclusion": "success",
         "status": "completed",
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39111782054"
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "ff2f7820a87e973028522489047c28915a0e5ff9",
+      "scope": "A084/A085 Bank Statement and A090 money display integration",
+      "tests": {
+        "grouped_unit_database": "107 tests across18 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user cases. Final focused bank(7)+PostgreSQL favourites(6) rerun13/13 PASS after final changes;includes an additional opening-only/overdraft regression added after the grouped run. Counts overlap and are not additive.",
+        "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(2.0m): scoped hub and bank selector,prompt/clear,inactive bank history,posted100 opening,20 deposit,20 reversal+5 withdrawal,95 closing,future9 excluded,CSV/XLSX/PDF95.00,native HTTP rows/summaries/options,nonbank/unknown/unauthorized-branch403,AXE AA/no overflow,unchanged journal count. No emulator/device claim.",
+        "android": "compileDebugKotlin +14 AccountReportData JVM tests PASS(3m26s),0 failures/errors/skips. Bank scope retained before metadata loads and removed on report switch. Device/emulator runtime NOT RUN.",
+        "typescript": "Final PASS after browser runtime.",
+        "eslint": "Final focused PASS;git diff --check PASS.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/layouts/computations and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. This Bank Statement slice is implemented and locally exercised;not checkpoint-wide final verification.",
+      "prior_head_ci": {
+        "head": "c08cc3bb0cba6f80df11186b634c3625490d72ae",
+        "run_id": 39146286206,
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39146286206"
       }
     }
   ]
