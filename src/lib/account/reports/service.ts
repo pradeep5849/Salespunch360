@@ -57,6 +57,8 @@ const D = Prisma.Decimal.clone({precision:48}),
       productId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ledgerId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ownerId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      categoryId: z.preprocess(blankFilter, z.union([z.string().uuid(), z.literal("UNCATEGORIZED")]).optional()),
+      itemStatus: z.preprocess(blankFilter, z.enum(["ACTIVE", "INACTIVE"]).optional()),
       accountType:z.preprocess(blankFilter,z.enum(["CASH","BANK","PETTY_CASH"]).optional()),
     })
     .strict();

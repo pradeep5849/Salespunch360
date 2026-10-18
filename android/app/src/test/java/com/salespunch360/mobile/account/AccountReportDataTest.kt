@@ -57,4 +57,12 @@ class AccountReportDataTest {
         assertEquals(setOf("from","to","branchId","accountType"),accountReportRequestFilters(options,"cash-bank",input).keys)
         assertEquals(mapOf("branchId" to "branch","projectId" to "project"),accountReportRequestFilters(options,"projects",input))
     }
+    @Test fun stockFiltersSurviveColdStartAndClearWhenChangingReport() {
+        val input=mapOf("categoryId" to "UNCATEGORIZED","itemStatus" to "INACTIVE")
+        assertEquals(input,accountReportRequestFilters(buildJsonObject{},"stock-detail",input))
+        assertTrue(accountReportRequestFilters(buildJsonObject{},"stock-category",input).isEmpty())
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"stock-detail","filters":["categoryId","itemStatus"]}]}""").jsonObject
+        assertEquals(input,accountReportRequestFilters(options,"stock-detail",input))
+        assertTrue(accountReportRequestFilters(options,"stock-detail",mapOf("categoryId" to "","itemStatus" to "")).isEmpty())
+    }
 }

@@ -33,5 +33,5 @@ it("maps the category stock snapshot without unrelated Project/party dimensions"
  expect(reportSpecificFilters("stock-category")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Summary")).toEqual([]);
 });
 it("maps Stock Detail to its own period movement destination",()=>{
- expect(searchReportCatalogue("ACCOUNT_ADMIN","Stock Detail")).toEqual([{key:"stock-detail",name:"Stock Detail Report",group:"Item/Stock reports"}]);expect(reportSpecificFilters("stock-detail")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Detail")).toEqual([]);
+ expect(searchReportCatalogue("ACCOUNT_ADMIN","Stock Detail")).toEqual([{key:"stock-detail",name:"Stock Detail Report",group:"Item/Stock reports"}]);expect(reportSpecificFilters("stock-detail")).toEqual(["categoryId","itemStatus"]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Detail")).toEqual([]);
 });

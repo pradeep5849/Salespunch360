@@ -28,6 +28,8 @@ data class AccountReportState(
     val productId: String = "",
     val ownerId: String = "",
     val accountType:String="",
+    val categoryId:String="",
+    val itemStatus:String="",
     val options: JsonObject = buildJsonObject {},
     val data: JsonObject? = null,
     val appliedFilters: Map<String,String> = emptyMap(),
@@ -66,7 +68,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun context(query:String) {
         val q=android.net.Uri.parse("https://internal.invalid/?$query")
-        _state.value=_state.value.copy(accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
+        _state.value=_state.value.copy(categoryId=q.getQueryParameter("categoryId").orEmpty(),itemStatus=q.getQueryParameter("itemStatus").orEmpty(),accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
     }
     fun choose(report: String?) {
         requestGeneration++
@@ -89,6 +91,8 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "customer" -> _state.value.copy(customerId = value)
             "vendor" -> _state.value.copy(vendorId = value)
             "owner" -> _state.value.copy(ownerId = value)
+            "categoryId" -> _state.value.copy(categoryId=value)
+            "itemStatus" -> _state.value.copy(itemStatus=value)
             "accountType" -> _state.value.copy(accountType=value)
             else -> _state.value.copy(productId = value)
         }
@@ -100,6 +104,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "branchId" to _state.value.branchId,"projectId" to _state.value.projectId,
             "ledgerId" to _state.value.ledgerId,"customerId" to _state.value.customerId,
             "vendorId" to _state.value.vendorId,"ownerId" to _state.value.ownerId,
+            "categoryId" to _state.value.categoryId,"itemStatus" to _state.value.itemStatus,
             "productId" to _state.value.productId,"accountType" to _state.value.accountType
         )
     )

@@ -7,3 +7,8 @@ it("preserves company intent and displayed default dates while dropping navigati
 it("keeps lifetime reports free of period bounds",()=>{expect(reportExportQuery({from:"2020-01-01",asOf:"2021-01-01",projectId:"project",scope:"all"},"2025-04-01","2026-01-10",true)).toBe("projectId=project&scope=all")});
 
 it("keeps the visible Cash/Bank account type on exports",()=>{expect(new URLSearchParams(reportExportQuery({accountType:"BANK",branchId:"branch"},"2026-10-01","2026-10-31")).get("accountType")).toBe("BANK")});
+
+it("preserves category and item status in exports",()=>{
+ const query=new URLSearchParams(reportExportQuery({categoryId:"UNCATEGORIZED",itemStatus:"INACTIVE"},"2026-10-01","2026-10-18"));
+ expect(query.get("categoryId")).toBe("UNCATEGORIZED");expect(query.get("itemStatus")).toBe("INACTIVE");
+});

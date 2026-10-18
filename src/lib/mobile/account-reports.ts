@@ -1,3 +1,4 @@
+import {stockDetailCategoriesForActor} from "@/lib/account/reports/stock-detail-options";
 import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
 import {availableReportCatalogueForActor,reportFavouritesForActor,setReportFavouriteForActor} from "@/lib/account/reports/favourites";
 import {reportExportRows} from "@/lib/account/reports/export-data";
@@ -31,6 +32,7 @@ export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
   const a = actor(u),
     options = await reportOptionsForActor(a),catalogue=await availableReportCatalogueForActor(a);
   return {
+    stockCategories: catalogue.some(x=>x.key === "stock-detail") ? await stockDetailCategoriesForActor(a) : [],
     reports:catalogue.map(x=>x.key),
     catalogue,
     favourites:await reportFavouritesForActor(a),

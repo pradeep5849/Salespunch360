@@ -111,6 +111,12 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                 Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
             }
         }
+        if (state.report=="stock-detail") {
+            val all = buildJsonObject { put("id", ""); put("name", "All") }
+            Option("Item category",state.categoryId,listOf(all)+state.options.array("stockCategories")){vm.filter("categoryId",it)}
+            val statuses = listOf(all)+listOf("ACTIVE" to "Active", "INACTIVE" to "Inactive").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
+            Option("Item status",state.itemStatus,statuses){vm.filter("itemStatus",it)}
+        }
         if (state.report=="cash-bank" && applicable?.contains("accountType")==true) {
             LazyRow { items(listOf("" to "All accounts", "CASH" to "Cash", "BANK" to "Bank", "PETTY_CASH" to "Petty cash")) { (value,label) ->
                 FilterChip(selected=state.accountType==value,onClick={vm.filter("accountType",value);vm.run()},label={Text(label)})
@@ -129,7 +135,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
             if(state.report=="stock-detail") {
                 val rows=accountReportRows(data)
-                if(rows.isEmpty()) Text("No tracked stock items are available in this company.")
+                if(rows.isEmpty()) Text("No stock items match the selected filters.")
                 if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     items(rows) { row -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
                         Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium)

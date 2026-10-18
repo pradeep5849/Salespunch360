@@ -1,8 +1,8 @@
 import {beforeEach, expect, it, vi} from "vitest";
 import {Prisma, StockMovementType} from "@prisma/client";
-const m=vi.hoisted(()=>({products:vi.fn(),warehouses:vi.fn(),movements:vi.fn(),scope:vi.fn(),branch:vi.fn(),inventory:vi.fn()}));
+const m=vi.hoisted(()=>({category:vi.fn(),products:vi.fn(),warehouses:vi.fn(),movements:vi.fn(),scope:vi.fn(),branch:vi.fn(),inventory:vi.fn()}));
 vi.mock("../inventory",()=>({assertInventoryAvailable:m.inventory}));
-const tx={accountProduct:{findMany:m.products},warehouse:{findMany:m.warehouses},stockMovement:{findMany:m.movements}};
+const tx={accountCategory:{findFirst:m.category},accountProduct:{findMany:m.products},warehouse:{findMany:m.warehouses},stockMovement:{findMany:m.movements}};
 vi.mock("@/lib/db",()=>({db:{$transaction:m.scope,branch:{findFirst:m.branch}}}));
 import {runFinancialReportForActor} from "./service";
 import {formatReport} from "./display";
@@ -13,7 +13,7 @@ const actor={id:"actor",companyId:"company",role:"ACCOUNT_USER",accountRole:"ACC
 const input={from:"2026-10-01",to:"2026-10-18"};
 const product=(id="item",unit="kg")=>({id,name:id,unit:{id:unit,name:unit,symbol:unit},category:{name:"Materials"}});
 const movement=(movementType:StockMovementType,quantity:string,date="2026-10-18",productId="item",id="move")=>({id,productId,movementType,quantity:new Prisma.Decimal(quantity),movementDate:new Date(date)});
-beforeEach(()=>{vi.clearAllMocks();m.products.mockResolvedValue([product()]);m.warehouses.mockResolvedValue([{id:"warehouse"}]);m.movements.mockResolvedValue([]);m.branch.mockResolvedValue({id:branch});m.inventory.mockResolvedValue(undefined);m.scope.mockImplementation(async work=>work(tx))});
+beforeEach(()=>{vi.clearAllMocks();m.category.mockResolvedValue({id:other,name:"Materials"});m.products.mockResolvedValue([product()]);m.warehouses.mockResolvedValue([{id:"warehouse"}]);m.movements.mockResolvedValue([]);m.branch.mockResolvedValue({id:branch});m.inventory.mockResolvedValue(undefined);m.scope.mockImplementation(async work=>work(tx))});
 it("keeps opening, in, out and closing coherent for negative stock and returns",async()=>{
  m.movements.mockResolvedValue([movement("SALE","3","2026-09-30"),movement("PURCHASE","2"),movement("SALE","1"),movement("SALES_RETURN","0.2501")]);
  const report=await runFinancialReportForActor(actor,"stock-detail",input);
@@ -53,4 +53,21 @@ it("denies branch, role, module/Items-disabled and unsupported filter inputs wit
 });
 it("returns an empty report without inventing an opening stock balance",async()=>{
  m.products.mockResolvedValue([]);const result=await runFinancialReportForActor(actor,"stock-detail",input);expect(result.rows).toEqual([]);expect(result.summary?.[0].value).toBe("—");
+});
+
+it("applies company-scoped category and active status together",async()=>{
+ await runFinancialReportForActor(actor,"stock-detail",{...input,categoryId:other,itemStatus:"ACTIVE"});
+ expect(m.category).toHaveBeenCalledWith({where:{companyId:"company",id:other},select:{id:true,name:true}});
+ expect(m.products).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",trackInventory:true,categoryId:other,isActive:true}}));
+});
+it("supports uncategorized inactive items without a category lookup",async()=>{
+ const report=await runFinancialReportForActor(actor,"stock-detail",{...input,categoryId:"UNCATEGORIZED",itemStatus:"INACTIVE"});
+ expect(m.category).not.toHaveBeenCalled();expect(m.products).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",trackInventory:true,categoryId:null,isActive:false}}));expect(report.note).toContain("Uncategorized (no category)");
+});
+it("rejects foreign categories, invalid statuses and filters on unsupported reports",async()=>{
+ m.category.mockResolvedValue(null);
+ await expect(runFinancialReportForActor(actor,"stock-detail",{...input,categoryId:other})).rejects.toThrow();
+ await expect(runFinancialReportForActor(actor,"stock-detail",{...input,itemStatus:"DELETED"})).rejects.toThrow();
+ await expect(runFinancialReportForActor(actor,"stock-category",{...input,categoryId:other})).rejects.toThrow();
+ expect(m.products).not.toHaveBeenCalled();expect(m.movements).not.toHaveBeenCalled();
 });

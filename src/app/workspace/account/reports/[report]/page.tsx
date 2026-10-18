@@ -1,3 +1,4 @@
+import {stockDetailCategories} from "@/lib/account/reports/stock-detail-options";
 import tabsStyles from "./cash-bank-tabs.module.css";
 import Link from "next/link";
 import {TransactionReportView} from "@/components/account/transaction-report-view";
@@ -51,6 +52,8 @@ export default async function Page({
             ledgerId: q.ledgerId,
             ownerId: q.ownerId,
             accountType:q.accountType,
+            categoryId:q.categoryId,
+            itemStatus:q.itemStatus,
           },
     );
   } catch (e) {
@@ -62,6 +65,7 @@ export default async function Page({
       note: isAccountDomainError(e)?accountErrorMessage((e as Error).message):e instanceof Error ? e.message : "Unable to load report",
     };
   }
+  const categories = report === "stock-detail" && data.columns.length ? await stockDetailCategories() : [];
   const query = reportExportQuery(q,from,to,projectLifetime);
   const hubQuery=new URLSearchParams([...new URLSearchParams(query)].filter(([key])=>["scope","from","to","asOf","branchId"].includes(key))).toString();
   return (
@@ -132,6 +136,10 @@ export default async function Page({
             </>
           )}
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
+          {report === "stock-detail" && <>
+            <Select name="categoryId" label="Item category" value={q.categoryId} rows={categories}/>
+            <Select name="itemStatus" label="Item status" value={q.itemStatus} rows={[{id:"ACTIVE",name:"Active"},{id:"INACTIVE",name:"Inactive"}]}/>
+          </>}
           <button>Run report</button>
         </form>
         <div>
