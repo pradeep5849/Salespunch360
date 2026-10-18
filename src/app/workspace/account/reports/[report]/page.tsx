@@ -1,3 +1,4 @@
+import {StockLevelView} from "@/components/account/stock-level-view";
 import {bankStatementOptions} from "@/lib/account/reports/bank-statement";
 import {stockDetailCategories} from "@/lib/account/reports/stock-detail-options";
 import tabsStyles from "./cash-bank-tabs.module.css";
@@ -55,6 +56,7 @@ export default async function Page({
             accountType:q.accountType,
             moneyAccountId:q.moneyAccountId,
             categoryId:q.categoryId,
+            itemSearch:q.itemSearch,
             itemStatus:q.itemStatus,
             stockLevel:q.stockLevel,
           },
@@ -71,6 +73,7 @@ export default async function Page({
   const banks = report === "bank-statement" && data.columns.length ? await bankStatementOptions() : [];
   const categories = ["stock-detail","stock-summary","low-stock-summary"].includes(report) && data.columns.length ? await stockDetailCategories() : [];
   const query = reportExportQuery(q,from,to,projectLifetime);
+  const clearSearchQuery=new URLSearchParams(query);clearSearchQuery.delete("itemSearch");
   const hubQuery=new URLSearchParams([...new URLSearchParams(query)].filter(([key])=>["scope","from","to","asOf","branchId"].includes(key))).toString();
   return (
     <div className="employees-shell">
@@ -142,6 +145,8 @@ export default async function Page({
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
           {report === "bank-statement" && <Select name="moneyAccountId" label="Bank account" value={q.moneyAccountId} rows={banks}/>}
           {["stock-detail","stock-summary","low-stock-summary"].includes(report) && <>
+            <label>Search items<input key={q.itemSearch??""} type="search" name="itemSearch" defaultValue={q.itemSearch??""} maxLength={240}/></label>
+            {q.itemSearch&&<Link href={`/workspace/account/reports/${report}?${clearSearchQuery.toString()}`}>Clear item search</Link>}
             <Select name="categoryId" label="Item category" value={q.categoryId} rows={categories}/>
             <Select name="itemStatus" label="Item status" value={q.itemStatus} rows={[{id:"ACTIVE",name:"Active"},{id:"INACTIVE",name:"Inactive"}]}/>
           </>}
@@ -163,7 +168,7 @@ export default async function Page({
             role="region"
             aria-label="Report results"
           >
-            {report==="stock-detail"?<StockDetailView data={data}/>:["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
+            {report==="stock-detail"?<StockDetailView data={data}/>: ["stock-summary","low-stock-summary"].includes(report)?<StockLevelView data={data}/>:["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
           </div>
         )}
       </section>

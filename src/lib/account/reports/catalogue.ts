@@ -52,9 +52,9 @@ export function searchReportCatalogue(
 const specificFilters: Record<string, string[]> = {
   "cash-bank":["accountType"],
   "bank-statement": ["moneyAccountId"],
-  "stock-summary": ["categoryId", "itemStatus", "stockLevel"],
-  "low-stock-summary": ["categoryId", "itemStatus"],
-  "stock-detail": ["categoryId", "itemStatus"],
+  "stock-summary": ["categoryId", "itemStatus", "stockLevel", "itemSearch"],
+  "low-stock-summary": ["categoryId", "itemStatus", "itemSearch"],
+  "stock-detail": ["categoryId", "itemStatus", "itemSearch"],
   "expense-transactions": ["projectId"],
   "expense-category": ["projectId"],
   "expense-items": ["projectId"],

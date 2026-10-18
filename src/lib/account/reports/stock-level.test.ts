@@ -29,3 +29,7 @@ it("rejects unavailable inventory,foreign category,role and unsupported scope",a
 it("retains quantity decimals while values follow company money formatting",async()=>{
  const r=await runFinancialReportForActor(actor,"stock-summary",input);const formatted=formatReport(r,{...DEFAULT_DISPLAY_PREFERENCES,baseCurrency:"USD",displayDecimalPlaces:0});expect(formatted.rows[0][3]).toBe("-1.2345");expect(formatted.rows[0][4]).toContain("$");expect(formatReport(r,DEFAULT_DISPLAY_PREFERENCES,true).rows[0][4]).toBe("-12.34");expect(formatReport(r,{...DEFAULT_DISPLAY_PREFERENCES,displayDecimalPlaces:0},true).rows[0].slice(3)).toEqual(["-1.2345","-12"]);
 });
+
+it("filters item names without changing quantities or summary scope",async()=>{
+ const r=await runFinancialReportForActor(actor,"stock-summary",{...input,itemSearch:"  pIpE  "});expect(r.rows.map(x=>x[0])).toEqual(["Pipe"]);expect(r.summary?.map(x=>x.value)).toEqual(["1","1","-12.34"]);expect((await runFinancialReportForActor(actor,"low-stock-summary",{...input,itemSearch:"missing"})).rows).toEqual([]);await expect(runFinancialReportForActor(actor,"stock-summary",{...input,itemSearch:"x".repeat(241)})).rejects.toThrow();
+});

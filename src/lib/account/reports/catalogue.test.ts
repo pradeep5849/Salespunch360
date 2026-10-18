@@ -33,7 +33,7 @@ it("maps the category stock snapshot without unrelated Project/party dimensions"
  expect(reportSpecificFilters("stock-category")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Summary")).toEqual([]);
 });
 it("maps Stock Detail to its own period movement destination",()=>{
- expect(searchReportCatalogue("ACCOUNT_ADMIN","Stock Detail")).toEqual([{key:"stock-detail",name:"Stock Detail Report",group:"Item/Stock reports"}]);expect(reportSpecificFilters("stock-detail")).toEqual(["categoryId","itemStatus"]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Detail")).toEqual([]);
+ expect(searchReportCatalogue("ACCOUNT_ADMIN","Stock Detail")).toEqual([{key:"stock-detail",name:"Stock Detail Report",group:"Item/Stock reports"}]);expect(reportSpecificFilters("stock-detail")).toEqual(["categoryId","itemStatus","itemSearch"]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Detail")).toEqual([]);
 });
 
 it("maps Bank Statement to its own bank-filtered destination",()=>{expect(searchReportCatalogue("ACCOUNT_ADMIN","Bank Statement")).toEqual([{key:"bank-statement",name:"Bank Statement",group:"Business status"}]);expect(reportSpecificFilters("bank-statement")).toEqual(["moneyAccountId"]);expect(searchReportCatalogue("PROJECT_MANAGER","Bank Statement")).toEqual([])});

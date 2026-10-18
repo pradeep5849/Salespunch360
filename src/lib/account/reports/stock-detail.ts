@@ -25,7 +25,7 @@ export async function stockDetailReport(c: FinancialReportContext): Promise<Repo
       if (!category) throw new AuthorizationError();
       categoryName = category.name;
     }
-    const products = await tx.accountProduct.findMany({where: {companyId: c.actor.companyId, trackInventory: true, ...(c.f.categoryId ? {categoryId: c.f.categoryId === "UNCATEGORIZED" ? null : c.f.categoryId} : {}), ...(c.f.itemStatus ? {isActive: c.f.itemStatus === "ACTIVE"} : {})}, include: {unit: true, category: true}, orderBy: [{name: "asc"}, {id: "asc"}]});
+    const products = await tx.accountProduct.findMany({where: {companyId: c.actor.companyId, trackInventory: true, ...(c.f.itemSearch ? {name: {contains: c.f.itemSearch.replace(/[\\%_]/g, "\\$&"), mode: "insensitive" as const}} : {}), ...(c.f.categoryId ? {categoryId: c.f.categoryId === "UNCATEGORIZED" ? null : c.f.categoryId} : {}), ...(c.f.itemStatus ? {isActive: c.f.itemStatus === "ACTIVE"} : {})}, include: {unit: true, category: true}, orderBy: [{name: "asc"}, {id: "asc"}]});
     const warehouses = await tx.warehouse.findMany({where: {companyId: c.actor.companyId, isActive: true, ...c.branch}, select: {id: true}});
     const amounts = new Map(products.map(product => [product.id, {opening: new D(0), incoming: new D(0), outgoing: new D(0)}]));
     let cursor: string | undefined;
@@ -61,7 +61,7 @@ export async function stockDetailReport(c: FinancialReportContext): Promise<Repo
         {label: "Quantity In", value: reportQuantity(totals.incoming), money: false},
         {label: "Quantity Out", value: reportQuantity(totals.outgoing), money: false},
       ],
-      note: `Category: ${categoryName}. Item status: ${c.f.itemStatus ?? "All"}. Category and status use current item metadata. Closing = beginning + quantity in - quantity out. Includes inactive tracked items and all opening history before the selected start date, using the same active-warehouse scope as Stock Summary. Mixed or unspecified units are not added together; item quantities retain four decimals. This report does not change stock or the ledger.`,
+      note: `Item search: ${c.f.itemSearch ?? "All"}. Category: ${categoryName}. Item status: ${c.f.itemStatus ?? "All"}. Category and status use current item metadata. Closing = beginning + quantity in - quantity out. Includes all opening history before the selected start date, using the same active-warehouse scope as Stock Summary. Mixed or unspecified units are not added together; item quantities retain four decimals. This report does not change stock or the ledger.`,
     };
   }, {isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 30000});
 }

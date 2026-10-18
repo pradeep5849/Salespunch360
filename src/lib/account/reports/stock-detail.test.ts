@@ -71,3 +71,12 @@ it("rejects foreign categories, invalid statuses and filters on unsupported repo
  await expect(runFinancialReportForActor(actor,"stock-category",{...input,categoryId:other})).rejects.toThrow();
  expect(m.products).not.toHaveBeenCalled();expect(m.movements).not.toHaveBeenCalled();
 });
+
+it("bounds trimmed case-insensitive item search to authorized stock metadata",async()=>{
+ await runFinancialReportForActor(actor,"stock-detail",{...input,itemSearch:"  Pipe  "});expect(m.products).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",trackInventory:true,name:{contains:"Pipe",mode:"insensitive"}}}));
+ await expect(runFinancialReportForActor(actor,"stock-detail",{...input,itemSearch:"x".repeat(241)})).rejects.toThrow();await expect(runFinancialReportForActor(actor,"bank-statement",{...input,itemSearch:"Pipe"})).rejects.toThrow("REPORT_FILTER_NOT_SUPPORTED");
+});
+
+it("treats database search wildcards as literal item-name characters",async()=>{
+ await runFinancialReportForActor(actor,"stock-detail",{...input,itemSearch:"%_"});expect(m.products.mock.calls[0][0].where.name.contains).toBe("\\%\\_");
+});

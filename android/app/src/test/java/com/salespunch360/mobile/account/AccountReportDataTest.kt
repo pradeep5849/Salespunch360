@@ -78,4 +78,10 @@ class AccountReportDataTest {
         assertEquals(filters-"stockLevel",accountReportRequestFilters(buildJsonObject{},"low-stock-summary",filters))
         assertTrue(accountReportRequestFilters(buildJsonObject{},"bank-statement",filters).isEmpty())
     }
+    @Test fun itemSearchRemainsScopedToStockReportsAndClearRemovesIt() {
+        val filters=mapOf("itemSearch" to "Pipe & Bolt")
+        for(report in listOf("stock-detail","stock-summary","low-stock-summary"))assertEquals(filters,accountReportRequestFilters(buildJsonObject{},report,filters))
+        assertTrue(accountReportRequestFilters(buildJsonObject{},"bank-statement",filters).isEmpty())
+        assertTrue(accountReportRequestFilters(buildJsonObject{},"stock-summary",mapOf("itemSearch" to "")).isEmpty())
+    }
 }

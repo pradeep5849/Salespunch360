@@ -14,3 +14,5 @@ it("preserves category and item status in exports",()=>{
 });
 
 it("preserves the selected bank in export requests",()=>{expect(new URLSearchParams(reportExportQuery({moneyAccountId:"bank"},"2026-10-01","2026-10-18")).get("moneyAccountId")).toBe("bank")});
+
+it("preserves item searches literally in export URLs",()=>{const q=new URLSearchParams(reportExportQuery({itemSearch:"Pipe & Bolt",stockLevel:"LOW"},"2026-10-01","2026-10-18"));expect(q.get("itemSearch")).toBe("Pipe & Bolt");expect(q.get("stockLevel")).toBe("LOW")});

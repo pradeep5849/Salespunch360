@@ -6,3 +6,5 @@
 .cards dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin-bottom:0}
 .cards dt{font-size:.85rem;color:#475569}
 .cards dd{margin:.35rem 0 0}
+
+.cards dl.levelAmounts{grid-template-columns:repeat(2,minmax(0,1fr))}

@@ -62,6 +62,7 @@ const D = Prisma.Decimal.clone({precision:48}),
       moneyAccountId: z.preprocess(blankFilter, z.string().uuid().optional()),
       categoryId: z.preprocess(blankFilter, z.union([z.string().uuid(), z.literal("UNCATEGORIZED")]).optional()),
       stockLevel: z.preprocess(blankFilter,z.enum(["AVAILABLE","LOW","NEGATIVE"]).optional()),
+      itemSearch: z.preprocess(blankFilter,z.string().trim().max(240).optional()),
       itemStatus: z.preprocess(blankFilter, z.enum(["ACTIVE", "INACTIVE"]).optional()),
       accountType:z.preprocess(blankFilter,z.enum(["CASH","BANK","PETTY_CASH"]).optional()),
     })

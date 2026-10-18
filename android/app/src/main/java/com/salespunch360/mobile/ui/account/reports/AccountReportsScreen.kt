@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
@@ -116,6 +117,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
         }
         if (state.report in setOf("stock-detail","stock-summary","low-stock-summary")) {
+            OutlinedTextField(state.itemSearch,{vm.filter("itemSearch",it.take(240))},label={Text("Search items")},singleLine=true,trailingIcon={if(state.itemSearch.isNotEmpty())TextButton(onClick={vm.filter("itemSearch","");vm.run()}){Text("Clear")}})
             val all = buildJsonObject { put("id", ""); put("name", "All") }
             Option("Item category",state.categoryId,listOf(all)+state.options.array("stockCategories")){vm.filter("categoryId",it)}
             val statuses = listOf(all)+listOf("ACTIVE" to "Active", "INACTIVE" to "Inactive").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
@@ -146,13 +148,24 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                 if(rows.isEmpty()) Text("No stock items match the selected filters.")
                 if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     items(rows) { row -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
-                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium)
+                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
                         Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.bodySmall)
                         val unit=row.getOrNull(2).orEmpty()
                         Text("Closing Quantity: ${row.getOrNull(6).orEmpty()} $unit",fontWeight=FontWeight.Bold)
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             listOf("Beginning Qty" to 3,"Quantity In" to 4,"Quantity Out" to 5).forEach { (label,index) -> Column(Modifier.weight(1f)) {Text(label,style=MaterialTheme.typography.bodySmall);Text("${row.getOrNull(index).orEmpty()} $unit")} }
                         }
+                    } } }
+                }
+            } else if(state.report in setOf("stock-summary","low-stock-summary")) {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty()) Text("No stock items match the selected filters.")
+                if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    items(rows) { row -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
+                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
+                        Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.bodySmall)
+                        Text("Stock Quantity: ${row.getOrNull(3).orEmpty()} ${row.getOrNull(2).orEmpty()}",fontWeight=FontWeight.Bold)
+                        Text("Stock Value: ${row.getOrNull(4).orEmpty()}")
                     } } }
                 }
             } else LazyRow {
