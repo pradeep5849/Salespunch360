@@ -21,8 +21,13 @@ async function principal(actor: Actor) {
 export async function availableReportCatalogueForActor(actor: Actor) {
   const user = await principal(actor),
     modules = await enabledModulesForCompany(actor.companyId!);
+  const stockSettings=modules.includes("INVENTORY")&&canUsePermission(user,user.company!.productEdition,"ACCOUNT_STOCK")
+    ?await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true}}):null;
+  const canStock=modules.includes("INVENTORY")&&canUsePermission(user,user.company!.productEdition,"ACCOUNT_STOCK")
+    &&(stockSettings?.itemSettings as {enabled?:boolean}|null)?.enabled!==false;
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
+      (x.key!=="stock-category"||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
       (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||
       (modules.includes("PROJECTS") &&

@@ -161,6 +161,7 @@ test.afterAll(async () => {
   await db.warehouse.deleteMany({where:{companyId}});
   await db.accountProduct.deleteMany({where:{companyId}});
   await db.accountService.deleteMany({where:{companyId}});
+  await db.accountCategory.deleteMany({where:{companyId}});
   await db.accountUnit.deleteMany({where:{companyId}});
   await db.customFieldValue.deleteMany({where:{companyId}});
   await db.customFieldDefinition.deleteMany({where:{companyId}});
@@ -2704,4 +2705,33 @@ test("A090 quotation details applies company money and date display without chan
   await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});await page.reload();await expect(page.getByText(/^Internal cost /)).toHaveCount(0);await expect(page.getByText(/^Subtotal /)).toContainText(formatMoney(snapshot.grandTotal.toString(),preferences));
   expect((await db.quotationRevision.findUniqueOrThrow({where:{id:snapshot.id}})).grandTotal.toString()).toBe(snapshot.grandTotal.toString());expect(await db.journalEntry.count({where:{companyId}})).toBe(journalCount);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}})}
+});
+
+
+test("A084 category stock report keeps unit valuation scope and exports aligned",async({page})=>{
+ test.setTimeout(180000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),suffix=randomUUID().slice(0,8);
+ const foreign=await db.accountProduct.create({data:{companyId:otherCompanyId,name:`Foreign stock ${suffix}`,trackInventory:true}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["INVENTORY"],itemSettings:{enabled:true},baseCurrency:"USD",displayDecimalPlaces:3}});
+  const actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const category=await db.accountCategory.create({data:{companyId,name:`Materials ${suffix}`}}),kg=await db.accountUnit.create({data:{companyId,name:`Kilogram ${suffix}`,symbol:"kg"}}),nos=await db.accountUnit.create({data:{companyId,name:`Number ${suffix}`,symbol:"Nos"}});
+  const steel=await db.accountProduct.create({data:{companyId,name:`Steel ${suffix}`,categoryId:category.id,unitId:kg.id,trackInventory:true,costPrice:"999"}}),bolt=await db.accountProduct.create({data:{companyId,name:`Bolt ${suffix}`,categoryId:category.id,unitId:nos.id,trackInventory:true,costPrice:"999"}});
+  const warehouse=await db.warehouse.create({data:{companyId,branchId,name:`Category warehouse ${suffix}`,code:`CAT${suffix}`}}),second=await db.branch.create({data:{companyId,name:`Other stock branch ${suffix}`,code:`SC${suffix}`}}),otherWarehouse=await db.warehouse.create({data:{companyId,branchId:second.id,name:`Other warehouse ${suffix}`,code:`OC${suffix}`}});
+  for(const row of [{productId:steel.id,quantity:"2.5",unitCost:"10",movementDate:"2026-10-18",warehouseId:warehouse.id},{productId:bolt.id,quantity:"3",unitCost:"2",movementDate:"2026-10-18",warehouseId:warehouse.id},{productId:steel.id,quantity:"5",unitCost:"20",movementDate:"2026-10-19",warehouseId:warehouse.id},{productId:steel.id,quantity:"100",unitCost:"10",movementDate:"2026-10-18",warehouseId:otherWarehouse.id}])await createStockMovementForActor(actor,"OPENING",{...row,sourceType:"OPENING",sourceId:randomUUID()});
+  await db.accountProduct.update({where:{id:steel.id},data:{isActive:false}});
+  const movements=await db.stockMovement.count({where:{companyId}}),journals=await db.journalEntry.count({where:{companyId}});
+  await signInSettings(page);await page.goto(`/workspace/account/reports?branchId=${branchId}&to=2026-10-18`);await page.getByRole("searchbox",{name:"Search reports"}).fill("Stock Summary by Item Category");await page.getByRole("link",{name:"Stock Summary by Item Category",exact:true}).click();
+  await expect(page).toHaveURL(/\/reports\/stock-category\?/,{timeout:30000});await expect(page.getByRole("heading",{name:"Stock Summary by Item Category",exact:true})).toBeVisible({timeout:15000});await expect(page.getByLabel("As of",{exact:true})).toHaveValue("2026-10-18");
+  const rows=page.locator("tbody tr").filter({hasText:category.name});await expect(rows).toHaveCount(2);await expect(rows.filter({hasText:"kg"})).toContainText("2.5000");await expect(rows.filter({hasText:"kg"})).toContainText("25.000");await expect(rows.filter({hasText:"Nos"})).toContainText("3.0000");await expect(rows.filter({hasText:"Nos"})).toContainText("6.000");await expect(page.locator("tbody")).not.toContainText(foreign.name);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  const csv=await page.request.get((await page.getByRole("link",{name:"CSV",exact:true}).getAttribute("href"))!);expect(csv.status()).toBe(200);const text=await csv.text();expect(text).toContain("Value (USD)");expect(text).toContain("2.5000");expect(text).toContain("Total stock value");expect(text).toContain("31.000");expect(text).not.toContain(foreign.name);
+  const currentUser=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:currentUser.sessionVersion}});const headers={authorization:`Bearer ${token}`},query=`branchId=${branchId}&to=2026-10-18`;
+  const response=await page.request.get(`/api/v1/mobile/account/reports/stock-category?${query}`,{headers});expect(response.status()).toBe(200);const native=await response.json();expect(native.rows.filter((row:string[])=>row[0]===category.name)).toEqual([[category.name,"kg","2.5000",formatMoney("25",resolveDisplayPreferences({...before,baseCurrency:"USD",displayDecimalPlaces:3}))],[category.name,"Nos","3.0000",formatMoney("6",resolveDisplayPreferences({...before,baseCurrency:"USD",displayDecimalPlaces:3}))]]);
+  await expect(runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchId]},"stock-category",{branchId:second.id,to:"2026-10-18"})).rejects.toThrow();
+  expect((await page.request.get(`/api/v1/mobile/account/reports/stock-category?branchId=${randomUUID()}&to=2026-10-18`,{headers})).status()).toBe(403);
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});expect((await page.request.get(`/api/v1/mobile/account/reports/stock-category?${query}`,{headers})).status()).toBe(400);await page.goto(`/workspace/account/reports?branchId=${branchId}`);await expect(page.getByRole("link",{name:"Stock Summary by Item Category",exact:true})).toHaveCount(0);
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true}}});await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/stock-category?${query}`,{headers})).status()).toBe(403);
+  expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountProduct.delete({where:{id:foreign.id}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
 });

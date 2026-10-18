@@ -75,6 +75,8 @@ export default async function Page({
               Project profitability and budget-versus-actual figures are
               lifetime-to-date. Date filters do not apply.
             </p>
+          ) : report==="stock-category" ? (
+            <label>As of <input type="date" name="to" defaultValue={to} required/></label>
           ) : (
             <ReportDateRange initialFrom={from} initialTo={to} today={reportCalendarDate()}/>
 

@@ -5,6 +5,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun categoryStockReportUsesServerCatalogueAndRejectsUnrelatedFilters() {
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"stock-category","name":"Stock Summary by Item Category","group":"Item/Stock reports","filters":[]}]}""").jsonObject
+        assertEquals("stock-category",accountReportCatalogue(options,"stock summary").single().key)
+        assertEquals(emptySet<String>(),accountReportSpecificFilters(options,"stock-category"))
+        assertEquals(mapOf("from" to "2026-10-18","to" to "2026-10-18","branchId" to "branch"),accountReportRequestFilters(options,"stock-category",mapOf("from" to "2026-10-18","to" to "2026-10-18","branchId" to "branch","projectId" to "project","productId" to "item")))
+    }
     @Test fun suppliedReportResponseRetainsPrimitiveNamesColumnsAndArrayRows() {
         val options=Json.parseToJsonElement("""{"reports":["profit-loss","profit-withdrawal"]}""").jsonObject
         assertEquals(listOf("profit-loss","profit-withdrawal"),accountReportNames(options))

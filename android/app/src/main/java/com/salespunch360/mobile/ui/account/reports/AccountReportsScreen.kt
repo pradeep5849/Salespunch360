@@ -79,7 +79,9 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     val applicable=com.salespunch360.mobile.account.accountReportSpecificFilters(state.options,state.report.orEmpty())
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
-        if(state.report !in listOf("projects","budget-vs-actual")){
+        if(state.report=="stock-category"){
+            OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("As of (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
+        }else if(state.report !in listOf("projects","budget-vs-actual")){
         var periodOpen by remember{mutableStateOf(false)}
         Box{TextButton(onClick={periodOpen=true}){Text("Choose report period")};DropdownMenu(expanded=periodOpen,onDismissRequest={periodOpen=false}){listOf("TODAY" to "Today","THIS_MONTH" to "This month","LAST_MONTH" to "Last month","FINANCIAL_YEAR" to "Financial year").forEach{(key,label)->DropdownMenuItem(text={Text(label)},onClick={val range=com.salespunch360.mobile.account.accountReportPeriodBounds(key);vm.dates(range.first.toString(),range.second.toString());periodOpen=false})}}}
         Row {
