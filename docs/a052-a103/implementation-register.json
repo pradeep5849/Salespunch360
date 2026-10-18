@@ -56979,7 +56979,9 @@
         "src/lib/account/reports/display.ts",
         "src/lib/account/reports/favourites.ts",
         "src/lib/account/reports/stock-level.test.ts",
-        "src/lib/account/reports/stock-level.ts"
+        "src/lib/account/reports/stock-level.ts",
+        "src/components/account/stock-detail-view.module.css",
+        "src/components/account/stock-level-view.tsx"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -57538,6 +57540,39 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned."
+        },
+        "stock_search_cards_2026_10_18": {
+          "implementation_commit": "1fdc65416c6bbd4be5781d87fcde7d7770718ceb",
+          "work": "Added bounded,trimmed case-insensitive item-name search to Stock Detail/Stock Summary/Low Stock Summary service filters,Web/native controls and export scope. PostgreSQL LIKE wildcard characters escaped for literal substring parity with stock-summary matching. Clear retains report context and applies an empty search;unsupported report search rejected. Stock Summary/Low Stock Summary now render item/category/quantity/unit/value cards on Web and bounded native lists,with native semantic headings and Web Money display reuse. No pricing,valuation,secondary-unit,posting,schema or migration changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/stock-detail-view.module.css",
+            "src/components/account/stock-level-view.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-detail.test.ts",
+            "src/lib/account/reports/stock-detail.ts",
+            "src/lib/account/reports/stock-level.test.ts",
+            "src/lib/account/reports/stock-level.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "118 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. Includes trimmed/max-length/literal-wildcard stock search,scoped summaries,unsupported report rejection and export URL encoding.",
+            "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(3.6m): all3 stock destinations case-insensitive name search yields only intended card/native HTTP row;CSV URLs/results retain search;clear restores matching results;literal %_ returns empty rather than broad SQL matches;Stock Summary/Low Stock Summary item cards and four-decimal quantities;filtered stock arithmetic,valuation,branch/company/Items/role boundaries;Axe AA/no overflow;unchanged stock/journal counts. Existing Stock Detail CSV/XLSX/PDF rerun;new summary destinations directly exercised CSV,not their binary formats.",
+            "android": "compileDebugKotlin +16 AccountReportData JVM tests PASS(4m2s),0 failures/errors/skips. Search preserved before metadata and limited to stock-family reports;clear removes filter. Native item-card/heading semantics compile only;no emulator/device/TalkBack runtime.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation."
         }
       }
     },
@@ -61045,7 +61080,9 @@
         "src/lib/account/reports/display.ts",
         "src/lib/account/reports/favourites.ts",
         "src/lib/account/reports/stock-level.test.ts",
-        "src/lib/account/reports/stock-level.ts"
+        "src/lib/account/reports/stock-level.ts",
+        "src/components/account/stock-detail-view.module.css",
+        "src/components/account/stock-level-view.tsx"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -61525,6 +61562,39 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned."
+        },
+        "stock_search_cards_2026_10_18": {
+          "implementation_commit": "1fdc65416c6bbd4be5781d87fcde7d7770718ceb",
+          "work": "Added bounded,trimmed case-insensitive item-name search to Stock Detail/Stock Summary/Low Stock Summary service filters,Web/native controls and export scope. PostgreSQL LIKE wildcard characters escaped for literal substring parity with stock-summary matching. Clear retains report context and applies an empty search;unsupported report search rejected. Stock Summary/Low Stock Summary now render item/category/quantity/unit/value cards on Web and bounded native lists,with native semantic headings and Web Money display reuse. No pricing,valuation,secondary-unit,posting,schema or migration changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/stock-detail-view.module.css",
+            "src/components/account/stock-level-view.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-detail.test.ts",
+            "src/lib/account/reports/stock-detail.ts",
+            "src/lib/account/reports/stock-level.test.ts",
+            "src/lib/account/reports/stock-level.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "118 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. Includes trimmed/max-length/literal-wildcard stock search,scoped summaries,unsupported report rejection and export URL encoding.",
+            "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(3.6m): all3 stock destinations case-insensitive name search yields only intended card/native HTTP row;CSV URLs/results retain search;clear restores matching results;literal %_ returns empty rather than broad SQL matches;Stock Summary/Low Stock Summary item cards and four-decimal quantities;filtered stock arithmetic,valuation,branch/company/Items/role boundaries;Axe AA/no overflow;unchanged stock/journal counts. Existing Stock Detail CSV/XLSX/PDF rerun;new summary destinations directly exercised CSV,not their binary formats.",
+            "android": "compileDebugKotlin +16 AccountReportData JVM tests PASS(4m2s),0 failures/errors/skips. Search preserved before metadata and limited to stock-family reports;clear removes filter. Native item-card/heading semantics compile only;no emulator/device/TalkBack runtime.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation."
         }
       }
     },
@@ -64653,7 +64723,11 @@
         "src/lib/mobile/account-reports.ts",
         "src/lib/account/reports/favourites.integration.test.ts",
         "src/lib/account/reports/stock-level.test.ts",
-        "src/lib/account/reports/stock-level.ts"
+        "src/lib/account/reports/stock-level.ts",
+        "src/components/account/stock-detail-view.module.css",
+        "src/components/account/stock-level-view.tsx",
+        "src/lib/account/reports/stock-detail.test.ts",
+        "src/lib/account/reports/stock-detail.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -65002,6 +65076,39 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations and full reference presentation/search/filter scope,plus final-head/device validation. New stock report destinations use the existing shared table/native row presentation;reference item-card styling/search still outstanding. A090-F01 other display consumers remain PARTIAL. No final finding status assigned."
+        },
+        "stock_search_cards_2026_10_18": {
+          "implementation_commit": "1fdc65416c6bbd4be5781d87fcde7d7770718ceb",
+          "work": "Added bounded,trimmed case-insensitive item-name search to Stock Detail/Stock Summary/Low Stock Summary service filters,Web/native controls and export scope. PostgreSQL LIKE wildcard characters escaped for literal substring parity with stock-summary matching. Clear retains report context and applies an empty search;unsupported report search rejected. Stock Summary/Low Stock Summary now render item/category/quantity/unit/value cards on Web and bounded native lists,with native semantic headings and Web Money display reuse. No pricing,valuation,secondary-unit,posting,schema or migration changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/stock-detail-view.module.css",
+            "src/components/account/stock-level-view.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-detail.test.ts",
+            "src/lib/account/reports/stock-detail.ts",
+            "src/lib/account/reports/stock-level.test.ts",
+            "src/lib/account/reports/stock-level.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "118 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. Includes trimmed/max-length/literal-wildcard stock search,scoped summaries,unsupported report rejection and export URL encoding.",
+            "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(3.6m): all3 stock destinations case-insensitive name search yields only intended card/native HTTP row;CSV URLs/results retain search;clear restores matching results;literal %_ returns empty rather than broad SQL matches;Stock Summary/Low Stock Summary item cards and four-decimal quantities;filtered stock arithmetic,valuation,branch/company/Items/role boundaries;Axe AA/no overflow;unchanged stock/journal counts. Existing Stock Detail CSV/XLSX/PDF rerun;new summary destinations directly exercised CSV,not their binary formats.",
+            "android": "compileDebugKotlin +16 AccountReportData JVM tests PASS(4m2s),0 failures/errors/skips. Search preserved before metadata and limited to stock-family reports;clear removes filter. Native item-card/heading semantics compile only;no emulator/device/TalkBack runtime.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation."
         }
       },
       "intermediate_validation": {
@@ -67471,6 +67578,27 @@
         "status": "completed",
         "conclusion": "success",
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39148051913"
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "1fdc65416c6bbd4be5781d87fcde7d7770718ceb",
+      "scope": "A084/A085 stock item search/cards and A090 money-display reuse",
+      "tests": {
+        "grouped_unit_database": "118 tests across19 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. Includes trimmed/max-length/literal-wildcard stock search,scoped summaries,unsupported report rejection and export URL encoding.",
+        "browser_api_export": "2 actual desktop/mobile Chromium cases PASS(3.6m): all3 stock destinations case-insensitive name search yields only intended card/native HTTP row;CSV URLs/results retain search;clear restores matching results;literal %_ returns empty rather than broad SQL matches;Stock Summary/Low Stock Summary item cards and four-decimal quantities;filtered stock arithmetic,valuation,branch/company/Items/role boundaries;Axe AA/no overflow;unchanged stock/journal counts. Existing Stock Detail CSV/XLSX/PDF rerun;new summary destinations directly exercised CSV,not their binary formats.",
+        "android": "compileDebugKotlin +16 AccountReportData JVM tests PASS(4m2s),0 failures/errors/skips. Search preserved before metadata and limited to stock-family reports;clear removes filter. Native item-card/heading semantics compile only;no emulator/device/TalkBack runtime.",
+        "typescript": "Final PASS after browser runtime.",
+        "eslint": "Final focused PASS;git diff --check PASS.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation.",
+      "prior_head_ci": {
+        "head": "886e065d3649c2d6e4dc2de13a4f39bd5d3c76bc",
+        "run_id": 39149244168,
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39149244168"
       }
     }
   ]
