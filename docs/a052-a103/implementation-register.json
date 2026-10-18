@@ -57391,6 +57391,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work."
+        },
+        "stock_detail_report_2026_10_18": {
+          "implementation_commit": "17542e8d29d92c624e435ecbf49e624717c109b0",
+          "work": "Added Stock Detail Report to the shared Web/native/API catalogue with period opening/in/out/closing quantities. One repeatable-read transaction supplies tracked product metadata, scoped active warehouses and paginated movement history; existing movement signs retained. Inactive tracked items included; canonical and unspecified units are not summed into a fabricated mixed quantity. Web and Android item cards show closing plus opening/in/out. Native parser keeps exact decimal strings. Catalogue/favourites apply shared role/module/Items gates; exports preserve four quantity decimals regardless of money display precision.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/stock-detail-view.module.css",
+            "src/components/account/stock-detail-view.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-detail.test.ts",
+            "src/lib/account/reports/stock-detail.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "92 tests across16 actual report/stock-summary files PASS,0 failures/skips; includes6 isolated local PostgreSQL catalogue/favourite/company/user tests covering both stock destinations. Focused22 tests are an earlier subset, not an additional final total.",
+            "browser_api_export": "2 desktop/mobile Chromium cases PASS(1.6m): actual negative opening -3, incoming2.2501,outgoing1,closing-1.7499; inactive item; future/other-branch/foreign-company exclusion; mixed-unit summary; card layout; actual native HTTP response; CSV/XLSX/PDF preserve -1.7499 despite money precision0; Items OFF/unsupported filter/Project Manager denied; Axe AA/no overflow; unchanged stock and journal counts.",
+            "android": "compileDebugKotlin +12 AccountReportData JVM tests PASS(3m9s),0 failures/errors/skips. Exact row parsing and server-declared filter scope exercised. No emulator/device/TalkBack runtime claim.",
+            "typescript": "PASS after browser runtime",
+            "eslint": "PASS focused after browser runtime; git diff --check PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: Stock Detail category/status controls and the remaining supplied report catalogue/layout/computation scope still pending, plus final-head/device validation. No secondary-unit basis decision inferred, schema/migration/financial write/production operation or A104."
         }
       }
     },
@@ -61231,6 +61260,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work."
+        },
+        "stock_detail_report_2026_10_18": {
+          "implementation_commit": "17542e8d29d92c624e435ecbf49e624717c109b0",
+          "work": "Added Stock Detail Report to the shared Web/native/API catalogue with period opening/in/out/closing quantities. One repeatable-read transaction supplies tracked product metadata, scoped active warehouses and paginated movement history; existing movement signs retained. Inactive tracked items included; canonical and unspecified units are not summed into a fabricated mixed quantity. Web and Android item cards show closing plus opening/in/out. Native parser keeps exact decimal strings. Catalogue/favourites apply shared role/module/Items gates; exports preserve four quantity decimals regardless of money display precision.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/stock-detail-view.module.css",
+            "src/components/account/stock-detail-view.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-detail.test.ts",
+            "src/lib/account/reports/stock-detail.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "92 tests across16 actual report/stock-summary files PASS,0 failures/skips; includes6 isolated local PostgreSQL catalogue/favourite/company/user tests covering both stock destinations. Focused22 tests are an earlier subset, not an additional final total.",
+            "browser_api_export": "2 desktop/mobile Chromium cases PASS(1.6m): actual negative opening -3, incoming2.2501,outgoing1,closing-1.7499; inactive item; future/other-branch/foreign-company exclusion; mixed-unit summary; card layout; actual native HTTP response; CSV/XLSX/PDF preserve -1.7499 despite money precision0; Items OFF/unsupported filter/Project Manager denied; Axe AA/no overflow; unchanged stock and journal counts.",
+            "android": "compileDebugKotlin +12 AccountReportData JVM tests PASS(3m9s),0 failures/errors/skips. Exact row parsing and server-declared filter scope exercised. No emulator/device/TalkBack runtime claim.",
+            "typescript": "PASS after browser runtime",
+            "eslint": "PASS focused after browser runtime; git diff --check PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: Stock Detail category/status controls and the remaining supplied report catalogue/layout/computation scope still pending, plus final-head/device validation. No secondary-unit basis decision inferred, schema/migration/financial write/production operation or A104."
         }
       }
     },
@@ -67009,6 +67067,27 @@
         "conclusion": "success",
         "status": "completed",
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39097038371"
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "17542e8d29d92c624e435ecbf49e624717c109b0",
+      "scope": "A084/A085 Stock Detail movement report/cards",
+      "tests": {
+        "grouped_unit_database": "92 tests across16 actual report/stock-summary files PASS,0 failures/skips; includes6 isolated local PostgreSQL catalogue/favourite/company/user tests covering both stock destinations. Focused22 tests are an earlier subset, not an additional final total.",
+        "browser_api_export": "2 desktop/mobile Chromium cases PASS(1.6m): actual negative opening -3, incoming2.2501,outgoing1,closing-1.7499; inactive item; future/other-branch/foreign-company exclusion; mixed-unit summary; card layout; actual native HTTP response; CSV/XLSX/PDF preserve -1.7499 despite money precision0; Items OFF/unsupported filter/Project Manager denied; Axe AA/no overflow; unchanged stock and journal counts.",
+        "android": "compileDebugKotlin +12 AccountReportData JVM tests PASS(3m9s),0 failures/errors/skips. Exact row parsing and server-declared filter scope exercised. No emulator/device/TalkBack runtime claim.",
+        "typescript": "PASS after browser runtime",
+        "eslint": "PASS focused after browser runtime; git diff --check PASS",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL: Stock Detail category/status controls and the remaining supplied report catalogue/layout/computation scope still pending, plus final-head/device validation. No secondary-unit basis decision inferred, schema/migration/financial write/production operation or A104.",
+      "prior_head_ci": {
+        "head": "ad3c9d48bed7a608f70fa3f000b5dbcc9a456a07",
+        "run_id": 39110448634,
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39110448634"
       }
     }
   ]
