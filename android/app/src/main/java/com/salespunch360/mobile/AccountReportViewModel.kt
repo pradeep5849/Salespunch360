@@ -31,6 +31,7 @@ data class AccountReportState(
     val moneyAccountId:String="",
     val categoryId:String="",
     val itemStatus:String="",
+    val stockLevel:String="",
     val options: JsonObject = buildJsonObject {},
     val data: JsonObject? = null,
     val appliedFilters: Map<String,String> = emptyMap(),
@@ -69,7 +70,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun context(query:String) {
         val q=android.net.Uri.parse("https://internal.invalid/?$query")
-        _state.value=_state.value.copy(moneyAccountId=q.getQueryParameter("moneyAccountId").orEmpty(),categoryId=q.getQueryParameter("categoryId").orEmpty(),itemStatus=q.getQueryParameter("itemStatus").orEmpty(),accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
+        _state.value=_state.value.copy(stockLevel=q.getQueryParameter("stockLevel").orEmpty(),moneyAccountId=q.getQueryParameter("moneyAccountId").orEmpty(),categoryId=q.getQueryParameter("categoryId").orEmpty(),itemStatus=q.getQueryParameter("itemStatus").orEmpty(),accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
     }
     fun choose(report: String?) {
         requestGeneration++
@@ -94,6 +95,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "owner" -> _state.value.copy(ownerId = value)
             "moneyAccountId" -> _state.value.copy(moneyAccountId=value)
             "categoryId" -> _state.value.copy(categoryId=value)
+            "stockLevel" -> _state.value.copy(stockLevel=value)
             "itemStatus" -> _state.value.copy(itemStatus=value)
             "accountType" -> _state.value.copy(accountType=value)
             else -> _state.value.copy(productId = value)
@@ -106,7 +108,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "branchId" to _state.value.branchId,"projectId" to _state.value.projectId,
             "ledgerId" to _state.value.ledgerId,"customerId" to _state.value.customerId,
             "vendorId" to _state.value.vendorId,"ownerId" to _state.value.ownerId,
-            "moneyAccountId" to _state.value.moneyAccountId,"categoryId" to _state.value.categoryId,"itemStatus" to _state.value.itemStatus,
+            "moneyAccountId" to _state.value.moneyAccountId,"categoryId" to _state.value.categoryId,"itemStatus" to _state.value.itemStatus,"stockLevel" to _state.value.stockLevel,
             "productId" to _state.value.productId,"accountType" to _state.value.accountType
         )
     )

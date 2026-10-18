@@ -25,6 +25,8 @@ export const REPORT_CATALOGUE = [
   ["branches", "Branch Report", "Business"],
   ["items", "Item Wise Profit & Loss", "Item/Stock reports"],
   ["stock-category", "Stock Summary by Item Category", "Item/Stock reports"],
+  ["stock-summary", "Stock Summary Report", "Item/Stock reports"],
+  ["low-stock-summary", "Low Stock Summary Report", "Item/Stock reports"],
   ["stock-detail", "Stock Detail Report", "Item/Stock reports"],
   ["invoices", "Bill Wise Profit", "Transaction"],
   ["customers", "Party Wise Profit & Loss", "Party reports"],
@@ -50,6 +52,8 @@ export function searchReportCatalogue(
 const specificFilters: Record<string, string[]> = {
   "cash-bank":["accountType"],
   "bank-statement": ["moneyAccountId"],
+  "stock-summary": ["categoryId", "itemStatus", "stockLevel"],
+  "low-stock-summary": ["categoryId", "itemStatus"],
   "stock-detail": ["categoryId", "itemStatus"],
   "expense-transactions": ["projectId"],
   "expense-category": ["projectId"],

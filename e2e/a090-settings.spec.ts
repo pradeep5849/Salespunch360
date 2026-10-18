@@ -2738,7 +2738,7 @@ test("A084 category stock report keeps unit valuation scope and exports aligned"
 
 
 test("A084 Stock Detail reconciles negative opening and period movements on web native exports",async({page})=>{
- test.setTimeout(180000);
+ test.setTimeout(240000);
  const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),suffix=randomUUID().slice(0,8);
  const foreign=await db.accountProduct.create({data:{companyId:otherCompanyId,name:`Foreign detail item ${suffix}`,trackInventory:true}});
  try{
@@ -2768,10 +2768,18 @@ test("A084 Stock Detail reconciles negative opening and period movements on web 
   await page.getByLabel("Item category",{exact:true}).selectOption("");await page.getByLabel("Item status",{exact:true}).selectOption("");await page.getByRole("button",{name:"Run report",exact:true}).click();await expect(card).toBeVisible();await expect(page.locator(".report-table-scroll")).toContainText(bolt.name);
   const options=await page.request.get("/api/v1/mobile/account/reports/options",{headers});expect(options.status()).toBe(200);expect((await options.json()).stockCategories).toEqual(expect.arrayContaining([{id:category.id,name:category.name},{id:"UNCATEGORIZED",name:"Uncategorized (no category)"}]));
   expect((await page.request.get(`/api/v1/mobile/account/reports/stock-detail?${query}&categoryId=${randomUUID()}`,{headers})).status()).toBe(403);
+  for(const report of ["stock-summary","low-stock-summary"]){
+   const stockQuery=`${query}&categoryId=${category.id}&itemStatus=INACTIVE`;
+   await page.goto(`/workspace/account/reports/${report}?${stockQuery}`);await expect(page.getByRole("heading",{name:report==="stock-summary"?"Stock Summary Report":"Low Stock Summary Report",exact:true})).toBeVisible({timeout:15000});await expect(page.locator("tbody tr")).toHaveCount(1);await expect(page.locator("tbody")).toContainText(pipe.name);await expect(page.locator("tbody")).toContainText("-1.7499");await expect(page.locator("tbody")).not.toContainText(bolt.name);
+   const nativeStock=await page.request.get(`/api/v1/mobile/account/reports/${report}?${stockQuery}`,{headers});expect(nativeStock.status()).toBe(200);const data=await nativeStock.json();expect(data.rows).toHaveLength(1);expect(data.rows[0][3]).toBe("-1.7499");expect(data.summary.map((x:{value:string})=>x.value)).toEqual(["1","1","-17.50"]);
+   const csv=await page.request.get(`/api/account/reports/${report}/csv?${stockQuery}`);expect(csv.status()).toBe(200);const text=await csv.text();expect(text).toContain("-1.7499");expect(text).toContain(",kg,-1.7499,-18");expect(text).not.toContain(bolt.name);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  }
+  await page.goto(`/workspace/account/reports/stock-summary?${query}&categoryId=${category.id}&stockLevel=AVAILABLE`);await expect(page.locator("tbody tr")).toHaveCount(0);await page.getByLabel("Stock level",{exact:true}).selectOption("NEGATIVE");await page.getByRole("button",{name:"Run report",exact:true}).click();await expect(page.locator("tbody")).toContainText(pipe.name);
   await expect(runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchId]},"stock-detail",{branchId:second.id,from:"2026-10-01",to:"2026-10-18"})).rejects.toThrow();
   await expect(runFinancialReportForActor({...actor,companyId:otherCompanyId},"stock-detail",{branchId,from:"2026-10-01",to:"2026-10-18"})).rejects.toThrow();
   expect((await page.request.get(`/api/v1/mobile/account/reports/stock-detail?${query}&projectId=${randomUUID()}`,{headers})).status()).toBe(400);
-  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});expect((await page.request.get(`/api/v1/mobile/account/reports/stock-detail?${query}`,{headers})).status()).toBe(400);await page.goto(`/workspace/account/reports?branchId=${branchId}`);await expect(page.getByRole("link",{name:"Stock Detail Report",exact:true})).toHaveCount(0);
+  await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});expect((await page.request.get(`/api/v1/mobile/account/reports/stock-detail?${query}`,{headers})).status()).toBe(400);await page.goto(`/workspace/account/reports?branchId=${branchId}`);await expect(page.getByRole("link",{name:"Stock Detail Report",exact:true})).toHaveCount(0);await expect(page.getByRole("link",{name:"Stock Summary Report",exact:true})).toHaveCount(0);await expect(page.getByRole("link",{name:"Low Stock Summary Report",exact:true})).toHaveCount(0);
   await db.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true}}});await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/stock-detail?${query}`,{headers})).status()).toBe(403);
   expect(await db.stockMovement.count({where:{companyId}})).toBe(movementCount);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountProduct.delete({where:{id:foreign.id}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},negativeStockAllowed:before.negativeStockAllowed,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}

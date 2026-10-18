@@ -35,12 +35,13 @@ fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspa
 fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<String,String>):Map<String,String> {
  val supported=accountReportSpecificFilters(options,report)
  val lifetime=report=="projects"||report=="budget-vs-actual"
- val known=setOf("from","to","branchId","projectId","ledgerId","customerId","vendorId","ownerId","productId","accountType","categoryId","itemStatus","moneyAccountId")
+ val known=setOf("from","to","branchId","projectId","ledgerId","customerId","vendorId","ownerId","productId","accountType","categoryId","itemStatus","moneyAccountId","stockLevel")
  return candidates.filter{(key,value)->
   value.isNotBlank()&&key in known&&
   (!lifetime||key=="branchId"||key=="projectId")&&
+  (key!="stockLevel"||report=="stock-summary")&&
   (key!="moneyAccountId"||report=="bank-statement")&&
-  (key !in setOf("categoryId","itemStatus") || report=="stock-detail")&&
+  (key !in setOf("categoryId","itemStatus") || report in setOf("stock-detail","stock-summary","low-stock-summary"))&&
   (key!="accountType"||report=="cash-bank")&&
   (key!="ownerId"||report=="owner-capital"||report=="profit-withdrawal")&&
   (key in setOf("from","to","branchId")||(key=="accountType"&&report=="cash-bank")||supported?.contains(key)!=false)

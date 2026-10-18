@@ -34,7 +34,7 @@ export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
     options = await reportOptionsForActor(a),catalogue=await availableReportCatalogueForActor(a);
   return {
     bankAccounts: catalogue.some(x=>x.key === "bank-statement") ? await bankStatementOptionsForActor(a) : [],
-    stockCategories: catalogue.some(x=>x.key === "stock-detail") ? await stockDetailCategoriesForActor(a) : [],
+    stockCategories: catalogue.some(x=>["stock-detail","stock-summary","low-stock-summary"].includes(x.key)) ? await stockDetailCategoriesForActor(a) : [],
     reports:catalogue.map(x=>x.key),
     catalogue,
     favourites:await reportFavouritesForActor(a),

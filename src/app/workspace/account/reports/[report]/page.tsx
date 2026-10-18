@@ -56,6 +56,7 @@ export default async function Page({
             moneyAccountId:q.moneyAccountId,
             categoryId:q.categoryId,
             itemStatus:q.itemStatus,
+            stockLevel:q.stockLevel,
           },
     );
   } catch (e) {
@@ -68,7 +69,7 @@ export default async function Page({
     };
   }
   const banks = report === "bank-statement" && data.columns.length ? await bankStatementOptions() : [];
-  const categories = report === "stock-detail" && data.columns.length ? await stockDetailCategories() : [];
+  const categories = ["stock-detail","stock-summary","low-stock-summary"].includes(report) && data.columns.length ? await stockDetailCategories() : [];
   const query = reportExportQuery(q,from,to,projectLifetime);
   const hubQuery=new URLSearchParams([...new URLSearchParams(query)].filter(([key])=>["scope","from","to","asOf","branchId"].includes(key))).toString();
   return (
@@ -83,7 +84,7 @@ export default async function Page({
               Project profitability and budget-versus-actual figures are
               lifetime-to-date. Date filters do not apply.
             </p>
-          ) : report==="stock-category" ? (
+          ) : ["stock-category","stock-summary","low-stock-summary"].includes(report) ? (
             <label>As of <input type="date" name="to" defaultValue={to} required/></label>
           ) : (
             <ReportDateRange initialFrom={from} initialTo={to} today={reportCalendarDate()}/>
@@ -140,10 +141,11 @@ export default async function Page({
           )}
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
           {report === "bank-statement" && <Select name="moneyAccountId" label="Bank account" value={q.moneyAccountId} rows={banks}/>}
-          {report === "stock-detail" && <>
+          {["stock-detail","stock-summary","low-stock-summary"].includes(report) && <>
             <Select name="categoryId" label="Item category" value={q.categoryId} rows={categories}/>
             <Select name="itemStatus" label="Item status" value={q.itemStatus} rows={[{id:"ACTIVE",name:"Active"},{id:"INACTIVE",name:"Inactive"}]}/>
           </>}
+          {report === "stock-summary" && <Select name="stockLevel" label="Stock level" value={q.stockLevel} rows={[{id:"AVAILABLE",name:"Available"},{id:"LOW",name:"Low"},{id:"NEGATIVE",name:"Negative"}]}/>}
           <button>Run report</button>
         </form>
         <div>

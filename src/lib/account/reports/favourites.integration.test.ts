@@ -190,8 +190,8 @@ it.skipIf(!url)("hides Project material report destinations when optional module
 it.skipIf(!url)("hides stock report destinations when Items is off without deleting favourites",async()=>{
  const actor={id:a,companyId};await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});
  await client.accountSettings.upsert({where:{companyId},create:{companyId,enabledModules:["INVENTORY"],itemSettings:{enabled:true}},update:{enabledModules:["INVENTORY"],itemSettings:{enabled:true}}});
- const keys=["stock-category","stock-detail"];
- for(const reportKey of keys){expect((await availableReportCatalogueForActor(actor)).find(x=>x.key===reportKey)).toMatchObject({filters:reportKey==="stock-detail"?["categoryId","itemStatus"]:[]});await setReportFavouriteForActor(actor,{reportKey,favourite:true})}
+ const keys=["stock-category","stock-detail","stock-summary","low-stock-summary"];
+ for(const reportKey of keys){expect((await availableReportCatalogueForActor(actor)).find(x=>x.key===reportKey)).toMatchObject({filters:reportKey==="stock-detail"||reportKey==="low-stock-summary"?["categoryId","itemStatus"]:reportKey==="stock-summary"?["categoryId","itemStatus","stockLevel"]:[]});await setReportFavouriteForActor(actor,{reportKey,favourite:true})}
  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});
  const hidden=(await availableReportCatalogueForActor(actor)).map(x=>x.key),favourites=await reportFavouritesForActor(actor);
  for(const reportKey of keys){expect(hidden).not.toContain(reportKey);expect(favourites).not.toContain(reportKey);await expect(setReportFavouriteForActor(actor,{reportKey,favourite:true})).rejects.toThrow();expect(await client.accountReportFavourite.count({where:{companyId,userId:a,reportKey}})).toBe(1)}

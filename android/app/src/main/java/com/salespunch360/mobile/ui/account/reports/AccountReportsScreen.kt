@@ -79,7 +79,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     val applicable=com.salespunch360.mobile.account.accountReportSpecificFilters(state.options,state.report.orEmpty())
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
-        if(state.report=="stock-category"){
+        if(state.report in setOf("stock-category","stock-summary","low-stock-summary")){
             OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("As of (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
         }else if(state.report !in listOf("projects","budget-vs-actual")){
         var periodOpen by remember{mutableStateOf(false)}
@@ -115,11 +115,15 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val choose = buildJsonObject { put("id", "");put("name", "Select bank account") }
             Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
         }
-        if (state.report=="stock-detail") {
+        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary")) {
             val all = buildJsonObject { put("id", ""); put("name", "All") }
             Option("Item category",state.categoryId,listOf(all)+state.options.array("stockCategories")){vm.filter("categoryId",it)}
             val statuses = listOf(all)+listOf("ACTIVE" to "Active", "INACTIVE" to "Inactive").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
             Option("Item status",state.itemStatus,statuses){vm.filter("itemStatus",it)}
+        }
+        if (state.report=="stock-summary") {
+            val levels = listOf("" to "All", "AVAILABLE" to "Available", "LOW" to "Low", "NEGATIVE" to "Negative").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
+            Option("Stock level",state.stockLevel,levels){vm.filter("stockLevel",it)}
         }
         if (state.report=="cash-bank" && applicable?.contains("accountType")==true) {
             LazyRow { items(listOf("" to "All accounts", "CASH" to "Cash", "BANK" to "Bank", "PETTY_CASH" to "Petty cash")) { (value,label) ->

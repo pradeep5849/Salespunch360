@@ -28,7 +28,7 @@ export async function availableReportCatalogueForActor(actor: Actor) {
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
       (x.key!=="bank-statement"||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
-      (!["stock-category","stock-detail"].includes(x.key)||canStock)&&
+      (!["stock-category","stock-detail","stock-summary","low-stock-summary"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
       (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||
       (modules.includes("PROJECTS") &&

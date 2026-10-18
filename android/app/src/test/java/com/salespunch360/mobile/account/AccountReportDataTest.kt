@@ -72,4 +72,10 @@ class AccountReportDataTest {
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"bank-statement","filters":["moneyAccountId"]}]}""").jsonObject
         assertEquals(input,accountReportRequestFilters(options,"bank-statement",input))
     }
+    @Test fun stockSummaryFiltersStayBoundToTheirSupportedDestinations() {
+        val filters=mapOf("categoryId" to "UNCATEGORIZED","itemStatus" to "ACTIVE","stockLevel" to "NEGATIVE")
+        assertEquals(filters,accountReportRequestFilters(buildJsonObject{},"stock-summary",filters))
+        assertEquals(filters-"stockLevel",accountReportRequestFilters(buildJsonObject{},"low-stock-summary",filters))
+        assertTrue(accountReportRequestFilters(buildJsonObject{},"bank-statement",filters).isEmpty())
+    }
 }
