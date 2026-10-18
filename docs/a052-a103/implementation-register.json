@@ -56981,7 +56981,10 @@
         "src/lib/account/reports/stock-level.test.ts",
         "src/lib/account/reports/stock-level.ts",
         "src/components/account/stock-detail-view.module.css",
-        "src/components/account/stock-level-view.tsx"
+        "src/components/account/stock-level-view.tsx",
+        "src/components/account/profit-report-view.module.css",
+        "src/components/account/profit-report-view.tsx",
+        "src/lib/account/reports/profit-presentation.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -57573,6 +57576,31 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation."
+        },
+        "profit_report_presentation_2026_10_18": {
+          "implementation_commit": "15366d0397439f764a124069288e3c70808e5995",
+          "work": "Profit reports now aggregate tax-exclusive revenue and profit from their existing displayed row groups,net of signed credit notes,without changing cost queries or fabricating service costs. Bill Wise Profit appends date/party/document type while retaining original first6 column positions and existing authorized Web/native detail destinations. Bill/Party profit use responsive Web table/cards and native bounded cards with calculation details;Web money/date and native server-formatted values reused. Shared item-profit computation also receives the same row-scoped monetary summaries. No ledger write,schema,migration or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/profit-report-view.module.css",
+            "src/components/account/profit-report-view.tsx",
+            "src/lib/account/reports/profit-presentation.test.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "124 tests across20 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. New6 profit tests cover signed credit/COGS/net summaries,mixed units,identically named party identities,zero/service-cost behavior,query ownership/role filters,date/money formatting and exact large cents.",
+            "browser_api_export": "Final2 actual desktop/mobile Chromium cases PASS(1.0m): posted100 sale minus25 credit yields net75 revenue/profit with no fabricated service cost;bill date/party/type and existing Sale Details link;party group;actual native report/credit-detail HTTP;CSV/XLSX/PDF totals/metadata;empty scope,Project Manager403,Axe AA/no root overflow,unchanged stock/journal counts.",
+            "android": "compileDebugKotlin +17 AccountReportData JVM tests PASS(3m23s),0 failures/errors/skips. Extra bill metadata/signed credit rows and safe native destinations parsed;native card/heading layout compiled only. Emulator/device runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "initial_runtime_correction": "Initial mobile case expired the default5s Sale Details navigation assertion during cold dev compilation;desktop passed. Existing30s URL/15s heading waits applied;final2 profiles PASS without source financial/navigation logic changes.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned."
         }
       }
     },
@@ -61082,7 +61110,10 @@
         "src/lib/account/reports/stock-level.test.ts",
         "src/lib/account/reports/stock-level.ts",
         "src/components/account/stock-detail-view.module.css",
-        "src/components/account/stock-level-view.tsx"
+        "src/components/account/stock-level-view.tsx",
+        "src/components/account/profit-report-view.module.css",
+        "src/components/account/profit-report-view.tsx",
+        "src/lib/account/reports/profit-presentation.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -61595,6 +61626,31 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation."
+        },
+        "profit_report_presentation_2026_10_18": {
+          "implementation_commit": "15366d0397439f764a124069288e3c70808e5995",
+          "work": "Profit reports now aggregate tax-exclusive revenue and profit from their existing displayed row groups,net of signed credit notes,without changing cost queries or fabricating service costs. Bill Wise Profit appends date/party/document type while retaining original first6 column positions and existing authorized Web/native detail destinations. Bill/Party profit use responsive Web table/cards and native bounded cards with calculation details;Web money/date and native server-formatted values reused. Shared item-profit computation also receives the same row-scoped monetary summaries. No ledger write,schema,migration or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/profit-report-view.module.css",
+            "src/components/account/profit-report-view.tsx",
+            "src/lib/account/reports/profit-presentation.test.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "124 tests across20 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. New6 profit tests cover signed credit/COGS/net summaries,mixed units,identically named party identities,zero/service-cost behavior,query ownership/role filters,date/money formatting and exact large cents.",
+            "browser_api_export": "Final2 actual desktop/mobile Chromium cases PASS(1.0m): posted100 sale minus25 credit yields net75 revenue/profit with no fabricated service cost;bill date/party/type and existing Sale Details link;party group;actual native report/credit-detail HTTP;CSV/XLSX/PDF totals/metadata;empty scope,Project Manager403,Axe AA/no root overflow,unchanged stock/journal counts.",
+            "android": "compileDebugKotlin +17 AccountReportData JVM tests PASS(3m23s),0 failures/errors/skips. Extra bill metadata/signed credit rows and safe native destinations parsed;native card/heading layout compiled only. Emulator/device runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "initial_runtime_correction": "Initial mobile case expired the default5s Sale Details navigation assertion during cold dev compilation;desktop passed. Existing30s URL/15s heading waits applied;final2 profiles PASS without source financial/navigation logic changes.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned."
         }
       }
     },
@@ -64727,7 +64783,10 @@
         "src/components/account/stock-detail-view.module.css",
         "src/components/account/stock-level-view.tsx",
         "src/lib/account/reports/stock-detail.test.ts",
-        "src/lib/account/reports/stock-detail.ts"
+        "src/lib/account/reports/stock-detail.ts",
+        "src/components/account/profit-report-view.module.css",
+        "src/components/account/profit-report-view.tsx",
+        "src/lib/account/reports/profit-presentation.test.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -65109,6 +65168,31 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference layout/filter scope and final-head/device validation. Earlier Stock Summary/Low Stock Summary search/card presentation gaps are addressed by this slice;pixel-level reference and device runtime are not certified. A090-F01 other display consumers remain PARTIAL. All199 final statuses remain unset until checkpoint-wide validation."
+        },
+        "profit_report_presentation_2026_10_18": {
+          "implementation_commit": "15366d0397439f764a124069288e3c70808e5995",
+          "work": "Profit reports now aggregate tax-exclusive revenue and profit from their existing displayed row groups,net of signed credit notes,without changing cost queries or fabricating service costs. Bill Wise Profit appends date/party/document type while retaining original first6 column positions and existing authorized Web/native detail destinations. Bill/Party profit use responsive Web table/cards and native bounded cards with calculation details;Web money/date and native server-formatted values reused. Shared item-profit computation also receives the same row-scoped monetary summaries. No ledger write,schema,migration or production operation.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/components/account/profit-report-view.module.css",
+            "src/components/account/profit-report-view.tsx",
+            "src/lib/account/reports/profit-presentation.test.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "124 tests across20 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. New6 profit tests cover signed credit/COGS/net summaries,mixed units,identically named party identities,zero/service-cost behavior,query ownership/role filters,date/money formatting and exact large cents.",
+            "browser_api_export": "Final2 actual desktop/mobile Chromium cases PASS(1.0m): posted100 sale minus25 credit yields net75 revenue/profit with no fabricated service cost;bill date/party/type and existing Sale Details link;party group;actual native report/credit-detail HTTP;CSV/XLSX/PDF totals/metadata;empty scope,Project Manager403,Axe AA/no root overflow,unchanged stock/journal counts.",
+            "android": "compileDebugKotlin +17 AccountReportData JVM tests PASS(3m23s),0 failures/errors/skips. Extra bill metadata/signed credit rows and safe native destinations parsed;native card/heading layout compiled only. Emulator/device runtime NOT RUN.",
+            "typescript": "Final PASS after browser runtime.",
+            "eslint": "Final focused PASS;git diff --check PASS.",
+            "initial_runtime_correction": "Initial mobile case expired the default5s Sale Details navigation assertion during cold dev compilation;desktop passed. Existing30s URL/15s heading waits applied;final2 profiles PASS without source financial/navigation logic changes.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned."
         }
       },
       "intermediate_validation": {
@@ -67599,6 +67683,28 @@
         "status": "completed",
         "conclusion": "success",
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39149244168"
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "15366d0397439f764a124069288e3c70808e5995",
+      "scope": "A084/A085 Bill/Party profit summaries/metadata/presentation with A090 display reuse",
+      "tests": {
+        "grouped_unit_database": "124 tests across20 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourite/company/user/Items-OFF cases. New6 profit tests cover signed credit/COGS/net summaries,mixed units,identically named party identities,zero/service-cost behavior,query ownership/role filters,date/money formatting and exact large cents.",
+        "browser_api_export": "Final2 actual desktop/mobile Chromium cases PASS(1.0m): posted100 sale minus25 credit yields net75 revenue/profit with no fabricated service cost;bill date/party/type and existing Sale Details link;party group;actual native report/credit-detail HTTP;CSV/XLSX/PDF totals/metadata;empty scope,Project Manager403,Axe AA/no root overflow,unchanged stock/journal counts.",
+        "android": "compileDebugKotlin +17 AccountReportData JVM tests PASS(3m23s),0 failures/errors/skips. Extra bill metadata/signed credit rows and safe native destinations parsed;native card/heading layout compiled only. Emulator/device runtime NOT RUN.",
+        "typescript": "Final PASS after browser runtime.",
+        "eslint": "Final focused PASS;git diff --check PASS.",
+        "initial_runtime_correction": "Initial mobile case expired the default5s Sale Details navigation assertion during cold dev compilation;desktop passed. Existing30s URL/15s heading waits applied;final2 profiles PASS without source financial/navigation logic changes.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned.",
+      "prior_head_ci": {
+        "head": "d6eb2d1008c1f91ec5d81e65804ca0f541ecb632",
+        "run_id": 39150258492,
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39150258492"
       }
     }
   ]
