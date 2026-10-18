@@ -1,3 +1,4 @@
+import {bankStatementOptions} from "@/lib/account/reports/bank-statement";
 import {stockDetailCategories} from "@/lib/account/reports/stock-detail-options";
 import tabsStyles from "./cash-bank-tabs.module.css";
 import Link from "next/link";
@@ -52,6 +53,7 @@ export default async function Page({
             ledgerId: q.ledgerId,
             ownerId: q.ownerId,
             accountType:q.accountType,
+            moneyAccountId:q.moneyAccountId,
             categoryId:q.categoryId,
             itemStatus:q.itemStatus,
           },
@@ -65,6 +67,7 @@ export default async function Page({
       note: isAccountDomainError(e)?accountErrorMessage((e as Error).message):e instanceof Error ? e.message : "Unable to load report",
     };
   }
+  const banks = report === "bank-statement" && data.columns.length ? await bankStatementOptions() : [];
   const categories = report === "stock-detail" && data.columns.length ? await stockDetailCategories() : [];
   const query = reportExportQuery(q,from,to,projectLifetime);
   const hubQuery=new URLSearchParams([...new URLSearchParams(query)].filter(([key])=>["scope","from","to","asOf","branchId"].includes(key))).toString();
@@ -136,6 +139,7 @@ export default async function Page({
             </>
           )}
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
+          {report === "bank-statement" && <Select name="moneyAccountId" label="Bank account" value={q.moneyAccountId} rows={banks}/>}
           {report === "stock-detail" && <>
             <Select name="categoryId" label="Item category" value={q.categoryId} rows={categories}/>
             <Select name="itemStatus" label="Item status" value={q.itemStatus} rows={[{id:"ACTIVE",name:"Active"},{id:"INACTIVE",name:"Inactive"}]}/>

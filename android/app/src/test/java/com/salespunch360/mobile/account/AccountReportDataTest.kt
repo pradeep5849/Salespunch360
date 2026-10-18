@@ -65,4 +65,11 @@ class AccountReportDataTest {
         assertEquals(input,accountReportRequestFilters(options,"stock-detail",input))
         assertTrue(accountReportRequestFilters(options,"stock-detail",mapOf("categoryId" to "","itemStatus" to "")).isEmpty())
     }
+    @Test fun bankStatementKeepsSelectedBankWithoutLeakingItToOtherReports() {
+        val input=mapOf("moneyAccountId" to "bank","from" to "2026-10-01")
+        assertEquals(input,accountReportRequestFilters(buildJsonObject{},"bank-statement",input))
+        assertEquals(mapOf("from" to "2026-10-01"),accountReportRequestFilters(buildJsonObject{},"cash-bank",input))
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"bank-statement","filters":["moneyAccountId"]}]}""").jsonObject
+        assertEquals(input,accountReportRequestFilters(options,"bank-statement",input))
+    }
 }

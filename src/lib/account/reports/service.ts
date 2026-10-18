@@ -1,3 +1,4 @@
+import {bankStatementReport} from "./bank-statement";
 import {financialLedgerBreakdown,type LedgerBreakdown} from "./ledger-breakdown";
 import {stockCategoryReport} from "./stock-category";
 import {stockDetailReport} from "./stock-detail";
@@ -57,6 +58,7 @@ const D = Prisma.Decimal.clone({precision:48}),
       productId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ledgerId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ownerId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      moneyAccountId: z.preprocess(blankFilter, z.string().uuid().optional()),
       categoryId: z.preprocess(blankFilter, z.union([z.string().uuid(), z.literal("UNCATEGORIZED")]).optional()),
       itemStatus: z.preprocess(blankFilter, z.enum(["ACTIVE", "INACTIVE"]).optional()),
       accountType:z.preprocess(blankFilter,z.enum(["CASH","BANK","PETTY_CASH"]).optional()),
@@ -219,6 +221,7 @@ export async function runFinancialReportForActor(
   }
   if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(name==="stock-category")return stockCategoryReport(await context(raw,false,actor));
+  if(name==="bank-statement")return bankStatementReport(await context(raw,false,actor));
   if(name==="stock-detail")return stockDetailReport(await context(raw,false,actor));
   if(TRANSACTION_REPORTS.includes(name))return transactionReport(name,await context(raw,false,actor));
   if (name === "projects" || name === "budget-vs-actual")

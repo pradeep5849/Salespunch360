@@ -2776,3 +2776,32 @@ test("A084 Stock Detail reconciles negative opening and period movements on web 
   expect(await db.stockMovement.count({where:{companyId}})).toBe(movementCount);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountProduct.delete({where:{id:foreign.id}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},negativeStockAllowed:before.negativeStockAllowed,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
 });
+
+test("A084 Bank Statement reconciles opening transfers reversals and scoped native exports",async({page})=>{
+ test.setTimeout(180000);
+ const {createMoneyAccountForActor,createMoneyTransferForActor}=await import("../src/lib/account/money");
+ const tag=randomUUID().slice(0,8),reportBranch=await db.branch.create({data:{companyId,name:`Statement branch ${tag}`,code:`BS${tag}`}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Statement year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ const bank=await createMoneyAccountForActor(actor,{name:`Statement bank ${tag}`,type:"BANK",branchId:reportBranch.id,openingBalance:"100",openingDate:"2026-09-30",creationRequestKey:randomUUID()}),cash=await createMoneyAccountForActor(actor,{name:`Statement cash ${tag}`,type:"CASH",branchId:reportBranch.id,openingBalance:"50",openingDate:"2026-09-30",creationRequestKey:randomUUID()});
+ const transfer=await createMoneyTransferForActor(actor,{branchId:reportBranch.id,sourceAccountId:cash.id,destinationAccountId:bank.id,amount:"20",transferDate:"2026-10-13",idempotencyKey:randomUUID()});
+ await reverseJournalForActor(actor,{journalEntryId:transfer.journalEntryId,entryDate:"2026-10-15",reason:"Bank statement reversal fixture"});
+ await createMoneyTransferForActor(actor,{branchId:reportBranch.id,sourceAccountId:bank.id,destinationAccountId:cash.id,amount:"5",transferDate:"2026-10-18",idempotencyKey:randomUUID()});
+ await createMoneyTransferForActor(actor,{branchId:reportBranch.id,sourceAccountId:cash.id,destinationAccountId:bank.id,amount:"9",transferDate:"2026-10-19",idempotencyKey:randomUUID()});
+ await db.moneyAccount.update({where:{id:bank.id},data:{isActive:false}});
+ const journals=await db.journalEntry.count({where:{companyId}}),query=`branchId=${reportBranch.id}&from=2026-10-01&to=2026-10-18`;
+ await signInSettings(page);await page.goto(`/workspace/account/reports?${query}`);await page.getByRole("searchbox",{name:"Search reports"}).fill("Bank Statement");await page.getByRole("link",{name:"Bank Statement",exact:true}).click();await expect(page).toHaveURL(/reports\/bank-statement\?/,{timeout:30000});
+ await expect(page.getByText("Select a bank account to view its statement.",{exact:true})).toBeVisible();await expect(page.getByLabel("Bank account",{exact:true}).locator("option")).not.toContainText([cash.name]);
+ await page.getByLabel("Bank account",{exact:true}).selectOption(bank.id);await page.getByRole("button",{name:"Run report",exact:true}).click();await expect(page).toHaveURL(new RegExp(`moneyAccountId=${bank.id}`),{timeout:30000});
+ const summary=page.getByRole("region",{name:"Report summary",exact:true});await expect(summary).toContainText("₹100.00");await expect(summary).toContainText("₹25.00");await expect(summary).toContainText("₹20.00");await expect(summary).toContainText("₹95.00");await expect(page.locator("tbody tr")).toHaveCount(3);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+ const filters=`${query}&moneyAccountId=${bank.id}`;
+ for(const format of ["csv","xlsx","pdf"]){const response=await page.request.get(`/api/account/reports/bank-statement/${format}?${filters}`);expect(response.status()).toBe(200);if(format==="csv"){const text=await response.text();expect(text).toContain(bank.name);expect(text).toContain("95.00")}else if(format==="pdf"){expect((await extractPdfText(await response.body())).text).toContain("95.00")}else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await response.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain("95.00")}}
+ const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+ const response=await page.request.get(`/api/v1/mobile/account/reports/bank-statement?${filters}`,{headers});expect(response.status()).toBe(200);const native=await response.json();expect(native.rows).toHaveLength(3);expect(native.summary.map((x:{value:string})=>x.value)).toEqual(["100.00","25.00","20.00","95.00"]);
+ const options=await page.request.get("/api/v1/mobile/account/reports/options",{headers});expect(options.status()).toBe(200);const banks=(await options.json()).bankAccounts;expect(banks).toContainEqual({id:bank.id,name:bank.name});expect(banks.some((row:{id:string})=>row.id===cash.id)).toBe(false);
+ expect((await page.request.get(`/api/v1/mobile/account/reports/bank-statement?${query}&moneyAccountId=${cash.id}`,{headers})).status()).toBe(403);
+ expect((await page.request.get(`/api/v1/mobile/account/reports/bank-statement?${query}&moneyAccountId=${randomUUID()}`,{headers})).status()).toBe(403);
+ await expect(runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchId]},"bank-statement",{moneyAccountId:bank.id,from:"2026-10-01",to:"2026-10-18"})).rejects.toThrow();
+ await page.getByLabel("Bank account",{exact:true}).selectOption("");await page.getByRole("button",{name:"Run report",exact:true}).click();await expect(page.getByText("Select a bank account to view its statement.",{exact:true})).toBeVisible();expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+});

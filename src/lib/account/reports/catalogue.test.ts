@@ -35,3 +35,5 @@ it("maps the category stock snapshot without unrelated Project/party dimensions"
 it("maps Stock Detail to its own period movement destination",()=>{
  expect(searchReportCatalogue("ACCOUNT_ADMIN","Stock Detail")).toEqual([{key:"stock-detail",name:"Stock Detail Report",group:"Item/Stock reports"}]);expect(reportSpecificFilters("stock-detail")).toEqual(["categoryId","itemStatus"]);expect(searchReportCatalogue("PROJECT_MANAGER","Stock Detail")).toEqual([]);
 });
+
+it("maps Bank Statement to its own bank-filtered destination",()=>{expect(searchReportCatalogue("ACCOUNT_ADMIN","Bank Statement")).toEqual([{key:"bank-statement",name:"Bank Statement",group:"Business status"}]);expect(reportSpecificFilters("bank-statement")).toEqual(["moneyAccountId"]);expect(searchReportCatalogue("PROJECT_MANAGER","Bank Statement")).toEqual([])});

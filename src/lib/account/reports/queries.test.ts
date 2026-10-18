@@ -12,3 +12,5 @@ it("preserves category and item status in exports",()=>{
  const query=new URLSearchParams(reportExportQuery({categoryId:"UNCATEGORIZED",itemStatus:"INACTIVE"},"2026-10-01","2026-10-18"));
  expect(query.get("categoryId")).toBe("UNCATEGORIZED");expect(query.get("itemStatus")).toBe("INACTIVE");
 });
+
+it("preserves the selected bank in export requests",()=>{expect(new URLSearchParams(reportExportQuery({moneyAccountId:"bank"},"2026-10-01","2026-10-18")).get("moneyAccountId")).toBe("bank")});

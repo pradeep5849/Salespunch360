@@ -111,6 +111,10 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                 Option("Product", state.productId, state.options.array("products")) { vm.filter("product", it) }
             }
         }
+        if (state.report=="bank-statement") {
+            val choose = buildJsonObject { put("id", "");put("name", "Select bank account") }
+            Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
+        }
         if (state.report=="stock-detail") {
             val all = buildJsonObject { put("id", ""); put("name", "All") }
             Option("Item category",state.categoryId,listOf(all)+state.options.array("stockCategories")){vm.filter("categoryId",it)}
