@@ -57363,6 +57363,34 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03 other report layouts/computations and A090-F01 remaining display consumers/final-head/device verification remain PARTIAL. No migrations,posting rule changes or production access."
+        },
+        "category_stock_report_2026_10_18": {
+          "implementation_commit": "5cc3e3e1ebab8a69171700767e77a91f03847db0",
+          "work": "Stock Summary by Item Category is now a shared report destination backed by existing scoped stock movement valuation. Groups by canonical category/unit, retains inactive tracked items and separates unspecified units per product. To-date closing balances include prior history; unrelated filters rejected. Web and native use As-of controls. Shared catalogue/favourites hide it for Items OFF or insufficient role/module access without deleting saved favourites. Values honor display/export currency; quantities retain four decimals.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-category.test.ts",
+            "src/lib/account/reports/stock-category.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "83 tests across15 actual files PASS,0 failures/skips: full reports group plus stock-summary-report; includes6 actual local PostgreSQL favourites/user/company/Items-toggle checks. Earlier49 focused tests are a subset, not additional final evidence.",
+            "browser_api": "2 desktop/mobile Chromium cases PASS(50.8s): real opening stock, inactive item, different units, future/other-branch exclusion, source-cost valuation despite changed master costs, hub navigation, CSV, actual native HTTP response, foreign metadata/invalid branch/Project Manager denials, Items OFF hiding/direct rejection, Axe AA/no overflow, unchanged stock movement and journal counts. Native HTTP is not emulator/device verification.",
+            "android": "compileDebugKotlin +11 AccountReportData JVM tests PASS(2m1s),0 failures/errors/skips; server-catalogue/filter parsing and As-of control compile. No emulator/device runtime.",
+            "typescript": "PASS after final browser run",
+            "eslint": "PASS focused after final browser run; git diff --check PASS",
+            "initial_runtime_corrections": "Initial run had a5s cold-navigation assertion timeout and used a session version captured before sign-in, yielding401. Added navigation wait/current session fixture. Next run expected raw native value cells although the existing API returns company-formatted cells; assertions corrected to existing display contract. Final run2/2 PASS; report amount/branch/unit/no-write assertions unchanged.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work."
         }
       }
     },
@@ -61175,6 +61203,34 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A085-F02/A084-F03 other supplied computations/layouts remain PARTIAL. No balance-report relabelling,stock basis change,migration or production write."
+        },
+        "category_stock_report_2026_10_18": {
+          "implementation_commit": "5cc3e3e1ebab8a69171700767e77a91f03847db0",
+          "work": "Stock Summary by Item Category is now a shared report destination backed by existing scoped stock movement valuation. Groups by canonical category/unit, retains inactive tracked items and separates unspecified units per product. To-date closing balances include prior history; unrelated filters rejected. Web and native use As-of controls. Shared catalogue/favourites hide it for Items OFF or insufficient role/module access without deleting saved favourites. Values honor display/export currency; quantities retain four decimals.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-category.test.ts",
+            "src/lib/account/reports/stock-category.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "83 tests across15 actual files PASS,0 failures/skips: full reports group plus stock-summary-report; includes6 actual local PostgreSQL favourites/user/company/Items-toggle checks. Earlier49 focused tests are a subset, not additional final evidence.",
+            "browser_api": "2 desktop/mobile Chromium cases PASS(50.8s): real opening stock, inactive item, different units, future/other-branch exclusion, source-cost valuation despite changed master costs, hub navigation, CSV, actual native HTTP response, foreign metadata/invalid branch/Project Manager denials, Items OFF hiding/direct rejection, Axe AA/no overflow, unchanged stock movement and journal counts. Native HTTP is not emulator/device verification.",
+            "android": "compileDebugKotlin +11 AccountReportData JVM tests PASS(2m1s),0 failures/errors/skips; server-catalogue/filter parsing and As-of control compile. No emulator/device runtime.",
+            "typescript": "PASS after final browser run",
+            "eslint": "PASS focused after final browser run; git diff --check PASS",
+            "initial_runtime_corrections": "Initial run had a5s cold-navigation assertion timeout and used a session version captured before sign-in, yielding401. Added navigation wait/current session fixture. Next run expected raw native value cells although the existing API returns company-formatted cells; assertions corrected to existing display contract. Final run2/2 PASS; report amount/branch/unit/no-write assertions unchanged.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work."
         }
       }
     },
@@ -64541,6 +64597,34 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A090-F01 remains PARTIAL for other display consumers/final-head validation. Hindi remains intentionally deferred. A080-F01 theme/print layout is not completed by this formatting slice."
+        },
+        "category_stock_report_2026_10_18": {
+          "implementation_commit": "5cc3e3e1ebab8a69171700767e77a91f03847db0",
+          "work": "Stock Summary by Item Category is now a shared report destination backed by existing scoped stock movement valuation. Groups by canonical category/unit, retains inactive tracked items and separates unspecified units per product. To-date closing balances include prior history; unrelated filters rejected. Web and native use As-of controls. Shared catalogue/favourites hide it for Items OFF or insufficient role/module access without deleting saved favourites. Values honor display/export currency; quantities retain four decimals.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/stock-category.test.ts",
+            "src/lib/account/reports/stock-category.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "83 tests across15 actual files PASS,0 failures/skips: full reports group plus stock-summary-report; includes6 actual local PostgreSQL favourites/user/company/Items-toggle checks. Earlier49 focused tests are a subset, not additional final evidence.",
+            "browser_api": "2 desktop/mobile Chromium cases PASS(50.8s): real opening stock, inactive item, different units, future/other-branch exclusion, source-cost valuation despite changed master costs, hub navigation, CSV, actual native HTTP response, foreign metadata/invalid branch/Project Manager denials, Items OFF hiding/direct rejection, Axe AA/no overflow, unchanged stock movement and journal counts. Native HTTP is not emulator/device verification.",
+            "android": "compileDebugKotlin +11 AccountReportData JVM tests PASS(2m1s),0 failures/errors/skips; server-catalogue/filter parsing and As-of control compile. No emulator/device runtime.",
+            "typescript": "PASS after final browser run",
+            "eslint": "PASS focused after final browser run; git diff --check PASS",
+            "initial_runtime_corrections": "Initial run had a5s cold-navigation assertion timeout and used a session version captured before sign-in, yielding401. Added navigation wait/current session fixture. Next run expected raw native value cells although the existing API returns company-formatted cells; assertions corrected to existing display contract. Final run2/2 PASS; report amount/branch/unit/no-write assertions unchanged.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work."
         }
       },
       "intermediate_validation": {
@@ -66904,6 +66988,28 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "A090-F01 remains PARTIAL for other display consumers/final-head validation. Hindi remains intentionally deferred. A080-F01 theme/print layout is not completed by this formatting slice."
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "5cc3e3e1ebab8a69171700767e77a91f03847db0",
+      "scope": "A084/A085 category stock report and shared A090 display",
+      "tests": {
+        "grouped_unit_database": "83 tests across15 actual files PASS,0 failures/skips: full reports group plus stock-summary-report; includes6 actual local PostgreSQL favourites/user/company/Items-toggle checks. Earlier49 focused tests are a subset, not additional final evidence.",
+        "browser_api": "2 desktop/mobile Chromium cases PASS(50.8s): real opening stock, inactive item, different units, future/other-branch exclusion, source-cost valuation despite changed master costs, hub navigation, CSV, actual native HTTP response, foreign metadata/invalid branch/Project Manager denials, Items OFF hiding/direct rejection, Axe AA/no overflow, unchanged stock movement and journal counts. Native HTTP is not emulator/device verification.",
+        "android": "compileDebugKotlin +11 AccountReportData JVM tests PASS(2m1s),0 failures/errors/skips; server-catalogue/filter parsing and As-of control compile. No emulator/device runtime.",
+        "typescript": "PASS after final browser run",
+        "eslint": "PASS focused after final browser run; git diff --check PASS",
+        "initial_runtime_corrections": "Initial run had a5s cold-navigation assertion timeout and used a session version captured before sign-in, yielding401. Added navigation wait/current session fixture. Next run expected raw native value cells although the existing API returns company-formatted cells; assertions corrected to existing display contract. Final run2/2 PASS; report amount/branch/unit/no-write assertions unchanged.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work.",
+      "prior_head_ci": {
+        "head": "490d8bdc57791371dc8bb77e3a4ea7d9c7d40d21",
+        "run_id": 39097038371,
+        "conclusion": "success",
+        "status": "completed",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39097038371"
+      }
     }
   ]
 }

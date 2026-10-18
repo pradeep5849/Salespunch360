@@ -9757,3 +9757,12 @@ A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Sav
 Code `705dd03f6dc444d74bef54a58cff916a1b929165` applies company Money to quotation totals/rates/gated cost and profit, plus AccountDate to issue/expiry dates.18 display tests and2 desktop/mobile-web browser cases PASS(33.6s): USD3decimals,ISOdates,cost privacy,no overflow,unchanged saved total/journals. Post-browser TypeScript,focused ESLint,diff check PASS.
 
 A090-F01 remains PARTIAL for other display consumers/final-head validation. Hindi remains intentionally deferred. A080-F01 theme/print layout is not completed by this formatting slice. Counts unchanged:179 implemented awaiting final verification,18partial,2notstarted; all199 original IDs retained.
+
+
+### 2026-10-18 — A084/A085 category stock report
+
+Code `5cc3e3e1ebab8a69171700767e77a91f03847db0` maps Stock Summary by Item Category through the shared Web/API/native catalogue using existing scoped movement valuation. Canonical units stay separate; unspecified units stay per product. Includes inactive tracked items and closing stock history through the selected To date, without secondary-unit conversion. Web/native As-of controls and favourite/Items-OFF gates added.
+
+83 grouped report/stock tests across15 actual files PASS,including6 isolated local PostgreSQL favourite/visibility checks. Android compileDebugKotlin +11 AccountReportData JVM tests PASS(2m1s). Final2 desktop/mobile-web checks PASS(50.8s):actual opening movements,branch/date/unit/value isolation,CSV,native HTTP,Items OFF/role denials,Axe/no overflow,no extra movements/journals. Test fixture navigation/session/display expectations corrected before final passing run; no failed run counted as a pass. Final post-browser TypeScript/focused ESLint/diff check PASS. No device/emulator claim; no migration.
+
+A084-F03/A085-F02 remain PARTIAL for other supplied catalogue computations/layouts and final-head/device validation. A090-F01 other display consumers remain PARTIAL. No secondary-unit conversion basis changed, migration, production operation or A104 work. Counts unchanged:179 implemented awaiting final verification,18partial,2notstarted. All199 original IDs and52pages retained; final complete-head validation pending. Prior checkpoint CI39097038371 succeeded at490d8bdc.
