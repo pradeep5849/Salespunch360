@@ -54924,7 +54924,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -55085,6 +55085,32 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F02 remains PARTIAL for native Add New Item return flow, remaining original selector scope and final-head/device verification. No migrations, posting-rule changes or production data access."
+        },
+        "native_item_return_and_selector_completion_2026_10_18": {
+          "implementation_commit": "9cc0f59602e87098d567d99fcfb9524fb515b605",
+          "work": "Android reuses the full native Add Item form inside quotation editing, selects the committed identity from fresh authorized quotation options, preserves quantity and quotation data, and retries failed returns without recreating the item. Photo retry/continue returns the same committed identity. The duplicate-save guard is scoped to embedded item creation so independent standalone creations still work. Item forms load only when opened by an eligible role. Both clients search saved items by name/code, retain selected items during filtering, and display saved purchase/estimated costs only with authoritative cost permission. Native refreshed master/unit/stock metadata remains read-only.",
+          "modified_files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountAddItemViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPartySelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/inventory/AddItemScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPartySelectionTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx"
+          ],
+          "tests": {
+            "focused_unit": "99 tests across 8 files PASS; clean TypeScript and focused ESLint PASS, git diff --check PASS.",
+            "android": "Final compileDebugKotlin + 26 focused JVM tests PASS (2m39s): 10 selection/balance/item tests, 7 draft-codec tests, 6 preview tests, 3 master-request tests; 0 failures/errors/skips. Includes exact large product rate, service rate, retained quantity/notes/replay identity/sibling lines, unit metadata and rejection of absent/wrong-kind/malformed option rows.",
+            "api_runtime": "2 native API scenarios PASS (15.7s) using Playwright profiles: committed product identity and idempotent retry, canonical product/service rates in fresh quote options, foreign-company exclusion, Data Entry cost/creation rejection, Items OFF rejection, no quotation/journal/stock mutations. These are server/API tests, not native UI/device runtime.",
+            "browser_runtime": "4 desktop/mobile Chromium cases PASS (1.6m): complete embedded web item form cancellation + post-commit return retry, distinct custom-field IDs/values and retained quotation draft, name/code search, selected option stability, authoritative product/service costs and Data Entry cost exclusion, responsive overflow.",
+            "initial_attempts": "The existing local test DB was stopped after environment restart; it was restarted preserving its data. An initial API test expected403 for Items OFF; existing domain contract returns400 ITEMS_DISABLED. Corrected the assertion, added explicit error-code/no-created-row checks and reran successfully. No backend behavior was weakened.",
+            "android_device": "NOT RUN: no emulator/device available. Touch/Back/TalkBack and actual native screen runtime remain unverified.",
+            "final_complete_head": "NOT RUN"
+          },
+          "scope_review": "Original A082-F02 code scope is now implemented: saved party/item search, authorized inline creation/return, branch filtering/reset, authorized stock/balance/cost metadata. Earlier implementation commits/evidence retained. This is code-status promotion only; final_status remains null.",
+          "remaining": "Final exact-head complete regression and Android emulator/device runtime remain outstanding; no final FIXED/VERIFIED classification. No migrations, production database operations, A104, merge or deployment."
         }
       },
       "push_checkpoint_evidence": {
@@ -66594,6 +66620,31 @@
         "final_complete_head": "NOT RUN"
       },
       "scope": "Intermediate native purchase default/cost parity;no final verification promotion"
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "9cc0f59602e87098d567d99fcfb9524fb515b605",
+      "scope": "A082-F02 code implementation completion; final verification not claimed",
+      "counts": {
+        "PARTIAL": 18,
+        "IMPLEMENTED BUT NOT VERIFIED": 179,
+        "NOT STARTED": 2
+      },
+      "previous_targeted_ci": {
+        "head": "df4958f11aa3002790c01c67cbcbe178af92281c",
+        "run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39065089646",
+        "web": "SUCCESS",
+        "android": "SUCCESS"
+      },
+      "current_tests": {
+        "focused_unit": "99 tests across 8 files PASS; clean TypeScript and focused ESLint PASS, git diff --check PASS.",
+        "android": "Final compileDebugKotlin + 26 focused JVM tests PASS (2m39s): 10 selection/balance/item tests, 7 draft-codec tests, 6 preview tests, 3 master-request tests; 0 failures/errors/skips. Includes exact large product rate, service rate, retained quantity/notes/replay identity/sibling lines, unit metadata and rejection of absent/wrong-kind/malformed option rows.",
+        "api_runtime": "2 native API scenarios PASS (15.7s) using Playwright profiles: committed product identity and idempotent retry, canonical product/service rates in fresh quote options, foreign-company exclusion, Data Entry cost/creation rejection, Items OFF rejection, no quotation/journal/stock mutations. These are server/API tests, not native UI/device runtime.",
+        "browser_runtime": "4 desktop/mobile Chromium cases PASS (1.6m): complete embedded web item form cancellation + post-commit return retry, distinct custom-field IDs/values and retained quotation draft, name/code search, selected option stability, authoritative product/service costs and Data Entry cost exclusion, responsive overflow.",
+        "initial_attempts": "The existing local test DB was stopped after environment restart; it was restarted preserving its data. An initial API test expected403 for Items OFF; existing domain contract returns400 ITEMS_DISABLED. Corrected the assertion, added explicit error-code/no-created-row checks and reran successfully. No backend behavior was weakened.",
+        "android_device": "NOT RUN: no emulator/device available. Touch/Back/TalkBack and actual native screen runtime remain unverified.",
+        "final_complete_head": "NOT RUN"
+      }
     }
   ]
 }

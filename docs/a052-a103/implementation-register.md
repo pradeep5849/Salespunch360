@@ -7150,7 +7150,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Select/new party/new item return paths; wrong-Branch selection prevented; cancellation retains draft; stock is read-only during estimation.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
@@ -9712,3 +9712,13 @@ Source commit `eb30ea51ec298f38a7745db7aae613fe853aafa8`. Web quotation Add New 
 99 focused tests PASS; TypeScript/focused ESLint PASS. Four balance/item browser regressions PASS (43.5s); final two custom-field/return-recovery desktop/mobile cases PASS (31.0s). Four standalone required-field/private-photo browser regressions PASS (49.0s).
 
 A082-F02 remains PARTIAL for native Add New Item return flow, remaining original selector scope and final-head/device verification. No migrations, posting-rule changes or production data access.
+
+### A082-F02 — native item return and selector completion (2026-10-18)
+
+Source commit `9cc0f59602e87098d567d99fcfb9524fb515b605`. Android reuses the full native Add Item form inside quotation editing, selects the committed identity from fresh authorized quotation options, preserves quantity and quotation data, and retries failed returns without recreating the item. Photo retry/continue returns the same committed identity. The duplicate-save guard is scoped to embedded item creation so independent standalone creations still work. Item forms load only when opened by an eligible role. Both clients search saved items by name/code, retain selected items during filtering, and display saved purchase/estimated costs only with authoritative cost permission. Native refreshed master/unit/stock metadata remains read-only.
+
+Original code scope reviewed against its saved finding: Original A082-F02 code scope is now implemented: saved party/item search, authorized inline creation/return, branch filtering/reset, authorized stock/balance/cost metadata. Earlier implementation commits/evidence retained. This is code-status promotion only; final_status remains null.
+
+99 focused tests, clean TypeScript and focused lint PASS. Android Kotlin compile + 26 focused JVM tests PASS (2m39s); 0 failures/errors/skips. Two native API scenarios PASS (15.7s; not device UI verification). Four desktop/mobile-web scenarios PASS (1.6m), including saved item search/cost privacy and retained-draft return recovery.
+
+Counts: 179 IMPLEMENTED BUT NOT VERIFIED; 18 PARTIAL; 2 NOT STARTED. All 199 IDs and 52 page mappings retained. Final exact-head complete regression and Android emulator/device runtime remain outstanding; no final FIXED/VERIFIED classification. No migrations, production database operations, A104, merge or deployment.
