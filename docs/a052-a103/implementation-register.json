@@ -53814,7 +53814,7 @@
       "permission_impact": "Preserve VIEW/EDIT/APPROVE/SHARE and cost-visibility server boundaries; exposing a control does not prove authorization.",
       "branch_company_impact": "Existing document queries scope company and assigned Branches; customer writes require matching Branch. No cross-company access demonstrated.",
       "accounting_financial_impact": "Estimate non-posting; resulting draft uses existing posting/accounting workflow. Keep Plus acceptance\u2192Project behavior distinct.",
-      "required_fix": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert.",
+      "required_fix": "Open authorized Add Sale with prefilled source revision details without persisting an invoice. Explicit Save posts a real Sale atomically with stable source linkage/replay identity; only successful posting closes the estimate. A Sale Order closes it when confirmed. Preserve lifecycle/history and module/permission/branch/company controls; Convert alone never posts or persists a Sale draft.",
       "required_tests": "Sale/order field carryover; source authorization and target permission/module; Branch consistency; replay/cancel/failure; no duplicate posting.",
       "original_status": "OPEN \u2014 RECORDED; NOT FIXED",
       "original_disposition": null,
@@ -53984,7 +53984,38 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
-      }
+      },
+      "checkpoint_work": {
+        "real_sale_save_policy_2026_10_18": {
+          "implementation_commit": "0534c952eac5f967f80e5a048be40e7866787c01",
+          "work": "Web/native Sale Save composes invoice creation, FY bootstrap, posting and optional receipt in one serializable/retried transaction. A failed Save leaves no newly persisted draft or partial submission. Receipt retry keys are retained and full-payment amounts use exact decimals. Generic web Sale actions also final-submit; selecting Sale in the generic editor opens the dedicated form. Direct/project-linked forms create nothing when left before Save.",
+          "modified_files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/commercial.test.ts",
+            "src/app/actions/commercial.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-submit.test.ts",
+            "src/lib/account/sale-submit.ts",
+            "src/lib/mobile/account-transactions.ts"
+          ],
+          "tests": {
+            "focused": "58 tests across4 files PASS: same-transaction composition, posting/receipt failures, exact full-payment balance and native key, zero receipt omission, invalid amount/cheque, permissions, legacy final-submit routing, safe errors and existing Sale/commercial services.",
+            "financial_database": "83 local PostgreSQL tests across3 files PASS (15.10s),0failures/skips: cheque finance, cheque transitions and project workflows.",
+            "api_runtime": "2 native API cases PASS: direct/project Sale rollback invoice/journal/receipt/new FY on invalid-bank receipt; real cash Save posts once and retry returns same posted identity without extra journals. HTTP tests in2 Playwright profiles, not device verification.",
+            "browser_runtime": "Final2 desktop/mobile-web cases PASS (52.6s): add items then leave direct/project Sale, no document/journal; generic type selector routes Sale without draft control; explicit web Save creates exactly one POSTED Sale20 with journal.",
+            "initial_checks": "Corrected test selectors to explicit Sale route, actual Quantity input and billed article; original no-save/Save/database assertions retained. Stopped a stalled test server and reran. Sale action error tests now mock the final-submit service; service tests independently exercise validation/composition.",
+            "typescript": "PASS clean",
+            "eslint": "PASS focused",
+            "android": "No Android source change in this backend slice. Prior26 JVM tests+compile retained; native device/emulator runtime NOT RUN.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Shared user-rule prerequisite only. A080-F02/A083-F01 remain PARTIAL for conversion entry/return/source linkage and Closed projection on posting/confirmation. No migration, production operation or A104. No unrelated original finding is closed by this shared change."
+        }
+      },
+      "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
     },
     {
       "finding_id": "A080-F03",
@@ -55819,7 +55850,7 @@
       "permission_impact": "Preserve VIEW/EDIT/APPROVE/SHARE and cost-visibility server boundaries; exposing a control does not prove authorization.",
       "branch_company_impact": "Existing document queries scope company and assigned Branches; customer writes require matching Branch. No cross-company access demonstrated.",
       "accounting_financial_impact": "Quotation drafts are non-posting; preserve that boundary and the authorized company/Branch.",
-      "required_fix": "Implement reference presentation and a deliberate Open/Closed mapping over retained lifecycle states; keep navigation from Menu into list. Preserve existing Home quick-action UI.",
+      "required_fix": "Implement reference presentation and a deliberate Open/Closed mapping over retained lifecycle states; keep navigation from Menu into list. Preserve existing Home quick-action UI. User clarification18October2026: keep Open until explicit Sale Save posts the real sale or Sale Order is confirmed. Convert-to-Sale only prefills an unsaved form, never a persisted Sale draft.",
       "required_tests": "Empty/populated/search/no-results; status group mapping; date/amount formatting; desktop/mobile/Android parity and accessibility.",
       "original_status": "OPEN \u2014 RECORDED; NOT FIXED",
       "original_disposition": null,
@@ -55889,13 +55920,43 @@
         "A082-F01",
         "A083-F02"
       ],
-      "checkpoint_work": [
-        {
-          "date": "2026-10-13",
-          "work": "Implemented estimate list cards, explicit complete lifecycle groups, bounded server-side party/number search and paging, illustrated empty/no-result states, Add Estimate preselection, permission-gated creation, native cards/group search with cancellation-aware debounce. Convert and balance semantics await the requested destination clarification; no financial conversion guessed.",
-          "tests": "55 focused quotation/filter/capability tests and 3 database integration tests passed (search corpus >200, pagination, cost redaction, assigned branch/company scope, core-product availability). Desktop + mobile-web list/empty/search/creation/axe/overflow: 2 passed after correcting document-type labeling and contrast; test waits for selected-filter navigation. Android compile, TypeScript/ESLint passed. Physical device/final-head validation pending."
+      "checkpoint_work": {
+        "prior_entries": [
+          {
+            "date": "2026-10-13",
+            "work": "Implemented estimate list cards, explicit complete lifecycle groups, bounded server-side party/number search and paging, illustrated empty/no-result states, Add Estimate preselection, permission-gated creation, native cards/group search with cancellation-aware debounce. Convert and balance semantics await the requested destination clarification; no financial conversion guessed.",
+            "tests": "55 focused quotation/filter/capability tests and 3 database integration tests passed (search corpus >200, pagination, cost redaction, assigned branch/company scope, core-product availability). Desktop + mobile-web list/empty/search/creation/axe/overflow: 2 passed after correcting document-type labeling and contrast; test waits for selected-filter navigation. Android compile, TypeScript/ESLint passed. Physical device/final-head validation pending."
+          }
+        ],
+        "real_sale_save_policy_2026_10_18": {
+          "implementation_commit": "0534c952eac5f967f80e5a048be40e7866787c01",
+          "work": "Web/native Sale Save composes invoice creation, FY bootstrap, posting and optional receipt in one serializable/retried transaction. A failed Save leaves no newly persisted draft or partial submission. Receipt retry keys are retained and full-payment amounts use exact decimals. Generic web Sale actions also final-submit; selecting Sale in the generic editor opens the dedicated form. Direct/project-linked forms create nothing when left before Save.",
+          "modified_files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/commercial.test.ts",
+            "src/app/actions/commercial.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-submit.test.ts",
+            "src/lib/account/sale-submit.ts",
+            "src/lib/mobile/account-transactions.ts"
+          ],
+          "tests": {
+            "focused": "58 tests across4 files PASS: same-transaction composition, posting/receipt failures, exact full-payment balance and native key, zero receipt omission, invalid amount/cheque, permissions, legacy final-submit routing, safe errors and existing Sale/commercial services.",
+            "financial_database": "83 local PostgreSQL tests across3 files PASS (15.10s),0failures/skips: cheque finance, cheque transitions and project workflows.",
+            "api_runtime": "2 native API cases PASS: direct/project Sale rollback invoice/journal/receipt/new FY on invalid-bank receipt; real cash Save posts once and retry returns same posted identity without extra journals. HTTP tests in2 Playwright profiles, not device verification.",
+            "browser_runtime": "Final2 desktop/mobile-web cases PASS (52.6s): add items then leave direct/project Sale, no document/journal; generic type selector routes Sale without draft control; explicit web Save creates exactly one POSTED Sale20 with journal.",
+            "initial_checks": "Corrected test selectors to explicit Sale route, actual Quantity input and billed article; original no-save/Save/database assertions retained. Stopped a stalled test server and reran. Sale action error tests now mock the final-submit service; service tests independently exercise validation/composition.",
+            "typescript": "PASS clean",
+            "eslint": "PASS focused",
+            "android": "No Android source change in this backend slice. Prior26 JVM tests+compile retained; native device/emulator runtime NOT RUN.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Shared user-rule prerequisite only. A080-F02/A083-F01 remain PARTIAL for conversion entry/return/source linkage and Closed projection on posting/confirmation. No migration, production operation or A104. No unrelated original finding is closed by this shared change."
         }
-      ],
+      },
       "push_checkpoint_evidence": {
         "original_problem": "Web renders number/type/revision/status rows without search, party, amount/balance/date or Convert. Native search exists but uses nine lifecycle chips and simple ListItems; native has no reference illustrated empty state.",
         "required_correction": "Implement reference presentation and a deliberate Open/Closed mapping over retained lifecycle states; keep navigation from Menu into list. Preserve existing Home quick-action UI.",
@@ -55998,7 +56059,8 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
-      }
+      },
+      "required_fix_before_user_sale_clarification": "Implement reference presentation and a deliberate Open/Closed mapping over retained lifecycle states; keep navigation from Menu into list. Preserve existing Home quick-action UI."
     },
     {
       "finding_id": "A083-F02",
@@ -66383,6 +66445,16 @@
       "update_sale_price": "Ask for confirmation before changing the saved retail price.",
       "source": "User async replies to call_7f8956ed234e4a828ba5a433542a72fd,items0and1",
       "implementation": "Both tax-inclusive MRP and explicit post-save retail-price confirmation implemented with focused evidence. A057-F03 remains PARTIAL for customer-specific rate consumption policy and final verification."
+    },
+    "conversion_closure_and_real_sale_only": {
+      "date": "2026-10-18",
+      "source": "Explicit user replies: close when sale is posted/order confirmed; Sale has no draft save; leaving midway without Save saves nothing; same for indirect/project-linked Sales.",
+      "decision": "Convert to Sale opens prefilled Add Sale without persisting an invoice. Explicit Save posts the real sale atomically. Leaving before Save creates nothing and leaves the estimate Open. Close only after successful Sale posting or Sale Order confirmation.",
+      "affected_findings": [
+        "A080-F02",
+        "A083-F01"
+      ],
+      "scope": "Overrides earlier target-draft wording for Sale. Source-linkage/conversion/closure integration remains PARTIAL."
     }
   },
   "push_checkpoint": {
@@ -66644,6 +66716,27 @@
         "initial_attempts": "The existing local test DB was stopped after environment restart; it was restarted preserving its data. An initial API test expected403 for Items OFF; existing domain contract returns400 ITEMS_DISABLED. Corrected the assertion, added explicit error-code/no-created-row checks and reran successfully. No backend behavior was weakened.",
         "android_device": "NOT RUN: no emulator/device available. Touch/Back/TalkBack and actual native screen runtime remain unverified.",
         "final_complete_head": "NOT RUN"
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "0534c952eac5f967f80e5a048be40e7866787c01",
+      "scope": "Shared direct/project Sale no-draft user rule; conversion prerequisites only",
+      "tests": {
+        "focused": "58 tests across4 files PASS: same-transaction composition, posting/receipt failures, exact full-payment balance and native key, zero receipt omission, invalid amount/cheque, permissions, legacy final-submit routing, safe errors and existing Sale/commercial services.",
+        "financial_database": "83 local PostgreSQL tests across3 files PASS (15.10s),0failures/skips: cheque finance, cheque transitions and project workflows.",
+        "api_runtime": "2 native API cases PASS: direct/project Sale rollback invoice/journal/receipt/new FY on invalid-bank receipt; real cash Save posts once and retry returns same posted identity without extra journals. HTTP tests in2 Playwright profiles, not device verification.",
+        "browser_runtime": "Final2 desktop/mobile-web cases PASS (52.6s): add items then leave direct/project Sale, no document/journal; generic type selector routes Sale without draft control; explicit web Save creates exactly one POSTED Sale20 with journal.",
+        "initial_checks": "Corrected test selectors to explicit Sale route, actual Quantity input and billed article; original no-save/Save/database assertions retained. Stopped a stalled test server and reran. Sale action error tests now mock the final-submit service; service tests independently exercise validation/composition.",
+        "typescript": "PASS clean",
+        "eslint": "PASS focused",
+        "android": "No Android source change in this backend slice. Prior26 JVM tests+compile retained; native device/emulator runtime NOT RUN.",
+        "final_complete_head": "NOT RUN"
+      },
+      "previous_targeted_ci": {
+        "head": "b16ceecb09753429be140b72e64eca854f15cb5d",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39091324398",
+        "status": "SUCCESS web+Android"
       }
     }
   ]

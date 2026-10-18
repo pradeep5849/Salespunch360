@@ -9722,3 +9722,13 @@ Original code scope reviewed against its saved finding: Original A082-F02 code s
 99 focused tests, clean TypeScript and focused lint PASS. Android Kotlin compile + 26 focused JVM tests PASS (2m39s); 0 failures/errors/skips. Two native API scenarios PASS (15.7s; not device UI verification). Four desktop/mobile-web scenarios PASS (1.6m), including saved item search/cost privacy and retained-draft return recovery.
 
 Counts: 179 IMPLEMENTED BUT NOT VERIFIED; 18 PARTIAL; 2 NOT STARTED. All 199 IDs and 52 page mappings retained. Final exact-head complete regression and Android emulator/device runtime remain outstanding; no final FIXED/VERIFIED classification. No migrations, production database operations, A104, merge or deployment.
+
+### User rule — real Sale Save for direct and indirect/project Sales (18October2026)
+
+Source `0534c952eac5f967f80e5a048be40e7866787c01`. Web/native Sale Save composes invoice creation, FY bootstrap, posting and optional receipt in one serializable/retried transaction. A failed Save leaves no newly persisted draft or partial submission. Receipt retry keys are retained and full-payment amounts use exact decimals. Generic web Sale actions also final-submit; selecting Sale in the generic editor opens the dedicated form. Direct/project-linked forms create nothing when left before Save.
+
+Convert-to-Sale must only open prefilled Add Sale. No Sale draft is persisted; the estimate stays Open until Save successfully posts the Sale. A Sale Order closes the estimate when confirmed. Explicit user clarification overrides earlier Sale target-draft wording; original source/finding records remain preserved in JSON.
+
+58 focused tests PASS;83 local PostgreSQL cheque/project regressions PASS (15.10s);2 native API cases PASS; final2 desktop/mobile-web cases PASS (52.6s), including actual web Save to POSTED20. Clean TypeScript/focused lint PASS. API profiles do not establish native-device runtime.
+
+Shared user-rule prerequisite only. A080-F02/A083-F01 remain PARTIAL for conversion entry/return/source linkage and Closed projection on posting/confirmation. No migration, production operation or A104. No unrelated original finding is closed by this shared change. Counts unchanged:179 code implemented awaiting final verification;18 partial;2 not started.
