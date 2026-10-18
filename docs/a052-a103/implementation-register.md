@@ -9750,3 +9750,10 @@ Code `264aedcd74e46f62f37f18334d5add34a3154d47` adds source/target permission an
 130 focused/grouped tests across6 files PASS;5 actual local PostgreSQL tests PASS;2 native HTTP runtime cases in desktop/mobile-web profiles PASS(15.7s). No additional business rows or source transitions occur during preparation. TypeScript, focused ESLint and diff check PASS. No new UI/device/Android runtime verification; no migration. Initial test-only settlement-model/actor fixture errors were corrected before final checks.
 
 A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Save/confirm closure and Web/native controls remain pending. Approval eligibility for Draft/Pending Approval sources is awaiting user decision; no rule invented. No migration or production operation. Counts remain179 implemented awaiting verification,18partial,2notstarted,199 IDs across52pages. Prior-head CI39094049701 succeeded at61ee95b6; final complete-head validation remains pending.
+
+
+### 2026-10-18 — A090 quotation detail display
+
+Code `705dd03f6dc444d74bef54a58cff916a1b929165` applies company Money to quotation totals/rates/gated cost and profit, plus AccountDate to issue/expiry dates.18 display tests and2 desktop/mobile-web browser cases PASS(33.6s): USD3decimals,ISOdates,cost privacy,no overflow,unchanged saved total/journals. Post-browser TypeScript,focused ESLint,diff check PASS.
+
+A090-F01 remains PARTIAL for other display consumers/final-head validation. Hindi remains intentionally deferred. A080-F01 theme/print layout is not completed by this formatting slice. Counts unchanged:179 implemented awaiting final verification,18partial,2notstarted; all199 original IDs retained.

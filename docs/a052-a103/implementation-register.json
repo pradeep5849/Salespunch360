@@ -64524,6 +64524,23 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A090 remains PARTIAL for remaining display consumers and final-head/runtime checks. Hindi intentionally deferred by user."
+        },
+        "quotation_details_display_2026_10_18": {
+          "implementation_commit": "705dd03f6dc444d74bef54a58cff916a1b929165",
+          "work": "Quotation Details totals, line rates/totals and gated internal cost/profit use company Money formatting; issue/valid-until dates use AccountDate. Quantities and persisted revision values are unchanged. Existing cost visibility retained.",
+          "files": [
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "unit": "18 display-preference tests PASS,0 failed/skipped.",
+            "browser": "2 desktop/mobile Chromium cases PASS(33.6s): USD3-decimal totals/rates/costs and ISO issue/expiry dates; no document overflow; Data Entry cost privacy; unchanged saved grand total and journal count.",
+            "typescript": "PASS after browser run",
+            "eslint": "PASS focused; git diff --check PASS",
+            "android": "No Android source changed; no new device/runtime claim.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090-F01 remains PARTIAL for other display consumers/final-head validation. Hindi remains intentionally deferred. A080-F01 theme/print layout is not completed by this formatting slice."
         }
       },
       "intermediate_validation": {
@@ -66873,6 +66890,20 @@
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39094049701"
       },
       "pending_business_decision": "Whether Draft or Pending Approval estimates may be converted, or approval is required. User question pending; affects writes, not read-only preparation."
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "705dd03f6dc444d74bef54a58cff916a1b929165",
+      "scope": "A090 quotation details display consumer",
+      "tests": {
+        "unit": "18 display-preference tests PASS,0 failed/skipped.",
+        "browser": "2 desktop/mobile Chromium cases PASS(33.6s): USD3-decimal totals/rates/costs and ISO issue/expiry dates; no document overflow; Data Entry cost privacy; unchanged saved grand total and journal count.",
+        "typescript": "PASS after browser run",
+        "eslint": "PASS focused; git diff --check PASS",
+        "android": "No Android source changed; no new device/runtime claim.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A090-F01 remains PARTIAL for other display consumers/final-head validation. Hindi remains intentionally deferred. A080-F01 theme/print layout is not completed by this formatting slice."
     }
   ]
 }
