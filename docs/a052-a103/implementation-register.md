@@ -9741,3 +9741,12 @@ Code commit `3a934530c1e0bd50f6948198dba0b414be023478` adds pure mapping for can
 38 tests in3 files PASS,0 failures/skips: quotation conversion prefill, quotation calculation and Sale preview. Grouped regression: 101 passed (101); quotation prefill/calculation/service runtime and Sale preview/submit,5 files. TypeScript, focused ESLint and diff check pass. Browser/device/DB runtime not run for this pure helper; no migration. The helper is not yet connected to conversion UI or persistence.
 
 A080-F02/A083-F01 remain PARTIAL: authorized conversion entry/prefill return, immutable source-revision linkage, replay/concurrency protection, Sale Save/order-confirm closure, Web/native controls and end-to-end verification remain pending. Counts unchanged:179 implemented awaiting final verification,18 partial,2 not started; all199 original IDs retained. Prior-head targeted CI39092777204 succeeded at34b028c7; final-head full validation remains pending.
+
+
+### 2026-10-18 — A080/A083 scoped read-only preparation
+
+Code `264aedcd74e46f62f37f18334d5add34a3154d47` adds source/target permission and module checks, scoped current revision, exact saved-total reconciliation and native GET `/api/v1/mobile/account/quotations/[id]/conversion-preview`. Returns prefill and separate full source terms/schedule without private costs or any persisted target/intent.
+
+130 focused/grouped tests across6 files PASS;5 actual local PostgreSQL tests PASS;2 native HTTP runtime cases in desktop/mobile-web profiles PASS(15.7s). No additional business rows or source transitions occur during preparation. TypeScript, focused ESLint and diff check PASS. No new UI/device/Android runtime verification; no migration. Initial test-only settlement-model/actor fixture errors were corrected before final checks.
+
+A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Save/confirm closure and Web/native controls remain pending. Approval eligibility for Draft/Pending Approval sources is awaiting user decision; no rule invented. No migration or production operation. Counts remain179 implemented awaiting verification,18partial,2notstarted,199 IDs across52pages. Prior-head CI39094049701 succeeded at61ee95b6; final complete-head validation remains pending.

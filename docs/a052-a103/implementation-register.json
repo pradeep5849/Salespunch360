@@ -54033,6 +54033,31 @@
             "database_runtime": "NOT RUN; no DB queries, schema or migration changes."
           },
           "remaining_limitation": "A080-F02/A083-F01 remain PARTIAL: authorized conversion entry/prefill return, immutable source-revision linkage, replay/concurrency protection, Sale Save/order-confirm closure, Web/native controls and end-to-end verification remain pending."
+        },
+        "conversion_preparation_2026_10_18": {
+          "date": "2026-10-18",
+          "implementation_commit": "264aedcd74e46f62f37f18334d5add34a3154d47",
+          "work": "Added authorized read-only quotation conversion preparation and native GET endpoint. Target permission/modules plus company/branch visibility, current revision and exact saved-total reconciliation checked. Canonical prices/discounts/charges and full separate source terms/payment schedule returned; no cost fields or persisted target/creation intent. Lead-only sources do not create customers or Projects. No lifecycle/posting conversion is enabled by this prerequisite.",
+          "modified_files": [
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/quotations/conversion-preview.test.ts",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.test.ts",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused_grouped": "130 tests across6 files PASS,0 failed/skipped: preparation, mapping, native route handlers, quotation service/calculation and atomic Sale submit.",
+            "database": "5 local PostgreSQL tests PASS,0 failed/skipped; exact329.10 prefill, saved source unchanged, no target/customer/Project/receipt/journal/audit writes, stale revision and foreign-company/unassigned-branch denied.",
+            "api_runtime": "2 Playwright API cases PASS in desktop/mobile-web profiles (15.7s): actual token authentication, both targets, no-store, exact totals, stale409, query injection400, missing source404, Data Entry403, unchanged business row counts. HTTP tests only; no browser interaction or Android emulator/device claim.",
+            "typescript": "PASS npx tsc --noEmit after runtime run",
+            "lint": "PASS focused ESLint including e2e file; git diff --check PASS",
+            "initial_test_correction": "Initial PG run4passed/1failed because the new test referred to client.settlement instead of existing accountSettlement. Test reference corrected; all5 then passed. Initial TypeScript fixture omitted required actor properties; fixture completed before final typecheck.",
+            "android": "No Android source changes; device/emulator NOT RUN.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Save/confirm closure and Web/native controls remain pending. Approval eligibility for Draft/Pending Approval sources is awaiting user decision; no rule invented. No migration or production operation."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -55995,6 +56020,31 @@
             "database_runtime": "NOT RUN; no DB queries, schema or migration changes."
           },
           "remaining_limitation": "A080-F02/A083-F01 remain PARTIAL: authorized conversion entry/prefill return, immutable source-revision linkage, replay/concurrency protection, Sale Save/order-confirm closure, Web/native controls and end-to-end verification remain pending."
+        },
+        "conversion_preparation_2026_10_18": {
+          "date": "2026-10-18",
+          "implementation_commit": "264aedcd74e46f62f37f18334d5add34a3154d47",
+          "work": "Added authorized read-only quotation conversion preparation and native GET endpoint. Target permission/modules plus company/branch visibility, current revision and exact saved-total reconciliation checked. Canonical prices/discounts/charges and full separate source terms/payment schedule returned; no cost fields or persisted target/creation intent. Lead-only sources do not create customers or Projects. No lifecycle/posting conversion is enabled by this prerequisite.",
+          "modified_files": [
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/quotations/conversion-preview.test.ts",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.test.ts",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused_grouped": "130 tests across6 files PASS,0 failed/skipped: preparation, mapping, native route handlers, quotation service/calculation and atomic Sale submit.",
+            "database": "5 local PostgreSQL tests PASS,0 failed/skipped; exact329.10 prefill, saved source unchanged, no target/customer/Project/receipt/journal/audit writes, stale revision and foreign-company/unassigned-branch denied.",
+            "api_runtime": "2 Playwright API cases PASS in desktop/mobile-web profiles (15.7s): actual token authentication, both targets, no-store, exact totals, stale409, query injection400, missing source404, Data Entry403, unchanged business row counts. HTTP tests only; no browser interaction or Android emulator/device claim.",
+            "typescript": "PASS npx tsc --noEmit after runtime run",
+            "lint": "PASS focused ESLint including e2e file; git diff --check PASS",
+            "initial_test_correction": "Initial PG run4passed/1failed because the new test referred to client.settlement instead of existing accountSettlement. Test reference corrected; all5 then passed. Initial TypeScript fixture omitted required actor properties; fixture completed before final typecheck.",
+            "android": "No Android source changes; device/emulator NOT RUN.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Save/confirm closure and Web/native controls remain pending. Approval eligibility for Draft/Pending Approval sources is awaiting user decision; no rule invented. No migration or production operation."
         }
       },
       "push_checkpoint_evidence": {
@@ -66800,6 +66850,29 @@
         "conclusion": "success",
         "limitation": "Prior head targeted CI; does not verify this helper or replace final-head full validation."
       }
+    },
+    {
+      "date": "2026-10-18",
+      "code_head": "264aedcd74e46f62f37f18334d5add34a3154d47",
+      "scope": "A080/A083 read-only conversion preparation; not complete conversion",
+      "tests": {
+        "focused_grouped": "130 tests across6 files PASS,0 failed/skipped: preparation, mapping, native route handlers, quotation service/calculation and atomic Sale submit.",
+        "database": "5 local PostgreSQL tests PASS,0 failed/skipped; exact329.10 prefill, saved source unchanged, no target/customer/Project/receipt/journal/audit writes, stale revision and foreign-company/unassigned-branch denied.",
+        "api_runtime": "2 Playwright API cases PASS in desktop/mobile-web profiles (15.7s): actual token authentication, both targets, no-store, exact totals, stale409, query injection400, missing source404, Data Entry403, unchanged business row counts. HTTP tests only; no browser interaction or Android emulator/device claim.",
+        "typescript": "PASS npx tsc --noEmit after runtime run",
+        "lint": "PASS focused ESLint including e2e file; git diff --check PASS",
+        "initial_test_correction": "Initial PG run4passed/1failed because the new test referred to client.settlement instead of existing accountSettlement. Test reference corrected; all5 then passed. Initial TypeScript fixture omitted required actor properties; fixture completed before final typecheck.",
+        "android": "No Android source changes; device/emulator NOT RUN.",
+        "final_complete_head": "NOT RUN"
+      },
+      "prior_head_ci": {
+        "head": "61ee95b6c401083e4aff4bbbb2513af07de100d4",
+        "run_id": 39094049701,
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39094049701"
+      },
+      "pending_business_decision": "Whether Draft or Pending Approval estimates may be converted, or approval is required. User question pending; affects writes, not read-only preparation."
     }
   ]
 }
