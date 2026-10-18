@@ -1,3 +1,4 @@
+import {ProfitReportView} from "@/components/account/profit-report-view";
 import {StockLevelView} from "@/components/account/stock-level-view";
 import {bankStatementOptions} from "@/lib/account/reports/bank-statement";
 import {stockDetailCategories} from "@/lib/account/reports/stock-detail-options";
@@ -168,7 +169,7 @@ export default async function Page({
             role="region"
             aria-label="Report results"
           >
-            {report==="stock-detail"?<StockDetailView data={data}/>: ["stock-summary","low-stock-summary"].includes(report)?<StockLevelView data={data}/>:["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
+            {report==="stock-detail"?<StockDetailView data={data}/>: ["stock-summary","low-stock-summary"].includes(report)?<StockLevelView data={data}/>:["invoices","customers"].includes(report)?<ProfitReportView data={data} billWise={report==="invoices"}/>: ["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
           </div>
         )}
       </section>

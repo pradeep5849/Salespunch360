@@ -84,4 +84,11 @@ class AccountReportDataTest {
         assertTrue(accountReportRequestFilters(buildJsonObject{},"bank-statement",filters).isEmpty())
         assertTrue(accountReportRequestFilters(buildJsonObject{},"stock-summary",mapOf("itemSearch" to "")).isEmpty())
     }
+    @Test fun profitRowsKeepBillMetadataAndAuthorizedNativeDetailLinks() {
+        val id="00000000-0000-4000-8000-000000000001"
+        val data=Json.parseToJsonElement("""{"rows":[["CR-1","-0.5000 Nos","-25.00","-15.00","-10.00","40.00","18/10/2026","Customer","CREDIT_NOTE"]],"nativeRowLinks":["/workspace/account/sales/$id"]}""").jsonObject
+        val row=accountReportRows(data).single()
+        assertEquals(listOf("18/10/2026","Customer","CREDIT_NOTE"),row.drop(6))
+        assertEquals("/workspace/account/sales/$id",accountReportDestination(accountReportLinks(data).single()))
+    }
 }

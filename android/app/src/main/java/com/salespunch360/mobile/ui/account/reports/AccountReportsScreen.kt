@@ -168,6 +168,22 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                         Text("Stock Value: ${row.getOrNull(4).orEmpty()}")
                     } } }
                 }
+            } else if(state.report in setOf("invoices","customers")) {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty()) Text("No profit records match the selected filters.")
+                if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    itemsIndexed(rows) { index,row ->
+                        val link=accountReportLinks(data).getOrNull(index)?.let{com.salespunch360.mobile.account.accountReportDestination(it)}
+                        Card(Modifier.fillMaxWidth().clickable(enabled=link!=null){link?.let(onNavigate)}) { Column(Modifier.padding(16.dp)) {
+                            Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
+                            if(state.report=="invoices") {Text(row.getOrNull(7).orEmpty());Text(row.getOrNull(6).orEmpty());Text(row.getOrNull(8).orEmpty().replace('_',' '))}
+                            Text("Revenue (excluding tax): ${row.getOrNull(2).orEmpty()}")
+                            Text("Profit / Loss: ${row.getOrNull(4).orEmpty()}",fontWeight=FontWeight.Bold)
+                            Text("Quantity: ${row.getOrNull(1).orEmpty()}",style=MaterialTheme.typography.bodySmall)
+                            Text("Inventory cost: ${row.getOrNull(3).orEmpty()} · Margin: ${row.getOrNull(5).orEmpty()}%",style=MaterialTheme.typography.bodySmall)
+                        } }
+                    }
+                }
             } else LazyRow {
                 item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
                 itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.let{com.salespunch360.mobile.account.accountReportDestination(it)};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }

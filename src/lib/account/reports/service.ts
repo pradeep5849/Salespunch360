@@ -882,14 +882,15 @@ export async function runFinancialReportForActor(
     return {
       title: name==="items"?"Item Wise Profit & Loss":name==="invoices"?"Bill Wise Profit":"Party Wise Profit & Loss",
       columns: [
-        name.slice(0, -1),
+        name==="items"?"Item":name==="invoices"?"Invoice":"Party",
         "Quantity",
         "Revenue",
         "COGS",
         "Profit",
         "Margin %",
+        ...(name==="invoices"?["Date","Party","Type"]:[]),
       ],
-      rows: [...group.values()].map((x) => {
+      rows: [...group.entries()].map(([key,x]) => {
         const p = itemProfitability(x.revenue, x.cogs);
         return [
           x.label,
@@ -898,10 +899,12 @@ export async function runFinancialReportForActor(
           n(p.cogs),
           n(p.profit),
           p.marginPercent.toFixed(2),
+          ...(name==="invoices"?[docsById.get(key)!.issueDate.toISOString().slice(0,10),docsById.get(key)!.partyName,docsById.get(key)!.type]:[]),
         ];
       }),
+      summary:[{label:"Revenue (excluding tax)",value:[...group.values()].reduce((sum,row)=>sum.add(row.revenue),new D(0)).toString(),money:true},{label:"Total Profit / Loss",value:[...group.values()].reduce((sum,row)=>sum.add(row.revenue).sub(row.cogs),new D(0)).toString(),money:true}],
       ...(name==="invoices"?{rowLinks:[...group.keys()].map(id=>{const doc=docsById.get(id)!;return doc.type==="SALES_INVOICE"?`/workspace/account/sales/${id}`:`/workspace/account/transactions/${id}`}),nativeRowLinks:[...group.keys()].map(id=>`/workspace/account/sales/${id}`)}:{}),
-      note: "Tax-exclusive posted sales revenue less linked inventory movement cost; service cost is not fabricated. Quantities retain saved units; mixed units are not added or converted.",
+      note: "Tax-exclusive posted sales revenue,net of credit notes,less linked inventory movement cost; service cost is not fabricated. Summaries use exactly the displayed row scope. Quantities retain saved units; mixed units are not added or converted.",
     };
   }
 
