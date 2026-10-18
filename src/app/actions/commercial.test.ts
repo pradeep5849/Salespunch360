@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   create: vi.fn(),
+  auth:vi.fn(),
+  submit:vi.fn(),
   apply: vi.fn(),
   remind: vi.fn(),
   status: vi.fn(),
@@ -15,6 +17,8 @@ vi.mock("@/lib/account/commercial", () => ({
   schedulePaymentReminder: m.remind,
   setPaymentReminderStatus: m.status,
 }));
+vi.mock("@/lib/auth/authorization",()=>({requirePermissionForMutation:m.auth,AuthorizationError:class AuthorizationError extends Error{}}));
+vi.mock("@/lib/account/sale-submit",()=>({submitSaleForActor:m.submit}));
 vi.mock("next/navigation", () => ({ redirect: m.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidate }));
 import {
@@ -26,10 +30,13 @@ import {
 } from "./commercial";
 beforeEach(() => {
   vi.clearAllMocks();
+  m.submit.mockReset();
+  m.auth.mockResolvedValue({id:"actor",companyId:"company",role:"ACCOUNT_USER",accountRole:"ACCOUNT_ADMIN",isActive:true,accountAccessActive:true});
   m.status.mockResolvedValue({ documentId: "d" });
 });
 describe("commercial actions normal FormData contracts", () => {
   it("rejects incomplete cheque details before creating a sale", async () => {
+    m.submit.mockRejectedValueOnce(new Error("INVALID_INPUT"));
     const result = await submitSaleInvoiceAction({ type: "SALES_INVOICE" }, {
       paymentType: "CHEQUE", receivedAmount: 1593, chequeNumber: "", chequeDate: "2026-10-12",
     });
@@ -118,7 +125,7 @@ describe("client commercial create result", () => {
     async (code) => {
       const original = new Error(code),
         log = vi.spyOn(console, "error").mockImplementation(() => {});
-      m.create.mockRejectedValueOnce(original);
+      m.submit.mockRejectedValueOnce(original);
       try {
         const result = await createCommercialDocumentAction({
           type: "SALES_INVOICE",
@@ -140,6 +147,11 @@ describe("client commercial create result", () => {
       }
     },
   );
+  it("legacy Sale creation also uses final submission rather than an independently saved draft",async()=>{
+    m.submit.mockResolvedValueOnce({id:"sale",documentNumber:"01",status:"POSTED"});
+    expect(await createCommercialDocumentAction({type:"SALES_INVOICE"})).toEqual({ok:true,id:"sale",documentNumber:"01"});
+    expect(m.submit).toHaveBeenCalledWith(expect.objectContaining({companyId:"company"}),{type:"SALES_INVOICE"});expect(m.create).not.toHaveBeenCalled();
+  });
   it("does not disclose unexpected exception text or database details", async () => {
     const original = new Error("private database and customer data"),
       log = vi.spyOn(console, "error").mockImplementation(() => {});

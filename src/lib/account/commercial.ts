@@ -2382,8 +2382,8 @@ export async function documentOutstanding(documentId: string) {
 }
 /** A full-payment save collects only the remaining balance after advances.
  * Preserve the original amount on retries so the receipt key remains stable. */
-export async function saleReceiptBalanceForActor(actor: Actor, documentId: string, idempotencyKey: string) {
-  return db.$transaction(async tx => {
+export async function saleReceiptBalanceForActor(actor: Actor, documentId: string, idempotencyKey: string, transaction?: Prisma.TransactionClient) {
+  return inAccountTransaction(transaction,async tx => {
     const doc = await tx.commercialDocument.findFirst({where:{id:documentId,companyId:actor.companyId,type:"SALES_INVOICE",status:"POSTED"}});
     if (!doc) throw new Error("NOT_FOUND");
     assertBranch(actor,doc.branchId);

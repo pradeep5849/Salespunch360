@@ -1,3 +1,4 @@
+import {submitSaleForActor} from "@/lib/account/sale-submit";
 import { saleDetailForActor } from "@/lib/account/sale-detail";
 import { EFFECTIVE_SETTLEMENT } from "@/lib/account/settlement-policy";
 import { chequePaymentDetails } from "@/lib/account/cheque-payment-input";
@@ -16,13 +17,11 @@ import {
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
   createSettlementForActor,
-  saleReceiptBalanceForActor,
   documentOutstandingsBatch,
   getCommercialDocumentForActor,
   listCommercialDocumentsForActor,
   postCommercialDocumentForActor,
 } from "@/lib/account/commercial";
-import { ensureOpenFinancialYearForDate } from "@/lib/account/financial-year";
 import { db } from "@/lib/db";
 import type { MobileAppPrincipal } from "./auth";
 
@@ -154,38 +153,11 @@ export async function mobileCreateSales(
   delete documentPayload.receivedInFull;
   delete documentPayload.paymentType;
   for (const key of ["chequeNumber", "chequeDate", "moneyAccountId", "paymentReference"]) delete documentPayload[key];
-  const actor = permit(user, "ACCOUNT_JOURNAL_POST"),
-    row = await createCommercialDocumentForActor(actor, documentPayload);
-  try {
-    await ensureOpenFinancialYearForDate(
-      actor.companyId,
-      new Date(String(source.issueDate)),
-    );
-    await postCommercialDocumentForActor(actor, { documentId: row.id });
-  } catch (error) {
-    if (!documentPayload.idempotencyKey)
-      await db.commercialDocument
-        .deleteMany({ where: { id: row.id, status: "DRAFT" } })
-        .catch(() => undefined);
-    throw error;
-  }
-  const receivedAmount=source.receivedInFull===true?Number(await saleReceiptBalanceForActor(permit(user,"ACCOUNT_SETTLEMENT_ENTRY"),row.id,`mobile-sale-receipt:${row.id}`)):requestedReceived;
-  if (Number.isFinite(receivedAmount) && receivedAmount > 0) {
-    const receiptActor = permit(user, "ACCOUNT_SETTLEMENT_ENTRY");
-    await createSettlementForActor(receiptActor, {
-      idempotencyKey: `mobile-sale-receipt:${row.id}`,
-      type: "CUSTOMER_RECEIPT",
-      branchId: String(source.branchId),
-      partyId: String(source.partyId),
-      paymentMode: paymentType === "CHEQUE" ? "CHEQUE" : paymentType === "CASH" ? "CASH" : "BANK",
-      ...(source.moneyAccountId ? { moneyAccountId: source.moneyAccountId } : {}),
-      ...(paymentType === "CHEQUE" ? { chequeNumber: source.chequeNumber, chequeDate: source.chequeDate } : {}),
-      ...(source.paymentReference ? { reference: source.paymentReference } : {}),
-      amount: receivedAmount.toFixed(2),
-      transactionDate: String(source.issueDate),
-      allocations: [{ documentId: row.id, amount: receivedAmount.toFixed(2) }],
-    });
-  }
+  const actor=permit(user,"ACCOUNT_JOURNAL_POST");
+  const row=await submitSaleForActor(actor,documentPayload,{
+    receivedAmount:source.receivedAmount??"0",receivedInFull:source.receivedInFull===true,paymentType,
+    ...(source.moneyAccountId?{moneyAccountId:source.moneyAccountId}:{}),...(source.chequeNumber?{chequeNumber:source.chequeNumber}:{}),...(source.chequeDate?{chequeDate:source.chequeDate}:{}),...(source.paymentReference?{reference:source.paymentReference}:{}),
+  },"mobile-sale-receipt");
   return getCommercialDocumentForActor(actor, row.id);
 }
 export async function mobilePostSales(user: MobileAppPrincipal, id: string) {
