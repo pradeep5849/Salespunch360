@@ -2660,3 +2660,28 @@ test("A086 leaving direct or project Sale before Save creates no document",async
   await db.accountSettings.update({where:{companyId},data:{transactionDefaults:{...before.transactionDefaults as object,transactionPreferences:{invoicePreview:false}}}});await page.reload();await page.getByPlaceholder("Search customer name or phone").fill(party.name);await page.getByRole("button",{name:new RegExp(party.name)}).click();await page.getByRole("button",{name:/Add Items/}).click();await page.getByText(product.name,{exact:true}).click();const ready=page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})});await ready.getByLabel("Quantity",{exact:true}).fill("2");await ready.getByLabel("Rate (Price/Unit)",{exact:true}).fill("10");await ready.getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/account\/sales\/[a-f0-9-]+$/,{timeout:25000});const savedId=page.url().split("/").pop()!;const saved=await db.commercialDocument.findFirstOrThrow({where:{id:savedId,companyId}});expect(saved.status).toBe("POSTED");expect(saved.grandTotal.toString()).toBe("20");expect(saved.journalEntryId).toBeTruthy();expect(await db.commercialDocument.count({where:{companyId}})).toBe(docs+1);
  }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},transactionDefaults:before.transactionDefaults??{}}})}
 });
+
+
+test("A080 conversion preview API is scoped, exact and never persists a target",async({request})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}});
+ const token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});
+ const headers={authorization:`Bearer ${token}`};
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["QUOTATIONS_BOQ","SALES","SALES_ORDER"]}});
+  const actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const source=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-18",lines:[{lineType:"CUSTOM",itemName:"Negotiated work",quantity:"3",rate:"100",taxRate:"18",internalUnitCost:"60"}],adjustments:[{label:"Discount",type:"DISCOUNT",valueType:"FIXED",value:"30"},{label:"Transport",type:"ADDITIONAL_CHARGE",valueType:"FIXED",value:"10",taxable:true,taxRate:"5"}]});
+  const revision=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:source.id}});
+  const counts=async()=>Promise.all([db.commercialDocument.count({where:{companyId}}),db.journalEntry.count({where:{companyId}}),db.accountSettlement.count({where:{companyId}}),db.customer.count({where:{companyId}}),db.project.count({where:{companyId}}),db.quotationAuditEvent.count({where:{companyId}})]),initial=await counts();
+  const path=`/api/v1/mobile/account/quotations/${source.id}/conversion-preview`;
+  expect((await request.get(`${path}?targetType=SALES_INVOICE`)).status()).toBe(401);
+  for(const targetType of ["SALES_INVOICE","SALES_ORDER"]){
+   const response=await request.get(`${path}?targetType=${targetType}&revisionId=${revision.id}`,{headers});expect(response.status()).toBe(200);expect(response.headers()["cache-control"]).toBe("no-store");const body=await response.json();expect(body).toMatchObject({sourceDocumentId:source.id,sourceRevisionId:revision.id,targetType,branchId,partyId:customerId,grandTotal:"329.10",taxTotal:"49.10",lines:[{quantity:"3",rate:"100.00",discountValue:"30.00"},{itemName:"Transport",rate:"10.00",taxRate:"5"}]});expect(JSON.stringify(body)).not.toMatch(/internalCost|internalUnitCost|expectedProfit|creationRequest/);
+  }
+  expect((await request.get(`${path}?targetType=SALES_INVOICE&revisionId=${randomUUID()}`,{headers})).status()).toBe(409);
+  expect((await request.get(`${path}?targetType=SALES_INVOICE&companyId=${otherCompanyId}`,{headers})).status()).toBe(400);
+  expect((await request.get(`/api/v1/mobile/account/quotations/${randomUUID()}/conversion-preview?targetType=SALES_INVOICE`,{headers})).status()).toBe(404);
+  await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});expect((await request.get(`${path}?targetType=SALES_INVOICE`,{headers})).status()).toBe(403);
+  expect(await counts()).toEqual(initial);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:source.id}})).status).toBe("DRAFT");
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
+});

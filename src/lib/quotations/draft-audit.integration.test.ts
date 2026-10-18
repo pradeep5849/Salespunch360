@@ -6,6 +6,7 @@ if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(ur
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {createQuotationForActor,updateQuotationDraftForActor,getQuotationForActor,listQuotationsForActor,transitionQuotationForActor} from "./service";
+import {quotationConversionPreviewForActor} from "./conversion-preview";
 const companyId=randomUUID(),branchId=randomUUID(),userId=randomUUID(),customerId=randomUUID();
 let actor:Parameters<typeof createQuotationForActor>[0];
 const input={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",lines:[{lineType:"CUSTOM",itemName:"Original line",quantity:"1",rate:"100",internalUnitCost:"25"}],notes:"Original note"};
@@ -75,6 +76,25 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   const next=await createQuotationForActor(actor,{...request,creationRequestKey:randomUUID()});
   expect(next.id).not.toBe(first.id);expect(next.documentNumber).not.toBe(first.documentNumber);
   expect((await getQuotationForActor(actor,first.id)).status).toBe("DRAFT");
+ });
+
+ it("prepares exact conversion values without creating a target, customer, Project, receipt, journal or audit",async()=>{
+  const document=await createQuotationForActor(actor,{...input,documentType:"ESTIMATE",lines:[{lineType:"CUSTOM",itemName:"Negotiated work",quantity:"3",rate:"100",taxRate:"18",internalUnitCost:"60"}],adjustments:[{label:"Agreed discount",type:"DISCOUNT",valueType:"FIXED",value:"30"},{label:"Transport",type:"ADDITIONAL_CHARGE",valueType:"FIXED",value:"10",taxable:true,taxRate:"5"}],paymentSchedule:[{label:"Completion",valueType:"PERCENTAGE",value:"100"}]});
+  const counts=async()=>Promise.all([
+   client.commercialDocument.count({where:{companyId}}),client.customer.count({where:{companyId}}),client.project.count({where:{companyId}}),
+   client.accountSettlement.count({where:{companyId}}),client.journalEntry.count({where:{companyId}}),client.quotationAuditEvent.count({where:{companyId}}),
+  ]);
+  const before=await counts(),saved=await getQuotationForActor(actor,document.id);
+  const preview=await quotationConversionPreviewForActor(actor,{documentId:document.id,revisionId:saved.revisions[0].id,targetType:"SALES_INVOICE"});
+  expect(preview).toMatchObject({sourceDocumentId:document.id,sourceRevisionId:saved.revisions[0].id,partyId:customerId,branchId,grandTotal:"329.10",taxTotal:"49.10",lines:[{quantity:"3",rate:"100.00",discountValue:"30.00"},{itemName:"Transport",rate:"10.00",taxRate:"5"}],reference:{paymentSchedule:[{amount:"329.10"}]}});
+  expect(JSON.stringify(preview)).not.toMatch(/internalCost|internalUnitCost|expectedProfit|creationRequest/);
+  await quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_ORDER"});
+  await expect(quotationConversionPreviewForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},{documentId:document.id,targetType:"SALES_INVOICE"})).rejects.toThrow("NOT_FOUND");
+  await expect(quotationConversionPreviewForActor(actor,{documentId:document.id,revisionId:randomUUID(),targetType:"SALES_INVOICE"})).rejects.toThrow("QUOTATION_REVISION_CHANGED");
+  const foreignCompany=randomUUID();await client.company.create({data:{id:foreignCompany,name:"Foreign conversion fixture",slug:`conversion-${foreignCompany}`,productEdition:"SALESPUNCH360_ACCOUNT"}});
+  try{await expect(quotationConversionPreviewForActor({...actor,companyId:foreignCompany},{documentId:document.id,targetType:"SALES_INVOICE"})).rejects.toThrow("NOT_FOUND");}finally{await client.company.delete({where:{id:foreignCompany}})}
+  expect(await counts()).toEqual(before);
+  expect((await getQuotationForActor(actor,document.id)).status).toBe("DRAFT");
  });
 
 });
