@@ -1,5 +1,6 @@
 import {financialLedgerBreakdown,type LedgerBreakdown} from "./ledger-breakdown";
 import {stockCategoryReport} from "./stock-category";
+import {stockDetailReport} from "./stock-detail";
 import {EXPENSE_REPORTS,expenseReport} from "./expense-reports";
 import {TRANSACTION_REPORTS,transactionReport} from "./transaction-reports";
 import {reportSpecificFilters} from "./catalogue";
@@ -216,6 +217,7 @@ export async function runFinancialReportForActor(
   }
   if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(name==="stock-category")return stockCategoryReport(await context(raw,false,actor));
+  if(name==="stock-detail")return stockDetailReport(await context(raw,false,actor));
   if(TRANSACTION_REPORTS.includes(name))return transactionReport(name,await context(raw,false,actor));
   if (name === "projects" || name === "budget-vs-actual")
     return projectReport(name, raw, actor);

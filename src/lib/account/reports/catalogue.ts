@@ -24,6 +24,7 @@ export const REPORT_CATALOGUE = [
   ["branches", "Branch Report", "Business"],
   ["items", "Item Wise Profit & Loss", "Item/Stock reports"],
   ["stock-category", "Stock Summary by Item Category", "Item/Stock reports"],
+  ["stock-detail", "Stock Detail Report", "Item/Stock reports"],
   ["invoices", "Bill Wise Profit", "Transaction"],
   ["customers", "Party Wise Profit & Loss", "Party reports"],
   ["tax", "GST / Tax Report", "Tax"],

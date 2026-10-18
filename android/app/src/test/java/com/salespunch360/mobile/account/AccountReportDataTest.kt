@@ -5,6 +5,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun stockDetailRetainsDecimalStringsAndUsesOnlyDeclaredScope() {
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"stock-detail","name":"Stock Detail Report","group":"Item/Stock reports","filters":[]}]}""").jsonObject
+        assertEquals("stock-detail",accountReportCatalogue(options,"stock detail").single().key)
+        assertEquals(mapOf("from" to "2026-10-01","to" to "2026-10-18","branchId" to "branch"),accountReportRequestFilters(options,"stock-detail",mapOf("from" to "2026-10-01","to" to "2026-10-18","branchId" to "branch","projectId" to "unrelated")))
+        val data=Json.parseToJsonElement("""{"rows":[["Pipe","Steel","kg","-3.0000","2.2501","1.0000","-1.7499"]]}""").jsonObject
+        assertEquals(listOf("Pipe","Steel","kg","-3.0000","2.2501","1.0000","-1.7499"),accountReportRows(data).single())
+    }
     @Test fun categoryStockReportUsesServerCatalogueAndRejectsUnrelatedFilters() {
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"stock-category","name":"Stock Summary by Item Category","group":"Item/Stock reports","filters":[]}]}""").jsonObject
         assertEquals("stock-category",accountReportCatalogue(options,"stock summary").single().key)

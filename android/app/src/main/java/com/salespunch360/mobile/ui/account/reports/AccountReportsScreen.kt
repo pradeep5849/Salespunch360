@@ -127,7 +127,21 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             Text(data.str("title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             data.str("note").takeIf { it.isNotBlank() }?.let { Text(it) }
             state.appliedFilters["from"]?.let { Text("Showing $it to ${state.appliedFilters["to"].orEmpty()}", style = MaterialTheme.typography.bodySmall) }
-            LazyRow {
+            if(state.report=="stock-detail") {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty()) Text("No tracked stock items are available in this company.")
+                if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    items(rows) { row -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
+                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium)
+                        Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.bodySmall)
+                        val unit=row.getOrNull(2).orEmpty()
+                        Text("Closing Quantity: ${row.getOrNull(6).orEmpty()} $unit",fontWeight=FontWeight.Bold)
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            listOf("Beginning Qty" to 3,"Quantity In" to 4,"Quantity Out" to 5).forEach { (label,index) -> Column(Modifier.weight(1f)) {Text(label,style=MaterialTheme.typography.bodySmall);Text("${row.getOrNull(index).orEmpty()} $unit")} }
+                        }
+                    } } }
+                }
+            } else LazyRow {
                 item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
                 itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.let{com.salespunch360.mobile.account.accountReportDestination(it)};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }
                 data["totals"]?.jsonArray?.let { totals -> item { Column { totals.forEach { Text(it.jsonPrimitive.content, fontWeight = FontWeight.Bold) } } } }

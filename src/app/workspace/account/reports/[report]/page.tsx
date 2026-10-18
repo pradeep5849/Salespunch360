@@ -8,6 +8,7 @@ import {ACCOUNT_REPORT_KEYS,reportSpecificFilters} from "@/lib/account/reports/c
 import { reportExportQuery } from "@/lib/account/reports/queries";
 import { reportCalendarDate, reportFinancialYearStart } from "@/lib/account/reports/dates";
 import { ReportTable } from "@/components/account/report-table";
+import {StockDetailView} from "@/components/account/stock-detail-view";
 import { notFound } from "next/navigation";
 import { AuthorizationError } from "@/lib/auth/authorization";
 import {
@@ -148,7 +149,7 @@ export default async function Page({
             role="region"
             aria-label="Report results"
           >
-            {["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
+            {report==="stock-detail"?<StockDetailView data={data}/>:["sale-report","purchase-report","expense-transactions"].includes(report)?<TransactionReportView data={data}/>:<ReportTable data={data}/>}
           </div>
         )}
       </section>

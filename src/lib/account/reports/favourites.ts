@@ -27,7 +27,7 @@ export async function availableReportCatalogueForActor(actor: Actor) {
     &&(stockSettings?.itemSettings as {enabled?:boolean}|null)?.enabled!==false;
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
-      (x.key!=="stock-category"||canStock)&&
+      (!["stock-category","stock-detail"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
       (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||
       (modules.includes("PROJECTS") &&
