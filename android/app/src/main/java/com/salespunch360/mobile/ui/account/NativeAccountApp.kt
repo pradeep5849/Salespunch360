@@ -200,7 +200,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/inventory/active")->com.salespunch360.mobile.ui.account.inventory.ActiveItemsManagementScreen(queryValue(state.selectedPath,"mode")=="activate",vm::back)
             state.selectedPath.substringBefore("?").endsWith("/inventory/stock-summary")->com.salespunch360.mobile.ui.account.inventory.StockSummaryScreen(padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
-            state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment?.takeIf{it!="quotations"&&it!="new"})
+            state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding,navigate=vm::select,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment?.takeIf{it!="quotations"&&it!="new"})
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
             purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))

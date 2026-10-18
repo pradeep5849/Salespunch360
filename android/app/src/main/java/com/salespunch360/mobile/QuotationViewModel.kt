@@ -50,6 +50,10 @@ data class QuotationRow(
 data class QuotationState(
     val canCreate:Boolean=false,
     val canCreateParty:Boolean=false,
+    val canCreateItem:Boolean=false,
+    val canCost:Boolean=false,
+    val itemReturnPending:Boolean=false,
+    val itemReturnError:String?=null,
     val canViewPartyBalance:Boolean=false,
     val partyBalance:JsonObject?=null,
     val stockAvailable:Boolean=false,
@@ -77,6 +81,7 @@ data class QuotationState(
 
 class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     private var partyBalanceJob:Job?=null
+    private var itemReturnJob:Job?=null
 
     private val api = ApiClient(SecureSession(app))
     private val _state = MutableStateFlow(QuotationState())
@@ -113,7 +118,9 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
 
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
+                canCost=options["canCost"]?.jsonPrimitive?.booleanOrNull==true,
                 canCreateParty=options["partyCreation"] is JsonObject,
+                canCreateItem=options["canCreateItem"]?.jsonPrimitive?.booleanOrNull==true,
                 canViewPartyBalance=options["canViewPartyBalance"]?.jsonPrimitive?.booleanOrNull==true,
                 stockAvailable=options["stock"] is JsonObject,
                 stockPositions=(options["stock"] as? JsonObject)?.array("positions").orEmpty(),
@@ -124,7 +131,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                 branches = options.array("branches").map { it.option() },
                 customers = options.array("customers").map { it.option() },
                 products = options.array("products").map { it.option() },
-                services = options.array("services").map { it.option("sellingRate") },
+                services = options.array("services").map { it.option("sellingRate").copy(costPrice=it.str("estimatedCost").ifBlank{null}) },
                 workPackages = options.array("workPackages").map { it.option("sellingRate") },
                 units = options.array("units").map { it.option() }
             )
@@ -166,6 +173,24 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         _state.value=current.copy(draft=selected,customers=current.customers.filterNot{it.id==record.id}+option,error=null)
     }
 
+    fun selectCreatedItem(index:Int,id:String,kind:String,done:()->Unit){
+        if(itemReturnJob?.isActive==true)return
+        val expected=_state.value.draft?:return
+        _state.value=_state.value.copy(itemReturnPending=true,itemReturnError=null)
+        itemReturnJob=viewModelScope.launch{
+            try{
+                val options=api.quotationOptions();currentCoroutineContext().ensureActive()
+                val current=_state.value;val draft=current.draft
+                if(draft==null||draft.creationRequestKey!=expected.creationRequestKey||draft.branchId!=expected.branchId)throw IllegalStateException("Draft changed")
+                val selected=quotationWithCreatedItem(draft,index,id,kind,options)?:throw IllegalStateException("Item unavailable")
+                _state.value=current.copy(draft=selected,itemReturnPending=false,itemReturnError=null,
+                    products=options.array("products").map{it.option()},services=options.array("services").map{it.option("sellingRate").copy(costPrice=it.str("estimatedCost").ifBlank{null})},units=options.array("units").map{it.option()},
+                    stockAvailable=options["stock"] is JsonObject,stockPositions=(options["stock"] as? JsonObject)?.array("positions").orEmpty())
+                done()
+            }catch(e:CancellationException){throw e}catch(_:Exception){_state.value=_state.value.copy(itemReturnPending=false,itemReturnError="Item saved. Returning failed. Retry; the item will not be created again.")}
+        }
+    }
+
     fun loadPartyBalance(partyId:String,branchId:String){
         partyBalanceJob?.cancel()
         fun pending(error:Boolean=false)=buildJsonObject{put("partyId",partyId);put("branchId",branchId);put(if(error)"error"else "loading",true)}
@@ -188,7 +213,8 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     fun closeDraft() {
         if(_state.value.saving)return
         partyBalanceJob?.cancel()
-        _state.value = _state.value.copy(draft = null,partyBalance=null)
+        itemReturnJob?.cancel()
+        _state.value = _state.value.copy(draft = null,partyBalance=null,itemReturnPending=false,itemReturnError=null)
     }
 
     fun line(index: Int, line: SalesLineDraft) {

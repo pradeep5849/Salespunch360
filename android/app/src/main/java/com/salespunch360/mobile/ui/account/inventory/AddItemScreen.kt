@@ -42,9 +42,20 @@ fun AddItemScreen(
     back:()->Unit,
     navigate:(String)->Unit,
     vm:AccountAddItemViewModel=viewModel(),
-    initialService:Boolean=false
+    initialService:Boolean=false,
+    onCreated:((String,String)->Unit)?=null,
+    returnPending:Boolean=false,
+    returnError:String?=null
 ){
     val s=vm.state.collectAsStateWithLifecycle().value
+    val finish:()->Unit={val current=vm.state.value;val id=current.createdItemId;val kind=current.createdItemKind;if(onCreated!=null&&id!=null&&kind!=null)onCreated(id,kind)else back()}
+    if(onCreated!=null&&s.createdItemId!=null&&!s.photoPending){
+        Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            Text("Item saved",style=MaterialTheme.typography.headlineSmall)
+            Text(returnError?:"Returning to the quotation…")
+            Button(enabled=!returnPending,onClick=finish){Text(if(returnPending)"Returning…"else "Return to quotation")}
+        };return
+    }
     val context=LocalContext.current
     val photoScope=rememberCoroutineScope()
     var photoBytes by remember{mutableStateOf<ByteArray?>(null)}
@@ -54,7 +65,7 @@ fun AddItemScreen(
     val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->if(uri!=null){photoLoading=true;photoScope.launch{
         runCatching{withContext(Dispatchers.IO){val mime=context.contentResolver.getType(uri).orEmpty();require(mime.startsWith("image/"));val bytes=context.contentResolver.openInputStream(uri)?.use{input->val output=java.io.ByteArrayOutputStream();val chunk=ByteArray(8192);while(true){val count=input.read(chunk);if(count<0)break;require(output.size()+count<=5*1024*1024);output.write(chunk,0,count)};output.toByteArray()}?:error("Unable to read image");require(bytes.isNotEmpty()&&bytes.size<=5*1024*1024);mime to bytes}}.onSuccess{photoMime=it.first;photoBytes=it.second;photoError=null}.onFailure{photoBytes=null;photoError="Choose a readable image up to 5 MB."};photoLoading=false
     }}}
-    if(s.photoPending){Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Item saved",style=MaterialTheme.typography.headlineSmall);Text(s.error?:"Uploading item photo…");photoError?.let{Text(it,color=MaterialTheme.colorScheme.error)};TextButton(enabled=!s.saving&&!photoLoading,onClick={photoPicker.launch("image/*")}){Text("Choose replacement photo")};Button(enabled=!s.saving,onClick={vm.retryPhoto(back,photoBytes?.let{photoMime to it})}){Text("Retry photo upload")};TextButton(enabled=!s.saving,onClick=back){Text("Continue without photo")}};return}
+    if(s.photoPending){Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Item saved",style=MaterialTheme.typography.headlineSmall);Text(s.error?:"Uploading item photo…");photoError?.let{Text(it,color=MaterialTheme.colorScheme.error)};TextButton(enabled=!s.saving&&!photoLoading,onClick={photoPicker.launch("image/*")}){Text("Choose replacement photo")};Button(enabled=!s.saving,onClick={vm.retryPhoto(finish,photoBytes?.let{photoMime to it})}){Text("Retry photo upload")};TextButton(enabled=!s.saving,onClick=finish){Text("Continue without photo")}};return}
     var service by remember(initialService){mutableStateOf(initialService)}
     var name by remember{mutableStateOf("")}
     var customValues by remember(service){mutableStateOf<Map<String,String>>(emptyMap())}
@@ -201,7 +212,8 @@ fun AddItemScreen(
                                 trackInventory=enabled("stockMaintenance")&&!service&&(openingStock.isNotBlank()||minStock.isNotBlank()||itemLocation.isNotBlank()),
                                 lowStockThreshold=if(enabled("stockMaintenance")&&!service)minStock else "0",
                                 customFields=if(enabled("customFields"))customValues else emptyMap(),
-                            ){back()}
+                                retainCommittedIdentity=onCreated!=null,
+                            ){finish()}
                         },
                         enabled=!photoLoading&&name.isNotBlank()&&s.configLoaded&&!s.loading&&!s.saving&&customFields.filter{it.isRequired}.all{!customValues[it.fieldKey].isNullOrBlank()},
                         modifier=Modifier.weight(1f).height(64.dp),

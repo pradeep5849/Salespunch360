@@ -10,6 +10,8 @@ import kotlinx.serialization.json.*
 
 data class AddItemState(
     val photoPending:Boolean=false,
+    val createdItemId:String?=null,
+    val createdItemKind:String?=null,
     val loading:Boolean=true,
     val saving:Boolean=false,
     val configLoaded:Boolean=false,
@@ -38,6 +40,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         _state.value=_state.value.copy(saving=true,error=null)
         runCatching{api.uploadItemPhoto(pending.first,pending.second,pending.third.first,pending.third.second)}.onSuccess{pendingPhoto=null;_state.value=_state.value.copy(saving=false,photoPending=false);done()}.onFailure{_state.value=_state.value.copy(saving=false,error="Item saved. Photo upload failed. Retry or continue without photo.")}
     }
+    fun beginCreate(){if(!_state.value.saving){pendingPhoto=null;_state.value=_state.value.copy(createdItemId=null,createdItemKind=null,photoPending=false,error=null)}}
     init{load()}
 
     fun load()=viewModelScope.launch{
@@ -102,9 +105,11 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
         photoMime:String="image/jpeg",
         secondaryUnitId:String?=null,
         secondaryUnitsPerBase:String="",
+        retainCommittedIdentity:Boolean=false,
         done:()->Unit
     )=viewModelScope.launch{
         if(_state.value.saving||_state.value.photoPending||!_state.value.configLoaded)return@launch
+        if(retainCommittedIdentity&&!_state.value.createdItemId.isNullOrBlank()){done();return@launch}
         val validationError=com.salespunch360.mobile.account.addItemValidationError(name,code,description,sellingRate,cost,taxRate,hsnSac,if(service)"0"else lowStockThreshold,if(service)""else openingQuantity,openingPrice,openingDate,itemLocation,pricing)
         if(validationError!=null){_state.value=_state.value.copy(error=validationError);return@launch}
         _state.value=_state.value.copy(saving=true,error=null)
@@ -137,6 +142,7 @@ class AccountAddItemViewModel(app:Application):AndroidViewModel(app){
                 }
             )
         }.onSuccess{row->
+            _state.value=_state.value.copy(createdItemId=row.id,createdItemKind=if(service)"services"else "products")
             if(photoBytes!=null){
                 pendingPhoto=Triple(if(service)"services"else "products",row.id,photoMime to photoBytes)
                 _state.value=_state.value.copy(saving=false,photoPending=true)

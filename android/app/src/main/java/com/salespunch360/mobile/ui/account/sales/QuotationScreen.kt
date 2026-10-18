@@ -27,6 +27,8 @@ import com.salespunch360.mobile.AccountMasterViewModel
 import com.salespunch360.mobile.ui.account.AccountMasterScreen
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.salespunch360.mobile.AccountAddItemViewModel
+import com.salespunch360.mobile.ui.account.inventory.AddItemScreen
 import com.salespunch360.mobile.QuotationDraft
 import com.salespunch360.mobile.QuotationState
 import com.salespunch360.mobile.QuotationViewModel
@@ -37,7 +39,7 @@ import java.io.File
 import kotlinx.serialization.json.*
 
 @Composable
-fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel(), initialDocumentId:String?=null) {
+fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel(), initialDocumentId:String?=null,navigate:(String)->Unit) {
     LaunchedEffect(initialDocumentId){initialDocumentId?.let(vm::open)}
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
@@ -87,12 +89,21 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
         }
     }
 
-    state.draft?.let { QuotationEditor(it, state, vm) }
+    state.draft?.let { QuotationEditor(it, state, vm,navigate) }
     state.detail?.let { QuotationDetail(it, vm, state.preview) }
 }
 
 @Composable
-private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: QuotationViewModel) {
+private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: QuotationViewModel,navigate:(String)->Unit) {
+    var newItemLine by remember { mutableStateOf<Int?>(null) }
+    if(newItemLine!=null){
+        val itemVm:AccountAddItemViewModel=viewModel(key="quotation-item-${draft.creationRequestKey}")
+        val index=newItemLine!!
+        LaunchedEffect(index){itemVm.beginCreate()}
+        Dialog(onDismissRequest={if(!itemVm.state.value.saving&&!state.itemReturnPending&&itemVm.state.value.createdItemId==null)newItemLine=null},properties=DialogProperties(usePlatformDefaultWidth=false)){
+            Surface(Modifier.fillMaxSize()){AddItemScreen(back={if(!itemVm.state.value.saving)newItemLine=null},navigate=navigate,vm=itemVm,initialService=draft.lines[index].lineType=="SERVICE",returnPending=state.itemReturnPending,returnError=state.itemReturnError,onCreated={id,kind->vm.selectCreatedItem(index,id,kind){newItemLine=null}})}
+        };return
+    }
     var newPartyOpen by remember { mutableStateOf(false) }
     var partyQuery by remember { mutableStateOf("") }
     LaunchedEffect(draft.customerId,draft.branchId,state.canViewPartyBalance){vm.loadPartyBalance(draft.customerId,draft.branchId)}
@@ -134,7 +145,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 }
                 item { OutlinedTextField(draft.issueDate, { vm.editDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date") }) }
                 item { OutlinedTextField(draft.validUntil, { vm.editDraft(draft.copy(validUntil = it)) }, label = { Text("Valid until") }) }
-                itemsIndexed(draft.lines) { index, line -> QuotationLine(index, line, state, vm) }
+                itemsIndexed(draft.lines) { index, line -> QuotationLine(index, line, state, vm){newItemLine=index} }
                 item { OutlinedButton(onClick = vm::addLine) { Text("Add line") } }
                 itemsIndexed(draft.adjustments) { index, adjustment ->
                     fun value(key:String)=(adjustment[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
@@ -179,7 +190,8 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
 }
 
 @Composable
-private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationState, vm: QuotationViewModel) {
+private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationState, vm: QuotationViewModel,createItem:()->Unit) {
+    var itemQuery by remember(line.lineType,index){mutableStateOf("")}
     val masters = when (line.lineType) { "PRODUCT" -> state.products; "SERVICE" -> state.services; "WORK_PACKAGE" -> state.workPackages; else -> emptyList() }
     ElevatedCard {
         Column(Modifier.padding(10.dp)) {
@@ -187,8 +199,11 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
             if (line.lineType == "CUSTOM") {
                 OutlinedTextField(line.itemName, { vm.line(index, line.copy(itemName = it)) }, label = { Text("Name") })
             } else {
-                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; vm.line(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty())) }
+                OutlinedTextField(itemQuery,{itemQuery=it},label={Text("Search saved items")},placeholder={Text("Item name or code")})
+                SelectField("Item", line.sourceId, masters.filter{it.id==line.sourceId||"${it.name} ${it.code.orEmpty()}".contains(itemQuery.trim(),ignoreCase=true)}.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; vm.line(index, line.copy(sourceId = id, rate = master.rate.orEmpty(), taxRate = master.taxRate.orEmpty())) }
             }
+            if(state.canCreateItem&&line.lineType in listOf("PRODUCT","SERVICE"))OutlinedButton(onClick=createItem,enabled=!state.saving){Text("Add new item")}
+            if(state.canCost)masters.firstOrNull{it.id==line.sourceId}?.costPrice?.let{Text("Saved ${if(line.lineType=="PRODUCT")"purchase"else "estimated"} unit cost: ${accountMoney(it)}")}
             if(line.lineType=="PRODUCT"&&state.stockAvailable&&masters.firstOrNull{it.id==line.sourceId}?.trackInventory==true){
                 val quantity=state.stockPositions.firstOrNull{it.str("productId")==line.sourceId&&it.str("branchId")==state.draft?.branchId}?.str("quantity")?:"0.0000"
                 Text("Recorded stock in selected branch (primary unit): $quantity")
