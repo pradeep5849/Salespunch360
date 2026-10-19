@@ -3787,7 +3787,8 @@
             "lint": "PASS focused ESLint; final diff check before commit.",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "Final complete checkpoint-head regression and physical Android/emulator/keyboard/TalkBack/pixel verification pending. Earlier historical evidence remains preserved; no final FIXED status claimed."
+          "remaining": "Final complete checkpoint-head regression and physical Android/emulator/keyboard/TalkBack/pixel verification pending. Earlier historical evidence remains preserved; no final FIXED status claimed.",
+          "implementation_commit": "9ee23791f4a4c207ba3388098b349a8ca0607c05"
         }
       },
       "intermediate_validation": {
