@@ -534,6 +534,7 @@ private fun DirectSaleInvoiceEditor(
             if(options.transactionPreference("transactionTime"))item{OutlinedTextField(draft.transactionTime,{onDraft(draft.copy(transactionTime=it))},enabled=!saving,label={Text("Transaction Time (HH:mm)")},modifier=Modifier.fillMaxWidth())}
             if(options.transactionPreference("ewayBillNumber"))item{OutlinedTextField(draft.ewayBillNumber,{if(it.length<=12&&it.all(Char::isDigit))onDraft(draft.copy(ewayBillNumber=it))},enabled=!saving,label={Text("E-Way Bill No.")},modifier=Modifier.fillMaxWidth())}
             item{InvoiceCustomFields(options.invoiceCustomFields,draft.type,draft.customFields,saving){onDraft(draft.copy(customFields=it))}}
+            if(options.shippingAddressEnabled)item{OutlinedTextField(draft.shippingAddress,{if(it.length<=5000)onDraft(draft.copy(shippingAddress=it))},enabled=!saving,label={Text("Shipping Address")},minLines=2,modifier=Modifier.fillMaxWidth())}
             if(options.transactionPreference("termsEnabled",true))item{OutlinedTextField(draft.notes,{if(it.length<=5000)onDraft(draft.copy(notes=it))},enabled=!saving,label={Text("Terms & Conditions")},minLines=2,modifier=Modifier.fillMaxWidth())}
             item{OutlinedTextField(draft.dueDate,{onDraft(draft.copy(dueDate=it))},enabled=!saving,label={Text("Due date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())}
             if(options.transactionPreference("itemCount"))item{Text("Total Qty: ${draft.lines.sumOf{it.quantity.toDoubleOrNull()?:0.0}}")}
@@ -601,7 +602,7 @@ private fun DirectSaleInvoiceEditor(
                     supportingContent=party.phone?.let{phone->{Text(phone)}},
                     trailingContent={Text("›")},
                     modifier=Modifier.clickable{
-                        onDraft(draft.copy(customerId=party.id,stateOfSupplyCode=party.stateCode?:options.defaultStateCode))
+                        onDraft(draft.copy(customerId=party.id,shippingAddress=if(options.shippingAddressEnabled)party.shippingAddress else draft.shippingAddress,stateOfSupplyCode=party.stateCode?:options.defaultStateCode))
                         customerSheet=false
                     }
                 )

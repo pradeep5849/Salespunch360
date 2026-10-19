@@ -2901,3 +2901,32 @@ test("A084 Discount Report nets recorded discounts across Web native and exports
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
 });
+
+test("A086 shipping address snapshots survive party changes native edits and print settings",async({page})=>{
+ test.setTimeout(240000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchIds:[]} as ProjectActor;
+ const branchId=(await db.branch.create({data:{companyId,name:"Shipping verification branch",code:`SHIP-${randomUUID().slice(0,8)}`}})).id;
+ const oldAddress="Original delivery site\nDock <A> & Gate 2",newAddress="Invoice delivery override\nHassan 573201";
+ const customer=await db.customer.create({data:{companyId,branchId,name:"Shipping verification party",isAccountCustomer:true,shippingAddress:oldAddress}});
+ const defaults={...((before.transactionDefaults as Record<string,unknown>)??{}),partySettings:{gstinEnabled:true,groupingEnabled:false,shippingAddressEnabled:true,printShippingAddress:true}};
+ try{
+  await db.accountSettings.update({where:{companyId},data:{transactionDefaults:defaults}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Shipping report year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  const input={type:"SALES_INVOICE",branchId,partyId:customer.id,issueDate:"2026-10-11",lines:[{lineType:"CUSTOM",itemName:"Delivery service",quantity:"1",rate:"100",taxRate:"0"}]};
+  const sale=await createCommercialDocumentForActor(actor,input);await postCommercialDocumentForActor(actor,{documentId:sale.id});expect(sale.shippingAddress).toBe(oldAddress);
+  await db.customer.update({where:{id:customer.id},data:{shippingAddress:"Customer address changed later"}});
+  await signInSettings(page);const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  await page.goto(`/workspace/account/sales/${sale.id}`);await expect(page.getByText(oldAddress,{exact:true})).toBeVisible({timeout:15000});
+  let native=await page.request.get(`/api/v1/mobile/account/transactions/${sale.id}`,{headers});expect(native.status()).toBe(200);expect((await native.json()).shippingAddress).toBe(oldAddress);
+  const printed=await page.request.get(`/api/account/print/SALES_INVOICE/${sale.id}`);expect(printed.status()).toBe(200);const html=await printed.text();expect(html).toContain("Dock &lt;A&gt; &amp; Gate 2");expect(html).not.toContain("Customer address changed later");
+  await page.goto(`/workspace/account/sales/${sale.id}/edit`);await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:15000});await expect(page.getByLabel("Shipping Address",{exact:true})).toBeVisible({timeout:15000});await expect(page.getByLabel("Shipping Address",{exact:true})).toHaveValue(oldAddress);await page.getByLabel("Shipping Address",{exact:true}).fill(newAddress);await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/,{timeout:30000});const replacementId=page.url().split("/").at(-1)!;expect(replacementId).not.toBe(sale.id);await expect(page.getByText(newAddress,{exact:true})).toBeVisible();
+  const replacement=await db.commercialDocument.findUniqueOrThrow({where:{id:replacementId}});expect(replacement.shippingAddress).toBe(newAddress);expect((await db.commercialDocument.findUniqueOrThrow({where:{id:sale.id}})).shippingAddress).toBe(oldAddress);expect((await db.customer.findUniqueOrThrow({where:{id:customer.id}})).shippingAddress).toBe("Customer address changed later");
+  const pdf=await page.request.get(`/api/account/print/SALES_INVOICE/${replacementId}?format=pdf`);expect(pdf.status()).toBe(200);expect((await extractPdfText(await pdf.body())).text).toContain("Invoice delivery override");
+  native=await page.request.patch(`/api/v1/mobile/account/transactions/${replacementId}`,{headers,data:{...input,idempotencyKey:randomUUID()}});expect(native.status()).toBe(200);const retained=await native.json();expect(retained.shippingAddress).toBe(newAddress);
+  await db.accountSettings.update({where:{companyId},data:{transactionDefaults:{...defaults,partySettings:{...defaults.partySettings,shippingAddressEnabled:false,printShippingAddress:true}}}});
+  await page.goto(`/workspace/account/sales/${retained.id}/edit`);await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:15000});await expect(page.getByLabel("Shipping Address",{exact:true})).toHaveCount(0);await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/,{timeout:30000});const hiddenId=page.url().split("/").at(-1)!;expect((await db.commercialDocument.findUniqueOrThrow({where:{id:hiddenId}})).shippingAddress).toBe(newAddress);
+  const hiddenPrint=await page.request.get(`/api/account/print/SALES_INVOICE/${hiddenId}`);expect(hiddenPrint.status()).toBe(200);expect(await hiddenPrint.text()).not.toContain("Invoice delivery override");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+ }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:before.transactionDefaults??{}}})}
+});

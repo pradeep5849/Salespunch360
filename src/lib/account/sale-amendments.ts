@@ -59,6 +59,7 @@ function creditPayload(
     branchId: sale.branchId,
     partyId: sale.partyId!,
     sourceDocumentId: sale.id,
+    shippingAddress: sale.shippingAddress ?? "",
     issueDate: date,
     taxMode: sale.taxMode,
     stateOfSupplyCode: sale.stateOfSupplyCode ?? undefined,
@@ -280,6 +281,7 @@ export function replacePostedSaleForActor(
         // Clients may omit hidden header fields; preserve their invoice snapshots.
         const headerDefaults: Record<string, unknown> = {
           billingName: sale.billingName ?? undefined,
+          shippingAddress: sale.shippingAddress ?? "",
           customerPoNumber: sale.customerPoNumber ?? undefined,
           customerPoDate: sale.customerPoDate?.toISOString().slice(0, 10),
           transactionTime: sale.transactionTime ?? undefined,

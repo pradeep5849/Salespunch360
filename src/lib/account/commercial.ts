@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { normalizeTransactionPreferences } from "./transaction-settings";
 import {recentSalePrices} from "./recent-sale-prices";
 import {transactionRoundingLimit,defaultTransactionRoundOff} from "./transaction-rounding";
+import {resolvePartySettings} from "./party-settings";
 import {transactionHeaderFields} from "./transaction-header";
 import {applyTransactionDefaults} from "./transaction-defaults";
 import { inAccountTransaction } from "./transaction-scope";
@@ -893,6 +894,7 @@ export async function createCommercialDocumentForActor(
                   gstin: true,
                   stateCode: true,
                   address: true,
+                  shippingAddress: true,
                 },
               })
             : await tx.vendor.findFirst({
@@ -1343,6 +1345,7 @@ export async function createCommercialDocumentForActor(
               partyId: party.id,
               partyName: party.name,
               billingName: d.billingName || null,
+              shippingAddress: d.shippingAddress !== undefined ? d.shippingAddress || null : resolvePartySettings(settings?.transactionDefaults).shippingAddressEnabled && "shippingAddress" in party && typeof party.shippingAddress === "string" ? party.shippingAddress || null : null,
               customerPoNumber: d.customerPoNumber || null,
               customerPoDate: d.customerPoDate,
               transactionTime: d.transactionTime,
@@ -3329,7 +3332,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
           isAccountCustomer: true,
           ...scope(actor),
         },
-        select: { id: true, name: true, phone: true, branchId: true, stateCode:true },
+        select: { id: true, name: true, phone: true, branchId: true, stateCode:true, shippingAddress:true },
       })
     ).map((customer) => ({
       ...customer,
@@ -3383,6 +3386,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
     }),
     invoiceCustomFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId,entityType:{in:["SALES_INVOICE","PURCHASE_BILL"]},isActive:true},orderBy:{position:"asc"}}),
     accountSettings: editorSettings,
+    partySettings: resolvePartySettings(editorSettings?.transactionDefaults),
     numberingSeries: await safeSalesInvoiceNumberingSeriesOptions(
       actor.companyId,
     ),

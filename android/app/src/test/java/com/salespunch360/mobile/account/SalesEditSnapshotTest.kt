@@ -5,6 +5,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SalesEditSnapshotTest {
+    @Test fun shippingAddressSnapshotSurvivesEditsAndSupportsExplicitClearing() {
+        val doc=Json.parseToJsonElement("""{"id":"sale","shippingAddress":"Original site\nStreet 2","lines":[]}""").jsonObject
+        val draft=savedSaleEditorDraft(doc)
+        assertEquals("Original site\nStreet 2",draft.shippingAddress)
+        assertEquals(draft.shippingAddress,salesDraftPayload(draft)["shippingAddress"]!!.jsonPrimitive.content)
+        assertEquals("",salesDraftPayload(draft.copy(shippingAddress=""))["shippingAddress"]!!.jsonPrimitive.content)
+        assertEquals("Original site\nStreet 2",draft.shippingAddress)
+    }
+
     @Test fun savedInvoiceRetainsCessSpecificationAndChargesWhenQuantityChanges() {
         val document=Json.parseToJsonElement("""{"id":"sale","taxableTotal":"100","tdsAmount":"1","tcsAmount":"2","freightAmount":"5","otherChargesAmount":"7","roundOffAmount":"0.25","taxMode":"INCLUSIVE","lines":[{"lineType":"CUSTOM","itemName":"Custom service","itemCode":"SAVED","specification":"Original specification","quantity":"1","rate":"120","taxRate":"18","cessRate":"2"}]}""").jsonObject
         val restored=savedSaleEditorDraft(document)

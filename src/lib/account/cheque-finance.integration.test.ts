@@ -1315,5 +1315,39 @@ describe.skipIf(!url)(
       }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:previous.enabledModules}});}
     });
 
+
+    it("A086 shipping snapshots survive party edits corrections retries and posted guards",async()=>{
+      const previous=await client.accountSettings.findUniqueOrThrow({where:{companyId}}),customer=await client.customer.findUniqueOrThrow({where:{id:customerId}});
+      try{
+        const defaults={...((previous.transactionDefaults as Record<string,unknown>)??{}),partySettings:{gstinEnabled:true,groupingEnabled:false,shippingAddressEnabled:true,printShippingAddress:true}};
+        await client.accountSettings.update({where:{companyId},data:{transactionDefaults:defaults as Prisma.InputJsonValue}});
+        await client.customer.update({where:{id:customerId},data:{shippingAddress:"Original delivery site\nHassan"}});
+        const input={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-11",lines:[{lineType:"CUSTOM",itemName:"Shipping snapshot service",quantity:"1",rate:"100",taxRate:"0"}]};
+        const sale=await createCommercialDocumentForActor(actor,input);expect(sale.shippingAddress).toBe("Original delivery site\nHassan");await postCommercialDocumentForActor(actor,{documentId:sale.id});
+        await client.customer.update({where:{id:customerId},data:{shippingAddress:"Customer moved later"}});
+        await expect(client.commercialDocument.update({where:{id:sale.id},data:{shippingAddress:"Unauthorized historical edit"}})).rejects.toThrow();
+        const request={...input,idempotencyKey:randomUUID()};
+        const replacement=await replacePostedSaleForActor(actor,sale.id,request);
+        expect(replacement.shippingAddress).toBe("Original delivery site\nHassan");
+        expect((await replacePostedSaleForActor(actor,sale.id,request)).id).toBe(replacement.id);
+        expect((await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id}})).shippingAddress).toBe("Original delivery site\nHassan");
+        expect((await client.commercialDocument.findFirstOrThrow({where:{sourceDocumentId:sale.id,type:"CREDIT_NOTE"}})).shippingAddress).toBe("Original delivery site\nHassan");
+        const before=await client.commercialDocument.count({where:{companyId}});
+        await expect(replacePostedSaleForActor({...actor,companyId:randomUUID()},replacement.id,{...input,idempotencyKey:randomUUID()})).rejects.toThrow();
+        await expect(replacePostedSaleForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[randomUUID()]},replacement.id,{...input,idempotencyKey:randomUUID()})).rejects.toThrow();
+        expect(await client.commercialDocument.count({where:{companyId}})).toBe(before);
+        const cleared=await replacePostedSaleForActor(actor,replacement.id,{...input,shippingAddress:"",idempotencyKey:randomUUID()});expect(cleared.shippingAddress).toBeNull();
+      }finally{await client.customer.update({where:{id:customerId},data:{shippingAddress:customer.shippingAddress}});await client.accountSettings.update({where:{companyId},data:{transactionDefaults:previous.transactionDefaults as Prisma.InputJsonValue}})}
+    });
+    it("A086 legacy missing shipping is not reconstructed during correction",async()=>{
+      const customer=await client.customer.findUniqueOrThrow({where:{id:customerId}});
+      try{
+        const input={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-11",shippingAddress:"",lines:[{lineType:"CUSTOM",itemName:"Legacy delivery unknown",quantity:"1",rate:"20",taxRate:"0"}]};
+        const sale=await createCommercialDocumentForActor(actor,input);await postCommercialDocumentForActor(actor,{documentId:sale.id});
+        await client.customer.update({where:{id:customerId},data:{shippingAddress:"New current party address"}});
+        const {shippingAddress:_omitted,...request}=input;void _omitted;
+        const replacement=await replacePostedSaleForActor(actor,sale.id,{...request,idempotencyKey:randomUUID()});expect(replacement.shippingAddress).toBeNull();
+      }finally{await client.customer.update({where:{id:customerId},data:{shippingAddress:customer.shippingAddress}})}
+    });
   },
 );

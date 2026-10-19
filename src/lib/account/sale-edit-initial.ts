@@ -15,6 +15,7 @@ export type SaleEditInitial = {
   tdsRate: string;
   tcsRate: string;
   billingName?: string;
+  shippingAddress?: string;
   customerPoNumber?: string;
   customerPoDate?: string;
   transactionTime?: string;

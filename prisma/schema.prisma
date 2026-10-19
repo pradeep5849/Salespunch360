@@ -2441,6 +2441,7 @@ model CommercialDocument {
   postingDate            DateTime?                @db.Date
   paymentTerms           String?                  @db.VarChar(500)
   partyAddress           String?
+  shippingAddress        String?
   grnReference           String?                  @db.VarChar(160)
   purchaseLocation       String?                  @db.VarChar(240)
   vendorInvoiceAttachmentKey String?              @db.VarChar(512)

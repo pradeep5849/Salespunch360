@@ -6,6 +6,7 @@ export type InvoiceProjectOption = {
   status: string;
 };
 export type InvoiceCustomerOption = {
+  shippingAddress?: string | null;
   id: string;
   name: string;
   branchId?: string;

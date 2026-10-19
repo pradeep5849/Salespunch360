@@ -6,6 +6,11 @@ import {transactionRoundingLimit,defaultTransactionRoundOff} from "./transaction
 
 describe("transaction header snapshots",()=>{
  const schema=z.object(transactionHeaderFields).strict();
+ it("validates document shipping addresses while allowing explicit clearing",()=>{
+  expect(schema.parse({shippingAddress:"  Site A\nStreet 2  "}).shippingAddress).toBe("Site A\nStreet 2");
+  expect(schema.parse({shippingAddress:""}).shippingAddress).toBe("");
+  expect(schema.safeParse({shippingAddress:"x".repeat(5001)}).success).toBe(false);
+ });
  it("keeps optional invoice metadata and validates time and statutory number",()=>{
   const data=schema.parse({billingName:" Separate billing name ",customerPoNumber:"PO-10",customerPoDate:"2026-10-10",transactionTime:"23:59",ewayBillNumber:"123456789012"});
   expect(data.billingName).toBe("Separate billing name");expect(data.customerPoDate?.toISOString()).toBe("2026-10-10T00:00:00.000Z");
