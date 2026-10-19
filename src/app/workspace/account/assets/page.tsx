@@ -68,7 +68,7 @@ export default async function Page({
             </Link>
             <p>
               {x.assetType} · {x.status} ·{" "}
-              <Money value={x.purchaseValue.toFixed(2)} />
+              <Money value={x.purchaseValue.toString()} />
             </p>
           </article>
         ))}

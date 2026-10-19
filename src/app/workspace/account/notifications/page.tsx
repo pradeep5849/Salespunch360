@@ -85,7 +85,7 @@ export default async function Page({
                   <Link href={`/workspace/account/expenses/${x.id}`}>
                     {x.transactionNumber}
                   </Link>{" "}
-                  · <ClientMoney value={x.totalAmount.toFixed(2)} />
+                  · <ClientMoney value={x.totalAmount.toString()} />
                   {x.approvalReviewStatus === "PENDING" && x.status === "POSTED"
                     ? " · Paid; review pending"
                     : ""}
