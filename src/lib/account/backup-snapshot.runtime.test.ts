@@ -135,6 +135,14 @@ describe("A088 backup shared financial dependencies", () => {
       orderBy: [{ userId: "asc" }, { reportKey: "asc" }],
     });
   });
+  it("retains reusable expense item identity, retry fingerprints and private photo references", async () => {
+    const item={id:"original-item",companyId:actor.companyId,name:"Delivery",normalizedName:"delivery",creationRequestKey:"original-key",creationRequestHash:"original-hash",photoObjectKey:"companies/company-a/expense-items/photo",photoMimeType:"image/png",isActive:false};
+    m.reads.set("expenseItem",vi.fn().mockResolvedValue([item]));
+    const result=await createAccountBackupForActor(actor),bundle=JSON.parse(new TextDecoder().decode(result.bytes));
+    expect(bundle.data.expenseItem).toEqual([item]);expect(bundle.manifest.recordCounts.expenseItem).toBe(1);
+    expect(m.reads.get("expenseItem")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{name:"asc"},{id:"asc"}]});
+    expect(result.manifest.uploadedFiles).toContain("private-storage backup");
+  });
   it("denies backup generation before reading financial data for a non-administrator", async () => {
     await expect(
       createAccountBackupForActor({ ...actor, accountRole: "ACCOUNTANT" }),

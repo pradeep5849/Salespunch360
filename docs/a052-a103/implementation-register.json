@@ -65048,6 +65048,28 @@
           "date": "2026-10-17",
           "commit": "c0266bc6c5ac3ae11cb5305b8779db8fd5e3ad6e",
           "dependency": "Backup/restore must retain optional item secondary-unit IDs and exact factors, with units restored before item references. No backup completion inferred from this item save slice."
+        },
+        {
+          "date": "2026-10-19",
+          "work": "Reusable ExpenseItem rows are included in the same repeatable-read company snapshot with deterministic name/id ordering. Active/archived identities, original retry keys/hashes, photo object keys/MIME and timestamps survive JSON export. Existing admin-only boundary, byte checksum and private-storage warning retained. No financial writes except the existing backup audit/record.",
+          "files": [
+            "src/lib/account/utilities.ts",
+            "src/lib/account/backup-snapshot.runtime.test.ts",
+            "src/lib/account/backup-expense-items.integration.test.ts",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused_group": "16 passed across4 backup/scheduling/expense-item files,0 failures/skips,including2 real local PostgreSQL tests. Tests cover active/archive retention,private photo references,exact identity/fingerprints,company isolation,admin denial,checksum,no item mutation/no journals.",
+            "browser": "2 desktop/mobile Chromium tests passed (48.6s): populated HTTP export,checksum,scope/credential exclusion,archive download,settings reload/manual download.",
+            "eslint": "PASS changed TS/TSX tests/consumers",
+            "workflow": "YAML parse PASS;new DB-backed backup integration step runs after migration rehearsal;mocked backup/scheduling group runs once in Web job.",
+            "android": "No native source changes;new emulator/device verification NOT RUN.",
+            "migration": "No schema change or new migration.",
+            "final_checkpoint_head": "NOT RUN",
+            "typescript": "PASS full typecheck after browser run"
+          },
+          "remaining": "A088-F01 remains PARTIAL: complete provider/blob recovery,validated restore and final full checkpoint validation pending. JSON export of private photo metadata does not back up file bytes or prove restoration."
         }
       ],
       "push_checkpoint_evidence": {

@@ -9908,3 +9908,11 @@ Validation: 89 unit/service/PDF/conversion tests, 9 actual isolated PostgreSQL i
 Final full TypeScript check after the Billing Name browser run: PASS.
 
 Billing Name implementation provenance: `e7ab1e04f1b647771c1f7071705f004c0f90a304`.
+
+### A088-F01 — Reusable expense item backup retention (2026-10-19)
+
+The existing administrator-only repeatable-read export now includes scoped active/archived ExpenseItem rows, retaining IDs, retry fingerprints, photo references and timestamps in deterministic order. No new migration or financial behavior change.
+
+Validation: 16 tests passed across four backup/scheduling/expense-item files, including two actual isolated PostgreSQL cases; zero failures/skips. Both desktop/mobile Chromium download/settings/archive profiles passed (48.6s), including a populated reusable item/photo-reference snapshot and checksum. Focused ESLint, workflow YAML and diff checks passed. CI adds the real database retention/isolation test after migration rehearsal. No new native/device check claimed. A088-F01 remains PARTIAL for provider/blob/restore and final checkpoint verification; file references are not file-byte backups.
+
+Final full TypeScript check after the backup browser run: PASS.

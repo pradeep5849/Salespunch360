@@ -104,6 +104,7 @@ test.beforeAll(async () => {
   await db.accountSettings.create({data:{companyId:otherCompanyId,baseCurrency:"INR",displayDecimalPlaces:2,dateFormat:"DD/MM/YYYY"}});
 });
 test.afterAll(async () => {
+  await db.expenseItem.deleteMany({where:{companyId,name:"A088 backup reusable fixture"}});
   await db.mobileSession.deleteMany({ where: { userId } });
   await db.ownerAssetFundingReturn.deleteMany({where:{companyId}});
   await db.assetOwnerFundingCancellation.deleteMany({where:{companyId}});
@@ -601,12 +602,14 @@ test("A101 service period switches snapshot sale days and completion removes onl
 
 test("A088 backup downloads settings and accounting snapshots with tenant isolation and matching checksum",async({page})=>{
  await signInSettings(page);
+ const reusable=await db.expenseItem.create({data:{companyId,name:"A088 backup reusable fixture",normalizedName:"a088 backup reusable fixture",creationRequestKey:randomUUID(),creationRequestHash:"b".repeat(64),photoObjectKey:`companies/${companyId}/expense-items/photo-fixture`,photoMimeType:"image/png",isActive:false}});
  const response=await page.request.get("/api/account/utilities/backup");expect(response.status()).toBe(200);
  const bytes=await response.body(),checksum=createHash("sha256").update(bytes).digest("hex");expect(response.headers()["x-content-sha256"]).toBe(checksum);
  const bundle=JSON.parse(bytes.toString());expect(bundle.manifest.formatVersion).toBe(2);expect(bundle.data.id).toBe(companyId);expect(bundle.data.accountSettings.companyId).toBe(companyId);
  expect(bundle.data.customers.some((row:{id:string})=>row.id===customerId)).toBe(true);expect(bundle.data.accountProducts.some((row:{id:string})=>row.id===productId)).toBe(true);expect(bundle.data.commercialDocuments.some((row:{id:string})=>row.id===printDocumentId)).toBe(true);
+ expect(bundle.data.expenseItem).toEqual(expect.arrayContaining([expect.objectContaining({id:reusable.id,photoObjectKey:reusable.photoObjectKey,isActive:false})]));
  expect(bundle.data.asset.some((row:{id:string})=>row.id===assetId)).toBe(true);
- for(const name of ["commercialDocuments","commercialDocumentLine","settlements","settlementAllocations","journalEntries","journalLines","stockMovement","projectMaterialMovement","expenseTransaction","loan","serviceReminderCompletion","customFieldValues"]){expect(Array.isArray(bundle.data[name])).toBe(true);expect(bundle.manifest.recordCounts[name]).toBe(bundle.data[name].length)}
+ for(const name of ["commercialDocuments","commercialDocumentLine","settlements","settlementAllocations","journalEntries","journalLines","stockMovement","projectMaterialMovement","expenseTransaction","expenseItem","loan","serviceReminderCompletion","customFieldValues"]){expect(Array.isArray(bundle.data[name])).toBe(true);expect(bundle.manifest.recordCounts[name]).toBe(bundle.data[name].length)}
  expect(bundle.data.serviceReminderCompletion.length).toBe(await db.serviceReminderCompletion.count({where:{companyId}}));expect(bundle.data.journalLines.length).toBe(await db.journalLine.count({where:{companyId}}));
  expect(bundle.data.users).toEqual(expect.arrayContaining([expect.objectContaining({id:userId})]));expect(bytes.toString()).not.toContain(otherCompanyId);expect(bytes.toString()).not.toContain('"passwordHash"');expect(bytes.toString()).not.toContain('"sessionVersion"');expect(bytes.toString()).not.toContain('"sessions"');
  const record=await db.accountBackupRecord.findFirstOrThrow({where:{companyId,checksum}});expect(record.manifest).toMatchObject({formatVersion:2});expect(await db.accountingAuditEvent.count({where:{companyId,eventType:"BACKUP_GENERATED",entityId:record.id}})).toBe(1);
