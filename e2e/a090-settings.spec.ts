@@ -3082,3 +3082,38 @@ test("A082 private quotation attachments survive retry edit revision and authori
   for(const key of keys)await privateStorage().delete(key);
  }
 });
+
+test("A082 first Save keeps selected quotation files atomic and retry-safe",async({page})=>{
+ test.setTimeout(180000);
+ const bytes=Buffer.concat([Buffer.from("%PDF-1.7\n"),Buffer.alloc(6*1024*1024,32)]),keys=new Set<string>();let sessionHash:string|null=null;
+ const before=await db.quotationDocument.count({where:{companyId}});
+ try{
+  await signInSettings(page);await page.goto("/workspace/account/quotations/new");
+  const identity=page.getByRole("group",{name:"Document",exact:true});
+  await identity.getByRole("combobox",{name:"Branch",exact:true}).selectOption(branchId);await identity.getByRole("combobox",{name:"Customer",exact:true}).selectOption(customerId);
+  await page.getByRole("textbox",{name:"Item name",exact:true}).fill("First save with files");await page.getByRole("spinbutton",{name:"Rate",exact:true}).fill("10");
+  const files=page.getByLabel("Add quotation files",{exact:true});await files.setInputFiles({name:"discard.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.7")});
+  await page.getByRole("button",{name:"Remove selected attachment discard.pdf",exact:true}).click();await files.setInputFiles({name:"large-plan.pdf",mimeType:"application/pdf",buffer:bytes});
+  expect(await db.quotationDocument.count({where:{companyId}})).toBe(before);
+  expect((await new AxeBuilder({page}).include('fieldset:has(input[aria-label="Add quotation files"])').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  let drop=true;await page.route("**/api/account/quotations/with-attachments",async route=>{if(drop){drop=false;const response=await route.fetch({timeout:60000});expect(response.status()).toBe(201);await route.abort()}else await route.continue()});
+  await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page.getByRole("alert").filter({hasText:"No save was confirmed"})).toBeVisible({timeout:60000});
+  expect(await db.quotationDocument.count({where:{companyId}})).toBe(before+1);await expect(page.getByRole("button",{name:"Remove selected attachment large-plan.pdf",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/,{timeout:30000});
+  const id=page.url().split("/").at(-2)!,stored=await db.quotationAttachment.findMany({where:{companyId,revision:{documentId:id}}});expect(stored).toHaveLength(1);keys.add(stored[0].storageKey);expect(stored[0].sizeBytes).toBe(bytes.length);
+  expect(await db.quotationDocument.count({where:{companyId}})).toBe(before+1);await page.getByRole("link",{name:"Document details",exact:true}).click();
+  const download=await page.request.get(`/api/account/quotation-attachments/${stored[0].id}`);expect(download.status()).toBe(200);expect(await download.body()).toEqual(bytes);
+  const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();sessionHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash:sessionHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});
+  const path="/api/v1/mobile/account/quotations/with-attachments",headers={authorization:`Bearer ${token}`},raw={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",lines:[{lineType:"CUSTOM",itemName:"Native first save",quantity:"1",rate:"10"}]},requestKey=randomUUID(),multipart={document:JSON.stringify(raw),creationRequestKey:requestKey,attachments:{name:"native.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.7\nnative")}};
+  expect((await page.request.post(path,{multipart})).status()).toBe(401);
+  const native=await page.request.post(path,{headers,multipart});expect(native.status()).toBe(201);const saved=await native.json(),nativeRows=await db.quotationAttachment.findMany({where:{companyId,revision:{documentId:saved.id}}});expect(nativeRows).toHaveLength(1);keys.add(nativeRows[0].storageKey);
+  const replay=await page.request.post(path,{headers,multipart});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(saved.id);
+  expect((await page.request.post(path,{headers,multipart:{...multipart,attachments:{...multipart.attachments,name:"changed.pdf"}}})).status()).toBe(409);
+  expect(await db.journalEntry.count({where:{companyId,sourceId:{in:[id,saved.id]}}})).toBe(0);
+ }finally{
+  await page.unrouteAll({behavior:"wait"});
+  if(sessionHash)await db.mobileSession.deleteMany({where:{userId,tokenHash:sessionHash}});
+  for(const row of await db.quotationAttachment.findMany({where:{companyId},select:{storageKey:true}}))keys.add(row.storageKey);
+  for(const key of keys)await privateStorage().delete(key);
+ }
+});

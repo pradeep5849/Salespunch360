@@ -65,6 +65,19 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun quotations(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/quotations"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
  suspend fun quotation(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}")).jsonObject
  suspend fun createQuotation(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations","POST",payload.toString())).jsonObject
+ suspend fun createQuotationWithAttachments(payload:JsonObject,files:List<QuotationCreationAttachment>)=withContext(Dispatchers.IO){
+  require(validQuotationCreationAttachments(files)){"Choose PDF, PNG or JPEG files, up to 50 files and 10 MB combined."}
+  val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("document",payload.toString()).addFormDataPart("creationRequestKey",payload["creationRequestKey"]?.jsonPrimitive?.content.orEmpty()).apply{
+   files.forEach{file->addFormDataPart("attachments",file.name,file.bytes.toRequestBody(file.mime.toMediaType()))}
+  }.build()
+  val requestToken=session.token()
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/quotations/with-attachments").apply{requestToken?.let{header("Authorization","Bearer $it")}}.post(body).build()
+  http.newCall(request).awaitResponse().use{response->
+   val raw=response.body?.string()?:"{}"
+   if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(requestToken);throw ApiException(response.code,runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull())}
+   json.parseToJsonElement(raw).jsonObject
+  }
+ }
  suspend fun updateQuotation(id:String,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/quotations/${enc(id)}","PATCH",payload.toString())
  suspend fun quotationAction(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/action","POST",payload.toString()))
  suspend fun quotationAttachments(id:String,revision:Int)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/attachments?revisionNumber=$revision")).jsonArray

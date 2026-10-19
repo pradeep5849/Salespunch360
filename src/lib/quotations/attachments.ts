@@ -46,6 +46,31 @@ async function discardUnreferenced(companyId:string,key:string){
   if(await tx.quotationAttachment.count({where:{companyId,storageKey:key}})===0)await privateStorage().delete(key);
  },{timeout:30000});
 }
+/** Prepare files in memory only. Nothing is persisted until the explicit Save transaction. */
+export async function prepareQuotationCreationAttachments(actor:QuotationActor,files:File[]){
+ if(!files.length)return [];
+ await authorize(actor,true);
+ if(files.length>MAX_ATTACHMENTS||files.reduce((sum,file)=>sum+file.size,0)>MAX_BYTES)throw new QuotationAttachmentError("QUOTATION_ATTACHMENT_LIMIT");
+ return Promise.all(files.map(async file=>{
+  if(!file.size||file.size>MAX_BYTES)throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT");
+  const bytes=Buffer.from(await file.arrayBuffer());
+  if(!validQuotationAttachment(bytes,file.type))throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT");
+  return {bytes,displayName:attachmentDisplayName(file.name),mimeType:file.type,contentHash:createHash("sha256").update(bytes).digest("hex"),sizeBytes:bytes.length};
+ }));
+}
+export async function storeQuotationCreationAttachmentsInTx(tx:Prisma.TransactionClient,actor:QuotationActor,documentId:string,revisionId:string,files:Awaited<ReturnType<typeof prepareQuotationCreationAttachments>>,attemptedKeys:Set<string>){
+ for(const file of files){
+  const requestKey=randomUUID(),storageKey=`companies/${actor.companyId}/quotation-attachments/${documentId}/0/${requestKey}`;
+  attemptedKeys.add(storageKey);
+  await privateStorage().put(storageKey,file.bytes);
+  const requestHash=createHash("sha256").update(JSON.stringify({documentId,revisionNumber:0,requestKey,displayName:file.displayName,mimeType:file.mimeType,contentHash:file.contentHash})).digest("hex");
+  await tx.quotationAttachment.create({data:{companyId:actor.companyId!,revisionId,requestKey,requestHash,displayName:file.displayName,mimeType:file.mimeType,sizeBytes:file.sizeBytes,contentHash:file.contentHash,storageKey,uploadedById:actor.id}});
+ }
+}
+/** Also covers rolled-back serializable attempts. Ambiguous database failures retain bytes. */
+export async function cleanQuotationCreationAttachmentAttempts(companyId:string,keys:Set<string>){
+ for(const key of keys)await discardUnreferenced(companyId,key).catch(()=>undefined);
+}
 export async function listQuotationAttachmentsForActor(actor:QuotationActor,documentId:string,revisionNumber:number){
  await authorize(actor);z.string().uuid().parse(documentId);z.number().int().min(0).parse(revisionNumber);
  return db.$transaction(async tx=>{

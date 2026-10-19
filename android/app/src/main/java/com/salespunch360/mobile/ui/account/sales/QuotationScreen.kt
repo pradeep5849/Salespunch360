@@ -3,6 +3,12 @@ package com.salespunch360.mobile.ui.account.sales
 import com.salespunch360.mobile.ui.account.accountMoney
 import com.salespunch360.mobile.ui.account.accountDate
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.salespunch360.mobile.data.QuotationCreationAttachment
+import com.salespunch360.mobile.ui.account.expense.readExpenseAttachment
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -95,6 +101,16 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
 
 @Composable
 private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: QuotationViewModel,navigate:(String)->Unit) {
+    val attachmentContext=LocalContext.current
+    val attachmentScope=rememberCoroutineScope()
+    var readingAttachment by remember(draft.creationRequestKey){mutableStateOf(false)}
+    var creationAttachmentError by remember(draft.creationRequestKey){mutableStateOf<String?>(null)}
+    val creationPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
+        if(uri!=null)attachmentScope.launch{
+            readingAttachment=true;creationAttachmentError=null
+            try{val(name,mime,bytes)=readExpenseAttachment(attachmentContext,uri);vm.addCreationAttachment(QuotationCreationAttachment(name,mime,bytes),draft.creationRequestKey)}catch(e:CancellationException){throw e}catch(e:Exception){creationAttachmentError=quotationAttachmentError(e)}finally{readingAttachment=false}
+        }
+    }
     var newItemLine by remember { mutableStateOf<Int?>(null) }
     if(newItemLine!=null){
         val itemVm:AccountAddItemViewModel=viewModel(key="quotation-item-${draft.creationRequestKey}")
@@ -117,9 +133,9 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
         return
     }
     AlertDialog(
-        onDismissRequest = vm::closeDraft,
+        onDismissRequest = {if(!readingAttachment)vm.closeDraft()},
         title = { Text(when { draft.id == null -> "New quotation"; draft.revision -> "New revision"; else -> "Edit quotation" }) },
-        confirmButton = { Column { if(draft.id==null) TextButton(enabled=!state.saving && draft.customerId.isNotBlank() && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields),onClick=vm::saveAndNew) { Text("Save & New") }; Button(enabled = !state.saving && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields) && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text(if(state.saving) "Saving…" else "Save") } } },
+        confirmButton = { Column { if(draft.id==null) TextButton(enabled=!readingAttachment && !state.saving && draft.customerId.isNotBlank() && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields),onClick=vm::saveAndNew) { Text("Save & New") }; Button(enabled = !readingAttachment && !state.saving && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields) && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text(if(state.saving) "Saving…" else "Save") } } },
         dismissButton = { TextButton(enabled=!state.saving,onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -169,6 +185,15 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 }
                 item {
                     OutlinedButton({vm.editDraft(draft.copy(adjustments=draft.adjustments+buildJsonObject{put("type","DISCOUNT");put("label","Discount");put("valueType","FIXED");put("value","0")}))}){Text("Add discount / charge")}
+                }
+                if(draft.id==null)item {
+                    Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+                        Text("Attachments",style=MaterialTheme.typography.titleSmall)
+                        Text("PDF, PNG or JPEG; up to 10 MB combined. Saved only when you Save; private to authorized staff.")
+                        OutlinedButton(enabled=!state.saving&&!readingAttachment,onClick={creationPicker.launch(arrayOf("application/pdf","image/png","image/jpeg"))}){Text(if(readingAttachment)"Reading file…"else"Add quotation file")}
+                        state.creationAttachments.forEachIndexed{index,file->Text(file.name);TextButton(enabled=!state.saving&&!readingAttachment,onClick={vm.removeCreationAttachment(index)}){Text("Remove ${file.name}")}}
+                        creationAttachmentError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+                    }
                 }
                 item { OutlinedTextField(draft.terms, { vm.editDraft(draft.copy(terms = it)) }, label = { Text("Terms") }, minLines = 2) }
                 item { OutlinedTextField(draft.inclusions, { vm.editDraft(draft.copy(inclusions = it)) }, label = { Text("Inclusions") }) }

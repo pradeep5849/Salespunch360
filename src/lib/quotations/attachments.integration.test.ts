@@ -31,6 +31,34 @@ describe.skipIf(!url)("A082 private revision attachments",()=>{
   });
   await client.numberingSeries.deleteMany({where:{companyId}});await client.customer.deleteMany({where:{companyId}});await client.user.deleteMany({where:{companyId}});await client.branch.deleteMany({where:{companyId}});await client.company.deleteMany({where:{id:{in:[companyId,foreignId]}}});await client.$disconnect();
  });
+ it("saves a new quotation and selected files atomically, with retry-safe file intent",async()=>{
+  const raw={...input,creationRequestKey:randomUUID()},before=await client.quotationDocument.count({where:{companyId}});put.mockClear();
+  const [first,replay]=await Promise.all([createQuotationForActor(actor,raw,[pdf()]),createQuotationForActor(actor,raw,[pdf()])]);
+  expect(first.id).toBe(replay.id);expect(put).toHaveBeenCalledTimes(1);
+  expect(await client.quotationDocument.count({where:{companyId}})).toBe(before+1);
+  const rows=await listQuotationAttachmentsForActor(actor,first.id,0);expect(rows).toHaveLength(1);
+  expect((await downloadQuotationAttachmentForActor(actor,rows[0].id)).data.toString()).toContain("%PDF-");
+  await expect(createQuotationForActor(actor,raw,[pdf("different.pdf")])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+  await expect(createQuotationForActor(actor,raw,[])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+ });
+ it("rolls back the whole first Save and numbering when a selected file cannot be stored",async()=>{
+  const raw={...input,creationRequestKey:randomUUID()},beforeObjects=objects.size;
+  const beforeSeries=await client.numberingSeries.findMany({where:{companyId}});
+  put.mockImplementationOnce(async(key,bytes)=>{objects.set(key,Buffer.from(bytes))}).mockRejectedValueOnce(new Error("storage offline"));
+  await expect(createQuotationForActor(actor,raw,[pdf("one.pdf"),pdf("two.pdf")])).rejects.toThrow("storage offline");
+  expect(await client.quotationDocument.count({where:{companyId,creationRequestKey:raw.creationRequestKey}})).toBe(0);
+  expect(await client.numberingSeries.findMany({where:{companyId}})).toEqual(beforeSeries);
+  expect(objects.size).toBe(beforeObjects);
+  const saved=await createQuotationForActor(actor,raw,[pdf("one.pdf"),pdf("two.pdf")]);
+  expect(await listQuotationAttachmentsForActor(actor,saved.id,0)).toHaveLength(2);
+ });
+ it("validates creation attachments and scope before persisting a quotation",async()=>{
+  put.mockClear();const before=await client.quotationDocument.count({where:{companyId}});
+  await expect(createQuotationForActor(actor,{...input,creationRequestKey:randomUUID()},[pdf("bad.pdf","bad")])).rejects.toThrow("INVALID_QUOTATION_ATTACHMENT");
+  await expect(createQuotationForActor(actor,input,[pdf()])).rejects.toThrow("QUOTATION_ATTACHMENT_REQUEST_KEY_REQUIRED");
+  for(const denied of [{...actor,companyId:foreignId},{...actor,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[]},{...actor,accountRole:null}])await expect(createQuotationForActor(denied,{...input,creationRequestKey:randomUUID()},[pdf()])).rejects.toThrow();
+  expect(put).not.toHaveBeenCalled();expect(await client.quotationDocument.count({where:{companyId}})).toBe(before);
+ });
  it("serializes retries once, rejects changed intent and returns only safe metadata",async()=>{
   const document=await createQuotationForActor(actor,input),raw=request(document.id),file=pdf("../private-plan.pdf");put.mockClear();
   const [first,replay]=await Promise.all([uploadQuotationAttachmentForActor(actor,raw,file),uploadQuotationAttachmentForActor(actor,raw,file)]);

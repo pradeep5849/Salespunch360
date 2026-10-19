@@ -1,9 +1,20 @@
 import {AuthenticationError} from "@/lib/auth/authorization";
 import {describe,expect,it,vi} from "vitest";
 vi.mock("@/lib/db",()=>({db:{}}));
-import {quotationAttachmentForm,quotationAttachmentFailure,quotationAttachmentResponse} from "./attachment-http";
+import {quotationAttachmentForm,quotationCreationForm,quotationAttachmentFailure,quotationAttachmentResponse} from "./attachment-http";
 import {QuotationAttachmentError} from "./attachments";
 describe("bounded private quotation attachment HTTP",()=>{
+ it("parses creation files and custom fields without persisting an implicit document",async()=>{
+  const body=new FormData();body.set("document",JSON.stringify({branchId:"branch",customFields:{old:"old"}}));body.set("creationRequestKey","key");body.set("custom_text","hello");
+  body.append("attachments",new File(["%PDF-1.7"],"plan.pdf",{type:"application/pdf"}));
+  const parsed=await quotationCreationForm(new Request("http://example.test/",{method:"POST",body}));
+  expect(parsed.document).toEqual({branchId:"branch",customFields:{text:"hello"},creationRequestKey:"key"});expect(parsed.files).toHaveLength(1);
+ });
+ it("rejects nonobject creation JSON and nonfile attachment entries",async()=>{
+  for(const value of ["null","[]","broken"]){const body=new FormData();body.set("document",value);await expect(quotationCreationForm(new Request("http://example.test/",{method:"POST",body}))).rejects.toThrow("INVALID_INPUT")}
+  const body=new FormData();body.set("document","{}");body.set("attachments","not a file");await expect(quotationCreationForm(new Request("http://example.test/",{method:"POST",body}))).rejects.toThrow("INVALID_QUOTATION_ATTACHMENT");
+  expect(quotationAttachmentFailure(new Error("IDEMPOTENCY_KEY_REUSED")).status).toBe(409);
+ });
  it("parses a bounded multipart upload without trusting a filename as a storage key",async()=>{
   const body=new FormData();body.set("file",new File(["%PDF-1.7"],"../../Plan.pdf",{type:"application/pdf"}));body.set("revisionNumber","0");body.set("requestKey","key");
   const parsed=await quotationAttachmentForm(new Request("http://example.test/",{method:"POST",body}));

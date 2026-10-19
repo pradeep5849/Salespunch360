@@ -48,6 +48,7 @@ data class QuotationRow(
 )
 
 data class QuotationState(
+    val creationAttachments:List<QuotationCreationAttachment> = emptyList(),
     val companyName:String="",
     val stateOfSupplyOptions:List<Pair<String,String>> = emptyList(),
     val canCreate:Boolean=false,
@@ -154,11 +155,12 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
-    fun createEstimate(){if(!_state.value.canCreate||_state.value.saving)return;val current=_state.value;_state.value=current.copy(draft=QuotationDraft(branchId=current.branches.firstOrNull()?.id.orEmpty(),documentType="ESTIMATE"))}
+    fun createEstimate(){if(!_state.value.canCreate||_state.value.saving)return;val current=_state.value;_state.value=current.copy(creationAttachments=emptyList(),draft=QuotationDraft(branchId=current.branches.firstOrNull()?.id.orEmpty(),documentType="ESTIMATE"))}
 
     fun create() {
         val current = _state.value
         _state.value = current.copy(
+            creationAttachments=emptyList(),
             draft = QuotationDraft(branchId = current.branches.firstOrNull()?.id.orEmpty())
         )
     }
@@ -218,8 +220,16 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         if(_state.value.saving)return
         partyBalanceJob?.cancel()
         itemReturnJob?.cancel()
-        _state.value = _state.value.copy(draft = null,partyBalance=null,itemReturnPending=false,itemReturnError=null)
+        _state.value = _state.value.copy(creationAttachments=emptyList(),draft = null,partyBalance=null,itemReturnPending=false,itemReturnError=null)
     }
+
+    fun addCreationAttachment(file:QuotationCreationAttachment,creationKey:String){
+        val current=_state.value;if(current.saving||current.draft==null||current.draft.id!=null||current.draft.creationRequestKey!=creationKey)return
+        val files=current.creationAttachments+file
+        require(validQuotationCreationAttachments(files)){"Choose PDF, PNG or JPEG files, up to 50 files and 10 MB combined."}
+        _state.value=current.copy(creationAttachments=files)
+    }
+    fun removeCreationAttachment(index:Int){if(!_state.value.saving)_state.value=_state.value.copy(creationAttachments=_state.value.creationAttachments.filterIndexed{position,_->position!=index})}
 
     fun line(index: Int, line: SalesLineDraft) {
         _state.value.draft?.let { editDraft(editedQuotationLine(it, index, line)) }
@@ -243,13 +253,14 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
     private fun saveDraft(startNew: Boolean) {
         if(_state.value.saving)return
         val draft = _state.value.draft ?: return
+        val attachments=_state.value.creationAttachments.toList()
         if(startNew && draft.id != null)return
         _state.value = _state.value.copy(saving = true,error=null)
         viewModelScope.launch {
             try {
                 val id = draft.id
                 val savedId = if (id == null) {
-                    api.createQuotation(payload(draft)).str("id")
+                    (if(attachments.isEmpty())api.createQuotation(payload(draft))else api.createQuotationWithAttachments(payload(draft),attachments)).str("id")
                 } else {
                     if(draft.revision)api.quotationAction(id,buildJsonObject { put("action","REVISE");put("document",payload(draft)) })
                     else api.updateQuotation(id,payload(draft))
@@ -257,7 +268,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // The write is confirmed. A failed detail reload must never retain
                 // this form as an unsaved revision that could be submitted again.
-                _state.value = _state.value.copy(saving=false,draft=if(startNew) freshQuotationAfterSave(draft) else null,detail=null,preview=false,message="Quotation saved with server totals.")
+                _state.value = _state.value.copy(creationAttachments=emptyList(),saving=false,draft=if(startNew) freshQuotationAfterSave(draft) else null,detail=null,preview=false,message="Quotation saved with server totals.")
                 if(!startNew) openDetail(savedId, draft.id == null)
                 refresh()
             } catch(e:Exception) { fail(e) }

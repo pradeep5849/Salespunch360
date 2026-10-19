@@ -1,4 +1,4 @@
-import {copyQuotationAttachmentsInTx} from "./attachments";
+import {copyQuotationAttachmentsInTx,prepareQuotationCreationAttachments,storeQuotationCreationAttachmentsInTx,cleanQuotationCreationAttachmentAttempts} from "./attachments";
 import {GST_STATES} from "@/lib/account/gst-states";
 import {resolveDisplayPreferences,type DisplayPreferences} from "@/lib/account/display-preferences";
 import {resolveItemSettings} from "@/lib/account/item-settings-policy";
@@ -86,10 +86,12 @@ async function createRevisionRows(actor: Actor, documentId: string, revisionNumb
 function publicQuotationDocument<T extends object>(document:T){
  return Object.fromEntries(Object.entries(document).filter(([key])=>!["creationRequestKey","creationRequestHash"].includes(key))) as Omit<T,"creationRequestKey"|"creationRequestHash">;
 }
-export async function createQuotationForActor(actor: Actor, raw: unknown) {
+export async function createQuotationForActor(actor: Actor, raw: unknown, files:File[] = []) {
  const input=quotationInput.parse(raw);await requireAccountModules(actor,"QUOTATIONS_BOQ");assertCostWrite(actor,input);
- const {creationRequestKey,...intent}=input,hash=creationRequestKey?commercialCreationHash(intent):undefined;
- return retrySerializable(()=>db.$transaction(async tx=>{
+ const attachments=await prepareQuotationCreationAttachments(actor,files),attemptedKeys=new Set<string>();
+ const {creationRequestKey,...intent}=input,hash=creationRequestKey?commercialCreationHash(attachments.length?{...intent,attachments:attachments.map(file=>({displayName:file.displayName,mimeType:file.mimeType,contentHash:file.contentHash,sizeBytes:file.sizeBytes}))}:intent):undefined;
+ if(attachments.length&&!creationRequestKey)throw new Error("QUOTATION_ATTACHMENT_REQUEST_KEY_REQUIRED");
+ try{return await retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId}::uuid FOR UPDATE`;
   await assertBranch(actor,input.branchId,tx);
   if(creationRequestKey){
@@ -98,10 +100,12 @@ export async function createQuotationForActor(actor: Actor, raw: unknown) {
   }
   const snapshot=await partySnapshot(actor,input,tx),documentNumber=await allocateDocumentNumberInTx(tx,{companyId:actor.companyId!,branchId:input.branchId,seriesKey:input.documentType,defaults:{prefix:input.documentType==="QUOTATION"?"Q-":input.documentType==="ESTIMATE"?"E-":"B-",padding:6}});
   const document=await tx.quotationDocument.create({data:{companyId:actor.companyId!,branchId:input.branchId,documentType:input.documentType,documentNumber,customerId:input.customerId,sourceLeadId:input.sourceLeadId,createdById:actor.id,creationRequestKey,creationRequestHash:hash}});
-  await createRevisionRows(actor,document.id,0,input,snapshot,tx);
+  const revision=await createRevisionRows(actor,document.id,0,input,snapshot,tx);
+  await storeQuotationCreationAttachmentsInTx(tx,actor,document.id,revision.id,attachments,attemptedKeys);
   await tx.quotationAuditEvent.create({data:{companyId:actor.companyId!,documentId:document.id,actorId:actor.id,eventType:"CREATED",revisionNumber:0}});
   return publicQuotationDocument(document);
- },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable}),3,["companyId","creationRequestKey"]);
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,...(attachments.length?{timeout:30000}:{})}),3,["companyId","creationRequestKey"]);
+ }finally{await cleanQuotationCreationAttachmentAttempts(actor.companyId!,attemptedKeys)}
 }
 
 async function quotationCustomValues(client:QueryClient,companyId:string,revisionId:string){
