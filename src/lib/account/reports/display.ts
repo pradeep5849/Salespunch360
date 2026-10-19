@@ -11,6 +11,8 @@ import type { ReportResult } from "./service";
 const moneyColumns = new Set([
   "Amount",
   "Sales",
+  "Sale Discount",
+  "Purchase/Expense Discount",
   "Purchases",
   "Withdrawal",
   "Deposit",

@@ -223,7 +223,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
-  if(name==="sale-purchase-party")return partyTradeReport(await context(raw,false,actor));
+  if(name==="sale-purchase-party"||name==="discount-party")return partyTradeReport(await context(raw,false,actor),name==="discount-party");
   if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(name==="stock-category")return stockCategoryReport(await context(raw,false,actor));
   if(["stock-summary","low-stock-summary"].includes(name))return stockLevelReport(name,await context(raw,false,actor));

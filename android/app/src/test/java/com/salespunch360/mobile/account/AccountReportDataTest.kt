@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun discountReportRetainsSignedMoneyAndRejectsStaleItemScope() {
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"discount-party","name":"Discount Report","group":"Business status","filters":[]}]}""").jsonObject
+        assertEquals("discount-party",accountReportCatalogue(options,"Discount Report").single().key)
+        assertEquals(mapOf("from" to "2026-10-01"),accountReportRequestFilters(options,"discount-party",mapOf("from" to "2026-10-01","productId" to "stale")))
+        val data=Json.parseToJsonElement("""{"rows":[["Customer","Customer","₹7.50","₹0.00"],["Vendor","Vendor","₹0.00","-₹4.50"]]}""").jsonObject
+        assertEquals("-₹4.50",accountReportRows(data)[1][3])
+    }
+
     @Test fun partyTradeKeepsCustomerVendorRowsAndOnlyPeriodBranchScope() {
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"sale-purchase-party","name":"Sale/Purchase by Party","group":"Party reports","filters":[]}]}""").jsonObject
         assertEquals("sale-purchase-party",accountReportCatalogue(options,"sale/purchase").single().key)

@@ -30,6 +30,7 @@ export const REPORT_CATALOGUE = [
   ["stock-detail", "Stock Detail Report", "Item/Stock reports"],
   ["invoices", "Bill Wise Profit", "Transaction"],
   ["sale-purchase-party", "Sale/Purchase by Party", "Party reports"],
+  ["discount-party", "Discount Report", "Business status"],
   ["customers", "Party Wise Profit & Loss", "Party reports"],
   ["tax", "GST / Tax Report", "Tax"],
   ["budget-vs-actual", "Budget vs Actual", "Projects"],

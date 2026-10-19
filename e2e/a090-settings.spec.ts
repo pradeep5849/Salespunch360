@@ -2872,3 +2872,28 @@ test("A084 Sale Purchase by Party nets posted returns across Web native and expo
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
 });
+
+test("A084 Discount Report nets recorded discounts across Web native and exports",async({page})=>{
+ test.setTimeout(240000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchIds:[]} as ProjectActor;
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:[],baseCurrency:"INR",displayDecimalPlaces:2}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Party report year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  const vendor=await db.vendor.create({data:{companyId,name:"Print fixture customer"}});
+  for(const [type,partyId,rate,returnType] of [["SALES_INVOICE",customerId,"100","CREDIT_NOTE"],["PURCHASE_BILL",vendor.id,"60","DEBIT_NOTE"]] as const){
+   const source=await createCommercialDocumentForActor(actor,{type,branchId,partyId,issueDate:"2026-10-05",...(type==="PURCHASE_BILL"?{purchasePurpose:"GENERAL_OFFICE" as const,vendorInvoiceNumber:`PARTY-${randomUUID()}`,vendorInvoiceDate:"2026-10-05"}:{}),lines:[{lineType:"CUSTOM",itemName:"Party report service",unitName:"Pieces",unitSymbol:"Nos",quantity:"1",rate,taxRate:"0",discountType:"PERCENTAGE",discountValue:"10"}]});await postCommercialDocumentForActor(actor,{documentId:source.id});
+   const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}});
+   const returned=await createCommercialDocumentForActor(actor,{type:returnType,branchId,partyId,sourceDocumentId:source.id,issueDate:"2026-10-18",...(returnType==="DEBIT_NOTE"?{purchasePurpose:"GENERAL_OFFICE" as const}:{}),lines:[{lineType:"CUSTOM",sourceCommercialLineId:line.id,itemName:line.itemName,unitName:"Pieces",unitSymbol:"Nos",quantity:"0.25",rate,taxRate:"0",discountType:"PERCENTAGE",discountValue:"10"}]});await postCommercialDocumentForActor(actor,{documentId:returned.id});
+  }
+  const journals=await db.journalEntry.count({where:{companyId}}),movements=await db.stockMovement.count({where:{companyId}}),query=`branchId=${branchId}&from=2026-10-01&to=2026-10-18`;
+  const result=await runFinancialReportForActor(actor,"discount-party",{branchId,from:"2026-10-01",to:"2026-10-18"});expect(result.rows).toEqual([["Print fixture customer","Customer","7.50","0.00"],["Print fixture customer","Vendor","0.00","4.50"]]);
+  await signInSettings(page);const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  await page.goto(`/workspace/account/reports/discount-party?${query}`);await expect(page.getByRole("heading",{name:"Discount Report",exact:true})).toBeVisible({timeout:15000});const summary=page.getByRole("region",{name:"Report summary",exact:true});await expect(summary).toContainText("₹7.50");await expect(summary).toContainText("₹4.50");await expect(page.getByRole("cell",{name:"Print fixture customer",exact:true})).toHaveCount(2);
+  const response=await page.request.get(`/api/v1/mobile/account/reports/discount-party?${query}`,{headers});expect(response.status()).toBe(200);expect((await response.json()).summary.map((x:{value:string})=>x.value)).toEqual(["7.50","4.50"]);
+  for(const format of ["csv","xlsx","pdf"]){const exported=await page.request.get(`/api/account/reports/discount-party/${format}?${query}`);expect(exported.status()).toBe(200);if(format==="csv"){const text=await exported.text();expect(text).toContain("7.50");expect(text).toContain("4.50")}else if(format==="pdf"){expect((await extractPdfText(await exported.body())).text).toContain("7.50")}else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await exported.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain("4.50")}}
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/discount-party?${query}`,{headers})).status()).toBe(403);
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
+});
