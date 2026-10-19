@@ -1,3 +1,4 @@
+import {commercialBaseQuantity,commercialReturnBaseQuantity} from "./commercial-stock-quantity";
 import {resolveCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import {customerPriceOptionsForActor,wholesalePriceOptionsForActor} from "./customer-price-options";
 import {itemPriceForDocument} from "./item-pricing";
@@ -651,7 +652,7 @@ async function snapshotLine(
       throw new Error("BATCH_REQUIRED");
     if (
       master.trackingMode === "SERIAL" &&
-      (!row.serialNumberId || !new D(row.quantity).equals(1))
+      (!row.serialNumberId || !new D(units.baseQuantity).equals(1))
     )
       throw new Error("SERIAL_QUANTITY_MISMATCH");
     if (new D(row.stockReturnQuantity ?? 0).gt(new D(row.quantity)))
@@ -1514,6 +1515,7 @@ async function purchaseInventoryFromAllocationsInTx(
     });
     if (!product) continue;
     for (const allocation of line.purchaseAllocations) {
+      const allocatedQuantity=commercialBaseQuantity(allocation);
       if (allocation.allocationType !== "INVENTORY" || !allocation.warehouseId)
         continue;
       const warehouse = await tx.warehouse.findFirst({
@@ -1538,7 +1540,7 @@ async function purchaseInventoryFromAllocationsInTx(
       )
         throw new Error("INVALID_INVENTORY_BATCH");
       if (line.serialNumberId) {
-        if (!allocation.quantity.equals(1))
+        if (!allocatedQuantity.equals(1))
           throw new Error("SERIAL_QUANTITY_MISMATCH");
         const serial = await tx.inventorySerialNumber.findFirst({
           where: {
@@ -1560,10 +1562,10 @@ async function purchaseInventoryFromAllocationsInTx(
         if (new D(prior._sum.quantity ?? 0).gt(0))
           throw new Error("SERIAL_ALREADY_IN_STOCK");
       }
-      let unitCost = allocation.taxableAmount.div(allocation.quantity);
+      let unitCost = allocation.taxableAmount.div(allocatedQuantity);
       if (doc.taxCreditTreatment !== "ELIGIBLE")
-        unitCost = unitCost.add(allocation.taxAmount.div(allocation.quantity));
-      const totalCost = allocation.quantity.mul(unitCost).toDecimalPlaces(2);
+        unitCost = unitCost.add(allocation.taxAmount.div(allocatedQuantity));
+      const totalCost = allocatedQuantity.mul(unitCost).toDecimalPlaces(2);
       await tx.stockMovement.create({
         data: {
           companyId: actor.companyId!,
@@ -1571,7 +1573,7 @@ async function purchaseInventoryFromAllocationsInTx(
           warehouseId: warehouse.id,
           productId: product.id,
           movementType: "PURCHASE",
-          quantity: allocation.quantity,
+          quantity: allocatedQuantity,
           unitCost,
           totalCost,
           sourceType: doc.type,
@@ -1698,12 +1700,13 @@ async function commercialInventoryInTx(
       }),
       valuation = stockValuation(prior),
       physicalReturn = ["CREDIT_NOTE", "DEBIT_NOTE"].includes(doc.type)
-        ? line.stockReturnQuantity
+        ? commercialReturnBaseQuantity(line)
         : new D(0),
       quantity = ["CREDIT_NOTE", "DEBIT_NOTE"].includes(doc.type)
         ? physicalReturn
-        : line.quantity;
+        : commercialBaseQuantity(line);
     if (quantity.lte(0)) continue;
+    if(line.serialNumberId&&!quantity.equals(1))throw new Error("SERIAL_QUANTITY_MISMATCH");
     let movementType: "PURCHASE" | "SALE" | "PURCHASE_RETURN" | "SALES_RETURN",
       unitCost: Prisma.Decimal;
     if (doc.type === "SALES_INVOICE") {
@@ -1814,6 +1817,7 @@ export async function postProjectPurchaseMaterialsInTx(
     });
     if (!product) continue;
     for (const allocation of line.purchaseAllocations) {
+      const allocatedQuantity=commercialBaseQuantity(allocation);
       if (allocation.allocationType !== "PROJECT" || !allocation.projectId)
         continue;
       if (!(allocation.warehouseId ?? line.warehouseId))
@@ -1841,7 +1845,7 @@ export async function postProjectPurchaseMaterialsInTx(
         throw new Error("INVALID_INVENTORY_BATCH");
       if (line.serialNumberId) {
         if (
-          !allocation.quantity.equals(1) ||
+          !allocatedQuantity.equals(1) ||
           !(await tx.inventorySerialNumber.findFirst({
             where: {
               id: line.serialNumberId,
@@ -1865,8 +1869,8 @@ export async function postProjectPurchaseMaterialsInTx(
       }
       const unitCost = allocation.taxableAmount
           .add(doc.taxCreditTreatment === "ELIGIBLE" ? 0 : allocation.taxAmount)
-          .div(allocation.quantity),
-        totalCost = allocation.quantity.mul(unitCost).toDecimalPlaces(2);
+          .div(allocatedQuantity),
+        totalCost = allocatedQuantity.mul(unitCost).toDecimalPlaces(2);
       await tx.stockMovement.create({
         data: {
           companyId: actor.companyId!,
@@ -1874,7 +1878,7 @@ export async function postProjectPurchaseMaterialsInTx(
           warehouseId: warehouse.id,
           productId: line.productId,
           movementType: "PURCHASE",
-          quantity: allocation.quantity,
+          quantity: allocatedQuantity,
           unitCost,
           totalCost,
           sourceType: "PURCHASE_BILL",
@@ -1899,7 +1903,7 @@ export async function postProjectPurchaseMaterialsInTx(
           warehouseId: warehouse.id,
           batchId: line.batchId,
           serialNumberId: line.serialNumberId,
-          quantity: allocation.quantity,
+          quantity: allocatedQuantity,
           originalUnitCost: unitCost,
           totalCost,
           movementDate: doc.issueDate,
@@ -1915,7 +1919,7 @@ export async function postProjectPurchaseMaterialsInTx(
           warehouseId: warehouse.id,
           productId: line.productId,
           movementType: "TRANSFER_OUT",
-          quantity: allocation.quantity,
+          quantity: allocatedQuantity,
           unitCost,
           totalCost,
           sourceType: "PROJECT_MATERIAL_ISSUE",
@@ -1938,7 +1942,7 @@ export async function postProjectPurchaseMaterialsInTx(
             movementType: movement.movementType,
             purchaseDocumentId: doc.id,
             purchaseAllocationId: allocation.id,
-            quantity: allocation.quantity.toString(),
+            quantity: allocatedQuantity.toString(),
             totalCost: totalCost.toString(),
           },
         },
@@ -2080,7 +2084,7 @@ export async function postCommercialDocumentForActor(
               ...doc,
               lines: doc.lines.map((line) => ({
                 ...line,
-                stockReturnQuantity: line.stockReturnQuantity.sub(
+                stockReturnBaseQuantity: commercialReturnBaseQuantity(line).sub(
                   projectReturns.projectReturnQuantities.get(line.id) ?? 0,
                 ),
               })),

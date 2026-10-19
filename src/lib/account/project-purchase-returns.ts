@@ -1,3 +1,4 @@
+import {commercialBaseQuantity,commercialReturnBaseQuantity} from "./commercial-stock-quantity";
 import { Prisma } from "@prisma/client";
 import { authorizeProjectForCommercial, type ProjectActor } from "./projects";
 import { projectMaterialIssueValue } from "./project-material";
@@ -14,6 +15,7 @@ export function purchaseReturnQuantities(
   sourceQuantity: Prisma.Decimal,
   returnedQuantity: Prisma.Decimal,
   allocations: Array<{ id: string; quantity: Prisma.Decimal }>,
+  precision=6,
 ) {
   if (
     sourceQuantity.lte(0) ||
@@ -36,7 +38,7 @@ export function purchaseReturnQuantities(
           : returnedQuantity
               .mul(row.quantity)
               .div(sourceQuantity)
-              .toDecimalPlaces(6);
+              .toDecimalPlaces(precision);
       remaining = remaining.sub(quantity);
       if (quantity.lt(0) || quantity.gt(row.quantity))
         throw new Error("ADJUSTMENT_STOCK_EXCEEDS_SOURCE");
@@ -103,9 +105,10 @@ export async function projectPurchaseReturnsInTx(
     const allocations = sourceLine.purchaseAllocations;
     if (!allocations.length) continue; // Legacy ordinary purchases retain their established inventory path.
     const quantities = purchaseReturnQuantities(
-      sourceLine.quantity,
-      line.stockReturnQuantity,
-      allocations,
+      commercialBaseQuantity(sourceLine),
+      commercialReturnBaseQuantity(line),
+      allocations.map(row=>({id:row.id,quantity:commercialBaseQuantity(row)})),
+      sourceLine.unitConversionSnapshot?4:6,
     );
     for (const allocation of allocations) {
       const quantity = quantities.get(allocation.id)!;

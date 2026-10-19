@@ -27,6 +27,10 @@ describe("Project supplier returns", () => {
       purchaseReturnQuantities(D(3), D(1), rows.slice(0, 2)),
     ).toThrow("INVALID_PURCHASE_ALLOCATION");
   });
+  it("conserves returned primary stock at four decimals for converted documents",()=>{
+    const result=purchaseReturnQuantities(D(3),D(1),[{id:"a",quantity:D(1)},{id:"b",quantity:D(1)},{id:"c",quantity:D(1)}],4);
+    expect([...result.values()].reduce((sum,value)=>sum.add(value),D(0)).toString()).toBe("1");expect(result.get("c")?.toString()).toBe("0.3334");expect([...result.values()].every(value=>value.decimalPlaces()<=4)).toBe(true);
+  });
   it("keeps company inventory value unchanged when a differently priced Project purchase is received and issued", () => {
     const rows = [
       { movementType: "OPENING" as const, quantity: D(10), unitCost: D(10) },

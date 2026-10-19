@@ -158,7 +158,8 @@ beforeEach(() => {
   m.journal.mockResolvedValue({ id: id(9) });
 });
 async function preparePosting(stock: number, quantity: number) {
-  const created = await createCommercialDocumentForActor(actor, input());
+  const request=input();request.lines[0].quantity=String(quantity);
+  const created = await createCommercialDocumentForActor(actor, request);
   const snapshot = m.tx.commercialDocument.create.mock.calls[0][0].data;
   const savedLines = snapshot.lines!
     .create as Prisma.CommercialDocumentLineUncheckedCreateWithoutDocumentInput[];
