@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import {parseCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -9,6 +10,7 @@ import { resolveItemSettings } from "./item-settings-policy";
 import { pricingForLegacyEdit } from "./item-pricing";
 import { retrySerializable } from "./transaction-retry";
 import type { ProjectActor } from "./projects";
+const PriceExact=Prisma.Decimal.clone({precision:48});
 export type SalePriceProposal={lineId:string;sourceKey:string;name:string;oldPrice:string;newPrice:string;expectedUpdatedAt:string};
 const input=z.object({documentId:z.string().uuid(),lineId:z.string().uuid(),expectedUpdatedAt:z.string().datetime(),requestKey:z.string().uuid(),confirmed:z.literal(true)}).strict();
 async function access(actor:ProjectActor){
@@ -20,14 +22,24 @@ async function document(tx:Prisma.TransactionClient,actor:ProjectActor,id:string
  if(!doc)throw new AuthorizationError();return doc;
 }
 async function policy(tx:Prisma.TransactionClient,companyId:string){return resolveItemSettings((await tx.accountSettings.findUnique({where:{companyId},select:{itemSettings:true}}))?.itemSettings);}
-export function retailRateFromInvoice(rate:Prisma.Decimal,taxMode:string,tax:Prisma.Decimal,cess:Prisma.Decimal){return (taxMode==="INCLUSIVE"?rate.mul(100).div(new Prisma.Decimal(100).add(tax).add(cess)):rate).toDecimalPlaces(2);}
+/** Consent updates a primary-unit master price,never a Box/Piece invoice rate.
+ * Normalize tax and unit factor before a single currency rounding step. */
+export function retailRateFromInvoice(rate:Prisma.Decimal,taxMode:string,tax:Prisma.Decimal,cess:Prisma.Decimal,unitSnapshot?:unknown){
+ const snapshot=unitSnapshot==null?undefined:parseCommercialUnitSnapshot(unitSnapshot);
+ let value=new PriceExact(rate.toString());
+ if(taxMode==="INCLUSIVE")value=value.mul(100).div(new PriceExact(100).add(tax.toString()).add(cess.toString()));
+ if(snapshot?.selection==="SECONDARY")value=value.mul(snapshot.secondaryUnitsPerBase);
+ value=value.toDecimalPlaces(2);
+ if(!value.isFinite()||value.lt(0)||value.gte("10000000000000000"))throw new Error("UNIT_CONVERSION_OVERFLOW");
+ return new Prisma.Decimal(value.toString());
+}
 async function proposal(tx:Prisma.TransactionClient,actor:ProjectActor,doc:Awaited<ReturnType<typeof document>>,lineId:string){
  const line=doc.lines.find(l=>l.id===lineId);if(!line)throw new AuthorizationError();
  const product=line.lineType==="PRODUCT"&&line.productId?await tx.accountProduct.findFirst({where:{id:line.productId,companyId:actor.companyId,isActive:true}}):null;
  const service=line.lineType==="SERVICE"&&line.serviceId?await tx.accountService.findFirst({where:{id:line.serviceId,companyId:actor.companyId,isActive:true}}):null;
  const master=product??service;if(!master)return null;
  const oldRate=product?.salePrice??service?.sellingRate??new Prisma.Decimal(0);
- const rate=retailRateFromInvoice(line.rate,doc.taxMode,line.taxRate,line.cessRate);
+ const rate=retailRateFromInvoice(line.rate,doc.taxMode,line.taxRate,line.cessRate,line.unitConversionSnapshot);
  return {master,product,service,rate,view:{lineId:line.id,sourceKey:`${line.lineType}:${master.id}`,name:line.itemName,oldPrice:oldRate.toString(),newPrice:rate.toString(),expectedUpdatedAt:master.updatedAt.toISOString()} satisfies SalePriceProposal};
 }
 export async function salePriceProposalsForActor(actor:ProjectActor,documentId:string):Promise<SalePriceProposal[]>{

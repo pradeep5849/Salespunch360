@@ -3,6 +3,11 @@ import {quantityInBaseUnits,type ItemUnitSelection} from "./unit-quantities";
 import {validUnitConversionRate} from "./unit-conversion-rate";
 const snapshotSchema=z.object({version:z.literal(1),selection:z.enum(["PRIMARY","SECONDARY"]),primaryUnitId:z.string().uuid(),secondaryUnitId:z.string().uuid(),secondaryUnitsPerBase:z.string().refine(validUnitConversionRate),unitName:z.string().max(80),unitSymbol:z.string().max(20)}).refine(value=>value.primaryUnitId!==value.secondaryUnitId);
 export type CommercialUnitSnapshot=z.infer<typeof snapshotSchema>;
+export function parseCommercialUnitSnapshot(value:unknown):CommercialUnitSnapshot{
+ const parsed=snapshotSchema.safeParse(value);
+ if(!parsed.success)throw new Error("INVALID_UNIT_SNAPSHOT");
+ return parsed.data;
+}
 type Unit={id:string;name:string;symbol:string;isActive?:boolean};
 type Master={unit?:Unit|null;secondaryUnit?:Unit|null;secondaryUnitsPerBase?:{toString():string}|string|null};
 type Source={unitConversionSnapshot:unknown;unitName:string|null;unitSymbol:string|null};
@@ -10,9 +15,7 @@ type Source={unitConversionSnapshot:unknown;unitName:string|null;unitSymbol:stri
 export function resolveCommercialUnitSnapshot(input:{quantity:string;selection?:ItemUnitSelection;master?:Master|null},source?:Source){
  let snapshot:CommercialUnitSnapshot|undefined;
  if(source?.unitConversionSnapshot!=null){
-  const parsed=snapshotSchema.safeParse(source.unitConversionSnapshot);
-  if(!parsed.success)throw new Error("INVALID_UNIT_SNAPSHOT");
-  snapshot=parsed.data;
+  snapshot=parseCommercialUnitSnapshot(source.unitConversionSnapshot);
   if(input.selection&&input.selection!==snapshot.selection)throw new Error("SOURCE_UNIT_MISMATCH");
  }else if(source){
   if(input.selection==="SECONDARY")throw new Error("SOURCE_UNIT_MISMATCH");

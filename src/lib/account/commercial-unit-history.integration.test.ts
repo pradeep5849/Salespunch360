@@ -1,11 +1,12 @@
 import {randomUUID} from "node:crypto";
-import {PrismaClient} from "@prisma/client";
+import {Prisma,PrismaClient} from "@prisma/client";
 import {beforeAll,afterAll,describe,it,expect,vi} from "vitest";
 const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {createCommercialDocumentForActor,postCommercialDocumentForActor} from "./commercial";
+import {salePriceProposalsForActor,confirmSalePriceForActor} from "./sale-price-updates";
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import type {ProjectActor} from "./projects";
 const companyId=randomUUID(),branchId=randomUUID(),userId=randomUUID(),customerId=randomUUID(),primary=randomUUID(),secondary=randomUUID(),productId=randomUUID(),vendorId=randomUUID();
@@ -28,7 +29,7 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   await client.$transaction(async tx=>{
    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
    await tx.stockMovement.deleteMany({where:{companyId}});await tx.purchaseLineAllocation.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{companyId}});await tx.commercialDocument.deleteMany({where:{companyId}});
-   await tx.accountingAuditEvent.deleteMany({where:{companyId}});await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});
+   await tx.accountOperationalAudit.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});
    await tx.numberingSeries.deleteMany({where:{companyId}});await tx.ledgerAccount.deleteMany({where:{companyId}});await tx.financialYear.deleteMany({where:{companyId}});
    await tx.accountProduct.deleteMany({where:{companyId}});await tx.warehouse.deleteMany({where:{companyId}});await tx.accountUnit.deleteMany({where:{companyId}});await tx.customer.deleteMany({where:{companyId}});await tx.vendor.deleteMany({where:{companyId}});await tx.accountSettings.deleteMany({where:{companyId}});await tx.user.deleteMany({where:{companyId}});await tx.branch.deleteMany({where:{companyId}});await tx.company.delete({where:{id:companyId}});
   });await client.$disconnect();
@@ -83,6 +84,24 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   const saleCost=await client.journalLine.findFirstOrThrow({where:{companyId,journalEntry:{sourceId:sale.id},ledgerAccount:{systemKey:"COGS"}}}),returnCost=await client.journalLine.findFirstOrThrow({where:{companyId,journalEntry:{sourceId:credit.id},ledgerAccount:{systemKey:"COGS"}}});expect(saleCost.debit.toString()).toBe("50");expect(returnCost.credit.toString()).toBe("25");
   const inventory=await client.journalLine.aggregate({where:{companyId,ledgerAccount:{systemKey:"INVENTORY_ASSET"}},_sum:{debit:true,credit:true}});expect(inventory._sum.debit!.sub(inventory._sum.credit??0).toString()).toBe("75");
   for(const id of [purchase.id,sale.id,credit.id]){const doc=await client.commercialDocument.findUniqueOrThrow({where:{id},include:{journalEntry:{include:{lines:true}}}});expect(doc.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0)}
+ });
+ it("confirms only a retained primary-unit future price and keeps posted history intact",async()=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}}),original=await client.accountProduct.findUniqueOrThrow({where:{id:productId}});
+  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,updateSalePrice:true}}});
+  try{
+   const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{...input.lines[0],quantity:"1",rate:"210"}]}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}}),snapshot={...line.unitConversionSnapshot as object,selection:"SECONDARY",unitName:"Box",unitSymbol:"box"};
+   await client.$executeRaw`UPDATE commercial_document_lines SET "baseQuantity"=10,"unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb,"unitName"='Box',"unitSymbol"='box' WHERE id=${line.id}::uuid`;
+   await postCommercialDocumentForActor(actor,{documentId:sale.id});
+   const before=await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id},include:{lines:true}});
+   await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.2"}});
+   const proposals=await salePriceProposalsForActor(actor,sale.id);expect(proposals).toHaveLength(1);expect(proposals[0]).toMatchObject({lineId:line.id,oldPrice:"20",newPrice:"21"});
+   expect((await client.accountProduct.findUniqueOrThrow({where:{id:productId}})).salePrice?.toString()).toBe("20");
+   const consent={documentId:sale.id,lineId:line.id,expectedUpdatedAt:proposals[0].expectedUpdatedAt,requestKey:randomUUID(),confirmed:true};
+   await confirmSalePriceForActor(actor,consent);await confirmSalePriceForActor(actor,consent);
+   expect((await client.accountProduct.findUniqueOrThrow({where:{id:productId}})).salePrice?.toString()).toBe("21");
+   expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id},include:{lines:true}})).toEqual(before);
+   expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_MASTER_PRICE_CONFIRMED",entityId:productId}})).toBe(1);
+  }finally{await client.accountProduct.update({where:{id:productId},data:{salePrice:original.salePrice,pricing:original.pricing??Prisma.DbNull,secondaryUnitsPerBase:original.secondaryUnitsPerBase}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});
