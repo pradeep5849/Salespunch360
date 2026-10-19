@@ -55090,6 +55090,35 @@
           },
           "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim.",
           "implementation_commit": "b0f31a092c2195ffd5b86a31f03d0610435ed3c8"
+        },
+        "billing_name_snapshot_2026_10_19": {
+          "work": "Optional Billing Name is a separate nullable revision snapshot, never a customer rename. Web/native create/edit/revise/read preview and customer PDF retain it; read-only Sale/Order prefill prefers it over customerName. Whitespace trims, blank/null explicitly clears, legacy client omission preserves on edit/revision, Save & New resets. Existing company/branch/module/cost scope and issued-history protection retained.",
+          "files": [
+            "prisma/schema.prisma",
+            "prisma/migrations/20261019140000_quotation_billing_name_snapshot/migration.sql",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/editor-data.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/conversion-preview.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationDraftCodec.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt"
+          ],
+          "tests": {
+            "unit": "89 passed across service.runtime, PDF and conversion-preview files, 0 failed/skipped.",
+            "database": "9 actual isolated PostgreSQL tests passed, 0 failed/skipped; includes create/edit/omission/null/revision/conversion name, issued mutation denial, customer unchanged and zero journal writes; existing scoped tests rerun.",
+            "browser": "2 desktop/mobile Chromium profiles passed (2.6m): form create, saved preview, parsed PDF, edit, authenticated native HTTP PATCH/GET omission preservation and explicit null clear, Axe AA/no root overflow/no journal changes.",
+            "android": "compileDebugKotlin and 19 quotation preview/codec JVM tests passed (4m7s), 0 failures/errors/skips. No emulator/device runtime.",
+            "migration": "Fresh empty local CI database complete 137-migration chain and pre-upgrade issued snapshot preservation rehearsal: 1 passed (9.78s), 0 failed/skipped. New billingName NULL and all original fields unchanged; repeat deploy no pending migrations. Isolated working DB migrate deploy/Prisma generate/validate/status passed. No production operation.",
+            "eslint": "PASS all changed TS/TSX consumers/tests",
+            "diff_check": "PASS",
+            "final_complete_head": "NOT RUN",
+            "typescript": "PASS final full typecheck after browser run"
+          },
+          "remaining": "A082-F01 remains PARTIAL for original attachment/reference layout scope. A080-F02 conversion lifecycle/eligibility/linkage remains PARTIAL; read-only name prefill does not complete conversion. Native device runtime and final 199-finding checkpoint validation pending."
         }
       }
     },

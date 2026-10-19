@@ -2257,6 +2257,7 @@ model QuotationDocument {
 }
 
 model QuotationRevision {
+  billingName          String?                    @db.VarChar(240)
   id                    String                     @id @default(uuid()) @db.Uuid
   companyId             String                     @db.Uuid
   documentId            String                     @db.Uuid

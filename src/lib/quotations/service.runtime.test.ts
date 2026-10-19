@@ -131,3 +131,12 @@ describe("A082 full item creation eligibility",()=>{
   expect(quotationInput.parse(input()).stateOfSupplyCode).toBeUndefined();expect(quotationInput.parse(input({stateOfSupplyCode:null})).stateOfSupplyCode).toBeNull();
   for(const code of ["","99","2","Karnataka",29])expect(quotationInput.safeParse(input({stateOfSupplyCode:code})).success).toBe(false);
  });
+
+it("validates, trims and explicitly clears billing names without changing customer identity",async()=>{
+ await createQuotation(input({billingName:"  Site division  "}));
+ expect(m.revisionCreate).toHaveBeenLastCalledWith({data:expect.objectContaining({billingName:"Site division",customerName:"Acme"})});
+ m.docFind.mockResolvedValue({id:ID,companyId:C,branchId:B,documentType:"QUOTATION",customerId:ID,sourceLeadId:null,status:"DRAFT",revisions:[{...revision(),billingName:"Existing division"}]});
+ await updateQuotationDraft(ID,input());expect(m.revisionCreate).toHaveBeenLastCalledWith({data:expect.objectContaining({billingName:"Existing division"})});
+ await updateQuotationDraft(ID,input({billingName:"   "}));expect(m.revisionCreate).toHaveBeenLastCalledWith({data:expect.objectContaining({billingName:null})});
+ await expect(createQuotation(input({billingName:"x".repeat(241)}))).rejects.toThrow();
+});

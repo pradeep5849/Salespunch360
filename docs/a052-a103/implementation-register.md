@@ -9898,3 +9898,11 @@ Counts181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED. All199 IDs/52pa
 ### A090-F01 — Notification and asset precision follow-up (2026-10-19)
 
 Expense notifications and asset purchase values pass full stored Decimal text to the existing company formatter, removing early two-decimal rounding. Focused formatter tests: 18 passed, zero failures/skips. Changed-consumer ESLint and diff checks passed. No browser runtime check for these consumers or final checkpoint-wide validation performed. Finding remains PARTIAL; no accounting/schema/native change.
+
+### A082-F01 — Optional Billing Name snapshot (2026-10-19)
+
+Web and Android expose a separate optional Billing Name. It survives save/edit/revision, appears in saved preview/detail/PDF, and supplies read-only Sale/Order prefill without changing customer identity. Blank/null clears; legacy omission preserves; Save & New resets. New additive `20261019140000_quotation_billing_name_snapshot` migration adds nullable `QuotationRevision.billingName`; existing rows stay NULL. Issued history remains immutable.
+
+Validation: 89 unit/service/PDF/conversion tests, 9 actual isolated PostgreSQL integration tests, 2 desktop/mobile Chromium profiles (2.6m), Android compilation plus 19 JVM tests (4m7s), and 1 fresh 137-migration upgrade rehearsal (9.78s) passed, with no failures/skips. Focused ESLint, Prisma generate/validate/status and diff checks passed. Browser checks cover save/edit/preview/PDF/native HTTP/explicit clearing/Axe/no overflow/no journals. No native emulator/device runtime or final checkpoint-wide verification claimed. A082-F01 remains PARTIAL for attachments and remaining reference layout; A080-F02 is not closed by shared prefill.
+
+Final full TypeScript check after the Billing Name browser run: PASS.

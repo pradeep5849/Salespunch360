@@ -47,3 +47,9 @@ describe("customer Unicode PDF",()=>{
   expect((await extractPdfText(await renderQuotationPdf({...dto,stateOfSupplyCode:"29"} as never))).text).toContain("State of supply: Karnataka");
   expect((await extractPdfText(await renderQuotationPdf({...dto,stateOfSupplyCode:null} as never))).text).toContain("State of supply: Not recorded");
  });
+
+ it("prints an optional billing display name without replacing the saved customer identity",async()=>{
+  const {text}=await extractPdfText(await renderQuotationPdf({...dto,billingName:"Acme site division"} as never));
+  expect(text).toContain("Customer/Lead: Acme");expect(text).toContain("Billing name: Acme site division");
+  expect((await extractPdfText(await renderQuotationPdf({...dto,billingName:null} as never))).text).not.toContain("Billing name:");
+ });

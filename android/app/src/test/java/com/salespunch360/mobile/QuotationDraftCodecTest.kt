@@ -96,4 +96,13 @@ class QuotationDraftCodecTest {
         val draft=savedQuotationDraft(document,revision);assertEquals("INCLUSIVE",draft.taxMode);assertEquals("INCLUSIVE",quotationDraftPayload(draft)["taxMode"]!!.jsonPrimitive.content)
         assertEquals("EXCLUSIVE",savedQuotationDraft(document,JsonObject(revision.filterKeys{it!="taxMode"})).taxMode);assertEquals("EXCLUSIVE",freshQuotationAfterSave(draft).taxMode)
     }
+    @Test fun billingNameRemainsSeparateFromCustomerAndClearsOnSaveNew(){
+        val document=Json.parseToJsonElement("""{"id":"doc","status":"DRAFT","branchId":"branch","customerId":"party","documentType":"QUOTATION"}""").jsonObject
+        val revision=Json.parseToJsonElement("""{"issueDate":"2026-10-19","customerName":"Legal party","billingName":"Site division","lines":[]}""").jsonObject
+        val draft=savedQuotationDraft(document,revision)
+        assertEquals("Site division",draft.billingName);assertEquals("party",draft.customerId)
+        assertEquals("Site division",quotationDraftPayload(draft)["billingName"]!!.jsonPrimitive.content)
+        assertEquals(JsonNull,quotationDraftPayload(draft.copy(billingName=""))["billingName"])
+        assertEquals("",freshQuotationAfterSave(draft).billingName)
+    }
 }

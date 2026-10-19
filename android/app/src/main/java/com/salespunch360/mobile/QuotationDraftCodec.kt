@@ -33,6 +33,7 @@ internal fun removedQuotationLine(draft: QuotationDraft, index: Int): QuotationD
 internal fun savedQuotationDraft(document: JsonObject, revision: JsonObject): QuotationDraft {
     val lines = revision.rows("lines")
     return QuotationDraft(
+        billingName=revision.text("billingName"),
         taxMode=revision.text("taxMode").ifBlank{"EXCLUSIVE"},
         stateOfSupplyCode=revision.text("stateOfSupplyCode"),
         roundOffEnabled=(revision["roundOffEnabled"] as? JsonPrimitive)?.booleanOrNull?:false,
@@ -66,6 +67,7 @@ internal fun freshQuotationAfterSave(draft: QuotationDraft) = QuotationDraft(bra
 
 internal fun quotationDraftPayload(draft: QuotationDraft) = buildJsonObject {
     if(draft.id==null) put("creationRequestKey",draft.creationRequestKey)
+    put("billingName",draft.billingName.takeIf{it.isNotBlank()}?.let{JsonPrimitive(it)}?:JsonNull)
     put("taxMode",draft.taxMode)
     put("stateOfSupplyCode",draft.stateOfSupplyCode.takeIf{it.isNotBlank()}?.let{JsonPrimitive(it)}?:JsonNull)
     put("roundOffEnabled",draft.roundOffEnabled)

@@ -143,6 +143,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                         if(balance?.get("error")?.jsonPrimitive?.booleanOrNull==true)TextButton({vm.loadPartyBalance(draft.customerId,draft.branchId)}){Text("Retry party balance")}
                     }
                 }
+                item { OutlinedTextField(draft.billingName, { vm.editDraft(draft.copy(billingName = it)) }, label = { Text("Billing Name (Optional)") }, isError=draft.billingName.length>240) }
                 item { OutlinedTextField(draft.issueDate, { vm.editDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date") }) }
                 item { OutlinedTextField(draft.validUntil, { vm.editDraft(draft.copy(validUntil = it)) }, label = { Text("Valid until") }) }
                 itemsIndexed(draft.lines) { index, line -> QuotationLine(index, line, state, vm){newItemLine=index} }
@@ -239,6 +240,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                     Text("${quotation.str("documentType")} · ${quotation.str("status")}", fontWeight = FontWeight.Bold)
                     Text(revision?.str("customerName").orEmpty())
                     Text("Rates ${if(revision?.str("taxMode")=="INCLUSIVE")"include"else"exclude"} tax.")
+                    revision?.str("billingName")?.takeIf{it.isNotBlank()}?.let{Text("Billing name: $it")}
                     Text("State of supply: ${states.firstOrNull{it.first==revision?.str("stateOfSupplyCode")}?.second?:revision?.str("stateOfSupplyCode").orEmpty().ifBlank{"Not recorded"}}")
                     Text("Round off ${accountMoney(revision?.str("roundOffAmount").orEmpty().ifBlank{"0"})}")
                     Text("Grand total ${accountMoney(revision?.str("grandTotal").orEmpty())}")

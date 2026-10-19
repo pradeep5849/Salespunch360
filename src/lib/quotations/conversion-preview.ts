@@ -49,7 +49,7 @@ export async function quotationConversionPreviewForActor(actor: QuotationActor, 
     branchId: document.branchId,
     partyId: document.customerId,
     projectId: document.projectId,
-    billingName: revision.customerName,
+    billingName: revision.billingName??revision.customerName,
     stateOfSupplyCode:revision.stateOfSupplyCode??undefined,
     ...prefill,
     // Reference content stays separate from invoice custom fields/short notes;

@@ -137,4 +137,19 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   expect(await client.journalEntry.count({where:{companyId}})).toBe(0);
  });
 
+ it("retains billing display names across edits and revisions without changing customer or issued history",async()=>{
+  const document=await createQuotationForActor(actor,{...input,billingName:"  Site division  "});
+  let saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBe("Site division");expect(saved.revisions[0].customerName).toBe("Fixture customer");
+  await updateQuotationDraftForActor(actor,document.id,{...input,notes:"Legacy client"});
+  saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBe("Site division");
+  expect((await quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_INVOICE"})).billingName).toBe("Site division");
+  await transitionQuotationForActor(actor,document.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,document.id,"APPROVED");
+  const issued=saved.revisions[0].id;
+  await expect(client.quotationRevision.update({where:{id:issued},data:{billingName:"Overwrite issued"}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
+  await createQuotationRevisionForActor(actor,document.id,input);saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBe("Site division");
+  await updateQuotationDraftForActor(actor,document.id,{...input,billingName:null});saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBeNull();
+  expect((await client.quotationRevision.findUniqueOrThrow({where:{id:issued}})).billingName).toBe("Site division");
+  expect((await client.customer.findUniqueOrThrow({where:{id:customerId}})).name).toBe("Fixture customer");
+  expect(await client.journalEntry.count({where:{companyId}})).toBe(0);
+ });
 });

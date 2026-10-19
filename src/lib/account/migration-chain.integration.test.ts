@@ -37,8 +37,8 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   deploy();
   const [after]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM commercial_documents d WHERE id=${id}::uuid`;
   const [quoteAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_revisions d WHERE id=${revisionId}::uuid`;
-  const {taxMode,stateOfSupplyCode,roundOffEnabled,roundOffAmount,...quoteRetained}=quoteAfter.record;
-  expect(taxMode).toBe("EXCLUSIVE");expect(stateOfSupplyCode).toBeNull();expect(roundOffEnabled).toBe(false);expect(Number(roundOffAmount)).toBe(0);expect(quoteRetained).toEqual(quoteBefore.record);
+  const {billingName,taxMode,stateOfSupplyCode,roundOffEnabled,roundOffAmount,...quoteRetained}=quoteAfter.record;
+  expect(billingName).toBeNull();expect(taxMode).toBe("EXCLUSIVE");expect(stateOfSupplyCode).toBeNull();expect(roundOffEnabled).toBe(false);expect(Number(roundOffAmount)).toBe(0);expect(quoteRetained).toEqual(quoteBefore.record);
   await expect(db.quotationRevision.update({where:{id:revisionId},data:{roundOffEnabled:true}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
   expect(after.record.shippingAddress).toBeNull();
   const {shippingAddress:_newField,...retained}=after.record;void _newField;
