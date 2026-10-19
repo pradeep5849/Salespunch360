@@ -741,7 +741,10 @@
         "scripts/check-runtime-schema.mjs",
         "scripts/check-runtime-schema.test.mjs",
         "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
-        "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
+        "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql",
+        ".github/workflows/targeted-validation.yml",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "e2e/a090-settings.spec.ts"
       ],
       "affected_services_apis_actions": [
         "Deployed failing request unknown; candidate web listExpenses(), Account layout and shared dependencies."
@@ -860,6 +863,24 @@
             "production": "NOT RUN;no production DB access/deployment."
           },
           "remaining": "Migration deployment in production remains prohibited/unexecuted;future approved deployment must apply migrations before new application code. A052 production crash recovery remains unverified there. These are required migration prerequisites,not additional finding IDs or reimplementation of merged134 findings."
+        },
+        "automated_shipping_migration_regression_2026_10_19": {
+          "implementation_commit": "84b2648abf836456ca47d6521cbb0101be7d178f",
+          "work": "Committed automated clean-chain/data-preserving migration rehearsal and a separate ephemeral PostgreSQL CI job. Rehearsal refuses non-local/non-*_ci or nonempty targets;never resets,drops or resolves database history. Deploys pre-shipping migrations (including prerequisites),seeds raw baseline columns,applies shipping plus any later migrations,compares all original invoice fields/customer data,checks the expense creation-request column/unique keys and repeats deploy. Added actual native Sale POST/retry checks for explicit shipping and POSTED status to existing desktop/mobile scenario.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "automated_migration": "Final1 integration test PASS(3.38s),0 failed/skipped,on a newly created isolated local empty *_ci database. No production writes. Initial manual rehearsal failures and fixes remain recorded in prior section.",
+            "native_post_browser": "Final2 desktop/mobile Chromium shipping cases PASS(1.1m),0 failed/skipped:actual authenticated Sale POST produces POSTED invoice with explicit shipping;retry returns same ID;all shipping detail/edit/native GET/PATCH/print/toggle/Axe assertions rerun. Prior paired Add/Edit regression2 profiles also passed on unchanged production source.",
+            "typescript": "Full final TypeScript PASS after final browser/new migration test.",
+            "eslint": "New migration test/browser file lint PASS;diff check PASS.",
+            "workflow": "Workflow YAML parsed successfully with available js-yaml;web/android/migration jobs validated.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
         }
       },
       "production_evidence": {
@@ -30134,7 +30155,10 @@
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
         "prisma/schema.prisma",
         "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
-        "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
+        "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql",
+        ".github/workflows/targeted-validation.yml",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "e2e/a090-settings.spec.ts"
       ],
       "affected_services_apis_actions": [
         "setupOwnerAction / ownerTransactionAction",
@@ -30263,6 +30287,24 @@
             "production": "NOT RUN;no production DB access/deployment."
           },
           "remaining": "Migration deployment in production remains prohibited/unexecuted;future approved deployment must apply migrations before new application code. A052 production crash recovery remains unverified there. These are required migration prerequisites,not additional finding IDs or reimplementation of merged134 findings."
+        },
+        "automated_shipping_migration_regression_2026_10_19": {
+          "implementation_commit": "84b2648abf836456ca47d6521cbb0101be7d178f",
+          "work": "Committed automated clean-chain/data-preserving migration rehearsal and a separate ephemeral PostgreSQL CI job. Rehearsal refuses non-local/non-*_ci or nonempty targets;never resets,drops or resolves database history. Deploys pre-shipping migrations (including prerequisites),seeds raw baseline columns,applies shipping plus any later migrations,compares all original invoice fields/customer data,checks the expense creation-request column/unique keys and repeats deploy. Added actual native Sale POST/retry checks for explicit shipping and POSTED status to existing desktop/mobile scenario.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "automated_migration": "Final1 integration test PASS(3.38s),0 failed/skipped,on a newly created isolated local empty *_ci database. No production writes. Initial manual rehearsal failures and fixes remain recorded in prior section.",
+            "native_post_browser": "Final2 desktop/mobile Chromium shipping cases PASS(1.1m),0 failed/skipped:actual authenticated Sale POST produces POSTED invoice with explicit shipping;retry returns same ID;all shipping detail/edit/native GET/PATCH/print/toggle/Axe assertions rerun. Prior paired Add/Edit regression2 profiles also passed on unchanged production source.",
+            "typescript": "Full final TypeScript PASS after final browser/new migration test.",
+            "eslint": "New migration test/browser file lint PASS;diff check PASS.",
+            "workflow": "Workflow YAML parsed successfully with available js-yaml;web/android/migration jobs validated.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
         }
       },
       "intermediate_validation": {
@@ -63655,7 +63697,8 @@
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-edit-initial.ts",
         "src/lib/account/transaction-header.test.ts",
-        "src/lib/account/transaction-header.ts"
+        "src/lib/account/transaction-header.ts",
+        "src/lib/account/migration-chain.integration.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -63764,6 +63807,24 @@
           },
           "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
           "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
+        },
+        "automated_shipping_migration_regression_2026_10_19": {
+          "implementation_commit": "84b2648abf836456ca47d6521cbb0101be7d178f",
+          "work": "Committed automated clean-chain/data-preserving migration rehearsal and a separate ephemeral PostgreSQL CI job. Rehearsal refuses non-local/non-*_ci or nonempty targets;never resets,drops or resolves database history. Deploys pre-shipping migrations (including prerequisites),seeds raw baseline columns,applies shipping plus any later migrations,compares all original invoice fields/customer data,checks the expense creation-request column/unique keys and repeats deploy. Added actual native Sale POST/retry checks for explicit shipping and POSTED status to existing desktop/mobile scenario.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "automated_migration": "Final1 integration test PASS(3.38s),0 failed/skipped,on a newly created isolated local empty *_ci database. No production writes. Initial manual rehearsal failures and fixes remain recorded in prior section.",
+            "native_post_browser": "Final2 desktop/mobile Chromium shipping cases PASS(1.1m),0 failed/skipped:actual authenticated Sale POST produces POSTED invoice with explicit shipping;retry returns same ID;all shipping detail/edit/native GET/PATCH/print/toggle/Axe assertions rerun. Prior paired Add/Edit regression2 profiles also passed on unchanged production source.",
+            "typescript": "Full final TypeScript PASS after final browser/new migration test.",
+            "eslint": "New migration test/browser file lint PASS;diff check PASS.",
+            "workflow": "Workflow YAML parsed successfully with available js-yaml;web/android/migration jobs validated.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
         }
       },
       "push_checkpoint_evidence": {
@@ -64293,7 +64354,8 @@
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-edit-initial.ts",
         "src/lib/account/transaction-header.test.ts",
-        "src/lib/account/transaction-header.ts"
+        "src/lib/account/transaction-header.ts",
+        "src/lib/account/migration-chain.integration.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -64430,6 +64492,24 @@
           },
           "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
           "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
+        },
+        "automated_shipping_migration_regression_2026_10_19": {
+          "implementation_commit": "84b2648abf836456ca47d6521cbb0101be7d178f",
+          "work": "Committed automated clean-chain/data-preserving migration rehearsal and a separate ephemeral PostgreSQL CI job. Rehearsal refuses non-local/non-*_ci or nonempty targets;never resets,drops or resolves database history. Deploys pre-shipping migrations (including prerequisites),seeds raw baseline columns,applies shipping plus any later migrations,compares all original invoice fields/customer data,checks the expense creation-request column/unique keys and repeats deploy. Added actual native Sale POST/retry checks for explicit shipping and POSTED status to existing desktop/mobile scenario.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "automated_migration": "Final1 integration test PASS(3.38s),0 failed/skipped,on a newly created isolated local empty *_ci database. No production writes. Initial manual rehearsal failures and fixes remain recorded in prior section.",
+            "native_post_browser": "Final2 desktop/mobile Chromium shipping cases PASS(1.1m),0 failed/skipped:actual authenticated Sale POST produces POSTED invoice with explicit shipping;retry returns same ID;all shipping detail/edit/native GET/PATCH/print/toggle/Axe assertions rerun. Prior paired Add/Edit regression2 profiles also passed on unchanged production source.",
+            "typescript": "Full final TypeScript PASS after final browser/new migration test.",
+            "eslint": "New migration test/browser file lint PASS;diff check PASS.",
+            "workflow": "Workflow YAML parsed successfully with available js-yaml;web/android/migration jobs validated.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
         }
       },
       "push_checkpoint_evidence": {
@@ -65935,7 +66015,8 @@
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-edit-initial.ts",
         "src/lib/account/transaction-header.test.ts",
-        "src/lib/account/transaction-header.ts"
+        "src/lib/account/transaction-header.ts",
+        "src/lib/account/migration-chain.integration.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -66080,6 +66161,24 @@
           },
           "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
           "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
+        },
+        "automated_shipping_migration_regression_2026_10_19": {
+          "implementation_commit": "84b2648abf836456ca47d6521cbb0101be7d178f",
+          "work": "Committed automated clean-chain/data-preserving migration rehearsal and a separate ephemeral PostgreSQL CI job. Rehearsal refuses non-local/non-*_ci or nonempty targets;never resets,drops or resolves database history. Deploys pre-shipping migrations (including prerequisites),seeds raw baseline columns,applies shipping plus any later migrations,compares all original invoice fields/customer data,checks the expense creation-request column/unique keys and repeats deploy. Added actual native Sale POST/retry checks for explicit shipping and POSTED status to existing desktop/mobile scenario.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "automated_migration": "Final1 integration test PASS(3.38s),0 failed/skipped,on a newly created isolated local empty *_ci database. No production writes. Initial manual rehearsal failures and fixes remain recorded in prior section.",
+            "native_post_browser": "Final2 desktop/mobile Chromium shipping cases PASS(1.1m),0 failed/skipped:actual authenticated Sale POST produces POSTED invoice with explicit shipping;retry returns same ID;all shipping detail/edit/native GET/PATCH/print/toggle/Axe assertions rerun. Prior paired Add/Edit regression2 profiles also passed on unchanged production source.",
+            "typescript": "Full final TypeScript PASS after final browser/new migration test.",
+            "eslint": "New migration test/browser file lint PASS;diff check PASS.",
+            "workflow": "Workflow YAML parsed successfully with available js-yaml;web/android/migration jobs validated.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
         }
       }
     },
@@ -68393,6 +68492,20 @@
         "run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39192627497",
         "result": "Web and Android SUCCESS"
       }
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "Committed migration-chain CI guard and native Sale POST shipping retry",
+      "implementation_commit": "84b2648abf836456ca47d6521cbb0101be7d178f",
+      "tests": {
+        "automated_migration": "Final1 integration test PASS(3.38s),0 failed/skipped,on a newly created isolated local empty *_ci database. No production writes. Initial manual rehearsal failures and fixes remain recorded in prior section.",
+        "native_post_browser": "Final2 desktop/mobile Chromium shipping cases PASS(1.1m),0 failed/skipped:actual authenticated Sale POST produces POSTED invoice with explicit shipping;retry returns same ID;all shipping detail/edit/native GET/PATCH/print/toggle/Axe assertions rerun. Prior paired Add/Edit regression2 profiles also passed on unchanged production source.",
+        "typescript": "Full final TypeScript PASS after final browser/new migration test.",
+        "eslint": "New migration test/browser file lint PASS;diff check PASS.",
+        "workflow": "Workflow YAML parsed successfully with available js-yaml;web/android/migration jobs validated.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
     }
   ]
 }
