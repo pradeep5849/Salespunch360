@@ -56984,7 +56984,9 @@
         "src/components/account/stock-level-view.tsx",
         "src/components/account/profit-report-view.module.css",
         "src/components/account/profit-report-view.tsx",
-        "src/lib/account/reports/profit-presentation.test.ts"
+        "src/lib/account/reports/profit-presentation.test.ts",
+        "src/lib/account/reports/party-trade.test.ts",
+        "src/lib/account/reports/party-trade.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -57601,6 +57603,33 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned."
+        },
+        "party_trade_report_2026_10_19": {
+          "implementation_commit": "4c4a53038a574c71717ecdb8760bd7ffafa56c97",
+          "work": "Supplied Sale/Purchase by Party destination added to shared authorized catalogue and Web/native navigation. Repeatable-read paginated posted economic documents use canonical Sale/Purchase Report grandTotal with negative credit/debit notes,role+party identity grouping,company/branch/period scope,and exact decimal monetary summaries. Shared Web currency table and native bounded party cards reuse server-formatted amounts. No financial writes,schema changes or migrations.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "132 tests across21 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourites/company/user/Items-OFF tests. New7 service tests cover signed returns,party role/identity separation,scope/role/edition rejection,pagination/large exact cents,empty totals and currency/export formatting;catalogue test added.",
+            "browser_api_export": "2 actual desktop/mobile Chromium tests PASS(43.3s): posted100 sale minus25 credit and60 purchase minus15 debit yield75 sales/45 purchases;identically named customer/vendor remain separate;Web summaries and table,native authenticated HTTP,CSV/XLSX/PDF,Project Manager403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+            "android": "compileDebugKotlin PASS;18 AccountReportData JVM tests PASS,0 failures/errors/skips(27s incremental final run,following2m16s source compilation). Native catalogue/filter/role row parsing exercised. No emulator/device runtime.",
+            "typescript": "Final full TypeScript PASS after browser run.",
+            "eslint": "Final focused lint PASS including browser test;git diff --check PASS.",
+            "initial_fixture_corrections": "Initial browser fixtures failed before report checks: vendor has no branchId;purchase bill requires vendor invoice number/date. Corrected fixtures;final both profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
         }
       }
     },
@@ -61113,7 +61142,9 @@
         "src/components/account/stock-level-view.tsx",
         "src/components/account/profit-report-view.module.css",
         "src/components/account/profit-report-view.tsx",
-        "src/lib/account/reports/profit-presentation.test.ts"
+        "src/lib/account/reports/profit-presentation.test.ts",
+        "src/lib/account/reports/party-trade.test.ts",
+        "src/lib/account/reports/party-trade.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -61651,6 +61682,33 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned."
+        },
+        "party_trade_report_2026_10_19": {
+          "implementation_commit": "4c4a53038a574c71717ecdb8760bd7ffafa56c97",
+          "work": "Supplied Sale/Purchase by Party destination added to shared authorized catalogue and Web/native navigation. Repeatable-read paginated posted economic documents use canonical Sale/Purchase Report grandTotal with negative credit/debit notes,role+party identity grouping,company/branch/period scope,and exact decimal monetary summaries. Shared Web currency table and native bounded party cards reuse server-formatted amounts. No financial writes,schema changes or migrations.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "132 tests across21 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourites/company/user/Items-OFF tests. New7 service tests cover signed returns,party role/identity separation,scope/role/edition rejection,pagination/large exact cents,empty totals and currency/export formatting;catalogue test added.",
+            "browser_api_export": "2 actual desktop/mobile Chromium tests PASS(43.3s): posted100 sale minus25 credit and60 purchase minus15 debit yield75 sales/45 purchases;identically named customer/vendor remain separate;Web summaries and table,native authenticated HTTP,CSV/XLSX/PDF,Project Manager403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+            "android": "compileDebugKotlin PASS;18 AccountReportData JVM tests PASS,0 failures/errors/skips(27s incremental final run,following2m16s source compilation). Native catalogue/filter/role row parsing exercised. No emulator/device runtime.",
+            "typescript": "Final full TypeScript PASS after browser run.",
+            "eslint": "Final focused lint PASS including browser test;git diff --check PASS.",
+            "initial_fixture_corrections": "Initial browser fixtures failed before report checks: vendor has no branchId;purchase bill requires vendor invoice number/date. Corrected fixtures;final both profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
         }
       }
     },
@@ -64786,7 +64844,9 @@
         "src/lib/account/reports/stock-detail.ts",
         "src/components/account/profit-report-view.module.css",
         "src/components/account/profit-report-view.tsx",
-        "src/lib/account/reports/profit-presentation.test.ts"
+        "src/lib/account/reports/profit-presentation.test.ts",
+        "src/lib/account/reports/party-trade.test.ts",
+        "src/lib/account/reports/party-trade.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -65193,6 +65253,33 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. This verifies Bill/Party presentation portions and existing navigation locally,not every financial report. A090-F01 other preference consumers remain PARTIAL. No final finding status assigned."
+        },
+        "party_trade_report_2026_10_19": {
+          "implementation_commit": "4c4a53038a574c71717ecdb8760bd7ffafa56c97",
+          "work": "Supplied Sale/Purchase by Party destination added to shared authorized catalogue and Web/native navigation. Repeatable-read paginated posted economic documents use canonical Sale/Purchase Report grandTotal with negative credit/debit notes,role+party identity grouping,company/branch/period scope,and exact decimal monetary summaries. Shared Web currency table and native bounded party cards reuse server-formatted amounts. No financial writes,schema changes or migrations.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "132 tests across21 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourites/company/user/Items-OFF tests. New7 service tests cover signed returns,party role/identity separation,scope/role/edition rejection,pagination/large exact cents,empty totals and currency/export formatting;catalogue test added.",
+            "browser_api_export": "2 actual desktop/mobile Chromium tests PASS(43.3s): posted100 sale minus25 credit and60 purchase minus15 debit yield75 sales/45 purchases;identically named customer/vendor remain separate;Web summaries and table,native authenticated HTTP,CSV/XLSX/PDF,Project Manager403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+            "android": "compileDebugKotlin PASS;18 AccountReportData JVM tests PASS,0 failures/errors/skips(27s incremental final run,following2m16s source compilation). Native catalogue/filter/role row parsing exercised. No emulator/device runtime.",
+            "typescript": "Final full TypeScript PASS after browser run.",
+            "eslint": "Final focused lint PASS including browser test;git diff --check PASS.",
+            "initial_fixture_corrections": "Initial browser fixtures failed before report checks: vendor has no branchId;purchase bill requires vendor invoice number/date. Corrected fixtures;final both profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
         }
       },
       "intermediate_validation": {
@@ -67706,6 +67793,26 @@
         "conclusion": "success",
         "url": "https://github.com/pradeep5849/Salespunch360/actions/runs/39150258492"
       }
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "Sale/Purchase by Party;A084-F03/A085-F02/A090-F01",
+      "implementation_commit": "4c4a53038a574c71717ecdb8760bd7ffafa56c97",
+      "tests": {
+        "grouped_unit_database": "132 tests across21 report/stock-summary files PASS,0 failures/skips,including6 actual local PostgreSQL catalogue/favourites/company/user/Items-OFF tests. New7 service tests cover signed returns,party role/identity separation,scope/role/edition rejection,pagination/large exact cents,empty totals and currency/export formatting;catalogue test added.",
+        "browser_api_export": "2 actual desktop/mobile Chromium tests PASS(43.3s): posted100 sale minus25 credit and60 purchase minus15 debit yield75 sales/45 purchases;identically named customer/vendor remain separate;Web summaries and table,native authenticated HTTP,CSV/XLSX/PDF,Project Manager403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+        "android": "compileDebugKotlin PASS;18 AccountReportData JVM tests PASS,0 failures/errors/skips(27s incremental final run,following2m16s source compilation). Native catalogue/filter/role row parsing exercised. No emulator/device runtime.",
+        "typescript": "Final full TypeScript PASS after browser run.",
+        "eslint": "Final focused lint PASS including browser test;git diff --check PASS.",
+        "initial_fixture_corrections": "Initial browser fixtures failed before report checks: vendor has no branchId;purchase bill requires vendor invoice number/date. Corrected fixtures;final both profiles PASS.",
+        "final_complete_head": "NOT RUN"
+      },
+      "prior_head_ci": {
+        "head": "52128347614ea350fa4d957a52f501a1d17b7328",
+        "run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39151361383",
+        "result": "Web and Android SUCCESS"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
     }
   ]
 }
