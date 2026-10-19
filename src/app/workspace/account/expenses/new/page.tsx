@@ -6,7 +6,6 @@ import {
   AuthorizationError,
 } from "@/lib/auth/authorization";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
-import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { ExpenseForm } from "../expense-form";
 type Query = { saved?: string; branchId?: string; scope?: string };
 async function load(query: Query) {
@@ -60,11 +59,8 @@ export default async function Page({
   return (
     <div className="employees-shell">
       <section className="employees-content">
-        <WorkspacePageHeader
-          title="New Expense / Income"
-          backHref={result.backHref}
-        />
         <ExpenseForm
+          backHref={result.backHref}
           options={result.options}
           action={createExpenseAction}
           formKey={query.saved ?? "new"}

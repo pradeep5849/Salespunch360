@@ -199,8 +199,15 @@ test("expense inline category, paid Save & New, review rejection and detail work
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 30000 });
   await page.goto("/workspace/account/expenses/new");
+  await expect(page.getByRole("heading", { name: "Expense", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Expense number and date" })).toContainText("Expense No.");
+  await expect(page.locator(".expense-entry")).toContainText("Expense browser fixture");
+  await page.getByRole("button", { name: "Open tax settings", exact: true }).click();
+  await expect(page.locator("#expense-tax-settings")).toHaveAttribute("open", "");
+  await expect(page.getByRole("button", { name: "Enable GST for this expense", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page
     .getByLabel("Transaction type", { exact: true })
     .selectOption("OTHER_INCOME");
@@ -308,7 +315,7 @@ test("expense inline category, paid Save & New, review rejection and detail work
     .selectOption(moneyId);
   await page.getByLabel("Transaction date", { exact: true }).fill("2026-10-09");
   await page
-    .getByLabel("Round total to nearest rupee", { exact: true })
+    .getByLabel("Round Off", { exact: true })
     .check();
   await expect(page.getByRole("status")).toContainText("Total ₹101.00");
   const axe = await new AxeBuilder({ page })

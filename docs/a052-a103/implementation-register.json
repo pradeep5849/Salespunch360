@@ -3730,7 +3730,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -3765,6 +3765,29 @@
             "e2e/a090-settings.spec.ts"
           ],
           "implementation_commit": "73df4f06800bec12adc3720aa8455d4a7c66e660"
+        },
+        "expense_entry_reference_2026_10_19": {
+          "work": "Completed linked expense entry header/back/GST/tax-settings controls, authoritative number preview/date and actual company firm row, billed-line quantity/rate/amount columns, charges/round-off/totals and Save & New/Save footer on responsive web and full-page native entry. Preserved existing Other Income, draft/reimbursement/recurring lifecycle, branch/category/create/category catalogue and paid-save semantics. Native request-key form reset was already present and preserved. Header back preserves unsaved-change confirmation. No API/model/migration or financial posting change.",
+          "files": [
+            "src/app/workspace/account/expenses/expense-editor.tsx",
+            "src/app/workspace/account/expenses/expense-editor.module.css",
+            "src/app/workspace/account/expenses/expense-form.tsx",
+            "src/app/workspace/account/expenses/new/page.tsx",
+            "src/app/workspace/account/expenses/[id]/edit/page.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
+            "e2e/a049-a051-expenses.spec.ts",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/mobile/account-expenses-inventory.contract.test.ts"
+          ],
+          "tests": {
+            "focused_unit": "52 passed,0 failed/skipped across5 files. Initial run51 passed/1 failed:stale source contract expected old native call signature; updated assertion retains native route/create/detail/query checks, then52 passed.",
+            "browser": "2 passed desktop/mobile Chromium(50.4s):header,number/date,firm,tax-settings gear,Other Income tax disabled,inline category/item,paid Save & New/reset,review rejection,detail,Axe WCAG and overflow. Initial run failed cold sign-in5s timeout;30s navigation wait then both passed.",
+            "android": "compileDebugKotlin and focused Expense JVM tests BUILD SUCCESSFUL(1m58s);7 tests,0 failures/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS after browser and formatting.",
+            "lint": "PASS focused ESLint; final diff check before commit.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Final complete checkpoint-head regression and physical Android/emulator/keyboard/TalkBack/pixel verification pending. Earlier historical evidence remains preserved; no final FIXED status claimed."
         }
       },
       "intermediate_validation": {
@@ -68506,6 +68529,19 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "A052-F11 linked expense reference entry",
+      "tests": {
+        "focused_unit": "52 passed,0 failed/skipped across5 files. Initial run51 passed/1 failed:stale source contract expected old native call signature; updated assertion retains native route/create/detail/query checks, then52 passed.",
+        "browser": "2 passed desktop/mobile Chromium(50.4s):header,number/date,firm,tax-settings gear,Other Income tax disabled,inline category/item,paid Save & New/reset,review rejection,detail,Axe WCAG and overflow. Initial run failed cold sign-in5s timeout;30s navigation wait then both passed.",
+        "android": "compileDebugKotlin and focused Expense JVM tests BUILD SUCCESSFUL(1m58s);7 tests,0 failures/errors/skips. No emulator/device runtime.",
+        "typescript": "PASS after browser and formatting.",
+        "lint": "PASS focused ESLint; final diff check before commit.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "Final complete checkpoint-head regression and physical Android/emulator/keyboard/TalkBack/pixel verification pending. Earlier historical evidence remains preserved; no final FIXED status claimed."
     }
   ]
 }

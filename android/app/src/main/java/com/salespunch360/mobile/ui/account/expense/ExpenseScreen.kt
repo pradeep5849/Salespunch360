@@ -1,5 +1,10 @@
 package com.salespunch360.mobile.ui.account.expense
 import com.salespunch360.mobile.ExpenseState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 
 import com.salespunch360.mobile.ui.account.accountDate
 import com.salespunch360.mobile.ui.account.accountMoney
@@ -9,6 +14,7 @@ internal suspend fun readExpenseAttachment(context:android.content.Context,uri:U
 @Composable fun ExpenseScreen(padding:PaddingValues,vm:AccountExpenseViewModel=viewModel(),initialQuery:String="",initialExpenseId:String?=null,initialCreate:Boolean=false){LaunchedEffect(initialQuery,initialExpenseId){vm.context(initialQuery);initialExpenseId?.let(vm::open)};val s=vm.state.collectAsStateWithLifecycle().value;var creationOpened by androidx.compose.runtime.saveable.rememberSaveable(initialCreate){mutableStateOf(false)};LaunchedEffect(initialCreate,s.loading,s.options){if(initialCreate&&!creationOpened&&!s.loading&&s.options["canCreateExpense"]?.jsonPrimitive?.booleanOrNull==true){creationOpened=true;vm.create()}};val context=LocalContext.current;var fileError by remember{mutableStateOf<String?>(null)};LaunchedEffect(s.downloaded){s.downloaded?.let{d->try{val file=withContext(Dispatchers.IO){com.salespunch360.mobile.data.safeAttachmentFile(context.cacheDir,d.first).also{target->target.outputStream().buffered().use{it.write(d.second)}}};val uri=FileProvider.getUriForFile(context,"${context.packageName}.files",file);context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/octet-stream").putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),"Share attachment"))}catch(e:Exception){fileError=e.message?:"Attachment could not be prepared."}finally{vm.consumedDownload()}}};Column(Modifier.fillMaxSize().padding(padding).padding(horizontal=16.dp)){Row{OutlinedTextField(s.query,vm::search,label={Text("Search expense or reference")},modifier=Modifier.weight(1f));IconButton(vm::refresh){Icon(Icons.Default.Refresh,"Refresh")};IconButton({vm.showRecurring(true)},enabled=!s.saving){Icon(Icons.Default.Repeat,"Recurring schedules")};FilledIconButton(vm::create,enabled=!s.saving&&s.options["canCreateExpense"]?.jsonPrimitive?.booleanOrNull==true){Icon(Icons.Default.Add,"New expense")}};if(s.recurringTemplateId!=null)Row{Text("Recurring bills",Modifier.weight(1f));TextButton(vm::clearRecurringBills){Text("All expenses")}};LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(listOf<String?>(null,"DRAFT","PENDING_APPROVAL","APPROVED","POSTED","REJECTED","REVERSED","CANCELLED")){x->FilterChip(s.status==x,{vm.filter(x)},{Text(x?.replace('_',' ')?:"All")})}};LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(listOf<String?>(null,"PROJECT_EXPENSE","OFFICE_EXPENSE","OTHER_INCOME","REIMBURSEMENT")){x->FilterChip(s.type==x,{vm.type(x)},{Text(x?.replace('_',' ')?:"All types")})}};LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){item{FilterChip(s.categoryId==null,{vm.category(null)},{Text("All categories")})};items(s.options.array("categories")){category->FilterChip(s.categoryId==category.str("id"),{vm.category(category.str("id"))},{Text(category.str("name"))})}};if(!s.loading&&s.error==null)s.summary?.let{totals->Text("Posted totals · all history");Text("Expense: ${accountMoney(totals.str("expense"))} · Other income: ${accountMoney(totals.str("income"))}");Text(totals.str("recognition"))};Row{Text("${s.rows.size} of ${s.total} transactions",Modifier.weight(1f));if(s.nextOffset!=null)TextButton(vm::loadMore,enabled=!s.loading){Text("Load more")}};if(s.loading)LinearProgressIndicator(Modifier.fillMaxWidth());s.message?.let{Text(it)};fileError?.let{Text(it,color=MaterialTheme.colorScheme.error)};s.error?.let{Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)){Row(Modifier.padding(12.dp)){Text(it,Modifier.weight(1f));TextButton(vm::refresh){Text("Retry")}}}};if(!s.loading&&s.error==null&&s.rows.isEmpty())Text("No expenses match these filters.",Modifier.padding(24.dp));LazyColumn{items(s.rows,key={it.str("id")}){x->ListItem(headlineContent={Text(x.str("transactionNumber"),fontWeight=FontWeight.Bold)},supportingContent={Text("${x.str("transactionDate").take(10)} · ${x.str("type").replace('_',' ')}")},trailingContent={Column{Text(accountMoney(x.str("totalAmount")));Text(x.str("status"))}},modifier=Modifier.clickable{vm.open(x.str("id"))})}}};if(s.recurringOpen)RecurringSchedulesDialog(s,{vm.showRecurring(false)},vm::recurringAction,vm::recurringBills);s.editing?.let{key(s.requestKey){ExpenseEditor(it,s.options,s.saving,s.error,s.newCategoryId,vm::dismiss,{p,n->vm.save(p,n)},{vm.showCategory(true)})}};s.detail?.let{ExpenseDetail(it,s.saving,s.error,vm::dismiss,vm::edit,vm::action,vm::attach,vm::download,vm::recurring,s.options,vm::payRecurring)};if(s.categoryOpen)CategoryEditor(buildJsonObject{},s.options.array("ledgers").map{it.jsonObject},s.saving,s.error,{vm.showCategory(false)},vm::saveCategory)}
 @Composable private fun ExpenseEditor(existing:JsonObject,options:JsonObject,saving:Boolean,error:String?,newCategoryId:String?,onClose:()->Unit,onSave:(JsonObject,Boolean)->Unit,addCategory:()->Unit){
  var addingItem by remember { mutableStateOf(false) }
+ var taxSettingsOpen by remember { mutableStateOf(false) }
  var branch by remember{mutableStateOf(existing.str("branchId").ifBlank{options.array("branches").firstOrNull()?.jsonObject?.str("id").orEmpty()})};var category by remember{mutableStateOf(existing.str("categoryId"))};var account by remember{mutableStateOf(existing.str("moneyAccountId"))};var project by remember{mutableStateOf(existing.str("projectId"))};val allowed=(options["allowedTypes"] as? JsonArray)?.map{it.jsonPrimitive.content}.orEmpty();var type by remember{mutableStateOf(existing.str("type").ifBlank{allowed.firstOrNull()?:"OFFICE_EXPENSE"})};var amount by remember{mutableStateOf(existing.str("taxableAmount"))};var tax by remember{mutableStateOf(existing.str("taxRate").ifBlank{"0"})};var cess by remember{mutableStateOf(existing.str("cessRate").ifBlank{"0"})};var mode by remember{mutableStateOf(existing.str("taxMode").ifBlank{options.str("defaultTaxMode").ifBlank{"EXCLUSIVE"}})};var credit by remember{mutableStateOf(existing.str("taxCreditTreatment").ifBlank{"ELIGIBLE"})};var supply by remember{mutableStateOf(existing.str("stateOfSupplyCode"))};var gst by remember{mutableStateOf((tax.toDoubleOrNull()?:0.0)>0||(cess.toDoubleOrNull()?:0.0)>0)};var date by remember{mutableStateOf(existing.str("transactionDate").take(10).ifBlank{java.time.LocalDate.now().toString()})};var reference by remember{mutableStateOf(existing.str("reference"))};var notes by remember{mutableStateOf(existing.str("notes"))};var charges by remember{mutableStateOf(existing.str("additionalCharges").ifBlank{"0"})};var round by remember{mutableStateOf(existing["roundOffEnabled"]?.jsonPrimitive?.booleanOrNull==true)};var lines by remember{mutableStateOf(existing.array("billedItems").map{val l=it.jsonObject;ExpenseLine(l.str("name"),l.str("quantity"),l.str("rate"))})};var confirmClose by remember{mutableStateOf(false)}
  LaunchedEffect(newCategoryId){newCategoryId?.let{category=it}}
  val income=type=="OTHER_INCOME";val categories=options.array("categories").filter{val sc=it.jsonObject.str("scope");sc=="BOTH"||sc==(if(income)"INCOME"else "EXPENSE")};val accounts=options.array("moneyAccounts").filter{it.jsonObject.str("branchId").let{b->b.isBlank()||b==branch}};val projects=options.array("projects").filter{it.jsonObject.str("branchId")==branch};val preview=expensePreview(amount,lines,charges,if(gst&&!income)tax else "0",if(gst&&!income)cess else "0",mode,round,options["compositionEnabled"]?.jsonPrimitive?.booleanOrNull==true)
@@ -17,42 +23,66 @@ internal suspend fun readExpenseAttachment(context:android.content.Context,uri:U
  androidx.compose.ui.window.Dialog(onDismissRequest={if(!saving)confirmClose=true},properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false,dismissOnClickOutside=false)) {
   Surface(Modifier.fillMaxSize()) {
    Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
      IconButton({confirmClose=true},enabled=!saving){Icon(Icons.Default.ArrowBack,"Back from expense")}
-     Text(if(existing.containsKey("id"))"Edit draft expense" else if(income)"Other Income" else "Expense",style=MaterialTheme.typography.titleLarge,modifier=Modifier.padding(top=10.dp))
+     Text(if(existing.containsKey("id"))"Edit Expense" else if(income)"Other Income" else "Expense",style=MaterialTheme.typography.titleLarge,modifier=Modifier.weight(1f))
+     Text("GST",style=MaterialTheme.typography.labelMedium)
+     Switch(gst&&!income,{gst=it;if(!it){tax="0";cess="0"}},enabled=!income&&!saving,modifier=Modifier.semantics{contentDescription="GST / tax"})
+     IconButton({taxSettingsOpen=true},enabled=!income&&!saving){Icon(Icons.Default.Settings,"Open tax settings")}
     }
     HorizontalDivider()
     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
- item{Text("Firm: ${options.str("companyName")}");val series=options.array("numbering").firstOrNull{it.str("branchId")==branch};val number=if(existing.containsKey("id"))existing.str("transactionNumber")else if(series!=null)series.str("prefix")+series.str("nextSequence").padStart(series["padding"]?.jsonPrimitive?.intOrNull?:6,'0')+series.str("suffix")else (if(income)"OI-"else "EXP-")+"000001";Text("Number ${if(existing.containsKey("id"))number else "$number (preview; assigned by server when saved)"}")}
+ item{
+  val series=options.array("numbering").firstOrNull{it.str("branchId")==branch}
+  val number=if(existing.containsKey("id"))existing.str("transactionNumber")else if(series!=null)series.str("prefix")+series.str("nextSequence").padStart(series["padding"]?.jsonPrimitive?.intOrNull?:6,'0')+series.str("suffix")else (if(income)"OI-"else "EXP-")+"000001"
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically){
+   Column(Modifier.weight(1f)){Text("Expense No.",style=MaterialTheme.typography.labelMedium);Text(number);if(!existing.containsKey("id"))Text("Number preview; assigned by server when saved.",style=MaterialTheme.typography.bodySmall)}
+   OutlinedTextField(date,{date=it},readOnly=existing.str("occurrenceKey").isNotBlank(),enabled=!saving,label={Text("Date (YYYY-MM-DD)")},modifier=Modifier.weight(1f))
+  }
+ }
+ item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){Text("Firm Name",style=MaterialTheme.typography.labelMedium);Text(options.str("companyName"),modifier=Modifier.weight(1f))};HorizontalDivider(Modifier.padding(top=12.dp))}
  item{SelectText("Transaction type",type,allowed){type=it;category="";project="";if(it=="OTHER_INCOME"){gst=false;tax="0";cess="0"}}}
  item{Select("Branch",branch,options.array("branches"),{branch=it;account="";project=""})}
  item{Select("Category",category,categories,{category=it})}
  if(options["canCreateCategory"]?.jsonPrimitive?.booleanOrNull==true)item{TextButton(addCategory,enabled=!saving){Text("Add expense / income category")}}
  item{Select("Cash / bank account",account,accounts,{account=it},if(type=="REIMBURSEMENT")"Reimbursement payable"else "Select account")}
  item{Select("Project",project,projects,{project=it},"No project")}
- item{OutlinedTextField(date,{date=it},readOnly=existing.str("occurrenceKey").isNotBlank(),label={Text("Transaction date (YYYY-MM-DD)")})}
  item{Text("Billed items",fontWeight=FontWeight.Bold)}
- items(lines.size){i->val l=lines[i];Column{OutlinedTextField(l.name,{v->lines=lines.mapIndexed{j,x->if(i==j)x.copy(name=v)else x}},label={Text("Item ${i+1} name")});OutlinedTextField(l.quantity,{v->lines=lines.mapIndexed{j,x->if(i==j)x.copy(quantity=v)else x}},label={Text("Item ${i+1} quantity")});OutlinedTextField(l.rate,{v->lines=lines.mapIndexed{j,x->if(i==j)x.copy(rate=v)else x}},label={Text("Item ${i+1} rate")});TextButton({lines=lines.filterIndexed{j,_->j!=i}},enabled=!saving){Text("Remove item ${i+1}")}}}
+ items(lines.size){i->val l=lines[i];val qty=l.quantity.toBigDecimalOrNull();val rate=l.rate.toBigDecimalOrNull();Column{
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+   OutlinedTextField(l.name,{v->lines=lines.mapIndexed{j,x->if(i==j)x.copy(name=v)else x}},label={Text("Name")},enabled=!saving,modifier=Modifier.weight(2f).semantics{contentDescription="Item ${i+1} name"})
+   OutlinedTextField(l.quantity,{v->lines=lines.mapIndexed{j,x->if(i==j)x.copy(quantity=v)else x}},label={Text("Qty")},enabled=!saving,modifier=Modifier.weight(1f).semantics{contentDescription="Item ${i+1} quantity"})
+   OutlinedTextField(l.rate,{v->lines=lines.mapIndexed{j,x->if(i==j)x.copy(rate=v)else x}},label={Text("Rate")},enabled=!saving,modifier=Modifier.weight(1.2f).semantics{contentDescription="Item ${i+1} rate"})
+   Column(Modifier.weight(1.2f).padding(top=6.dp)){Text("Amount",style=MaterialTheme.typography.labelSmall);Text(if(qty!=null&&rate!=null)accountMoney(qty.multiply(rate))else "—",style=MaterialTheme.typography.bodySmall)}
+  }
+  TextButton({lines=lines.filterIndexed{j,_->j!=i}},enabled=!saving,modifier=Modifier.align(Alignment.End)){Text("Remove item ${i+1}")}
+ }}
  item{TextButton({addingItem=true},enabled=!saving&&lines.size<200){Text("Add billed item")}}
  if(lines.isEmpty())item{OutlinedTextField(amount,{amount=it},label={Text("Entered amount")})}
  item{OutlinedTextField(charges,{charges=it},label={Text("Additional taxable charges")})}
- item{Row{Checkbox(round,{round=it});Text("Round total to nearest rupee")}}
- item{Row{Switch(gst&&!income,{gst=it;if(!it){tax="0";cess="0"}},enabled=!income);Text("GST / tax")}}
+ item{Row{Checkbox(round,{round=it});Text("Round Off")}}
  if(income)item{Text("Other Income is non-taxable. GST and CESS are zero.")}
- if(gst&&!income){item{OutlinedTextField(tax,{tax=it},label={Text("GST rate (%)")})};item{OutlinedTextField(cess,{cess=it},label={Text("CESS rate (%)")})};item{SelectText("Tax mode",mode,listOf("EXCLUSIVE","INCLUSIVE")){mode=it}};item{SelectText("Input tax credit",credit,listOf("ELIGIBLE","INELIGIBLE","BLOCKED")){credit=it}};item{OutlinedTextField(supply,{supply=it},label={Text("State of supply code")})}}
+ if(gst&&!income)item{TextButton({taxSettingsOpen=true},enabled=!saving){Text("Tax settings · GST $tax% · CESS $cess%")}}
  item{Text(preview?.let{"Taxable ${accountMoney(it.taxable)} · Tax ${accountMoney(it.tax)} · Round off ${accountMoney(it.rounding)} · Total ${accountMoney(it.total)}"}?:"Complete positive amounts to preview totals.")}
  item{OutlinedTextField(reference,{reference=it},label={Text("Reference")})};item{OutlinedTextField(notes,{notes=it},label={Text("Notes")})};error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}}
     }
     HorizontalDivider()
     Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-     TextButton({confirmClose=true},enabled=!saving){Text("Cancel")}
      if(!existing.containsKey("id"))OutlinedButton({save(true)},enabled=canSave,modifier=Modifier.weight(1f)){Text("Save & New")}
-     Button({save(false)},enabled=canSave,modifier=Modifier.weight(1f)){Text(if(saving)"Saving…"else if(existing.containsKey("id")||type=="REIMBURSEMENT")"Save draft"else if(income)"Save receipt"else "Save expense")}
+     Button({save(false)},enabled=canSave,modifier=Modifier.weight(1f)){Text(if(saving)"Saving…"else if(existing.containsKey("id")||type=="REIMBURSEMENT")"Save draft"else if(income)"Save receipt"else "Save")}
     }
    }
   }
  }
 
+ if(taxSettingsOpen)AlertDialog(onDismissRequest={taxSettingsOpen=false},title={Text("Tax settings")},text={Column(Modifier.fillMaxWidth().heightIn(max=440.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
+  if(!gst&&!income)TextButton({gst=true},enabled=!saving){Text("Enable GST for this expense")}
+  OutlinedTextField(tax,{tax=it},enabled=gst&&!income&&!saving,label={Text("GST rate (%)")},modifier=Modifier.fillMaxWidth())
+  OutlinedTextField(cess,{cess=it},enabled=gst&&!income&&!saving,label={Text("CESS rate (%)")},modifier=Modifier.fillMaxWidth())
+  SelectText("Tax mode",mode,listOf("EXCLUSIVE","INCLUSIVE")){mode=it}
+  SelectText("Input tax credit",credit,listOf("ELIGIBLE","INELIGIBLE","BLOCKED")){credit=it}
+  OutlinedTextField(supply,{supply=it},enabled=!saving,label={Text("State of supply code")},modifier=Modifier.fillMaxWidth())
+ }},confirmButton={TextButton({taxSettingsOpen=false}){Text("Done")}})
  if(addingItem)AddExpenseItemScreen(onClose={addingItem=false},onSave={name->if(lines.size<200)lines=lines+ExpenseLine(name,"1","0");addingItem=false})
  if(confirmClose)AlertDialog(onDismissRequest={confirmClose=false},title={Text("Discard unsaved changes?")},confirmButton={TextButton(onClose){Text("Discard")}},dismissButton={TextButton({confirmClose=false}){Text("Keep editing")}})
 }
