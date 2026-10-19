@@ -7194,7 +7194,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** 5 × 70 exclusive + 18% = 413; inclusive cases; discounts/taxable charges; rounding toggles; save/edit/revision/PDF agreement.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
@@ -9885,3 +9885,12 @@ Explicit GST State of Supply now selects/saves/reloads on Web and native;revisio
 168 grouped tests PASS across11 files including7 local PostgreSQL integration tests;2 desktop/mobile Chromium cases PASS(2.3m) for state29/save/edit27/PDF/native PATCH+GET/clear/400invalid code,with rounding/Axe/overflow/no-journal assertions retained. Android compile+16 quotation JVM tests PASS(3m46s). Full clean-chain/legacy-data upgrade rehearsal1 PASS(7.92s),Prisma generate/validate/status,TypeScript and focused ESLint/diff PASS. Earlier92-test focused subset overlaps168;no inflated totals. No device/emulator/TalkBack or final199-head verification claim.
 
 A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence. Linked A082-F01 metadata/attachment UI and A080-F02 conversion workflow remain PARTIAL;no status inferred from shared output work. Counts180 IMPLEMENTED BUT NOT VERIFIED/17 PARTIAL/2 NOT STARTED;all199 IDs and52page mappings retained. Production migration/recovery,main conflicts and complete final validation still outstanding.
+
+
+## 19 October 2026 — A082-F03 tax-mode implementation completed
+
+A082-F03 is IMPLEMENTED BUT NOT VERIFIED. Inclusive/exclusive selectors now use the shared existing tax rounding policy on Web/native previews,server save/approval,revision snapshots,older-client omission,details/preview/PDF and read-only commercial prefill. Entered rates/discounts retained;taxable-charge and net cost/profit calculations agree. Existing shared minimum-cent behaviour is preserved (0.03 inclusive at18% aggregates0.04);shared tax engine and historical posted amounts unchanged. Together with previous rounding and supply slices,this completes the original finding's code scope. A080-F02 source conversion workflow and A082-F01 metadata/attachments remain PARTIAL.
+
+173 grouped tests PASS/11files including8 actual isolated PostgreSQL tests;4 desktop/mobile Chromium cases PASS(1.4m) including modes/rounding/supply/save/edit/PDF/authenticated native PATCH+GET/400 validation/Axe/overflow/no journals. Initial3browser passed/1cold-edit5s wait failure corrected using explicit navigation/heading waits,then all4rerun. Android compile+18 quotation JVM tests PASS(4m13s). New additive20261019120000_quotation_tax_mode_snapshot defaults historical rowsEXCLUSIVE. Fresh full-chain+legacy-record upgrade rehearsal1 PASS(14.72s);old values preserved,new defaults validated,issued mutation denied,repeatdeploy clean. Prisma generate/validate/status,TypeScript and final ESLint/diff PASS;test prefer-const lint issue fixed. Initial132-test subset overlaps173.
+
+Counts181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED. All199 IDs/52pages retained;all final statuses unset. Native device/TalkBack and full final199-head validation remain pending. No production migration,merge,deploy or A104.

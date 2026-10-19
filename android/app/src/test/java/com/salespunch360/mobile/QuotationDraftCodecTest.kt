@@ -90,4 +90,10 @@ class QuotationDraftCodecTest {
         assertEquals(JsonNull,quotationDraftPayload(draft.copy(stateOfSupplyCode=""))["stateOfSupplyCode"])
         assertEquals("",freshQuotationAfterSave(draft).stateOfSupplyCode)
     }
+    @Test fun rateTaxModeRoundTripsAndLegacyDefaultsRemainExclusive(){
+        val document=Json.parseToJsonElement("""{"id":"doc","status":"DRAFT","branchId":"branch","customerId":"party","documentType":"QUOTATION"}""").jsonObject
+        val revision=Json.parseToJsonElement("""{"issueDate":"2026-10-19","taxMode":"INCLUSIVE","lines":[]}""").jsonObject
+        val draft=savedQuotationDraft(document,revision);assertEquals("INCLUSIVE",draft.taxMode);assertEquals("INCLUSIVE",quotationDraftPayload(draft)["taxMode"]!!.jsonPrimitive.content)
+        assertEquals("EXCLUSIVE",savedQuotationDraft(document,JsonObject(revision.filterKeys{it!="taxMode"})).taxMode);assertEquals("EXCLUSIVE",freshQuotationAfterSave(draft).taxMode)
+    }
 }

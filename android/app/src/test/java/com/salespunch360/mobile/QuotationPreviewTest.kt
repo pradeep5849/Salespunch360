@@ -39,4 +39,11 @@ class QuotationPreviewTest {
    assertEquals(rate,quotationPreview(draft.copy(roundOffEnabled=false))!!.total)
   }
  }
+ @Test fun inclusiveModePreservesSharedTaxDiscountChargeAndRoundingRules(){
+  val base=QuotationDraft(taxMode="INCLUSIVE",lines=listOf(line(quantity="5",rate="82.60")))
+  assertEquals("413.00",quotationPreview(base)!!.total);assertEquals("63.00",quotationPreview(base)!!.tax)
+  val discounted=base.copy(roundOffEnabled=true,lines=listOf(line(quantity="5",rate="82.60",discountType="PERCENTAGE",discount="10")),adjustments=listOf(adjustment(value="11.80"),adjustment(type="ADDITIONAL_CHARGE",value="11.80",taxable=true,tax="18")))
+  val preview=quotationPreview(discounted)!!;assertEquals("315.00",preview.taxable);assertEquals("56.70",preview.tax);assertEquals("372.00",preview.total);assertEquals("0.30",preview.roundOff)
+  assertEquals("0.04",quotationPreview(QuotationDraft(taxMode="INCLUSIVE",lines=listOf(line(rate="0.03"))))!!.total)
+ }
 }

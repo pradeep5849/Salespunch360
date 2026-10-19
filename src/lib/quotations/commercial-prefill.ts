@@ -37,7 +37,7 @@ export type QuotationCommercialLine = {
  * the quotation calculator's exact allocation. Extra charges remain labelled lines.
  * No stock/payment identity, internal cost or original line identity is copied.
  */
-export function quotationCommercialPrefill(lines: SnapshotLine[], adjustments: SnapshotAdjustment[] = [],options:{roundOffEnabled?:boolean}={}) {
+export function quotationCommercialPrefill(lines: SnapshotLine[], adjustments: SnapshotAdjustment[] = [],options:{roundOffEnabled?:boolean;taxMode?:"EXCLUSIVE"|"INCLUSIVE"}={}) {
   const calculated = calculateQuotation(lines, adjustments,options);
   const result: QuotationCommercialLine[] = lines.map((line, index) => {
     const amount = calculated.lines[index];
@@ -73,11 +73,11 @@ export function quotationCommercialPrefill(lines: SnapshotLine[], adjustments: S
   let taxable = new Prisma.Decimal(0), tax = new Prisma.Decimal(0);
   for (const line of result) {
     const price = commercialLineAmounts(new Prisma.Decimal(line.quantity), new Prisma.Decimal(line.rate), line.discountType, new Prisma.Decimal(line.discountValue));
-    const amounts = calculateTax({amount: price.enteredAmount, taxRate: new Prisma.Decimal(line.taxRate), taxMode: "EXCLUSIVE"});
+    const amounts = calculateTax({amount: price.enteredAmount, taxRate: new Prisma.Decimal(line.taxRate), taxMode: options.taxMode??"EXCLUSIVE"});
     taxable = taxable.add(amounts.taxable); tax = tax.add(amounts.totalTax);
   }
   if (!taxable.equals(calculated.taxableTotal) || !tax.equals(calculated.taxTotal)
     || !taxable.add(tax).add(calculated.roundOffAmount).equals(calculated.grandTotal)) throw new Error("CONVERSION_TOTAL_MISMATCH");
-  return {taxMode: "EXCLUSIVE" as const, roundOffAmount:calculated.roundOffAmount.toFixed(2),lines: result,
+  return {taxMode: options.taxMode??"EXCLUSIVE", roundOffAmount:calculated.roundOffAmount.toFixed(2),lines: result,
     taxableTotal: taxable.toFixed(2), taxTotal: tax.toFixed(2), grandTotal: calculated.grandTotal.toFixed(2)};
 }

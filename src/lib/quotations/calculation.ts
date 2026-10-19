@@ -1,3 +1,4 @@
+import {calculateTax} from "@/lib/account/tax-calculation";
 import { Prisma } from "@prisma/client";
 
 const D = (value: Prisma.Decimal.Value) => new Prisma.Decimal(value);
@@ -33,7 +34,7 @@ function allocateDiscount(amount: Prisma.Decimal, bases: Prisma.Decimal[]) {
   });
 }
 
-export function calculateQuotation(lines: CalculationLine[], adjustments: CalculationAdjustment[] = [], options:{roundOffEnabled?:boolean} = {}) {
+export function calculateQuotation(lines: CalculationLine[], adjustments: CalculationAdjustment[] = [], options:{roundOffEnabled?:boolean;taxMode?:"EXCLUSIVE"|"INCLUSIVE"} = {}) {
   if (!lines.length) throw new Error("LINES_REQUIRED");
   const calculatedLines = lines.map(line => {
     const quantity = D(line.quantity), rate = D(line.rate), cost = D(line.internalUnitCost ?? 0), taxRate = D(line.taxRate ?? 0);
@@ -51,6 +52,7 @@ export function calculateQuotation(lines: CalculationLine[], adjustments: Calcul
   let remainingBase = sum(calculatedLines.map(line => line.taxableBeforeDocumentDiscount));
   let additionalChargeTotal = ZERO;
   let adjustmentTax = ZERO;
+  let chargeTaxableTotal = ZERO;
   const calculatedAdjustments = adjustments.map(adjustment => {
     const base = adjustment.type === "DISCOUNT" ? remainingBase : remainingBase.plus(additionalChargeTotal);
     const amount = valueAmount(base, adjustment.valueType, adjustment.value);
@@ -64,12 +66,14 @@ export function calculateQuotation(lines: CalculationLine[], adjustments: Calcul
       additionalChargeTotal = money(additionalChargeTotal.plus(amount));
     }
     const taxRate = D(adjustment.taxRate ?? 0); validatePercentage(taxRate);
-    const taxAmount = adjustment.type === "ADDITIONAL_CHARGE" && adjustment.taxable ? money(amount.mul(taxRate).div(HUNDRED)) : ZERO;
+    const chargeTax = adjustment.type === "ADDITIONAL_CHARGE" ? calculateTax({amount,taxRate:adjustment.taxable?taxRate:ZERO,taxMode:options.taxMode??"EXCLUSIVE"}) : null;
+    const taxAmount = chargeTax?.totalTax??ZERO;
+    if(chargeTax)chargeTaxableTotal=money(chargeTaxableTotal.add(chargeTax.taxable));
     adjustmentTax = money(adjustmentTax.plus(taxAmount));
     return { ...adjustment, amount, taxAmount };
   });
-  calculatedLines.forEach(line => { line.taxAmount = money(line.taxableAmount.mul(line.taxRate).div(HUNDRED)); line.lineTotal = money(line.taxableAmount.plus(line.taxAmount)); });
-  const taxableTotal = money(remainingBase.plus(additionalChargeTotal));
+  calculatedLines.forEach(line => { const tax=calculateTax({amount:line.taxableAmount,taxRate:line.taxRate,taxMode:options.taxMode??"EXCLUSIVE"});line.taxableAmount=tax.taxable;line.taxAmount=tax.totalTax;line.lineTotal=money(tax.taxable.add(tax.totalTax)); });
+  const taxableTotal = money(sum(calculatedLines.map(line=>line.taxableAmount)).plus(chargeTaxableTotal));
   const taxTotal = money(sum(calculatedLines.map(line => line.taxAmount)).plus(adjustmentTax));
   const unroundedTotal = money(taxableTotal.plus(taxTotal));
   const roundOffAmount = options.roundOffEnabled ? money(unroundedTotal.toDecimalPlaces(0,Prisma.Decimal.ROUND_HALF_UP).minus(unroundedTotal)) : ZERO;

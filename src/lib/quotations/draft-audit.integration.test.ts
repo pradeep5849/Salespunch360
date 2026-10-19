@@ -125,4 +125,16 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   await expect(createQuotationForActor(actor,{...input,stateOfSupplyCode:"99"})).rejects.toThrow();expect(await client.journalEntry.count({where:{companyId}})).toBe(0);
  });
 
+ it("persists inclusive mode through approval and revisions while preserving entered rates",async()=>{
+  const data={...input,taxMode:"INCLUSIVE",stateOfSupplyCode:"29",roundOffEnabled:true,lines:[{lineType:"CUSTOM",itemName:"Inclusive fixture",quantity:"5",rate:"82.60",taxRate:"18"}],paymentSchedule:[{label:"Full",valueType:"PERCENTAGE",value:"100"}]};
+  const doc=await createQuotationForActor(actor,data);let saved=await getQuotationForActor(actor,doc.id);const revision=saved.revisions[0];
+  expect(revision.taxMode).toBe("INCLUSIVE");expect(revision.grandTotal.toFixed(2)).toBe("413.00");expect(revision.taxTotal.toFixed(2)).toBe("63.00");expect(revision.lines[0].rate.toFixed(2)).toBe("82.60");expect(revision.paymentSchedule[0].amount.toFixed(2)).toBe("413.00");
+  const {taxMode:_mode,...oldClient}=data;void _mode;await updateQuotationDraftForActor(actor,doc.id,oldClient);expect((await getQuotationForActor(actor,doc.id)).revisions[0].taxMode).toBe("INCLUSIVE");
+  await updateQuotationDraftForActor(actor,doc.id,{...data,taxMode:"EXCLUSIVE",roundOffEnabled:false});expect((await getQuotationForActor(actor,doc.id)).revisions[0].grandTotal.toFixed(2)).toBe("487.34");
+  await updateQuotationDraftForActor(actor,doc.id,data);await transitionQuotationForActor(actor,doc.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,doc.id,"APPROVED");
+  saved=await getQuotationForActor(actor,doc.id);await expect(client.quotationRevision.update({where:{id:saved.revisions[0].id},data:{taxMode:"EXCLUSIVE"}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
+  const next=await createQuotationRevisionForActor(actor,doc.id,oldClient);expect(next.taxMode).toBe("INCLUSIVE");expect(next.grandTotal.toFixed(2)).toBe("413.00");
+  expect(await client.journalEntry.count({where:{companyId}})).toBe(0);
+ });
+
 });

@@ -2979,7 +2979,7 @@ test("A082 quotation rounding survives web preview edit PDF and native update wi
  const id=page.url().split("/").at(-2)!,saved=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}});
  expect(saved.stateOfSupplyCode).toBe("29");expect(saved.roundOffEnabled).toBe(true);expect(saved.roundOffAmount.toFixed(2)).toBe("-0.49");expect(saved.grandTotal.toFixed(2)).toBe("100.00");
  const pdf=await page.request.get(`/workspace/account/quotations/${id}/pdf`);expect(pdf.status()).toBe(200);const printed=(await extractPdfText(await pdf.body())).text;expect(printed).toContain("Round off: -₹0.49");expect(printed).toContain("State of supply: Karnataka");
- await page.getByRole("link",{name:"Document details",exact:true}).click();await page.getByRole("link",{name:"Edit draft",exact:true}).click();
+ await page.getByRole("link",{name:"Document details",exact:true}).click();await page.getByRole("link",{name:"Edit draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}/edit$`),{timeout:30000});await expect(page.getByRole("heading",{name:"Edit draft",exact:true})).toBeVisible({timeout:15000});
  await expect(page.getByRole("combobox",{name:"State of Supply",exact:true})).toHaveValue("29");await page.getByRole("combobox",{name:"State of Supply",exact:true}).selectOption("27");
  await expect(page.getByRole("checkbox",{name:"Round Off",exact:true})).toBeChecked();await page.getByRole("checkbox",{name:"Round Off",exact:true}).uncheck();
  await expect(row("Total amount")).toContainText("₹100.49");await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`),{timeout:20000});
@@ -2994,5 +2994,23 @@ test("A082 quotation rounding survives web preview edit PDF and native update wi
   expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{...payload,stateOfSupplyCode:"99"}})).status()).toBe(400);
 
  }finally{await db.mobileSession.deleteMany({where:{userId,tokenHash}})}
+ expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+});
+
+test("A082 inclusive quotation mode agrees across preview saved PDF edit and native requests",async({page})=>{
+ test.setTimeout(150000);
+ await signInSettings(page);await page.goto("/workspace/account/quotations/new");
+ const identity=page.getByRole("group",{name:"Document",exact:true});await identity.getByRole("combobox",{name:"Branch",exact:true}).selectOption(branchId);await identity.getByRole("combobox",{name:"Customer",exact:true}).selectOption(customerId);
+ await page.getByRole("textbox",{name:"Item name",exact:true}).fill("Inclusive quotation fixture");await page.getByRole("spinbutton",{name:"Quantity",exact:true}).fill("5");await page.getByRole("spinbutton",{name:"Rate",exact:true}).fill("82.60");await page.getByRole("spinbutton",{name:"Tax %",exact:true}).fill("18");
+ const totals=page.getByRole("region",{name:"Quotation totals",exact:true}),row=(label:string)=>totals.locator("dl>div").filter({has:page.locator("dt",{hasText:new RegExp(`^${label}$`)})});
+ await expect(row("Total amount")).toContainText("₹487.34");await page.getByRole("combobox",{name:"Rate tax mode",exact:true}).selectOption("INCLUSIVE");await expect(row("Total amount")).toContainText("₹413.00");await expect(row("Tax")).toContainText("₹63.00");
+ const journals=await db.journalEntry.count({where:{companyId}});await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/,{timeout:20000});
+ const id=page.url().split("/").at(-2)!,saved=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id},include:{lines:true}});expect(saved.taxMode).toBe("INCLUSIVE");expect(saved.grandTotal.toFixed(2)).toBe("413.00");expect(saved.lines[0].rate.toFixed(2)).toBe("82.60");
+ const pdf=await page.request.get(`/workspace/account/quotations/${id}/pdf`);expect(pdf.status()).toBe(200);const printed=(await extractPdfText(await pdf.body())).text;expect(printed).toContain("Rates: tax inclusive");expect(printed).toContain("GRAND TOTAL: ₹413.00");
+ await page.getByRole("link",{name:"Document details",exact:true}).click();await page.getByRole("link",{name:"Edit draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}/edit$`),{timeout:30000});await expect(page.getByRole("heading",{name:"Edit draft",exact:true})).toBeVisible({timeout:15000});await expect(page.getByRole("combobox",{name:"Rate tax mode",exact:true})).toHaveValue("INCLUSIVE");await page.getByRole("combobox",{name:"Rate tax mode",exact:true}).selectOption("EXCLUSIVE");await expect(row("Total amount")).toContainText("₹487.34");
+ expect((await new AxeBuilder({page}).include('form:has(select[aria-label="Rate tax mode"])').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`),{timeout:20000});expect((await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}})).grandTotal.toFixed(2)).toBe("487.34");
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken(),tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,sessionVersion:user.sessionVersion,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date()}});
+ try{const headers={authorization:`Bearer ${token}`},data={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",taxMode:"INCLUSIVE",lines:[{lineType:"CUSTOM",itemName:"Inclusive quotation fixture",quantity:"5",rate:"82.60",taxRate:"18"}]};expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data})).status()).toBe(200);const native=await page.request.get(`/api/v1/mobile/account/quotations/${id}`,{headers});expect(native.status()).toBe(200);const body=await native.json();expect(body.revisions[0].taxMode).toBe("INCLUSIVE");expect(body.revisions[0].grandTotal).toBe("413");expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{...data,taxMode:"WITH"}})).status()).toBe(400)}finally{await db.mobileSession.deleteMany({where:{userId,tokenHash}})}
  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
 });

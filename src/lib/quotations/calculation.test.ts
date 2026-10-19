@@ -30,3 +30,18 @@ describe("quotation explicit whole-unit rounding",()=>{
   expect(()=>reconcilePaymentSchedule([{valueType:"FIXED",value:x.taxableTotal.add(x.taxTotal)}],x.grandTotal)).toThrow("PAYMENT_SCHEDULE_MISMATCH");
  });
 });
+
+describe("quotation rate tax mode",()=>{
+ it("uses shared tax rounding for inclusive rates, discounts and taxable charges",()=>{
+  const x=calculateQuotation([{quantity:"5",rate:"82.60",taxRate:"18",internalUnitCost:"50",discountType:"PERCENTAGE",discountValue:"10"}],[{type:"DISCOUNT",valueType:"FIXED",value:"11.80"},{type:"ADDITIONAL_CHARGE",valueType:"FIXED",value:"11.80",taxable:true,taxRate:"18"}],{taxMode:"INCLUSIVE",roundOffEnabled:true});
+  expect(x.subtotal.toFixed(2)).toBe("413.00");expect(x.taxableTotal.toFixed(2)).toBe("315.00");expect(x.taxTotal.toFixed(2)).toBe("56.70");expect(x.roundOffAmount.toFixed(2)).toBe("0.30");expect(x.grandTotal.toFixed(2)).toBe("372.00");expect(x.expectedProfit.toFixed(2)).toBe("65.00");
+ });
+ it("matches the existing commercial tax basis at the inclusive minimum-cent boundary",async()=>{
+  const {calculateTax}=await import("@/lib/account/tax-calculation"),{Prisma}=await import("@prisma/client");const line={quantity:"1",rate:"0.03",taxRate:"18"},tax=calculateTax({amount:new Prisma.Decimal(line.rate),taxRate:new Prisma.Decimal(line.taxRate),taxMode:"INCLUSIVE"});
+  const x=calculateQuotation([line],[],{taxMode:"INCLUSIVE"});expect(x.taxableTotal.equals(tax.taxable)).toBe(true);expect(x.taxTotal.equals(tax.totalTax)).toBe(true);expect(x.grandTotal.equals(tax.taxable.add(tax.totalTax))).toBe(true);
+ });
+ it("keeps exclusive defaults and tax-free inclusive lines compatible",()=>{
+  expect(calculateQuotation([{quantity:"5",rate:"70",taxRate:"18"}]).grandTotal.toFixed(2)).toBe("413.00");
+  expect(calculateQuotation([{quantity:"5",rate:"70",taxRate:"0"}],[],{taxMode:"INCLUSIVE"}).grandTotal.toFixed(2)).toBe("350.00");
+ });
+});

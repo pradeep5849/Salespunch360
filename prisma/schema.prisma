@@ -2281,6 +2281,7 @@ model QuotationRevision {
   additionalChargeTotal Decimal                    @default(0) @db.Decimal(18, 2)
   taxableTotal          Decimal                    @default(0) @db.Decimal(18, 2)
   taxTotal              Decimal                    @default(0) @db.Decimal(18, 2)
+  taxMode               TaxMode                    @default(EXCLUSIVE)
   stateOfSupplyCode     String?                    @db.VarChar(2)
   roundOffEnabled       Boolean                    @default(false)
   roundOffAmount        Decimal                    @default(0) @db.Decimal(18, 2)

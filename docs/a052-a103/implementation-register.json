@@ -54221,7 +54221,13 @@
             "eslint": "PASS changed-file ESLint and diff check",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim."
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim.",
+          "implementation_commit": "b0f31a092c2195ffd5b86a31f03d0610435ed3c8"
+        },
+        "quotation_tax_mode_shared_2026_10_19": {
+          "work": "Read-only commercial prefill retains inclusive/exclusive tax mode,entered prices and exact shared aggregate totals. Conversion eligibility/linkage/post-save closure still incomplete.",
+          "linked_finding": "A082-F03",
+          "remaining": "PARTIAL;no whole-finding completion inferred."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -55081,7 +55087,8 @@
             "eslint": "PASS changed-file ESLint and diff check",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim."
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim.",
+          "implementation_commit": "b0f31a092c2195ffd5b86a31f03d0610435ed3c8"
         }
       }
     },
@@ -55546,10 +55553,31 @@
         "src/app/workspace/account/quotations/quotation-editor.tsx",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
         "src/lib/quotations/service.ts",
-        "src/lib/quotations/calculation.ts"
+        "src/lib/quotations/calculation.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/QuotationDraftCodec.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/QuotationPreview.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/QuotationDraftCodecTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/QuotationPreviewTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/schema.prisma",
+        "src/app/workspace/account/quotations/[id]/page.tsx",
+        "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+        "src/components/account/quotation-totals-preview.tsx",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/quotations/calculation.test.ts",
+        "src/lib/quotations/commercial-prefill.test.ts",
+        "src/lib/quotations/commercial-prefill.ts",
+        "src/lib/quotations/conversion-preview.ts",
+        "src/lib/quotations/draft-audit.integration.test.ts",
+        "src/lib/quotations/editor-data.ts",
+        "src/lib/quotations/pdf.ts",
+        "prisma/migrations/20261019120000_quotation_tax_mode_snapshot/migration.sql"
       ],
       "affected_services_apis_actions": [
-        "Quotation web pages/actions and corresponding native/API paths, as identified in affected files"
+        "Quotation web pages/actions and corresponding native/API paths, as identified in affected files",
+        "createQuotationForActor/updateQuotationDraftForActor/createQuotationRevisionForActor/transitionQuotationForActor",
+        "GET/PATCH /api/v1/mobile/account/quotations/[id];Web/public/native quotation PDF renderer;read-only conversion prefill"
       ],
       "affected_models": [
         "QuotationDocument",
@@ -55627,7 +55655,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -55874,7 +55902,46 @@
             "eslint": "PASS changed-file ESLint and diff check",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim."
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim.",
+          "implementation_commit": "b0f31a092c2195ffd5b86a31f03d0610435ed3c8"
+        },
+        "quotation_tax_mode_complete_2026_10_19": {
+          "work": "Completed A082-F03 remaining tax-mode implementation: explicit inclusive/exclusive controls on Web/native;server calculation uses shared existing commercial tax rounding for lines and taxable charges after discounts;net cost/profit calculation retained. Revision snapshots persist mode;older-client omission preserves it;approval recalculates with it;pending/issued immutability protects it. Editor initial values,Save & New,safe customer DTO,detail/preview/PDF and read-only commercial prefill retain the chosen mode and entered rates. Existing shared minimum-cent rounding policy is preserved,including the existing0.03-inclusive/18% aggregate0.04 result;no shared tax engine or historical posted calculations changed. With prior live-preview,rounding and supply-snapshot slices,the original A082-F03 code scope is implemented.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationDraftCodec.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPreview.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationDraftCodecTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/components/account/quotation-totals-preview.tsx",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/quotations/calculation.test.ts",
+            "src/lib/quotations/calculation.ts",
+            "src/lib/quotations/commercial-prefill.test.ts",
+            "src/lib/quotations/commercial-prefill.ts",
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/lib/quotations/editor-data.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/service.ts",
+            "prisma/migrations/20261019120000_quotation_tax_mode_snapshot/migration.sql"
+          ],
+          "tests": {
+            "grouped": "173 tests PASS across11 quotation/calculation/domain/PDF/conversion/display/backup files,0 failed/skipped,including8 actual isolated local PostgreSQL integration tests. Initial132-test focused subset overlaps173. Inclusive discount+taxable-charge/rounding/cost fixtures,shared-cent boundary,approval,revision,legacy omission and issued mutation denial covered.",
+            "browser": "Final4 desktop/mobile Chromium cases PASS(1.4m),0 failed/skipped:inclusive/exclusive live/save/edit/PDF/native PATCH+GET/invalid mode400;rounding and supply select/save/reload/change/clear/invalid state400;Axe/no overflow/no journals. Initial3passed/1mobile failed5s cold-edit locator wait;added explicit30s navigation+15s heading wait and reran all4 unchanged business assertions.",
+            "android": "compileDebugKotlin and18 quotation preview/codec JVM tests PASS(4m13s),0 failures/errors/skips. Device/emulator/TalkBack NOT RUN.",
+            "migration": "New additive20261019120000_quotation_tax_mode_snapshot applied only to isolated local CI DB;old records defaultEXCLUSIVE. Fresh empty-database full-chain/legacy-data upgrade rehearsal1 PASS(14.72s),all old values retained,new defaults verified,issued mutation denied,repeatdeploy clean. Prisma generate/validate/status PASS.",
+            "typescript": "PASS final full typecheck after browser",
+            "eslint": "PASS final changed-file lint/diff;initial prefer-const in new integration test fixed and lint rerun",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "IMPLEMENTED BUT NOT VERIFIED:full final199-finding head regression and native device/emulator/runtime verification remain pending. A082-F01 attachment/reference scope and A080-F02 conversion source linkage/eligibility/lifecycle remain PARTIAL. No A104,merge/deploy,production operations or historical migration edits."
         }
       }
     },
@@ -68761,6 +68828,20 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax calculations/persistence and final checkpoint verification. A082-F01 still requires other original metadata/attachments/reference work;A080-F02 conversion lifecycle/linkage/eligibility remains PARTIAL. No financial posting changes,production DB/migration/deployment or historical migration edits. No native device runtime claim."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "A082-F03 code implementation completed;linked A080-F02 prefill only",
+      "tests": {
+        "grouped": "173 tests PASS across11 quotation/calculation/domain/PDF/conversion/display/backup files,0 failed/skipped,including8 actual isolated local PostgreSQL integration tests. Initial132-test focused subset overlaps173. Inclusive discount+taxable-charge/rounding/cost fixtures,shared-cent boundary,approval,revision,legacy omission and issued mutation denial covered.",
+        "browser": "Final4 desktop/mobile Chromium cases PASS(1.4m),0 failed/skipped:inclusive/exclusive live/save/edit/PDF/native PATCH+GET/invalid mode400;rounding and supply select/save/reload/change/clear/invalid state400;Axe/no overflow/no journals. Initial3passed/1mobile failed5s cold-edit locator wait;added explicit30s navigation+15s heading wait and reran all4 unchanged business assertions.",
+        "android": "compileDebugKotlin and18 quotation preview/codec JVM tests PASS(4m13s),0 failures/errors/skips. Device/emulator/TalkBack NOT RUN.",
+        "migration": "New additive20261019120000_quotation_tax_mode_snapshot applied only to isolated local CI DB;old records defaultEXCLUSIVE. Fresh empty-database full-chain/legacy-data upgrade rehearsal1 PASS(14.72s),all old values retained,new defaults verified,issued mutation denied,repeatdeploy clean. Prisma generate/validate/status PASS.",
+        "typescript": "PASS final full typecheck after browser",
+        "eslint": "PASS final changed-file lint/diff;initial prefer-const in new integration test fixed and lint rerun",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "IMPLEMENTED BUT NOT VERIFIED:full final199-finding head regression and native device/emulator/runtime verification remain pending. A082-F01 attachment/reference scope and A080-F02 conversion source linkage/eligibility/lifecycle remain PARTIAL. No A104,merge/deploy,production operations or historical migration edits."
     }
   ]
 }

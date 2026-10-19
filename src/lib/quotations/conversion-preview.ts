@@ -35,7 +35,7 @@ export async function quotationConversionPreviewForActor(actor: QuotationActor, 
   // Lead acceptance owns customer/Project creation. Merely opening a Sale form
   // must never create a customer or run that independent Plus workflow.
   if (!document.customerId) throw new Error("QUOTATION_CUSTOMER_REQUIRED");
-  const prefill = quotationCommercialPrefill(revision.lines, revision.adjustments,{roundOffEnabled:revision.roundOffEnabled});
+  const prefill = quotationCommercialPrefill(revision.lines, revision.adjustments,{roundOffEnabled:revision.roundOffEnabled,taxMode:revision.taxMode});
   for (const field of ["taxableTotal", "taxTotal", "grandTotal"] as const) {
     if (!new Prisma.Decimal(prefill[field]).equals(revision[field])) throw new Error("QUOTATION_TOTALS_STALE");
   }

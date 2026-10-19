@@ -56,3 +56,8 @@ it("retains explicit quotation rounding in commercial prefill without spreading 
  const result=quotationCommercialPrefill([{lineType:"CUSTOM",itemName:"Rounded fixture",quantity:"1",rate:"100.49",taxRate:"0"}],[],{roundOffEnabled:true});
  expect(result.roundOffAmount).toBe("-0.49");expect(result.grandTotal).toBe("100.00");expect(result.lines[0].rate).toBe("100.49");expect(result.taxableTotal).toBe("100.49");
 });
+
+it("preserves inclusive entered prices and shared rounding in commercial prefill",()=>{
+ const result=quotationCommercialPrefill([{...line,quantity:"5",rate:"82.60"}],[{label:"Freight",type:"ADDITIONAL_CHARGE",valueType:"FIXED",value:"11.80",taxable:true,taxRate:"18"}],{taxMode:"INCLUSIVE"});
+ expect(result).toMatchObject({taxMode:"INCLUSIVE",taxableTotal:"360.00",taxTotal:"64.80",grandTotal:"424.80",lines:[{rate:"82.60"},{rate:"11.80"}]});
+});
