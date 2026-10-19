@@ -2850,6 +2850,8 @@ test("A084 Bill and Party profit summaries retain credit notes metadata and deta
 
 test("A084 Sale Purchase by Party nets posted returns across Web native and exports",async({page})=>{
  test.setTimeout(240000);
+ const branchId=(await db.branch.create({data:{companyId,name:"Isolated party report branch",code:`PARTY-${randomUUID().slice(0,8)}`}})).id;
+ const customerId=(await db.customer.create({data:{companyId,branchId,name:"Print fixture customer",isAccountCustomer:true}})).id;
  const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchIds:[]} as ProjectActor;
  try{
   await db.accountSettings.update({where:{companyId},data:{enabledModules:[],baseCurrency:"INR",displayDecimalPlaces:2}});
@@ -2875,6 +2877,8 @@ test("A084 Sale Purchase by Party nets posted returns across Web native and expo
 
 test("A084 Discount Report nets recorded discounts across Web native and exports",async({page})=>{
  test.setTimeout(240000);
+ const branchId=(await db.branch.create({data:{companyId,name:"Isolated party report branch",code:`PARTY-${randomUUID().slice(0,8)}`}})).id;
+ const customerId=(await db.customer.create({data:{companyId,branchId,name:"Print fixture customer",isAccountCustomer:true}})).id;
  const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchIds:[]} as ProjectActor;
  try{
   await db.accountSettings.update({where:{companyId},data:{enabledModules:[],baseCurrency:"INR",displayDecimalPlaces:2}});
