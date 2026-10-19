@@ -14205,6 +14205,41 @@
             "Nullable SQL check strengthened by a new follow-up migration; applied migration was preserved."
           ],
           "remaining": "PARTIAL retained. Transaction secondary-unit selectors, immutable document factor/base-quantity snapshots, purchase/sale/return stock quantity and valuation conversion, and historical factor behavior remain A062-F02 work. Native device/emulator/TalkBack and full final-head validation not executed."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "db7ed121fb376d9a610d216491238f29ec50407f",
+          "work": "Following approved primary-unit stock/pricing basis,add nullable commercial-line baseQuantity/unitConversionSnapshot and purchase-allocation baseQuantity. Existing rows remain NULL with original meaning;no backfill/reinterpretation. New primary-unit document writes retain the configured explicit mapping and exact primary quantities. Correction lines inherit source factor and original labels even after current item/unit changes;legacy source rows do not acquire guessed mappings. Database checks validate snapshot shape,positive factor,exact entered/base quantity relation and allocation positivity;existing posted-child guards protect new columns. No secondary-unit input/selector is accepted yet:live selected-unit posting remains disabled until all consumers are converted. Primary rates,quantities,totals and posting remain unchanged.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "prisma/migrations/20261020060000_commercial_unit_snapshots/migration.sql",
+            "prisma/schema.prisma",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts"
+          ],
+          "models_changed": [
+            "CommercialDocumentLine.baseQuantity nullable Decimal18,4",
+            "CommercialDocumentLine.unitConversionSnapshot nullable Json",
+            "PurchaseLineAllocation.baseQuantity nullable Decimal18,4"
+          ],
+          "migrations": [
+            "20261020060000_commercial_unit_snapshots"
+          ],
+          "tests": {
+            "financial_group": "122 tests PASS/7files,0 failures/skips(18.30s):new4 actual PostgreSQL commercial-unit history/allocation cases plus existing cheque-finance,Project workflow,purchase inventory,sale-save,exact quantity and source-snapshot regressions. Initial40-case run overlaps final122 and is not added again. Covers balanced real invoice posting,posted-line immutability,changed-master source correction factor/labels,legacy NULL meaning,allocation snapshots and invalid direct writes.",
+            "migration": "Fresh empty local *_ci complete139-migration/legacy-upgrade rehearsal1 PASS(4.12s total),0 failures/skips:all old commercial-line fields retained exactly,new fields NULL,existing commercial document and issued quotation fields preserved,repeatdeploy clean. Applied new migration only to isolated local CI databases. No historical migration edits or production operations.",
+            "schema": "Prisma generate,final validate with explicit local DATABASE_URL/DIRECT_URL,and local migrate status PASS(139 up to date). First validate without DIRECT_URL reportedP1012;reran with correct local environment and passed.",
+            "typescript": "Final full no-emit typecheck PASS after fixture corrections.",
+            "eslint": "Final focused ESLint and diff checks PASS;workflow YAML parse PASS.",
+            "workflow": "New4-case real PostgreSQL history test added to targeted migration job.",
+            "initial_corrections": "First expanded group118 PASS/4skips from invalid fixture Vendor.branchId;removed nonexistent fixture field. Next121 PASS/1fail from missing required vendor invoice number/date;added valid fixture fields. Typecheck also required fixture actor name/email. Final122 PASS/0skip without relaxing application validation.",
+            "browser": "NOT RUN for unit snapshot slice;no UI/selector change. Earlier quotation browser checks are separate evidence.",
+            "android": "NOT RUN for this backend/schema slice;no Android source changed. Device/emulator/runtime parity remains pending.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL:accepting secondary selection,selected-unit saved/retail/wholesale/customer pricing and fixed discounts,stock/COGS,serial/batch validation,return quantities,purchase/project allocations/valuation,source-preserving sale edits,reports and Web/native selectors still need wiring and verification. Primary-unit policy is resolved;do not leave it marked decision-blocked. No secondary financial behavior is claimed complete.",
+          "deployment": "Apply new additive migration through validated deployment procedure before activating matching generated Prisma client. Deployment/production database operations are not authorized or performed."
         }
       ]
     },
@@ -19384,6 +19419,41 @@
           "tests": "16 combined arithmetic/snapshot tests passed; TypeScript and focused lint passed. No live posting changes.",
           "decision_pending": "Asked whether stock should be counted in the smallest unit (e.g. pieces for 1 box=12 pieces) or the primary unit at existing four-decimal precision. Awaiting user answer before choosing canonical stock basis or altering inventory posting/valuation. Continue independent findings meanwhile.",
           "remaining": "PARTIAL; commercial line/allocation persistence, inventory/project receipt and return consumers, price-update conversion, reports and web/native transaction unit selection still pending."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "db7ed121fb376d9a610d216491238f29ec50407f",
+          "work": "Following approved primary-unit stock/pricing basis,add nullable commercial-line baseQuantity/unitConversionSnapshot and purchase-allocation baseQuantity. Existing rows remain NULL with original meaning;no backfill/reinterpretation. New primary-unit document writes retain the configured explicit mapping and exact primary quantities. Correction lines inherit source factor and original labels even after current item/unit changes;legacy source rows do not acquire guessed mappings. Database checks validate snapshot shape,positive factor,exact entered/base quantity relation and allocation positivity;existing posted-child guards protect new columns. No secondary-unit input/selector is accepted yet:live selected-unit posting remains disabled until all consumers are converted. Primary rates,quantities,totals and posting remain unchanged.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "prisma/migrations/20261020060000_commercial_unit_snapshots/migration.sql",
+            "prisma/schema.prisma",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts"
+          ],
+          "models_changed": [
+            "CommercialDocumentLine.baseQuantity nullable Decimal18,4",
+            "CommercialDocumentLine.unitConversionSnapshot nullable Json",
+            "PurchaseLineAllocation.baseQuantity nullable Decimal18,4"
+          ],
+          "migrations": [
+            "20261020060000_commercial_unit_snapshots"
+          ],
+          "tests": {
+            "financial_group": "122 tests PASS/7files,0 failures/skips(18.30s):new4 actual PostgreSQL commercial-unit history/allocation cases plus existing cheque-finance,Project workflow,purchase inventory,sale-save,exact quantity and source-snapshot regressions. Initial40-case run overlaps final122 and is not added again. Covers balanced real invoice posting,posted-line immutability,changed-master source correction factor/labels,legacy NULL meaning,allocation snapshots and invalid direct writes.",
+            "migration": "Fresh empty local *_ci complete139-migration/legacy-upgrade rehearsal1 PASS(4.12s total),0 failures/skips:all old commercial-line fields retained exactly,new fields NULL,existing commercial document and issued quotation fields preserved,repeatdeploy clean. Applied new migration only to isolated local CI databases. No historical migration edits or production operations.",
+            "schema": "Prisma generate,final validate with explicit local DATABASE_URL/DIRECT_URL,and local migrate status PASS(139 up to date). First validate without DIRECT_URL reportedP1012;reran with correct local environment and passed.",
+            "typescript": "Final full no-emit typecheck PASS after fixture corrections.",
+            "eslint": "Final focused ESLint and diff checks PASS;workflow YAML parse PASS.",
+            "workflow": "New4-case real PostgreSQL history test added to targeted migration job.",
+            "initial_corrections": "First expanded group118 PASS/4skips from invalid fixture Vendor.branchId;removed nonexistent fixture field. Next121 PASS/1fail from missing required vendor invoice number/date;added valid fixture fields. Typecheck also required fixture actor name/email. Final122 PASS/0skip without relaxing application validation.",
+            "browser": "NOT RUN for unit snapshot slice;no UI/selector change. Earlier quotation browser checks are separate evidence.",
+            "android": "NOT RUN for this backend/schema slice;no Android source changed. Device/emulator/runtime parity remains pending.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL:accepting secondary selection,selected-unit saved/retail/wholesale/customer pricing and fixed discounts,stock/COGS,serial/batch validation,return quantities,purchase/project allocations/valuation,source-preserving sale edits,reports and Web/native selectors still need wiring and verification. Primary-unit policy is resolved;do not leave it marked decision-blocked. No secondary financial behavior is claimed complete.",
+          "deployment": "Apply new additive migration through validated deployment procedure before activating matching generated Prisma client. Deployment/production database operations are not authorized or performed."
         }
       ],
       "push_checkpoint_evidence": {
@@ -69136,6 +69206,23 @@
         "final_checkpoint_head": "NOT RUN"
       },
       "remaining": "A082-F01 stays PARTIAL for remaining original reference header/toolbar/layout parity. Native device/emulator/runtime accessibility and complete199-finding final validation remain unverified. No production,merge,deployment orA104."
+    },
+    {
+      "scope": "A058-F06/A062-F02 immutable commercial primary-unit snapshots",
+      "implementation_commit": "db7ed121fb376d9a610d216491238f29ec50407f",
+      "evidence": {
+        "financial_group": "122 tests PASS/7files,0 failures/skips(18.30s):new4 actual PostgreSQL commercial-unit history/allocation cases plus existing cheque-finance,Project workflow,purchase inventory,sale-save,exact quantity and source-snapshot regressions. Initial40-case run overlaps final122 and is not added again. Covers balanced real invoice posting,posted-line immutability,changed-master source correction factor/labels,legacy NULL meaning,allocation snapshots and invalid direct writes.",
+        "migration": "Fresh empty local *_ci complete139-migration/legacy-upgrade rehearsal1 PASS(4.12s total),0 failures/skips:all old commercial-line fields retained exactly,new fields NULL,existing commercial document and issued quotation fields preserved,repeatdeploy clean. Applied new migration only to isolated local CI databases. No historical migration edits or production operations.",
+        "schema": "Prisma generate,final validate with explicit local DATABASE_URL/DIRECT_URL,and local migrate status PASS(139 up to date). First validate without DIRECT_URL reportedP1012;reran with correct local environment and passed.",
+        "typescript": "Final full no-emit typecheck PASS after fixture corrections.",
+        "eslint": "Final focused ESLint and diff checks PASS;workflow YAML parse PASS.",
+        "workflow": "New4-case real PostgreSQL history test added to targeted migration job.",
+        "initial_corrections": "First expanded group118 PASS/4skips from invalid fixture Vendor.branchId;removed nonexistent fixture field. Next121 PASS/1fail from missing required vendor invoice number/date;added valid fixture fields. Typecheck also required fixture actor name/email. Final122 PASS/0skip without relaxing application validation.",
+        "browser": "NOT RUN for unit snapshot slice;no UI/selector change. Earlier quotation browser checks are separate evidence.",
+        "android": "NOT RUN for this backend/schema slice;no Android source changed. Device/emulator/runtime parity remains pending.",
+        "final_checkpoint_head": "NOT RUN"
+      },
+      "remaining": "A058-F06/A062-F02 remain PARTIAL:accepting secondary selection,selected-unit saved/retail/wholesale/customer pricing and fixed discounts,stock/COGS,serial/batch validation,return quantities,purchase/project allocations/valuation,source-preserving sale edits,reports and Web/native selectors still need wiring and verification. Primary-unit policy is resolved;do not leave it marked decision-blocked. No secondary financial behavior is claimed complete."
     }
   ]
 }

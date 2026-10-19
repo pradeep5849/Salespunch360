@@ -10008,3 +10008,34 @@ A082-F01 stays PARTIAL for remaining original reference header/toolbar/layout pa
 ### A058/A062 — Approved primary-unit basis (2026-10-20)
 
 User confirmed primary-unit stock and saved prices:1Box containing10Pieces,primaryPiece at₹20/Piece,must deduct10Pieces and charge₹200. This resolves the previously pending canonical-stock-basis decision;transaction integration remains pending and no finding is closed by the decision alone.
+
+
+### A058-F06/A062-F02 — Immutable primary-unit commercial snapshots (2026-10-20)
+
+Following approved primary-unit stock/pricing basis,add nullable commercial-line baseQuantity/unitConversionSnapshot and purchase-allocation baseQuantity. Existing rows remain NULL with original meaning;no backfill/reinterpretation. New primary-unit document writes retain the configured explicit mapping and exact primary quantities. Correction lines inherit source factor and original labels even after current item/unit changes;legacy source rows do not acquire guessed mappings. Database checks validate snapshot shape,positive factor,exact entered/base quantity relation and allocation positivity;existing posted-child guards protect new columns. No secondary-unit input/selector is accepted yet:live selected-unit posting remains disabled until all consumers are converted. Primary rates,quantities,totals and posting remain unchanged.
+
+Implementation commit: `db7ed121fb376d9a610d216491238f29ec50407f`. Migration: `20261020060000_commercial_unit_snapshots`.
+
+**financial_group:** 122 tests PASS/7files,0 failures/skips(18.30s):new4 actual PostgreSQL commercial-unit history/allocation cases plus existing cheque-finance,Project workflow,purchase inventory,sale-save,exact quantity and source-snapshot regressions. Initial40-case run overlaps final122 and is not added again. Covers balanced real invoice posting,posted-line immutability,changed-master source correction factor/labels,legacy NULL meaning,allocation snapshots and invalid direct writes.
+
+**migration:** Fresh empty local *_ci complete139-migration/legacy-upgrade rehearsal1 PASS(4.12s total),0 failures/skips:all old commercial-line fields retained exactly,new fields NULL,existing commercial document and issued quotation fields preserved,repeatdeploy clean. Applied new migration only to isolated local CI databases. No historical migration edits or production operations.
+
+**schema:** Prisma generate,final validate with explicit local DATABASE_URL/DIRECT_URL,and local migrate status PASS(139 up to date). First validate without DIRECT_URL reportedP1012;reran with correct local environment and passed.
+
+**typescript:** Final full no-emit typecheck PASS after fixture corrections.
+
+**eslint:** Final focused ESLint and diff checks PASS;workflow YAML parse PASS.
+
+**workflow:** New4-case real PostgreSQL history test added to targeted migration job.
+
+**initial_corrections:** First expanded group118 PASS/4skips from invalid fixture Vendor.branchId;removed nonexistent fixture field. Next121 PASS/1fail from missing required vendor invoice number/date;added valid fixture fields. Typecheck also required fixture actor name/email. Final122 PASS/0skip without relaxing application validation.
+
+**browser:** NOT RUN for unit snapshot slice;no UI/selector change. Earlier quotation browser checks are separate evidence.
+
+**android:** NOT RUN for this backend/schema slice;no Android source changed. Device/emulator/runtime parity remains pending.
+
+**final_checkpoint_head:** NOT RUN
+
+A058-F06/A062-F02 remain PARTIAL:accepting secondary selection,selected-unit saved/retail/wholesale/customer pricing and fixed discounts,stock/COGS,serial/batch validation,return quantities,purchase/project allocations/valuation,source-preserving sale edits,reports and Web/native selectors still need wiring and verification. Primary-unit policy is resolved;do not leave it marked decision-blocked. No secondary financial behavior is claimed complete.
+
+Apply new additive migration through validated deployment procedure before activating matching generated Prisma client. Deployment/production database operations are not authorized or performed. Counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED;all199 IDs/52pages retained.
