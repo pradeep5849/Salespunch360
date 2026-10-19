@@ -9954,3 +9954,30 @@ A082-F01 remains PARTIAL for unsaved creation-form attachment staging and remain
 Attachment final checks: full TypeScript PASS after renaming a test fixture that shadowed DOM document;application behavior unchanged. Existing SecureSessionRaceTest1 PASS(22s) after final21 quotation tests:22 distinct JVM cases,zero failures/errors/skips. A nonexistent SessionInvalidationTest filter added no evidence. No native UI/runtime certification claimed.
 
 Private attachment implementation provenance: `7e71f02615bd8f58682dc33fef7e943600e3cc8e` (also maps backup dependency to A088-F01).
+
+
+### A082-F01 — Atomic attachments on initial quotation Save
+
+New Web and Android quotation creation forms select private PDF/PNG/JPEG files in memory before the first explicit Save. The bounded multipart creation endpoint commits the quotation, revision, attachment metadata, audit and document numbering together. The creation request hash includes sanitized file names, MIME types, sizes and content hashes; concurrent/retried identical intent returns one saved document and changed intent conflicts. Storage failure rolls back the whole Save; cleanup checks references under the company lock and retains bytes if the database result is ambiguous. Save & New clears selected files after confirmed success. No implicit document is created by selection or leaving the form. Existing saved-revision attachment protections and non-posting boundary are preserved.
+
+Implementation commit: `fafcdd752e3ffe90528b95cba84635da8a463d05`. No schema/migration change.
+
+**grouped:** 82 unit/API/service/backup tests PASS across5 files,0 failures/skips;19 actual local PostgreSQL attachment/draft tests PASS across2 files,0 failures/skips. 101 distinct cases in these final grouped runs. Earlier7 HTTP/6 route/19 database focused runs overlap and are not added again.
+
+**browser:** 2 actual desktop/mobile Chromium cases PASS(1.9m):select/remove before Save creates no document;6MB-plus file bypasses unchanged6mb server-action body limit via bounded multipart endpoint;lost successful Save response retained files/key and retry produced exactly1 document/file;authorized download preserved bytes;native HTTP create/replay201,unauth401,changed intent409;Axe AA/no overflow/no journal writes.
+
+**android:** compileDebugKotlin and22 focused JVM tests PASS(5m8s):8 preview,11 draft codec,3 attachment including combined byte/count/MIME bounds;0 failures/errors/skips. No Android emulator/device UI runtime executed.
+
+**typescript:** Full no-emit typecheck PASS after all source changes;subsequent browser-only timeout/fixture-cleanup adjustment adds no types.
+
+**eslint:** Focused changed-file ESLint PASS;final browser-file ESLint PASS after timeout/cleanup changes.
+
+**workflow:** YAML parse PASS;new creation-route tests added to existing targeted Web validation group.
+
+**schema:** No schema or migration changes in this slice;previous138-migration rehearsal remains historical evidence,not rerun or represented as new evidence.
+
+**initial_corrections:** First browser run:mobile attachment help text contrast4.49 failed Axe;use existing ink colour and rerun. Second run:mobile5s expectation expired while cold new route compiled and in-flight request raced fixture cleanup;extend explicit upload wait and wait for intercepted requests in finally. Final2 cases passed without relaxing financial,scope,privacy or accessibility assertions.
+
+**final_checkpoint_head:** NOT RUN;full199-finding final validation remains pending
+
+A082-F01 remains PARTIAL for remaining original reference layout/header/toolbar and expandable terms parity. Native device/emulator/TalkBack runtime is not claimed. Complete checkpoint final-head validation and main-conflict resolution remain outstanding. A104,merge,deployment and production operations remain on hold. All199 original finding IDs/52 page mappings preserved;counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED.
