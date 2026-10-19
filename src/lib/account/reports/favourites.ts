@@ -27,6 +27,7 @@ export async function availableReportCatalogueForActor(actor: Actor) {
     &&(stockSettings?.itemSettings as {enabled?:boolean}|null)?.enabled!==false;
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
+      (x.key!=="sale-purchase-party"||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
       (x.key!=="bank-statement"||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
       (!["stock-category","stock-detail","stock-summary","low-stock-summary"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&

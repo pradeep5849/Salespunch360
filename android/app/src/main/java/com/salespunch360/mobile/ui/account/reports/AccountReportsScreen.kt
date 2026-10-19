@@ -184,6 +184,17 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                         } }
                     }
                 }
+            } else if(state.report=="sale-purchase-party") {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty()) Text("No party transactions match the selected filters.")
+                if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    items(rows) { row -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
+                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
+                        Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.bodySmall)
+                        Text("Sales: ${row.getOrNull(2).orEmpty()}")
+                        Text("Purchases: ${row.getOrNull(3).orEmpty()}")
+                    } } }
+                }
             } else LazyRow {
                 item { Column { accountReportColumns(data).forEach { Text(it, fontWeight = FontWeight.Bold) } } }
                 itemsIndexed(accountReportRows(data)) { index, row -> val link=accountReportLinks(data).getOrNull(index)?.let{com.salespunch360.mobile.account.accountReportDestination(it)};Column(Modifier.clickable(enabled=link!=null){link?.let(onNavigate)}) { row.forEach { Text(it) } } }

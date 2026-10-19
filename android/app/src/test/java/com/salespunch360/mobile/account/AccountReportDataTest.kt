@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun partyTradeKeepsCustomerVendorRowsAndOnlyPeriodBranchScope() {
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"sale-purchase-party","name":"Sale/Purchase by Party","group":"Party reports","filters":[]}]}""").jsonObject
+        assertEquals("sale-purchase-party",accountReportCatalogue(options,"sale/purchase").single().key)
+        assertEquals(mapOf("from" to "2026-10-01","to" to "2026-10-18","branchId" to "branch"),accountReportRequestFilters(options,"sale-purchase-party",mapOf("from" to "2026-10-01","to" to "2026-10-18","branchId" to "branch","productId" to "stale")))
+        val data=Json.parseToJsonElement("""{"rows":[["Same name","Customer","₹75.00","₹0.00"],["Same name","Vendor","₹0.00","₹45.00"]]}""").jsonObject
+        assertEquals(listOf(listOf("Same name","Customer","₹75.00","₹0.00"),listOf("Same name","Vendor","₹0.00","₹45.00")),accountReportRows(data))
+    }
+
     @Test fun stockDetailRetainsDecimalStringsAndUsesOnlyDeclaredScope() {
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"stock-detail","name":"Stock Detail Report","group":"Item/Stock reports","filters":[]}]}""").jsonObject
         assertEquals("stock-detail",accountReportCatalogue(options,"stock detail").single().key)
