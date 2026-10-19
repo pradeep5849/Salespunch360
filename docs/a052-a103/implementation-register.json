@@ -66112,7 +66112,8 @@
             "final_checkpoint_head": "NOT RUN",
             "typescript": "PASS final full typecheck after browser run"
           },
-          "remaining": "A090-F01 remains PARTIAL for remaining original consumer/final complete checkpoint validation;legacy generic reminder date rendering is source-wired with shared formatter tests,not browser-certified. Hindi intentionally deferred."
+          "remaining": "A090-F01 remains PARTIAL for remaining original consumer/final complete checkpoint validation;legacy generic reminder date rendering is source-wired with shared formatter tests,not browser-certified. Hindi intentionally deferred.",
+          "implementation_commit": "1a713f9a0ef5ef044aefd40520b8fbafec82e663"
         }
       },
       "intermediate_validation": {

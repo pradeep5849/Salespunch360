@@ -9938,3 +9938,5 @@ Project audit and generic transaction reminder renderers now use shared AccountT
 Final focused group30 tests PASS/3files;the same6 UI cases also PASS in Asia/Kolkata and America/Los_Angeles (overlap,not42 unique tests). Covers3 date formats,unchanged clock/ISO and local midnight. Final Project browser2 desktop/mobile Chromium profiles PASS(30.7s),including persisted date preference,original audit timestamp,no new journals/no overflow. Initial unit failures were lowercase static-markup attribute assertions;corrected spelling,reran all. Initial browser fixture failed before UI at missing required commercial subtotal;replaced unsupported order-reminder setup with valid Project audit workflow. Legacy generic reminder browser runtime is NOT VERIFIED. Focused final lint/diff PASS. No new Android/device test or final checkpoint-wide claim. A090-F01 remains PARTIAL;Hindi intentionally deferred.
 
 Final TypeScript after timestamp browser run: PASS.
+
+Timestamp calendar implementation provenance: `1a713f9a0ef5ef044aefd40520b8fbafec82e663`.
