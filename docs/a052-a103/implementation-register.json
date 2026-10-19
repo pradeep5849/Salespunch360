@@ -53913,7 +53913,8 @@
             "android": "No native source changed;HTTP mobile PDF exercised,not emulator/device rendering.",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation."
+          "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation.",
+          "implementation_commit": "dedf9ec26fc2bc7615e8c57a11d87368f06e193f"
         }
       }
     },
@@ -65776,7 +65777,8 @@
             "android": "No native source changed;HTTP mobile PDF exercised,not emulator/device rendering.",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation."
+          "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation.",
+          "implementation_commit": "dedf9ec26fc2bc7615e8c57a11d87368f06e193f"
         }
       },
       "intermediate_validation": {
