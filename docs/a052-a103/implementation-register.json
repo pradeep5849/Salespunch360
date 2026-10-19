@@ -54206,7 +54206,8 @@
             "eslint": "PASS changed TS/TSX files and diff check",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit.",
+          "implementation_commit": "c577e9a270f605d299026b8d776f0f29ea9545aa"
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -55349,7 +55350,8 @@
             "eslint": "PASS changed TS/TSX files and diff check",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit.",
+          "implementation_commit": "c577e9a270f605d299026b8d776f0f29ea9545aa"
         }
       },
       "push_checkpoint_evidence": {
@@ -55807,7 +55809,8 @@
             "eslint": "PASS changed TS/TSX files and diff check",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit.",
+          "implementation_commit": "c577e9a270f605d299026b8d776f0f29ea9545aa"
         }
       }
     },
