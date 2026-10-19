@@ -97,3 +97,7 @@ jobs:
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/quotations/attachments.integration.test.ts src/lib/quotations/draft-audit.integration.test.ts --maxWorkers=1
+      - name: Commercial primary-unit snapshots and historical corrections
+        env:
+          ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+        run: npx vitest run src/lib/account/commercial-unit-history.integration.test.ts --maxWorkers=1

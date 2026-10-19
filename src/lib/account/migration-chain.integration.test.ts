@@ -28,6 +28,9 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   await db.$executeRaw`INSERT INTO customers (id,"companyId","branchId",name,"shippingAddress","isAccountCustomer","updatedAt") VALUES (${customerId}::uuid,${companyId}::uuid,${branchId}::uuid,'Existing customer','Current customer site',true,NOW())`;
   // Use the pre-upgrade columns: the generated client already knows the new field.
   await db.$executeRaw`INSERT INTO commercial_documents ("id","companyId","branchId","type","status","documentNumber","partyId","partyName","customerId","issueDate","subtotal","taxableTotal","taxTotal","grandTotal","balanceDue","createdById","updatedAt") VALUES (${id}::uuid,${companyId}::uuid,${branchId}::uuid,'SALES_INVOICE','DRAFT','PRE-MIGRATION',${customerId}::uuid,'Existing customer',${customerId}::uuid,'2026-10-11',100,100,0,100,100,${userId}::uuid,NOW())`;
+  const legacyLineId=randomUUID();
+  await db.$executeRaw`INSERT INTO commercial_document_lines (id,"companyId","documentId",position,"lineType","itemName","unitName","unitSymbol",quantity,rate,"baseAmount","discountAmount","taxableAmount","taxAmount","lineTotal") VALUES (${legacyLineId}::uuid,${companyId}::uuid,${id}::uuid,0,'CUSTOM','Existing line','Historical pack','old',2,50,100,0,100,0,100)`;
+  const [lineBefore]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(l) AS record FROM commercial_document_lines l WHERE id=${legacyLineId}::uuid`;
   const quoteId=randomUUID(),revisionId=randomUUID();
   await db.$executeRaw`INSERT INTO quotation_documents (id,"companyId","branchId","documentType","documentNumber","customerId",status,"createdById","updatedAt") VALUES (${quoteId}::uuid,${companyId}::uuid,${branchId}::uuid,'QUOTATION','PRE-ROUNDING',${customerId}::uuid,'APPROVED',${userId}::uuid,NOW())`;
   await db.$executeRaw`INSERT INTO quotation_revisions (id,"companyId","documentId","revisionNumber",status,"issueDate","customerName",subtotal,"taxableTotal","grandTotal","updatedAt") VALUES (${revisionId}::uuid,${companyId}::uuid,${quoteId}::uuid,0,'APPROVED','2026-10-11','Existing customer',100.49,100.49,100.49,NOW())`;
@@ -37,6 +40,9 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   deploy();
   const [after]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM commercial_documents d WHERE id=${id}::uuid`;
   const [quoteAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_revisions d WHERE id=${revisionId}::uuid`;
+  const [lineAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(l) AS record FROM commercial_document_lines l WHERE id=${legacyLineId}::uuid`;
+  const {baseQuantity,unitConversionSnapshot,...lineRetained}=lineAfter.record;
+  expect(baseQuantity).toBeNull();expect(unitConversionSnapshot).toBeNull();expect(lineRetained).toEqual(lineBefore.record);
   const {billingName,taxMode,stateOfSupplyCode,roundOffEnabled,roundOffAmount,...quoteRetained}=quoteAfter.record;
   expect(billingName).toBeNull();expect(taxMode).toBe("EXCLUSIVE");expect(stateOfSupplyCode).toBeNull();expect(roundOffEnabled).toBe(false);expect(Number(roundOffAmount)).toBe(0);expect(quoteRetained).toEqual(quoteBefore.record);
   await expect(db.quotationRevision.update({where:{id:revisionId},data:{roundOffEnabled:true}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");

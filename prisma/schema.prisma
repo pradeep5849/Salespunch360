@@ -2527,6 +2527,9 @@ model ServiceReminderCompletion {
 }
 
 model CommercialDocumentLine {
+  // NULL on historical rows: quantity retains its original primary-unit meaning.
+  baseQuantity Decimal? @db.Decimal(18,4)
+  unitConversionSnapshot Json?
   serviceReminderCompletion ServiceReminderCompletion?
   servicePeriodDays Int?
   id             String             @id @default(uuid()) @db.Uuid
@@ -2576,6 +2579,7 @@ model CommercialDocumentLine {
 }
 
 model PurchaseLineAllocation {
+  baseQuantity Decimal? @db.Decimal(18,4)
   id                  String                 @id @default(uuid()) @db.Uuid
   companyId           String                 @db.Uuid
   documentLineId      String                 @db.Uuid

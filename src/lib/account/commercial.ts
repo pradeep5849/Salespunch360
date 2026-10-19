@@ -1,3 +1,4 @@
+import {resolveCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import {customerPriceOptionsForActor,wholesalePriceOptionsForActor} from "./customer-price-options";
 import {itemPriceForDocument} from "./item-pricing";
 import {commercialLineAmounts} from "./commercial-line-amounts";
@@ -526,13 +527,15 @@ async function snapshotLine(
     hsnSacCode: string | null;
     trackInventory: boolean;
     trackingMode: string;
-    unit: { name: string; symbol: string } | null;
+    unit: { id:string; name: string; symbol: string } | null;
+    secondaryUnit?: { id:string; name:string; symbol:string; isActive:boolean } | null;
+    secondaryUnitsPerBase?: Prisma.Decimal | null;
   } | null = null;
   if (row.lineType === "PRODUCT" || row.lineType === "MATERIAL") {
     if (!row.sourceId) throw new Error("LINE_SOURCE_REQUIRED");
     const x = await tx.accountProduct.findFirst({
       where: { companyId: a.companyId, id: row.sourceId, isActive: true },
-      include: { unit: true },
+      include: { unit: true, secondaryUnit:true },
     });
     if (x)
       master = {
@@ -553,13 +556,15 @@ async function snapshotLine(
             ? x.trackingMode
             : "NONE",
         unit: x.unit,
+        secondaryUnit:x.secondaryUnit,
+        secondaryUnitsPerBase:x.secondaryUnitsPerBase,
       };
   }
   if (row.lineType === "SERVICE") {
     if (!row.sourceId) throw new Error("LINE_SOURCE_REQUIRED");
     const x = await tx.accountService.findFirst({
       where: { companyId: a.companyId, id: row.sourceId, isActive: true },
-      include: { unit: true },
+      include: { unit: true, secondaryUnit:true },
     });
     if (x)
       master = {
@@ -574,6 +579,8 @@ async function snapshotLine(
         trackInventory: false,
         trackingMode: "NONE",
         unit: x.unit,
+        secondaryUnit:x.secondaryUnit,
+        secondaryUnitsPerBase:x.secondaryUnitsPerBase,
       };
   }
   if (row.lineType === "WORK_PACKAGE" || row.lineType === "SUBCONTRACT") {
@@ -598,6 +605,12 @@ async function snapshotLine(
   }
   if (row.lineType !== "CUSTOM" && !master)
     throw new Error("INVALID_LINE_SOURCE");
+  const isCorrection=["CREDIT_NOTE","DEBIT_NOTE"].includes(type);
+  if(isCorrection&&(!row.sourceCommercialLineId||!sourceDocumentId))throw new Error("SOURCE_LINE_REQUIRED");
+  const sourceLine=isCorrection?await tx.commercialDocumentLine.findFirst({where:{id:row.sourceCommercialLineId,companyId:a.companyId,documentId:sourceDocumentId}}):null;
+  // Primary-only until selected-unit posting/valuation consumers are connected.
+  // Persist the current mapping now, so later master edits cannot reinterpret history.
+  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,master},sourceLine??undefined);
   const defaultPricing=itemPriceForDocument(master?.rate,master?.tax,master?.pricing,documentTaxMode,purchase,row.quantity);
   const quantity = new D(row.quantity),
     rate = new D(row.rate ?? defaultPricing.rate),
@@ -659,13 +672,6 @@ async function snapshotLine(
   if (["CREDIT_NOTE", "DEBIT_NOTE"].includes(type)) {
     if (!row.sourceCommercialLineId || !sourceDocumentId)
       throw new Error("SOURCE_LINE_REQUIRED");
-    const sourceLine = await tx.commercialDocumentLine.findFirst({
-      where: {
-        id: row.sourceCommercialLineId,
-        companyId: a.companyId,
-        documentId: sourceDocumentId,
-      },
-    });
     if (
       !sourceLine ||
       sourceLine.productId !==
@@ -750,9 +756,11 @@ async function snapshotLine(
     itemCode: row.itemCode ?? master?.code,
     description: row.description ?? master?.description,
     specification: row.specification,
-    unitName: row.unitName ?? master?.unit?.name,
-    unitSymbol: row.unitSymbol ?? master?.unit?.symbol,
+    unitName: sourceLine ? units.unitName : row.unitName ?? master?.unit?.name,
+    unitSymbol: sourceLine ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
     quantity,
+    baseQuantity:new D(units.baseQuantity),
+    unitConversionSnapshot:units.snapshot,
     rate,
     discountType: effectiveDiscountType,
     discountValue: row.discountValue,
@@ -1153,7 +1161,7 @@ export async function createCommercialDocumentForActor(
             return {
               ...line,
               purchaseAllocations: {
-                create: allocations,
+                create: allocations.map(allocation=>({...allocation,baseQuantity:new D(resolveCommercialUnitSnapshot({quantity:allocation.quantity.toString()}, {unitConversionSnapshot:line.unitConversionSnapshot??null,unitName:line.unitName??null,unitSymbol:line.unitSymbol??null}).baseQuantity)})),
               },
             };
           }),
