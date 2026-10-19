@@ -57630,6 +57630,32 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
+        },
+        "discount_party_report_2026_10_19": {
+          "implementation_commit": "232f408b3909338490e7fba652fa29c828516856",
+          "work": "Supplied Discount Report added to authorized shared Web/native catalogue,period/branch controls and export service. Reuses one repeatable-read paginated company-scoped posted economic document stream;reads recorded discountTotal rather than document totals and subtracts credit/debit-note discounts. Customer/vendor identities remain separate;currency-format money headers and native bounded party cards added. Standalone expenses do not store party discounts;visible report note and this evidence explicitly retain that limitation rather than synthesizing values. No financial writes,schema or migrations.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "135 tests across21 report/stock-summary files PASS,0 failures/skips,including6 local PostgreSQL cases. Discount service tests verify recorded values rather than document totals,signed returns,zero-discount parties,business-currency/export formatting;catalogue supports only implemented dimensions.",
+            "browser_api_export": "Sale/Purchase by Party both desktop/mobile profiles PASS after shared-source change(initial combined run). Discount Report final both desktop/mobile Chromium profiles PASS(1.4m):100 sale with10% discount minus25 return yields7.50 discount;60 purchase minus15 debit yields4.50 discount;Web table/summaries,native authenticated HTTP,CSV/XLSX/PDF,role403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+            "android": "compileDebugKotlin +19 AccountReportData JVM tests PASS(3m25s),0 failures/errors/skips. Discount catalogue/unsupported scope and signed formatted row parsing tested;native card runtime NOT RUN.",
+            "typescript": "Final full TypeScript PASS after browser run.",
+            "eslint": "Final focused ESLint PASS;git diff --check PASS.",
+            "initial_fixture_correction": "New Discount Report browser fixture initially used PERCENT instead of supported PERCENTAGE. Sale/Purchase regression passed;corrected fixture;final Discount Report both profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
         }
       }
     },
@@ -59964,6 +59990,13 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "native_date_storage_evidence_2026_10_19": {
+          "work": "Read-only local PostgreSQL information_schema check confirms commercial_documents.issueDate and journal_entries.entryDate are both native date. Original WITHDRAWN disposition preserved;no application correction justified or made.",
+          "tests": "Actual database metadata check PASS for both columns;zero writes. Latest party-report browser fixture includes credit/debit notes issued on the selected final day and verifies their inclusion in Web/native HTTP/CSV/XLSX/PDF totals.",
+          "remaining": "Not a complete start/noon/end/timezone/single-day/as-of matrix. Retain PARTIAL evidence status and pending final-head validation;do not relabel withdrawn claim as a new defect."
+        }
       }
     },
     {
@@ -61709,6 +61742,32 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
+        },
+        "discount_party_report_2026_10_19": {
+          "implementation_commit": "232f408b3909338490e7fba652fa29c828516856",
+          "work": "Supplied Discount Report added to authorized shared Web/native catalogue,period/branch controls and export service. Reuses one repeatable-read paginated company-scoped posted economic document stream;reads recorded discountTotal rather than document totals and subtracts credit/debit-note discounts. Customer/vendor identities remain separate;currency-format money headers and native bounded party cards added. Standalone expenses do not store party discounts;visible report note and this evidence explicitly retain that limitation rather than synthesizing values. No financial writes,schema or migrations.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "135 tests across21 report/stock-summary files PASS,0 failures/skips,including6 local PostgreSQL cases. Discount service tests verify recorded values rather than document totals,signed returns,zero-discount parties,business-currency/export formatting;catalogue supports only implemented dimensions.",
+            "browser_api_export": "Sale/Purchase by Party both desktop/mobile profiles PASS after shared-source change(initial combined run). Discount Report final both desktop/mobile Chromium profiles PASS(1.4m):100 sale with10% discount minus25 return yields7.50 discount;60 purchase minus15 debit yields4.50 discount;Web table/summaries,native authenticated HTTP,CSV/XLSX/PDF,role403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+            "android": "compileDebugKotlin +19 AccountReportData JVM tests PASS(3m25s),0 failures/errors/skips. Discount catalogue/unsupported scope and signed formatted row parsing tested;native card runtime NOT RUN.",
+            "typescript": "Final full TypeScript PASS after browser run.",
+            "eslint": "Final focused ESLint PASS;git diff --check PASS.",
+            "initial_fixture_correction": "New Discount Report browser fixture initially used PERCENT instead of supported PERCENTAGE. Sale/Purchase regression passed;corrected fixture;final Discount Report both profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
         }
       }
     },
@@ -65280,6 +65339,32 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
+        },
+        "discount_party_report_2026_10_19": {
+          "implementation_commit": "232f408b3909338490e7fba652fa29c828516856",
+          "work": "Supplied Discount Report added to authorized shared Web/native catalogue,period/branch controls and export service. Reuses one repeatable-read paginated company-scoped posted economic document stream;reads recorded discountTotal rather than document totals and subtracts credit/debit-note discounts. Customer/vendor identities remain separate;currency-format money headers and native bounded party cards added. Standalone expenses do not store party discounts;visible report note and this evidence explicitly retain that limitation rather than synthesizing values. No financial writes,schema or migrations.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped_unit_database": "135 tests across21 report/stock-summary files PASS,0 failures/skips,including6 local PostgreSQL cases. Discount service tests verify recorded values rather than document totals,signed returns,zero-discount parties,business-currency/export formatting;catalogue supports only implemented dimensions.",
+            "browser_api_export": "Sale/Purchase by Party both desktop/mobile profiles PASS after shared-source change(initial combined run). Discount Report final both desktop/mobile Chromium profiles PASS(1.4m):100 sale with10% discount minus25 return yields7.50 discount;60 purchase minus15 debit yields4.50 discount;Web table/summaries,native authenticated HTTP,CSV/XLSX/PDF,role403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+            "android": "compileDebugKotlin +19 AccountReportData JVM tests PASS(3m25s),0 failures/errors/skips. Discount catalogue/unsupported scope and signed formatted row parsing tested;native card runtime NOT RUN.",
+            "typescript": "Final full TypeScript PASS after browser run.",
+            "eslint": "Final focused ESLint PASS;git diff --check PASS.",
+            "initial_fixture_correction": "New Discount Report browser fixture initially used PERCENT instead of supported PERCENTAGE. Sale/Purchase regression passed;corrected fixture;final Discount Report both profiles PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
         }
       },
       "intermediate_validation": {
@@ -67813,6 +67898,26 @@
         "result": "Web and Android SUCCESS"
       },
       "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference controls/layouts and final-head/device validation. A090-F01 other preference consumers remain PARTIAL. Local runtime evidence covers this report only;native card runtime not executed. All199 final statuses remain unset."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "Discount Report;A084-F03/A085-F02/A090-F01 plus withdrawn A084-F13 storage evidence",
+      "implementation_commit": "232f408b3909338490e7fba652fa29c828516856",
+      "tests": {
+        "grouped_unit_database": "135 tests across21 report/stock-summary files PASS,0 failures/skips,including6 local PostgreSQL cases. Discount service tests verify recorded values rather than document totals,signed returns,zero-discount parties,business-currency/export formatting;catalogue supports only implemented dimensions.",
+        "browser_api_export": "Sale/Purchase by Party both desktop/mobile profiles PASS after shared-source change(initial combined run). Discount Report final both desktop/mobile Chromium profiles PASS(1.4m):100 sale with10% discount minus25 return yields7.50 discount;60 purchase minus15 debit yields4.50 discount;Web table/summaries,native authenticated HTTP,CSV/XLSX/PDF,role403,Axe AA/no root overflow,and unchanged journal/stock counts.",
+        "android": "compileDebugKotlin +19 AccountReportData JVM tests PASS(3m25s),0 failures/errors/skips. Discount catalogue/unsupported scope and signed formatted row parsing tested;native card runtime NOT RUN.",
+        "typescript": "Final full TypeScript PASS after browser run.",
+        "eslint": "Final focused ESLint PASS;git diff --check PASS.",
+        "initial_fixture_correction": "New Discount Report browser fixture initially used PERCENT instead of supported PERCENTAGE. Sale/Purchase regression passed;corrected fixture;final Discount Report both profiles PASS.",
+        "final_complete_head": "NOT RUN"
+      },
+      "prior_head_ci": {
+        "head": "a6dc29c69c2cb55e6bd7a71cdceffb6c5368fd5e",
+        "run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39191198591",
+        "result": "Web and Android SUCCESS"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
     }
   ]
 }

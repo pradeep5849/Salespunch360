@@ -9814,3 +9814,12 @@ Source commit `4c4a53038a574c71717ecdb8760bd7ffafa56c97` maps to A084-F03, A085-
 Actual validation: 132 grouped report/stock-summary tests across21 files PASS (includes6 local PostgreSQL cases);2 desktop/mobile Chromium tests PASS (43.3s), authenticated native report HTTP, CSV/XLSX/PDF, role denial, Axe AA, no overflow and no ledger/stock writes;Android compilation plus18 report JVM tests PASS;full TypeScript and focused lint PASS. Initial fixture errors (vendor branch field and missing supplier invoice metadata) corrected before final browser PASS. Native emulator/device card runtime not executed. Earlier52128347 passed both Web/Android CI run39151361383.
 
 Counts remain179 IMPLEMENTED BUT NOT VERIFIED /18 PARTIAL /2 NOT STARTED. Broad linked report/display findings remain partial;all199 final statuses remain unset. Full checkpoint final-head validation remains pending;A104,merge,deployment remain on hold.
+
+
+## 19 October — Discount Report and withdrawn date-claim evidence
+
+Source `232f408b3909338490e7fba652fa29c828516856` maps to A084-F03/A085-F02 and shared currency display A090-F01. Discount Report now nets recorded posted sale/purchase discounts against credit/debit notes,retains company/branch/period isolation,separates customer/vendor identities and connects Web/native catalogue/cards/export paths. Standalone expenses have no recorded party-discount field:report explicitly states this limitation;no amounts are inferred. No schema,migration or financial-write change.
+
+Validation:135 grouped tests/21 files PASS including6 local PostgreSQL cases;Sale/Purchase by Party both desktop/mobile regression profiles PASS after shared-source changes;Discount Report final2 desktop/mobile Chromium profiles PASS(1.4m),including actual authenticated native HTTP,CSV/XLSX/PDF,role denial,Axe AA,no overflow and unchanged journal/stock counts;Android compile+19 report JVM tests PASS(3m25s);full TypeScript/focused ESLint/diff check PASS. New browser fixture percentage enum corrected before final pass. No emulator/device runtime. Previousa6dc29c6 passed Web/Android CI39191198591.
+
+A084-F13 remains the original withdrawn claim:read-only local PostgreSQL metadata confirms both journal entry and commercial document calendar dates use native DATE. No financial-code change was made;full boundary/timezone/as-of test matrix remains pending. Counts remain179 implemented but not verified/18 partial/2 not started;all199 final statuses unset. No A104,merge,deployment or production write.
