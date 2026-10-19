@@ -9828,3 +9828,8 @@ A084-F13 remains the original withdrawn claim:read-only local PostgreSQL metadat
 ### Party-report grouped browser isolation follow-up
 
 Test-only source `b79b57c77dfae67d9748ad9054c5b431d3d21939`:each new report scenario now owns a separate branch/customer,preventing fixture transactions from contaminating later report totals in serial runs. Final combined Sale/Purchase by Party + Discount Report desktop/mobile run4 PASS(52.3s),zero failures/skips;TypeScript/focused browser lint/diff check PASS afterward. Production report/native code unchanged from232f408b;135 grouped tests and19 JVM/Android compile results remain applicable without unnecessary repetition. No final checkpoint status change.
+
+
+### A090 Android item-master currency follow-up
+
+Source `6de7b8df7ab5d88d0607c55f08167529b8a2f6e1`:legacy native Items master sale/cost summaries reuse accountMoney and saved business currency/decimal precision,removing hard-coded rupees. Raw values and cost visibility unchanged. Android compilation and4 existing display-preference JVM tests PASS(1m42s),zero failures/errors/skips;diff check PASS. Native emulator/device screen runtime not executed. A090-F01 remains PARTIAL;no new schema,migration,Web or financial logic. The preceding report source retains135 grouped/19 report JVM/4 combined browser passes;these separate groups are not a complete199-finding final-head run.

@@ -64929,7 +64929,8 @@
         "src/components/account/profit-report-view.tsx",
         "src/lib/account/reports/profit-presentation.test.ts",
         "src/lib/account/reports/party-trade.test.ts",
-        "src/lib/account/reports/party-trade.ts"
+        "src/lib/account/reports/party-trade.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -65401,6 +65402,20 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
+        },
+        "native_item_master_currency_2026_10_19": {
+          "implementation_commit": "6de7b8df7ab5d88d0607c55f08167529b8a2f6e1",
+          "work": "Android legacy Items master destination sale/cost summary now calls existing composition-local accountMoney instead of hard-coded rupee strings. Currency and decimal precision follow saved business display preferences;raw amounts and cost visibility unchanged.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin and existing4 AccountDisplayPreferences JVM tests PASS(1m42s),0 failures/errors/skips. Coverage includes USD precision/no rupee,half-up rounding,calendar dates and invalid numeric fallback.",
+            "diff_check": "PASS",
+            "device_runtime": "NOT RUN;no emulator/device currency-screen verification claimed.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090-F01 remains PARTIAL for other display consumers and final checkpoint verification. No new financial logic,schema,migration or Web source changes."
         }
       },
       "intermediate_validation": {
@@ -67967,6 +67982,18 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "A090-F01 Android item master currency",
+      "implementation_commit": "6de7b8df7ab5d88d0607c55f08167529b8a2f6e1",
+      "tests": {
+        "android": "compileDebugKotlin and existing4 AccountDisplayPreferences JVM tests PASS(1m42s),0 failures/errors/skips. Coverage includes USD precision/no rupee,half-up rounding,calendar dates and invalid numeric fallback.",
+        "diff_check": "PASS",
+        "device_runtime": "NOT RUN;no emulator/device currency-screen verification claimed.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A090-F01 remains PARTIAL for other display consumers and final checkpoint verification. No new financial logic,schema,migration or Web source changes."
     }
   ]
 }
