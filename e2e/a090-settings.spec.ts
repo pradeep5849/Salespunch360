@@ -2959,3 +2959,33 @@ test("A090 quotation PDF uses scoped company display settings across web public 
   await db.accountSettings.update({where:{companyId},data:{baseCurrency:saved.baseCurrency,displayDecimalPlaces:saved.displayDecimalPlaces,dateFormat:saved.dateFormat}});
  }
 });
+
+test("A082 quotation rounding survives web preview edit PDF and native update without ledger writes",async({page})=>{
+ test.setTimeout(150000);
+ await signInSettings(page);await page.goto("/workspace/account/quotations/new");
+ const identity=page.getByRole("group",{name:"Document",exact:true});
+ await identity.getByRole("combobox",{name:"Branch",exact:true}).selectOption(branchId);
+ await identity.getByRole("combobox",{name:"Customer",exact:true}).selectOption(customerId);
+ await page.getByRole("textbox",{name:"Item name",exact:true}).fill("Rounded quotation fixture");
+ await page.getByRole("spinbutton",{name:"Rate",exact:true}).fill("100.49");
+ const totals=page.getByRole("region",{name:"Quotation totals",exact:true}),row=(label:string)=>totals.locator("dl>div").filter({has:page.locator("dt",{hasText:new RegExp(`^${label}$`)})});
+ await expect(row("Total amount")).toContainText("₹100.49");await page.getByRole("checkbox",{name:"Round Off",exact:true}).check();
+ await expect(row("Round off")).toContainText("-₹0.49");await expect(row("Total amount")).toContainText("₹100.00");
+ expect((await new AxeBuilder({page}).include('form:has(input[aria-label="Round Off"])').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const journals=await db.journalEntry.count({where:{companyId}});
+ await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/,{timeout:20000});
+ const id=page.url().split("/").at(-2)!,saved=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}});
+ expect(saved.roundOffEnabled).toBe(true);expect(saved.roundOffAmount.toFixed(2)).toBe("-0.49");expect(saved.grandTotal.toFixed(2)).toBe("100.00");
+ const pdf=await page.request.get(`/workspace/account/quotations/${id}/pdf`);expect(pdf.status()).toBe(200);expect((await extractPdfText(await pdf.body())).text).toContain("Round off: -₹0.49");
+ await page.getByRole("link",{name:"Document details",exact:true}).click();await page.getByRole("link",{name:"Edit draft",exact:true}).click();
+ await expect(page.getByRole("checkbox",{name:"Round Off",exact:true})).toBeChecked();await page.getByRole("checkbox",{name:"Round Off",exact:true}).uncheck();
+ await expect(row("Total amount")).toContainText("₹100.49");await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`),{timeout:20000});
+ expect((await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}})).roundOffEnabled).toBe(false);
+ const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken(),tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});
+ try{
+  const headers={authorization:`Bearer ${token}`},response=await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",roundOffEnabled:true,lines:[{lineType:"CUSTOM",itemName:"Rounded quotation fixture",quantity:"1",rate:"100.49",taxRate:"0"}]}});expect(response.status()).toBe(200);
+  const native=await page.request.get(`/api/v1/mobile/account/quotations/${id}`,{headers});expect(native.status()).toBe(200);const body=await native.json();expect(body.revisions[0].roundOffEnabled).toBe(true);expect(body.revisions[0].roundOffAmount).toBe("-0.49");expect(body.revisions[0].grandTotal).toBe("100");
+ }finally{await db.mobileSession.deleteMany({where:{userId,tokenHash}})}
+ expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+});

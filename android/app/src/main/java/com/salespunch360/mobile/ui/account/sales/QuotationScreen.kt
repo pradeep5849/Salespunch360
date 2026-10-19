@@ -173,13 +173,14 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") }) }
                 item { InvoiceCustomFields(state.customFields,"QUOTATION",draft.customFields,state.saving){vm.editDraft(draft.copy(customFields=it))} }
                 item { OutlinedTextField(draft.notes, { vm.editDraft(draft.copy(notes = it)) }, label = { Text("Notes") }) }
+                item { FilterChip(selected=draft.roundOffEnabled,onClick={vm.editDraft(draft.copy(roundOffEnabled=!draft.roundOffEnabled))},label={Text("Round Off")},enabled=!state.saving) }
                 item {
                     val totals=quotationPreview(draft)
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text("Totals",style=MaterialTheme.typography.titleMedium)
                         Text("Rates exclude tax. Totals are recalculated when you save.",style=MaterialTheme.typography.bodySmall)
                         if(totals==null)Text("Enter valid quantities, rates, discounts and GST percentages to preview totals.")
-                        else listOf("Subtotal" to totals.subtotal,"Discount" to totals.discount,"Additional charges" to totals.charges,"Taxable amount" to totals.taxable,"Tax" to totals.tax,"Total amount" to totals.total).forEach { (label,amount) ->
+                        else listOf("Subtotal" to totals.subtotal,"Discount" to totals.discount,"Additional charges" to totals.charges,"Taxable amount" to totals.taxable,"Tax" to totals.tax,"Round off" to totals.roundOff,"Total amount" to totals.total).forEach { (label,amount) ->
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,modifier=Modifier.weight(1f));Text(accountMoney(amount))}
                         }
                     }
@@ -235,6 +236,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                 item {
                     Text("${quotation.str("documentType")} · ${quotation.str("status")}", fontWeight = FontWeight.Bold)
                     Text(revision?.str("customerName").orEmpty())
+                    Text("Round off ${accountMoney(revision?.str("roundOffAmount").orEmpty().ifBlank{"0"})}")
                     Text("Grand total ${accountMoney(revision?.str("grandTotal").orEmpty())}")
                 }
                 revision?.array("lines")?.let { lines -> items(lines) { line -> Text("${line.str("itemName")} · ${line.str("quantity")} × ${accountMoney(line.str("rate"))} = ${accountMoney(line.str("lineTotal"))}") } }

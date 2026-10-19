@@ -37,8 +37,8 @@ export type QuotationCommercialLine = {
  * the quotation calculator's exact allocation. Extra charges remain labelled lines.
  * No stock/payment identity, internal cost or original line identity is copied.
  */
-export function quotationCommercialPrefill(lines: SnapshotLine[], adjustments: SnapshotAdjustment[] = []) {
-  const calculated = calculateQuotation(lines, adjustments);
+export function quotationCommercialPrefill(lines: SnapshotLine[], adjustments: SnapshotAdjustment[] = [],options:{roundOffEnabled?:boolean}={}) {
+  const calculated = calculateQuotation(lines, adjustments,options);
   const result: QuotationCommercialLine[] = lines.map((line, index) => {
     const amount = calculated.lines[index];
     const sourceId = line.lineType === "PRODUCT" ? line.productId
@@ -77,7 +77,7 @@ export function quotationCommercialPrefill(lines: SnapshotLine[], adjustments: S
     taxable = taxable.add(amounts.taxable); tax = tax.add(amounts.totalTax);
   }
   if (!taxable.equals(calculated.taxableTotal) || !tax.equals(calculated.taxTotal)
-    || !taxable.add(tax).equals(calculated.grandTotal)) throw new Error("CONVERSION_TOTAL_MISMATCH");
-  return {taxMode: "EXCLUSIVE" as const, lines: result,
+    || !taxable.add(tax).add(calculated.roundOffAmount).equals(calculated.grandTotal)) throw new Error("CONVERSION_TOTAL_MISMATCH");
+  return {taxMode: "EXCLUSIVE" as const, roundOffAmount:calculated.roundOffAmount.toFixed(2),lines: result,
     taxableTotal: taxable.toFixed(2), taxTotal: tax.toFixed(2), grandTotal: calculated.grandTotal.toFixed(2)};
 }

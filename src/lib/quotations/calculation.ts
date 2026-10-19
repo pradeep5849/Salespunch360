@@ -33,7 +33,7 @@ function allocateDiscount(amount: Prisma.Decimal, bases: Prisma.Decimal[]) {
   });
 }
 
-export function calculateQuotation(lines: CalculationLine[], adjustments: CalculationAdjustment[] = []) {
+export function calculateQuotation(lines: CalculationLine[], adjustments: CalculationAdjustment[] = [], options:{roundOffEnabled?:boolean} = {}) {
   if (!lines.length) throw new Error("LINES_REQUIRED");
   const calculatedLines = lines.map(line => {
     const quantity = D(line.quantity), rate = D(line.rate), cost = D(line.internalUnitCost ?? 0), taxRate = D(line.taxRate ?? 0);
@@ -71,11 +71,13 @@ export function calculateQuotation(lines: CalculationLine[], adjustments: Calcul
   calculatedLines.forEach(line => { line.taxAmount = money(line.taxableAmount.mul(line.taxRate).div(HUNDRED)); line.lineTotal = money(line.taxableAmount.plus(line.taxAmount)); });
   const taxableTotal = money(remainingBase.plus(additionalChargeTotal));
   const taxTotal = money(sum(calculatedLines.map(line => line.taxAmount)).plus(adjustmentTax));
-  const grandTotal = money(taxableTotal.plus(taxTotal));
+  const unroundedTotal = money(taxableTotal.plus(taxTotal));
+  const roundOffAmount = options.roundOffEnabled ? money(unroundedTotal.toDecimalPlaces(0,Prisma.Decimal.ROUND_HALF_UP).minus(unroundedTotal)) : ZERO;
+  const grandTotal = money(unroundedTotal.plus(roundOffAmount));
   const internalCostTotal = sum(calculatedLines.map(line => line.internalCostTotal));
   const expectedProfit = money(taxableTotal.minus(internalCostTotal));
   const expectedMarginPercent = taxableTotal.isZero() ? ZERO : expectedProfit.mul(HUNDRED).div(taxableTotal).toDecimalPlaces(4);
-  return { lines: calculatedLines, adjustments: calculatedAdjustments, subtotal, discountTotal, additionalChargeTotal, taxableTotal, taxTotal, grandTotal, internalCostTotal, expectedProfit, expectedMarginPercent };
+  return { lines: calculatedLines, adjustments: calculatedAdjustments, subtotal, discountTotal, additionalChargeTotal, taxableTotal, taxTotal, roundOffAmount, grandTotal, internalCostTotal, expectedProfit, expectedMarginPercent };
 }
 
 /** A supplied schedule must use one mode and reconcile exactly; zero-total quotations may omit the schedule only. */

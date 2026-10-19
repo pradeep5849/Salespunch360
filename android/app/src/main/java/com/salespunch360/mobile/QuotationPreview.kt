@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.serialization.json.*
 
-data class QuotationPreview(val subtotal:String,val discount:String,val charges:String,val taxable:String,val tax:String,val total:String)
+data class QuotationPreview(val subtotal:String,val discount:String,val charges:String,val taxable:String,val tax:String,val total:String,val roundOff:String="0.00")
 
 /** Read-only exclusive-tax preview; authoritative validation and saving stay on the server. */
 fun quotationPreview(draft:QuotationDraft):QuotationPreview? = try {
@@ -49,5 +49,7 @@ fun quotationPreview(draft:QuotationDraft):QuotationPreview? = try {
     }
     val taxable=money(remaining+charges)
     val tax=money(sum(net.indices.map { money(net[it].multiply(taxes[it]).divide(hundred)) })+adjustmentTax)
-    QuotationPreview(sum(bases).toPlainString(),money(discountTotal).toPlainString(),money(charges).toPlainString(),taxable.toPlainString(),tax.toPlainString(),money(taxable+tax).toPlainString())
+    val rawTotal=money(taxable+tax)
+    val roundOff=if(draft.roundOffEnabled)money(rawTotal.setScale(0,RoundingMode.HALF_UP)-rawTotal)else money(zero)
+    QuotationPreview(sum(bases).toPlainString(),money(discountTotal).toPlainString(),money(charges).toPlainString(),taxable.toPlainString(),tax.toPlainString(),money(rawTotal+roundOff).toPlainString(),roundOff.toPlainString())
 }catch(_:IllegalArgumentException){null}catch(_:ArithmeticException){null}

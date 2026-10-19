@@ -54193,6 +54193,20 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Save/confirm closure and Web/native controls remain pending. Approval eligibility for Draft/Pending Approval sources is awaiting user decision; no rule invented. No migration or production operation."
+        },
+        "quotation_rounding_shared_2026_10_19": {
+          "work": "Read-only commercial prefill now retains separate final rounding;quotation party-balance contrast corrected. Shared portion only;no whole-finding completion inferred.",
+          "linked_finding": "A082-F03",
+          "tests": {
+            "grouped": "164 tests passed across11 quotation/domain/calculation/PDF/conversion/display/backup files,0 failed/skipped,including6 actual local PostgreSQL integration tests. Earlier123-test group overlaps,not added. Initial integration caught approval TOTALS_STALE because approval omitted saved rounding;fixed and all tests rerun successfully.",
+            "browser": "Final2 desktop/mobile Chromium cases PASS(2.2m):round on/off/live totals,save preview/edit/PDF,actual authenticated mobile PATCH/GET,persisted offset and grand total,no journal writes,Axe WCAG/no overflow. Initial2 failed party-balance contrast4.49:1;fixed text colour and reran unchanged assertion.",
+            "android": "Final compileDebugKotlin+15 focused quotation preview/codec JVM tests PASS(3m23s),0 failures/errors/skips. Initial14 passed/1 failed because new zero-tax fixture inherited18% default;fixture explicitly0%,then all15 rerun. No device/emulator/TalkBack runtime.",
+            "migration": "Prisma generate/validate/status PASS. New additive migration applied only to isolated local CI database. Fresh empty-database full-chain/upgrade rehearsal1 PASS(7.52s):pre-existing invoice and approved quotation retain every old column;shippingNULL;roundingfalse/zero;approved revision mutation rejected;repeated deploy no pending migrations.",
+            "typescript": "PASS final full typecheck",
+            "eslint": "PASS changed TS/TSX files and diff check",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -55322,6 +55336,20 @@
           },
           "scope_review": "Original A082-F02 code scope is now implemented: saved party/item search, authorized inline creation/return, branch filtering/reset, authorized stock/balance/cost metadata. Earlier implementation commits/evidence retained. This is code-status promotion only; final_status remains null.",
           "remaining": "Final exact-head complete regression and Android emulator/device runtime remain outstanding; no final FIXED/VERIFIED classification. No migrations, production database operations, A104, merge or deployment."
+        },
+        "quotation_rounding_shared_2026_10_19": {
+          "work": "Read-only commercial prefill now retains separate final rounding;quotation party-balance contrast corrected. Shared portion only;no whole-finding completion inferred.",
+          "linked_finding": "A082-F03",
+          "tests": {
+            "grouped": "164 tests passed across11 quotation/domain/calculation/PDF/conversion/display/backup files,0 failed/skipped,including6 actual local PostgreSQL integration tests. Earlier123-test group overlaps,not added. Initial integration caught approval TOTALS_STALE because approval omitted saved rounding;fixed and all tests rerun successfully.",
+            "browser": "Final2 desktop/mobile Chromium cases PASS(2.2m):round on/off/live totals,save preview/edit/PDF,actual authenticated mobile PATCH/GET,persisted offset and grand total,no journal writes,Axe WCAG/no overflow. Initial2 failed party-balance contrast4.49:1;fixed text colour and reran unchanged assertion.",
+            "android": "Final compileDebugKotlin+15 focused quotation preview/codec JVM tests PASS(3m23s),0 failures/errors/skips. Initial14 passed/1 failed because new zero-tax fixture inherited18% default;fixture explicitly0%,then all15 rerun. No device/emulator/TalkBack runtime.",
+            "migration": "Prisma generate/validate/status PASS. New additive migration applied only to isolated local CI database. Fresh empty-database full-chain/upgrade rehearsal1 PASS(7.52s):pre-existing invoice and approved quotation retain every old column;shippingNULL;roundingfalse/zero;approved revision mutation rejected;repeated deploy no pending migrations.",
+            "typescript": "PASS final full typecheck",
+            "eslint": "PASS changed TS/TSX files and diff check",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
         }
       },
       "push_checkpoint_evidence": {
@@ -55741,6 +55769,45 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A082-F03 remains PARTIAL for inclusive-tax/rounding/supply persistence and final platform/output verification."
+        },
+        "quotation_rounding_2026_10_19": {
+          "work": "Added explicit whole-unit Round Off control and Decimal/BigDecimal final adjustment to Web/native preview. Stored enabled flag and signed amount on each quotation revision; propagated through safe customer DTO, detail, saved preview, PDF and read-only commercial conversion prefill. Payment schedules reconcile to rounded grand total. Server approval recalculates with persisted switch and validates the offset. Draft/revision saves preserve omitted switch for older clients while honoring explicit false. Existing pending/issued full-row immutability protects both new fields. Historical totals are not recalculated. Party balance contrast corrected after actual Axe failure.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationDraftCodec.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationPreview.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationDraftCodecTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/components/account/quotation-party-balance.tsx",
+            "src/components/account/quotation-totals-preview.tsx",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/quotations/calculation.test.ts",
+            "src/lib/quotations/calculation.ts",
+            "src/lib/quotations/commercial-prefill.test.ts",
+            "src/lib/quotations/commercial-prefill.ts",
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/lib/quotations/editor-data.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/service.ts",
+            "prisma/migrations/20261019090000_quotation_rounding_snapshot/migration.sql"
+          ],
+          "tests": {
+            "grouped": "164 tests passed across11 quotation/domain/calculation/PDF/conversion/display/backup files,0 failed/skipped,including6 actual local PostgreSQL integration tests. Earlier123-test group overlaps,not added. Initial integration caught approval TOTALS_STALE because approval omitted saved rounding;fixed and all tests rerun successfully.",
+            "browser": "Final2 desktop/mobile Chromium cases PASS(2.2m):round on/off/live totals,save preview/edit/PDF,actual authenticated mobile PATCH/GET,persisted offset and grand total,no journal writes,Axe WCAG/no overflow. Initial2 failed party-balance contrast4.49:1;fixed text colour and reran unchanged assertion.",
+            "android": "Final compileDebugKotlin+15 focused quotation preview/codec JVM tests PASS(3m23s),0 failures/errors/skips. Initial14 passed/1 failed because new zero-tax fixture inherited18% default;fixture explicitly0%,then all15 rerun. No device/emulator/TalkBack runtime.",
+            "migration": "Prisma generate/validate/status PASS. New additive migration applied only to isolated local CI database. Fresh empty-database full-chain/upgrade rehearsal1 PASS(7.52s):pre-existing invoice and approved quotation retain every old column;shippingNULL;roundingfalse/zero;approved revision mutation rejected;repeated deploy no pending migrations.",
+            "typescript": "PASS final full typecheck",
+            "eslint": "PASS changed TS/TSX files and diff check",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
         }
       }
     },
@@ -68599,6 +68666,20 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "A082-F03 quotation rounding and linked A080-F02/A082-F02 consumers",
+      "tests": {
+        "grouped": "164 tests passed across11 quotation/domain/calculation/PDF/conversion/display/backup files,0 failed/skipped,including6 actual local PostgreSQL integration tests. Earlier123-test group overlaps,not added. Initial integration caught approval TOTALS_STALE because approval omitted saved rounding;fixed and all tests rerun successfully.",
+        "browser": "Final2 desktop/mobile Chromium cases PASS(2.2m):round on/off/live totals,save preview/edit/PDF,actual authenticated mobile PATCH/GET,persisted offset and grand total,no journal writes,Axe WCAG/no overflow. Initial2 failed party-balance contrast4.49:1;fixed text colour and reran unchanged assertion.",
+        "android": "Final compileDebugKotlin+15 focused quotation preview/codec JVM tests PASS(3m23s),0 failures/errors/skips. Initial14 passed/1 failed because new zero-tax fixture inherited18% default;fixture explicitly0%,then all15 rerun. No device/emulator/TalkBack runtime.",
+        "migration": "Prisma generate/validate/status PASS. New additive migration applied only to isolated local CI database. Fresh empty-database full-chain/upgrade rehearsal1 PASS(7.52s):pre-existing invoice and approved quotation retain every old column;shippingNULL;roundingfalse/zero;approved revision mutation rejected;repeated deploy no pending migrations.",
+        "typescript": "PASS final full typecheck",
+        "eslint": "PASS changed TS/TSX files and diff check",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A082-F03 remains PARTIAL for inclusive/exclusive tax mode and tax-supply context persistence. A080-F02 source linkage/eligibility/post-save closure remains PARTIAL. Native device/runtime,production migration and final199-head complete validation not claimed. No production operation or historical migration edit."
     }
   ]
 }

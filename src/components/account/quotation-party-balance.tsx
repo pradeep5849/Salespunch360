@@ -17,5 +17,5 @@ export function QuotationPartyBalance({partyId,branchId}:{partyId:string;branchI
  },[partyId,branchId,attempt]);
  if(!partyId||!branchId)return null;
  const current=result?.attempt===attempt?result:undefined;
- return <p aria-live="polite" title="Posted party balance within your authorized branches, including openings, receipts and advances.">Party balance: {current?.balance!==undefined?<Money value={current.balance}/>:current?.failed?<>Unavailable. <button type="button" onClick={()=>setAttempt(value=>value+1)}>Retry party balance</button></>:"Loading…"}</p>;
+ return <p style={{color:"#526078"}} aria-live="polite" title="Posted party balance within your authorized branches, including openings, receipts and advances.">Party balance: {current?.balance!==undefined?<Money value={current.balance}/>:current?.failed?<>Unavailable. <button type="button" onClick={()=>setAttempt(value=>value+1)}>Retry party balance</button></>:"Loading…"}</p>;
 }

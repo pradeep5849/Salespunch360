@@ -5,7 +5,7 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
-import {createQuotationForActor,updateQuotationDraftForActor,getQuotationForActor,listQuotationsForActor,transitionQuotationForActor} from "./service";
+import {createQuotationForActor,updateQuotationDraftForActor,getQuotationForActor,listQuotationsForActor,transitionQuotationForActor,createQuotationRevisionForActor} from "./service";
 import {quotationConversionPreviewForActor} from "./conversion-preview";
 const companyId=randomUUID(),branchId=randomUUID(),userId=randomUUID(),customerId=randomUUID();
 let actor:Parameters<typeof createQuotationForActor>[0];
@@ -95,6 +95,23 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   try{await expect(quotationConversionPreviewForActor({...actor,companyId:foreignCompany},{documentId:document.id,targetType:"SALES_INVOICE"})).rejects.toThrow("NOT_FOUND");}finally{await client.company.delete({where:{id:foreignCompany}})}
   expect(await counts()).toEqual(before);
   expect((await getQuotationForActor(actor,document.id)).status).toBe("DRAFT");
+ });
+
+ it("persists rounding on create/edit/revision, preserves legacy-client omission and protects issued history",async()=>{
+  const roundedInput={...input,roundOffEnabled:true,lines:[{lineType:"CUSTOM",itemName:"Rounding fixture",quantity:"1",rate:"100.49",taxRate:"0"}],paymentSchedule:[{label:"Full",valueType:"PERCENTAGE",value:"100"}]};
+  const document=await createQuotationForActor(actor,roundedInput);
+  let saved=await getQuotationForActor(actor,document.id),revision=saved.revisions[0];
+  expect(revision.roundOffEnabled).toBe(true);expect(revision.roundOffAmount.toFixed(2)).toBe("-0.49");expect(revision.grandTotal.toFixed(2)).toBe("100.00");expect(revision.paymentSchedule[0].amount.toFixed(2)).toBe("100.00");
+  const {roundOffEnabled:_omitted,...oldClient}=roundedInput;void _omitted;
+  await updateQuotationDraftForActor(actor,document.id,{...oldClient,notes:"Old client omission"});
+  saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].roundOffEnabled).toBe(true);
+  await updateQuotationDraftForActor(actor,document.id,{...roundedInput,roundOffEnabled:false});
+  saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].grandTotal.toFixed(2)).toBe("100.49");expect(saved.revisions[0].roundOffAmount.toFixed(2)).toBe("0.00");
+  await updateQuotationDraftForActor(actor,document.id,roundedInput);await transitionQuotationForActor(actor,document.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,document.id,"APPROVED");
+  revision=(await getQuotationForActor(actor,document.id)).revisions[0];
+  await expect(client.quotationRevision.update({where:{id:revision.id},data:{roundOffEnabled:false,roundOffAmount:0}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
+  const next=await createQuotationRevisionForActor(actor,document.id,oldClient);expect(next.roundOffEnabled).toBe(true);expect(next.roundOffAmount.toFixed(2)).toBe("-0.49");
+  const before=await client.journalEntry.count({where:{companyId}});expect(before).toBe(0);
  });
 
 });

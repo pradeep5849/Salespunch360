@@ -33,6 +33,7 @@ internal fun removedQuotationLine(draft: QuotationDraft, index: Int): QuotationD
 internal fun savedQuotationDraft(document: JsonObject, revision: JsonObject): QuotationDraft {
     val lines = revision.rows("lines")
     return QuotationDraft(
+        roundOffEnabled=(revision["roundOffEnabled"] as? JsonPrimitive)?.booleanOrNull?:false,
         id = document.text("id"), revision = document.text("status") != "DRAFT",
         branchId = document.text("branchId"), customerId = document.text("customerId"),
         documentType = document.text("documentType"), issueDate = revision.text("issueDate").take(10),
@@ -63,6 +64,7 @@ internal fun freshQuotationAfterSave(draft: QuotationDraft) = QuotationDraft(bra
 
 internal fun quotationDraftPayload(draft: QuotationDraft) = buildJsonObject {
     if(draft.id==null) put("creationRequestKey",draft.creationRequestKey)
+    put("roundOffEnabled",draft.roundOffEnabled)
     put("branchId", draft.branchId); put("documentType", draft.documentType); put("customerId", draft.customerId)
     put("issueDate", draft.issueDate)
     draft.validUntil.takeIf { it.isNotBlank() }?.let { put("validUntil", it) }

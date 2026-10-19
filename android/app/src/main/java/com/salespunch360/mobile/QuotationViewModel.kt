@@ -16,7 +16,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.serialization.json.*
 
-data class QuotationDraft(
+data class QuotationDraft(val roundOffEnabled:Boolean=false,
     val customFields:Map<String,String> = emptyMap(),
     val id: String? = null,
     val revision: Boolean = false,

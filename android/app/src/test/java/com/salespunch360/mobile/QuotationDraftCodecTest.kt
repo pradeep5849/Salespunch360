@@ -74,4 +74,12 @@ class QuotationDraftCodecTest {
         assertNull(quotationDraftPayload(draft.copy(id="saved"))["creationRequestKey"])
     }
 
+    @Test fun roundingSurvivesSavedRevisionAndPayloadButResetsForSaveNew(){
+        val document=Json.parseToJsonElement("""{"id":"doc","status":"SENT","branchId":"branch","customerId":"party","documentType":"ESTIMATE"}""").jsonObject
+        val revision=Json.parseToJsonElement("""{"issueDate":"2026-10-19","roundOffEnabled":true,"roundOffAmount":"-0.49","lines":[]}""").jsonObject
+        val draft=savedQuotationDraft(document,revision)
+        assertTrue(draft.roundOffEnabled);assertTrue(quotationDraftPayload(draft)["roundOffEnabled"]!!.jsonPrimitive.boolean)
+        assertNull(quotationDraftPayload(draft)["roundOffAmount"])
+        assertFalse(freshQuotationAfterSave(draft).roundOffEnabled)
+    }
 }

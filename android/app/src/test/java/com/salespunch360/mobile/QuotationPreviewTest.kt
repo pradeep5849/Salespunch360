@@ -32,4 +32,11 @@ class QuotationPreviewTest {
   val result=quotationPreview(QuotationDraft(lines=listOf(line(rate="200")),adjustments=listOf(adjustment(mode="PERCENTAGE",value="10"),adjustment("ADDITIONAL_CHARGE",value="20",taxable=true,tax="18"))))!!
   assertEquals("236.00",result.total)
  }
+ @Test fun roundingMatchesServerWithoutChangingDraftPrices(){
+  for((rate,total,offset)in listOf(Triple("100.49","100.00","-0.49"),Triple("100.50","101.00","0.50"),Triple("100.51","101.00","0.49"),Triple("0.49","0.00","-0.49"))){
+   val draft=QuotationDraft(roundOffEnabled=true,lines=listOf(line(rate=rate,tax="0")))
+   val rounded=quotationPreview(draft)!!;assertEquals(total,rounded.total);assertEquals(offset,rounded.roundOff);assertEquals(rate,draft.lines.first().rate)
+   assertEquals(rate,quotationPreview(draft.copy(roundOffEnabled=false))!!.total)
+  }
+ }
 }

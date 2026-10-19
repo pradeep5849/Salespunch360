@@ -51,3 +51,8 @@ describe("A080/A083 quotation to commercial prefill", () => {
     expect(() => quotationCommercialPrefill([{...line, rate: "0.005"}])).toThrow("CONVERSION_TOTAL_MISMATCH");
   });
 });
+
+it("retains explicit quotation rounding in commercial prefill without spreading it into line prices",()=>{
+ const result=quotationCommercialPrefill([{lineType:"CUSTOM",itemName:"Rounded fixture",quantity:"1",rate:"100.49",taxRate:"0"}],[],{roundOffEnabled:true});
+ expect(result.roundOffAmount).toBe("-0.49");expect(result.grandTotal).toBe("100.00");expect(result.lines[0].rate).toBe("100.49");expect(result.taxableTotal).toBe("100.49");
+});
