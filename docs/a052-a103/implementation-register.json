@@ -739,7 +739,9 @@
         "prisma/schema.prisma",
         ".github/workflows/deploy-prisma-migrations.yml",
         "scripts/check-runtime-schema.mjs",
-        "scripts/check-runtime-schema.test.mjs"
+        "scripts/check-runtime-schema.test.mjs",
+        "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
+        "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
       ],
       "affected_services_apis_actions": [
         "Deployed failing request unknown; candidate web listExpenses(), Account layout and shared dependencies."
@@ -837,7 +839,28 @@
       "checkpoint_work": {
         "status": "PARTIAL",
         "summary": "Matched supplied production exception to existing additive migration. No production migration executed. Earlier user deferral preceded this new diagnostic evidence; production remediation and validation remain pending. Added read-only generated-client scalar-column verification after migration deployment; it detects missing columns and wrong/empty database targets. Existing historical migrations remain unchanged; no production migration or deployment performed.",
-        "production_execution_blocker": "BLOCKED — production migration/remediation and validation are prohibited in this checkpoint. Provided P2022 identifies missing creationRequestKey; local migration/preflight work is not proof of production recovery."
+        "production_execution_blocker": "BLOCKED — production migration/remediation and validation are prohibited in this checkpoint. Provided P2022 identifies missing creationRequestKey; local migration/preflight work is not proof of production recovery.",
+        "migration_prerequisites_2026_10_19": {
+          "implementation_commit": "6dc96da76a8c9122092e0bfc58cf34da1217806b",
+          "work": "Two new idempotent prerequisite migrations create existing-model company/id unique keys before legacy owner and commercial-line foreign keys during fresh deployment. Existing upgraded DBs already have these indexes;IF NOT EXISTS preserves them. Historical SQL/checksums unchanged;no row updates or new business policy.",
+          "files": [
+            "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
+            "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
+          ],
+          "migrations": [
+            "20260911185000_owner_composite_key_prerequisite",
+            "20260911235000_commercial_line_key_prerequisite"
+          ],
+          "tests": {
+            "initial_failures": "First clean historical-chain run failed owner_financial_accounts referenced unique key;second failed commercial_document_lines referenced unique key. Both exact failures retained in local evidence;no historical migration modified.",
+            "fresh_chain": "Full prior migration chain with additive prerequisites now deploys on a new isolated local *_ci DB. Seeded pre-shipping invoice/customer;applied shipping migration;asserted every original invoice field byte-for-byte JSON equal,shippingAddress NULL,and customer/current shipping data retained. Repeated migrate deploy PASS with no pending changes.",
+            "existing_upgrade": "Both prerequisite migrations deploy idempotently on the existing upgraded local CI DB;existing index names/rows retained.",
+            "expense_column": "Read-only fresh-rehearsal information_schema check PASS:expense_transactions.creationRequestKey and commercial_documents.shippingAddress exist. This is local schema evidence,not proof of a production recovery.",
+            "historical_migrations": "git diff against base shows30 added migration files and0 modified/deleted historical migration files.",
+            "production": "NOT RUN;no production DB access/deployment."
+          },
+          "remaining": "Migration deployment in production remains prohibited/unexecuted;future approved deployment must apply migrations before new application code. A052 production crash recovery remains unverified there. These are required migration prerequisites,not additional finding IDs or reimplementation of merged134 findings."
+        }
       },
       "production_evidence": {
         "code": "P2022",
@@ -30109,7 +30132,9 @@
         "src/lib/account/money.ts",
         "src/lib/mobile/account-money.ts",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
+        "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
       ],
       "affected_services_apis_actions": [
         "setupOwnerAction / ownerTransactionAction",
@@ -30217,7 +30242,28 @@
       ],
       "checkpoint_work": {
         "status": "IMPLEMENTED BUT NOT VERIFIED",
-        "summary": "Independent named owner/partner identities with optional company user link, contact details, deactivation preserving ledger/history, stable creation request/hash, web and Android create/edit routes. No app role promotion."
+        "summary": "Independent named owner/partner identities with optional company user link, contact details, deactivation preserving ledger/history, stable creation request/hash, web and Android create/edit routes. No app role promotion.",
+        "migration_prerequisites_2026_10_19": {
+          "implementation_commit": "6dc96da76a8c9122092e0bfc58cf34da1217806b",
+          "work": "Two new idempotent prerequisite migrations create existing-model company/id unique keys before legacy owner and commercial-line foreign keys during fresh deployment. Existing upgraded DBs already have these indexes;IF NOT EXISTS preserves them. Historical SQL/checksums unchanged;no row updates or new business policy.",
+          "files": [
+            "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
+            "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
+          ],
+          "migrations": [
+            "20260911185000_owner_composite_key_prerequisite",
+            "20260911235000_commercial_line_key_prerequisite"
+          ],
+          "tests": {
+            "initial_failures": "First clean historical-chain run failed owner_financial_accounts referenced unique key;second failed commercial_document_lines referenced unique key. Both exact failures retained in local evidence;no historical migration modified.",
+            "fresh_chain": "Full prior migration chain with additive prerequisites now deploys on a new isolated local *_ci DB. Seeded pre-shipping invoice/customer;applied shipping migration;asserted every original invoice field byte-for-byte JSON equal,shippingAddress NULL,and customer/current shipping data retained. Repeated migrate deploy PASS with no pending changes.",
+            "existing_upgrade": "Both prerequisite migrations deploy idempotently on the existing upgraded local CI DB;existing index names/rows retained.",
+            "expense_column": "Read-only fresh-rehearsal information_schema check PASS:expense_transactions.creationRequestKey and commercial_documents.shippingAddress exist. This is local schema evidence,not proof of a production recovery.",
+            "historical_migrations": "git diff against base shows30 added migration files and0 modified/deleted historical migration files.",
+            "production": "NOT RUN;no production DB access/deployment."
+          },
+          "remaining": "Migration deployment in production remains prohibited/unexecuted;future approved deployment must apply migrations before new application code. A052 production crash recovery remains unverified there. These are required migration prerequisites,not additional finding IDs or reimplementation of merged134 findings."
+        }
       },
       "intermediate_validation": {
         "owner_services_and_actions": "16 passed, 0 failed, 0 skipped (12 isolated database + 4 action tests)",
@@ -63585,7 +63631,31 @@
       "expected_behavior": "Shared Add Sale form must restore/reference all supported fields and present safe correction identity clearly.",
       "root_cause": "Shared form lacks fields and correction identity model differs from reference.",
       "affected_files": [
-        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx"
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/sales/[id]/page.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+        "src/lib/account/cheque-finance.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/print.ts",
+        "src/lib/account/project-invoice-selection.ts",
+        "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-duplicate.test.ts",
+        "src/lib/account/sale-duplicate.ts",
+        "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/transaction-header.test.ts",
+        "src/lib/account/transaction-header.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -63633,7 +63703,68 @@
           "src/app/workspace/account/transactions/new/commercial-editor.tsx",
           "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
           "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt"
-        ]
+        ],
+        "sale_shipping_snapshot_2026_10_19": {
+          "implementation_commit": "7784a254fd04abab7d03febe9158a0748df83966",
+          "work": "CommercialDocument now stores nullable document-specific shippingAddress. Authorized new-document creation captures the customer address only when enabled and no explicit value was supplied;explicit blank clears it. Web/native Add/Edit/Duplicate and Project prefill retain the snapshot;correction/reversal copy omitted original values,including unknown historical blanks,rather than reading a changed customer address. Sale Details and actual HTML/PDF print use the snapshot;form/print toggles preserve stored data. Web/native Sale Details muted labels and Web bill/amount/Edit colors darkened;Web Axe AA passes. No amount/posting policy changes;paid-sale corrections and attachments remain outside this completed slice.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/print.ts",
+            "src/lib/account/project-invoice-selection.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/sale-edit-initial.ts",
+            "src/lib/account/transaction-header.test.ts",
+            "src/lib/account/transaction-header.ts"
+          ],
+          "models_changed": [
+            "CommercialDocument.shippingAddress (nullable String/TEXT)"
+          ],
+          "migrations": [
+            "20261019060000_commercial_shipping_snapshot"
+          ],
+          "apis_actions": [
+            "createCommercialDocumentForActor",
+            "commercialEditorOptionsForActor",
+            "replacePostedSaleForActor/creditPayload",
+            "submitSaleInvoiceAction/replacePostedSaleAction (shared validated input)",
+            "GET/POST /api/v1/mobile/account/transactions",
+            "GET /api/v1/mobile/account/transactions/options",
+            "GET/PATCH /api/v1/mobile/account/transactions/{id}",
+            "GET /api/account/print/{documentType}/{id} (HTML/PDF snapshot consumer)"
+          ],
+          "tests": {
+            "financial_database": "37 cheque/sale PostgreSQL integration tests PASS,0 failed/skipped. New2 shipping cases cover auto capture,changed customer,immutable posted update rejection,correction/reversal retention,retry identity,foreign company/branch denial,explicit clearing and missing historical values. Initial focused selection2 PASS/35 excluded;superseded by final full37 group.",
+            "print_header_unit": "94 tests across8 print/header/service/API files PASS,0 failed/skipped.",
+            "commercial_unit": "79 tests across11 commercial/backup/submit/header/duplicate/project files PASS,0 failed/skipped. Overlaps earlier94 group;do not sum as unique coverage.",
+            "browser_native_api_print": "Final4 desktop/mobile Chromium cases PASS(1.7m):existing inclusive/cess/charge/metadata edit/delete regression plus shipping snapshot/customer independence,Web edit,native authenticated GET/PATCH,HTML escaping,actual PDF text,hidden field retention,print gating,Axe AA and no root overflow.",
+            "android": "Final compileDebugKotlin +21 JVM tests PASS(2m5s),0 failures/errors/skips across SalesEditSnapshot(5),ProjectInvoiceSelection(4),SaleDuplicate(3),ChequeSalePayload(2),SalesPreview(7). Native snapshot/clearing/Project defaults and hidden retention tested;no emulator/device/TalkBack runtime claim.",
+            "typescript": "Final full TypeScript PASS after Web runtime. Initial errors from project customer option type and union shipping field narrowed/fixed before passing checks.",
+            "eslint": "Final focused TypeScript/TSX ESLint PASS;git diff --check PASS.",
+            "initial_browser_corrections": "First attempt interrupted to correct an unnecessary test accordion toggle. Next run2 old regressions passed/2 new cases failed Axe for pre-existing low-contrast Sale Details labels/amounts/bar/Edit. Contrast corrected without weakening assertions;final4 cases PASS.",
+            "schema_migration": "Prisma generate/validate/status PASS;additive shipping column applied on existing isolated CI DB. Clean baseline-to-new-column preservation rehearsal and idempotent redeploy PASS after prerequisite-key fixes recorded separately.",
+            "final_complete_head": "NOT RUN"
+          },
+          "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "Cheque/reference, description, attachments, shipping and charge edit controls missing; replacement uses new identity/number.",
@@ -64138,7 +64269,31 @@
       "expected_behavior": "Show retained detail fields and working share/menu/Edit/Delete destinations.",
       "root_cause": "Detail renderer/action surface lacks reference controls.",
       "affected_files": [
-        "src/app/workspace/account/sales/[id]/page.tsx"
+        "src/app/workspace/account/sales/[id]/page.tsx",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/cheque-finance.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/print.ts",
+        "src/lib/account/project-invoice-selection.ts",
+        "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-duplicate.test.ts",
+        "src/lib/account/sale-duplicate.ts",
+        "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/transaction-header.test.ts",
+        "src/lib/account/transaction-header.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -64214,6 +64369,67 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A087-F02 remains PARTIAL for remaining original actions/shipping/attachments and final runtime parity. No migration/posting behavior changes."
+        },
+        "sale_shipping_snapshot_2026_10_19": {
+          "implementation_commit": "7784a254fd04abab7d03febe9158a0748df83966",
+          "work": "CommercialDocument now stores nullable document-specific shippingAddress. Authorized new-document creation captures the customer address only when enabled and no explicit value was supplied;explicit blank clears it. Web/native Add/Edit/Duplicate and Project prefill retain the snapshot;correction/reversal copy omitted original values,including unknown historical blanks,rather than reading a changed customer address. Sale Details and actual HTML/PDF print use the snapshot;form/print toggles preserve stored data. Web/native Sale Details muted labels and Web bill/amount/Edit colors darkened;Web Axe AA passes. No amount/posting policy changes;paid-sale corrections and attachments remain outside this completed slice.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/print.ts",
+            "src/lib/account/project-invoice-selection.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/sale-edit-initial.ts",
+            "src/lib/account/transaction-header.test.ts",
+            "src/lib/account/transaction-header.ts"
+          ],
+          "models_changed": [
+            "CommercialDocument.shippingAddress (nullable String/TEXT)"
+          ],
+          "migrations": [
+            "20261019060000_commercial_shipping_snapshot"
+          ],
+          "apis_actions": [
+            "createCommercialDocumentForActor",
+            "commercialEditorOptionsForActor",
+            "replacePostedSaleForActor/creditPayload",
+            "submitSaleInvoiceAction/replacePostedSaleAction (shared validated input)",
+            "GET/POST /api/v1/mobile/account/transactions",
+            "GET /api/v1/mobile/account/transactions/options",
+            "GET/PATCH /api/v1/mobile/account/transactions/{id}",
+            "GET /api/account/print/{documentType}/{id} (HTML/PDF snapshot consumer)"
+          ],
+          "tests": {
+            "financial_database": "37 cheque/sale PostgreSQL integration tests PASS,0 failed/skipped. New2 shipping cases cover auto capture,changed customer,immutable posted update rejection,correction/reversal retention,retry identity,foreign company/branch denial,explicit clearing and missing historical values. Initial focused selection2 PASS/35 excluded;superseded by final full37 group.",
+            "print_header_unit": "94 tests across8 print/header/service/API files PASS,0 failed/skipped.",
+            "commercial_unit": "79 tests across11 commercial/backup/submit/header/duplicate/project files PASS,0 failed/skipped. Overlaps earlier94 group;do not sum as unique coverage.",
+            "browser_native_api_print": "Final4 desktop/mobile Chromium cases PASS(1.7m):existing inclusive/cess/charge/metadata edit/delete regression plus shipping snapshot/customer independence,Web edit,native authenticated GET/PATCH,HTML escaping,actual PDF text,hidden field retention,print gating,Axe AA and no root overflow.",
+            "android": "Final compileDebugKotlin +21 JVM tests PASS(2m5s),0 failures/errors/skips across SalesEditSnapshot(5),ProjectInvoiceSelection(4),SaleDuplicate(3),ChequeSalePayload(2),SalesPreview(7). Native snapshot/clearing/Project defaults and hidden retention tested;no emulator/device/TalkBack runtime claim.",
+            "typescript": "Final full TypeScript PASS after Web runtime. Initial errors from project customer option type and union shipping field narrowed/fixed before passing checks.",
+            "eslint": "Final focused TypeScript/TSX ESLint PASS;git diff --check PASS.",
+            "initial_browser_corrections": "First attempt interrupted to correct an unnecessary test accordion toggle. Next run2 old regressions passed/2 new cases failed Axe for pre-existing low-contrast Sale Details labels/amounts/bar/Edit. Contrast corrected without weakening assertions;final4 cases PASS.",
+            "schema_migration": "Prisma generate/validate/status PASS;additive shipping column applied on existing isolated CI DB. Clean baseline-to-new-column preservation rehearsal and idempotent redeploy PASS after prerequisite-key fixes recorded separately.",
+            "final_complete_head": "NOT RUN"
+          },
+          "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
         }
       },
       "push_checkpoint_evidence": {
@@ -65694,7 +65910,32 @@
       "expected_behavior": "Retain print preference while shipping disabled and restore it on re-enable.",
       "root_cause": "Unchecked/disabled form serialization conflates stored choice with feature availability.",
       "affected_files": [
-        "src/components/account/party-settings-form.tsx"
+        "src/components/account/party-settings-form.tsx",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/sales/[id]/page.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/cheque-finance.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/print.ts",
+        "src/lib/account/project-invoice-selection.ts",
+        "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-duplicate.test.ts",
+        "src/lib/account/sale-duplicate.ts",
+        "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/transaction-header.test.ts",
+        "src/lib/account/transaction-header.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -65777,6 +66018,69 @@
         ],
         "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "sale_shipping_snapshot_2026_10_19": {
+          "implementation_commit": "7784a254fd04abab7d03febe9158a0748df83966",
+          "work": "CommercialDocument now stores nullable document-specific shippingAddress. Authorized new-document creation captures the customer address only when enabled and no explicit value was supplied;explicit blank clears it. Web/native Add/Edit/Duplicate and Project prefill retain the snapshot;correction/reversal copy omitted original values,including unknown historical blanks,rather than reading a changed customer address. Sale Details and actual HTML/PDF print use the snapshot;form/print toggles preserve stored data. Web/native Sale Details muted labels and Web bill/amount/Edit colors darkened;Web Axe AA passes. No amount/posting policy changes;paid-sale corrections and attachments remain outside this completed slice.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/cheque-finance.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/print.ts",
+            "src/lib/account/project-invoice-selection.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/sale-edit-initial.ts",
+            "src/lib/account/transaction-header.test.ts",
+            "src/lib/account/transaction-header.ts"
+          ],
+          "models_changed": [
+            "CommercialDocument.shippingAddress (nullable String/TEXT)"
+          ],
+          "migrations": [
+            "20261019060000_commercial_shipping_snapshot"
+          ],
+          "apis_actions": [
+            "createCommercialDocumentForActor",
+            "commercialEditorOptionsForActor",
+            "replacePostedSaleForActor/creditPayload",
+            "submitSaleInvoiceAction/replacePostedSaleAction (shared validated input)",
+            "GET/POST /api/v1/mobile/account/transactions",
+            "GET /api/v1/mobile/account/transactions/options",
+            "GET/PATCH /api/v1/mobile/account/transactions/{id}",
+            "GET /api/account/print/{documentType}/{id} (HTML/PDF snapshot consumer)"
+          ],
+          "tests": {
+            "financial_database": "37 cheque/sale PostgreSQL integration tests PASS,0 failed/skipped. New2 shipping cases cover auto capture,changed customer,immutable posted update rejection,correction/reversal retention,retry identity,foreign company/branch denial,explicit clearing and missing historical values. Initial focused selection2 PASS/35 excluded;superseded by final full37 group.",
+            "print_header_unit": "94 tests across8 print/header/service/API files PASS,0 failed/skipped.",
+            "commercial_unit": "79 tests across11 commercial/backup/submit/header/duplicate/project files PASS,0 failed/skipped. Overlaps earlier94 group;do not sum as unique coverage.",
+            "browser_native_api_print": "Final4 desktop/mobile Chromium cases PASS(1.7m):existing inclusive/cess/charge/metadata edit/delete regression plus shipping snapshot/customer independence,Web edit,native authenticated GET/PATCH,HTML escaping,actual PDF text,hidden field retention,print gating,Axe AA and no root overflow.",
+            "android": "Final compileDebugKotlin +21 JVM tests PASS(2m5s),0 failures/errors/skips across SalesEditSnapshot(5),ProjectInvoiceSelection(4),SaleDuplicate(3),ChequeSalePayload(2),SalesPreview(7). Native snapshot/clearing/Project defaults and hidden retention tested;no emulator/device/TalkBack runtime claim.",
+            "typescript": "Final full TypeScript PASS after Web runtime. Initial errors from project customer option type and union shipping field narrowed/fixed before passing checks.",
+            "eslint": "Final focused TypeScript/TSX ESLint PASS;git diff --check PASS.",
+            "initial_browser_corrections": "First attempt interrupted to correct an unnecessary test accordion toggle. Next run2 old regressions passed/2 new cases failed Axe for pre-existing low-contrast Sale Details labels/amounts/bar/Edit. Contrast corrected without weakening assertions;final4 cases PASS.",
+            "schema_migration": "Prisma generate/validate/status PASS;additive shipping column applied on existing isolated CI DB. Clean baseline-to-new-column preservation rehearsal and idempotent redeploy PASS after prerequisite-key fixes recorded separately.",
+            "final_complete_head": "NOT RUN"
+          },
+          "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
+        }
       }
     },
     {
@@ -67994,6 +68298,101 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "A090-F01 remains PARTIAL for other display consumers and final checkpoint verification. No new financial logic,schema,migration or Web source changes."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "A086-F06/A087-F02 shipping and contrast;A096-F01 shipping setting consumer;A065-F01/A052-F01 additive migration-chain prerequisites",
+      "implementation_commits": [
+        "6dc96da76a8c9122092e0bfc58cf34da1217806b",
+        "7784a254fd04abab7d03febe9158a0748df83966"
+      ],
+      "shipping": {
+        "implementation_commit": "7784a254fd04abab7d03febe9158a0748df83966",
+        "work": "CommercialDocument now stores nullable document-specific shippingAddress. Authorized new-document creation captures the customer address only when enabled and no explicit value was supplied;explicit blank clears it. Web/native Add/Edit/Duplicate and Project prefill retain the snapshot;correction/reversal copy omitted original values,including unknown historical blanks,rather than reading a changed customer address. Sale Details and actual HTML/PDF print use the snapshot;form/print toggles preserve stored data. Web/native Sale Details muted labels and Web bill/amount/Edit colors darkened;Web Axe AA passes. No amount/posting policy changes;paid-sale corrections and attachments remain outside this completed slice.",
+        "files": [
+          ".github/workflows/targeted-validation.yml",
+          "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+          "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+          "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+          "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+          "e2e/a090-settings.spec.ts",
+          "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+          "prisma/schema.prisma",
+          "src/app/workspace/account/sales/[id]/edit/page.tsx",
+          "src/app/workspace/account/sales/[id]/page.tsx",
+          "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+          "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+          "src/lib/account/cheque-finance.integration.test.ts",
+          "src/lib/account/commercial.ts",
+          "src/lib/account/print.ts",
+          "src/lib/account/project-invoice-selection.ts",
+          "src/lib/account/sale-amendments.ts",
+          "src/lib/account/sale-duplicate.test.ts",
+          "src/lib/account/sale-duplicate.ts",
+          "src/lib/account/sale-edit-initial.ts",
+          "src/lib/account/transaction-header.test.ts",
+          "src/lib/account/transaction-header.ts"
+        ],
+        "models_changed": [
+          "CommercialDocument.shippingAddress (nullable String/TEXT)"
+        ],
+        "migrations": [
+          "20261019060000_commercial_shipping_snapshot"
+        ],
+        "apis_actions": [
+          "createCommercialDocumentForActor",
+          "commercialEditorOptionsForActor",
+          "replacePostedSaleForActor/creditPayload",
+          "submitSaleInvoiceAction/replacePostedSaleAction (shared validated input)",
+          "GET/POST /api/v1/mobile/account/transactions",
+          "GET /api/v1/mobile/account/transactions/options",
+          "GET/PATCH /api/v1/mobile/account/transactions/{id}",
+          "GET /api/account/print/{documentType}/{id} (HTML/PDF snapshot consumer)"
+        ],
+        "tests": {
+          "financial_database": "37 cheque/sale PostgreSQL integration tests PASS,0 failed/skipped. New2 shipping cases cover auto capture,changed customer,immutable posted update rejection,correction/reversal retention,retry identity,foreign company/branch denial,explicit clearing and missing historical values. Initial focused selection2 PASS/35 excluded;superseded by final full37 group.",
+          "print_header_unit": "94 tests across8 print/header/service/API files PASS,0 failed/skipped.",
+          "commercial_unit": "79 tests across11 commercial/backup/submit/header/duplicate/project files PASS,0 failed/skipped. Overlaps earlier94 group;do not sum as unique coverage.",
+          "browser_native_api_print": "Final4 desktop/mobile Chromium cases PASS(1.7m):existing inclusive/cess/charge/metadata edit/delete regression plus shipping snapshot/customer independence,Web edit,native authenticated GET/PATCH,HTML escaping,actual PDF text,hidden field retention,print gating,Axe AA and no root overflow.",
+          "android": "Final compileDebugKotlin +21 JVM tests PASS(2m5s),0 failures/errors/skips across SalesEditSnapshot(5),ProjectInvoiceSelection(4),SaleDuplicate(3),ChequeSalePayload(2),SalesPreview(7). Native snapshot/clearing/Project defaults and hidden retention tested;no emulator/device/TalkBack runtime claim.",
+          "typescript": "Final full TypeScript PASS after Web runtime. Initial errors from project customer option type and union shipping field narrowed/fixed before passing checks.",
+          "eslint": "Final focused TypeScript/TSX ESLint PASS;git diff --check PASS.",
+          "initial_browser_corrections": "First attempt interrupted to correct an unnecessary test accordion toggle. Next run2 old regressions passed/2 new cases failed Axe for pre-existing low-contrast Sale Details labels/amounts/bar/Edit. Contrast corrected without weakening assertions;final4 cases PASS.",
+          "schema_migration": "Prisma generate/validate/status PASS;additive shipping column applied on existing isolated CI DB. Clean baseline-to-new-column preservation rehearsal and idempotent redeploy PASS after prerequisite-key fixes recorded separately.",
+          "final_complete_head": "NOT RUN"
+        },
+        "deployment_requirement": "Before any future application deployment,run the approved migrate-deploy chain including the nullable shipping snapshot and two prerequisite key migrations. No production migration or deployment was executed. Legacy address values remain NULL;historical addresses cannot be reconstructed from current party data.",
+        "remaining": "A086-F06/A087-F02 remain PARTIAL for attachments,remaining reference actions/identity and paid/advance/adjusted correction scope plus final-head/device validation. Related A096-F01 retains its previous implementation status and requires final checkpoint verification. All199 final statuses remain unset."
+      },
+      "migration_prerequisites": {
+        "implementation_commit": "6dc96da76a8c9122092e0bfc58cf34da1217806b",
+        "work": "Two new idempotent prerequisite migrations create existing-model company/id unique keys before legacy owner and commercial-line foreign keys during fresh deployment. Existing upgraded DBs already have these indexes;IF NOT EXISTS preserves them. Historical SQL/checksums unchanged;no row updates or new business policy.",
+        "files": [
+          "prisma/migrations/20260911185000_owner_composite_key_prerequisite/migration.sql",
+          "prisma/migrations/20260911235000_commercial_line_key_prerequisite/migration.sql"
+        ],
+        "migrations": [
+          "20260911185000_owner_composite_key_prerequisite",
+          "20260911235000_commercial_line_key_prerequisite"
+        ],
+        "tests": {
+          "initial_failures": "First clean historical-chain run failed owner_financial_accounts referenced unique key;second failed commercial_document_lines referenced unique key. Both exact failures retained in local evidence;no historical migration modified.",
+          "fresh_chain": "Full prior migration chain with additive prerequisites now deploys on a new isolated local *_ci DB. Seeded pre-shipping invoice/customer;applied shipping migration;asserted every original invoice field byte-for-byte JSON equal,shippingAddress NULL,and customer/current shipping data retained. Repeated migrate deploy PASS with no pending changes.",
+          "existing_upgrade": "Both prerequisite migrations deploy idempotently on the existing upgraded local CI DB;existing index names/rows retained.",
+          "expense_column": "Read-only fresh-rehearsal information_schema check PASS:expense_transactions.creationRequestKey and commercial_documents.shippingAddress exist. This is local schema evidence,not proof of a production recovery.",
+          "historical_migrations": "git diff against base shows30 added migration files and0 modified/deleted historical migration files.",
+          "production": "NOT RUN;no production DB access/deployment."
+        },
+        "remaining": "Migration deployment in production remains prohibited/unexecuted;future approved deployment must apply migrations before new application code. A052 production crash recovery remains unverified there. These are required migration prerequisites,not additional finding IDs or reimplementation of merged134 findings."
+      },
+      "prior_head_ci": {
+        "head": "91dd488754daa7da1e9dca5b77c1e863e38cd120",
+        "run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39192627497",
+        "result": "Web and Android SUCCESS"
+      }
     }
   ]
 }
