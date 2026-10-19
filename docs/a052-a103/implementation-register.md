@@ -9916,3 +9916,5 @@ The existing administrator-only repeatable-read export now includes scoped activ
 Validation: 16 tests passed across four backup/scheduling/expense-item files, including two actual isolated PostgreSQL cases; zero failures/skips. Both desktop/mobile Chromium download/settings/archive profiles passed (48.6s), including a populated reusable item/photo-reference snapshot and checksum. Focused ESLint, workflow YAML and diff checks passed. CI adds the real database retention/isolation test after migration rehearsal. No new native/device check claimed. A088-F01 remains PARTIAL for provider/blob/restore and final checkpoint verification; file references are not file-byte backups.
 
 Final full TypeScript check after the backup browser run: PASS.
+
+Reusable expense item backup implementation provenance: `0706bb91f3023b93506a20f305dc791881ed19f4`.

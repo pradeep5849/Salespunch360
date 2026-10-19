@@ -65069,7 +65069,8 @@
             "final_checkpoint_head": "NOT RUN",
             "typescript": "PASS full typecheck after browser run"
           },
-          "remaining": "A088-F01 remains PARTIAL: complete provider/blob recovery,validated restore and final full checkpoint validation pending. JSON export of private photo metadata does not back up file bytes or prove restoration."
+          "remaining": "A088-F01 remains PARTIAL: complete provider/blob recovery,validated restore and final full checkpoint validation pending. JSON export of private photo metadata does not back up file bytes or prove restoration.",
+          "commit": "0706bb91f3023b93506a20f305dc791881ed19f4"
         }
       ],
       "push_checkpoint_evidence": {
