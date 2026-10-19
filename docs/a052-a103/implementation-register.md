@@ -9952,3 +9952,5 @@ Initial failures/corrections retained:1 write conflict when mutating database fi
 A082-F01 remains PARTIAL for unsaved creation-form attachment staging and remaining reference layout. A088-F01 remains PARTIAL for provider/blob/validated recovery. No final199-head verification or native device runtime claimed. No merge,deploy,production operation or A104.
 
 Attachment final checks: full TypeScript PASS after renaming a test fixture that shadowed DOM document;application behavior unchanged. Existing SecureSessionRaceTest1 PASS(22s) after final21 quotation tests:22 distinct JVM cases,zero failures/errors/skips. A nonexistent SessionInvalidationTest filter added no evidence. No native UI/runtime certification claimed.
+
+Private attachment implementation provenance: `7e71f02615bd8f58682dc33fef7e943600e3cc8e` (also maps backup dependency to A088-F01).

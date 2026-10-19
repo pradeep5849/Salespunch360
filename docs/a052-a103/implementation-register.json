@@ -55192,7 +55192,8 @@
             "initial_corrections": "Initial75-test run had1 write conflict from concurrent mutating test files;serial maxWorkers1 rerun75/75 passed,then expanded final90 passed. Initial browser2 cases stopped on status selector matching Loading and Added;filtered exact success/removal status and final2 passed with business assertions unchanged. Initial public DTO probe treated returned share token as object;corrected existing string contract and final7 passed. First native compiler caught comma declaration typo;corrected,then final compilation/tests passed.",
             "final_checkpoint_head": "NOT RUN"
           },
-          "remaining": "A082-F01 stays PARTIAL: current controls operate after a quotation draft has first been saved;unsaved creation-form attachment staging and remaining supplied reference layout are not completed. Native emulator/device runtime,provider/blob recovery and checkpoint-wide final validation remain unverified. No Sales draft,financial posting,merge/deployment/production change or A104."
+          "remaining": "A082-F01 stays PARTIAL: current controls operate after a quotation draft has first been saved;unsaved creation-form attachment staging and remaining supplied reference layout are not completed. Native emulator/device runtime,provider/blob recovery and checkpoint-wide final validation remain unverified. No Sales draft,financial posting,merge/deployment/production change or A104.",
+          "implementation_commit": "7e71f02615bd8f58682dc33fef7e943600e3cc8e"
         }
       }
     },
@@ -65149,7 +65150,8 @@
           "date": "2026-10-19",
           "primary_finding": "A082-F01",
           "work": "Company-scoped repeatable-read backup now retains quotationAttachment original IDs,revision links,retry/hash metadata and private object keys in deterministic order. This carries attachment restore dependencies into the register;does not include file bytes or complete A088.",
-          "tests": "Populated scoped snapshot regression included in90-test group;actual browser backup contains persisted attachment metadata. Provider/blob recovery/validated restore/final-head coverage remain pending."
+          "tests": "Populated scoped snapshot regression included in90-test group;actual browser backup contains persisted attachment metadata. Provider/blob recovery/validated restore/final-head coverage remain pending.",
+          "commit": "7e71f02615bd8f58682dc33fef7e943600e3cc8e"
         }
       ],
       "push_checkpoint_evidence": {
