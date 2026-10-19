@@ -55118,7 +55118,8 @@
             "final_complete_head": "NOT RUN",
             "typescript": "PASS final full typecheck after browser run"
           },
-          "remaining": "A082-F01 remains PARTIAL for original attachment/reference layout scope. A080-F02 conversion lifecycle/eligibility/linkage remains PARTIAL; read-only name prefill does not complete conversion. Native device runtime and final 199-finding checkpoint validation pending."
+          "remaining": "A082-F01 remains PARTIAL for original attachment/reference layout scope. A080-F02 conversion lifecycle/eligibility/linkage remains PARTIAL; read-only name prefill does not complete conversion. Native device runtime and final 199-finding checkpoint validation pending.",
+          "implementation_commit": "e7ab1e04f1b647771c1f7071705f004c0f90a304"
         }
       }
     },

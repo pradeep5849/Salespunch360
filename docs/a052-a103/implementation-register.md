@@ -9906,3 +9906,5 @@ Web and Android expose a separate optional Billing Name. It survives save/edit/r
 Validation: 89 unit/service/PDF/conversion tests, 9 actual isolated PostgreSQL integration tests, 2 desktop/mobile Chromium profiles (2.6m), Android compilation plus 19 JVM tests (4m7s), and 1 fresh 137-migration upgrade rehearsal (9.78s) passed, with no failures/skips. Focused ESLint, Prisma generate/validate/status and diff checks passed. Browser checks cover save/edit/preview/PDF/native HTTP/explicit clearing/Axe/no overflow/no journals. No native emulator/device runtime or final checkpoint-wide verification claimed. A082-F01 remains PARTIAL for attachments and remaining reference layout; A080-F02 is not closed by shared prefill.
 
 Final full TypeScript check after the Billing Name browser run: PASS.
+
+Billing Name implementation provenance: `e7ab1e04f1b647771c1f7071705f004c0f90a304`.
