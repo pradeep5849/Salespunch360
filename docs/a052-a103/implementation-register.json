@@ -3785,7 +3785,8 @@
             "android": "compileDebugKotlin and focused Expense JVM tests BUILD SUCCESSFUL(1m58s);7 tests,0 failures/errors/skips. No emulator/device runtime.",
             "typescript": "PASS after browser and formatting.",
             "lint": "PASS focused ESLint; final diff check before commit.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "overview_regression": "Additional2 desktop/mobile overview/navigation/report export/Axe cases PASS(1.4m) on pushed expense source6910e19b;correct Expense heading preserved."
           },
           "remaining": "Final complete checkpoint-head regression and physical Android/emulator/keyboard/TalkBack/pixel verification pending. Earlier historical evidence remains preserved; no final FIXED status claimed.",
           "implementation_commit": "9ee23791f4a4c207ba3388098b349a8ca0607c05"
@@ -53893,6 +53894,27 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "quotation_pdf_display_2026_10_19": {
+          "work": "Quotation customer DTO now adds only normalized company-scoped language/currency/precision/date preferences. Shared Web/public/native PDF renderer applies saved currency/decimal precision to money and saved calendar format to issue/validity dates. Quantity and GST percentages remain numeric; saved calculations and ledger are unchanged. Private settings JSON and internal costs are not exposed.",
+          "files": [
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/pdf.test.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "grouped_unit": "133 passed across7 quotation calculation/service/PDF/action/conversion/prefill/display files,0 failed/skipped. Earlier94-test focused subset overlaps,not added.",
+            "browser": "2 desktop/mobile Chromium profiles passed(38.3s),each checks real Web,public link and authenticated mobile PDF HTTP download against local PostgreSQL company settings; USD3decimal/date formatting,saved total unchanged,no journals created. First run failed fixture cleanup due enforced QUOTATION_AUDIT_APPEND_ONLY;switched to existing guarded afterAll company fixture cleanup without changing production immutability.",
+            "typescript": "PASS after final browser run",
+            "eslint": "PASS final focused lint;diff check PASS",
+            "android": "No native source changed;HTTP mobile PDF exercised,not emulator/device rendering.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation."
+        }
       }
     },
     {
@@ -65736,6 +65758,25 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A090-F01 remains PARTIAL for other display consumers and final checkpoint verification. No new financial logic,schema,migration or Web source changes."
+        },
+        "quotation_pdf_display_2026_10_19": {
+          "work": "Quotation customer DTO now adds only normalized company-scoped language/currency/precision/date preferences. Shared Web/public/native PDF renderer applies saved currency/decimal precision to money and saved calendar format to issue/validity dates. Quantity and GST percentages remain numeric; saved calculations and ledger are unchanged. Private settings JSON and internal costs are not exposed.",
+          "files": [
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/pdf.test.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "grouped_unit": "133 passed across7 quotation calculation/service/PDF/action/conversion/prefill/display files,0 failed/skipped. Earlier94-test focused subset overlaps,not added.",
+            "browser": "2 desktop/mobile Chromium profiles passed(38.3s),each checks real Web,public link and authenticated mobile PDF HTTP download against local PostgreSQL company settings; USD3decimal/date formatting,saved total unchanged,no journals created. First run failed fixture cleanup due enforced QUOTATION_AUDIT_APPEND_ONLY;switched to existing guarded afterAll company fixture cleanup without changing production immutability.",
+            "typescript": "PASS after final browser run",
+            "eslint": "PASS final focused lint;diff check PASS",
+            "android": "No native source changed;HTTP mobile PDF exercised,not emulator/device rendering.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation."
         }
       },
       "intermediate_validation": {
@@ -68543,6 +68584,19 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "Final complete checkpoint-head regression and physical Android/emulator/keyboard/TalkBack/pixel verification pending. Earlier historical evidence remains preserved; no final FIXED status claimed."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "A090-F01 quotation PDF display consumer;A080-F01 shared output mapping only",
+      "tests": {
+        "grouped_unit": "133 passed across7 quotation calculation/service/PDF/action/conversion/prefill/display files,0 failed/skipped. Earlier94-test focused subset overlaps,not added.",
+        "browser": "2 desktop/mobile Chromium profiles passed(38.3s),each checks real Web,public link and authenticated mobile PDF HTTP download against local PostgreSQL company settings; USD3decimal/date formatting,saved total unchanged,no journals created. First run failed fixture cleanup due enforced QUOTATION_AUDIT_APPEND_ONLY;switched to existing guarded afterAll company fixture cleanup without changing production immutability.",
+        "typescript": "PASS after final browser run",
+        "eslint": "PASS final focused lint;diff check PASS",
+        "android": "No native source changed;HTTP mobile PDF exercised,not emulator/device rendering.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation."
     }
   ]
 }

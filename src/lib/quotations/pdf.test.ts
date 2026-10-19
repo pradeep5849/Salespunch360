@@ -32,3 +32,13 @@ describe("customer Unicode PDF",()=>{
   expect(pdf.toString()).not.toMatch(/SECRET-COST|SECRET-PROFIT|PRIVATE-COMPANY|SECRET-LINE-COST/);
  });
 });
+
+ it("uses company currency, decimal precision and calendar dates without modifying saved amounts",async()=>{
+  const data={...dto,displayPreferences:{appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}};
+  const {text}=await extractPdfText(await renderQuotationPdf(data as never));
+  expect(text).toContain("Issue: 09/10/2026 | Valid until: 10/10/2026");
+  expect(text).toContain("GRAND TOTAL: $112.100");
+  expect(text).toContain("Rate $100.000");expect(text).toContain("Taxable $90.000");
+  expect(text).toContain("GST 18%");expect(text).toContain("Qty 1");
+  expect(dto.grandTotal.toString()).toBe("112.1");expect(text).not.toContain("₹");
+ });

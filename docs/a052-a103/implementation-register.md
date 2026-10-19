@@ -596,7 +596,7 @@ Intermediate verification:95 grouped tests;36 financial/unit tests including5 Po
 
 **Required tests:** Reference screenshots at supported mobile sizes; category and Items transitions; back/search/Add Expenses; totals/categories real data; keyboard/TalkBack; desktop feature parity; orange control reaches permitted expense/category entry; denied category mutation remains blocked; full-page native entry and keyboard selector behavior.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Own Expenses/source/local functional audit completed; 13 findings recorded. Local Account Admin list and linked entry destinations opened. Deployed Admin failure remained unconfirmed locally. No finding was fixed in its checkpoint.", "tests": "58 existing tests passed, 0 failed, 0 skipped; isolated local production-build desktop/mobile checks with 103 migrations. Android source-only assessment.", "finding_status": null, "evidence": ["SalesPunch360_A052_Audit_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -9860,3 +9860,10 @@ A052-F11 is IMPLEMENTED BUT NOT VERIFIED: web/native entry now includes Back/tit
 Validation: 52 focused unit/contract tests passed after correcting one stale native route signature assertion; 2 desktop/mobile Chromium paid Save & New/review/detail/header/GST/Axe/overflow scenarios passed after allowing30s for cold sign-in; Android compile and7 expense JVM tests passed; final TypeScript and targeted lint passed. No Android device/emulator/TalkBack runtime claim. Final full checkpoint regression is pending.
 
 Current counts:180 IMPLEMENTED BUT NOT VERIFIED;17 PARTIAL;2 NOT STARTED. All199 original finding IDs and52 page mappings retained. No final finding marked FIXED. Draft PR153 remains conflicting with main; no merge/rebase/deployment/production operation/A104.
+
+
+## 19 October 2026 — quotation PDF display preferences
+
+A090-F01 shared quotation output now uses four normalized company-scoped display preferences in the safe customer DTO. Web/public/native PDFs apply currency/precision and issue/validity date formatting while retaining saved amounts, quantities, percentages and financial history. No private settings JSON, costs or source IDs exposed. A080-F01 output mapping only; its themes/layouts remain PARTIAL. A090-F01 remains PARTIAL.
+
+133 grouped quotation/display tests passed (earlier94-test subset overlaps);2 desktop/mobile Chromium profiles passed all3 real Web/public/mobile PDF downloads with local database fixtures, unchanged stored total and journal count. Initial cleanup failed correctly against append-only issued quotation history; existing guarded suite cleanup used for final passing run. Final TypeScript,focused ESLint and diff checks passed. No native device runtime claimed. Additional2 expense-overview desktop/mobile/export/Axe regressions also passed on6910e19b. No migration or production operations. Current counts180 IMPLEMENTED BUT NOT VERIFIED,17 PARTIAL,2 NOT STARTED;199 unique IDs/52pages retained;full final-head validation pending.

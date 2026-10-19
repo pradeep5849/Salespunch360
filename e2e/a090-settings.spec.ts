@@ -2932,3 +2932,30 @@ test("A086 shipping address snapshots survive party changes native edits and pri
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
  }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:before.transactionDefaults??{}}})}
 });
+
+test("A090 quotation PDF uses scoped company display settings across web public and native downloads",async({page})=>{
+ test.setTimeout(120000);
+ const saved=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ let sessionHash:string|undefined;
+ try{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]} as ProjectActor;
+  const quote=await createQuotationForActor(actor,{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",validUntil:"2026-11-13",lines:[{lineType:"CUSTOM",itemName:"Scoped display line",quantity:"1",rate:"100",taxRate:"18"}]});
+  await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
+  const share=await createQuotationShareForActor(actor,quote.id),journals=await db.journalEntry.count({where:{companyId}});
+  await signInSettings(page);
+  const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();sessionHash=hashSessionToken(token);
+  await db.mobileSession.create({data:{userId,tokenHash:sessionHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});
+  for(const [path,headers] of [[`/workspace/account/quotations/${quote.id}/pdf`,undefined],[`/share/quotation/${share}/pdf`,undefined],[`/api/v1/mobile/account/quotations/${quote.id}/pdf`,{authorization:`Bearer ${token}`}]] as const){
+   const response=await page.request.get(path,{headers});expect(response.status()).toBe(200);
+   const text=(await extractPdfText(await response.body())).text;
+   expect(text).toContain("GRAND TOTAL: $118.000");expect(text).toContain("Issue: 10/13/2026 | Valid until: 11/13/2026");expect(text).not.toContain("₹");expect(text).not.toMatch(/internalUnitCost|expectedProfit|companyId/);
+  }
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+  const revision=await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id,companyId}});expect(revision.grandTotal.toFixed(2)).toBe("118.00");
+ }finally{
+  if(sessionHash)await db.mobileSession.deleteMany({where:{userId,tokenHash:sessionHash}});
+  // Issued quotation history is immutable; the existing guarded company fixture cleanup handles it after the suite.
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:saved.baseCurrency,displayDecimalPlaces:saved.displayDecimalPlaces,dateFormat:saved.dateFormat}});
+ }
+});

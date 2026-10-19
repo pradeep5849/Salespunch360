@@ -115,3 +115,12 @@ describe("A082 full item creation eligibility",()=>{
   for(const role of ["PROJECT_MANAGER","DATA_ENTRY"] as const){m.auth.mockResolvedValue(actor(role));expect((await quotationEditorOptions()).canCreateItem).toBe(false)}
  });
 });
+
+ it("projects only company-scoped public display preferences and never exposes other settings",async()=>{
+  customModels.accountSettings.findUnique.mockResolvedValueOnce({appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY",transactionDefaults:{private:"SECRET"}} as never);
+  m.shareFind.mockResolvedValue({companyId:C,revisionId:R,revision:{revisionNumber:0,customerName:"Acme",document:{documentType:"QUOTATION",documentNumber:"Q-1",company:{name:"Safe"},branch:{name:"Main"}},lines:[],adjustments:[],paymentSchedule:[]}});
+  const result=await getPublicQuotation("token");
+  expect(customModels.accountSettings.findUnique).toHaveBeenCalledWith({where:{companyId:C},select:{appLanguage:true,baseCurrency:true,displayDecimalPlaces:true,dateFormat:true}});
+  expect(result.displayPreferences).toEqual({appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"});
+  expect(JSON.stringify(result)).not.toMatch(/SECRET|transactionDefaults|companyId|revisionId/);
+ });
