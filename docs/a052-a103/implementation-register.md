@@ -10070,3 +10070,32 @@ Implementation commit: `d05395e568fbc2d6bd339f40f4b07f4852e9bb59`. No new schema
 **final_checkpoint_head:** NOT RUN
 
 A058-F06/A062-F02 stay PARTIAL. Still needed:public selected-unit input and source-preserving sale edits,automatic saved Retail/Wholesale/Customer rate and fixed-discount conversion,saved-price update conversion,reports,Web/native controls and complete converted Project/vendor-return runtime coverage. Do not claim the public1Box/₹200workflow complete from seeded backend tests. No secondary business-policy decision remains unresolved;primary-unit basis is approved. Counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED,all199 IDs/52pages retained.
+
+
+### A058-F06/A062-F02 — Primary-unit saved-price consent (2026-10-20)
+
+Future saved-retail-price proposals/explicit confirmations normalize a posted selected-unit invoice rate back to the retained primary unit. Tax/GST/cess and original unit factor are normalized with48-digit intermediates before one currency rounding step. Current master conversion is never used to reinterpret the saved invoice;malformed snapshots and unrepresentable master prices are rejected. Existing consent,company/branch/module/permission,optimistic timestamp and idempotency protections remain. Shared source-snapshot validation is reused. No automatic master update or posted-document/ledger change introduced.
+
+Implementation commit: `388449e8cfc0a491e2653091a9bbdfa538490e97`.
+
+**financial_group:** 150 tests PASS/11files,0 failures/skips(32.63s),including6 actual PostgreSQL unit-history/stock/price-consent cases and existing cheque-finance/Project/unit/service regressions. Earlier143-case physical group and28-case consent probe overlap and are not added again.
+
+**consent_database:** Seeded validated converted draft snapshot posts1Box at₹210 with original0.1Box/Piece factor. After current master factor changes to0.2,proposal remains₹21 per primaryPiece,not₹210 or₹42. Master stays₹20 until explicit consent;duplicate confirmation updates/audits once. Posted invoice and lines remain exactly unchanged. Fixture restores only its own master/settings. Public unit selectors/automatic selected pricing are not claimed implemented.
+
+**arithmetic:** ₹236 inclusive of18%GST perBox becomes₹20 per primaryPiece;₹23.65 inclusive case proves one final rounding(₹2.00),not intermediate rounding. PRIMARY/legacy meaning retained;corrupted snapshots and primary-price overflow rejected.
+
+**typescript:** Final full no-emit typecheck PASS.
+
+**eslint:** Final focused ESLint/diff PASS.
+
+**initial_corrections:** Initial28 assertions all passed,but fixture cleanup failed because newly created operational audit still referenced actor. Added guarded fixture-company audit cleanup;final150-case group0fail/skip. Existing business assertions/guards unchanged.
+
+**migration:** No new schema/migration;139-migration chain and36 additive checkpoint migrations unchanged.
+
+**browser:** NOT RUN for this backend consent slice;actual Web selection/confirmation runtime remains to verify once selectors are connected.
+
+**android:** NOT RUN for this backend slice;native selection/confirmation/device runtime remains to verify.
+
+**final_checkpoint_head:** NOT RUN
+
+Both findings stay PARTIAL. Automatic saved Retail/Wholesale/Customer defaults and discounts in selected units,public input,source-preserving sale edit/duplicate,report consumers,Web/native selectors and converted mixed-Project/vendor-return financial runtime coverage remain. Explicit saved-price confirmation normalization is now wired and independently regression-tested. Counts unchanged:181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED;all199 IDs/52pages retained.
