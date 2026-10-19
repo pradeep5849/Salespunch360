@@ -78,3 +78,10 @@ describe("A080/A083 read-only conversion preparation", () => {
     await quotationConversionPreview(request); expect(m.auth).toHaveBeenCalledExactlyOnceWith("ACCOUNT_QUOTATION_VIEW");
   });
 });
+
+it("carries only the source supply snapshot into read-only conversion preparation",async()=>{
+ const original=source();m.read.mockResolvedValue({...original,revisions:[{...original.revisions[0],stateOfSupplyCode:"29"}]});
+ expect((await quotationConversionPreviewForActor(actor,request)).stateOfSupplyCode).toBe("29");
+ m.read.mockResolvedValue({...original,revisions:[{...original.revisions[0],stateOfSupplyCode:null}]});
+ expect((await quotationConversionPreviewForActor(actor,request)).stateOfSupplyCode).toBeUndefined();
+});

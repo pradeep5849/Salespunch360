@@ -124,3 +124,10 @@ describe("A082 full item creation eligibility",()=>{
   expect(result.displayPreferences).toEqual({appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"});
   expect(JSON.stringify(result)).not.toMatch(/SECRET|transactionDefaults|companyId|revisionId/);
  });
+
+ it("validates explicit quotation supply context while allowing omitted and cleared legacy values",async()=>{
+  const {quotationInput}=await import("./service");
+  for(const code of ["29","27","38"])expect(quotationInput.parse(input({stateOfSupplyCode:code})).stateOfSupplyCode).toBe(code);
+  expect(quotationInput.parse(input()).stateOfSupplyCode).toBeUndefined();expect(quotationInput.parse(input({stateOfSupplyCode:null})).stateOfSupplyCode).toBeNull();
+  for(const code of ["","99","2","Karnataka",29])expect(quotationInput.safeParse(input({stateOfSupplyCode:code})).success).toBe(false);
+ });

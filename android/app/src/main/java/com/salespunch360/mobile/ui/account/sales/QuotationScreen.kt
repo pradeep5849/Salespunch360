@@ -90,7 +90,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     }
 
     state.draft?.let { QuotationEditor(it, state, vm,navigate) }
-    state.detail?.let { QuotationDetail(it, vm, state.preview) }
+    state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions) }
 }
 
 @Composable
@@ -173,6 +173,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") }) }
                 item { InvoiceCustomFields(state.customFields,"QUOTATION",draft.customFields,state.saving){vm.editDraft(draft.copy(customFields=it))} }
                 item { OutlinedTextField(draft.notes, { vm.editDraft(draft.copy(notes = it)) }, label = { Text("Notes") }) }
+                item { SelectField("State of Supply",draft.stateOfSupplyCode,listOf("" to "Not recorded")+state.stateOfSupplyOptions){vm.editDraft(draft.copy(stateOfSupplyCode=it))} }
                 item { FilterChip(selected=draft.roundOffEnabled,onClick={vm.editDraft(draft.copy(roundOffEnabled=!draft.roundOffEnabled))},label={Text("Round Off")},enabled=!state.saving) }
                 item {
                     val totals=quotationPreview(draft)
@@ -222,7 +223,7 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
 }
 
 @Composable
-private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, preview: Boolean) {
+private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, preview: Boolean,states:List<Pair<String,String>>) {
     val revision = quotation.array("revisions").firstOrNull()
     val capabilities=quotation["capabilities"] as? JsonObject
     val allowedTransitions = quotation["allowedTransitions"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
@@ -236,6 +237,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                 item {
                     Text("${quotation.str("documentType")} · ${quotation.str("status")}", fontWeight = FontWeight.Bold)
                     Text(revision?.str("customerName").orEmpty())
+                    Text("State of supply: ${states.firstOrNull{it.first==revision?.str("stateOfSupplyCode")}?.second?:revision?.str("stateOfSupplyCode").orEmpty().ifBlank{"Not recorded"}}")
                     Text("Round off ${accountMoney(revision?.str("roundOffAmount").orEmpty().ifBlank{"0"})}")
                     Text("Grand total ${accountMoney(revision?.str("grandTotal").orEmpty())}")
                 }

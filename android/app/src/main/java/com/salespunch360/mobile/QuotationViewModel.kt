@@ -16,7 +16,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.serialization.json.*
 
-data class QuotationDraft(val roundOffEnabled:Boolean=false,
+data class QuotationDraft(val stateOfSupplyCode:String="",val roundOffEnabled:Boolean=false,
     val customFields:Map<String,String> = emptyMap(),
     val id: String? = null,
     val revision: Boolean = false,
@@ -48,6 +48,7 @@ data class QuotationRow(
 )
 
 data class QuotationState(
+    val stateOfSupplyOptions:List<Pair<String,String>> = emptyList(),
     val canCreate:Boolean=false,
     val canCreateParty:Boolean=false,
     val canCreateItem:Boolean=false,
@@ -118,6 +119,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
 
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
+                stateOfSupplyOptions=options.array("stateOfSupplyOptions").map{it.str("code") to it.str("name")},
                 canCost=options["canCost"]?.jsonPrimitive?.booleanOrNull==true,
                 canCreateParty=options["partyCreation"] is JsonObject,
                 canCreateItem=options["canCreateItem"]?.jsonPrimitive?.booleanOrNull==true,

@@ -42,3 +42,8 @@ describe("customer Unicode PDF",()=>{
   expect(text).toContain("GST 18%");expect(text).toContain("Qty 1");
   expect(dto.grandTotal.toString()).toBe("112.1");expect(text).not.toContain("₹");
  });
+
+ it("prints the saved supply state and keeps unknown historical supply explicit",async()=>{
+  expect((await extractPdfText(await renderQuotationPdf({...dto,stateOfSupplyCode:"29"} as never))).text).toContain("State of supply: Karnataka");
+  expect((await extractPdfText(await renderQuotationPdf({...dto,stateOfSupplyCode:null} as never))).text).toContain("State of supply: Not recorded");
+ });

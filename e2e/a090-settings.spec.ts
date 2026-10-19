@@ -2966,6 +2966,7 @@ test("A082 quotation rounding survives web preview edit PDF and native update wi
  const identity=page.getByRole("group",{name:"Document",exact:true});
  await identity.getByRole("combobox",{name:"Branch",exact:true}).selectOption(branchId);
  await identity.getByRole("combobox",{name:"Customer",exact:true}).selectOption(customerId);
+ await page.getByRole("combobox",{name:"State of Supply",exact:true}).selectOption("29");
  await page.getByRole("textbox",{name:"Item name",exact:true}).fill("Rounded quotation fixture");
  await page.getByRole("spinbutton",{name:"Rate",exact:true}).fill("100.49");
  const totals=page.getByRole("region",{name:"Quotation totals",exact:true}),row=(label:string)=>totals.locator("dl>div").filter({has:page.locator("dt",{hasText:new RegExp(`^${label}$`)})});
@@ -2976,16 +2977,22 @@ test("A082 quotation rounding survives web preview edit PDF and native update wi
  const journals=await db.journalEntry.count({where:{companyId}});
  await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/,{timeout:20000});
  const id=page.url().split("/").at(-2)!,saved=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}});
- expect(saved.roundOffEnabled).toBe(true);expect(saved.roundOffAmount.toFixed(2)).toBe("-0.49");expect(saved.grandTotal.toFixed(2)).toBe("100.00");
- const pdf=await page.request.get(`/workspace/account/quotations/${id}/pdf`);expect(pdf.status()).toBe(200);expect((await extractPdfText(await pdf.body())).text).toContain("Round off: -₹0.49");
+ expect(saved.stateOfSupplyCode).toBe("29");expect(saved.roundOffEnabled).toBe(true);expect(saved.roundOffAmount.toFixed(2)).toBe("-0.49");expect(saved.grandTotal.toFixed(2)).toBe("100.00");
+ const pdf=await page.request.get(`/workspace/account/quotations/${id}/pdf`);expect(pdf.status()).toBe(200);const printed=(await extractPdfText(await pdf.body())).text;expect(printed).toContain("Round off: -₹0.49");expect(printed).toContain("State of supply: Karnataka");
  await page.getByRole("link",{name:"Document details",exact:true}).click();await page.getByRole("link",{name:"Edit draft",exact:true}).click();
+ await expect(page.getByRole("combobox",{name:"State of Supply",exact:true})).toHaveValue("29");await page.getByRole("combobox",{name:"State of Supply",exact:true}).selectOption("27");
  await expect(page.getByRole("checkbox",{name:"Round Off",exact:true})).toBeChecked();await page.getByRole("checkbox",{name:"Round Off",exact:true}).uncheck();
  await expect(row("Total amount")).toContainText("₹100.49");await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`),{timeout:20000});
- expect((await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}})).roundOffEnabled).toBe(false);
+ const edited=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}});expect(edited.roundOffEnabled).toBe(false);expect(edited.stateOfSupplyCode).toBe("27");
  const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken(),tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});
  try{
-  const headers={authorization:`Bearer ${token}`},response=await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",roundOffEnabled:true,lines:[{lineType:"CUSTOM",itemName:"Rounded quotation fixture",quantity:"1",rate:"100.49",taxRate:"0"}]}});expect(response.status()).toBe(200);
-  const native=await page.request.get(`/api/v1/mobile/account/quotations/${id}`,{headers});expect(native.status()).toBe(200);const body=await native.json();expect(body.revisions[0].roundOffEnabled).toBe(true);expect(body.revisions[0].roundOffAmount).toBe("-0.49");expect(body.revisions[0].grandTotal).toBe("100");
+  const headers={authorization:`Bearer ${token}`},response=await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",stateOfSupplyCode:"29",roundOffEnabled:true,lines:[{lineType:"CUSTOM",itemName:"Rounded quotation fixture",quantity:"1",rate:"100.49",taxRate:"0"}]}});expect(response.status()).toBe(200);
+  const native=await page.request.get(`/api/v1/mobile/account/quotations/${id}`,{headers});expect(native.status()).toBe(200);const body=await native.json();expect(body.revisions[0].stateOfSupplyCode).toBe("29");expect(body.revisions[0].roundOffEnabled).toBe(true);expect(body.revisions[0].roundOffAmount).toBe("-0.49");expect(body.revisions[0].grandTotal).toBe("100");
+  const payload={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",stateOfSupplyCode:null,roundOffEnabled:true,lines:[{lineType:"CUSTOM",itemName:"Rounded quotation fixture",quantity:"1",rate:"100.49",taxRate:"0"}]};
+  expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:payload})).status()).toBe(200);
+  expect((await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:id}})).stateOfSupplyCode).toBeNull();
+  expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{...payload,stateOfSupplyCode:"99"}})).status()).toBe(400);
+
  }finally{await db.mobileSession.deleteMany({where:{userId,tokenHash}})}
  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
 });

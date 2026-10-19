@@ -50,6 +50,7 @@ export async function quotationConversionPreviewForActor(actor: QuotationActor, 
     partyId: document.customerId,
     projectId: document.projectId,
     billingName: revision.customerName,
+    stateOfSupplyCode:revision.stateOfSupplyCode??undefined,
     ...prefill,
     // Reference content stays separate from invoice custom fields/short notes;
     // never silently truncate the estimate's longer terms or payment schedule.

@@ -114,4 +114,15 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   const before=await client.journalEntry.count({where:{companyId}});expect(before).toBe(0);
  });
 
+ it("snapshots supply context, preserves omission, accepts explicit clear and protects approved history",async()=>{
+  const data={...input,stateOfSupplyCode:"29"};
+  const doc=await createQuotationForActor(actor,data);let saved=await getQuotationForActor(actor,doc.id);expect(saved.revisions[0].stateOfSupplyCode).toBe("29");
+  await updateQuotationDraftForActor(actor,doc.id,{...input,notes:"Legacy omitted field"});saved=await getQuotationForActor(actor,doc.id);expect(saved.revisions[0].stateOfSupplyCode).toBe("29");
+  await updateQuotationDraftForActor(actor,doc.id,{...input,stateOfSupplyCode:null});expect((await getQuotationForActor(actor,doc.id)).revisions[0].stateOfSupplyCode).toBeNull();
+  await updateQuotationDraftForActor(actor,doc.id,{...input,stateOfSupplyCode:"27"});await transitionQuotationForActor(actor,doc.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,doc.id,"APPROVED");
+  saved=await getQuotationForActor(actor,doc.id);await expect(client.quotationRevision.update({where:{id:saved.revisions[0].id},data:{stateOfSupplyCode:"29"}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
+  const next=await createQuotationRevisionForActor(actor,doc.id,input);expect(next.stateOfSupplyCode).toBe("27");
+  await expect(createQuotationForActor(actor,{...input,stateOfSupplyCode:"99"})).rejects.toThrow();expect(await client.journalEntry.count({where:{companyId}})).toBe(0);
+ });
+
 });
