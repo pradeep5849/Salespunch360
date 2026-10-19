@@ -9823,3 +9823,8 @@ Source `232f408b3909338490e7fba652fa29c828516856` maps to A084-F03/A085-F02 and 
 Validation:135 grouped tests/21 files PASS including6 local PostgreSQL cases;Sale/Purchase by Party both desktop/mobile regression profiles PASS after shared-source changes;Discount Report final2 desktop/mobile Chromium profiles PASS(1.4m),including actual authenticated native HTTP,CSV/XLSX/PDF,role denial,Axe AA,no overflow and unchanged journal/stock counts;Android compile+19 report JVM tests PASS(3m25s);full TypeScript/focused ESLint/diff check PASS. New browser fixture percentage enum corrected before final pass. No emulator/device runtime. Previousa6dc29c6 passed Web/Android CI39191198591.
 
 A084-F13 remains the original withdrawn claim:read-only local PostgreSQL metadata confirms both journal entry and commercial document calendar dates use native DATE. No financial-code change was made;full boundary/timezone/as-of test matrix remains pending. Counts remain179 implemented but not verified/18 partial/2 not started;all199 final statuses unset. No A104,merge,deployment or production write.
+
+
+### Party-report grouped browser isolation follow-up
+
+Test-only source `b79b57c77dfae67d9748ad9054c5b431d3d21939`:each new report scenario now owns a separate branch/customer,preventing fixture transactions from contaminating later report totals in serial runs. Final combined Sale/Purchase by Party + Discount Report desktop/mobile run4 PASS(52.3s),zero failures/skips;TypeScript/focused browser lint/diff check PASS afterward. Production report/native code unchanged from232f408b;135 grouped tests and19 JVM/Android compile results remain applicable without unnecessary repetition. No final checkpoint status change.

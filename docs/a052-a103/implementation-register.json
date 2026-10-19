@@ -57656,6 +57656,18 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
+        },
+        "party_report_browser_isolation_2026_10_19": {
+          "implementation_commit": "b79b57c77dfae67d9748ad9054c5b431d3d21939",
+          "work": "Each new party-report browser test creates its own branch and customer,so serial execution shares neither transaction totals nor report scope with earlier fixture cases. No production source,financial or schema changes.",
+          "tests": {
+            "browser": "Final combined desktop/mobile Sale/Purchase by Party and Discount Report run:4 PASS(52.3s),0 failures/skips;Web/native HTTP/CSV/XLSX/PDF/role/Axe/no overflow/no financial writes.",
+            "typescript": "PASS after final combined browser run.",
+            "eslint": "Browser file PASS;git diff --check PASS.",
+            "unchanged_source_validation": "Financial/report/native source unchanged from232f408b;135 grouped tests and19 Android JVM tests/compilation remain the applicable local source evidence,not repeated unnecessarily.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
         }
       }
     },
@@ -61768,6 +61780,18 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
+        },
+        "party_report_browser_isolation_2026_10_19": {
+          "implementation_commit": "b79b57c77dfae67d9748ad9054c5b431d3d21939",
+          "work": "Each new party-report browser test creates its own branch and customer,so serial execution shares neither transaction totals nor report scope with earlier fixture cases. No production source,financial or schema changes.",
+          "tests": {
+            "browser": "Final combined desktop/mobile Sale/Purchase by Party and Discount Report run:4 PASS(52.3s),0 failures/skips;Web/native HTTP/CSV/XLSX/PDF/role/Axe/no overflow/no financial writes.",
+            "typescript": "PASS after final combined browser run.",
+            "eslint": "Browser file PASS;git diff --check PASS.",
+            "unchanged_source_validation": "Financial/report/native source unchanged from232f408b;135 grouped tests and19 Android JVM tests/compilation remain the applicable local source evidence,not repeated unnecessarily.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
         }
       }
     },
@@ -65365,6 +65389,18 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
+        },
+        "party_report_browser_isolation_2026_10_19": {
+          "implementation_commit": "b79b57c77dfae67d9748ad9054c5b431d3d21939",
+          "work": "Each new party-report browser test creates its own branch and customer,so serial execution shares neither transaction totals nor report scope with earlier fixture cases. No production source,financial or schema changes.",
+          "tests": {
+            "browser": "Final combined desktop/mobile Sale/Purchase by Party and Discount Report run:4 PASS(52.3s),0 failures/skips;Web/native HTTP/CSV/XLSX/PDF/role/Axe/no overflow/no financial writes.",
+            "typescript": "PASS after final combined browser run.",
+            "eslint": "Browser file PASS;git diff --check PASS.",
+            "unchanged_source_validation": "Financial/report/native source unchanged from232f408b;135 grouped tests and19 Android JVM tests/compilation remain the applicable local source evidence,not repeated unnecessarily.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
         }
       },
       "intermediate_validation": {
@@ -67918,6 +67954,19 @@
         "result": "Web and Android SUCCESS"
       },
       "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied destinations/reference controls/layouts and final-head/device validation. Standalone ExpenseTransaction has no party discount field and billed lines have no discount;this destination includes recorded commercial discounts only and explicitly states the limitation. A090-F01 other consumers remain PARTIAL. No final finding status assigned."
+    },
+    {
+      "date": "2026-10-19",
+      "scope": "Party report browser fixture isolation",
+      "implementation_commit": "b79b57c77dfae67d9748ad9054c5b431d3d21939",
+      "tests": {
+        "browser": "Final combined desktop/mobile Sale/Purchase by Party and Discount Report run:4 PASS(52.3s),0 failures/skips;Web/native HTTP/CSV/XLSX/PDF/role/Axe/no overflow/no financial writes.",
+        "typescript": "PASS after final combined browser run.",
+        "eslint": "Browser file PASS;git diff --check PASS.",
+        "unchanged_source_validation": "Financial/report/native source unchanged from232f408b;135 grouped tests and19 Android JVM tests/compilation remain the applicable local source evidence,not repeated unnecessarily.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
     }
   ]
 }
