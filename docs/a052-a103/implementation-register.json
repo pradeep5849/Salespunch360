@@ -55139,7 +55139,8 @@
             "final_checkpoint_head": "NOT RUN",
             "typescript": "PASS final full typecheck after browser runs"
           },
-          "remaining": "A082-F01 remains PARTIAL for attachments and remaining original reference layout. Firm display does not add cross-company switching. Native emulator/device runtime not claimed. No schema or migration change."
+          "remaining": "A082-F01 remains PARTIAL for attachments and remaining original reference layout. Firm display does not add cross-company switching. Native emulator/device runtime not claimed. No schema or migration change.",
+          "implementation_commit": "54cf88f88301db2b1686aebe4efbb704c00b490c"
         }
       }
     },
@@ -66089,7 +66090,8 @@
             "final_checkpoint_head": "NOT RUN",
             "typescript": "PASS final full typecheck after browser runs"
           },
-          "remaining": "A090-F01 remains PARTIAL for remaining original consumers/final checkpoint verification. Project audit and generic transaction reminder timestamps still use server-locale datetime strings;this fallback calendar-date fix does not change them. Hindi translation remains intentionally deferred."
+          "remaining": "A090-F01 remains PARTIAL for remaining original consumers/final checkpoint verification. Project audit and generic transaction reminder timestamps still use server-locale datetime strings;this fallback calendar-date fix does not change them. Hindi translation remains intentionally deferred.",
+          "implementation_commit": "54cf88f88301db2b1686aebe4efbb704c00b490c"
         }
       },
       "intermediate_validation": {

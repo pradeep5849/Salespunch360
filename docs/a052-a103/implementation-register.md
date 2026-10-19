@@ -9928,3 +9928,5 @@ Focused group:94 tests PASS/6files,zero failures/skips;initial33-test subset ove
 A090-F01 remains PARTIAL for other original consumers/final validation,including Project audit/generic reminder datetime strings. Hindi remains intentionally deferred. A082-F01 remains PARTIAL for attachments and remaining layout. No native device/emulator/TalkBack verification claimed.
 
 Firm-display native validation: compileDebugKotlin plus19 quotation preview/codec JVM tests PASS(3m35s),zero failures/errors/skips;no emulator/device UI runtime claim.
+
+Dashboard date/quotation firm implementation provenance: `54cf88f88301db2b1686aebe4efbb704c00b490c`.
