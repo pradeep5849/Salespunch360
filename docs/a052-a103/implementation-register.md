@@ -10039,3 +10039,34 @@ Implementation commit: `db7ed121fb376d9a610d216491238f29ec50407f`. Migration: `2
 A058-F06/A062-F02 remain PARTIAL:accepting secondary selection,selected-unit saved/retail/wholesale/customer pricing and fixed discounts,stock/COGS,serial/batch validation,return quantities,purchase/project allocations/valuation,source-preserving sale edits,reports and Web/native selectors still need wiring and verification. Primary-unit policy is resolved;do not leave it marked decision-blocked. No secondary financial behavior is claimed complete.
 
 Apply new additive migration through validated deployment procedure before activating matching generated Prisma client. Deployment/production database operations are not authorized or performed. Counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED;all199 IDs/52pages retained.
+
+
+### A058-F06/A062-F02 — Primary-unit physical posting (2026-10-20)
+
+Stock posting now consumes stored primary baseQuantity,with historical quantity fallback. Purchase inventory receipts and automatic Project receipt/issue quantities,cost-per-primary-unit and serial validation use allocation base quantities. Sales and physical returns use retained line/source conversion;Project return distribution uses canonical quantities and four-decimal conservation on new mapped source documents. The internal Project-return subtraction is passed as base-unit posting context instead of subtracting primary quantities from selected display quantities or converting twice. This override and forged snapshot/base fields are not accepted from request input. Source posting locks,negative-stock policy,tax/amount handling,history guards and retry behavior are retained. Secondary input/automatic selected pricing/UI are still disabled until their own integration is complete.
+
+Implementation commit: `d05395e568fbc2d6bd339f40f4b07f4852e9bb59`. No new schema/migration.
+
+**financial_group:** 143 tests PASS/10files,0 failures/skips(18.70s),including5 actual local PostgreSQL unit-history cases plus cheque-finance/Project workflow and related unit/service regressions. Earlier44 focused helper/service cases and earlier5-case DB run overlap final143 and are not added again.
+
+**converted_database_scenario:** A validated converted draft snapshot is seeded in the isolated fixture because public secondary input is not enabled. Purchase2Boxes at₹50/Box receives20 primaryPieces at₹5 cost;Sale1Box at explicit₹200 bills₹200,removes10Pieces and posts₹50 COGS;credit halfBox returns5Pieces at original₹25 cost. Purchase/Sale/Credit journals balance;COGS debits/credits and final inventory ledger₹75 match. This verifies retained-unit posting,not automatic saved-price conversion or user-facing selectors.
+
+**project:** Focused Project material receipt/issue test proves saved base100 vs selected10 posts100 physical units and retains total₹5000/unitcost₹50. Converted return allocation helper conserves primary quantity at4decimal precision;legacy6decimal behavior remains unchanged. Existing actual Project workflow regressions pass;additional converted mixed-Project/vendor-return runtime cases are still required before full finding closure.
+
+**security:** Request schema regression confirms baseQuantity,unitConversionSnapshot and internal stockReturnBaseQuantity cannot be forged through request input. Existing finance branch/company/module/access regressions remain in the143-test group.
+
+**typescript:** Final full no-emit typecheck PASS.
+
+**eslint:** Final focused ESLint,diff and workflow YAML parse PASS.
+
+**initial_corrections:** First31-case focused group had2 failures:an existing mocked posting fixture changed saved quantity after document creation while retaining a now-stale baseQuantity. Corrected fixture to request the intended quantity before authoritative document calculation,keeping original stock/valuation assertions;expanded final143 pass. No financial assertion or business guard weakened.
+
+**migration:** No new schema/migration in physical-consumer slice. Prior foundation139-migration rehearsal is historical evidence;exact new-head targeted CI will rehearse the same unchanged SQL.
+
+**browser:** NOT RUN for this backend slice;Web selectors remain pending.
+
+**android:** NOT RUN for this backend slice;native selectors/emulator/device runtime remain pending.
+
+**final_checkpoint_head:** NOT RUN
+
+A058-F06/A062-F02 stay PARTIAL. Still needed:public selected-unit input and source-preserving sale edits,automatic saved Retail/Wholesale/Customer rate and fixed-discount conversion,saved-price update conversion,reports,Web/native controls and complete converted Project/vendor-return runtime coverage. Do not claim the public1Box/₹200workflow complete from seeded backend tests. No secondary business-policy decision remains unresolved;primary-unit basis is approved. Counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED,all199 IDs/52pages retained.
