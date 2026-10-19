@@ -3117,3 +3117,23 @@ test("A082 first Save keeps selected quotation files atomic and retry-safe",asyn
   for(const key of keys)await privateStorage().delete(key);
  }
 });
+
+test("A082 expandable quotation terms retain hidden values through save new and edit",async({page})=>{
+ test.setTimeout(150000);
+ await signInSettings(page);await page.goto("/workspace/account/quotations/new");
+ const identity=page.getByRole("group",{name:"Document",exact:true});await identity.getByRole("combobox",{name:"Branch",exact:true}).selectOption(branchId);await identity.getByRole("combobox",{name:"Customer",exact:true}).selectOption(customerId);
+ await page.getByRole("textbox",{name:"Item name",exact:true}).fill("Accordion terms fixture");await page.getByRole("spinbutton",{name:"Rate",exact:true}).fill("10");
+ const summary=page.locator("summary").filter({hasText:"Terms & Conditions"}),terms=page.getByRole("textbox",{name:"Terms",exact:true});
+ await expect(terms).not.toBeVisible();await summary.focus();await summary.press("Space");await expect(terms).toBeVisible();
+ await terms.fill("Original agreed terms\nSecond line");await page.getByRole("textbox",{name:"Inclusions",exact:true}).fill("Included installation");await page.getByRole("textbox",{name:"Exclusions",exact:true}).fill("Excluded transport");await page.getByRole("textbox",{name:"Notes",exact:true}).fill("Independent note");
+ await summary.click();await expect(terms).not.toBeVisible();
+ expect((await new AxeBuilder({page}).include('details:has(summary)').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
+ await page.addStyleTag({content:"html{font-size:20px}"});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const before=await db.quotationDocument.findMany({where:{companyId},select:{id:true}}),ids=before.map(row=>row.id),journals=await db.journalEntry.count({where:{companyId}});
+ await page.getByRole("button",{name:"Save & New",exact:true}).click();await expect(page.getByRole("status").filter({hasText:/New quotation ready/})).toBeVisible({timeout:30000});
+ await expect(terms).not.toBeVisible();await summary.click();await expect(terms).toHaveValue("");await expect(page.getByRole("textbox",{name:"Notes",exact:true})).toHaveValue("");expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).include('details:has(summary)').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
+ const saved=await db.quotationDocument.findFirstOrThrow({where:{companyId,id:{notIn:ids}},include:{revisions:true}}),revision=saved.revisions[0];expect(revision.terms).toBe("Original agreed terms\nSecond line");expect(revision.inclusions).toBe("Included installation");expect(revision.exclusions).toBe("Excluded transport");expect(revision.notes).toBe("Independent note");
+ await page.goto(`/workspace/account/quotations/${saved.id}/edit`);await expect(page.getByRole("heading",{name:"Edit draft",exact:true})).toBeVisible({timeout:30000});await expect(terms).not.toBeVisible();await summary.focus();await summary.press("Enter");await expect(terms).toHaveValue("Original agreed terms\nSecond line");await terms.fill("Updated agreed terms");await summary.click();await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${saved.id}\\?saved=1`),{timeout:30000});
+ const updated=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:saved.id}});expect(updated.terms).toBe("Updated agreed terms");expect(updated.inclusions).toBe("Included installation");expect(updated.notes).toBe("Independent note");
+ const pdf=await page.request.get(`/workspace/account/quotations/${saved.id}/pdf`);expect(pdf.status()).toBe(200);const printed=(await extractPdfText(await pdf.body())).text;expect(printed).toContain("Updated agreed terms");expect(printed).toContain("Included installation");expect(printed).toContain("Excluded transport");expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+});

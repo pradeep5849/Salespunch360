@@ -96,7 +96,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     }
 
     state.draft?.let { QuotationEditor(it, state, vm,navigate) }
-    state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions) }
+    if(state.draft==null)state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions) }
 }
 
 @Composable
@@ -132,13 +132,17 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
         }
         return
     }
-    AlertDialog(
-        onDismissRequest = {if(!readingAttachment)vm.closeDraft()},
-        title = { Text(when { draft.id == null -> "New quotation"; draft.revision -> "New revision"; else -> "Edit quotation" }) },
-        confirmButton = { Column { if(draft.id==null) TextButton(enabled=!readingAttachment && !state.saving && draft.customerId.isNotBlank() && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields),onClick=vm::saveAndNew) { Text("Save & New") }; Button(enabled = !readingAttachment && !state.saving && invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields) && draft.customerId.isNotBlank() && draft.lines.isNotEmpty(), onClick = vm::save) { Text(if(state.saving) "Saving…" else "Save") } } },
-        dismissButton = { TextButton(enabled=!state.saving,onClick = vm::closeDraft) { Text("Cancel") } },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    var termsExpanded by remember(draft.creationRequestKey){mutableStateOf(false)}
+    Dialog(onDismissRequest={if(!readingAttachment)vm.closeDraft()},properties=DialogProperties(usePlatformDefaultWidth=false)){
+        Surface(Modifier.fillMaxSize()){
+            Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()){
+                Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    Text(when{draft.id==null->"New quotation";draft.revision->"New revision";else->"Edit quotation"},style=MaterialTheme.typography.titleLarge,modifier=Modifier.weight(1f))
+                    TextButton(enabled=!state.saving&&!readingAttachment,onClick=vm::closeDraft){Text("Cancel")}
+                }
+                HorizontalDivider()
+                state.error?.let{Text(it,color=MaterialTheme.colorScheme.error,modifier=Modifier.fillMaxWidth().padding(12.dp))}
+                LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=12.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 item { OutlinedTextField(state.companyName.ifBlank{"Current company"},{},readOnly=true,label={Text("Firm Name")},modifier=Modifier.fillMaxWidth()) }
                 state.error?.let { error -> item { Text(error,color=MaterialTheme.colorScheme.error) } }
                 if(draft.id==null) {
@@ -195,9 +199,12 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                         creationAttachmentError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
                     }
                 }
-                item { OutlinedTextField(draft.terms, { vm.editDraft(draft.copy(terms = it)) }, label = { Text("Terms") }, minLines = 2) }
-                item { OutlinedTextField(draft.inclusions, { vm.editDraft(draft.copy(inclusions = it)) }, label = { Text("Inclusions") }) }
-                item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") }) }
+                item { TextButton(onClick={termsExpanded=!termsExpanded},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Terms & Conditions — ${if(termsExpanded)"Hide"else"Show"}")} }
+                if(termsExpanded){
+                    item { OutlinedTextField(draft.terms, { vm.editDraft(draft.copy(terms = it)) }, label = { Text("Terms") }, minLines = 2,modifier=Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(draft.inclusions, { vm.editDraft(draft.copy(inclusions = it)) }, label = { Text("Inclusions") },modifier=Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(draft.exclusions, { vm.editDraft(draft.copy(exclusions = it)) }, label = { Text("Exclusions") },modifier=Modifier.fillMaxWidth()) }
+                }
                 item { InvoiceCustomFields(state.customFields,"QUOTATION",draft.customFields,state.saving){vm.editDraft(draft.copy(customFields=it))} }
                 item { OutlinedTextField(draft.notes, { vm.editDraft(draft.copy(notes = it)) }, label = { Text("Notes") }) }
                 item { SelectField("Rate tax mode",draft.taxMode,listOf("EXCLUSIVE" to "Tax exclusive","INCLUSIVE" to "Tax inclusive")){vm.editDraft(draft.copy(taxMode=it))} }
@@ -214,9 +221,15 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                         }
                     }
                 }
+                }
+                HorizontalDivider()
+                Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    if(draft.id==null)OutlinedButton(enabled=!readingAttachment&&!state.saving&&draft.customerId.isNotBlank()&&invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields),onClick=vm::saveAndNew,modifier=Modifier.weight(1f).heightIn(min=56.dp)){Text("Save & New")}
+                    Button(enabled=!readingAttachment&&!state.saving&&invoiceCustomFieldsValid(state.customFields,"QUOTATION",draft.customFields)&&draft.customerId.isNotBlank()&&draft.lines.isNotEmpty(),onClick=vm::save,modifier=Modifier.weight(1f).heightIn(min=56.dp)){Text(if(state.saving)"Saving…"else"Save")}
+                }
             }
         }
-    )
+    }
 }
 
 @Composable
