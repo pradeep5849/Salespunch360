@@ -54227,7 +54227,8 @@
         "quotation_tax_mode_shared_2026_10_19": {
           "work": "Read-only commercial prefill retains inclusive/exclusive tax mode,entered prices and exact shared aggregate totals. Conversion eligibility/linkage/post-save closure still incomplete.",
           "linked_finding": "A082-F03",
-          "remaining": "PARTIAL;no whole-finding completion inferred."
+          "remaining": "PARTIAL;no whole-finding completion inferred.",
+          "implementation_commit": "4b24c0733e7dea9a84d68d579adc2161100a6d7a"
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -55941,7 +55942,8 @@
             "eslint": "PASS final changed-file lint/diff;initial prefer-const in new integration test fixed and lint rerun",
             "final_complete_head": "NOT RUN"
           },
-          "remaining": "IMPLEMENTED BUT NOT VERIFIED:full final199-finding head regression and native device/emulator/runtime verification remain pending. A082-F01 attachment/reference scope and A080-F02 conversion source linkage/eligibility/lifecycle remain PARTIAL. No A104,merge/deploy,production operations or historical migration edits."
+          "remaining": "IMPLEMENTED BUT NOT VERIFIED:full final199-finding head regression and native device/emulator/runtime verification remain pending. A082-F01 attachment/reference scope and A080-F02 conversion source linkage/eligibility/lifecycle remain PARTIAL. No A104,merge/deploy,production operations or historical migration edits.",
+          "implementation_commit": "4b24c0733e7dea9a84d68d579adc2161100a6d7a"
         }
       }
     },
