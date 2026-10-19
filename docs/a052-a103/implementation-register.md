@@ -9930,3 +9930,11 @@ A090-F01 remains PARTIAL for other original consumers/final validation,including
 Firm-display native validation: compileDebugKotlin plus19 quotation preview/codec JVM tests PASS(3m35s),zero failures/errors/skips;no emulator/device UI runtime claim.
 
 Dashboard date/quotation firm implementation provenance: `54cf88f88301db2b1686aebe4efbb704c00b490c`.
+
+### A090-F01 — Server-local timestamp calendar formatting (2026-10-19)
+
+Project audit and generic transaction reminder renderers now use shared AccountTimestamp: saved company date format,existing server-local wall-clock time/calendar,and original ISO datetime in a semantic time element. No timezone conversion,stored timestamp,permission/query,financial logic,schema or migration change.
+
+Final focused group30 tests PASS/3files;the same6 UI cases also PASS in Asia/Kolkata and America/Los_Angeles (overlap,not42 unique tests). Covers3 date formats,unchanged clock/ISO and local midnight. Final Project browser2 desktop/mobile Chromium profiles PASS(30.7s),including persisted date preference,original audit timestamp,no new journals/no overflow. Initial unit failures were lowercase static-markup attribute assertions;corrected spelling,reran all. Initial browser fixture failed before UI at missing required commercial subtotal;replaced unsupported order-reminder setup with valid Project audit workflow. Legacy generic reminder browser runtime is NOT VERIFIED. Focused final lint/diff PASS. No new Android/device test or final checkpoint-wide claim. A090-F01 remains PARTIAL;Hindi intentionally deferred.
+
+Final TypeScript after timestamp browser run: PASS.

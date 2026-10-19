@@ -1,3 +1,4 @@
+import {AccountTimestamp} from "@/components/account/account-ui";
 import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
@@ -255,8 +256,8 @@ export default async function Page({
       {x.reminders.map((r) => (
         <div key={r.id}>
           <p>
-            {r.status} · {r.remindAt.toLocaleString()} · {r.message}
-            {r.sentAt && ` · Sent ${r.sentAt.toLocaleString()}`}
+            {r.status} · <AccountTimestamp value={r.remindAt}/> · {r.message}
+            {r.sentAt && <> · Sent <AccountTimestamp value={r.sentAt}/></>}
           </p>
           {controls.canRemind && r.status === "PENDING" && (
             <form action={reminderStatusAction}>

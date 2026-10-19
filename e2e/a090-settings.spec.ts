@@ -3020,3 +3020,24 @@ test("A082 inclusive quotation mode agrees across preview saved PDF edit and nat
  try{const headers={authorization:`Bearer ${token}`},data={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",taxMode:"INCLUSIVE",lines:[{lineType:"CUSTOM",itemName:"Inclusive quotation fixture",quantity:"5",rate:"82.60",taxRate:"18"}]};expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data})).status()).toBe(200);const native=await page.request.get(`/api/v1/mobile/account/quotations/${id}`,{headers});expect(native.status()).toBe(200);const body=await native.json();expect(body.revisions[0].taxMode).toBe("INCLUSIVE");expect(body.revisions[0].grandTotal).toBe("413");expect((await page.request.patch(`/api/v1/mobile/account/quotations/${id}`,{headers,data:{...data,taxMode:"WITH"}})).status()).toBe(400)}finally{await db.mobileSession.deleteMany({where:{userId,tokenHash}})}
  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
 });
+
+test("A090 project audit timestamps honor date preference without changing the clock",async({page})=>{
+ test.setTimeout(150000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),projectId=randomUUID(),auditId=randomUUID();
+ const stamp=new Date(2026,9,13,13,5,9);
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS"],dateFormat:"YYYY-MM-DD"}});
+  await db.project.create({data:{id:projectId,companyId,branchId,customerId,projectNumber:`TIME-${projectId}`,name:"Timestamp preference fixture",createdById:userId}});
+  await db.projectAuditEvent.create({data:{id:auditId,companyId,projectId,actorUserId:userId,eventType:"PROJECT_CREATED",createdAt:stamp}});
+  const journals=await db.journalEntry.count({where:{companyId}});
+  await signInSettings(page);await page.goto(`/workspace/account/projects/${projectId}`);
+  const audit=page.locator(`time[datetime="${stamp.toISOString()}"]`);await expect(audit).toHaveText(`2026-10-13 · ${stamp.toLocaleTimeString()}`);await expect(audit.locator("..")).toContainText("PROJECT_CREATED");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  expect((await db.projectAuditEvent.findUniqueOrThrow({where:{id:auditId}})).createdAt.toISOString()).toBe(stamp.toISOString());
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,dateFormat:before.dateFormat}});
+  await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;await tx.projectAuditEvent.deleteMany({where:{companyId,id:auditId}});await tx.project.deleteMany({where:{companyId,id:projectId}})});
+ }
+});

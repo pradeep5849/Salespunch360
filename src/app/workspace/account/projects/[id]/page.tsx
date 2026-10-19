@@ -1,3 +1,4 @@
+import {AccountTimestamp} from "@/components/account/account-ui";
 import {AccountDate, ClientMoney} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { projectWorkflowCapabilities } from "@/lib/account/project-workflow-capabilities";
@@ -443,7 +444,7 @@ export default async function Page({
         <ul>
           {project.audits.map((event) => (
             <li key={event.id}>
-              {event.createdAt.toLocaleString()} — {event.eventType}
+              <AccountTimestamp value={event.createdAt}/> — {event.eventType}
             </li>
           ))}
         </ul>

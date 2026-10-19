@@ -66092,6 +66092,27 @@
           },
           "remaining": "A090-F01 remains PARTIAL for remaining original consumers/final checkpoint verification. Project audit and generic transaction reminder timestamps still use server-locale datetime strings;this fallback calendar-date fix does not change them. Hindi translation remains intentionally deferred.",
           "implementation_commit": "54cf88f88301db2b1686aebe4efbb704c00b490c"
+        },
+        "server_local_timestamp_calendar_2026_10_19": {
+          "work": "Shared AccountTimestamp applies the saved company date preference to Project audit and generic transaction reminder date portions. Preserves pre-existing server-local clock and calendar zone by using local calendar components and original toLocaleTimeString;does not UTC-slice a local date. Semantic time retains the original ISO datetime. No stored timestamp/timezone policy/financial behavior/schema changes.",
+          "files": [
+            "src/components/account/account-ui.tsx",
+            "src/components/account/account-ui.test.tsx",
+            "src/app/workspace/account/projects/[id]/page.tsx",
+            "src/app/workspace/account/transactions/[id]/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused_group": "30 tests PASS/3files,0 failures/skips. Same6 account-UI cases rerun under Asia/Kolkata and America/Los_Angeles:6 PASS in each zone;overlapping coverage,not42 unique tests. Cases cover3 date formats,unchanged clock/ISO and local midnight.",
+            "browser": "Final2 desktop/mobile Chromium Project audit cases PASS(30.7s),saved preference,unchanged audit timestamp/no journals/no root overflow. No generic reminder browser runtime claimed.",
+            "initial_corrections": "Initial3 unit assertions expected lowercase datetime in React static markup;corrected to actual dateTime spelling,then all final tests/timezones passed. Initial browser fixture failed before UI at missing required commercial subtotal;removed unsupported order-reminder fixture and reran a valid Project audit workflow. Product assertions were not weakened;legacy reminder runtime remains unverified.",
+            "eslint": "PASS focused final lint",
+            "android": "No native source changed;no new native/device validation claimed.",
+            "migration": "None required.",
+            "final_checkpoint_head": "NOT RUN",
+            "typescript": "PASS final full typecheck after browser run"
+          },
+          "remaining": "A090-F01 remains PARTIAL for remaining original consumer/final complete checkpoint validation;legacy generic reminder date rendering is source-wired with shared formatter tests,not browser-certified. Hindi intentionally deferred."
         }
       },
       "intermediate_validation": {
