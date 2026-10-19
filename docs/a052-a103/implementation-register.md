@@ -9918,3 +9918,13 @@ Validation: 16 tests passed across four backup/scheduling/expense-item files, in
 Final full TypeScript check after the backup browser run: PASS.
 
 Reusable expense item backup implementation provenance: `0706bb91f3023b93506a20f305dc791881ed19f4`.
+
+### A090-F01/A082-F01 — Calendar header and authenticated firm display (2026-10-19)
+
+The project-only and general dashboard fallback financial-year labels now use the existing company date component; named financial years and April boundaries remain unchanged. AccountPageHeader accepts formatted React content. Quotation Web/native forms display a read-only Firm Name from actor.companyId; incoming company/name fields cannot select another tenant. No schema, migration or posting changes.
+
+Focused group:94 tests PASS/6files,zero failures/skips;initial33-test subset overlaps94 and is not summed. Includes six rendered dashboard cases,three date formats,named year,company scope/year boundary,and company-scoped firm/forged input regression. General Settings browser final2 desktop/mobile profiles PASS(55.3s),including persisted formatting,reload,dashboard header,asset money/date,isolation/unsaved navigation. Initial mobile stopped at old5second sign-in wait before reaching dashboard;desktop passed. Reused existing signInSettings20second helper,then both profiles passed without weakening business checks. Quotation browser2 profiles PASS(2.0m):firm read-only/save/edit/preview/PDF/native metadata/rounding/supply/Axe/no overflow/no journals. Final TypeScript,focused ESLint,YAML/diff PASS.
+
+A090-F01 remains PARTIAL for other original consumers/final validation,including Project audit/generic reminder datetime strings. Hindi remains intentionally deferred. A082-F01 remains PARTIAL for attachments and remaining layout. No native device/emulator/TalkBack verification claimed.
+
+Firm-display native validation: compileDebugKotlin plus19 quotation preview/codec JVM tests PASS(3m35s),zero failures/errors/skips;no emulator/device UI runtime claim.

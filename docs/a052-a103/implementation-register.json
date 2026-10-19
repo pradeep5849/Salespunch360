@@ -55120,6 +55120,26 @@
           },
           "remaining": "A082-F01 remains PARTIAL for original attachment/reference layout scope. A080-F02 conversion lifecycle/eligibility/linkage remains PARTIAL; read-only name prefill does not complete conversion. Native device runtime and final 199-finding checkpoint validation pending.",
           "implementation_commit": "e7ab1e04f1b647771c1f7071705f004c0f90a304"
+        },
+        "authenticated_firm_header_2026_10_19": {
+          "work": "Quotation editor options select only authenticated company name/product edition from actor.companyId; Web/native forms display Firm Name read-only. Request payload cannot choose/change tenant. Existing module/branch/customer/cost permissions unchanged.",
+          "files": [
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused_group": "94 passed across6 files,0 failures/skips,including company-scoped firm lookup and forged company input ignored on create.",
+            "eslint": "PASS changed-file lint",
+            "browser": "2 desktop/mobile Chromium quotation profiles PASS(2.0m):read-only authenticated Firm Name,create/save/preview/PDF/edit,existing native authenticated PATCH/GET metadata preservation,rounding,supply,Axe/no overflow/no journals.",
+            "android": "compileDebugKotlin and19 quotation preview/codec JVM tests PASS(3m35s),0 failures/errors/skips. No emulator/device UI runtime.",
+            "final_checkpoint_head": "NOT RUN",
+            "typescript": "PASS final full typecheck after browser runs"
+          },
+          "remaining": "A082-F01 remains PARTIAL for attachments and remaining original reference layout. Firm display does not add cross-company switching. Native emulator/device runtime not claimed. No schema or migration change."
         }
       }
     },
@@ -66050,6 +66070,26 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "A090-F01 remains PARTIAL; other consumers and final complete checkpoint validation pending. No native source, schema or migration changed."
+        },
+        "dashboard_calendar_header_2026_10_19": {
+          "work": "Both project-only and general dashboard fallback financial-year subtitles now use the existing company date preference component. Named financial years remain unchanged; April boundary and query scope unchanged. Shared AccountPageHeader subtitle accepts ReactNode so the formatted component renders as content rather than object text.",
+          "files": [
+            "src/app/workspace/account/dashboard/page.tsx",
+            "src/app/workspace/account/dashboard/page.test.tsx",
+            "src/components/account/account-shell.tsx",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused_group": "94 passed across6 dashboard/display/account UI/quotation service/capability files,0 failures/skips. Initial33-test dashboard/display subset overlaps94,not summed. Six new SSR cases cover3 date formats,named year,general/project-only headers,company-scoped lookup and preceding-April boundary.",
+            "browser": "2 desktop/mobile Chromium General Settings tests passed (55.3s): persisted settings,reload,rendered fallback dashboard date,money/date display,tenant isolation and unsaved navigation. Initial mobile test stopped before dashboard at old5s sign-in timeout;desktop passed. Reused existing20s signInSettings helper and reran both successfully.",
+            "eslint": "PASS changed-file lint",
+            "workflow": "YAML parse PASS;focused dashboard/display regression added to Web CI.",
+            "android": "No dashboard native source changed;no new native dashboard runtime claimed.",
+            "final_checkpoint_head": "NOT RUN",
+            "typescript": "PASS final full typecheck after browser runs"
+          },
+          "remaining": "A090-F01 remains PARTIAL for remaining original consumers/final checkpoint verification. Project audit and generic transaction reminder timestamps still use server-locale datetime strings;this fallback calendar-date fix does not change them. Hindi translation remains intentionally deferred."
         }
       },
       "intermediate_validation": {

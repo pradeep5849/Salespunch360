@@ -48,6 +48,7 @@ data class QuotationRow(
 )
 
 data class QuotationState(
+    val companyName:String="",
     val stateOfSupplyOptions:List<Pair<String,String>> = emptyList(),
     val canCreate:Boolean=false,
     val canCreateParty:Boolean=false,
@@ -119,6 +120,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
 
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
+                companyName=options.str("companyName"),
                 stateOfSupplyOptions=options.array("stateOfSupplyOptions").map{it.str("code") to it.str("name")},
                 canCost=options["canCost"]?.jsonPrimitive?.booleanOrNull==true,
                 canCreateParty=options["partyCreation"] is JsonObject,

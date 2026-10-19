@@ -53,13 +53,13 @@ export default async function Page({
       resolved.context.mode === "COMPANY"
         ? "Company Consolidated Dashboard"
         : `${resolved.context.branchName} Dashboard`,
-    period = year?.name ?? from.toLocaleDateString("en-IN");
+    period = year?.name ?? <AccountDate value={from.toISOString()}/>;
   if (data.projectOnly)
     return (
       <>
         <AccountPageHeader
           title={title}
-          subtitle={`Authorized Projects · ${period}`}
+          subtitle={<>Authorized Projects · {period}</>}
         />
         <section className="account-stat-grid">
           <AccountCard>
@@ -92,7 +92,7 @@ export default async function Page({
     <>
       <AccountPageHeader
         title={title}
-        subtitle={`Current Financial Year · ${period}`}
+        subtitle={<>Current Financial Year · {period}</>}
       />
       <div className="account-dashboard-modern">
         {visible.sales && (

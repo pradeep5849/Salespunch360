@@ -167,7 +167,7 @@ export async function getCustomerQuotationForActor(actor: Actor,id: string): Pro
 export async function quotationEditorOptionsForActor(actor: Actor) {
   await requireAccountModules(actor,"QUOTATIONS_BOQ");
   const canCost = canViewQuotationCost(actor);
-  const company = await db.company.findUniqueOrThrow({ where: { id: actor.companyId! }, select: { productEdition: true } });
+  const company = await db.company.findUniqueOrThrow({ where: { id: actor.companyId! }, select: { productEdition: true,name:true } });
   const [branches, customers, products, services, workPackages, units] = await Promise.all([
     db.branch.findMany({ where: scopedBranchWhere(actor), select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
     db.customer.findMany({ where: { companyId: actor.companyId!, isActive: true, isAccountCustomer: true, ...(actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {}) }, select: { id: true, name: true, contactPerson: true, phone:true, branchId: true }, orderBy: { name: "asc" } }),
@@ -189,7 +189,7 @@ export async function quotationEditorOptionsForActor(actor: Actor) {
     fields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"CUSTOMER",isActive:true},orderBy:[{position:"asc"},{id:"asc"}]}),
     settings:resolvePartySettings((await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{transactionDefaults:true}}))?.transactionDefaults),
   }:undefined;
-  return { stateOfSupplyOptions:GST_STATES.map(([code,name])=>({code,name})),canCreateItem, canViewPartyBalance:canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LEDGER_VIEW")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS"), stock:await quotationStockOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,products.filter(row=>row.trackInventory).map(row=>row.id)), partyCreation, customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
+  return { companyName:company.name,stateOfSupplyOptions:GST_STATES.map(([code,name])=>({code,name})),canCreateItem, canViewPartyBalance:canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LEDGER_VIEW")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS"), stock:await quotationStockOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,products.filter(row=>row.trackInventory).map(row=>row.id)), partyCreation, customFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId!,entityType:"QUOTATION",isActive:true},orderBy:{position:"asc"}}), branches, customers, products: safeProducts, services: safeServices, workPackages: safeWorkPackages, units, leads, canCost,canCreate:quotationActionCapabilities(actor,"DRAFT").canEdit };
 }
 
 export async function createQuotation(raw:unknown){return createQuotationForActor(await requirePermissionForMutation("ACCOUNT_QUOTATION_EDIT"),raw)}

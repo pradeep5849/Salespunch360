@@ -123,6 +123,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
         dismissButton = { TextButton(enabled=!state.saving,onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { OutlinedTextField(state.companyName.ifBlank{"Current company"},{},readOnly=true,label={Text("Firm Name")},modifier=Modifier.fillMaxWidth()) }
                 state.error?.let { error -> item { Text(error,color=MaterialTheme.colorScheme.error) } }
                 if(draft.id==null) {
                 item { SelectField("Type", draft.documentType, listOf("QUOTATION" to "Quotation", "ESTIMATE" to "Estimate", "BOQ" to "BOQ")) { vm.editDraft(draft.copy(documentType = it)) } }

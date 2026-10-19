@@ -140,3 +140,12 @@ it("validates, trims and explicitly clears billing names without changing custom
  await updateQuotationDraft(ID,input({billingName:"   "}));expect(m.revisionCreate).toHaveBeenLastCalledWith({data:expect.objectContaining({billingName:null})});
  await expect(createQuotation(input({billingName:"x".repeat(241)}))).rejects.toThrow();
 });
+
+it("shows only the authenticated company as the editor firm and ignores a forged company on save",async()=>{
+ m.company.mockResolvedValue({name:"Authorized company",productEdition:"SALESPUNCH360_ACCOUNT"});
+ expect((await quotationEditorOptions()).companyName).toBe("Authorized company");
+ expect(m.company).toHaveBeenLastCalledWith({where:{id:C},select:{productEdition:true,name:true}});
+ await createQuotation(input({companyId:"foreign-company",companyName:"Forged firm"}));
+ expect(m.docCreate).toHaveBeenLastCalledWith({data:expect.objectContaining({companyId:C})});
+ expect(m.revisionCreate.mock.calls.at(-1)?.[0].data).not.toHaveProperty("companyName");
+});

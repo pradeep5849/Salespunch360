@@ -182,11 +182,7 @@ test.afterAll(async () => {
 
 test("A090 saves company preferences, survives reload, formats data and protects unsaved navigation", async ({page}) => {
   test.setTimeout(120_000);
-  await page.goto("/sign-in");
-  await page.getByLabel("Email",{exact:true}).fill(email);
-  await page.getByLabel("Password",{exact:true}).fill(password);
-  await page.getByRole("button",{name:"Sign In",exact:true}).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
+  await signInSettings(page);
   await page.goto(`/workspace/account/assets/${assetId}`);
   await page.goto("/workspace/account/settings/general");
   await page.getByLabel("Business Currency",{exact:true}).selectOption("USD");
@@ -206,6 +202,10 @@ test("A090 saves company preferences, survives reload, formats data and protects
   await expect(page.getByLabel("Business Currency",{exact:true})).toHaveValue("USD");
   await expect(page.locator("output")).toHaveText("3");
   await expect(page.getByLabel("Date Format",{exact:true})).toHaveValue("YYYY-MM-DD");
+  await page.goto("/workspace/account/dashboard");
+  const openYear=await db.financialYear.findFirst({where:{companyId,status:"OPEN"},orderBy:{startDate:"desc"}}),calendarNow=new Date(),fallbackYear=calendarNow.getUTCFullYear()-(calendarNow.getUTCMonth()<3?1:0);
+  await expect(page.locator(".account-page-header")).toContainText(`Current Financial Year · ${openYear?.name??`${fallbackYear}-04-01`}`);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.goto(`/workspace/account/assets/${assetId}`);
   await expect(page.locator(".account-money").filter({hasText:"$12.350"})).toBeVisible();
   await expect(page.getByText("2026-10-11",{exact:true})).toBeVisible();
@@ -2966,6 +2966,7 @@ test("A090 quotation PDF uses scoped company display settings across web public 
 test("A082 quotation rounding survives web preview edit PDF and native update without ledger writes",async({page})=>{
  test.setTimeout(150000);
  await signInSettings(page);await page.goto("/workspace/account/quotations/new");
+ await expect(page.getByRole("textbox",{name:"Firm Name",exact:true})).toHaveValue("Settings browser fixture");await expect(page.getByRole("textbox",{name:"Firm Name",exact:true})).toHaveAttribute("readonly","");
  const identity=page.getByRole("group",{name:"Document",exact:true});
  await identity.getByRole("combobox",{name:"Branch",exact:true}).selectOption(branchId);
  await identity.getByRole("combobox",{name:"Customer",exact:true}).selectOption(customerId);
