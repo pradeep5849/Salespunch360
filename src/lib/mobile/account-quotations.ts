@@ -11,3 +11,8 @@ export async function mobileTransitionQuotation(user:MobileAppPrincipal,id:strin
 export async function mobileShareQuotation(user:MobileAppPrincipal,id:string,expiresAt?:string){return{token:await createQuotationShareForActor(await write(user,"ACCOUNT_QUOTATION_SHARE"),id,expiresAt?new Date(expiresAt):undefined)}}
 
 export async function mobileCustomerQuotation(user:MobileAppPrincipal,id:string){return getCustomerQuotationForActor(actor(user,"ACCOUNT_QUOTATION_VIEW"),id)}
+
+export async function mobileQuotationAttachmentList(user:MobileAppPrincipal,id:string,revisionNumber:number){return (await import("@/lib/quotations/attachments")).listQuotationAttachmentsForActor(actor(user,"ACCOUNT_QUOTATION_VIEW"),id,revisionNumber)}
+export async function mobileQuotationAttachmentUpload(user:MobileAppPrincipal,id:string,revisionNumber:number,requestKey:string,file:File){return (await import("@/lib/quotations/attachments")).uploadQuotationAttachmentForActor(await write(user,"ACCOUNT_QUOTATION_EDIT"),{documentId:id,revisionNumber,requestKey},file)}
+export async function mobileQuotationAttachmentDownload(user:MobileAppPrincipal,id:string){return (await import("@/lib/quotations/attachments")).downloadQuotationAttachmentForActor(actor(user,"ACCOUNT_QUOTATION_VIEW"),id)}
+export async function mobileQuotationAttachmentRemove(user:MobileAppPrincipal,documentId:string,revisionNumber:number,id:string){return (await import("@/lib/quotations/attachments")).removeQuotationAttachmentForActor(await write(user,"ACCOUNT_QUOTATION_EDIT"),documentId,revisionNumber,id)}

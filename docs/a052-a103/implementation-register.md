@@ -9940,3 +9940,15 @@ Final focused group30 tests PASS/3files;the same6 UI cases also PASS in Asia/Kol
 Final TypeScript after timestamp browser run: PASS.
 
 Timestamp calendar implementation provenance: `1a713f9a0ef5ef044aefd40520b8fbafec82e663`.
+
+### A082-F01/A088-F01 — Private revision attachments (2026-10-19)
+
+Saved quotation details on Web/Android support private PDF/PNG/JPEG files,10MB per file/50 per revision. Bounded multipart input,signature/MIME validation,UUID/hash retries,company/branch/module/role access,checksum-verified downloads and private/no-store/nosniff responses protect files. Draft edits preserve IDs;new revisions copy references;the existing issued-child database guard freezes history. Locked reference checks preserve shared historical bytes on removal. Storage/audit failures roll back metadata and clean only unreferenced bytes. Customer/public DTOs exclude attachments. Backups retain original metadata/keys and existing private-storage warning,not file bytes.
+
+New additive migration:`20261019180000_quotation_private_attachments`,new QuotationAttachment model and relation fields only;no historical edits or financial writes. Fresh138-migration/legacy-upgrade rehearsal1 PASS(4.00s total);Prisma generate/validate/status PASS. Final90-test group/6files PASS,including16 actual local PostgreSQL cases;enhanced7-case public/customer privacy subset PASS(2.88s),overlap not added. Earlier78/67 groups overlap90. Browser2 desktop/mobile Chromium cases PASS(1.1m):committed-response-loss retry once,Web/native HTTP downloads/access/error codes,draft edit/revision/issued-history protection/removal,backup metadata,Axe/no overflow/no journals. Final Android compilation+21 JVM tests PASS(3m25s),no failures/errors/skips;native UI/device/TalkBack not run.
+
+Initial failures/corrections retained:1 write conflict when mutating database files ran concurrently;serial execution passed;browser status selector matched Loading+Added,filtered success/removal then both passed;privacy probe corrected share token string contract;native comma declaration typo corrected before final compilation. API/body/status checks and domain assertions retained.
+
+A082-F01 remains PARTIAL for unsaved creation-form attachment staging and remaining reference layout. A088-F01 remains PARTIAL for provider/blob/validated recovery. No final199-head verification or native device runtime claimed. No merge,deploy,production operation or A104.
+
+Attachment final checks: full TypeScript PASS after renaming a test fixture that shadowed DOM document;application behavior unchanged. Existing SecureSessionRaceTest1 PASS(22s) after final21 quotation tests:22 distinct JVM cases,zero failures/errors/skips. A nonexistent SessionInvalidationTest filter added no evidence. No native UI/runtime certification claimed.

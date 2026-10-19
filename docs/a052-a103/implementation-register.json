@@ -55141,6 +55141,58 @@
           },
           "remaining": "A082-F01 remains PARTIAL for attachments and remaining original reference layout. Firm display does not add cross-company switching. Native emulator/device runtime not claimed. No schema or migration change.",
           "implementation_commit": "54cf88f88301db2b1686aebe4efbb704c00b490c"
+        },
+        "private_revision_attachments_2026_10_19": {
+          "work": "Added private revision-bound PDF/PNG/JPEG attachments (10MB/file,50/revision) with bounded11MB multipart parsing, MIME/signature checks, original byte SHA verification on download, company/assigned-branch/module/role enforcement and UUID/hash idempotency under company/document locks. Draft replacement retains attachment IDs/bytes;new revisions copy file references;existing database OLD/NEW-parent guards reject issued mutation/deletion. Removal deletes bytes only after a locked refcount proves no historical reference. Storage/audit failures roll back metadata and clean only unreferenced bytes;ambiguous/unavailable cleanup preserves bytes. Web and Android saved-document controls list/add/retry/download/share/remove;native uses bounded existing file reader,whitelisted cache extension,and rejected-token-only expiry invalidation. Customer/public DTOs exclude private attachments;backup adds original metadata/keys,not file bytes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "prisma/schema.prisma",
+            "prisma/migrations/20261019180000_quotation_private_attachments/migration.sql",
+            "src/lib/quotations/attachments.ts",
+            "src/lib/quotations/attachments.integration.test.ts",
+            "src/lib/quotations/attachment-http.ts",
+            "src/lib/quotations/attachment-http.test.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/mobile/account-quotations.ts",
+            "src/components/account/quotation-attachments.tsx",
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "src/app/api/account/quotations/[id]/attachments/route.ts",
+            "src/app/api/account/quotation-attachments/[id]/route.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/attachments/route.ts",
+            "src/app/api/v1/mobile/account/quotation-attachments/[id]/route.ts",
+            "src/lib/account/utilities.ts",
+            "src/lib/account/backup-snapshot.runtime.test.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationAttachmentControls.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/QuotationAttachmentTest.kt"
+          ],
+          "models_changed": [
+            "QuotationAttachment new revision/company/uploader-linked model;existing models gain relation fields only"
+          ],
+          "migrations": [
+            "20261019180000_quotation_private_attachments"
+          ],
+          "apis_actions": [
+            "Web GET/POST /api/account/quotations/[id]/attachments",
+            "Web GET/DELETE /api/account/quotation-attachments/[id]",
+            "Native GET/POST /api/v1/mobile/account/quotations/[id]/attachments",
+            "Native GET/DELETE /api/v1/mobile/account/quotation-attachments/[id]",
+            "updateQuotationDraftForActor/createQuotationRevisionForActor retain or copy references atomically"
+          ],
+          "tests": {
+            "grouped": "90 tests PASS/6files,0 failures/skips,including16 real local PostgreSQL attachment/draft cases. Initial78-test group and67-test HTTP/unit group overlap90;not summed. Enhanced public/customer-output privacy7-case subset rerun PASS(2.88s),overlaps90. Tests coverconcurrent retry/changed intent,scope/permission/module denial,metadata filtering,issued direct-SQL guards,draft rollback,copy/removal preserving historical bytes,invalid/oversized/streamed upload,corrupt-file rejection,storage/audit rollback and no journal writes.",
+            "browser": "2 actual desktop/mobile Chromium cases PASS(1.1m):drop successful upload response,retry creates1 record;Web/native authenticated list/replay/download,invalid400,unauth401,missing/forbidden403,issued delete409;Web draft edit/new revision retention/removal,old issued file still downloadable,backup metadata,Axe AA/no overflow/no journals. Native HTTP is not device UI runtime.",
+            "android": "Final compileDebugKotlin +21 quotation preview/codec/attachment JVM tests PASS(3m25s),0 failures/errors/skips. Existing SecureSessionRaceTest then1 PASS(22s,incremental test run),proves stale rejected token cannot invalidate a new session;22 distinct JVM cases total. Original SessionInvalidationTest filter matched no class and adds no evidence. First syntax typo corrected;earlier21-test run3m1s preceded session-expiry wrapper and is not final evidence. No emulator/device/TalkBack runtime.",
+            "migration": "New additive table/FKs/indexes/size check and existing issued-child trigger. Local isolated deploy and fresh empty-database complete138-migration/legacy-upgrade rehearsal1 PASS(4.00s total),0 failures/skips;all prior document fields unchanged,repeatdeploy clean. Prisma generate/validate/status PASS. No historical migration or production operation.",
+            "eslint": "Focused final changed-file lint PASS before enhanced test-only privacy assertion;final privacy-file lint PASS.",
+            "typescript": "PASS final full typecheck after enhanced privacy test. Initial head typecheck found quotation fixture named document shadowing DOM document in browser callback;renamed fixture,then PASS with unchanged application/runtime assertions.",
+            "workflow": "YAML parse PASS;HTTP tests added to Web group and real attachment/draft tests added serially to PostgreSQL migration job.",
+            "initial_corrections": "Initial75-test run had1 write conflict from concurrent mutating test files;serial maxWorkers1 rerun75/75 passed,then expanded final90 passed. Initial browser2 cases stopped on status selector matching Loading and Added;filtered exact success/removal status and final2 passed with business assertions unchanged. Initial public DTO probe treated returned share token as object;corrected existing string contract and final7 passed. First native compiler caught comma declaration typo;corrected,then final compilation/tests passed.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "A082-F01 stays PARTIAL: current controls operate after a quotation draft has first been saved;unsaved creation-form attachment staging and remaining supplied reference layout are not completed. Native emulator/device runtime,provider/blob recovery and checkpoint-wide final validation remain unverified. No Sales draft,financial posting,merge/deployment/production change or A104."
         }
       }
     },
@@ -65092,6 +65144,12 @@
           },
           "remaining": "A088-F01 remains PARTIAL: complete provider/blob recovery,validated restore and final full checkpoint validation pending. JSON export of private photo metadata does not back up file bytes or prove restoration.",
           "commit": "0706bb91f3023b93506a20f305dc791881ed19f4"
+        },
+        {
+          "date": "2026-10-19",
+          "primary_finding": "A082-F01",
+          "work": "Company-scoped repeatable-read backup now retains quotationAttachment original IDs,revision links,retry/hash metadata and private object keys in deterministic order. This carries attachment restore dependencies into the register;does not include file bytes or complete A088.",
+          "tests": "Populated scoped snapshot regression included in90-test group;actual browser backup contains persisted attachment metadata. Provider/blob recovery/validated restore/final-head coverage remain pending."
         }
       ],
       "push_checkpoint_evidence": {

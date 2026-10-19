@@ -151,7 +151,7 @@ test.afterAll(async () => {
   await tx.quotationPaymentSchedule.deleteMany({where:{companyId}});
   await tx.quotationAdjustment.deleteMany({where:{companyId}});
   await tx.quotationLine.deleteMany({where:{companyId}});
-  await tx.quotationRevision.deleteMany({where:{companyId}});
+  await tx.quotationAttachment.deleteMany({where:{companyId}});await tx.quotationRevision.deleteMany({where:{companyId}});
   await tx.quotationDocument.deleteMany({where:{companyId}});
   });
   await db.productPrice.deleteMany({where:{companyId}});
@@ -3039,5 +3039,46 @@ test("A090 project audit timestamps honor date preference without changing the c
  }finally{
   await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,dateFormat:before.dateFormat}});
   await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;await tx.projectAuditEvent.deleteMany({where:{companyId,id:auditId}});await tx.project.deleteMany({where:{companyId,id:projectId}})});
+ }
+});
+
+test("A082 private quotation attachments survive retry edit revision and authorized web native downloads",async({page})=>{
+ test.setTimeout(180000);
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ const input={branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-19",lines:[{lineType:"CUSTOM",itemName:"Private plan work",quantity:"1",rate:"10"}]};
+ const quotation=await createQuotationForActor(actor,input),id=quotation.id,bytes=Buffer.from("%PDF-1.7\nPrivate quotation plan fixture");
+ const keys=new Set<string>();let sessionHash:string|null=null;
+ try{
+  await signInSettings(page);await page.goto(`/workspace/account/quotations/${id}`);
+  const section=page.getByRole("region",{name:"Quotation attachments",exact:true});await expect(section.getByText("No attachments.",{exact:true})).toBeVisible();
+  let drop=true;await page.route(`**/api/account/quotations/${id}/attachments*`,async route=>{if(route.request().method()==="POST"&&drop){drop=false;const committed=await route.fetch();expect(committed.status()).toBe(201);await route.abort()}else await route.continue()});
+  await section.getByLabel("Image or document",{exact:true}).setInputFiles({name:"plan.pdf",mimeType:"application/pdf",buffer:bytes});await section.getByRole("button",{name:"Add attachment",exact:true}).click();
+  await expect(section.getByRole("alert")).toBeVisible();await section.getByRole("button",{name:"Add attachment",exact:true}).click();await expect(section.getByRole("status").filter({hasText:/^Attachment added\.$/})).toHaveText("Attachment added.");
+  let attachments=await db.quotationAttachment.findMany({where:{companyId,revision:{documentId:id}}});expect(attachments).toHaveLength(1);const first=attachments[0];keys.add(first.storageKey);
+  await expect(section.getByRole("link",{name:"plan.pdf",exact:true})).toBeVisible();
+  const web=await page.request.get(`/api/account/quotation-attachments/${first.id}`);expect(web.status()).toBe(200);expect(await web.body()).toEqual(bytes);expect(web.headers()["x-content-type-options"]).toBe("nosniff");expect(web.headers()["cache-control"]).toContain("private");
+  await expect(new AxeBuilder({page}).include('section[aria-label="Quotation attachments"]').withTags(["wcag2a","wcag2aa"]).analyze()).resolves.toMatchObject({violations:[]});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();sessionHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash:sessionHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  const endpoint=`/api/v1/mobile/account/quotations/${id}/attachments`;
+  const replay=await page.request.post(endpoint,{headers,multipart:{file:{name:"plan.pdf",mimeType:"application/pdf",buffer:bytes},revisionNumber:"0",requestKey:first.requestKey}});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(first.id);
+  const listed=await page.request.get(`${endpoint}?revisionNumber=0`,{headers});expect(listed.status()).toBe(200);expect(await listed.json()).toEqual([expect.objectContaining({id:first.id,displayName:"plan.pdf"})]);expect(await listed.text()).not.toMatch(/storageKey|requestHash|contentHash|companyId/);
+  const native=await page.request.get(`/api/v1/mobile/account/quotation-attachments/${first.id}`,{headers});expect(native.status()).toBe(200);expect(await native.body()).toEqual(bytes);
+  expect((await page.request.get(`/api/v1/mobile/account/quotation-attachments/${first.id}`)).status()).toBe(401);
+  expect((await page.request.get(`/api/v1/mobile/account/quotation-attachments/${randomUUID()}`,{headers})).status()).toBe(403);
+  expect((await page.request.post(endpoint,{headers,multipart:{file:{name:"bad.pdf",mimeType:"application/pdf",buffer:Buffer.from("invalid")},revisionNumber:"0",requestKey:randomUUID()}})).status()).toBe(400);
+  const backup=JSON.parse(Buffer.from((await createAccountBackupForActor({id:userId,companyId,accountRole:"ACCOUNT_ADMIN"})).bytes).toString());expect(backup.data.quotationAttachment).toEqual(expect.arrayContaining([expect.objectContaining({id:first.id,storageKey:first.storageKey})]));
+  await page.getByRole("link",{name:"Edit draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}/edit$`),{timeout:30000});await page.getByRole("textbox",{name:"Notes",exact:true}).fill("Retain attachments on draft replacement");await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`),{timeout:30000});await expect(section.getByRole("link",{name:"plan.pdf",exact:true})).toBeVisible();
+  expect((await db.quotationAttachment.findFirstOrThrow({where:{companyId,revision:{documentId:id}}})).id).toBe(first.id);
+  await transitionQuotationForActor(actor,id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,id,"APPROVED");await page.reload();await expect(section.getByRole("button",{name:"Remove plan.pdf",exact:true})).toHaveCount(0);
+  expect((await page.request.delete(`/api/v1/mobile/account/quotation-attachments/${first.id}?documentId=${id}&revisionNumber=0`,{headers})).status()).toBe(409);
+  await createQuotationRevisionForActor(actor,id,input);await page.reload();await expect(section.getByRole("button",{name:"Remove plan.pdf",exact:true})).toBeVisible();
+  attachments=await db.quotationAttachment.findMany({where:{companyId,revision:{documentId:id}}});expect(attachments).toHaveLength(2);for(const row of attachments)keys.add(row.storageKey);
+  await section.getByRole("button",{name:"Remove plan.pdf",exact:true}).click();await expect(section.getByRole("status").filter({hasText:/^Attachment removed\.$/})).toHaveText("Attachment removed.");await expect(section.getByText("No attachments.",{exact:true})).toBeVisible();
+  const historical=await page.request.get(`/api/v1/mobile/account/quotation-attachments/${first.id}`,{headers});expect(historical.status()).toBe(200);expect(await historical.body()).toEqual(bytes);
+  expect(await db.journalEntry.count({where:{companyId,sourceId:id}})).toBe(0);
+ }finally{
+  if(sessionHash)await db.mobileSession.deleteMany({where:{userId,tokenHash:sessionHash}});
+  await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;const revisions=await tx.quotationRevision.findMany({where:{companyId,documentId:id},select:{id:true}}),ids=revisions.map(r=>r.id);const stored=await tx.quotationAttachment.findMany({where:{companyId,revisionId:{in:ids}},select:{storageKey:true}});for(const row of stored)keys.add(row.storageKey);await tx.quotationAttachment.deleteMany({where:{companyId,revisionId:{in:ids}}});await tx.quotationAuditEvent.deleteMany({where:{companyId,documentId:id}});await tx.quotationPaymentSchedule.deleteMany({where:{companyId,revisionId:{in:ids}}});await tx.quotationAdjustment.deleteMany({where:{companyId,revisionId:{in:ids}}});await tx.quotationLine.deleteMany({where:{companyId,revisionId:{in:ids}}});await tx.quotationRevision.deleteMany({where:{companyId,documentId:id}});await tx.quotationDocument.deleteMany({where:{companyId,id}})});
+  for(const key of keys)await privateStorage().delete(key);
  }
 });

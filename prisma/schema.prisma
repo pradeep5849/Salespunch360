@@ -825,6 +825,7 @@ model Company {
   dailyTravelApprovals                DailyTravelApproval[]
   quotationDocuments                  QuotationDocument[]
   quotationRevisions                  QuotationRevision[]
+  quotationAttachments                QuotationAttachment[]
   quotationLines                      QuotationLine[]
   quotationAdjustments                QuotationAdjustment[]
   quotationPaymentSchedules           QuotationPaymentSchedule[]
@@ -922,6 +923,7 @@ model User {
   createdQuotationDocuments  QuotationDocument[]      @relation("QuotationCreator")
   acceptedQuotationDocuments QuotationDocument[]      @relation("QuotationAcceptor")
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
+  quotationAttachments      QuotationAttachment[]
   commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
   settlements                AccountSettlement[]      @relation("SettlementCreator")
   commercialAudits           CommercialAuditEvent[]   @relation("CommercialAuditActor")
@@ -2298,6 +2300,7 @@ model QuotationRevision {
   adjustments           QuotationAdjustment[]
   paymentSchedule       QuotationPaymentSchedule[]
   shares                QuotationShare[]
+  attachments           QuotationAttachment[]
 
   @@unique([companyId, id])
   @@unique([documentId, revisionNumber])
@@ -3656,4 +3659,28 @@ model AccountReportFavourite {
  user User @relation(fields:[companyId,userId],references:[companyId,id],onDelete:Cascade)
  @@id([companyId,userId,reportKey])
  @@map("account_report_favourites")
+}
+
+model QuotationAttachment {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @db.Uuid
+  revisionId    String   @db.Uuid
+  requestKey    String   @db.Uuid
+  requestHash   String   @db.Char(64)
+  displayName   String   @db.VarChar(240)
+  mimeType      String   @db.VarChar(120)
+  sizeBytes     Int
+  contentHash   String   @db.Char(64)
+  storageKey    String   @db.VarChar(512)
+  uploadedById  String   @db.Uuid
+  createdAt     DateTime @default(now())
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision      QuotationRevision @relation(fields: [companyId, revisionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "quotation_attachments_revision_fkey")
+  uploadedBy    User @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "quotation_attachments_uploader_fkey")
+
+  @@unique([companyId, id])
+  @@unique([companyId, revisionId, requestKey])
+  @@index([companyId, revisionId, createdAt])
+  @@index([companyId, storageKey])
+  @@map("quotation_attachments")
 }

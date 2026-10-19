@@ -247,6 +247,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                     Text("Grand total ${accountMoney(revision?.str("grandTotal").orEmpty())}")
                 }
                 revision?.array("lines")?.let { lines -> items(lines) { line -> Text("${line.str("itemName")} · ${line.str("quantity")} × ${accountMoney(line.str("rate"))} = ${accountMoney(line.str("lineTotal"))}") } }
+                item { QuotationAttachmentControls(quotation.str("id"),revision?.get("revisionNumber")?.jsonPrimitive?.intOrNull?:0,capabilities?.get("canEdit")?.jsonPrimitive?.booleanOrNull==true) }
                 item {
                     if(!preview) allowedTransitions.forEach { target -> Button(onClick = { vm.transition(target) }, modifier = Modifier.fillMaxWidth()) { Text(target.replace('_', ' ')) } }
                     if (!preview && (capabilities?.get("canEdit")?.jsonPrimitive?.booleanOrNull==true || capabilities?.get("canRevise")?.jsonPrimitive?.booleanOrNull==true)) {

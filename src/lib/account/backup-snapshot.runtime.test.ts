@@ -143,6 +143,13 @@ describe("A088 backup shared financial dependencies", () => {
     expect(m.reads.get("expenseItem")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{name:"asc"},{id:"asc"}]});
     expect(result.manifest.uploadedFiles).toContain("private-storage backup");
   });
+  it("retains private quotation attachment references and original revision identities",async()=>{
+    const row={id:"attachment-original",companyId:actor.companyId,revisionId:"issued-revision",storageKey:"companies/company-a/quotation-attachments/private",contentHash:"a".repeat(64),requestKey:"retry-key",displayName:"Plan.pdf",mimeType:"application/pdf",sizeBytes:128};
+    m.reads.set("quotationAttachment",vi.fn().mockResolvedValue([row]));
+    const bundle=JSON.parse(new TextDecoder().decode((await createAccountBackupForActor(actor)).bytes));
+    expect(bundle.data.quotationAttachment).toEqual([row]);expect(bundle.manifest.recordCounts.quotationAttachment).toBe(1);
+    expect(m.reads.get("quotationAttachment")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]});
+  });
   it("denies backup generation before reading financial data for a non-administrator", async () => {
     await expect(
       createAccountBackupForActor({ ...actor, accountRole: "ACCOUNTANT" }),
