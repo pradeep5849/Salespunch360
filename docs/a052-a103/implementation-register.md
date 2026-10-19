@@ -9981,3 +9981,30 @@ Implementation commit: `fafcdd752e3ffe90528b95cba84635da8a463d05`. No schema/mig
 **final_checkpoint_head:** NOT RUN;full199-finding final validation remains pending
 
 A082-F01 remains PARTIAL for remaining original reference layout/header/toolbar and expandable terms parity. Native device/emulator/TalkBack runtime is not claimed. Complete checkpoint final-head validation and main-conflict resolution remain outstanding. A104,merge,deployment and production operations remain on hold. All199 original finding IDs/52 page mappings preserved;counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED.
+
+
+### A082-F01 — Expandable terms and full-screen Android editor (2026-10-20)
+
+Web quotation forms use keyboard-operable expandable Terms & Conditions with controlled values retained while collapsed;Notes remain independently available. Android quotation editor now uses a full-screen Dialog with safe-system/keyboard insets,scrolling form,persistent Save/Save & New footer and expandable terms. Existing details dialog is hidden while an editor is active;save errors render inside the editor. No autosave,document lifecycle,permission,module or financial mutation semantics changed.
+
+Implementation commit: `a2273526ab3cb0f7437e3f206820d450f3520dfe`.
+
+**browser:** Final2 desktop/mobile Chromium cases PASS(1.9m),0 failures/skips:Space/Enter expansion;collapsed Terms/Inclusions/Exclusions saved intact;Save & New resets values/accordion;edit retains and updates values while collapsed;PDF matches;no new journals;collapsed and expanded Axe AA checks,20px root text/no overflow. Initial2 cases PASS(2.1m) precede added expanded-state accessibility assertion and overlap final2.
+
+**android:** Final compileDebugKotlin and22 quotation preview/codec/attachment JVM tests PASS(3m12s),0 failures/errors/skips after dialog-stacking/error-location changes. Earlier22 PASS(3m26s) precedes those final changes and is not counted again. No native device/emulator/keyboard/TalkBack runtime executed;full-screen layout is compile-checked,not runtime-certified.
+
+**typescript:** Full no-emit typecheck PASS.
+
+**eslint:** Focused Web editor/browser-file ESLint PASS.
+
+**database:** Browser Save/edit/PDF exercises actual isolated local PostgreSQL;no service/schema/migration/financial logic changed in this slice. No new migration rehearsal or financial integration suite claimed.
+
+**previous_ci:** All3 targeted jobs Web/Android/migration PASS at13bfd414bc788c6840c5ad8c050b05d045da0e32 (run39305813843);historical predecessor evidence,not new-head CI.
+
+**final_checkpoint_head:** NOT RUN
+
+A082-F01 stays PARTIAL for remaining original reference header/toolbar/layout parity. Native device/emulator/runtime accessibility and complete199-finding final validation remain unverified. No production,merge,deployment orA104. Counts remain181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED;all199 IDs/52pages preserved.
+
+### A058/A062 — Approved primary-unit basis (2026-10-20)
+
+User confirmed primary-unit stock and saved prices:1Box containing10Pieces,primaryPiece at₹20/Piece,must deduct10Pieces and charge₹200. This resolves the previously pending canonical-stock-basis decision;transaction integration remains pending and no finding is closed by the decision alone.

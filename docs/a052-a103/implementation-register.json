@@ -55236,6 +55236,26 @@
             "final_checkpoint_head": "NOT RUN;full199-finding final validation remains pending"
           },
           "remaining": "A082-F01 remains PARTIAL for remaining original reference layout/header/toolbar and expandable terms parity. Native device/emulator/TalkBack runtime is not claimed. Complete checkpoint final-head validation and main-conflict resolution remain outstanding. A104,merge,deployment and production operations remain on hold."
+        },
+        "expandable_terms_and_full_screen_editor_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "a2273526ab3cb0f7437e3f206820d450f3520dfe",
+          "work": "Web quotation forms use keyboard-operable expandable Terms & Conditions with controlled values retained while collapsed;Notes remain independently available. Android quotation editor now uses a full-screen Dialog with safe-system/keyboard insets,scrolling form,persistent Save/Save & New footer and expandable terms. Existing details dialog is hidden while an editor is active;save errors render inside the editor. No autosave,document lifecycle,permission,module or financial mutation semantics changed.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/quotation-editor.tsx"
+          ],
+          "tests": {
+            "browser": "Final2 desktop/mobile Chromium cases PASS(1.9m),0 failures/skips:Space/Enter expansion;collapsed Terms/Inclusions/Exclusions saved intact;Save & New resets values/accordion;edit retains and updates values while collapsed;PDF matches;no new journals;collapsed and expanded Axe AA checks,20px root text/no overflow. Initial2 cases PASS(2.1m) precede added expanded-state accessibility assertion and overlap final2.",
+            "android": "Final compileDebugKotlin and22 quotation preview/codec/attachment JVM tests PASS(3m12s),0 failures/errors/skips after dialog-stacking/error-location changes. Earlier22 PASS(3m26s) precedes those final changes and is not counted again. No native device/emulator/keyboard/TalkBack runtime executed;full-screen layout is compile-checked,not runtime-certified.",
+            "typescript": "Full no-emit typecheck PASS.",
+            "eslint": "Focused Web editor/browser-file ESLint PASS.",
+            "database": "Browser Save/edit/PDF exercises actual isolated local PostgreSQL;no service/schema/migration/financial logic changed in this slice. No new migration rehearsal or financial integration suite claimed.",
+            "previous_ci": "All3 targeted jobs Web/Android/migration PASS at13bfd414bc788c6840c5ad8c050b05d045da0e32 (run39305813843);historical predecessor evidence,not new-head CI.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "A082-F01 stays PARTIAL for remaining original reference header/toolbar/layout parity. Native device/emulator/runtime accessibility and complete199-finding final validation remain unverified. No production,merge,deployment orA104."
         }
       }
     },
@@ -68344,6 +68364,14 @@
         "A083-F01"
       ],
       "scope": "Overrides earlier target-draft wording for Sale. Source-linkage/conversion/closure integration remains PARTIAL."
+    },
+    "primary_unit_stock_and_prices_2026_10_20": {
+      "pages": [
+        "A058",
+        "A062"
+      ],
+      "decision": "User approved primary-unit stock and saved prices. Example:1Box=10Pieces,primaryPiece,\u20b920/Piece;1Box sale deducts10Pieces and charges\u20b9200. Preserve selected unit and immutable conversion snapshot. Existing setup factor means secondary units per1primary,so this example uses0.1Box/Piece. No independent secondary-unit price inferred.",
+      "source": "User reply to call_06e881f823224da4b136cd5c37734a8d."
     }
   },
   "push_checkpoint": {
@@ -69094,6 +69122,20 @@
         "final_checkpoint_head": "NOT RUN;full199-finding final validation remains pending"
       },
       "remaining": "A082-F01 remains PARTIAL for remaining original reference layout/header/toolbar and expandable terms parity. Native device/emulator/TalkBack runtime is not claimed. Complete checkpoint final-head validation and main-conflict resolution remain outstanding. A104,merge,deployment and production operations remain on hold."
+    },
+    {
+      "scope": "A082-F01 expandable terms/full-screen native editor",
+      "implementation_commit": "a2273526ab3cb0f7437e3f206820d450f3520dfe",
+      "evidence": {
+        "browser": "Final2 desktop/mobile Chromium cases PASS(1.9m),0 failures/skips:Space/Enter expansion;collapsed Terms/Inclusions/Exclusions saved intact;Save & New resets values/accordion;edit retains and updates values while collapsed;PDF matches;no new journals;collapsed and expanded Axe AA checks,20px root text/no overflow. Initial2 cases PASS(2.1m) precede added expanded-state accessibility assertion and overlap final2.",
+        "android": "Final compileDebugKotlin and22 quotation preview/codec/attachment JVM tests PASS(3m12s),0 failures/errors/skips after dialog-stacking/error-location changes. Earlier22 PASS(3m26s) precedes those final changes and is not counted again. No native device/emulator/keyboard/TalkBack runtime executed;full-screen layout is compile-checked,not runtime-certified.",
+        "typescript": "Full no-emit typecheck PASS.",
+        "eslint": "Focused Web editor/browser-file ESLint PASS.",
+        "database": "Browser Save/edit/PDF exercises actual isolated local PostgreSQL;no service/schema/migration/financial logic changed in this slice. No new migration rehearsal or financial integration suite claimed.",
+        "previous_ci": "All3 targeted jobs Web/Android/migration PASS at13bfd414bc788c6840c5ad8c050b05d045da0e32 (run39305813843);historical predecessor evidence,not new-head CI.",
+        "final_checkpoint_head": "NOT RUN"
+      },
+      "remaining": "A082-F01 stays PARTIAL for remaining original reference header/toolbar/layout parity. Native device/emulator/runtime accessibility and complete199-finding final validation remain unverified. No production,merge,deployment orA104."
     }
   ]
 }
