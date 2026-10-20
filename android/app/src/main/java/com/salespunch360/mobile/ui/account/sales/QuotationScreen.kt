@@ -61,7 +61,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
             vm.consumedPdf()
         }
     }
-    if(state.pdfPreview)state.pdf?.let { bytes ->QuotationPdfPreview(bytes,onClose=vm::consumedPdf,onShare=vm::sharePreviewPdf) }
+    if(state.pdfPreview)state.pdf?.let { bytes ->QuotationPdfPreview(bytes,onClose=vm::consumedPdf,onShare=vm::sharePreviewPdf,documentName=state.detail?.str("documentNumber").orEmpty().ifBlank{"Quotation"}) }
     state.shareToken?.let { token ->
         LaunchedEffect(token) {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.salespunch360.com/share/quotation/$token")

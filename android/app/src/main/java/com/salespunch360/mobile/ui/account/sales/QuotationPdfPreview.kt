@@ -4,6 +4,10 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.print.PrintManager
+import android.print.PrintAttributes
+import com.salespunch360.mobile.data.QuotationPdfPrintAdapter
+import com.salespunch360.mobile.account.quotationPrintName
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -24,8 +28,9 @@ private data class QuotationPdfPage(val bitmap:Bitmap,val count:Int)
 
 /** Renders the exact authorized customer PDF; never reconstructs a private detail DTO. */
 @Composable
-fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit){
+fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,documentName:String="Quotation"){
  val context=LocalContext.current
+ var printError by remember(bytes){mutableStateOf<String?>(null)}
  var number by remember(bytes){mutableIntStateOf(0)}
  var page by remember(bytes,number){mutableStateOf<Result<QuotationPdfPage>?>(null)}
  LaunchedEffect(bytes,number){
@@ -61,6 +66,15 @@ fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit){
      Text("${number+1} / ${page?.getOrNull()?.count?:"…"}")
      OutlinedButton(modifier=Modifier.weight(1f),enabled=page?.isSuccess==true&&number+1<(page?.getOrNull()?.count?:0),onClick={number++}){Text("Next page")}
     }
+    printError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+    OutlinedButton(enabled=page?.isSuccess==true,modifier=Modifier.fillMaxWidth(),onClick={
+     try{
+      val rendered=page?.getOrNull()?:return@OutlinedButton
+      val manager=context.getSystemService(PrintManager::class.java)?:throw IllegalStateException("Printing unavailable")
+      val media=if(rendered.bitmap.width>rendered.bitmap.height)PrintAttributes.MediaSize.ISO_A4.asLandscape()else PrintAttributes.MediaSize.ISO_A4
+      manager.print(quotationPrintName(documentName),QuotationPdfPrintAdapter(bytes,documentName,rendered.count),PrintAttributes.Builder().setMediaSize(media).build());printError=null
+     }catch(_:Exception){printError="Printing is unavailable. Use Share PDF or try again."}
+    }){Text("Print PDF")}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
      OutlinedButton(onClick=onClose,modifier=Modifier.weight(1f)){Text("Close preview")}
      Button(onClick=onShare,modifier=Modifier.weight(1f)){Text("Share PDF")}
