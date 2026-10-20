@@ -10141,3 +10141,9 @@ Commit `6d0c61092c6e770de19b91cbfbe0b8e868d434e8` enforces current document + re
 Status remains **PARTIAL**. Append-only non-cash receipt/advance application credits preserve original payment history. Atomic replacement now reapplies actual funds and removes the original payment discount: 100 invoice / 90 paid / 10 discount corrected to 80 leaves 10 advance. Pending cheque corrections remain blocked.
 
 Validation: 14 focused PostgreSQL tests and 82 cheque regression tests passed (96 total, no failures/skips); TypeScript and changed-file ESLint passed. Prisma generation/schema validation and local migration deployment passed (141 migrations). UI gates, browser/native runtime, broader permissions/module verification, fresh migration rehearsal and final-head validation remain outstanding. Two additive migrations; no production operations.
+
+### A086-F05 — paid correction UI and runtime follow-up, 2026-10-20
+
+Eligible paid sales now expose the shared Edit/Delete capability to Web and Android. Web editing uses the same capability, while pending cheques and existing posted adjustments remain protected. Managed payment-history reversal has stable domain errors.
+
+Final related validation: 89 tests passed across five PostgreSQL/accounting suites (including concurrent cancellation/retry and role/company/branch denial); two desktop/mobile Chromium cases passed with actual Web Save plus authenticated mobile GET/PATCH/replay/DELETE; Android compile and14 focused JVM tests passed; full141-migration fresh-chain/legacy upgrade rehearsal passed; final TypeScript and changed-file lint passed. No native device/emulator runtime. Original A086-F05 remains PARTIAL pending the policy and implementation for an invoice with an already posted Credit Note, plus broader final-head checks. No totals or final statuses promoted.

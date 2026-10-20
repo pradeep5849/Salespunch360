@@ -20,14 +20,11 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
       const receipts = sale.allocations.filter(
         (row) => row.settlement.type === "CUSTOMER_RECEIPT",
       );
-      const [partyBalance, allocationHistory, advanceHistory] =
+      const [partyBalance, pendingCheques] =
         await Promise.all([
           currentPartyBalanceForActor(actor, sale.partyId, true, tx),
           tx.settlementAllocation.count({
-            where: { companyId: actor.companyId, documentId: sale.id },
-          }),
-          tx.advanceApplication.count({
-            where: { companyId: actor.companyId, documentId: sale.id },
+            where: { companyId: actor.companyId, documentId: sale.id, settlement:{status:"PENDING_CHEQUE"} },
           }),
         ]);
       const active =
@@ -64,10 +61,11 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
           canChange:
             active &&
             Boolean(sale.financial) &&
-            outstanding.eq(base) &&
+            !pendingCheques &&
+            outstanding.add(sale.allocations.reduce((sum,row)=>sum.add(row.amount),zero)).add(sale.advanceApplications.reduce((sum,row)=>sum.add(row.amount),zero)).eq(base) &&
             !sale.adjustments.length &&
-            !allocationHistory &&
-            !advanceHistory &&
+            canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST") &&
+            (!(sale.allocations.length||sale.advanceApplications.length)||(["ACCOUNT_ADMIN","ACCOUNTANT"].includes(actor.accountRole??"")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTLEMENT_ENTRY"))) &&
             canUsePermission(
               actor,
               "SALESPUNCH360_ACCOUNT",

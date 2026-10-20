@@ -64686,6 +64686,29 @@
             "cheque_regression": "82 passed, 0 failed, 0 skipped across six cheque suites; 10.00 seconds."
           },
           "remaining": "Finding remains PARTIAL. UI capability gates still reject paid edits; permission/module matrix, browser/native runtime, complete financial regression, fresh migration rehearsal and final-head validation remain required. No production migration/deployment performed.",
+          "commit_sha": "08de07daa8dc19befc83b53e1e5c92236e3e678f"
+        },
+        "paid_correction_ui_runtime_2026_10_20": {
+          "implementation": "Shared sale detail capability enables eligible paid receipt/advance corrections on Web and Android; pending cheques, prior posted adjustments, missing journal/settlement permissions remain blocked. Web Edit uses shared capability. Web/native delete confirmations explain actual payments retained as advance and discount removal. Managed journal reversal returns stable domain errors before SQL guards.",
+          "files": [
+            "src/lib/account/sale-detail.ts",
+            "src/lib/accounting/service.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail-actions.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "evidence": {
+            "database": "89 PASS/5 suites in21.51seconds on final changed code. Receipt/advance cancellation includes concurrent requests returning the same correction, sequential replay, denied role/company/branch and immutable originals.",
+            "browser": "2 PASS desktop/mobile Chromium in 52.7 seconds. Actual Web paid edit100->80 retains10 advance; authenticated mobile GET/PATCH/replay/DELETE then proves corrected70 invoice,20 available advance, eventual cancellation90 available; original receipt unchanged. Earlier narrower browser2PASS42.8seconds is overlapping evidence.",
+            "android": "compileDebugKotlin and focused testDebugUnitTest BUILD SUCCESSFUL in2m35s; SalesEditSnapshotTest7PASS,SalesPreviewTest7PASS,0fail/errors/skips. No emulator/device runtime.",
+            "migration": "Fresh isolated local empty database full141migration chain + legacy document upgrade rehearsal PASS1test6.59seconds; repeat deploy no pending migrations, retained legacy snapshots. No historical migration edits and no production DB.",
+            "lint": "PASS final changed-file ESLint and git diff --check.",
+            "typescript": "PASS full no-emit typecheck after browser exited and explicit ledger fixture correction.",
+            "initial_test_corrections": "Cancellation denial test initially expected a Promise rejection for synchronous authorization throw; corrected assertion. Browser initially counted unrelated seeded DRAFT; now polls only posted replacement for the test product and waits for financial commit."
+          },
+          "remaining": "A086-F05 remains PARTIAL: original invoices with prior posted credit adjustments still require safe residual correction implementation; broader financial/period/rollback coverage and final-head validation pending. Android emulator/device runtime unavailable. No final_status promotion. User decision requested for invoices already carrying posted Credit Notes: correct remaining unreturned units versus retain separate correction-document workflow. No behavior invented.",
           "commit_sha": null
         }
       }

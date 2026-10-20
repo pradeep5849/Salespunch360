@@ -1,15 +1,15 @@
 import {retainedLineDiscountValue} from "@/lib/account/retained-line-discount";
+import {saleDetail} from "@/lib/account/sale-detail";
 import Link from "next/link";
 import styles from "../sale-detail.module.css";
-import { commercialEditorOptions, getCommercialDocument } from "@/lib/account/commercial";
+import { commercialEditorOptions } from "@/lib/account/commercial";
 import { SaleEditForm } from "./sale-edit-form";
 
 export default async function Page({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
-  const [sale,rawOptions]=await Promise.all([getCommercialDocument(id),commercialEditorOptions()]);
+  const [sale,rawOptions]=await Promise.all([saleDetail(id),commercialEditorOptions()]);
   if(sale.type!=="SALES_INVOICE"||sale.status!=="POSTED"||!sale.partyId)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This document cannot be edited as a posted sale.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
-  const base=sale.payableAmount??sale.grandTotal;
-  if(!sale.financial||!sale.financial.outstanding.eq(base)||sale.adjustments.length||sale.allocations.length||sale.advanceApplications.length)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This sale has a payment or adjustment and cannot be edited.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
+  if(!sale.paymentSummary.canChange)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This sale cannot be edited with your current permissions or its current correction history.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
   const options=JSON.parse(JSON.stringify(rawOptions));
   const initial={
     id:sale.id,documentNumber:sale.documentNumber,

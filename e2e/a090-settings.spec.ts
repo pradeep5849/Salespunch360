@@ -3198,3 +3198,36 @@ for(const scenario of [{type:"FIXED",value:"1",applied:"3",total:"57",legacy:fal
   const replacement=await db.commercialDocument.findFirstOrThrow({where:{companyId,type:"SALES_INVOICE",id:{notIn:[source.id,copy.id]},lines:{some:{productId:product.id}}},include:{lines:true}});expect(replacement.status).toBe("POSTED");expect(replacement.grandTotal.toString()).toBe("57");expect(replacement.lines[0].discountValue?.toString()).toBe("3");expect(await db.commercialDocumentLine.findUniqueOrThrow({where:{id:original.id}})).toEqual(original);
  }
 });
+
+test("A086 paid sale edit retains actual excess payment as advance",async({page})=>{
+ test.setTimeout(180000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES"],transactionDefaults:{invoicePreview:false,transactionPreferences:{linkPayments:false,discountDuringPayment:true}}}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Paid correction verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ const product=await db.accountProduct.create({data:{companyId,name:"Paid correction item",salePrice:"100",trackInventory:false}});
+ const source=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-18",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:source.id});
+ const receipt=await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-19",allocations:[{documentId:source.id,amount:"100",discountAmount:"10"}]});
+ const original=await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}});
+ await signInSettings(page);await page.goto(`/workspace/account/sales/${source.id}`);
+ await page.getByRole("link",{name:"Edit",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
+ await page.getByRole("button",{name:/^Edit item /}).first().click();await page.getByLabel("Rate (Price/Unit)",{exact:true}).fill("80");await page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})}).getByRole("button",{name:"Save",exact:true}).click();
+ await page.getByRole("button",{name:"Save",exact:true}).click();
+ await expect.poll(async()=>await db.commercialDocument.count({where:{companyId,type:"SALES_INVOICE",id:{not:source.id},status:"POSTED",lines:{some:{productId:product.id}}}}),{timeout:60000}).toBe(1);
+ const replacement=await db.commercialDocument.findFirstOrThrow({where:{companyId,type:"SALES_INVOICE",id:{not:source.id},status:"POSTED",lines:{some:{productId:product.id}}}});expect(replacement.status).toBe("POSTED");expect(replacement.grandTotal.toString()).toBe("80");
+ const credit=await db.accountSettlement.findFirstOrThrow({where:{receiptCreditSourceAllocationId:original.allocations[0].id}});expect(credit.amount.toString()).toBe("90");expect(credit.remainingAmount.toString()).toBe("10");
+ expect(await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}})).toEqual(original);
+ expect((await db.$transaction(tx=>documentOutstandingInTx(tx,companyId,replacement.id))).outstanding.toString()).toBe("0");
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const token=createSessionToken(),currentUser=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:currentUser.sessionVersion}});
+ const headers={authorization:`Bearer ${token}`},path=`/api/v1/mobile/account/transactions/${replacement.id}`;
+ const detail=await page.request.get(path,{headers});expect(detail.status()).toBe(200);expect((await detail.json()).paymentSummary.canChange).toBe(true);
+ const payload={idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"70",taxRate:"0"}]};
+ const edited=await page.request.patch(path,{headers,data:payload});expect(edited.status()).toBe(200);const nativeReplacement=await edited.json();expect(nativeReplacement.status).toBe("POSTED");expect(nativeReplacement.paymentSummary.outstanding).toBe("0.00");
+ const available=await db.accountSettlement.aggregate({where:{companyId,partyId:customerId,paymentMode:"ACCOUNT_CREDIT"},_sum:{remainingAmount:true}});expect(available._sum.remainingAmount?.toString()).toBe("20");
+ const replay=await page.request.patch(path,{headers,data:payload});expect(replay.status()).toBe(200);expect((await replay.json()).id).toBe(nativeReplacement.id);
+ const deleted=await page.request.delete(`/api/v1/mobile/account/transactions/${nativeReplacement.id}`,{headers});expect(deleted.status()).toBe(200);
+ const retained=await db.accountSettlement.aggregate({where:{companyId,partyId:customerId,paymentMode:"ACCOUNT_CREDIT"},_sum:{remainingAmount:true}});expect(retained._sum.remainingAmount?.toString()).toBe("90");
+ expect(await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}})).toEqual(original);
+
+});

@@ -11,7 +11,8 @@ vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof Prism
 import {createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor,createSettlementForActor,documentOutstandingInTx,documentOutstandingsBatch,applyAdvanceForActor} from "./commercial";
 import {submitSaleForActor} from "./sale-submit";
 import {saleDuplicateDraft} from "./sale-duplicate";
-import {replacePostedSaleForActor} from "./sale-amendments";
+import {saleDetailForActor} from "./sale-detail";
+import {replacePostedSaleForActor,reversePostedSaleForActor} from "./sale-amendments";
 import {salePriceProposalsForActor,confirmSalePriceForActor} from "./sale-price-updates";
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import type {ProjectActor} from "./projects";
@@ -264,6 +265,7 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    const receipt=await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-19",allocations:[{documentId:sale.id,amount:"100",discountAmount:"10"}]});
    const original=await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}});
    const payload={idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Paid edit",quantity:"1",rate:"80",taxRate:"0"}]};
+   expect((await saleDetailForActor(actor,sale.id)).paymentSummary.canChange).toBe(true);
    const replacement=await replacePostedSaleForActor(actor,sale.id,payload);
    expect(replacement.status).toBe("POSTED");
    expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,replacement.id))).outstanding.toString()).toBe("0");
@@ -271,6 +273,29 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    expect(credit.amount.toString()).toBe("90");expect(credit.remainingAmount.toString()).toBe("10");
    expect(await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}})).toEqual(original);
    expect((await replacePostedSaleForActor(actor,sale.id,payload)).id).toBe(replacement.id);
+  }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
+ });
+ it.each(["RECEIPT","ADVANCE"] as const)("cancels a paid sale funded by %s while retaining actual funds",async kind=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  await client.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES"],transactionDefaults:{transactionPreferences:{linkPayments:false}}}});
+  try{
+   const party=await client.customer.create({data:{companyId,branchId,name:`Cancellation ${kind}`,isAccountCustomer:true}});
+   const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:party.id,issueDate:"2026-10-18",lines:[{lineType:"CUSTOM",itemName:"Cancel paid",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+   const payment=await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:kind==="RECEIPT"?"CUSTOMER_RECEIPT":"CUSTOMER_ADVANCE",branchId,partyId:party.id,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-19",...(kind==="RECEIPT"?{allocations:[{documentId:sale.id,amount:"90"}]}:{})});
+   if(kind==="ADVANCE")await applyAdvanceForActor(actor,{advanceId:payment.id,documentId:sale.id,amount:"90",applicationDate:"2026-10-19",idempotencyKey:randomUUID()});
+   const original=await client.accountSettlement.findUniqueOrThrow({where:{id:payment.id},include:{allocations:true,applications:true,journalEntry:true}});
+   expect((await saleDetailForActor(actor,sale.id)).paymentSummary.canChange).toBe(true);
+   expect(()=>reversePostedSaleForActor({...actor,accountRole:"DATA_ENTRY"},sale.id)).toThrow();
+   await expect(reversePostedSaleForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[randomUUID()]},sale.id)).rejects.toThrow();
+   await expect(reversePostedSaleForActor({...actor,companyId:randomUUID()},sale.id)).rejects.toThrow();
+   const [correction,replayed]=await Promise.all([reversePostedSaleForActor(actor,sale.id),reversePostedSaleForActor(actor,sale.id)]);
+   expect(replayed.id).toBe(correction.id);
+   expect((await reversePostedSaleForActor(actor,sale.id)).id).toBe(correction.id);
+   expect(await currentPartyBalanceForActor(actor,party.id)).toBe("-90.00");
+   expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,sale.id))).outstanding.toString()).toBe("0");
+   expect(await client.accountSettlement.findUniqueOrThrow({where:{id:payment.id},include:{allocations:true,applications:true,journalEntry:true}})).toEqual(original);
+   expect((await saleDetailForActor(actor,sale.id)).paymentSummary.canChange).toBe(false);
+   expect(await client.accountSettlement.count({where:{companyId,partyId:party.id,paymentMode:"ACCOUNT_CREDIT",remainingAmount:"90"}})).toBe(1);
   }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{

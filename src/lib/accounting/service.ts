@@ -404,6 +404,13 @@ export async function reverseJournalInTx(
     sourceLifecycle?.advanceApplicationId !== original.sourceId
   )
     throw new Error("MANAGED_ADVANCE_REVERSAL_REQUIRED");
+  // Return stable domain errors before the database's immutable-history guard.
+  if(["CUSTOMER_RECEIPT","CUSTOMER_ADVANCE"].includes(original.sourceType)){
+    const credit=await tx.accountSettlement.findFirst({where:{companyId:a.companyId,journalEntryId:original.id},select:{id:true,paymentMode:true}});
+    if(credit?.paymentMode==="ACCOUNT_CREDIT")throw new Error("RECEIPT_ADVANCE_CREDIT_NOT_REVERSIBLE");
+    if(credit&&await tx.accountSettlement.count({where:{companyId:a.companyId,OR:[{receiptCreditSourceAllocation:{is:{settlementId:credit.id}}},{advanceCreditSourceApplication:{is:{advanceId:credit.id}}}]}}))throw new Error("RECEIPT_HAS_ADVANCE_CREDIT");
+  }
+  if(original.sourceType==="ADVANCE_APPLICATION"&&await tx.accountSettlement.count({where:{companyId:a.companyId,advanceCreditSourceApplication:{is:{journalEntryId:original.id}}}}))throw new Error("RECEIPT_HAS_ADVANCE_CREDIT");
   const reversalYear = await tx.financialYear.findFirst({
     where: {
       companyId: a.companyId,
