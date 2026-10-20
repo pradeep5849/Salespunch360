@@ -1,4 +1,5 @@
-import {describe,expect,it} from "vitest";
+import {PDFPage} from "pdf-lib";
+import {describe,expect,it,vi} from "vitest";
 import {renderQuotationPdf} from "./pdf";
 import {extractPdfText} from "../../../tests/helpers/pdf-text";
 const dto={revisionNumber:2,issueDate:new Date("2026-09-10"),validUntil:new Date("2026-10-10"),customerName:"Acme",contactPerson:"Buyer",phone:"1",email:"a@example.com",billingAddress:"Billing",siteAddress:"Site",gstin:"GST",pan:"PAN",terms:"Terms",inclusions:"Included",exclusions:"Excluded",notes:"Notes",subtotal:{toString:()=>"100"},discountTotal:{toString:()=>"10"},additionalChargeTotal:{toString:()=>"5"},taxableTotal:{toString:()=>"95"},taxTotal:{toString:()=>"17.1"},grandTotal:{toString:()=>"112.1"},lines:[{position:0,lineType:"CUSTOM",itemName:"Work",itemCode:null,description:"Description",specification:"Materials",unitName:"Number",unitSymbol:"Nos",quantity:{toString:()=>"1"},rate:{toString:()=>"100"},discountType:"FIXED",discountValue:{toString:()=>"10"},baseAmount:{toString:()=>"100"},discountAmount:{toString:()=>"10"},taxableAmount:{toString:()=>"90"},taxRate:{toString:()=>"18"},taxAmount:{toString:()=>"16.2"},lineTotal:{toString:()=>"106.2"}}],adjustments:[{position:0,type:"ADDITIONAL_CHARGE",label:"Freight",valueType:"FIXED",value:{toString:()=>"5"},amount:{toString:()=>"5"},taxable:true,taxRate:{toString:()=>"18"},taxAmount:{toString:()=>"0.9"}}],paymentSchedule:[{position:0,label:"Advance",valueType:"PERCENTAGE",value:{toString:()=>"100"},amount:{toString:()=>"112.1"},dueDescription:"Now"}],document:{documentType:"QUOTATION",documentNumber:"Q-1",company:{name:"Seller",addressLine1:"Address",addressLine2:null,locality:null,city:"City",state:"State",postalCode:"1",country:"India",primaryContactName:"Owner",primaryPhone:"2",contactEmail:"s@example.com",website:"example.com",gstin:"SGST",pan:"SPAN",registrationNumber:"REG"},branch:{name:"Main",code:"M",addressLine1:"Branch address",addressLine2:null,locality:null,city:"City",state:"State",postalCode:"1",country:"India",phone:"3",email:"b@example.com",gstin:"BGST"}}};
@@ -52,4 +53,14 @@ describe("customer Unicode PDF",()=>{
   const {text}=await extractPdfText(await renderQuotationPdf({...dto,billingName:"Acme site division"} as never));
   expect(text).toContain("Customer/Lead: Acme");expect(text).toContain("Billing name: Acme site division");
   expect((await extractPdfText(await renderQuotationPdf({...dto,billingName:null} as never))).text).not.toContain("Billing name:");
+ });
+
+ it("draws saved theme accents and layout while retaining safe amounts in words",async()=>{
+  const draw=vi.spyOn(PDFPage.prototype,"drawLine");
+  try {
+   const {text}=await extractPdfText(await renderQuotationPdf({...dto,printPresentation:{theme:"#123456",amountWordsFormat:"INTERNATIONAL"}} as never));
+   expect(draw).toHaveBeenCalledWith(expect.objectContaining({thickness:1.5,color:expect.objectContaining({red:18/255,green:52/255,blue:86/255})}));
+   expect(text).toContain("Amount in words: one hundred twelve INR and ten hundredths only");
+   expect(text).toContain("GRAND TOTAL:");expect(text).not.toMatch(/internalCost|companyId/);
+  } finally {draw.mockRestore()}
  });

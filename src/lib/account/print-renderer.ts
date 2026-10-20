@@ -32,7 +32,8 @@ function words(v:bigint,indian:boolean):string {
  const groups=indian?[["10000000","crore"],["100000","lakh"],["1000","thousand"],["100","hundred"]]:[["1000000000000000000","quintillion"],["1000000000000000","quadrillion"],["1000000000000","trillion"],["1000000000","billion"],["1000000","million"],["1000","thousand"],["100","hundred"]];
  for(const [raw,name] of groups){const factor=BigInt(raw);if(v>=factor)return words(v/factor,indian)+" "+name+(v%factor?" "+words(v%factor,indian):"");}return "";
 }
-function amountWords(doc:AccountPrintDocument){const decimal=new Prisma.Decimal(doc.payableAmount??doc.total),[whole,fraction]=decimal.abs().toDecimalPlaces(2).toFixed(2).split(".");return `${decimal.lt(0)?"minus ":""}${words(BigInt(whole),text(doc,"amountWordsFormat","INDIAN")!=="INTERNATIONAL")} ${doc.currency??"INR"}${BigInt(fraction)?" and "+words(BigInt(fraction),false)+" hundredths":""} only`;}
+export function printableAmountWords(value:string,currency="INR",format="INDIAN"){const decimal=new Prisma.Decimal(value),[whole,fraction]=decimal.abs().toDecimalPlaces(2).toFixed(2).split(".");return `${decimal.lt(0)?"minus ":""}${words(BigInt(whole),format!=="INTERNATIONAL")} ${currency}${BigInt(fraction)?" and "+words(BigInt(fraction),false)+" hundredths":""} only`;}
+function amountWords(doc:AccountPrintDocument){return printableAmountWords(doc.payableAmount??doc.total,doc.currency??"INR",text(doc,"amountWordsFormat","INDIAN"));}
 function cell(doc:AccountPrintDocument,row:AccountPrintDocument["lines"][number],column:string){
  return column==="ITEM"?row.description+(yes(doc,"printDescription")&&row.detail?" — "+row.detail:""):column==="QTY"?row.quantity:amount(doc,column==="RATE"?row.rate:column==="TAXABLE"?row.taxable:column==="TAX"?row.tax:row.total);
 }

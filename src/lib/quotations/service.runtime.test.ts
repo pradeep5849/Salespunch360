@@ -117,12 +117,13 @@ describe("A082 full item creation eligibility",()=>{
 });
 
  it("projects only company-scoped public display preferences and never exposes other settings",async()=>{
-  customModels.accountSettings.findUnique.mockResolvedValueOnce({appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY",transactionDefaults:{private:"SECRET"}} as never);
+  customModels.accountSettings.findUnique.mockResolvedValueOnce({appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY",transactionDefaults:{private:"SECRET",invoicePrintSettings:{theme:"MODERN",amountWordsFormat:"INTERNATIONAL",bankAccountId:"PRIVATE-BANK"}}} as never);
   m.shareFind.mockResolvedValue({companyId:C,revisionId:R,revision:{revisionNumber:0,customerName:"Acme",document:{documentType:"QUOTATION",documentNumber:"Q-1",company:{name:"Safe"},branch:{name:"Main"}},lines:[],adjustments:[],paymentSchedule:[]}});
   const result=await getPublicQuotation("token");
-  expect(customModels.accountSettings.findUnique).toHaveBeenCalledWith({where:{companyId:C},select:{appLanguage:true,baseCurrency:true,displayDecimalPlaces:true,dateFormat:true}});
+  expect(customModels.accountSettings.findUnique).toHaveBeenCalledWith({where:{companyId:C},select:{appLanguage:true,baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,transactionDefaults:true}});
   expect(result.displayPreferences).toEqual({appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"});
-  expect(JSON.stringify(result)).not.toMatch(/SECRET|transactionDefaults|companyId|revisionId/);
+  expect(result.printPresentation).toEqual({theme:"MODERN",amountWordsFormat:"INTERNATIONAL"});
+  expect(JSON.stringify(result)).not.toMatch(/SECRET|PRIVATE-BANK|transactionDefaults|companyId|revisionId/);
  });
 
  it("validates explicit quotation supply context while allowing omitted and cleared legacy values",async()=>{

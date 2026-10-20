@@ -1,3 +1,3 @@
 import { getCustomerQuotation } from "@/lib/quotations/service";
 import { renderQuotationPdf } from "@/lib/quotations/pdf";
-export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params,r=await getCustomerQuotation(id);return new Response(await renderQuotationPdf(r),{headers:{"content-type":"application/pdf","content-disposition":`attachment; filename="${r.document.documentNumber}-R${r.revisionNumber}.pdf"`}});}catch{return new Response("Not found",{status:404});}}
+export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params,r=await getCustomerQuotation(id);return new Response(await renderQuotationPdf(r),{headers:{"content-type":"application/pdf","content-disposition":`${new URL(request.url).searchParams.get("preview")==="1"?"inline":"attachment"}; filename="${r.document.documentNumber}-R${r.revisionNumber}.pdf"`}});}catch{return new Response("Not found",{status:404});}}

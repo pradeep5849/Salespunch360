@@ -54718,6 +54718,33 @@
           },
           "remaining": "A090-F01 remains PARTIAL for other original display consumers and final checkpoint validation. A080-F01 actual theme/layout/logo/signature/amount words controls remain outstanding; formatting does not implement themes. Hindi translation remains intentionally deferred. No financial conversion,DB schema,API route contract change,migration or production operation.",
           "implementation_commit": "dedf9ec26fc2bc7615e8c57a11d87368f06e193f"
+        },
+        "quotation_themed_pdf_preview_2026_10_20": {
+          "work": "Safe customer quotation DTO now projects only validated existing company Invoice Print theme and amount-word format. PDF consumes Regular/Modern/Classic/Minimal and six-digit accents with actual heading colors, rule weights, margin/title layout and exact shared amount words; original customer/tax/item/terms text remains. Saved Web preview applies the same accent and amount words and provides keyboard-accessible inline authenticated PDF preview with download fallback. Existing default attachment behavior is preserved. No raw settings/private object keys or internal costs reach the customer DTO.",
+          "files": [
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/[id]/pdf/route.ts",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/lib/account/print-renderer.ts",
+            "src/lib/quotations/pdf.test.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/print-presentation.ts",
+            "src/lib/quotations/print-presentation.test.ts"
+          ],
+          "tests": {
+            "focused": "85 PASS/4 quotation PDF/service/presentation and invoice-print regression files,0 failed/skipped,5.06s. PDF draw operator verifies actual RGB/style; content parser verifies words and private-field exclusion. Earlier78subset overlaps.",
+            "browser": "Final desktop/mobile Chromium2 PASS43.9s after keyboard/Axe assertions; real Web/public/mobile HTTP PDFs reflect saved company currency/theme/amount-word preferences; Web preview accent,keyboard expansion,inline headers,Axe AA collapsed preview and no root overflow; saved total118 and journal count unchanged. Earlier2PASS43.7s overlaps before keyboard/Axe additions. Native PDF HTTP is exercised,not native screen/device. Built-in PDF viewer accessibility is not certified.",
+            "initial_fixture_correction": "Initial browser pair failed in cleanup because the new Prisma.DbNull reference lacked its import. Added import,then both paired reruns passed. No production source workaround or schema change.",
+            "typescript": "Final full no-emit PASS after browser exit.",
+            "eslint": "Final changed-file ESLint and git diff --check PASS.",
+            "android": "No Android source changed in this quotation slice; no device/emulator runtime claimed.",
+            "migration": "NONE required.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A080-F01 remains PARTIAL for full supplied GST1–6/Modern Elite themes, logo/signature and native preview/settings controls. A090-F01 other consumer/final validation remains PARTIAL; Hindi intentionally deferred. No financial mutation,production/deployment/merge/A104.",
+          "implementation_commit": null
         }
       }
     },
@@ -67214,6 +67241,33 @@
           },
           "remaining": "A090-F01 remains PARTIAL for remaining original consumer/final complete checkpoint validation;legacy generic reminder date rendering is source-wired with shared formatter tests,not browser-certified. Hindi intentionally deferred.",
           "implementation_commit": "1a713f9a0ef5ef044aefd40520b8fbafec82e663"
+        },
+        "quotation_themed_pdf_preview_2026_10_20": {
+          "work": "Safe customer quotation DTO now projects only validated existing company Invoice Print theme and amount-word format. PDF consumes Regular/Modern/Classic/Minimal and six-digit accents with actual heading colors, rule weights, margin/title layout and exact shared amount words; original customer/tax/item/terms text remains. Saved Web preview applies the same accent and amount words and provides keyboard-accessible inline authenticated PDF preview with download fallback. Existing default attachment behavior is preserved. No raw settings/private object keys or internal costs reach the customer DTO.",
+          "files": [
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/[id]/pdf/route.ts",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/lib/account/print-renderer.ts",
+            "src/lib/quotations/pdf.test.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/print-presentation.ts",
+            "src/lib/quotations/print-presentation.test.ts"
+          ],
+          "tests": {
+            "focused": "85 PASS/4 quotation PDF/service/presentation and invoice-print regression files,0 failed/skipped,5.06s. PDF draw operator verifies actual RGB/style; content parser verifies words and private-field exclusion. Earlier78subset overlaps.",
+            "browser": "Final desktop/mobile Chromium2 PASS43.9s after keyboard/Axe assertions; real Web/public/mobile HTTP PDFs reflect saved company currency/theme/amount-word preferences; Web preview accent,keyboard expansion,inline headers,Axe AA collapsed preview and no root overflow; saved total118 and journal count unchanged. Earlier2PASS43.7s overlaps before keyboard/Axe additions. Native PDF HTTP is exercised,not native screen/device. Built-in PDF viewer accessibility is not certified.",
+            "initial_fixture_correction": "Initial browser pair failed in cleanup because the new Prisma.DbNull reference lacked its import. Added import,then both paired reruns passed. No production source workaround or schema change.",
+            "typescript": "Final full no-emit PASS after browser exit.",
+            "eslint": "Final changed-file ESLint and git diff --check PASS.",
+            "android": "No Android source changed in this quotation slice; no device/emulator runtime claimed.",
+            "migration": "NONE required.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A080-F01 remains PARTIAL for full supplied GST1–6/Modern Elite themes, logo/signature and native preview/settings controls. A090-F01 other consumer/final validation remains PARTIAL; Hindi intentionally deferred. No financial mutation,production/deployment/merge/A104.",
+          "implementation_commit": null
         }
       },
       "intermediate_validation": {
@@ -70183,6 +70237,15 @@
         "final_checkpoint_head": "NOT RUN"
       },
       "remaining": "Both findings stay PARTIAL. Automatic saved Retail/Wholesale/Customer defaults and discounts in selected units,public input,source-preserving sale edit/duplicate,report consumers,Web/native selectors and converted mixed-Project/vendor-return financial runtime coverage remain. Explicit saved-price confirmation normalization is now wired and independently regression-tested."
+    },
+    {
+      "date": "2026-10-20",
+      "code_head": "d0601376ef12c344d6a721d604ad4d5e06555a39",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39396100467",
+      "web": "SUCCESS",
+      "android": "SUCCESS",
+      "migration": "SUCCESS",
+      "scope": "Targeted CI for completed unit selection; predecessor evidence only for subsequent quotation changes,not final complete199-finding validation."
     }
   ]
 }

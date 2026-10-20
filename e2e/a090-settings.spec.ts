@@ -31,7 +31,7 @@ import { PDFDocument } from "pdf-lib";
 import ExcelJS from "exceljs";
 import {createSessionToken,hashSessionToken} from "../src/lib/auth/crypto";
 import { createHash,randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { Prisma,PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { postJournalInTx } from "../src/lib/accounting/service";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
@@ -2945,7 +2945,7 @@ test("A090 quotation PDF uses scoped company display settings across web public 
  const saved=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
  let sessionHash:string|undefined;
  try{
-  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY",transactionDefaults:{...((saved.transactionDefaults as Record<string,unknown>)??{}),invoicePrintSettings:{theme:"MODERN",amountWordsFormat:"INTERNATIONAL"}}}});
   const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]} as ProjectActor;
   const quote=await createQuotationForActor(actor,{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",validUntil:"2026-11-13",lines:[{lineType:"CUSTOM",itemName:"Scoped display line",quantity:"1",rate:"100",taxRate:"18"}]});
   await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
@@ -2956,14 +2956,21 @@ test("A090 quotation PDF uses scoped company display settings across web public 
   for(const [path,headers] of [[`/workspace/account/quotations/${quote.id}/pdf`,undefined],[`/share/quotation/${share}/pdf`,undefined],[`/api/v1/mobile/account/quotations/${quote.id}/pdf`,{authorization:`Bearer ${token}`}]] as const){
    const response=await page.request.get(path,{headers});expect(response.status()).toBe(200);
    const text=(await extractPdfText(await response.body())).text;
-   expect(text).toContain("GRAND TOTAL: $118.000");expect(text).toContain("Issue: 10/13/2026 | Valid until: 11/13/2026");expect(text).not.toContain("₹");expect(text).not.toMatch(/internalUnitCost|expectedProfit|companyId/);
+   expect(text).toContain("Amount in words: one hundred eighteen USD only");expect(text).toContain("GRAND TOTAL: $118.000");expect(text).toContain("Issue: 10/13/2026 | Valid until: 11/13/2026");expect(text).not.toContain("₹");expect(text).not.toMatch(/internalUnitCost|expectedProfit|companyId/);
   }
+  await page.goto(`/workspace/account/quotations/${quote.id}/preview`);
+  const preview=page.getByRole("region",{name:"Saved document preview"});await expect(preview).toHaveCSS("border-top-color","rgb(15, 118, 110)");
+  await expect(preview).toContainText("Amount in words: one hundred eighteen USD only");
+  expect((await new AxeBuilder({page}).include('section[aria-label="Saved document preview"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
+  const printPreview=page.getByText("Print preview",{exact:true});await printPreview.focus();await page.keyboard.press("Enter");await expect(page.locator('iframe[title="Quotation print preview"]')).toBeVisible();
+  const inline=await page.request.get(`/workspace/account/quotations/${quote.id}/pdf?preview=1`);expect(inline.status()).toBe(200);expect(inline.headers()["content-disposition"]).toMatch(/^inline;/);
+  await expect(page.locator("body")).toHaveJSProperty("scrollWidth",await page.locator("body").evaluate(el=>el.clientWidth));
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
   const revision=await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id,companyId}});expect(revision.grandTotal.toFixed(2)).toBe("118.00");
  }finally{
   if(sessionHash)await db.mobileSession.deleteMany({where:{userId,tokenHash:sessionHash}});
   // Issued quotation history is immutable; the existing guarded company fixture cleanup handles it after the suite.
-  await db.accountSettings.update({where:{companyId},data:{baseCurrency:saved.baseCurrency,displayDecimalPlaces:saved.displayDecimalPlaces,dateFormat:saved.dateFormat}});
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:saved.baseCurrency,displayDecimalPlaces:saved.displayDecimalPlaces,dateFormat:saved.dateFormat,transactionDefaults:saved.transactionDefaults??Prisma.DbNull}});
  }
 });
 

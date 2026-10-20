@@ -10174,3 +10174,8 @@ A058-F06/A062-F02: assigned-unit selector and selected primary-price defaults no
 ### Original unit-finding implementation reconciliation — 2026-10-20
 
 A058-F06 and A062-F02 are now IMPLEMENTED BUT NOT VERIFIED after completing their missing native purchase/order entry consumers. Original assignment, exact conversion, historical source, stock/COGS, return and mixed Project correction requirements have implementation and linked focused evidence; report quantities retain appropriate saved/primary units. Full final-head and native device runtime remain pending, so neither finding receives a final verification status. Current199 findings:183 IMPLEMENTED BUT NOT VERIFIED,15 PARTIAL,1 NOT STARTED. This changes implementation counts only. Generic native continuation maps tof7171d14.
+
+
+### Quotation print theme and safe preview continuation — 2026-10-20
+
+A080-F01/A090-F01: validated existing company theme/amount-word preference now reaches safe customer DTO,actual PDF and saved Web preview. Named print themes/hex accents affect heading/rule/layout; exact shared amount words retained with company currency. Keyboard inline preview/download fallback implemented.85focused tests PASS; final desktop/mobile/public/native-HTTP browser2PASS43.9s,collapsed preview Axe AA,no overflow,no financial writes; full TypeScript/lint/diff PASS. Initial browser cleanup missing Prisma import corrected. No new migration/native source/device certification. A080-F01 remains PARTIAL for full reference themes,logo/signature/native controls; A090 other consumers remain partial. Counts183implemented-but-not-finally-verified/15PARTIAL/1NOT STARTED. Prior exactd0601376 targeted CI all3jobs PASS(run39396100467),not final checkpoint validation.
