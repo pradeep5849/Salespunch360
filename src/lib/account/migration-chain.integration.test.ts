@@ -34,11 +34,15 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   const quoteId=randomUUID(),revisionId=randomUUID();
   await db.$executeRaw`INSERT INTO quotation_documents (id,"companyId","branchId","documentType","documentNumber","customerId",status,"createdById","updatedAt") VALUES (${quoteId}::uuid,${companyId}::uuid,${branchId}::uuid,'QUOTATION','PRE-ROUNDING',${customerId}::uuid,'APPROVED',${userId}::uuid,NOW())`;
   await db.$executeRaw`INSERT INTO quotation_revisions (id,"companyId","documentId","revisionNumber",status,"issueDate","customerName",subtotal,"taxableTotal","grandTotal","updatedAt") VALUES (${revisionId}::uuid,${companyId}::uuid,${quoteId}::uuid,0,'APPROVED','2026-10-11','Existing customer',100.49,100.49,100.49,NOW())`;
+  const [quoteDocumentBefore]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_documents d WHERE id=${quoteId}::uuid`;
   const [quoteBefore]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_revisions d WHERE id=${revisionId}::uuid`;
   const [before]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM commercial_documents d WHERE id=${id}::uuid`;
   for(const name of readdirSync(resolve("prisma/migrations"))){if(name!=="migration_lock.toml"&&name>=target)cpSync(resolve("prisma/migrations",name),join(scratch,"migrations",name),{recursive:true});}
   deploy();
   const [after]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM commercial_documents d WHERE id=${id}::uuid`;
+  const [quoteDocumentAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_documents d WHERE id=${quoteId}::uuid`;
+  const {convertedCommercialDocumentId,convertedAt,...quoteDocumentRetained}=quoteDocumentAfter.record;
+  expect(convertedCommercialDocumentId).toBeNull();expect(convertedAt).toBeNull();expect(quoteDocumentRetained).toEqual(quoteDocumentBefore.record);
   const [quoteAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_revisions d WHERE id=${revisionId}::uuid`;
   const [lineAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(l) AS record FROM commercial_document_lines l WHERE id=${legacyLineId}::uuid`;
   const {baseQuantity,unitConversionSnapshot,...lineRetained}=lineAfter.record;
@@ -47,7 +51,7 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   expect(billingName).toBeNull();expect(taxMode).toBe("EXCLUSIVE");expect(stateOfSupplyCode).toBeNull();expect(roundOffEnabled).toBe(false);expect(Number(roundOffAmount)).toBe(0);expect(quoteRetained).toEqual(quoteBefore.record);
   await expect(db.quotationRevision.update({where:{id:revisionId},data:{roundOffEnabled:true}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
   expect(after.record.shippingAddress).toBeNull();
-  const {shippingAddress:_newField,...retained}=after.record;void _newField;
+  const {shippingAddress:_newField,sourceQuotationRevisionId,...retained}=after.record;void _newField;expect(sourceQuotationRevisionId).toBeNull();
   expect(retained).toEqual(before.record);
   expect(await db.customer.count({where:{companyId,shippingAddress:"Current customer site"}})).toBe(1);
   expect(await db.commercialDocument.count({where:{companyId}})).toBe(1);
@@ -56,6 +60,8 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   const ownerKey=await db.$queryRaw<Array<{indexdef:string}>>`SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='owner_financial_accounts_companyId_id_key'`;
   const lineKey=await db.$queryRaw<Array<{indexdef:string}>>`SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='commercial_document_lines_companyId_id_key'`;
   expect(ownerKey).toHaveLength(1);expect(ownerKey[0].indexdef).toContain("UNIQUE");expect(lineKey).toHaveLength(1);expect(lineKey[0].indexdef).toContain("UNIQUE");
+  const conversionKeys=await db.$queryRaw<Array<{condeferrable:boolean;condeferred:boolean}>>`SELECT condeferrable,condeferred FROM pg_constraint WHERE conname IN ('commercial_documents_sourceQuotationRevision_fkey','quotation_documents_convertedCommercialDocument_fkey')`;
+  expect(conversionKeys).toHaveLength(2);expect(conversionKeys.every(key=>key.condeferrable&&key.condeferred)).toBe(true);
   expect(deploy()).toContain("No pending migrations");
  }finally{await db.$disconnect();rmSync(scratch,{recursive:true,force:true});}
 },180000);

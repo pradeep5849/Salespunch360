@@ -598,6 +598,7 @@ enum QuotationAuditEventType {
   DECLINED
   EXPIRED
   CANCELLED
+  CONVERTED
 }
 
 enum BillingAuditType {
@@ -2234,6 +2235,9 @@ model QuotationDocument {
   sourceLeadId          String?               @db.Uuid
   projectId             String?               @db.Uuid
   status                QuotationStatus       @default(DRAFT)
+  convertedCommercialDocumentId String? @db.Uuid
+  convertedAt DateTime?
+  convertedCommercialDocument CommercialDocument? @relation("QuotationCommercialTarget", fields: [companyId, convertedCommercialDocumentId], references: [companyId, id], onDelete: NoAction, onUpdate: NoAction, map: "quotation_documents_convertedCommercialDocument_fkey")
   currentRevisionNumber Int                   @default(0)
   createdById           String                @db.Uuid
   acceptedById          String?               @db.Uuid
@@ -2251,6 +2255,7 @@ model QuotationDocument {
   revisions             QuotationRevision[]
   audits                QuotationAuditEvent[]
 
+  @@unique([companyId, convertedCommercialDocumentId])
   @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, branchId, documentType, documentNumber])
@@ -2307,6 +2312,8 @@ model QuotationRevision {
   @@unique([documentId, revisionNumber])
   @@index([companyId, documentId])
   @@map("quotation_revisions")
+  convertedDocuments CommercialDocument[] @relation("CommercialQuotationSource")
+
 }
 
 model QuotationLine {
@@ -2482,6 +2489,9 @@ model CommercialDocument {
   notes                  String?
   journalEntryId         String?                  @db.Uuid
   createdById            String                   @db.Uuid
+  sourceQuotationRevisionId String? @db.Uuid
+  sourceQuotationRevision QuotationRevision? @relation("CommercialQuotationSource", fields: [companyId, sourceQuotationRevisionId], references: [companyId, id], onDelete: NoAction, onUpdate: NoAction, map: "commercial_documents_sourceQuotationRevision_fkey")
+  convertedQuotation QuotationDocument? @relation("QuotationCommercialTarget")
   signatureVersionId     String?                  @db.Uuid
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
@@ -2511,6 +2521,7 @@ model CommercialDocument {
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
   @@index([companyId, projectId])
+  @@index([companyId, sourceQuotationRevisionId])
   @@index([companyId, sourcePurchaseOrderId, status])
   @@map("commercial_documents")
 }

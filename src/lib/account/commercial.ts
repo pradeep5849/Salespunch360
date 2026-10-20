@@ -1,3 +1,4 @@
+import {requireQuotationSourceInTx,closeQuotationSourceInTx,authorizeQuotationConversion} from "@/lib/quotations/commercial-link";
 import {commercialBaseQuantity,commercialReturnBaseQuantity} from "./commercial-stock-quantity";
 import {resolveCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import {customerPriceOptionsForActor,wholesalePriceOptionsForActor} from "./customer-price-options";
@@ -338,6 +339,7 @@ export const commercialDocumentInput = z
       .regex(/^[A-Za-z0-9][A-Za-z0-9 ./_-]*$/)
       .optional(),
     sourceDocumentId: z.string().uuid().optional(),
+    sourceQuotationRevisionId:z.string().uuid().optional(),
     copiedFromSaleId: z.string().uuid().optional(),
     sourcePurchaseOrderId: z.string().uuid().optional(),
     purchasePurpose: z.nativeEnum(PurchasePurpose).optional(),
@@ -906,8 +908,14 @@ export async function createCommercialDocumentForActor(
               projectIds.add(allocation.projectId!);
             for (const projectId of projectIds)
               await getProjectForActor(actor, projectId);
+            await authorizeQuotationConversion(actor,existing);
             return existing;
           }
+        }
+
+        if(d.sourceQuotationRevisionId){
+          if(!d.idempotencyKey)throw new Error("QUOTATION_CONVERSION_KEY_REQUIRED");
+          await requireQuotationSourceInTx(tx,actor,d);
         }
 
         if (d.type === "SALES_INVOICE" && d.reverseCharge &&
@@ -1372,6 +1380,7 @@ export async function createCommercialDocumentForActor(
             data: {
               creationRequestKey: d.idempotencyKey,
               creationRequestHash,
+              sourceQuotationRevisionId:d.sourceQuotationRevisionId,
               companyId: actor.companyId,
               branchId: d.branchId,
               type: d.type,
@@ -1520,6 +1529,29 @@ export async function finalizeNonFinancialDocument(raw: unknown) {
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
+export async function confirmSalesOrderForActor(actor:Actor,raw:unknown,transaction?:Prisma.TransactionClient){
+ const {documentId}=z.object({documentId:z.string().uuid()}).strict().parse(raw);
+ return inAccountTransaction(transaction,async tx=>{
+  await tx.$queryRaw`SELECT id FROM commercial_documents WHERE id=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  const doc=await tx.commercialDocument.findFirst({where:{id:documentId,companyId:actor.companyId,type:"SALES_ORDER"}});
+  if(!doc)throw new Error("NOT_FOUND");assertBranch(actor,doc.branchId);
+  await requireAccountModules(actor,"SALES","SALES_ORDER");
+  const company=await tx.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true}});
+  if(!canUsePermission(actor,company.productEdition,"ACCOUNT_SALES_ENTRY"))throw new AuthorizationError();
+  if(doc.projectId)await authorizeProjectForCommercial(actor,doc.projectId,doc.branchId,doc.customerId??undefined,tx);
+  await authorizeQuotationConversion(actor,doc);
+  if(doc.status==="POSTED")return doc;
+  if(doc.status!=="DRAFT"||doc.journalEntryId)throw new Error("DOCUMENT_NOT_FINALIZABLE");
+  await requireQuotationSourceInTx(tx,actor,doc);
+  const signature=await tx.authorizedSignatureVersion.findFirst({where:{companyId:actor.companyId,isCurrent:true},orderBy:{createdAt:"desc"}});
+  const updated=await tx.commercialDocument.update({where:{id:doc.id},data:{status:"POSTED",signatureVersionId:signature?.id}});
+  await closeQuotationSourceInTx(tx,actor,doc);
+  await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"SALES_ORDER_CONFIRMED",entityType:"COMMERCIAL_DOCUMENT",entityId:doc.id}});
+  return updated;
+ });
+}
+export async function confirmSalesOrder(raw:unknown){return confirmSalesOrderForActor((await requirePermissionForMutation("ACCOUNT_SALES_ENTRY")) as Actor,raw)}
+
 async function purchaseInventoryFromAllocationsInTx(
   tx: Prisma.TransactionClient,
   actor: Actor,
@@ -2041,12 +2073,14 @@ export async function postCommercialDocumentForActor(
               tx,
             );
         }
+        await authorizeQuotationConversion(actor,doc);
         if (doc.status === "POSTED" && doc.journalEntryId)
           return tx.journalEntry.findFirstOrThrow({
             where: { id: doc.journalEntryId, companyId: actor.companyId },
           });
         if (doc.status !== "DRAFT" || !p.financial)
           throw new Error("DOCUMENT_NOT_POSTABLE");
+        await requireQuotationSourceInTx(tx,actor,doc);
         let source: Prisma.CommercialDocumentGetPayload<{
             include: { lines: { include: { purchaseAllocations: true } } };
           }> | null = null,
@@ -2321,6 +2355,8 @@ export async function postCommercialDocumentForActor(
             }
           }
         }
+
+        await closeQuotationSourceInTx(tx,actor,doc);
 
         await audit(
           tx,

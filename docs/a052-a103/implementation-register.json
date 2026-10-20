@@ -55144,6 +55144,33 @@
             "final_checkpoint_head": "NOT RUN;new-head CI requested separately."
           },
           "remaining": "A080-F02/A083-F01 remain PARTIAL. Explicit target Save/confirmation still needs stable source linkage, transactional approval/revision recheck and source closure. No persisted Sale draft or automatic posting introduced;no whole-finding completion inferred."
+        },
+        "transactional_conversion_core_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": null,
+          "implementation": "Transactional approved-current-revision source linkage; atomic real Sale Save closure; explicit Sales Order confirmation closure; idempotent replay and competing-save protection; immutable closure/source metadata; derived Closed filters/capabilities without changing approved history. Read-only preparation remains non-posting.",
+          "modified_files": [
+            "prisma/schema.prisma",
+            "prisma/migrations/20261020120000_quotation_commercial_conversion/migration.sql",
+            "src/lib/quotations/commercial-link.ts",
+            "src/lib/quotations/commercial-link.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/list-filter.ts",
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/mobile/account-quotations.ts",
+            "src/lib/account/migration-chain.integration.test.ts"
+          ],
+          "tests": {
+            "grouped": "166 passed across9 files (11.10s),0 failed/skipped,including8 actual local PostgreSQL conversion cases. Covers retry/concurrency,rollback,order confirmation,no-ledger order,stale/unapproved/foreign-company/unassigned-branch/permission denial and immutable/deferred DB guards.",
+            "migration": "142 migrations applied to isolated local DB. Fresh full-chain and legacy upgrade rehearsal1 passed(3.70s);old fixture fields unchanged,new linkage fields null,deferred FKs checked,repeat deploy clean.",
+            "typescript": "PASS after removing duplicate domain-error message entry.",
+            "eslint": "PASS focused changed-file lint.",
+            "browser": "NOT RUN for conversion linkage.",
+            "android": "NOT RUN for conversion linkage.",
+            "final_head": "NOT RUN"
+          },
+          "remaining": "PARTIAL: Web/native Convert prefill and confirmation controls/API wiring,unit selection ambiguity review,HTTP/browser/native runtime and final-head complete validation remain. No deployment/production database changes."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -57491,6 +57518,33 @@
             "final_checkpoint_head": "NOT RUN;new-head CI requested separately."
           },
           "remaining": "A080-F02/A083-F01 remain PARTIAL. Explicit target Save/confirmation still needs stable source linkage, transactional approval/revision recheck and source closure. No persisted Sale draft or automatic posting introduced;no whole-finding completion inferred."
+        },
+        "transactional_conversion_core_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": null,
+          "implementation": "Transactional approved-current-revision source linkage; atomic real Sale Save closure; explicit Sales Order confirmation closure; idempotent replay and competing-save protection; immutable closure/source metadata; derived Closed filters/capabilities without changing approved history. Read-only preparation remains non-posting.",
+          "modified_files": [
+            "prisma/schema.prisma",
+            "prisma/migrations/20261020120000_quotation_commercial_conversion/migration.sql",
+            "src/lib/quotations/commercial-link.ts",
+            "src/lib/quotations/commercial-link.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/list-filter.ts",
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/mobile/account-quotations.ts",
+            "src/lib/account/migration-chain.integration.test.ts"
+          ],
+          "tests": {
+            "grouped": "166 passed across9 files (11.10s),0 failed/skipped,including8 actual local PostgreSQL conversion cases. Covers retry/concurrency,rollback,order confirmation,no-ledger order,stale/unapproved/foreign-company/unassigned-branch/permission denial and immutable/deferred DB guards.",
+            "migration": "142 migrations applied to isolated local DB. Fresh full-chain and legacy upgrade rehearsal1 passed(3.70s);old fixture fields unchanged,new linkage fields null,deferred FKs checked,repeat deploy clean.",
+            "typescript": "PASS after removing duplicate domain-error message entry.",
+            "eslint": "PASS focused changed-file lint.",
+            "browser": "NOT RUN for conversion linkage.",
+            "android": "NOT RUN for conversion linkage.",
+            "final_head": "NOT RUN"
+          },
+          "remaining": "PARTIAL: Web/native Convert prefill and confirmation controls/API wiring,unit selection ambiguity review,HTTP/browser/native runtime and final-head complete validation remain. No deployment/production database changes."
         }
       },
       "push_checkpoint_evidence": {
@@ -70304,6 +70358,13 @@
       "android": "SUCCESS",
       "migration": "SUCCESS",
       "scope": "Targeted CI for completed unit selection; predecessor evidence only for subsequent quotation changes,not final complete199-finding validation."
+    },
+    {
+      "date": "2026-10-20",
+      "code_head": "fe5e62cc7151aeacc66a6fcd47c982f3c7eda95e",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39427649237",
+      "result": "SUCCESS",
+      "scope": "Targeted CI including native PDF preview lint fix. Predecessor evidence only for uncommitted conversion changes; not final 199-finding validation."
     }
   ]
 }

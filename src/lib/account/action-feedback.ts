@@ -8,6 +8,11 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  QUOTATION_ALREADY_CONVERTED:"This estimate has already been converted. Open its recorded sale or order.",
+  QUOTATION_REVISION_CHANGED:"The estimate revision has changed. Reload the approved estimate before saving.",
+  QUOTATION_CONVERSION_KEY_REQUIRED:"Reload the conversion form before saving so retries use the same request.",
+  INVALID_QUOTATION_CONVERSION_SOURCE:"Keep the approved estimate’s company, branch, customer and project when converting it.",
+  INVALID_QUOTATION_CONVERSION_TARGET:"Convert an approved estimate to a Sale or Sale Order.",
   UNIT_CONVERSION_UNAVAILABLE:"Choose an active unit with a valid saved conversion for this item.",
   INVALID_UNIT_SNAPSHOT:"The item’s saved unit conversion is invalid. Review its units before saving.",
   SOURCE_UNIT_MISMATCH:"Keep the original document’s unit when editing, copying or returning this line.",

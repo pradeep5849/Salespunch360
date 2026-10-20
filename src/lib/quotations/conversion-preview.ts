@@ -29,6 +29,7 @@ export async function quotationConversionPreviewForActor(actor: QuotationActor, 
   // future projection/refactor cannot turn this entry into an unscoped reader.
   if (document.companyId !== actor.companyId || (actor.branchAccessScope === "SELECTED_BRANCHES"
     && !actor.branchIds?.includes(document.branchId))) throw new AuthorizationError();
+  if(document.convertedCommercialDocumentId)throw new Error("QUOTATION_ALREADY_CONVERTED");
   const revision = document.revisions[0];
   if (!revision || revision.revisionNumber !== document.currentRevisionNumber
     || (request.revisionId && request.revisionId !== revision.id)) throw new Error("QUOTATION_REVISION_CHANGED");
