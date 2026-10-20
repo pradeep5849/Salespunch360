@@ -79,7 +79,8 @@ data class QuotationState(
     val shareToken: String? = null,
     val error: String? = null,
     val message: String? = null,
-    val preview: Boolean = false
+    val preview: Boolean = false,
+    val pdfPreview:Boolean=false
 )
 
 class QuotationViewModel(app: Application) : AndroidViewModel(app) {
@@ -336,17 +337,21 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun download() = viewModelScope.launch {
+    fun download(preview:Boolean=false) = viewModelScope.launch {
         val id = _state.value.detail?.str("id") ?: return@launch
         try {
-            _state.value = _state.value.copy(pdf = api.quotationPdf(id))
+            val bytes=api.quotationPdf(id)
+            if(_state.value.detail?.str("id")==id)_state.value = _state.value.copy(pdf = bytes,pdfPreview=preview)
         } catch (e: Exception) {
             fail(e)
         }
     }
 
+    fun previewPdf(){download(true)}
+    fun sharePreviewPdf(){_state.value=_state.value.copy(pdfPreview=false)}
+
     fun consumedPdf() {
-        _state.value = _state.value.copy(pdf = null)
+        _state.value = _state.value.copy(pdf = null,pdfPreview=false)
     }
 
     private fun fail(e: Exception) {

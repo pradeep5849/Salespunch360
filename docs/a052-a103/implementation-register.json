@@ -54769,6 +54769,25 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A080-F01 remains PARTIAL for all supplied GST1–6/Modern Elite layouts and complete native preview/theme/settings controls; current branding is not a historical quotation asset snapshot. Final checkpoint validation/device runtime remain pending.",
+          "implementation_commit": "11481beb3c6bfc00303b58e561b1a96fbdf7afff"
+        },
+        "quotation_native_pdf_page_preview_2026_10_20": {
+          "work": "Native quotation details now offer an in-app print preview of the exact authorized PDF, one bounded raster page at a time with previous/next navigation, safe-area full-screen layout, error/share fallback and explicit Close. Temporary renderer files/descriptors/pages close and are deleted after each render. Sharing reuses the preview bytes instead of refetching a potentially changed PDF. Detail dialog hides during PDF preview; stale download responses from another document are ignored. No automatic posting/sending or private detail reconstruction.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/QuotationPdfSizing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationPdfPreview.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/QuotationPdfSizingTest.kt"
+          ],
+          "tests": {
+            "android": "Final compileDebugKotlin and34Quotation JVM tests PASS,0fail/errors/skips,BUILD SUCCESSFUL2m11s after share-byte reuse,stale-document guard and weighted page controls. Added2bounded page-size tests for portrait/landscape,extreme aspect ratio and invalid dimensions. Earlier34PASS2m7s overlaps before final UI refinements.",
+            "runtime": "Native emulator/device/PdfRenderer/chooser/TalkBack runtime NOT RUN; compile/JVM do not certify screen rendering. Server PDF actual Web/public/mobile HTTP and company branding evidence remains in prior entry.",
+            "diff": "git diff --check PASS",
+            "web_database": "No Web/server/schema/migration source changed in this native slice; prior215group/2browser evidence applies to unchanged server source,not final checkpoint verification.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A080-F01 stays PARTIAL for all supplied GST1–6/Modern Elite layouts, complete native theme/settings/print controls and final validation; no emulator/device runtime.",
           "implementation_commit": null
         }
       }

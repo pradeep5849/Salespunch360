@@ -49,7 +49,8 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     LaunchedEffect(initialDocumentId){initialDocumentId?.let(vm::open)}
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
-    LaunchedEffect(state.pdf) {
+    LaunchedEffect(state.pdf,state.pdfPreview) {
+        if(state.pdfPreview)return@LaunchedEffect
         state.pdf?.let { bytes ->
             val file = File(context.cacheDir, "quotation.pdf")
             file.writeBytes(bytes)
@@ -59,6 +60,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
             vm.consumedPdf()
         }
     }
+    if(state.pdfPreview)state.pdf?.let { bytes ->QuotationPdfPreview(bytes,onClose=vm::consumedPdf,onShare=vm::sharePreviewPdf) }
     state.shareToken?.let { token ->
         LaunchedEffect(token) {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.salespunch360.com/share/quotation/$token")
@@ -96,7 +98,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     }
 
     state.draft?.let { QuotationEditor(it, state, vm,navigate) }
-    if(state.draft==null)state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions) }
+    if(state.draft==null&&!(state.pdfPreview&&state.pdf!=null))state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions) }
 }
 
 @Composable
@@ -292,7 +294,8 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                         OutlinedButton(onClick = vm::revise, modifier = Modifier.fillMaxWidth()) { Text(if (quotation.str("status") == "DRAFT") "Edit" else "Create revision") }
                     }
                     if (!preview && capabilities?.get("canShare")?.jsonPrimitive?.booleanOrNull==true) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
-                    OutlinedButton(onClick = vm::download, modifier = Modifier.fillMaxWidth()) { Text("Download / share PDF") }
+                    OutlinedButton(onClick = vm::previewPdf, modifier = Modifier.fillMaxWidth()) { Text("Print preview") }
+                    OutlinedButton(onClick = {vm.download()}, modifier = Modifier.fillMaxWidth()) { Text("Download / share PDF") }
                 }
             }
         }

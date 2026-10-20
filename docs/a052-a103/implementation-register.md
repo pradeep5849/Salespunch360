@@ -10184,3 +10184,8 @@ A080-F01/A090-F01: validated existing company theme/amount-word preference now r
 ### Quotation company branding — 2026-10-20
 
 A080-F01: company-scoped logo/current signature normalized from private storage, existing visibility switches honored, safe customer DTO contains image bytes/signatory text only. Saved Web preview/shared Web/public/native-HTTP PDF embed assets.215grouped tests PASS/16files (includes90focused cases),browser2PASS47.8s,TypeScript/lint/diff PASS. No schema/migration/native source/device runtime. Current branding only; historical commercial signature snapshots and saved quotation financial values unchanged. StillPARTIAL for full reference/native theme controls and final verification. Prior theme code maps to5f6c85ce.
+
+
+### Native quotation PDF-page preview — 2026-10-20
+
+A080-F01: native details now render exact authorized customer PDF with bounded one-page raster,Previous/Next,Close and same-byte Share. Resources/temp files closed; underlying detail hidden; stale different-document response ignored. Final Kotlin compile and34Quotation JVM tests PASS2m11s,0fail/errors/skips; no emulator/device/PdfRenderer/chooser/TalkBack runtime claimed. Current server branding maps to11481beb. Finding remainsPARTIAL for full reference theme/settings/print controls and final validation.
