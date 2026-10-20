@@ -64660,6 +64660,33 @@
           "decision": "User selected keeping released paid-invoice amounts as customer advance credit;do not reverse original receipt automatically.",
           "implementation_status": "DECISION RECORDED ONLY;financial release/reclassification/reapplication workflow not implemented by this commit. Existing paid-correction guard remains.",
           "required_work": "Preserve immutable receipt/allocation history;release effective application/receipt amounts with auditable correction entries,keep original bank/cash receipt unchanged,make released balance reusable and reapply up to corrected invoice total. Verify ledger,history cutoff,company/branch/permissions,cheque state,idempotency/concurrency and rollback before enabling paid Edit/Delete."
+        },
+        "paid_correction_advance_credit_2026_10_20": {
+          "implementation": "Append-only receipt/allocation and advance/application credit release with balanced non-cash journal, immutable original payments, restored payment discount, cutoff-aware outstanding and no duplicated cash/project receipts. Atomic Sale correction releases applied payments before full credit and reapplies available actual funds to the replacement, retaining excess as customer advance. Pending cheques remain blocked.",
+          "files": [
+            "prisma/schema.prisma",
+            "prisma/migrations/20261020100000_receipt_advance_credit/migration.sql",
+            "prisma/migrations/20261020103000_advance_application_credit/migration.sql",
+            "src/lib/account/receipt-advance-credit.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/settlement-policy.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/party-balance.ts",
+            "src/lib/account/print.ts",
+            "src/lib/account/project-costing.ts",
+            "src/lib/account/projects.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "tests": {
+            "focused_database": "14 passed, 0 failed, 0 skipped; commercial-unit-history.integration.test.ts; 3.45 seconds. Includes 100/90/10 -> 80 paid replacement leaving 10 advance, retry, receipt immutability, non-cash credit reapplication and released advance-application history.",
+            "typescript": "PASS: tsc --noEmit --incremental false",
+            "eslint": "PASS: all 10 changed TypeScript files",
+            "prisma": "Generate and schema validation PASS; both new migrations applied successfully to isolated local *_ci database. 141 migrations total.",
+            "cheque_regression": "82 passed, 0 failed, 0 skipped across six cheque suites; 10.00 seconds."
+          },
+          "remaining": "Finding remains PARTIAL. UI capability gates still reject paid edits; permission/module matrix, browser/native runtime, complete financial regression, fresh migration rehearsal and final-head validation remain required. No production migration/deployment performed.",
+          "commit_sha": null
         }
       }
     },
@@ -69030,6 +69057,13 @@
       "decision": "Approved estimates only. The source closes only after explicit real Sale Save/posts or Sale Order confirmation; opening Convert creates no persisted Sale draft.",
       "source": "User answer to call_6781250954e14cbf984734bc95ef0872 question1 plus prior no-Sale-drafts instruction",
       "status": "Approval gate implemented for read-only conversion preparation and locally verified. Transactional target Save/source linkage/approval recheck/closure remain pending."
+    },
+    "paid_invoice_correction_discount": {
+      "decision": "Remove the original payment discount when correcting a paid invoice. An original invoice of 100 with 90 actually paid and 10 payment discount, reduced to 80, leaves 10 customer advance credit. Cancellation retains only the actual 90 paid as advance.",
+      "source": "Explicit user reply call_40919c8f786249fba5503167eba0668d, question 0",
+      "affected_findings": [
+        "A086-F05"
+      ]
     }
   },
   "push_checkpoint": {

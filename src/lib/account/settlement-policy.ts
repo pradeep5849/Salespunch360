@@ -6,7 +6,9 @@ export const EFFECTIVE_SETTLEMENT = {
 export const EFFECTIVE_SETTLEMENT_ALLOCATION = {
   settlement: { is: EFFECTIVE_SETTLEMENT },
 };
+export const EFFECTIVE_DOCUMENT_ALLOCATION = {...EFFECTIVE_SETTLEMENT_ALLOCATION,receiptAdvanceCredit:{is:null}};
 export const EFFECTIVE_ADVANCE_APPLICATION = {
+  releasedAdvanceCredit:{is:null},
   advance: { is: EFFECTIVE_SETTLEMENT },
   journalEntry: { is: { status: "POSTED" as const } },
 };
@@ -34,7 +36,11 @@ export function effectiveAllocationAt(asOf: Date) {
 export function effectiveAdvanceApplicationAt(asOf: Date): import("@prisma/client").Prisma.AdvanceApplicationWhereInput {
   return {
     applicationDate: { lte: asOf },
+    OR:[{releasedAdvanceCredit:{is:null}},{releasedAdvanceCredit:{is:{transactionDate:{gt:asOf}}}}],
     advance: { is: effectiveSettlementAt(asOf) },
     journalEntry: { is: postedJournalAt(asOf) },
   };
 }
+
+/** Released receipt allocations still existed before their non-cash credit date. */
+export function effectiveDocumentAllocationAt(asOf:Date){return {...effectiveAllocationAt(asOf),OR:[{receiptAdvanceCredit:{is:null}},{receiptAdvanceCredit:{is:{transactionDate:{gt:asOf}}}}]};}

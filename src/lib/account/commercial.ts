@@ -3,7 +3,7 @@ import {resolveCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import {customerPriceOptionsForActor,wholesalePriceOptionsForActor} from "./customer-price-options";
 import {itemPriceForDocument} from "./item-pricing";
 import {commercialLineAmounts} from "./commercial-line-amounts";
-import { effectiveAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
+import { EFFECTIVE_DOCUMENT_ALLOCATION, effectiveDocumentAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { normalizeTransactionPreferences } from "./transaction-settings";
 import {recentSalePrices} from "./recent-sale-prices";
@@ -2375,7 +2375,7 @@ export async function documentOutstandingInTx(
   const [adjustmentRows, allocations, applications] = await Promise.all([
       adjustmentQuery,
       tx.settlementAllocation.aggregate({
-        where: { ...EFFECTIVE_SETTLEMENT_ALLOCATION, companyId, documentId },
+        where: { ...EFFECTIVE_DOCUMENT_ALLOCATION, companyId, documentId },
         _sum: { amount: true },
       }),
       tx.advanceApplication.aggregate({
@@ -2539,6 +2539,7 @@ const settlementPolicy: Record<
 export async function createSettlementForActor(actor: Actor, raw: unknown, transaction?: Prisma.TransactionClient, chequeLifecycle?: { closeChequeId?: string; reuseChequeId?: string }) {
   financialRole(actor);
   const d = settlementInput.parse(raw);
+  if(d.paymentMode==="ACCOUNT_CREDIT")throw new Error("INVALID_PAYMENT_MODE");
   if (d.paymentMode === "CHEQUE" && !d.chequeNumber) throw new Error("CHEQUE_NUMBER_REQUIRED");
   if (d.paymentMode === "CHEQUE" && !new D(d.amount).gt(0)) throw new Error("CHEQUE_AMOUNT_REQUIRED");
   const requestHash = createHash("sha256").update(JSON.stringify({
@@ -3160,7 +3161,7 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string, tr
       },
       reminders: { orderBy: { createdAt: "desc" } },
       adjustments: { where: { status: "POSTED" } },
-      allocations: { where: EFFECTIVE_SETTLEMENT_ALLOCATION, include: { settlement: true } },
+      allocations: { where: EFFECTIVE_DOCUMENT_ALLOCATION, include: { settlement: true } },
       advanceApplications: { where: EFFECTIVE_ADVANCE_APPLICATION, include: { advance: true } },
     },
   });
@@ -3228,7 +3229,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
           where: { status: "POSTED" },
           select: { grandTotal: true },
         },
-        allocations: { where: EFFECTIVE_SETTLEMENT_ALLOCATION, select: { amount: true } },
+        allocations: { where: EFFECTIVE_DOCUMENT_ALLOCATION, select: { amount: true } },
         advanceApplications: { where: EFFECTIVE_ADVANCE_APPLICATION, select: { amount: true } },
         lines: {
           select: {
@@ -3527,7 +3528,7 @@ export async function documentOutstandingsBatch(
       }),
       db.settlementAllocation.groupBy({
         by: ["documentId"],
-        where: { ...(asOf?effectiveAllocationAt(asOf):EFFECTIVE_SETTLEMENT_ALLOCATION), companyId, documentId: { in: ids } },
+        where: { ...(asOf?effectiveDocumentAllocationAt(asOf):EFFECTIVE_DOCUMENT_ALLOCATION), companyId, documentId: { in: ids } },
         _sum: { amount: true },
       }),
       db.advanceApplication.groupBy({

@@ -61,7 +61,12 @@ export async function scopedPartyBalance(
       SELECT -SUM(s.amount + CASE WHEN s.type::text=${paymentType} THEN s."discountAmount" ELSE 0 END)
       FROM account_settlements s JOIN journal_entries j ON j.id=s."journalEntryId" AND j."companyId"=s."companyId"
       WHERE s."companyId"=${companyId}::uuid AND s."partyId"=${partyId}::uuid AND s.status='POSTED' AND j.status='POSTED'
-        AND s.type::text IN (${paymentType},${advanceType}) ${restrict(Prisma.sql`s."branchId"`)}
+        AND s."paymentMode"::text<>'ACCOUNT_CREDIT' AND s.type::text IN (${paymentType},${advanceType}) ${restrict(Prisma.sql`s."branchId"`)}
+      UNION ALL
+      SELECT SUM(a."discountAmount") FROM settlement_allocations a
+      JOIN account_settlements c ON c."receiptCreditSourceAllocationId"=a.id AND c."companyId"=a."companyId"
+      WHERE c."companyId"=${companyId}::uuid AND c."partyId"=${partyId}::uuid AND c.status='POSTED'
+        ${restrict(Prisma.sql`c."branchId"`)}
     ) balances
   `);
   return new Prisma.Decimal(rows[0]?.balance ?? 0).toFixed(2);

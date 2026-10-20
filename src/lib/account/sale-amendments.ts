@@ -1,9 +1,12 @@
+import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
+import {EFFECTIVE_DOCUMENT_ALLOCATION,EFFECTIVE_ADVANCE_APPLICATION} from "./settlement-policy";
 import {retainedLineDiscountValue} from "./retained-line-discount";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
 import type { ProjectActor } from "./projects";
 import {
+  applyAdvanceForActor,
   createCommercialDocumentForActor,
   documentOutstandingInTx,
   postCommercialDocumentForActor,
@@ -25,8 +28,8 @@ async function editableSaleInTx(
     include: {
       lines: { orderBy: { position: "asc" } },
       adjustments: { where: { status: "POSTED" } },
-      allocations: true,
-      advanceApplications: true,
+      allocations: {where:EFFECTIVE_DOCUMENT_ALLOCATION,include:{settlement:true}},
+      advanceApplications: {where:EFFECTIVE_ADVANCE_APPLICATION},
     },
   });
   if (
@@ -41,14 +44,11 @@ async function editableSaleInTx(
     !sale.partyId
   )
     throw new Error("SALE_NOT_EDITABLE");
+  const pending=await tx.settlementAllocation.count({where:{companyId:actor.companyId,documentId:sale.id,settlement:{status:"PENDING_CHEQUE"}}});
+  if(pending)throw new Error("SALE_HAS_PENDING_CHEQUE");
   const financial = await documentOutstandingInTx(tx, actor.companyId, sale.id);
-  if (
-    !financial.outstanding.eq(sale.payableAmount ?? sale.grandTotal) ||
-    sale.adjustments.length ||
-    sale.allocations.length ||
-    sale.advanceApplications.length
-  )
-    throw new Error("SALE_HAS_PAYMENTS_OR_ADJUSTMENTS");
+  const applied=sale.allocations.reduce((total,row)=>total.add(row.amount),new Prisma.Decimal(0)).add(sale.advanceApplications.reduce((total,row)=>total.add(row.amount),new Prisma.Decimal(0)));
+  if(sale.adjustments.length||!financial.outstanding.add(applied).eq(sale.payableAmount??sale.grandTotal))throw new Error("SALE_HAS_PAYMENTS_OR_ADJUSTMENTS");
   return sale;
 }
 function creditPayload(
@@ -112,7 +112,9 @@ async function creditInTx(
   actor: ProjectActor,
   sale: Awaited<ReturnType<typeof editableSaleInTx>>,
 ) {
-  const date = businessToday();
+  const date = [businessToday(),sale.issueDate.toISOString().slice(0,10),...sale.allocations.map(row=>row.settlement.transactionDate.toISOString().slice(0,10)),...sale.advanceApplications.map(row=>row.applicationDate.toISOString().slice(0,10))].sort().at(-1)!;
+  for(const row of sale.allocations)await receiptAdvanceCreditInTx(tx,actor,{allocationId:row.id,entryDate:date});
+  for(const row of sale.advanceApplications)await advanceApplicationCreditInTx(tx,actor,{applicationId:row.id,entryDate:date});
   await ensureOpenFinancialYearForDate(actor.companyId, new Date(date), tx);
   const credit = await createCommercialDocumentForActor(
     actor,
@@ -400,6 +402,17 @@ export function replacePostedSaleForActor(
           { documentId: replacement.id },
           tx,
         );
+        // Preserve actual previous payments even when automatic linking is disabled.
+        // Posting may already have applied them; use current remaining/outstanding.
+        if(replacement.partyId===sale.partyId&&replacement.projectId===sale.projectId){
+          const credits=await tx.accountSettlement.findMany({where:{companyId:actor.companyId,OR:[{receiptCreditSourceAllocationId:{in:sale.allocations.map(row=>row.id)}},{advanceCreditSourceApplicationId:{in:sale.advanceApplications.map(row=>row.id)}}]},orderBy:{id:"asc"}});
+          for(const credit of credits){
+            const available=await tx.accountSettlement.findUniqueOrThrow({where:{id:credit.id}});
+            const financial=await documentOutstandingInTx(tx,actor.companyId,replacement.id);
+            const amount=Prisma.Decimal.min(available.remainingAmount,financial.outstanding);
+            if(amount.gt(0))await applyAdvanceForActor(actor,{advanceId:credit.id,documentId:replacement.id,amount:amount.toFixed(2),applicationDate:new Date(Math.max(credit.transactionDate.getTime(),replacement.issueDate.getTime())),idempotencyKey:`sale-correction:${replacement.id}:${credit.id}`},tx);
+          }
+        }
         await tx.accountOperationalAudit.create({
           data: {
             companyId: actor.companyId,

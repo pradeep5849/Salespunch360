@@ -1,4 +1,4 @@
-import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
+import { EFFECTIVE_DOCUMENT_ALLOCATION, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { retrySerializable } from "./transaction-retry";
 import { Prisma, ProjectChangeOrderStatus } from "@prisma/client";
@@ -240,8 +240,8 @@ async function scopedProject(actor: Actor, id: string) {
         commercialDocuments: {
           include: {
             lines: true,
-            allocations: true,
-            advanceApplications: true,
+            allocations: {where:EFFECTIVE_DOCUMENT_ALLOCATION},
+            advanceApplications: {where:EFFECTIVE_ADVANCE_APPLICATION},
             adjustments: { where: { status: "POSTED" } },
           },
         },
@@ -502,7 +502,7 @@ export async function loadProjectCostingForActor(
     ).actual,
     advanceReceived = sum(
       projectSettlements
-        .filter((x) => x.type === "CUSTOMER_ADVANCE")
+        .filter((x) => x.type === "CUSTOMER_ADVANCE" && x.paymentMode!=="ACCOUNT_CREDIT")
         .map((x) => x.amount),
     ),
     amountReceived = sum(

@@ -52,6 +52,12 @@ const messages: Record<string, string> = {
     "Enter the cheque number before recording this payment.",
   CHEQUE_AMOUNT_REQUIRED:
     "Enter a positive cheque amount. A payment discount alone does not require a cheque.",
+  INVALID_PAYMENT_MODE: "Choose Cash, Bank or Cheque for a new payment. Correction credits are created by the invoice workflow.",
+  SALE_HAS_PENDING_CHEQUE: "Resolve this invoice’s pending cheque before correcting the invoice.",
+  INVALID_RECEIPT_ADVANCE_CREDIT: "This payment allocation cannot be released as customer advance credit.",
+  INVALID_RECEIPT_ADVANCE_CREDIT_DATE: "Choose a correction date on or after the invoice and payment dates.",
+  RECEIPT_HAS_ADVANCE_CREDIT: "This payment has been released as customer advance credit. Correct that credit before reversing the payment.",
+  RECEIPT_ADVANCE_CREDIT_NOT_REVERSIBLE: "This credit belongs to an invoice correction and cannot be reversed independently.",
   QUOTATION_APPROVAL_REQUIRED: "Only approved estimates can be converted. Approve the current revision first.",
   INVALID_SALE_LINE_SOURCE:
     "A retained item must belong to this invoice and keep its original item identity. Add a new line to change the item.",

@@ -10135,3 +10135,9 @@ Commit `a157e31e4aa7ffecf5277dc96df51e7129047860` restores a missing legacy FIXE
 User decisions recorded: released paid-invoice amounts stay as customer advance credit, with original receipts preserved; only approved estimates convert, and only real Sale Save/order confirmation closes the source. Paid release/reclassification/reapplication implementation remains pending and guarded.
 
 Commit `6d0c61092c6e770de19b91cbfbe0b8e868d434e8` enforces current document + revision APPROVED for read-only conversion preparation. A080-F02/A083-F01 remain PARTIAL for transactional Save/linkage/closure.159 grouped tests/7 files PASS,zero failures/skips,including real PostgreSQL approval/audit checks;actual desktop/mobile-profile HTTP cases2 PASS (17.8s),no target/journal/customer/Project/receipt/audit writes. TypeScript,focused ESLint/diff PASS. No migration or native device claim. All199 IDs/52pages retained;finding statuses unchanged.
+
+### A086-F05 — paid correction checkpoint, 2026-10-20
+
+Status remains **PARTIAL**. Append-only non-cash receipt/advance application credits preserve original payment history. Atomic replacement now reapplies actual funds and removes the original payment discount: 100 invoice / 90 paid / 10 discount corrected to 80 leaves 10 advance. Pending cheque corrections remain blocked.
+
+Validation: 14 focused PostgreSQL tests and 82 cheque regression tests passed (96 total, no failures/skips); TypeScript and changed-file ESLint passed. Prisma generation/schema validation and local migration deployment passed (141 migrations). UI gates, browser/native runtime, broader permissions/module verification, fresh migration rehearsal and final-head validation remain outstanding. Two additive migrations; no production operations.

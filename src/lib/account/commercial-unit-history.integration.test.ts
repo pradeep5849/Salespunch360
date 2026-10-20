@@ -1,3 +1,6 @@
+import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
+import {reverseJournalInTx} from "@/lib/accounting/service";
+import {currentPartyBalanceForActor} from "./party-balance";
 import {randomUUID} from "node:crypto";
 import {Prisma,PrismaClient} from "@prisma/client";
 import {beforeAll,afterAll,describe,it,expect,vi} from "vitest";
@@ -5,7 +8,7 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
-import {createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor} from "./commercial";
+import {createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor,createSettlementForActor,documentOutstandingInTx,documentOutstandingsBatch,applyAdvanceForActor} from "./commercial";
 import {submitSaleForActor} from "./sale-submit";
 import {saleDuplicateDraft} from "./sale-duplicate";
 import {replacePostedSaleForActor} from "./sale-amendments";
@@ -31,7 +34,7 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
  afterAll(async()=>{
   await client.$transaction(async tx=>{
    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
-   await tx.stockMovement.deleteMany({where:{companyId}});await tx.purchaseLineAllocation.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{companyId}});await tx.commercialDocument.deleteMany({where:{companyId}});
+   await tx.stockMovement.deleteMany({where:{companyId}});await tx.purchaseLineAllocation.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});await tx.advanceApplication.deleteMany({where:{companyId}});await tx.settlementAllocation.deleteMany({where:{companyId}});await tx.accountSettlement.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{companyId}});await tx.commercialDocument.deleteMany({where:{companyId}});
    await tx.accountOperationalAudit.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});
    await tx.numberingSeries.deleteMany({where:{companyId}});await tx.ledgerAccount.deleteMany({where:{companyId}});await tx.financialYear.deleteMany({where:{companyId}});
    await tx.accountProduct.deleteMany({where:{companyId}});await tx.warehouse.deleteMany({where:{companyId}});await tx.accountUnit.deleteMany({where:{companyId}});await tx.customer.deleteMany({where:{companyId}});await tx.vendor.deleteMany({where:{companyId}});await tx.accountSettings.deleteMany({where:{companyId}});await tx.user.deleteMany({where:{companyId}});await tx.branch.deleteMany({where:{companyId}});await tx.company.delete({where:{id:companyId}});
@@ -200,6 +203,75 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    }
    expect(await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);expect(original.discountValue).toBeNull();
   }finally{await client.accountProduct.update({where:{id:productId},data:{pricing:originalMaster.pricing??Prisma.DbNull}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull}})}
+ });
+ it.each([{cash:"100",discount:"0"},{cash:"90",discount:"10"}])("reclassifies receipt $cash plus discount $discount as reusable non-cash advance",async scenario=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  await client.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES"],transactionDefaults:{transactionPreferences:{linkPayments:false,discountDuringPayment:true}}}});
+  try{
+   const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-18",lines:[{lineType:"CUSTOM",itemName:"Paid original",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+   const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+   const receipt=await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:scenario.cash,transactionDate:"2026-10-19",allocations:[{documentId:sale.id,amount:"100",discountAmount:scenario.discount}]});
+   const original=await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}}),allocation=original.allocations[0];
+   const balanceBefore=new Prisma.Decimal(await currentPartyBalanceForActor(actor,customerId));
+   const cashBalance=async()=>{const cash=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"CASH"}}),rows=await client.journalLine.aggregate({where:{companyId,ledgerAccountId:cash.id},_sum:{debit:true,credit:true}});return new Prisma.Decimal(rows._sum.debit??0).sub(rows._sum.credit??0).toString()};
+   const originalCash=await cashBalance(),date=new Date("2026-10-20");
+   await expect(client.$transaction(tx=>receiptAdvanceCreditInTx(tx,{...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[randomUUID()]},{allocationId:allocation.id,entryDate:date}))).rejects.toThrow();
+   await expect(client.$transaction(tx=>receiptAdvanceCreditInTx(tx,actor,{allocationId:allocation.id,entryDate:"2026-10-18"}))).rejects.toThrow("INVALID_RECEIPT_ADVANCE_CREDIT_DATE");
+   const credit=await client.$transaction(async tx=>{
+    const advance=await receiptAdvanceCreditInTx(tx,actor,{allocationId:allocation.id,entryDate:date});
+    const correction=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",branchId,partyId:customerId,sourceDocumentId:sale.id,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Paid original",quantity:"1",rate:"100",taxRate:"0",sourceCommercialLineId:line.id}]},tx);
+    await postCommercialDocumentForActor(actor,{documentId:correction.id},tx);return advance;
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+   expect(credit.paymentMode).toBe("ACCOUNT_CREDIT");expect(credit.amount.toString()).toBe(scenario.cash);expect(credit.remainingAmount.toString()).toBe(scenario.cash);expect(credit.moneyAccountId).toBeNull();
+   expect(await cashBalance()).toBe(originalCash);expect(await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}})).toEqual(original);
+   expect(await currentPartyBalanceForActor(actor,customerId)).toBe(balanceBefore.sub(scenario.cash).toFixed(2));
+   expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,sale.id))).outstanding.toString()).toBe("0");
+   expect((await documentOutstandingsBatch(companyId,[sale],new Date("2026-10-19"))).get(sale.id)?.toString()).toBe("0");
+   expect((await documentOutstandingsBatch(companyId,[sale],date)).get(sale.id)?.toString()).toBe("0");
+   expect((await client.$transaction(tx=>receiptAdvanceCreditInTx(tx,actor,{allocationId:allocation.id,entryDate:date}))).id).toBe(credit.id);
+   await expect(client.$transaction(tx=>receiptAdvanceCreditInTx(tx,actor,{allocationId:allocation.id,entryDate:"2026-10-21"}))).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+   await expect(createSettlementForActor(actor,{type:"CUSTOMER_ADVANCE",branchId,partyId:customerId,paymentMode:"ACCOUNT_CREDIT",amount:"1",transactionDate:"2026-10-20",allocations:[],idempotencyKey:randomUUID()})).rejects.toThrow("INVALID_PAYMENT_MODE");
+   const replacement=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Corrected amount",quantity:"1",rate:"80",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:replacement.id});
+   await applyAdvanceForActor(actor,{advanceId:credit.id,documentId:replacement.id,amount:"80",applicationDate:"2026-10-20",idempotencyKey:randomUUID()});
+   expect((await client.accountSettlement.findUniqueOrThrow({where:{id:credit.id}})).remainingAmount.toString()).toBe(new Prisma.Decimal(scenario.cash).sub(80).toString());
+   expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,replacement.id))).outstanding.toString()).toBe("0");expect(await cashBalance()).toBe(originalCash);
+   await expect(client.$transaction(tx=>reverseJournalInTx(tx,actor,{journalEntryId:original.journalEntryId!,entryDate:"2026-10-20",reason:"Unsafe original receipt reversal"},{settlementId:receipt.id}))).rejects.toThrow("RECEIPT_HAS_ADVANCE_CREDIT");
+   await expect(client.$transaction(tx=>reverseJournalInTx(tx,actor,{journalEntryId:credit.journalEntryId!,entryDate:"2026-10-20",reason:"Unsafe credit reversal"},{settlementId:credit.id}))).rejects.toThrow("RECEIPT_ADVANCE_CREDIT_NOT_REVERSIBLE");
+   expect(await client.accountSettlement.count({where:{companyId,receiptCreditSourceAllocationId:allocation.id}})).toBe(1);
+   const application=await client.advanceApplication.findFirstOrThrow({where:{documentId:replacement.id},include:{journalEntry:true}});
+   const priorAdvance=await client.accountSettlement.findUniqueOrThrow({where:{id:credit.id}});
+   const released=await client.$transaction(async tx=>{
+    const next=await advanceApplicationCreditInTx(tx,actor,{applicationId:application.id,entryDate:date});
+    const replacementLine=await tx.commercialDocumentLine.findFirstOrThrow({where:{documentId:replacement.id}});
+    const reversal=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",branchId,partyId:customerId,sourceDocumentId:replacement.id,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Corrected amount",quantity:"1",rate:"80",taxRate:"0",sourceCommercialLineId:replacementLine.id}]},tx);
+    await postCommercialDocumentForActor(actor,{documentId:reversal.id},tx);return next;
+   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+   expect(released.amount.toString()).toBe("80");expect(released.remainingAmount.toString()).toBe("80");
+   expect(await client.advanceApplication.findUniqueOrThrow({where:{id:application.id},include:{journalEntry:true}})).toEqual(application);
+   expect(await client.accountSettlement.findUniqueOrThrow({where:{id:credit.id}})).toEqual(priorAdvance);
+   expect(await cashBalance()).toBe(originalCash);
+   expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,replacement.id))).outstanding.toString()).toBe("0");
+   expect((await client.$transaction(tx=>advanceApplicationCreditInTx(tx,actor,{applicationId:application.id,entryDate:date}))).id).toBe(released.id);
+   expect(await client.accountSettlement.count({where:{companyId,advanceCreditSourceApplicationId:application.id}})).toBe(1);
+
+  }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
+ });
+ it("paid edit removes the old discount and retains only excess actual cash as advance",async()=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  await client.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES"],transactionDefaults:{transactionPreferences:{linkPayments:false,discountDuringPayment:true}}}});
+  try{
+   const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-18",lines:[{lineType:"CUSTOM",itemName:"Paid edit",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+   const receipt=await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-19",allocations:[{documentId:sale.id,amount:"100",discountAmount:"10"}]});
+   const original=await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}});
+   const payload={idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Paid edit",quantity:"1",rate:"80",taxRate:"0"}]};
+   const replacement=await replacePostedSaleForActor(actor,sale.id,payload);
+   expect(replacement.status).toBe("POSTED");
+   expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,replacement.id))).outstanding.toString()).toBe("0");
+   const credit=await client.accountSettlement.findFirstOrThrow({where:{receiptCreditSourceAllocationId:original.allocations[0].id}});
+   expect(credit.amount.toString()).toBe("90");expect(credit.remainingAmount.toString()).toBe("10");
+   expect(await client.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}})).toEqual(original);
+   expect((await replacePostedSaleForActor(actor,sale.id,payload)).id).toBe(replacement.id);
+  }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});

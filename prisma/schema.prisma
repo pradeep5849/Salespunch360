@@ -285,6 +285,7 @@ enum PaymentMode {
   CASH
   BANK
   CHEQUE
+  ACCOUNT_CREDIT
 }
 
 enum SettlementStatus {
@@ -2606,6 +2607,10 @@ model PurchaseLineAllocation {
 }
 
 model AccountSettlement {
+  advanceCreditSourceApplicationId String? @db.Uuid
+  advanceCreditSourceApplication AdvanceApplication? @relation("AdvanceCreditSource", fields:[companyId,advanceCreditSourceApplicationId], references:[companyId,id], onDelete:NoAction, onUpdate:Restrict, map:"advance_credit_source_fkey")
+  receiptCreditSourceAllocationId String? @db.Uuid
+  receiptCreditSourceAllocation SettlementAllocation? @relation("ReceiptCreditSource", fields:[companyId,receiptCreditSourceAllocationId], references:[companyId,id], onDelete:NoAction, onUpdate:Restrict, map:"receipt_credit_source_fkey")
   id               String                 @id @default(uuid()) @db.Uuid
   companyId        String                 @db.Uuid
   branchId         String                 @db.Uuid
@@ -2642,6 +2647,8 @@ model AccountSettlement {
   cheque Cheque? @relation("ChequeSettlementHistory", fields: [companyId, chequeId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "settlement_cheque_company_fkey")
   currentCheques Cheque[] @relation("ChequeCurrentSettlement")
 
+  @@unique([companyId, advanceCreditSourceApplicationId], map:"account_settlements_advance_credit_source_key")
+  @@unique([companyId, receiptCreditSourceAllocationId], map:"account_settlements_receipt_credit_source_key")
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, settlementNumber])
   @@unique([companyId, idempotencyKey])
@@ -2650,6 +2657,7 @@ model AccountSettlement {
 }
 
 model SettlementAllocation {
+  receiptAdvanceCredit AccountSettlement? @relation("ReceiptCreditSource")
   id           String             @id @default(uuid()) @db.Uuid
   companyId    String             @db.Uuid
   settlementId String             @db.Uuid
@@ -2661,6 +2669,7 @@ model SettlementAllocation {
   settlement   AccountSettlement  @relation(fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   document     CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  @@unique([companyId, id], map:"settlement_allocations_company_id_key")
   @@unique([companyId, settlementId, documentId])
   @@map("settlement_allocations")
 }
@@ -2708,6 +2717,7 @@ model OpeningBalanceAllocation {
 }
 
 model AdvanceApplication {
+  releasedAdvanceCredit AccountSettlement? @relation("AdvanceCreditSource")
   id              String             @id @default(uuid()) @db.Uuid
   companyId       String             @db.Uuid
   advanceId       String             @db.Uuid
@@ -2725,6 +2735,7 @@ model AdvanceApplication {
   journalEntry    JournalEntry       @relation("AdvanceApplicationJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   createdBy       User               @relation("AdvanceApplicationActor", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  @@unique([companyId,id], map:"advance_applications_company_id_key")
   @@unique([companyId, idempotencyKey])
   @@unique([companyId, advanceId, documentId, idempotencyKey])
   @@map("advance_applications")
