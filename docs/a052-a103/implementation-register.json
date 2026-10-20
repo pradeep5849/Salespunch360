@@ -54788,7 +54788,7 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A080-F01 stays PARTIAL for all supplied GST1–6/Modern Elite layouts, complete native theme/settings/print controls and final validation; no emulator/device runtime.",
-          "implementation_commit": null
+          "implementation_commit": "f2cf93a6dcd6fcb99d34131f9a871f7e1838945d"
         }
       }
     },
