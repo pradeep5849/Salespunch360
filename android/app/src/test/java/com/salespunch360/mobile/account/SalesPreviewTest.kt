@@ -50,4 +50,9 @@ class SalesPreviewTest {
         assertEquals("100.00",salesPreviewTotal(SalesEditorDraft(taxMode="INCLUSIVE",reverseCharge=true,lines=listOf(cess)),SalesOptions()).toPlainString())
     }
 
+
+ @Test fun secondaryProfitUsesPrimaryCostQuantities(){
+  val draft=SalesEditorDraft(lines=listOf(SalesLineDraft(sourceId="item",quantity="1",rate="200",unitSelection="SECONDARY",secondaryUnitsPerBase="0.1")))
+  assertEquals("100.00",salesPreviewProfit(draft,SalesOptions(products=listOf(SalesOption("item","Item",costPrice="10"))))?.toPlainString())
+ }
 }

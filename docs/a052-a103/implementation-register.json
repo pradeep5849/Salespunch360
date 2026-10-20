@@ -14451,6 +14451,50 @@
             "final_checkpoint_head": "NOT RUN; new checkpoint CI requested separately."
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: public selected-unit entry and production default-pricing wiring, native selectors/rule retrieval, report consumers and converted mixed-Project/vendor-return coverage remain. A071-F05 broader unsupported Home source/party-transfer work remains unchanged. No finding promoted or final verification inferred."
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_public_entry",
+          "primary_findings": [
+            "A058-F06",
+            "A062-F02"
+          ],
+          "implementation": "Public commercial lines accept PRIMARY/SECONDARY selection; server captures authorized company item conversion, defaults selected rates from primary-unit prices and discounts from primary quantities, and retains source conversions for returns/copies/edits. Active/foreign unit checks and friendly API400 validation preserve isolation. Web Add/Edit Sale offers only assigned units, locks retained historical units, supports selected Retail/Wholesale/Customer default conversion and computes estimated cost using primary quantities. Shared Web purchase editor exposes assigned units and primary-cost defaults, retains original return units and blocks invalid conversion previews without mutating render state. Native options decode assigned rules; Add Sale selection/default pricing, preview profit and serial checks use primary quantities. Native saved edits/duplicates retain unit selection and only submit authorized source IDs, never conversion factors/snapshots.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-editor-pricing.test.ts",
+            "src/lib/account/commercial-editor-pricing.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial-unit-snapshot.test.ts",
+            "src/lib/account/commercial-unit-snapshot.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "evidence": {
+            "unit_service_database": "105PASS/8files/30.01seconds,0fail/skip; final related PostgreSQL, pricing, source snapshot, duplicate and cheque regression. Earlier104test group and65test group overlap and are not extra unique cases. Physical purchase/sale/return test now uses public SECONDARY input and primary-cost defaults instead of injected SQL snapshots.",
+            "browser_sales_api_legacy": "6PASS desktop/mobile Chromium/1.9minutes: primary-price fixed discounts and legacy duplication/edit; API secondary entry201, retry sameID, inactive unit400 with no duplicate; Web2Boxes total380/base20 and unchanged conversion during edit after master factor changes. Earlier2API and2Web runs overlap. Dev-server reported cancelled destination streams during test navigation; all business assertions passed; no production runtime claim.",
+            "browser_purchase": "2PASS desktop/mobile Chromium/42.2seconds: primary cost12 gives1Box120/base10, retained allocationbase10; actual Save draft then Post/Issue balanced ledger. Invalid quantity0.00001 displays feedback and disables Save; restoring1 enables successful Save. This is distinct from the six Sales/API cases.",
+            "android": "Kotlin compile + focused testDebugUnitTest BUILD SUCCESSFUL3m59s;30JVMtests,0fail/errors/skips (SalesPreview8,SalesSettingsDefaults1,SalesEditSnapshot8,ItemMasterPricing13). Added exact selected-unit pricing/discount, option decoding, copied-source request metadata and primary-cost profit tests. No emulator/device runtime.",
+            "typescript": "PASS final full no-emit check after final browser exit.",
+            "eslint": "PASS final changed-file ESLint and git diff --check. Initial React immutability lint rejected a mutable preview error flag; replaced with immutable per-line result records and reran both desktop/mobile invalid/valid recovery cases.",
+            "initial_test_corrections": "Isolated new secondary-return test from automatic application of other fixture advances; moved source-unit mismatch assertion before full return posting so the existing fully-adjusted guard cannot pre-empt it. Updated duplicate UI fixture to a valid retained snapshot while request payload continues dropping client conversion metadata. Purchase browser locator initially used an exact select label that included option text; fixed to the established accessible combobox pattern; remaining redundant case interrupted before successful paired rerun.",
+            "migration": "No new schema/migration for this unit-entry continuation; existing139unit snapshot migration and140/141paid-credit migrations preserved.",
+            "final_checkpoint_head": "NOT RUN; related evidence only."
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL: native purchase/order unit selectors and rule wiring, converted mixed-Project/vendor-return allocation cases, report/export consumers and complete final-head validation remain. No native emulator/device runtime. No whole finding or linked page promoted.",
+          "commit_sha": null
         }
       ]
     },
@@ -19813,6 +19857,50 @@
             "final_checkpoint_head": "NOT RUN; new checkpoint CI requested separately."
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: public selected-unit entry and production default-pricing wiring, native selectors/rule retrieval, report consumers and converted mixed-Project/vendor-return coverage remain. A071-F05 broader unsupported Home source/party-transfer work remains unchanged. No finding promoted or final verification inferred."
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_public_entry",
+          "primary_findings": [
+            "A058-F06",
+            "A062-F02"
+          ],
+          "implementation": "Public commercial lines accept PRIMARY/SECONDARY selection; server captures authorized company item conversion, defaults selected rates from primary-unit prices and discounts from primary quantities, and retains source conversions for returns/copies/edits. Active/foreign unit checks and friendly API400 validation preserve isolation. Web Add/Edit Sale offers only assigned units, locks retained historical units, supports selected Retail/Wholesale/Customer default conversion and computes estimated cost using primary quantities. Shared Web purchase editor exposes assigned units and primary-cost defaults, retains original return units and blocks invalid conversion previews without mutating render state. Native options decode assigned rules; Add Sale selection/default pricing, preview profit and serial checks use primary quantities. Native saved edits/duplicates retain unit selection and only submit authorized source IDs, never conversion factors/snapshots.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-editor-pricing.test.ts",
+            "src/lib/account/commercial-editor-pricing.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial-unit-snapshot.test.ts",
+            "src/lib/account/commercial-unit-snapshot.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "evidence": {
+            "unit_service_database": "105PASS/8files/30.01seconds,0fail/skip; final related PostgreSQL, pricing, source snapshot, duplicate and cheque regression. Earlier104test group and65test group overlap and are not extra unique cases. Physical purchase/sale/return test now uses public SECONDARY input and primary-cost defaults instead of injected SQL snapshots.",
+            "browser_sales_api_legacy": "6PASS desktop/mobile Chromium/1.9minutes: primary-price fixed discounts and legacy duplication/edit; API secondary entry201, retry sameID, inactive unit400 with no duplicate; Web2Boxes total380/base20 and unchanged conversion during edit after master factor changes. Earlier2API and2Web runs overlap. Dev-server reported cancelled destination streams during test navigation; all business assertions passed; no production runtime claim.",
+            "browser_purchase": "2PASS desktop/mobile Chromium/42.2seconds: primary cost12 gives1Box120/base10, retained allocationbase10; actual Save draft then Post/Issue balanced ledger. Invalid quantity0.00001 displays feedback and disables Save; restoring1 enables successful Save. This is distinct from the six Sales/API cases.",
+            "android": "Kotlin compile + focused testDebugUnitTest BUILD SUCCESSFUL3m59s;30JVMtests,0fail/errors/skips (SalesPreview8,SalesSettingsDefaults1,SalesEditSnapshot8,ItemMasterPricing13). Added exact selected-unit pricing/discount, option decoding, copied-source request metadata and primary-cost profit tests. No emulator/device runtime.",
+            "typescript": "PASS final full no-emit check after final browser exit.",
+            "eslint": "PASS final changed-file ESLint and git diff --check. Initial React immutability lint rejected a mutable preview error flag; replaced with immutable per-line result records and reran both desktop/mobile invalid/valid recovery cases.",
+            "initial_test_corrections": "Isolated new secondary-return test from automatic application of other fixture advances; moved source-unit mismatch assertion before full return posting so the existing fully-adjusted guard cannot pre-empt it. Updated duplicate UI fixture to a valid retained snapshot while request payload continues dropping client conversion metadata. Purchase browser locator initially used an exact select label that included option text; fixed to the established accessible combobox pattern; remaining redundant case interrupted before successful paired rerun.",
+            "migration": "No new schema/migration for this unit-entry continuation; existing139unit snapshot migration and140/141paid-credit migrations preserved.",
+            "final_checkpoint_head": "NOT RUN; related evidence only."
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL: native purchase/order unit selectors and rule wiring, converted mixed-Project/vendor-return allocation cases, report/export consumers and complete final-head validation remain. No native emulator/device runtime. No whole finding or linked page promoted.",
+          "commit_sha": null
         }
       ],
       "push_checkpoint_evidence": {
@@ -42563,7 +42651,7 @@
             "migration": "No new schema or migration for this UI path; reuses existing loan-payment ledger and immutable history."
           },
           "remaining": "Opening processing fee remains pending explicit gross/net fee-source policy; user question sent. Original A067-F03 remains PARTIAL. Native emulator/device runtime and complete final-head validation remain pending.",
-          "commit_sha": null
+          "commit_sha": "b0216353fa5a436ef4d036a672419ae85d0682dc"
         }
       }
     },
@@ -51003,6 +51091,50 @@
             "final_checkpoint_head": "NOT RUN; new-head CI requested separately."
           },
           "remaining": "No finding status promoted. Historical PERCENTAGE rows missing the original input percentage still require safe compatibility handling without guessing from current master defaults. Public selected-unit entry/default-pricing/report/native-rule integration and broader original partial scopes remain pending. No full checkpoint final validation or production/device claim."
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_public_entry",
+          "primary_findings": [
+            "A058-F06",
+            "A062-F02"
+          ],
+          "implementation": "Public commercial lines accept PRIMARY/SECONDARY selection; server captures authorized company item conversion, defaults selected rates from primary-unit prices and discounts from primary quantities, and retains source conversions for returns/copies/edits. Active/foreign unit checks and friendly API400 validation preserve isolation. Web Add/Edit Sale offers only assigned units, locks retained historical units, supports selected Retail/Wholesale/Customer default conversion and computes estimated cost using primary quantities. Shared Web purchase editor exposes assigned units and primary-cost defaults, retains original return units and blocks invalid conversion previews without mutating render state. Native options decode assigned rules; Add Sale selection/default pricing, preview profit and serial checks use primary quantities. Native saved edits/duplicates retain unit selection and only submit authorized source IDs, never conversion factors/snapshots.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SalesPreview.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-editor-pricing.test.ts",
+            "src/lib/account/commercial-editor-pricing.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial-unit-snapshot.test.ts",
+            "src/lib/account/commercial-unit-snapshot.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "evidence": {
+            "unit_service_database": "105PASS/8files/30.01seconds,0fail/skip; final related PostgreSQL, pricing, source snapshot, duplicate and cheque regression. Earlier104test group and65test group overlap and are not extra unique cases. Physical purchase/sale/return test now uses public SECONDARY input and primary-cost defaults instead of injected SQL snapshots.",
+            "browser_sales_api_legacy": "6PASS desktop/mobile Chromium/1.9minutes: primary-price fixed discounts and legacy duplication/edit; API secondary entry201, retry sameID, inactive unit400 with no duplicate; Web2Boxes total380/base20 and unchanged conversion during edit after master factor changes. Earlier2API and2Web runs overlap. Dev-server reported cancelled destination streams during test navigation; all business assertions passed; no production runtime claim.",
+            "browser_purchase": "2PASS desktop/mobile Chromium/42.2seconds: primary cost12 gives1Box120/base10, retained allocationbase10; actual Save draft then Post/Issue balanced ledger. Invalid quantity0.00001 displays feedback and disables Save; restoring1 enables successful Save. This is distinct from the six Sales/API cases.",
+            "android": "Kotlin compile + focused testDebugUnitTest BUILD SUCCESSFUL3m59s;30JVMtests,0fail/errors/skips (SalesPreview8,SalesSettingsDefaults1,SalesEditSnapshot8,ItemMasterPricing13). Added exact selected-unit pricing/discount, option decoding, copied-source request metadata and primary-cost profit tests. No emulator/device runtime.",
+            "typescript": "PASS final full no-emit check after final browser exit.",
+            "eslint": "PASS final changed-file ESLint and git diff --check. Initial React immutability lint rejected a mutable preview error flag; replaced with immutable per-line result records and reran both desktop/mobile invalid/valid recovery cases.",
+            "initial_test_corrections": "Isolated new secondary-return test from automatic application of other fixture advances; moved source-unit mismatch assertion before full return posting so the existing fully-adjusted guard cannot pre-empt it. Updated duplicate UI fixture to a valid retained snapshot while request payload continues dropping client conversion metadata. Purchase browser locator initially used an exact select label that included option text; fixed to the established accessible combobox pattern; remaining redundant case interrupted before successful paired rerun.",
+            "migration": "No new schema/migration for this unit-entry continuation; existing139unit snapshot migration and140/141paid-credit migrations preserved.",
+            "final_checkpoint_head": "NOT RUN; related evidence only."
+          },
+          "remaining": "A071-F05 remains PARTIAL for broader Home/noncommercial-source and party-transfer scope. This continuation only strengthens its shared duplicate provenance and related entry handling; no Home completion inferred.",
+          "commit_sha": null
         }
       ],
       "push_checkpoint_evidence": {
@@ -64729,7 +64861,7 @@
             "initial_test_corrections": "Cancellation denial test initially expected a Promise rejection for synchronous authorization throw; corrected assertion. Browser initially counted unrelated seeded DRAFT; now polls only posted replacement for the test product and waits for financial commit."
           },
           "remaining": "A086-F05 remains PARTIAL: original invoices with prior posted credit adjustments still require safe residual correction implementation; broader financial/period/rollback coverage and final-head validation pending. Android emulator/device runtime unavailable. No final_status promotion. User decision requested for invoices already carrying posted Credit Notes: correct remaining unreturned units versus retain separate correction-document workflow. No behavior invented.",
-          "commit_sha": null
+          "commit_sha": "45a115025c97a1b47c6f9e31ad52112b97ba3167"
         }
       }
     },

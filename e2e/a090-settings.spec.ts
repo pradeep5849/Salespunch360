@@ -3250,3 +3250,59 @@ test("A067 standalone loan charges do not reduce principal",async({page})=>{
  const principal=await db.journalLine.aggregate({where:{companyId,ledgerAccountId:loan.liabilityLedgerId},_sum:{debit:true,credit:true}});expect(Number(principal._sum.credit??0)-Number(principal._sum.debit??0)).toBe(100000);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+
+
+test("A058 secondary unit API uses primary price and exact saved conversion",async({page})=>{
+ test.setTimeout(180000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES"],itemSettings:{enabled:true,itemWiseDiscount:true},transactionDefaults:{transactionPreferences:{linkPayments:false}}}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Unit API verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const primary=await db.accountUnit.create({data:{companyId,name:"API Piece",symbol:"ap"}}),secondary=await db.accountUnit.create({data:{companyId,name:"API Box",symbol:"ab"}});
+ const product=await db.accountProduct.create({data:{companyId,name:"API secondary item",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"0.1",salePrice:"20",trackInventory:false,pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:"FIXED",discountValue:"1",normalizedDiscountValue:"1"}}});
+ await signInSettings(page);const token=createSessionToken(),user=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});
+ const headers={authorization:`Bearer ${token}`},payload={type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:product.id,unitSelection:"SECONDARY",quantity:"1",taxRate:"0"}]};
+ const result=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:payload});expect(result.status()).toBe(201);const created=await result.json();
+ const sale=await db.commercialDocument.findUniqueOrThrow({where:{id:created.id},include:{lines:true}}),line=sale.lines[0];expect(sale.status).toBe("POSTED");expect(sale.grandTotal.toString()).toBe("190");expect(line.rate.toString()).toBe("200");expect(line.baseQuantity?.toString()).toBe("10");expect(line.unitName).toBe("API Box");expect(line.discountAmount.toString()).toBe("10");
+ const replay=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:payload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(created.id);
+ await db.accountUnit.update({where:{id:secondary.id},data:{isActive:false}});
+ const denied=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:{...payload,idempotencyKey:randomUUID()}});expect(denied.status()).toBe(400);expect((await denied.json()).error).toBe("UNIT_CONVERSION_UNAVAILABLE");
+ expect(await db.commercialDocument.count({where:{companyId,lines:{some:{productId:product.id}}}})).toBe(1);
+});
+
+
+test("A058 Web Sale selects an assigned secondary unit and retains it on edit",async({page})=>{
+ test.setTimeout(180000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES"],itemSettings:{enabled:true,itemWiseDiscount:true},transactionDefaults:{invoicePreview:false,transactionPreferences:{linkPayments:false}}}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Unit Web verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const primary=await db.accountUnit.create({data:{companyId,name:"Web Piece",symbol:"wp"}}),secondary=await db.accountUnit.create({data:{companyId,name:"Web Box",symbol:"wb"}}),unrelated=await db.accountUnit.create({data:{companyId,name:"Unrelated unit",symbol:"un"}});
+ const product=await db.accountProduct.create({data:{companyId,name:"Web secondary item",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"0.1",salePrice:"20",trackInventory:false,pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:"FIXED",discountValue:"1",normalizedDiscountValue:"1"}}});
+ await signInSettings(page);await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");await page.getByPlaceholder("Search customer name or phone").fill("Print fixture customer");await page.getByRole("button",{name:/Print fixture customer/}).click();await page.getByRole("button",{name:/Add Items/}).click();await page.getByText(product.name,{exact:true}).click();
+ const picker=page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})});
+ await expect(picker.getByLabel("Unit",{exact:true}).locator(`option[value="${unrelated.id}"]`)).toHaveCount(0);
+ await picker.getByLabel("Unit",{exact:true}).selectOption(secondary.id);await expect(picker.getByLabel("Rate (Price/Unit)",{exact:true})).toHaveValue("200");await picker.getByLabel("Quantity",{exact:true}).fill("2");await picker.getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();
+ await expect.poll(async()=>await db.commercialDocument.count({where:{companyId,status:"POSTED",lines:{some:{productId:product.id}}}}),{timeout:60000}).toBe(1);
+ const source=await db.commercialDocument.findFirstOrThrow({where:{companyId,status:"POSTED",lines:{some:{productId:product.id}}},include:{lines:true}});expect(source.grandTotal.toString()).toBe("380");expect(source.lines[0].baseQuantity?.toString()).toBe("20");expect(source.lines[0].unitName).toBe("Web Box");
+ await db.accountProduct.update({where:{id:product.id},data:{secondaryUnitsPerBase:"0.2"}});
+ await page.goto(`/workspace/account/sales/${source.id}/edit`);await page.getByRole("button",{name:/^Edit item /}).click();await expect(picker.getByLabel("Unit",{exact:true})).toBeDisabled();await expect(picker.getByLabel("Unit",{exact:true})).toHaveValue(secondary.id);await picker.getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();
+ await expect.poll(async()=>await db.commercialDocument.count({where:{companyId,type:"SALES_INVOICE",status:"POSTED",lines:{some:{productId:product.id}}}}),{timeout:60000}).toBe(2);
+ const replacement=await db.commercialDocument.findFirstOrThrow({where:{companyId,type:"SALES_INVOICE",id:{not:source.id},status:"POSTED",lines:{some:{productId:product.id}}},include:{lines:true}});expect(replacement.grandTotal.toString()).toBe("380");expect(replacement.lines[0].baseQuantity?.toString()).toBe("20");expect(replacement.lines[0].unitConversionSnapshot).toEqual(source.lines[0].unitConversionSnapshot);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test("A062 purchase secondary unit uses primary cost through Save and Post",async({page})=>{
+ test.setTimeout(180000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["PURCHASES"],transactionDefaults:{transactionPreferences:{linkPayments:false}}}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Purchase unit Web verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const primary=await db.accountUnit.create({data:{companyId,name:"Purchase Piece",symbol:"pp"}}),secondary=await db.accountUnit.create({data:{companyId,name:"Purchase Box",symbol:"pb"}}),vendor=await db.vendor.create({data:{companyId,name:"Unit purchase vendor"}});
+ const product=await db.accountProduct.create({data:{companyId,name:"Purchase secondary item",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"0.1",costPrice:"12",salePrice:"20",taxRate:"0",trackInventory:false}});
+ await signInSettings(page);await page.goto("/workspace/account/transactions/new?type=PURCHASE_BILL");
+ await page.getByRole("combobox",{name:/^Vendor/}).selectOption(vendor.id);await page.getByLabel("Vendor invoice number",{exact:true}).fill("UNIT-PURCHASE-01");await page.getByLabel("Vendor invoice date",{exact:true}).fill("2026-10-20");await page.getByText("Advanced purchase purpose",{exact:true}).click();await page.getByRole("combobox",{name:/^Purpose/}).selectOption("GENERAL_OFFICE");
+ await page.getByRole("combobox",{name:/^Line type/}).selectOption("MATERIAL");await page.getByRole("combobox",{name:/^Item/}).selectOption(product.id);await page.getByRole("combobox",{name:/^Unit/}).selectOption("SECONDARY");await page.getByLabel("Quantity",{exact:true}).fill("0.00001");await expect(page.getByRole("alert").filter({hasText:"convert exactly"})).toBeVisible();await expect(page.getByRole("button",{name:"Create Draft",exact:true})).toBeDisabled();await page.getByLabel("Quantity",{exact:true}).fill("1");
+ await page.getByRole("button",{name:"Create Draft",exact:true}).click();await expect.poll(async()=>await db.commercialDocument.count({where:{companyId,type:"PURCHASE_BILL",lines:{some:{productId:product.id}}}}),{timeout:60000}).toBe(1);
+ const source=await db.commercialDocument.findFirstOrThrow({where:{companyId,type:"PURCHASE_BILL",lines:{some:{productId:product.id}}},include:{lines:{include:{purchaseAllocations:true}}}});expect(source.status).toBe("DRAFT");expect(source.grandTotal.toString()).toBe("120");expect(source.lines[0].rate.toString()).toBe("120");expect(source.lines[0].baseQuantity?.toString()).toBe("10");expect(source.lines[0].purchaseAllocations[0].baseQuantity?.toString()).toBe("10");
+ await expect(page).toHaveURL(new RegExp(`/transactions/${source.id}$`),{timeout:30000});await page.getByRole("button",{name:"Post / Issue",exact:true}).click();await expect.poll(async()=>(await db.commercialDocument.findUniqueOrThrow({where:{id:source.id}})).status,{timeout:60000}).toBe("POSTED");
+ const posted=await db.commercialDocument.findUniqueOrThrow({where:{id:source.id},include:{journalEntry:{include:{lines:true}}}});expect(posted.journalEntry!.lines.reduce((n,row)=>n+Number(row.debit)-Number(row.credit),0)).toBe(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

@@ -36,4 +36,21 @@ class ItemMasterPricingTest {
  assertEquals("70",options.wholesaleRate("item","2026-10-01"));assertEquals("70",options.wholesaleRate("item","2026-10-31"))
  assertNull(options.wholesaleRate("item","2026-11-01"));assertNull(options.wholesaleRate("other","2026-10-01"));assertNull(options.copy(wholesalePrice=false).wholesaleRate("item","2026-10-01"))
  }
+
+ @Test fun secondaryPriceAndDiscountUsePrimaryQuantities(){
+  val item=SalesOption("item","Item",rate="20",secondaryUnitsPerBase="0.1",pricing=buildJsonObject{put("enteredSalePrice","20");put("discountType","FIXED");put("normalizedDiscountValue","1")})
+  val price=itemMasterPriceForUnit(item,"EXCLUSIVE",quantity="2",selection="SECONDARY")
+  assertEquals("200.00",price.rate);assertEquals("20",price.discountValue)
+  assertEquals("100.00",itemMasterPriceForUnit(item,"EXCLUSIVE",quantity="1",selection="SECONDARY",priceKind="CUSTOMER",customerRate="10").rate)
+ }
+ @Test fun secondaryQuantityMustConvertExactly(){
+  assertEquals("10.0000",primaryUnitQuantity("1","SECONDARY","0.1").toPlainString())
+  assertThrows(IllegalArgumentException::class.java){primaryUnitQuantity("1","SECONDARY","0.3")}
+  assertThrows(IllegalArgumentException::class.java){primaryUnitQuantity("1","SECONDARY","")}
+ }
+
+ @Test fun optionDecoderKeepsAssignedUnitRules(){
+  val option=Json.parseToJsonElement("""{"id":"item","name":"Item","salePrice":"20","unitId":"piece","secondaryUnitId":"box","secondaryUnitsPerBase":"0.1"}""").jsonObject.option()
+  assertEquals("piece",option.unitId);assertEquals("box",option.secondaryUnitId);assertEquals("0.1",option.secondaryUnitsPerBase)
+ }
 }

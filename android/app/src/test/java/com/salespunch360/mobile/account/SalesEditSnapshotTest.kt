@@ -72,4 +72,12 @@ class SalesEditSnapshotTest {
         assertEquals("0",restored[0].discountValue)
         assertEquals("",restored[1].discountValue)
     }
+
+ @Test fun copiedSecondaryUnitsSubmitSourceIdsButNeverClientConversionMetadata(){
+  val document=Json.parseToJsonElement("""{"id":"sale","type":"SALES_INVOICE","branchId":"branch","partyId":"party","lines":[{"id":"line","lineType":"PRODUCT","productId":"product","quantity":"1","rate":"200","unitConversionSnapshot":{"selection":"SECONDARY","secondaryUnitsPerBase":"0.1"}}]}""").jsonObject
+  val saved=savedSaleEditorDraft(document);assertEquals("SECONDARY",saved.lines.single().unitSelection)
+  val copied=duplicateSavedSaleDraft(document,"2026-10-20");val payload=salesDraftPayload(copied);val line=payload["lines"]!!.jsonArray.single().jsonObject
+  assertEquals("sale",payload["copiedFromSaleId"]!!.jsonPrimitive.content);assertEquals("line",line["copiedFromSaleLineId"]!!.jsonPrimitive.content)
+  assertEquals("SECONDARY",line["unitSelection"]!!.jsonPrimitive.content);assertNull(line["secondaryUnitsPerBase"]);assertNull(line["unitConversionSnapshot"]);assertNull(line["originalLineId"])
+ }
 }

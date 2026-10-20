@@ -23,3 +23,10 @@ it("rejects malformed source metadata and unavailable secondary units",()=>{
  expect(()=>resolveCommercialUnitSnapshot({quantity:"1",selection:"SECONDARY"})).toThrow("UNIT_CONVERSION_UNAVAILABLE");
  expect(()=>resolveCommercialUnitSnapshot({quantity:"1",selection:"SECONDARY",master:{...master,secondaryUnit:{...master.secondaryUnit,isActive:false}}})).toThrow("UNIT_CONVERSION_UNAVAILABLE");
 });
+
+it("rejects an inactive current primary unit while preserving authorized historical units",()=>{
+ const inactive={...master,unit:{...master.unit,isActive:false}};
+ expect(()=>resolveCommercialUnitSnapshot({quantity:"1",selection:"PRIMARY",master:inactive})).toThrow("UNIT_CONVERSION_UNAVAILABLE");
+ const original=resolveCommercialUnitSnapshot({quantity:"1",selection:"SECONDARY",master});
+ expect(resolveCommercialUnitSnapshot({quantity:"1",master:inactive},{unitConversionSnapshot:original.snapshot,unitName:"Historical box",unitSymbol:"old"})).toMatchObject({baseQuantity:original.baseQuantity,unitName:"Historical box"});
+});

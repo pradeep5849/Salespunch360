@@ -1,7 +1,7 @@
 import {commercialBaseQuantity,commercialReturnBaseQuantity} from "./commercial-stock-quantity";
 import {resolveCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import {customerPriceOptionsForActor,wholesalePriceOptionsForActor} from "./customer-price-options";
-import {itemPriceForDocument} from "./item-pricing";
+import {itemPriceForSelectedUnit} from "./item-pricing";
 import {commercialLineAmounts} from "./commercial-line-amounts";
 import { EFFECTIVE_DOCUMENT_ALLOCATION, effectiveDocumentAllocationAt, effectiveAdvanceApplicationAt, postedJournalAt, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT, EFFECTIVE_SETTLEMENT_ALLOCATION } from "./settlement-policy";
 import { createHash } from "node:crypto";
@@ -285,6 +285,7 @@ const lineSchema = z.object({
   itemCode: z.string().max(80).optional(),
   description: z.string().max(10_000).optional(),
   specification: z.string().max(20_000).optional(),
+  unitSelection: z.enum(["PRIMARY","SECONDARY"]).optional(),
   unitName: z.string().max(80).optional(),
   unitSymbol: z.string().max(20).optional(),
   quantity: decimal,
@@ -544,6 +545,7 @@ async function snapshotLine(
       where: { companyId: a.companyId, id: row.sourceId, isActive: true },
       include: { unit: true, secondaryUnit:true },
     });
+    if(x&&((x.unit&&x.unit.companyId!==a.companyId)||(x.secondaryUnit&&x.secondaryUnit.companyId!==a.companyId)))throw new Error("INVALID_UNIT_SNAPSHOT");
     if (x)
       master = {
         id: x.id,
@@ -573,6 +575,7 @@ async function snapshotLine(
       where: { companyId: a.companyId, id: row.sourceId, isActive: true },
       include: { unit: true, secondaryUnit:true },
     });
+    if(x&&((x.unit&&x.unit.companyId!==a.companyId)||(x.secondaryUnit&&x.secondaryUnit.companyId!==a.companyId)))throw new Error("INVALID_UNIT_SNAPSHOT");
     if (x)
       master = {
         id: x.id,
@@ -625,8 +628,8 @@ async function snapshotLine(
     (retainedLine.productId??retainedLine.serviceId??retainedLine.workPackageId??null)!==(row.sourceId??null)))
     throw new Error("INVALID_SALE_LINE_SOURCE");
   // Retained lines keep the original selected unit and factor even after master edits.
-  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,master},sourceLine??retainedLine??undefined);
-  const defaultPricing=itemPriceForDocument(master?.rate,master?.tax,master?.pricing,documentTaxMode,purchase,row.quantity);
+  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,selection:row.unitSelection,master},sourceLine??retainedLine??undefined);
+  const defaultPricing=itemPriceForSelectedUnit({rate:master?.rate,taxRate:master?.tax,pricing:master?.pricing,mode:documentTaxMode,purchase,quantity:row.quantity,selection:units.snapshot?.selection??"PRIMARY",secondaryUnitsPerBase:units.snapshot?.secondaryUnitsPerBase});
   const quantity = new D(row.quantity),
     rate = new D(row.rate ?? sourceLine?.rate ?? retainedLine?.rate ?? defaultPricing.rate),
     taxRate = resolveCommercialTaxRate(row.taxRate, master?.tax ?? null),
@@ -771,8 +774,8 @@ async function snapshotLine(
     itemCode: row.itemCode ?? master?.code,
     description: row.description ?? master?.description,
     specification: row.specification,
-    unitName: sourceLine || retainedLine ? units.unitName : row.unitName ?? master?.unit?.name,
-    unitSymbol: sourceLine || retainedLine ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
+    unitName: sourceLine || retainedLine || units.snapshot ? units.unitName : row.unitName ?? master?.unit?.name,
+    unitSymbol: sourceLine || retainedLine || units.snapshot ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
     quantity,
     baseQuantity:new D(units.baseQuantity),
     unitConversionSnapshot:units.snapshot,
@@ -3245,7 +3248,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
             quantity: true,
             rate: true,
             taxRate: true,
-            lineTotal: true,
+            lineTotal: true,unitName:true,unitSymbol:true,unitConversionSnapshot:true,
           },
         },
       },
@@ -3393,6 +3396,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         barcode: true,
         salePrice: true,
         pricing:true,
+        unitId:true,secondaryUnitId:true,secondaryUnitsPerBase:true,
         costPrice: true,
         taxRate: true,
         trackInventory: true,
@@ -3435,7 +3439,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
         code: true,
         sellingRate: true,
         estimatedCost:true,
-        pricing:true,
+        pricing:true,unitId:true,secondaryUnitId:true,secondaryUnitsPerBase:true,
         taxRate: true,
       },
     }),

@@ -10,4 +10,9 @@ describe("commercial editor retained master pricing",()=>{
  it("applies saved sale discount per unit but obeys Items discount OFF",()=>{expect(commercialEditorPricing(line,master,false,"EXCLUSIVE")).toMatchObject({rate:"100",discountType:"FIXED",discountValue:"30"});expect(commercialEditorPricing(line,master,false,"EXCLUSIVE",false)).toMatchObject({discountType:"NONE",discountValue:"0"})});
  it("keeps explicit zero distinct from omitted defaults",()=>{expect(commercialEditorPricing({...line,rate:"0",taxRate:"0"},master,true,"EXCLUSIVE")).toMatchObject({rate:"0",taxRate:"0"})});
  it("uses service purchase cost and custom input without an item master",()=>{expect(commercialEditorPricing(line,{estimatedCost:"12",taxRate:"0"},true,"EXCLUSIVE").rate).toBe("12");expect(commercialEditorPricing({...line,rate:"15",taxRate:"2"},undefined,true,"EXCLUSIVE").rate).toBe("15")});
+ it("uses primary cost and saved discounts when a secondary unit is selected",()=>{
+ const source={...master,secondaryUnitsPerBase:"0.1"};
+ const purchase=commercialEditorPricing({...line,quantity:"1",unitSelection:"SECONDARY"},source,true,"EXCLUSIVE");expect(purchase.rate).toBe("500");expect(purchase.discountValue).toBe("0");
+ const sale=commercialEditorPricing({...line,quantity:"1",unitSelection:"SECONDARY"},source,false,"EXCLUSIVE");expect(sale.rate).toBe("1000");expect(sale.discountValue).toBe("100");
+ });
 });

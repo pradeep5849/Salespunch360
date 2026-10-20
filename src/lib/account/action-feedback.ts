@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  UNIT_CONVERSION_UNAVAILABLE:"Choose an active unit with a valid saved conversion for this item.",
+  INVALID_UNIT_SNAPSHOT:"The item’s saved unit conversion is invalid. Review its units before saving.",
+  SOURCE_UNIT_MISMATCH:"Keep the original document’s unit when editing, copying or returning this line.",
+  INVALID_UNIT_QUANTITY:"Enter a positive quantity with at most four decimal places.",
+  UNIT_CONVERSION_PRECISION:"This quantity cannot be converted exactly at the stock precision. Adjust the quantity or conversion.",
+  UNIT_CONVERSION_OVERFLOW:"The converted quantity or rate exceeds the supported limit.",
   INVALID_ITEM_UNIT_CONVERSION:"Select two different active units and enter a positive conversion factor with at most four decimal places.",
   INVALID_OWNER_HISTORY_SCOPE:"Choose a branch or all authorized branches, then reload the owner history.",
   OWNER_CORRECTION_ALREADY_POSTED: "This transaction already has a correction. Open its recorded history; retry only with the same date and reason.",

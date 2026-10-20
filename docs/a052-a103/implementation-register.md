@@ -5407,7 +5407,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** 6500 fee does not reduce principal; fee total/source/history; atomic posting/retry; no duplicate expense.
 
-**Current implementation status:** NOT STARTED. Final-head verification not yet run.
+**Current implementation status:** PARTIAL. Standalone charges entry implemented and tested; opening-fee gross/net policy and final-head verification remain pending.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A067_Audit_Report.md", "SalesPunch360_A067_Source_Checkpoint.md"], "final_head_regression": "NOT RUN"}
 
@@ -10153,3 +10153,9 @@ Final related validation: 89 tests passed across five PostgreSQL/accounting suit
 Now PARTIAL rather than NOT STARTED. Web and Android expose a charges-only payment using the existing authorized/idempotent service: zero principal, zero interest, independently linked fee/payment journal. Actual6500fee leaves100000principal unchanged. Opening processing-fee handling still needs the explicit net/gross disbursement policy; no assumption was implemented.
 
 Validation:50tests/6Web/backend/financial suites PASS,2desktop/mobile browser cases PASS, Android compile and15focused JVM tests PASS, TypeScript and lint PASS. No new migration or native device runtime. Current counts:181implemented-but-not-finally-verified,17PARTIAL,1NOT STARTED; all199IDs retained and final statuses unchanged.
+
+### A058-F06 / A062-F02 — secondary-unit public entry and pricing, 2026-10-20
+
+Public transaction input now resolves authorized primary/secondary units and converts primary prices, saved per-unit discounts and stock quantities consistently. Web Sale and shared purchase entry expose assigned units; retained edits/duplicates/returns preserve historical conversion. Native Sale rules, selected pricing, request IDs and estimated profit use primary quantities. The linked A071-F05 duplicate dependency is mapped without closing its broader Home scope.
+
+Validation:105related unit/service/PostgreSQL tests PASS;6Sales/API/legacy desktop/mobile cases PASS plus2distinct purchase Save/Post and invalid-to-valid recovery cases PASS; Android compile and30focused JVM tests PASS; final TypeScript/lint/diff checks PASS. Some prior overlapping Sales browser navigation logged dev-server cancelled destination streams; all financial assertions passed. No native device runtime or new migration. Findings remain PARTIAL for native purchase/order entry, mixed-Project/vendor-return coverage, report consumers and final checkpoint validation. Counts remain181implemented-but-not-finally-verified,17PARTIAL,1NOT STARTED.

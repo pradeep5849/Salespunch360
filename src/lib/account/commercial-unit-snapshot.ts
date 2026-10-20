@@ -21,6 +21,7 @@ export function resolveCommercialUnitSnapshot(input:{quantity:string;selection?:
   if(input.selection==="SECONDARY")throw new Error("SOURCE_UNIT_MISMATCH");
  }else{
   const selection=input.selection??"PRIMARY",master=input.master;
+  if(master?.unit?.isActive===false)throw new Error("UNIT_CONVERSION_UNAVAILABLE");
   if(master?.unit&&master.secondaryUnit&&master.secondaryUnitsPerBase!=null){
    if(selection==="SECONDARY"&&master.secondaryUnit.isActive===false)throw new Error("UNIT_CONVERSION_UNAVAILABLE");
    const unit=selection==="SECONDARY"?master.secondaryUnit:master.unit;

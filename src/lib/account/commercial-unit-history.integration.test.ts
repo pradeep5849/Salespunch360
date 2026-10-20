@@ -72,15 +72,10 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   const trackedId=randomUUID(),warehouseId=randomUUID();
   await client.warehouse.create({data:{id:warehouseId,companyId,branchId,name:"Converted stock",code:`W-${warehouseId.slice(0,8)}`,isDefault:true}});
   await client.accountProduct.create({data:{id:trackedId,companyId,name:"Tracked primary-price item",unitId:primary,secondaryUnitId:secondary,secondaryUnitsPerBase:"0.1",salePrice:"20",costPrice:"5",trackInventory:true}});
-  const purchase=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"INVENTORY_SALES",vendorInvoiceNumber:"STOCK-001",vendorInvoiceDate:"2026-10-20",lines:[{lineType:"MATERIAL",sourceId:trackedId,quantity:"2",rate:"50",taxRate:"0",warehouseId}]});
-  const purchasedLine=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:purchase.id}}),purchaseSnapshot={...purchasedLine.unitConversionSnapshot as object,selection:"SECONDARY",unitName:"Box",unitSymbol:"box"};
-  await client.$executeRaw`UPDATE commercial_document_lines SET "baseQuantity"=20,"unitConversionSnapshot"=${JSON.stringify(purchaseSnapshot)}::jsonb,"unitName"='Box',"unitSymbol"='box' WHERE id=${purchasedLine.id}::uuid`;
-  await client.purchaseLineAllocation.updateMany({where:{documentLineId:purchasedLine.id},data:{baseQuantity:"20"}});
+  const purchase=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"INVENTORY_SALES",vendorInvoiceNumber:"STOCK-001",vendorInvoiceDate:"2026-10-20",lines:[{lineType:"MATERIAL",sourceId:trackedId,unitSelection:"SECONDARY",quantity:"2",taxRate:"0",warehouseId}]});
   await postCommercialDocumentForActor(actor,{documentId:purchase.id});
-  const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{lineType:"PRODUCT",sourceId:trackedId,quantity:"1",rate:"200",taxRate:"0",warehouseId}]});
-  const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}}),snapshot={...line.unitConversionSnapshot as object,selection:"SECONDARY",unitName:"Box",unitSymbol:"box"};
-  // Emulate a validated selected-unit draft snapshot. Public secondary input is not enabled yet.
-  await client.$executeRaw`UPDATE commercial_document_lines SET "baseQuantity"=10,"unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb,"unitName"='Box',"unitSymbol"='box' WHERE id=${line.id}::uuid`;
+  const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{lineType:"PRODUCT",sourceId:trackedId,unitSelection:"SECONDARY",quantity:"1",taxRate:"0",warehouseId}]});
+  const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
   await postCommercialDocumentForActor(actor,{documentId:sale.id});
   const receipt=await client.stockMovement.findFirstOrThrow({where:{companyId,sourceId:purchase.id,movementType:"PURCHASE"}});expect(receipt.quantity.toString()).toBe("20");expect(receipt.unitCost.toString()).toBe("5");
   const outbound=await client.stockMovement.findFirstOrThrow({where:{companyId,sourceId:sale.id,movementType:"SALE"}});expect(outbound.quantity.toString()).toBe("10");expect(outbound.unitCost.toString()).toBe("5");expect(outbound.totalCost.toString()).toBe("50");
@@ -297,6 +292,25 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    expect((await saleDetailForActor(actor,sale.id)).paymentSummary.canChange).toBe(false);
    expect(await client.accountSettlement.count({where:{companyId,partyId:party.id,paymentMode:"ACCOUNT_CREDIT",remainingAmount:"90"}})).toBe(1);
   }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
+ });
+ it("public secondary selection prices in primary units and retains the original return conversion",async()=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}}),master=await client.accountProduct.findUniqueOrThrow({where:{id:productId}});
+  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemWiseDiscount:true},transactionDefaults:{transactionPreferences:{linkPayments:false}}}});
+  await client.accountProduct.update({where:{id:productId},data:{pricing:{discountType:"FIXED",discountValue:"1",normalizedDiscountValue:"1",enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE"},secondaryUnitsPerBase:"0.1"}});
+  try{
+   const source=await createCommercialDocumentForActor(actor,{...input,lines:[{lineType:"PRODUCT",sourceId:productId,unitSelection:"SECONDARY",quantity:"1",taxRate:"0"}]});
+   await postCommercialDocumentForActor(actor,{documentId:source.id});
+   const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}});
+   expect(line.baseQuantity?.toString()).toBe("10");expect(line.quantity.toString()).toBe("1");expect(line.rate.toString()).toBe("200");expect(line.discountValue?.toString()).toBe("10");expect(line.lineTotal.toString()).toBe("190");expect(line.unitName).toBe("Box");
+   expect(line.unitConversionSnapshot).toMatchObject({selection:"SECONDARY",secondaryUnitsPerBase:"0.1"});
+   await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.2"}});
+   const correction=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",branchId,partyId:customerId,sourceDocumentId:source.id,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:productId,sourceCommercialLineId:line.id,unitSelection:"SECONDARY",quantity:"1",rate:"200",discountType:"FIXED",discountValue:"10",taxRate:"0"}]});
+   const returned=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:correction.id}});expect(returned.baseQuantity?.toString()).toBe("10");expect(returned.unitConversionSnapshot).toEqual(line.unitConversionSnapshot);
+   await expect(createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",branchId,partyId:customerId,sourceDocumentId:source.id,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:productId,sourceCommercialLineId:line.id,unitSelection:"PRIMARY",quantity:"1",rate:"200"}]})).rejects.toThrow("SOURCE_UNIT_MISMATCH");
+   await postCommercialDocumentForActor(actor,{documentId:correction.id});
+   await client.accountUnit.update({where:{id:secondary},data:{isActive:false}});
+   await expect(createCommercialDocumentForActor(actor,{...input,lines:[{lineType:"PRODUCT",sourceId:productId,unitSelection:"SECONDARY",quantity:"1"}]})).rejects.toThrow("UNIT_CONVERSION_UNAVAILABLE");
+  }finally{await client.accountUnit.update({where:{id:secondary},data:{isActive:true}});await client.accountProduct.update({where:{id:productId},data:{pricing:master.pricing??Prisma.DbNull,secondaryUnitsPerBase:master.secondaryUnitsPerBase}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});

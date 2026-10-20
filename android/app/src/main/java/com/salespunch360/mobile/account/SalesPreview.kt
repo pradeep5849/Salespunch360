@@ -30,7 +30,7 @@ fun salesPreviewTotal(draft:SalesEditorDraft,options:SalesOptions):BigDecimal {
 }
 fun salesPreviewProfit(draft:SalesEditorDraft,options:SalesOptions):BigDecimal? {
     if(draft.lines.any{line->(line.sourceId.isNotBlank()||line.itemName.isNotBlank())&&options.products.none{it.id==line.sourceId&&it.costPrice!=null}})return null
-    return draft.lines.fold(BigDecimal.ZERO){sum,line->sum+taxable(line,draft)-number(options.products.firstOrNull{it.id==line.sourceId}?.costPrice.orEmpty())*number(line.quantity)}.setScale(2,RoundingMode.HALF_UP)
+    return try{draft.lines.fold(BigDecimal.ZERO){sum,line->val master=options.products.firstOrNull{it.id==line.sourceId};sum+taxable(line,draft)-number(master?.costPrice.orEmpty())*primaryUnitQuantity(line.quantity,line.unitSelection,line.secondaryUnitsPerBase.ifBlank{master?.secondaryUnitsPerBase.orEmpty()})}.setScale(2,RoundingMode.HALF_UP)}catch(e:IllegalArgumentException){null}
 }
 
 fun salesPreviewAdvance(draft:SalesEditorDraft,options:SalesOptions):BigDecimal {

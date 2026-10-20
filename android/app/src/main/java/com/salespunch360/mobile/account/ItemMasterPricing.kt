@@ -29,3 +29,22 @@ fun itemMasterPrice(master:SalesOption?,taxMode:String,purchase:Boolean=false,di
     val shown=if(!customer&&!catalogueWholesale&&taxMode=="INCLUSIVE"&&p.str(if(purchase)"purchaseTaxMode"else "saleTaxMode")=="INCLUSIVE"&&entered!=null)entered else base.multiply(factor)
     return ItemMasterPrice(shown.setScale(2,RoundingMode.HALF_UP).toPlainString(),type,(if(type=="FIXED")discount.setScale(2,RoundingMode.HALF_UP)else discount).stripTrailingZeros().toPlainString())
 }
+
+
+/** Prices and saved per-unit discounts use primary stock quantities. */
+fun primaryUnitQuantity(quantity:String,selection:String="PRIMARY",conversion:String=""):BigDecimal{
+ val entered=quantity.toBigDecimalOrNull()?:throw IllegalArgumentException("Invalid quantity")
+ require(entered.signum()>=0&&entered.stripTrailingZeros().scale()<=4&&entered<BigDecimal("100000000000000")){"Invalid quantity"}
+ require(selection in listOf("PRIMARY","SECONDARY")){"Invalid unit"}
+ val base=if(selection=="SECONDARY"){
+  require(validUnitConversionRate(conversion)){"Unit conversion unavailable"}
+  try{entered.divide(conversion.toBigDecimal(),4,RoundingMode.UNNECESSARY)}catch(e:ArithmeticException){throw IllegalArgumentException("Quantity does not convert exactly")}
+ }else entered
+ require(base<BigDecimal("100000000000000")){"Converted quantity exceeds limit"}
+ return base
+}
+fun itemMasterPriceForUnit(master:SalesOption?,taxMode:String,purchase:Boolean=false,discounts:Boolean=true,quantity:String="1",priceKind:String="RETAIL",customerRate:String?=null,wholesaleRate:String?=null,selection:String="PRIMARY",conversion:String=master?.secondaryUnitsPerBase.orEmpty()):ItemMasterPrice{
+ val base=primaryUnitQuantity(quantity,selection,conversion)
+ val price=itemMasterPrice(master,taxMode,purchase,discounts,base.toPlainString(),priceKind,customerRate,wholesaleRate)
+ return if(selection=="SECONDARY")price.copy(rate=price.rate.toBigDecimal().divide(conversion.toBigDecimal(),2,RoundingMode.HALF_UP).toPlainString()) else price
+}
