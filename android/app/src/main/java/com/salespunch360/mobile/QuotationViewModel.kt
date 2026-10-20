@@ -80,7 +80,8 @@ data class QuotationState(
     val error: String? = null,
     val message: String? = null,
     val preview: Boolean = false,
-    val pdfPreview:Boolean=false
+    val pdfPreview:Boolean=false,
+    val canManageSettings:Boolean=false
 )
 
 class QuotationViewModel(app: Application) : AndroidViewModel(app) {
@@ -123,6 +124,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
             currentCoroutineContext().ensureActive()
             _state.value = _state.value.copy(
                 companyName=options.str("companyName"),
+                canManageSettings=options.bool("canManageSettings"),
                 stateOfSupplyOptions=options.array("stateOfSupplyOptions").map{it.str("code") to it.str("name")},
                 canCost=options["canCost"]?.jsonPrimitive?.booleanOrNull==true,
                 canCreateParty=options["partyCreation"] is JsonObject,

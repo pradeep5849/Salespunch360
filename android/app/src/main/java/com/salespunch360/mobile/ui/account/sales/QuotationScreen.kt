@@ -140,8 +140,9 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
         Surface(Modifier.fillMaxSize()){
             Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()){
                 Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    Text(when{draft.id==null->"New quotation";draft.revision->"New revision";else->"Edit quotation"},style=MaterialTheme.typography.titleLarge,modifier=Modifier.weight(1f))
-                    TextButton(enabled=!state.saving&&!readingAttachment,onClick=vm::closeDraft){Text("Cancel")}
+                    TextButton(enabled=!state.saving&&!readingAttachment,onClick=vm::closeDraft){Text("← Back")}
+                    Text((if(draft.revision)"New revision · "else if(draft.id!=null)"Edit · "else "")+when(draft.documentType){"ESTIMATE"->"Estimate";"BOQ"->"BOQ";else->"Quotation"},style=MaterialTheme.typography.titleLarge,modifier=Modifier.weight(1f))
+                    if(state.canManageSettings)TextButton(enabled=!state.saving&&!readingAttachment,onClick={navigate("/workspace/account/settings/transactions")}){Text("Settings")}
                 }
                 HorizontalDivider()
                 state.error?.let{Text(it,color=MaterialTheme.colorScheme.error,modifier=Modifier.fillMaxWidth().padding(12.dp))}
@@ -168,7 +169,10 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                     }
                 }
                 item { OutlinedTextField(draft.billingName, { vm.editDraft(draft.copy(billingName = it)) }, label = { Text("Billing Name (Optional)") }, isError=draft.billingName.length>240) }
-                item { OutlinedTextField(draft.issueDate, { vm.editDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date") }) }
+                item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+                    OutlinedTextField(if(draft.id!=null&&state.detail?.str("id")==draft.id)state.detail.str("documentNumber")else"Assigned on Save",{},readOnly=true,label={Text("Reference No.")},modifier=Modifier.weight(1f))
+                    OutlinedTextField(draft.issueDate,{vm.editDraft(draft.copy(issueDate=it))},label={Text("Issue date")},modifier=Modifier.weight(1f))
+                } }
                 item { OutlinedTextField(draft.validUntil, { vm.editDraft(draft.copy(validUntil = it)) }, label = { Text("Valid until") }) }
                 itemsIndexed(draft.lines) { index, line -> QuotationLine(index, line, state, vm){newItemLine=index} }
                 item { OutlinedButton(onClick = vm::addLine) { Text("Add line") } }
