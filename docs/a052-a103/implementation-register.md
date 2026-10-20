@@ -10117,3 +10117,9 @@ A058-F06/A062-F02 remain PARTIAL. Commit `5c5b259aa943a898c169e037044c9dbc9bc2c9
 Commit `247c7b2a0de24a0154e8d486256be0510037007c` retains verified source unit provenance for posted Sale duplicates. Linked evidence: A058-F06/A062-F02/A071-F05; findings remain PARTIAL. Company/branch/permission/source-item checks and request hashing prevent forged or conflicting provenance. Opening Duplicate writes nothing; explicit Save posts an independent invoice with original conversion and no copied payments/returns. Save & New clears header provenance.
 
 Validation: 174 grouped tests/12 files PASS, zero failures/skips; final actual desktop + mobile-web browser/API cases 2 PASS (41.4s), including authenticated mobile save/retry and forged-source rejection. TypeScript, focused ESLint, YAML parsing and diff checks PASS. Initial fixture typing/dev-generated-file race corrected before final pass. No native Android runtime or migration claimed. Public selectors/default-pricing/report/native rule work remains pending.
+
+### Applied master-discount snapshots — 20 October 2026
+
+Commit `9e6d02dae0389ca39cd4d7b6cf6e65d9bc562b42` stores the applied master discount value on new commercial lines, so later copies retain the billed fixed total or original percentage after master defaults change. Linked findings A058-F02/A071-F05/A086-F06; no finding status promoted. Historical posted rows are unchanged.
+
+201 grouped tests/14 files PASS (zero failures/skips); actual desktop + mobile-web browser cases4 PASS (43.6s); final TypeScript, focused ESLint and diff checks PASS. Three units at20 retain fixed3/total57 or10percent/total54 after master defaults change. Journals balance and source snapshots remain unchanged. No new migration/native runtime claim. Legacy null discount snapshots need a safe compatibility fallback; broader unit integration remains pending.

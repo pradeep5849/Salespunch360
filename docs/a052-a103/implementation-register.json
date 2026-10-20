@@ -13067,6 +13067,34 @@
             "device_runtime": "NOT RUN"
           },
           "remaining": "Complete final-head regression/output matrix and Android emulator/device/offline/accessibility runtime verification remain pending; neither finding is FIXED + VERIFIED."
+        },
+        "applied_discount_snapshots_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "9e6d02dae0389ca39cd4d7b6cf6e65d9bc562b42",
+          "linked_finding_ids": [
+            "A058-F02",
+            "A071-F05",
+            "A086-F06"
+          ],
+          "work": "New commercial lines retain the discount value actually used in calculation, including master defaults, instead of storing only caller overrides. FIXED saved per-primary-unit defaults are retained as the applied billed-line total; PERCENTAGE retains its original percentage. Subsequent duplicate/edit prefill can preserve that snapshot after current item defaults change. Existing explicit overrides, calculations and historical posted rows are not rewritten.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "35 PASS / 3 files before adding the percentage scenario; overlaps final group and is not additional unique coverage.",
+            "grouped": "201 PASS / 14 files,0 failures/skips,19.31s. Actual local PostgreSQL unit history/discount snapshot/cheque/Project plus Sale save/duplicate/submit/pricing/editor/mobile boundary/Web action regressions.",
+            "database": "Three primary units at20 each with saved fixed1/unit retain FIXED value3,discount3,total57. Saved10percent retains PERCENTAGE value10,discount6,total54. After master default changes to9, explicit Sale Save of each duplicate retains original snapshot,total and balanced journal. Fixture master/settings restored; no historical updates.",
+            "web_browser": "4 PASS in43.6s: FIXED and PERCENTAGE duplicate flows in actual desktop + mobile Chromium. Open writes nothing; explicit Save posts independent document preserving discount/value,total and original source line; journals balance and no root overflow.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "android": "No native source changed; no Android unit/build/device runtime executed for this server snapshot change.",
+            "migration": "No schema/migration/data backfill. Historical null discount values remain untouched.",
+            "prior_ci": "Exact previous head42dbe5eaf4a5f4ad052c9ea5c9c55d3fd53df604 CI39359985339 passed web/migration/android; prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new-head targeted CI requested separately."
+          },
+          "remaining": "No finding status promoted. Legacy posted lines with null discountValue still require a safe edit/duplicate compatibility fallback without changing posted history. A058-F06/A062-F02 public unit entry/default-price/native/report integration remains PARTIAL. A071-F05/A086-F06 broader remaining original scope is unchanged."
         }
       }
     },
@@ -50857,6 +50885,34 @@
             "final_checkpoint_head": "NOT RUN; new checkpoint CI requested separately."
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: public selected-unit entry and production default-pricing wiring, native selectors/rule retrieval, report consumers and converted mixed-Project/vendor-return coverage remain. A071-F05 broader unsupported Home source/party-transfer work remains unchanged. No finding promoted or final verification inferred."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "9e6d02dae0389ca39cd4d7b6cf6e65d9bc562b42",
+          "linked_finding_ids": [
+            "A058-F02",
+            "A071-F05",
+            "A086-F06"
+          ],
+          "work": "New commercial lines retain the discount value actually used in calculation, including master defaults, instead of storing only caller overrides. FIXED saved per-primary-unit defaults are retained as the applied billed-line total; PERCENTAGE retains its original percentage. Subsequent duplicate/edit prefill can preserve that snapshot after current item defaults change. Existing explicit overrides, calculations and historical posted rows are not rewritten.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "35 PASS / 3 files before adding the percentage scenario; overlaps final group and is not additional unique coverage.",
+            "grouped": "201 PASS / 14 files,0 failures/skips,19.31s. Actual local PostgreSQL unit history/discount snapshot/cheque/Project plus Sale save/duplicate/submit/pricing/editor/mobile boundary/Web action regressions.",
+            "database": "Three primary units at20 each with saved fixed1/unit retain FIXED value3,discount3,total57. Saved10percent retains PERCENTAGE value10,discount6,total54. After master default changes to9, explicit Sale Save of each duplicate retains original snapshot,total and balanced journal. Fixture master/settings restored; no historical updates.",
+            "web_browser": "4 PASS in43.6s: FIXED and PERCENTAGE duplicate flows in actual desktop + mobile Chromium. Open writes nothing; explicit Save posts independent document preserving discount/value,total and original source line; journals balance and no root overflow.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "android": "No native source changed; no Android unit/build/device runtime executed for this server snapshot change.",
+            "migration": "No schema/migration/data backfill. Historical null discount values remain untouched.",
+            "prior_ci": "Exact previous head42dbe5eaf4a5f4ad052c9ea5c9c55d3fd53df604 CI39359985339 passed web/migration/android; prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new-head targeted CI requested separately."
+          },
+          "remaining": "No finding status promoted. Legacy posted lines with null discountValue still require a safe edit/duplicate compatibility fallback without changing posted history. A058-F06/A062-F02 public unit entry/default-price/native/report integration remains PARTIAL. A071-F05/A086-F06 broader remaining original scope is unchanged."
         }
       ],
       "push_checkpoint_evidence": {
@@ -64638,6 +64694,34 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "The automated rehearsal tests clean history plus a pre-shipping fixture,not a production backup/restore or recovery of an already-failed deployed migration history. No production migration/deployment;all199 final statuses unset and broader page findings remain incomplete."
+        },
+        "applied_discount_snapshots_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "9e6d02dae0389ca39cd4d7b6cf6e65d9bc562b42",
+          "linked_finding_ids": [
+            "A058-F02",
+            "A071-F05",
+            "A086-F06"
+          ],
+          "work": "New commercial lines retain the discount value actually used in calculation, including master defaults, instead of storing only caller overrides. FIXED saved per-primary-unit defaults are retained as the applied billed-line total; PERCENTAGE retains its original percentage. Subsequent duplicate/edit prefill can preserve that snapshot after current item defaults change. Existing explicit overrides, calculations and historical posted rows are not rewritten.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "35 PASS / 3 files before adding the percentage scenario; overlaps final group and is not additional unique coverage.",
+            "grouped": "201 PASS / 14 files,0 failures/skips,19.31s. Actual local PostgreSQL unit history/discount snapshot/cheque/Project plus Sale save/duplicate/submit/pricing/editor/mobile boundary/Web action regressions.",
+            "database": "Three primary units at20 each with saved fixed1/unit retain FIXED value3,discount3,total57. Saved10percent retains PERCENTAGE value10,discount6,total54. After master default changes to9, explicit Sale Save of each duplicate retains original snapshot,total and balanced journal. Fixture master/settings restored; no historical updates.",
+            "web_browser": "4 PASS in43.6s: FIXED and PERCENTAGE duplicate flows in actual desktop + mobile Chromium. Open writes nothing; explicit Save posts independent document preserving discount/value,total and original source line; journals balance and no root overflow.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "android": "No native source changed; no Android unit/build/device runtime executed for this server snapshot change.",
+            "migration": "No schema/migration/data backfill. Historical null discount values remain untouched.",
+            "prior_ci": "Exact previous head42dbe5eaf4a5f4ad052c9ea5c9c55d3fd53df604 CI39359985339 passed web/migration/android; prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new-head targeted CI requested separately."
+          },
+          "remaining": "No finding status promoted. Legacy posted lines with null discountValue still require a safe edit/duplicate compatibility fallback without changing posted history. A058-F06/A062-F02 public unit entry/default-price/native/report integration remains PARTIAL. A071-F05/A086-F06 broader remaining original scope is unchanged."
         }
       },
       "push_checkpoint_evidence": {
