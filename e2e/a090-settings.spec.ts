@@ -3137,3 +3137,38 @@ test("A082 expandable quotation terms retain hidden values through save new and 
  const updated=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:saved.id}});expect(updated.terms).toBe("Updated agreed terms");expect(updated.inclusions).toBe("Included installation");expect(updated.notes).toBe("Independent note");
  const pdf=await page.request.get(`/workspace/account/quotations/${saved.id}/pdf`);expect(pdf.status()).toBe(200);const printed=(await extractPdfText(await pdf.body())).text;expect(printed).toContain("Updated agreed terms");expect(printed).toContain("Included installation");expect(printed).toContain("Excluded transport");expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
 });
+
+test("A058 A062 Duplicate preserves original selected units after master conversion changes",async({page})=>{
+ test.setTimeout(180000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","INVENTORY"],itemSettings:{enabled:true,itemWiseDiscount:true},transactionDefaults:{invoicePreview:false}}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Unit duplicate verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const primary=await db.accountUnit.create({data:{companyId,name:"Unit duplicate Piece",symbol:"pc"}}),secondary=await db.accountUnit.create({data:{companyId,name:"Unit duplicate Box",symbol:"box"}});
+ const product=await db.accountProduct.create({data:{companyId,name:"Retained Box duplicate",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"0.1",salePrice:"20",trackInventory:false}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ const source=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"200",taxRate:"0"}]}),line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}});
+ const snapshot={...line.unitConversionSnapshot as object,selection:"SECONDARY",unitName:secondary.name,unitSymbol:secondary.symbol};
+ // Validated draft fixture; this does not claim public secondary-unit selection is implemented.
+ await db.$executeRaw`UPDATE commercial_document_lines SET "baseQuantity"=10,"unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb,"unitName"=${secondary.name},"unitSymbol"=${secondary.symbol} WHERE id=${line.id}::uuid`;
+ await postCommercialDocumentForActor(actor,{documentId:source.id});
+ const original=await db.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}});
+ await db.accountProduct.update({where:{id:product.id},data:{secondaryUnitsPerBase:"0.2"}});
+ const count=await db.commercialDocument.count({where:{companyId}}),journals=await db.journalEntry.count({where:{companyId}});
+ await signInSettings(page);await page.goto(`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${source.id}`);
+ await expect(page.getByText(product.name,{exact:true})).toBeVisible({timeout:30000});
+ expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.getByRole("button",{name:"Save",exact:true}).click();
+ await expect.poll(async()=>await db.commercialDocument.count({where:{companyId}}),{timeout:30000}).toBe(count+1);
+ const copy=await db.commercialDocument.findFirstOrThrow({where:{companyId,type:"SALES_INVOICE",id:{notIn:[source.id,printDocumentId]}},include:{lines:true,allocations:true,advanceApplications:true}});
+ expect(copy.status).toBe("POSTED");expect(copy.grandTotal.toString()).toBe("200");expect(copy.lines[0].quantity.toString()).toBe("1");expect(copy.lines[0].baseQuantity?.toString()).toBe("10");expect(copy.lines[0].unitConversionSnapshot).toEqual(snapshot);expect(copy.lines[0].sourceCommercialLineId).toBeNull();expect(copy.allocations).toHaveLength(0);expect(copy.advanceApplications).toHaveLength(0);
+ expect(await db.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);
+ expect(await db.journalEntry.count({where:{companyId}})).toBe(journals+1);
+ const login=await page.request.post("/api/v1/mobile/auth/login",{data:{identifier:email,password,deviceId:randomUUID(),deviceName:"Selected-unit duplicate API"}});expect(login.status()).toBe(200);
+ const headers={authorization:`Bearer ${(await login.json()).accessToken}`},apiInput={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",idempotencyKey:randomUUID(),copiedFromSaleId:source.id,lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"1",rate:"200",taxRate:"0",copiedFromSaleLineId:line.id}]};
+ const invalid=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:{...apiInput,lines:[{...apiInput.lines[0],copiedFromSaleLineId:randomUUID()}]}});expect(invalid.status()).toBe(400);expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+1);
+ const created=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:apiInput});expect(created.status()).toBe(201);const native=await created.json();expect(native.status).toBe("POSTED");expect(native.lines[0].baseQuantity).toBe("10");expect(native.lines[0].unitConversionSnapshot).toEqual(snapshot);
+ const retry=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:apiInput});expect(retry.status()).toBe(201);expect((await retry.json()).id).toBe(native.id);
+ expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+2);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals+2);
+ expect(await db.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);
+});

@@ -298,6 +298,7 @@ const lineSchema = z.object({
   serialNumberId: z.string().uuid().optional(),
   stockReturnQuantity: decimal.optional(),
   sourceCommercialLineId: z.string().uuid().optional(),
+  copiedFromSaleLineId: z.string().uuid().optional(),
   purchaseAllocations: z
     .array(
       z
@@ -336,6 +337,7 @@ export const commercialDocumentInput = z
       .regex(/^[A-Za-z0-9][A-Za-z0-9 ./_-]*$/)
       .optional(),
     sourceDocumentId: z.string().uuid().optional(),
+    copiedFromSaleId: z.string().uuid().optional(),
     sourcePurchaseOrderId: z.string().uuid().optional(),
     purchasePurpose: z.nativeEnum(PurchasePurpose).optional(),
     purchaseClassification: z.nativeEnum(PurchaseClassification).optional(),
@@ -374,6 +376,9 @@ export const commercialDocumentInput = z
   .strict()
   .superRefine((v, c) => {
     const purchase = policies[v.type].party === "vendor";
+    if ((v.copiedFromSaleId && v.type !== "SALES_INVOICE") ||
+        v.lines.some(line => line.copiedFromSaleLineId && !v.copiedFromSaleId))
+      c.addIssue({code:"custom",message:"Copied sale lines require a source Sale",path:["copiedFromSaleId"]});
     if (purchase && !v.purchasePurpose)
       c.addIssue({
         code: "custom",
@@ -849,6 +854,12 @@ export async function createCommercialDocumentForActor(
           }),
         ]);
         if (!branch) throw new Error("INVALID_BRANCH");
+        if(d.copiedFromSaleId){
+          if(retainedSale)throw new Error("INVALID_SALE_LINE_SOURCE");
+          if(!canUsePermission(actor,companyPolicy.productEdition,"ACCOUNT_LEDGER_VIEW"))throw new AuthorizationError();
+          const copiedSale=await tx.commercialDocument.findFirst({where:{id:d.copiedFromSaleId,companyId:actor.companyId,branchId:d.branchId,type:"SALES_INVOICE",status:"POSTED"}});
+          if(!copiedSale)throw new Error("INVALID_SALE_LINE_SOURCE");
+        }
         const resolvedDefaults=applyTransactionDefaults(d,settings?.transactionDefaults);
         const creationRequestHash = d.idempotencyKey
           ? commercialCreationHash(d)
@@ -1107,7 +1118,7 @@ export async function createCommercialDocumentForActor(
                     )),
                 settings?.transactionDefaults??undefined,
                 d.taxMode,
-                retainedSale?.lineIds.has(i)?{documentId:retainedSale.documentId,lineId:retainedSale.lineIds.get(i)!}:undefined,
+                retainedSale?.lineIds.has(i)?{documentId:retainedSale.documentId,lineId:retainedSale.lineIds.get(i)!}:d.copiedFromSaleId&&x.copiedFromSaleLineId?{documentId:d.copiedFromSaleId,lineId:x.copiedFromSaleLineId}:undefined,
               ),
             ),
           ),

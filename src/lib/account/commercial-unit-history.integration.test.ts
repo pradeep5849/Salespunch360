@@ -5,7 +5,9 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
-import {createCommercialDocumentForActor,postCommercialDocumentForActor} from "./commercial";
+import {createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor} from "./commercial";
+import {submitSaleForActor} from "./sale-submit";
+import {saleDuplicateDraft} from "./sale-duplicate";
 import {replacePostedSaleForActor} from "./sale-amendments";
 import {salePriceProposalsForActor,confirmSalePriceForActor} from "./sale-price-updates";
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
@@ -131,6 +133,31 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
     const doc=await client.commercialDocument.findUniqueOrThrow({where:{id},include:{journalEntry:{include:{lines:true}}}});
     expect(doc.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
    }
+  }finally{await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.1"}})}
+ });
+ it("duplicates selected units through explicit Sale Save without copying financial history",async()=>{
+  const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{...input.lines[0],quantity:"1",rate:"200"}]}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+  const snapshot={...line.unitConversionSnapshot as object,selection:"SECONDARY",unitName:"Box",unitSymbol:"box"};
+  await client.$executeRaw`UPDATE commercial_document_lines SET "baseQuantity"=10,"unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb,"unitName"='Box',"unitSymbol"='box' WHERE id=${line.id}::uuid`;
+  await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  const original=await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}});
+  const copied=saleDuplicateDraft(await getCommercialDocumentForActor(actor,sale.id),"2026-10-20");
+  await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.2"}});
+  try{
+   const request={...input,idempotencyKey:randomUUID(),copiedFromSaleId:copied.copiedFromSaleId,lines:copied.lines.map(row=>({lineType:row.lineType,sourceId:row.sourceId,quantity:row.quantity,rate:row.rate,taxRate:row.taxRate,copiedFromSaleLineId:row.copiedFromSaleLineId}))};
+   await expect(submitSaleForActor(actor,{...request,lines:[{...request.lines[0],copiedFromSaleLineId:randomUUID()}]})).rejects.toThrow("INVALID_SALE_LINE_SOURCE");
+   await expect(submitSaleForActor(actor,{...request,copiedFromSaleId:randomUUID()})).rejects.toThrow("INVALID_SALE_LINE_SOURCE");
+   await expect(submitSaleForActor(actor,{...request,copiedFromSaleId:undefined})).rejects.toThrow();
+   const saved=await submitSaleForActor(actor,request),retained=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:saved.id}});
+   expect(saved.status).toBe("POSTED");expect(saved.id).not.toBe(sale.id);
+   expect(retained.baseQuantity?.toString()).toBe("10");expect(retained.unitConversionSnapshot).toEqual(snapshot);expect(retained.sourceCommercialLineId).toBeNull();expect(retained.lineTotal.toString()).toBe("200");
+   expect((await submitSaleForActor(actor,request)).id).toBe(saved.id);
+   await expect(submitSaleForActor(actor,{...request,copiedFromSaleId:saved.id})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+   expect(await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);
+   expect(await client.commercialDocument.count({where:{companyId,sourceDocumentId:sale.id}})).toBe(0);
+   expect(await client.settlementAllocation.count({where:{companyId,documentId:saved.id}})).toBe(0);
+   const posted=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id},include:{journalEntry:{include:{lines:true}}}});
+   expect(posted.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
   }finally{await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.1"}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{

@@ -33,7 +33,7 @@ jobs:
       - name: Money mutation validation boundaries
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
       - name: Exact unit quantity and immutable snapshot guards
-        run: npx vitest run src/lib/account/unit-quantities.test.ts src/lib/account/commercial-unit-snapshot.test.ts src/lib/account/commercial-stock-quantity.test.ts src/lib/account/project-purchase-returns.test.ts src/lib/account/commercial-project-input.test.ts
+        run: npx vitest run src/lib/account/unit-quantities.test.ts src/lib/account/item-selected-unit-pricing.test.ts src/lib/account/commercial-unit-snapshot.test.ts src/lib/account/commercial-stock-quantity.test.ts src/lib/account/project-purchase-returns.test.ts src/lib/account/commercial-project-input.test.ts
       - name: Report selectors and exact financial breakdowns
         run: npx vitest run src/lib/account/reports/party-trade.test.ts src/lib/account/reports/profit-presentation.test.ts src/lib/account/reports/stock-level.test.ts src/lib/account/reports/bank-statement.test.ts src/lib/account/reports/stock-detail-options.test.ts src/lib/account/reports/stock-detail.test.ts src/lib/account/reports/stock-category.test.ts src/lib/account/reports/catalogue.test.ts src/lib/account/stock-summary-report.test.ts src/lib/account/reports/cash-bank.test.ts src/lib/account/reports/ledger-breakdown.test.ts src/lib/account/reports/purchase-register.test.ts src/lib/account/reports/queries.test.ts
       - name: Quotation preview and authoritative calculation regression
