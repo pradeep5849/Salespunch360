@@ -7,7 +7,7 @@ const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {submitSaleForActor} from "@/lib/account/sale-submit";
-import {createCommercialDocumentForActor,confirmSalesOrderForActor} from "@/lib/account/commercial";
+import {createCommercialDocumentForActor,confirmSalesOrderForActor,commercialDocumentControlsForActor} from "@/lib/account/commercial";
 import {createQuotationForActor,createQuotationRevisionForActor,transitionQuotationForActor,listQuotationsForActor,getQuotationForActor,createQuotationShareForActor} from "./service";
 import type {ProjectActor} from "@/lib/account/projects";
 const fixture=()=>({companyId:randomUUID(),branchId:randomUUID(),customerId:randomUUID(),userId:randomUUID()});
@@ -66,7 +66,12 @@ describe.skipIf(!url)("A080/A083 actual quotation conversion commit boundary",()
  it("keeps an order draft open and closes only on idempotent confirmation without a ledger write",async()=>{
   const q=await approved(),order=await createCommercialDocumentForActor(actor(),target(q.revision.id,"SALES_ORDER")),before=await client.journalEntry.count({where:{companyId:own.companyId}});
   expect(order.status).toBe("DRAFT");expect((await source(q.id)).convertedAt).toBeNull();
+  expect(await commercialDocumentControlsForActor(actor(),order.id)).toMatchObject({canConfirmSalesOrder:true,canManage:false,canRemind:false,advances:[]});
+  expect((await commercialDocumentControlsForActor({...actor(),accountRole:"PROJECT_MANAGER"},order.id)).canConfirmSalesOrder).toBe(false);
+  expect((await commercialDocumentControlsForActor({...actor(),branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},order.id)).canConfirmSalesOrder).toBe(false);
+  expect((await commercialDocumentControlsForActor(actor(foreign),order.id)).canConfirmSalesOrder).toBe(false);
   const [a,b]=await Promise.all([confirmSalesOrderForActor(actor(),{documentId:order.id}),confirmSalesOrderForActor(actor(),{documentId:order.id})]);
+  expect((await commercialDocumentControlsForActor(actor(),order.id)).canConfirmSalesOrder).toBe(false);
   expect(a.id).toBe(b.id);expect(a.status).toBe("POSTED");expect((await source(q.id)).convertedCommercialDocumentId).toBe(order.id);
   expect(await client.journalEntry.count({where:{companyId:own.companyId}})).toBe(before);expect(await client.accountOperationalAudit.count({where:{companyId:own.companyId,eventType:"SALES_ORDER_CONFIRMED",entityId:order.id}})).toBe(1);
  });

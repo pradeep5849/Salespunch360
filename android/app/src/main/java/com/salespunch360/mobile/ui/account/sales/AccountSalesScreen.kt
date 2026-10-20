@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.AccountSalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,5 +70,5 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
     state.editor?.let { SalesDocumentEditor(it, state.options, state.saving, vm::editDraft, vm::addLine, vm::updateLine, vm::removeLine, vm::closeEditor, vm::save,vm::updateInvoicePrefix,vm::createSaleCustomer,navigate) }
     state.detail?.let { SalesDocumentDetail(it, state.saving, vm::closeDetail, vm::requestPost, vm::editSavedSale, vm::deleteSavedSale) }
     state.salePriceDocumentId?.let{SalePriceConfirmation(it,vm::closePriceConfirmation)}
-    state.postingId?.let { AlertDialog(onDismissRequest = vm::cancelPost,title = { Text("Post document?") },text = { Text("Posting is authoritative and may create ledger and stock movements. This requires server confirmation.") },confirmButton = { Button(onClick = vm::confirmPost) { Text("Post") } },dismissButton = { TextButton(onClick = vm::cancelPost) { Text("Cancel") } }) }
+    state.postingId?.let { AlertDialog(onDismissRequest = vm::cancelPost,title = { Text(if(state.detail?.str("type")=="SALES_ORDER")"Confirm Sale Order?" else "Post document?") },text = { Text(if(state.detail?.str("type")=="SALES_ORDER")"Confirm this order and close its linked estimate. No accounting entry is posted for an order." else "Posting is authoritative and may create ledger and stock movements. This requires server confirmation.") },confirmButton = { Button(onClick = vm::confirmPost) { Text(if(state.detail?.str("type")=="SALES_ORDER")"Confirm" else "Post") } },dismissButton = { TextButton(onClick = vm::cancelPost) { Text("Cancel") } }) }
 }

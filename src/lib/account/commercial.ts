@@ -3485,18 +3485,18 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
     }),
   };
 }
-export async function commercialDocumentControls(documentId: string) {
-  const actor = (await requirePermission("ACCOUNT_LEDGER_VIEW")) as Actor,
-    document = await db.commercialDocument.findFirst({
+export async function commercialDocumentControlsForActor(actor:Actor,documentId:string) {
+  const document = await db.commercialDocument.findFirst({
       where: {
         id: documentId,
         companyId: actor.companyId,
-        status: "POSTED",
         ...scope(actor),
       },
       select: {
         id: true,
         type: true,
+        status: true,
+        sourceQuotationRevisionId: true,
         branchId: true,
         customerId: true,
         vendorId: true,
@@ -3506,15 +3506,18 @@ export async function commercialDocumentControls(documentId: string) {
     });
   if (!document)
     return {
+      canConfirmSalesOrder: false,
       canManage: false,
       canRemind: false,
       advances: [],
       enabledModules: [] as ModuleKey[],
     };
   const enabledModules = await enabledModulesForCompany(actor.companyId),
+    company=await db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true}}),
+    canConfirmSalesOrder=document.status==="DRAFT"&&document.type==="SALES_ORDER"&&enabledModules.includes("SALES")&&enabledModules.includes("SALES_ORDER")&&canUsePermission(actor,company.productEdition,"ACCOUNT_SALES_ENTRY")&&(!document.sourceQuotationRevisionId||(enabledModules.includes("QUOTATIONS_BOQ")&&canUsePermission(actor,company.productEdition,"ACCOUNT_QUOTATION_VIEW"))),
     canManage =
-      actor.accountRole === "ACCOUNT_ADMIN" ||
-      actor.accountRole === "ACCOUNTANT",
+      document.status==="POSTED"&&(actor.accountRole === "ACCOUNT_ADMIN" ||
+      actor.accountRole === "ACCOUNTANT"),
     customer = document.type === "SALES_INVOICE",
     advanceType = customer ? "CUSTOMER_ADVANCE" : "VENDOR_ADVANCE",
     advanceModule = customer ? "CUSTOMER_ADVANCES" : "VENDOR_ADVANCES",
@@ -3535,6 +3538,7 @@ export async function commercialDocumentControls(documentId: string) {
           })
         : [];
   return {
+    canConfirmSalesOrder,
     canManage,
     canRemind:
       canManage &&
@@ -3545,6 +3549,8 @@ export async function commercialDocumentControls(documentId: string) {
     enabledModules,
   };
 }
+
+export async function commercialDocumentControls(documentId:string){return commercialDocumentControlsForActor((await requirePermission("ACCOUNT_LEDGER_VIEW")) as Actor,documentId)}
 
 export async function documentOutstandingsBatch(
   companyId: string,

@@ -14,6 +14,7 @@ import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
   commercialDocumentPolicies,
+  commercialDocumentControlsForActor,
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
   createSettlementForActor,
@@ -117,7 +118,7 @@ export async function mobileSalesDetail(user: MobileAppPrincipal, id: string) {
   const header = await db.commercialDocument.findFirst({where:{id,companyId:actor.companyId,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:actor.branchIds??[]}}:{})},select:{type:true}});
   if(!header)throw new Error("NOT_FOUND");
   if(!SALES_TYPES.has(header.type))throw new Error("MOBILE_FORBIDDEN");
-  if(header.type!=="SALES_INVOICE")return getCommercialDocumentForActor(actor,id);
+  if(header.type!=="SALES_INVOICE"){const [document,controls]=await Promise.all([getCommercialDocumentForActor(actor,id),commercialDocumentControlsForActor(actor,id)]);return {...document,capabilities:{canConfirmSalesOrder:controls.canConfirmSalesOrder}};}
   const row = await saleDetailForActor(actor,id);
   if (!SALES_TYPES.has(row.type)) throw new Error("MOBILE_FORBIDDEN");
   if(row.type!=="SALES_INVOICE")return row;

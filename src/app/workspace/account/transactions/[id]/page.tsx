@@ -4,6 +4,7 @@ import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import {
   applyAdvanceAction,
+  confirmSalesOrderAction,
   finalizeCommercialAction,
   postCommercialAction,
   reminderStatusAction,
@@ -130,6 +131,7 @@ export default async function Page({
           {x.financial.paymentStatus}
         </p>
       )}
+      {controls.canConfirmSalesOrder&&<form action={confirmSalesOrderAction}><input type="hidden" name="id" value={x.id}/><button>Confirm Sale Order</button><p>Confirmation closes the linked estimate. No accounting entry is posted for an order.</p></form>}
       {x.status === "DRAFT" && x.type === "PURCHASE_ORDER" && (
         <form action={finalizeCommercialAction}>
           <input type="hidden" name="id" value={x.id} />

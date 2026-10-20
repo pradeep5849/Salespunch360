@@ -55,6 +55,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun confirmSalePrice(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}/sale-price","POST",payload.toString())).jsonObject
  suspend fun accountSalesDocument(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}")).jsonObject
  suspend fun createAccountSalesDocument(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions","POST",payload.toString())).jsonObject
+ suspend fun confirmAccountSalesOrder(id:String)=call("api/v1/mobile/account/transactions/${enc(id)}/confirm","POST")
  suspend fun postAccountSalesDocument(id:String)=call("api/v1/mobile/account/transactions/${enc(id)}/post","POST")
  suspend fun createCustomerReceipt(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/receipts","POST",payload.toString())).jsonObject
  suspend fun customerReceiptContext()=json.parseToJsonElement(call("api/v1/mobile/account/receipts")).jsonObject

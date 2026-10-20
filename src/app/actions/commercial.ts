@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   applyAdvance,
+  confirmSalesOrder,
   createCommercialDocument,
   createSettlement,
   finalizeNonFinancialDocument,
@@ -145,4 +146,10 @@ export async function reminderStatusAction(form: FormData) {
     status: String(form.get("status")),
   });
   revalidatePath(`/workspace/account/transactions/${reminder.documentId}`);
+}
+
+export async function confirmSalesOrderAction(form:FormData){
+ await confirmSalesOrder({documentId:String(form.get("id"))});
+ revalidatePath("/workspace/account/quotations");
+ revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
 }

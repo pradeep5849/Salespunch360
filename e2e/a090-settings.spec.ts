@@ -128,6 +128,14 @@ test.afterAll(async () => {
     await tx.accountSettlement.deleteMany({where:{companyId}});
     await tx.purchaseLineAllocation.deleteMany({where:{companyId}});
     await tx.commercialDocumentLine.deleteMany({where:{companyId}});
+  await tx.quotationShare.deleteMany({where:{companyId}});
+  await tx.quotationAuditEvent.deleteMany({where:{companyId}});
+  await tx.quotationPaymentSchedule.deleteMany({where:{companyId}});
+  await tx.quotationAdjustment.deleteMany({where:{companyId}});
+  await tx.quotationLine.deleteMany({where:{companyId}});
+  await tx.quotationAttachment.deleteMany({where:{companyId}});await tx.quotationRevision.deleteMany({where:{companyId}});
+  await tx.quotationDocument.deleteMany({where:{companyId}});
+
     await tx.commercialDocument.deleteMany({where:{companyId}});
     await tx.projectChangeOrder.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
@@ -144,16 +152,6 @@ test.afterAll(async () => {
   await db.projectAuditEvent.deleteMany({where:{companyId}});
   await db.projectMember.deleteMany({where:{companyId}});
   await db.project.deleteMany({where:{companyId}});
-  await db.$transaction(async tx=>{
-    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
-  await tx.quotationShare.deleteMany({where:{companyId}});
-  await tx.quotationAuditEvent.deleteMany({where:{companyId}});
-  await tx.quotationPaymentSchedule.deleteMany({where:{companyId}});
-  await tx.quotationAdjustment.deleteMany({where:{companyId}});
-  await tx.quotationLine.deleteMany({where:{companyId}});
-  await tx.quotationAttachment.deleteMany({where:{companyId}});await tx.quotationRevision.deleteMany({where:{companyId}});
-  await tx.quotationDocument.deleteMany({where:{companyId}});
-  });
   await db.productPrice.deleteMany({where:{companyId}});
   await db.customer.deleteMany({where:{companyId}});
   await db.vendor.deleteMany({where:{companyId}});
@@ -3333,4 +3331,33 @@ test("A062 purchase secondary unit uses primary cost through Save and Post",asyn
  for(let i=0;i<2;i++)expect((await page.request.post(`/api/v1/mobile/account/purchases/${native.id}/post`,{headers})).status()).toBe(200);
  expect((await db.commercialDocument.findUniqueOrThrow({where:{id:native.id}})).status).toBe("POSTED");expect(await db.journalEntry.count({where:{companyId,sourceId:native.id,status:"POSTED"}})).toBe(1);
 
+});
+
+for(const saveNew of [false,true])test(`A080 approved estimate opens unsaved Add Sale and closes only on real Save${saveNew?" and New":""}`,async({page})=>{
+ test.setTimeout(180000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ try{
+  await db.accountSettings.update({where:{companyId},data:{transactionDefaults:{...((before.transactionDefaults as Record<string,unknown>)??{}),transactionPreferences:{invoicePreview:false,cashSaleByDefault:false,roundOff:false}}}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Conversion browser year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  const quote=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-20",billingName:"Estimate billing",terms:"Original estimate terms",lines:[{lineType:"CUSTOM",itemName:"Agreed estimate work",quantity:"1",rate:"100",taxRate:"0"}],adjustments:[{label:"Agreed discount",type:"DISCOUNT",valueType:"FIXED",value:"10"}]});
+  await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
+  const count=await db.commercialDocument.count({where:{companyId}}),journals=await db.journalEntry.count({where:{companyId}});
+  await signInSettings(page);await page.goto(`/workspace/account/quotations/${quote.id}`);
+  await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
+  await expect(page.getByText("Agreed estimate work",{exact:true})).toBeVisible();await page.getByText("Estimate terms and payment schedule",{exact:true}).focus();await page.keyboard.press("Space");await expect(page.getByText("Original estimate terms",{exact:true})).toBeVisible();
+  expect((await new AxeBuilder({page}).include('[aria-label="Source estimate"]').withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+  await page.goto(`/workspace/account/quotations/${quote.id}`);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}})).convertedAt).toBeNull();
+  await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  await page.getByRole("button",{name:saveNew?"Save & New":"Save",exact:true}).click();
+  await expect.poll(async()=>Boolean((await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}})).convertedCommercialDocumentId),{timeout:30000}).toBe(true);
+  const closed=await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}}),sale=await db.commercialDocument.findUniqueOrThrow({where:{id:closed.convertedCommercialDocumentId!},include:{lines:true}});
+  await expect(page).toHaveURL(saveNew?/\/workspace\/account\/transactions\/new\?type=SALES_INVOICE$/:new RegExp(`/workspace/account/sales/${sale.id}$`),{timeout:30000});
+  expect(sale.status).toBe("POSTED");expect(sale.grandTotal.toFixed(2)).toBe("90.00");expect(sale.billingName).toBe("Estimate billing");expect(sale.lines[0].discountAmount.toFixed(2)).toBe("10.00");
+  expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+1);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals+1);
+  await page.goto(`/workspace/account/quotations/${quote.id}`);await expect(page.getByText(/CLOSED · Converted/)).toBeVisible();await expect(page.getByRole("link",{name:"Convert to Sale",exact:true})).toHaveCount(0);
+  const revision=await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id},orderBy:{revisionNumber:"desc"}});await page.goto(`/workspace/account/transactions/new?type=SALES_INVOICE&quotationId=${quote.id}&quotationRevisionId=${revision.id}`);await expect(page.getByRole("heading",{name:"Estimate conversion unavailable"})).toBeVisible({timeout:15000});await expect(page.locator("main").getByRole("alert")).toContainText("already been converted");expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+1);
+ }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:before.transactionDefaults??{}}})}
 });
