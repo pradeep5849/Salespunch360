@@ -37,7 +37,7 @@ jobs:
       - name: Report selectors and exact financial breakdowns
         run: npx vitest run src/lib/account/reports/party-trade.test.ts src/lib/account/reports/profit-presentation.test.ts src/lib/account/reports/stock-level.test.ts src/lib/account/reports/bank-statement.test.ts src/lib/account/reports/stock-detail-options.test.ts src/lib/account/reports/stock-detail.test.ts src/lib/account/reports/stock-category.test.ts src/lib/account/reports/catalogue.test.ts src/lib/account/stock-summary-report.test.ts src/lib/account/reports/cash-bank.test.ts src/lib/account/reports/ledger-breakdown.test.ts src/lib/account/reports/purchase-register.test.ts src/lib/account/reports/queries.test.ts
       - name: Quotation preview and authoritative calculation regression
-        run: npx vitest run src/lib/quotations/creation-attachments-route.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/conversion-preview.test.ts src/app/api/v1/mobile/account/quotations/\[id\]/conversion-preview/route.test.ts src/lib/quotations/commercial-prefill.test.ts src/lib/quotations/party-balance.test.ts src/lib/quotations/stock-options.test.ts src/lib/mobile/master-validation-feedback.test.ts src/app/actions/account-party-creation.test.ts src/lib/account/party-create.runtime.test.ts src/lib/quotations/calculation.test.ts src/lib/quotations/service.runtime.test.ts src/lib/quotations/pdf.test.ts
+        run: npx vitest run src/lib/quotations/creation-attachments-route.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/conversion-preview.test.ts src/lib/quotations/sale-prefill.test.ts src/lib/quotations/action-capabilities.test.ts src/app/api/v1/mobile/account/transactions/\[id\]/confirm/route.test.ts src/app/api/v1/mobile/account/quotations/\[id\]/conversion-preview/route.test.ts src/lib/quotations/commercial-prefill.test.ts src/lib/quotations/party-balance.test.ts src/lib/quotations/stock-options.test.ts src/lib/mobile/master-validation-feedback.test.ts src/app/actions/account-party-creation.test.ts src/lib/account/party-create.runtime.test.ts src/lib/quotations/calculation.test.ts src/lib/quotations/service.runtime.test.ts src/lib/quotations/pdf.test.ts
       - name: Purchase master pricing preview
         run: npx vitest run src/lib/account/commercial-editor-pricing.test.ts src/lib/account/item-pricing.test.ts src/lib/account/purchase-editor-lineage.test.ts
       - run: npm run typecheck
@@ -97,6 +97,10 @@ jobs:
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/quotations/attachments.integration.test.ts src/lib/quotations/draft-audit.integration.test.ts --maxWorkers=1
+      - name: Quotation approved conversion, atomic Sale and order confirmation
+        env:
+          ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+        run: npx vitest run src/lib/quotations/commercial-link.integration.test.ts --maxWorkers=1
       - name: Commercial primary-unit snapshots and historical corrections
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
