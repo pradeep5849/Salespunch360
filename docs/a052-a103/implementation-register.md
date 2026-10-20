@@ -10107,3 +10107,7 @@ A058-F06/A062-F02 remain PARTIAL. Commit `f635ba31eee065329bc02c88d7d61c01121c90
 ### Original correction rate — 20 October 2026
 
 A058-F06/A062-F02 remain PARTIAL. Commit `2aad97aaf2b7ca8b4f09fbb7a0abe066b6646662` retains the original source rate when a correction omits an explicit rate. Local PostgreSQL/financial regression: 116 tests across 6 files PASS, zero failures/skips; TypeScript, focused ESLint and diff checks PASS. Converted half-box return retains ₹200/box, corrects ₹100 and restores 5 pieces at original ₹25 cost. No new browser/native runtime verification or migration. Prior checkpoint `3628ffd7658513f78f6ef0d246b211b7154c5cff` targeted CI39349408298 passed; new-head CI remains separate evidence.
+
+### Retained units in posted-sale amendments — 20 October 2026
+
+A058-F06/A062-F02 remain PARTIAL. Commit `5c5b259aa943a898c169e037044c9dbc9bc2c9ff` keeps verified original selected units through the atomic amendment workflow. Company/branch/source identity checks remain enforced; raw client snapshots cannot grant provenance. Local PostgreSQL/grouped regression: 125 tests across 7 files PASS, zero failures/skips. Final TypeScript, focused ESLint and diff checks PASS. Seeded converted-source test proves original factor retained after master changes, exact base quantities, balanced journals, unchanged posted history and retry idempotency. No new migration or browser/native runtime claim. Duplicate provenance, public selectors/default wiring and remaining report/Project coverage remain pending.

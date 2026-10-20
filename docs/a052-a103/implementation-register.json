@@ -14335,6 +14335,28 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "Both findings remain PARTIAL. Public selected-unit input, trusted original-line edit/duplicate preservation, production selected pricing defaults, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return verification remain."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "5c5b259aa943a898c169e037044c9dbc9bc2c9ff",
+          "work": "Atomic posted-sale amendments now pass verified original line IDs through a server-only transaction context. The writer rechecks company, branch, posted Sale type and item identity, then retains original selected-unit snapshot, factor, labels and omitted rate. Current master conversion and forged client labels cannot reinterpret retained units. Source-line identity remains separate from credit/debit lineage; no raw snapshot accepted and no posted history changed.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "tests": {
+            "focused": "7 local PostgreSQL unit-history cases PASS before grouped regression; overlapping, not additional tests.",
+            "grouped_regression": "125 PASS / 7 files, 0 failures/skips, 18.83s: unit history, cheque finance, Project workflow, Project purchase inventory, Sale save, duplicate and forged commercial input regressions.",
+            "amendment_database": "Seeded validated SECONDARY draft represents 1 Box=10 Pieces at 200/Box. After posting and changing current master factor from0.1 to0.2, amendment to2Boxes retains original0.1 factor/base20 and total400; credit retains originalbase10. Original posted line unchanged, three journals balanced, repeated same request returns one replacement/one credit. Forged labels ignored for retained units; raw originalLineId/snapshot/baseQuantity on ordinary create cannot grant provenance and produce authoritative PRIMARY base2. Retained-unit context without transaction rejected.",
+            "typescript": "Final full no-emit typecheck PASS.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "browser": "NOT RUN; backend workflow only. Public unit selection not enabled.",
+            "android": "NOT RUN; server amendment path shared, no device/runtime claim.",
+            "migration": "No schema/migration changes.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL. Duplicate provenance, public selected-unit input and production default pricing, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return runtime coverage remain. Amendment retention is implemented and covered by actual local PostgreSQL regression, not a completed page/final-head claim."
         }
       ]
     },
@@ -19644,6 +19666,28 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "Both findings remain PARTIAL. Public selected-unit input, trusted original-line edit/duplicate preservation, production selected pricing defaults, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return verification remain."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "5c5b259aa943a898c169e037044c9dbc9bc2c9ff",
+          "work": "Atomic posted-sale amendments now pass verified original line IDs through a server-only transaction context. The writer rechecks company, branch, posted Sale type and item identity, then retains original selected-unit snapshot, factor, labels and omitted rate. Current master conversion and forged client labels cannot reinterpret retained units. Source-line identity remains separate from credit/debit lineage; no raw snapshot accepted and no posted history changed.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "tests": {
+            "focused": "7 local PostgreSQL unit-history cases PASS before grouped regression; overlapping, not additional tests.",
+            "grouped_regression": "125 PASS / 7 files, 0 failures/skips, 18.83s: unit history, cheque finance, Project workflow, Project purchase inventory, Sale save, duplicate and forged commercial input regressions.",
+            "amendment_database": "Seeded validated SECONDARY draft represents 1 Box=10 Pieces at 200/Box. After posting and changing current master factor from0.1 to0.2, amendment to2Boxes retains original0.1 factor/base20 and total400; credit retains originalbase10. Original posted line unchanged, three journals balanced, repeated same request returns one replacement/one credit. Forged labels ignored for retained units; raw originalLineId/snapshot/baseQuantity on ordinary create cannot grant provenance and produce authoritative PRIMARY base2. Retained-unit context without transaction rejected.",
+            "typescript": "Final full no-emit typecheck PASS.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "browser": "NOT RUN; backend workflow only. Public unit selection not enabled.",
+            "android": "NOT RUN; server amendment path shared, no device/runtime claim.",
+            "migration": "No schema/migration changes.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL. Duplicate provenance, public selected-unit input and production default pricing, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return runtime coverage remain. Amendment retention is implemented and covered by actual local PostgreSQL regression, not a completed page/final-head claim."
         }
       ],
       "push_checkpoint_evidence": {
