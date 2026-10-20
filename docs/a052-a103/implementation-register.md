@@ -10194,3 +10194,18 @@ A080-F01: native details now render exact authorized customer PDF with bounded o
 ### Native PDF preview lint correction — 2026-10-20
 
 A080-F01: exact14073580 CI39399517107 Web/migration PASS,Android lint failed ProduceStateDoesNotAssignValue. Local reproduction identified1error/4warnings. Explicit remembered state/keyed LaunchedEffect fixes the detector while retaining cancellation/resource handling. Final compile,34Quotation JVM andlintDebug PASS5m29s;0unitfail/errors/skips,lint0errors/4existingwarnings. No native runtime certification. New-head CI pending;original finding remainsPARTIAL. Conversion source/schema work in the workspace is separate and not included in this lint-only commit.
+
+### 2026-10-20 — conversion linkage, real Add Sale and order confirmation checkpoint
+
+Code commits: `3e33e275` (transactional linkage and additive migration 142), `59a892fc` (Web real Sale preparation and Web/mobile/native order confirmation). A080-F02 and A083-F01 remain **PARTIAL**; no original finding is newly marked verified. Register totals remain **183 IMPLEMENTED BUT NOT VERIFIED, 15 PARTIAL, 1 NOT STARTED** (199 unique findings).
+
+- Approved/current-revision source and target identities are locked and rechecked. Only successful real Sale Save or explicit Sale Order confirmation closes the estimate; retries do not duplicate closure or financial writes. Order confirmation creates no journal.
+- Web Convert opens an unsaved Add Sale. Full reference text remains separate from short invoice notes. Physical stock units require explicit review. Leaving creates nothing; Save & New opens a fresh form without the conversion identity. Converted/stale forms show controlled feedback.
+- Web/native order confirmation uses server-scoped capabilities and the same authorization/transaction service. New mobile `POST /api/v1/mobile/account/transactions/[id]/confirm` trusts authenticated route identity, not client company/source IDs.
+- Focused PostgreSQL group: **128 passed / 6 files**, including 8 real conversion integration tests; overlaps earlier 166-test core group. Final unit/HTTP/prefill group: **77 passed / 7 files**. Do not add overlapping runs as distinct tests.
+- Browser: **4 passed** desktop/mobile Save and Save & New; actual ₹100 − ₹10 = ₹90 posted Sale, one journal, source closure, no abandoned draft, keyboard/Axe source section/no overflow, controlled converted URL. Test cleanup deletes only its localhost fixture tenant's linked quotation/commercial history together so deferred tenant FKs remain satisfied.
+- Android: compile, **51 focused JVM tests**, lint **PASS**; 0 test failures/errors/skips, lint 0 errors/4 warnings/6 information. No device/emulator runtime executed.
+- Migration: fresh full **142-migration** chain and legacy-data rehearsal **1 passed**, original fields unchanged and new nullable linkage fields null; repeat deploy clean. Historical migrations and production DB untouched.
+- Final changed-file lint, TypeScript and diff checks **PASS**. Full 199-finding final-head validation remains pending.
+
+Remaining conversion scope includes Web order prefill, native conversion prefill/navigation, physical-unit converted Sale runtime, browser/HTTP order confirmation and complete reference parity. PR #153 stays Draft, A104 remains on hold, and main conflicts remain unresolved.
