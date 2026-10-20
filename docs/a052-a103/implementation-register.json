@@ -14316,6 +14316,25 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: connect production defaults, trusted selected-unit input and retained-source edits/duplicates; Web/native selectors, report quantities and converted Project/vendor-return verification remain."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "2aad97aaf2b7ca8b4f09fbb7a0abe066b6646662",
+          "work": "Correction lines with an omitted rate now retain the authorized original source line rate instead of defaulting to today's item master rate. Explicit caller overrides retain their existing behavior. Converted source-unit quantities continue to use immutable original mapping. No selected-unit public input or selectors enabled.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "tests": {
+            "financial_regression": "116 PASS / 6 files, 0 failures/skips, 17.15s. Actual local PostgreSQL unit history, cheque finance, Project workflow, Project purchase inventory, Sale save plus selected-unit pricing tests. Converted half-Box correction omits rate and retains 200/Box: total100, stock return5Pieces at original cost25; journals remain balanced.",
+            "typescript": "Full no-emit typecheck PASS.",
+            "eslint": "Focused ESLint and diff check PASS.",
+            "browser": "NOT RUN for this server correction.",
+            "android": "NOT RUN for this server correction.",
+            "migration": "No migration/schema change.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "Both findings remain PARTIAL. Public selected-unit input, trusted original-line edit/duplicate preservation, production selected pricing defaults, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return verification remain."
         }
       ]
     },
@@ -19606,6 +19625,25 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: connect production defaults, trusted selected-unit input and retained-source edits/duplicates; Web/native selectors, report quantities and converted Project/vendor-return verification remain."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "2aad97aaf2b7ca8b4f09fbb7a0abe066b6646662",
+          "work": "Correction lines with an omitted rate now retain the authorized original source line rate instead of defaulting to today's item master rate. Explicit caller overrides retain their existing behavior. Converted source-unit quantities continue to use immutable original mapping. No selected-unit public input or selectors enabled.",
+          "files": [
+            "src/lib/account/commercial.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "tests": {
+            "financial_regression": "116 PASS / 6 files, 0 failures/skips, 17.15s. Actual local PostgreSQL unit history, cheque finance, Project workflow, Project purchase inventory, Sale save plus selected-unit pricing tests. Converted half-Box correction omits rate and retains 200/Box: total100, stock return5Pieces at original cost25; journals remain balanced.",
+            "typescript": "Full no-emit typecheck PASS.",
+            "eslint": "Focused ESLint and diff check PASS.",
+            "browser": "NOT RUN for this server correction.",
+            "android": "NOT RUN for this server correction.",
+            "migration": "No migration/schema change.",
+            "final_checkpoint_head": "NOT RUN"
+          },
+          "remaining": "Both findings remain PARTIAL. Public selected-unit input, trusted original-line edit/duplicate preservation, production selected pricing defaults, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return verification remain."
         }
       ],
       "push_checkpoint_evidence": {

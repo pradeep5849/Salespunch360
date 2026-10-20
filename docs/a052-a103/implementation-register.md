@@ -10103,3 +10103,7 @@ Both findings stay PARTIAL. Automatic saved Retail/Wholesale/Customer defaults a
 ### Selected-unit catalogue defaults — 20 October 2026
 
 A058-F06/A062-F02 remain PARTIAL. Commit `f635ba31eee065329bc02c88d7d61c01121c9087` adds the shared pricing helper and 7 new focused cases; 38 tests across 3 files pass, full TypeScript and focused ESLint pass. Production callers/selectors remain unchanged pending safe source-preserving edits/duplicates. No browser, Android or database runtime verification claimed for this preparatory slice. No migration added.
+
+### Original correction rate — 20 October 2026
+
+A058-F06/A062-F02 remain PARTIAL. Commit `2aad97aaf2b7ca8b4f09fbb7a0abe066b6646662` retains the original source rate when a correction omits an explicit rate. Local PostgreSQL/financial regression: 116 tests across 6 files PASS, zero failures/skips; TypeScript, focused ESLint and diff checks PASS. Converted half-box return retains ₹200/box, corrects ₹100 and restores 5 pieces at original ₹25 cost. No new browser/native runtime verification or migration. Prior checkpoint `3628ffd7658513f78f6ef0d246b211b7154c5cff` targeted CI39349408298 passed; new-head CI remains separate evidence.
