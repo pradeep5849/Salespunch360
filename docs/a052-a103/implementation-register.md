@@ -7108,7 +7108,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Metadata create/edit/revision/export round trips; attachment company access/upload failure; narrow screens/keyboard/large fonts.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
@@ -10220,3 +10220,14 @@ A080-F02 is now **IMPLEMENTED BUT NOT VERIFIED**. Counts: **184 IMPLEMENTED BUT 
 Final focused validation:78 unit/API cases PASS;57 Android JVM cases PASS(6 new conversion codec tests),compile/lint PASS,lint0errors/4warnings/6information;TypeScript/ESLint/diff PASS. Browser8 distinct cases PASS:2 physical-unit cases(49.5s) and6 grouped Sale/order cases(2.1m),desktop+mobile. Save/Save&New/abandonment,90.00 negotiated Sale,190.00 physical Sale/baseQuantity20/factor0.1,one source closure,order confirmation/no journal,authenticated HTTP/retry/permission denial/route identity,chooser Escape/Axe/no overflow verified. Physical-product test uses trackInventory:false;no new tracked-warehouse movement runtime claim.
 
 Intermediate failing runs and corrections are retained in JSON. A premature mobile-pass progress statement was incorrect;completed logs and final2+6 browser results are authoritative. Native device/emulator/Coroutine UI/TalkBack runtime and the complete199-finding final-head validation remain pending. No merge,production operation,deployment or A104. Predecessor0e0a5fb4 targeted CI passed run39432331899;new head requires its own CI.
+
+
+### 2026-10-20 — A082-F01 editor metadata/toolbar implementation completed
+
+Code `9d638a25`: type-aware Web/native header,workingBack andpermission-gated Settings,new reference Assigned on Save andretained read-only saved references,reference/date mobile row,firm metadata andgrouped Save actions. Existing attachment/billing/supply/notes/expandable-terms implementations preserved. Web routes use authoritative capabilities to return invalid edit/revision requests to scoped details. No role-policy change:Project Managers can edit/approve quotations.
+
+A082-F01 is **IMPLEMENTED BUT NOT VERIFIED**. Current185 IMPLEMENTED BUT NOT VERIFIED /13PARTIAL /1NOTSTARTED,199 unique original IDs;final statuses remain unset. Other quotation/backup findings retain their own incomplete scope.
+
+Focused74unit/service/capability/attachment cases PASS. Final2desktop/mobile header cases PASS(1.6m);related4attachment/terms cases PASS on same application code in preceding group. That group’s2header fixture failures were corrected without changing permissions;do not report the original group as all6passed. Header checks cover same-row bounds,readonly references,realBack/Settings,role-gated Web/native options,Axe/no overflow,lifecycle redirects andno navigation-created document/journal. Earlier precursor6passed5.1m predates final layout/guard refinements.
+
+Android compile/40focusedQuotationJVM/lint PASS8m14s,0testfailures/errors/skips,lint0errors/4warnings/6information. Final TypeScript/ESLint/diff PASS. Native device/emulator/TalkBack/visual runtime andcomplete199-finding final-head verification remain pending. No DBmodel/migration,production write,merge/deploy/A104. Predecessorbf9c2bde targeted CI passed run39438358438;new head needs its own CI.

@@ -55370,7 +55370,12 @@
       "checkpoint_work": {
         "implementation": "Shared quotation action capabilities now include actual role/workspace/state eligibility for draft edit, revision, approval, sharing and lifecycle. Mobile detail filters transitions accordingly; Android edit/revision/share controls consume returned capability booleans. Existing Admin/Accountant/Project Manager approval and Data Entry draft submission remain; Data Entry issued lifecycle/share/approval blocked. Server mutation guards unchanged.",
         "tests": "54 focused capability/mobile-detail/service tests passed; Android compile passed; clean Node22 TypeScript and focused lint passed after correcting the fixture edition enum.",
-        "remaining": "Final-head browser/API/native regressions and physical Android role/state interaction remain pending. No final status assigned."
+        "remaining": "Final-head browser/API/native regressions and physical Android role/state interaction remain pending. No final status assigned.",
+        "web_edit_revision_capability_navigation_2026_10_20": {
+          "implementation_commit": "9d638a25f6eaa40c3e6c356722b2205f4e9f1342",
+          "work": "Web edit/revision routes now redirect to scoped detail when authoritative canEdit/canRevise is false;native settings toolbar honors server canManageSettings. Existing Project Manager edit/approve rights preserved.",
+          "tests": "2desktop/mobile header cases PASS plus74focused capability/service/attachment tests and40nativeJVM/build/lint PASS. No new native runtime verification or status promotion claimed."
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "mobileQuotationDetail returns full quotationTransitions rather than filtered allowed actions. Native shows all transitions, and Share link for APPROVED/SENT regardless of canShare. Server permissions reject unauthorized Data Entry operations.",
@@ -55986,7 +55991,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -56292,6 +56297,33 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "A082-F01 stays PARTIAL for remaining original reference header/toolbar/layout parity. Native device/emulator/runtime accessibility and complete199-finding final validation remain unverified. No production,merge,deployment orA104."
+        },
+        "reference_header_toolbar_completion_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "9d638a25f6eaa40c3e6c356722b2205f4e9f1342",
+          "actual_implementation": "Completed remaining reference metadata/header/toolbar around the existing billing/supply/notes/private-attachment/expandable-terms implementation. Web type-aware heading,Back and permission-gated Settings;new references truthfully Assigned on Save,existing draft/revision references retained read-only;reference/date stay side-by-side on mobile,firm spans the row;Save actions grouped. Native full-screen header addsBack/settings andreference/date row without changing save/attachment behavior. Existing role policy preserved:Project Managers may edit/approve quotations. Direct invalid edit/revision lifecycle routes redirect to authorized details using authoritative capabilities.",
+          "modified_files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/[id]/edit/page.tsx",
+            "src/app/workspace/account/quotations/[id]/revisions/new/page.tsx",
+            "src/app/workspace/account/quotations/new/page.tsx",
+            "src/app/workspace/account/quotations/quotation-editor.tsx",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "focused_unit": "74 PASS/4 files,0 failed/skipped(4.52s):quotation service runtime/action capabilities and attachment route/HTTP boundaries.",
+            "browser_final_header": "2 PASS desktop/mobile(1.6m),0 failed/skipped:dynamic Estimate heading;new/read-only reference andfirm;saved draft reference;reference/date actual same-row bounds;date editing;working Settings andBack;Axe toolbar/no overflow;Data Entry Settings hidden andnative options.canManageSettings false;draft revision denied byredirect,approved draft edit redirected,approved revision available;no navigation-created quotation/journal. Lifecycle fixture transitions are explicit test arrangement,not UI writes.",
+            "browser_related_regression": "4 attachment/expandable-term cases PASS on the same application code in preceding6-case group(2.3m);2header cases initially failed because the fixture incorrectly assumed Project Managers lack quotation-edit permission. Corrected only fixture assertions,then final2header cases passed. An earlier precursor6-case header/attachment/terms groupPASS5.1m predates final row/action/lifecycle refinements;not final-head evidence.",
+            "android": "compileDebugKotlin,testDebugUnitTest(*Quotation*Test),lintDebug PASS8m14s;40 JVM tests,0 failures/errors/skips;lint0 errors/4warnings/6information. No emulator/device/TalkBack/visual runtime executed.",
+            "typescript": "Final full no-emit typecheck PASS after browser server exit.",
+            "eslint": "Final changed-file lint and git diff --check PASS.",
+            "initial_test_corrections": "Initial extra redirect test assumed PROJECT_MANAGER could not edit quotations;existing permissions correctly allow it. No role policy changed. Mobile Back test used5sdefault under cold compilation;aligned to30s navigation wait. Lifecycle redirects verified in a real browser,not an HTTP client that cannot follow streamed meta redirects.",
+            "final_checkpoint_head": "NOT RUN;complete199-finding final-head validation still pending."
+          },
+          "implementation_completion": "A082-F01 original supported metadata/layout/attachment/expandable-term requirements now have implementation,combining this header slice with its preserved earlier attachment/terms evidence. Status IMPLEMENTED BUT NOT VERIFIED;no final verification claim.",
+          "remaining_limitations": "Native device/emulator and runtime accessibility/visual parity remain unexecuted;complete checkpoint final-head validation pending. Theme/print controls A080-F01,list A083-F01,blob recovery A088-F01 and other findings retain independent incomplete scope. No new DB model/migration,production operation,merge,deployment orA104."
         }
       }
     },
@@ -70548,6 +70580,13 @@
       "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39432331899",
       "result": "SUCCESS",
       "scope": "Predecessor targeted CI only;not final validation of6143a2ee or all199 findings."
+    },
+    {
+      "date": "2026-10-20",
+      "code_head": "bf9c2bde6f7995baee1475c2a314f47927ed5ad2",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39438358438",
+      "result": "SUCCESS",
+      "scope": "Predecessor targeted CI only;not final validation of9d638a25 or all199 findings."
     }
   ]
 }
