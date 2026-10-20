@@ -14494,7 +14494,7 @@
             "final_checkpoint_head": "NOT RUN; related evidence only."
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: native purchase/order unit selectors and rule wiring, converted mixed-Project/vendor-return allocation cases, report/export consumers and complete final-head validation remain. No native emulator/device runtime. No whole finding or linked page promoted.",
-          "commit_sha": null
+          "commit_sha": "cbfe0ce5d69844246178dbfc07d15930cc36fed2"
         }
       ]
     },
@@ -19900,7 +19900,7 @@
             "final_checkpoint_head": "NOT RUN; related evidence only."
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: native purchase/order unit selectors and rule wiring, converted mixed-Project/vendor-return allocation cases, report/export consumers and complete final-head validation remain. No native emulator/device runtime. No whole finding or linked page promoted.",
-          "commit_sha": null
+          "commit_sha": "cbfe0ce5d69844246178dbfc07d15930cc36fed2"
         }
       ],
       "push_checkpoint_evidence": {
@@ -51134,7 +51134,7 @@
             "final_checkpoint_head": "NOT RUN; related evidence only."
           },
           "remaining": "A071-F05 remains PARTIAL for broader Home/noncommercial-source and party-transfer scope. This continuation only strengthens its shared duplicate provenance and related entry handling; no Home completion inferred.",
-          "commit_sha": null
+          "commit_sha": "cbfe0ce5d69844246178dbfc07d15930cc36fed2"
         }
       ],
       "push_checkpoint_evidence": {
