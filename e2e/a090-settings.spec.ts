@@ -6,7 +6,7 @@ import {extractPdfText} from "../tests/helpers/pdf-text";
 import AxeBuilder from "@axe-core/playwright";
 import {mobileStockSummary,mobileStockSummaryExport} from "../src/lib/mobile/account-inventory";
 import {reversePostedSaleForActor} from "../src/lib/account/sale-amendments";
-import {setupOwnerFinancialAccountForActor,postOwnerTransactionForActor} from "../src/lib/account/money";
+import {createMoneyAccountForActor,createAndReceiveLoanForActor,setupOwnerFinancialAccountForActor,postOwnerTransactionForActor} from "../src/lib/account/money";
 import {runFinancialReportForActor} from "../src/lib/account/reports/service";
 import {reverseJournalForActor,postJournalForActor} from "../src/lib/accounting/service";
 import {createQuotationForActor,createQuotationRevisionForActor,transitionQuotationForActor,createQuotationShareForActor,getPublicQuotation,getQuotationForActor} from "../src/lib/quotations/service";
@@ -3230,4 +3230,23 @@ test("A086 paid sale edit retains actual excess payment as advance",async({page}
  const retained=await db.accountSettlement.aggregate({where:{companyId,partyId:customerId,paymentMode:"ACCOUNT_CREDIT"},_sum:{remainingAmount:true}});expect(retained._sum.remainingAmount?.toString()).toBe("90");
  expect(await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true,journalEntry:true}})).toEqual(original);
 
+});
+
+
+test("A067 standalone loan charges do not reduce principal",async({page})=>{
+ test.setTimeout(180000);
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Loan charge verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ const bank=await createMoneyAccountForActor(actor,{type:"BANK",name:"Charge verification bank",branchId,creationRequestKey:randomUUID()});
+ const loan=await createAndReceiveLoanForActor(actor,{branchId,lender:"Charge verification lender",loanType:"TERM",principal:"100000",startDate:"2026-10-18",moneyAccountId:bank.id,idempotencyKey:randomUUID()});
+ await signInSettings(page);await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
+ await page.getByRole("checkbox",{name:"Charges on loan only",exact:true}).check();
+ const form=page.locator("form").filter({has:page.getByLabel("Loan to repay",{exact:true})});
+ await form.getByLabel("Loan to repay",{exact:true}).selectOption(loan.id);await form.getByLabel("Payment account",{exact:true}).selectOption(bank.id);await form.getByLabel("Payment date",{exact:true}).fill("2026-10-20");await form.getByLabel("Charges",{exact:true}).fill("6500");await form.getByLabel("Payment description",{exact:true}).fill("Independent processing charge");
+ await expect(form.getByLabel("Principal paid",{exact:true})).toHaveCount(0);await expect(form.getByLabel("Interest paid",{exact:true})).toHaveCount(0);
+ await form.getByRole("button",{name:"Post loan charges",exact:true}).click();await expect.poll(async()=>await db.loanPayment.count({where:{companyId,loanId:loan.id}}),{timeout:60000}).toBe(1);
+ const payment=await db.loanPayment.findFirstOrThrow({where:{companyId,loanId:loan.id}});expect(payment.principal.toString()).toBe("0");expect(payment.interest.toString()).toBe("0");expect(payment.charges.toString()).toBe("6500");const journal=await db.journalEntry.findUniqueOrThrow({where:{id:payment.journalEntryId},include:{lines:true}});expect(journal.lines.reduce((n,row)=>n+Number(row.debit)-Number(row.credit),0)).toBe(0);
+ const principal=await db.journalLine.aggregate({where:{companyId,ledgerAccountId:loan.liabilityLedgerId},_sum:{debit:true,credit:true}});expect(Number(principal._sum.credit??0)-Number(principal._sum.debit??0)).toBe(100000);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

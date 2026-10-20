@@ -42018,7 +42018,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "PARTIAL",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -42545,6 +42545,26 @@
         ],
         "verification_status": "NOT STARTED",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "standalone_charges_2026_10_20": {
+          "implementation": "Web and Android expose Charges on loan only. Principal and interest are forced to zero in this mode; the existing scoped/idempotent LoanPayment service records the fee against its expense ledger and selected money account without changing loan principal. No opening-fee/net-disbursement policy invented.",
+          "files": [
+            "src/components/account/loan-forms.tsx",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "unit_financial": "50 PASS/6 files/28.52seconds, including real PostgreSQL money-edit integration and loan input/total/operations/history/overview regressions. No failures/skips.",
+            "browser": "2PASS desktop/mobile Chromium/1.2minutes: actual charges-only selection, hidden principal/interest controls,6500fee payment, balanced journal and unchanged100000principal; no horizontal overflow. Initial fixture incorrectly included nonexistent LoanPayment.journalEntry relation; corrected to explicit journalEntryId lookup and reran.",
+            "android": "compileDebugKotlin + focused Money/Loan JVM tests BUILD SUCCESSFUL in3m14s:15tests,0fail/errors/skips. No emulator/device runtime.",
+            "typescript": "PASS full no-emit check after browser exit.",
+            "eslint": "PASS final changed-file lint and git diff --check.",
+            "migration": "No new schema or migration for this UI path; reuses existing loan-payment ledger and immutable history."
+          },
+          "remaining": "Opening processing fee remains pending explicit gross/net fee-source policy; user question sent. Original A067-F03 remains PARTIAL. Native emulator/device runtime and complete final-head validation remain pending.",
+          "commit_sha": null
+        }
       }
     },
     {

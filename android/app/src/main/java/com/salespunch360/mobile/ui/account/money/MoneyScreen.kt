@@ -216,6 +216,9 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var printQr by remember{mutableStateOf(selected?.get("printUpiQr")?.jsonPrimitive?.booleanOrNull?:false)}
     var paymentDescription by remember{mutableStateOf("")}
     var charges by remember{mutableStateOf("0")}
+    var chargeOnly by remember{mutableStateOf(false)}
+    val paymentPrincipal=if(chargeOnly)"0"else amount
+    val paymentInterest=if(chargeOnly)"0"else interest
     var date by remember{mutableStateOf(java.time.LocalDate.now().toString())}
     var reference by remember{mutableStateOf("")}
     var transferDescription by remember{mutableStateOf("")}
@@ -235,7 +238,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
         kind=="loan-operations"->date.isNotBlank()&&(if(loanAction=="TOP_UP")source.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1 else adjustmentReason.trim().length in 3..1000)
         kind=="loan-edit"->loanName.length<=240&&loanNumber.length<=160&&loanDescription.length<=2000&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loans"->source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
-        kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(amount,interest,charges)?.signum()==1
+        kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(paymentPrincipal,paymentInterest,charges)?.signum()==1
         kind=="accounts"->name.isNotBlank()&&(type!="BANK"||bankErrors.valid)
         else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||(owner.isNotBlank()&&fundingReturns!=null))
     }
@@ -323,12 +326,14 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{OutlinedTextField(interest,{interest=it},label={Text("Interest rate")},enabled=!saving)}
                 }
                 if(kind=="loan-payments"){
-                    item{OutlinedTextField(interest,{interest=it},label={Text("Interest paid")},enabled=!saving)}
+                    item{Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Checkbox(checked=chargeOnly,onCheckedChange={chargeOnly=it},enabled=!saving,modifier=Modifier.semantics{contentDescription="Charges on loan only"});Text("Charges on loan only")}}
+                    if(chargeOnly)item{Text("Records charges without changing loan principal.")}
+                    if(!chargeOnly)item{OutlinedTextField(interest,{interest=it},label={Text("Interest paid")},enabled=!saving)}
                     item{OutlinedTextField(charges,{charges=it},label={Text("Charges")},enabled=!saving)}
                     item{OutlinedTextField(paymentDescription,{paymentDescription=it},label={Text("Payment description")},enabled=!saving)}
-                    item{Text("Payment total: "+(loanPaymentTotal(amount,interest,charges)?.let{accountMoney(it)}?:"Enter valid amounts"),modifier=Modifier.semantics{liveRegion=LiveRegionMode.Polite})}
+                    item{Text("Payment total: "+(loanPaymentTotal(paymentPrincipal,paymentInterest,charges)?.let{accountMoney(it)}?:"Enter valid amounts"),modifier=Modifier.semantics{liveRegion=LiveRegionMode.Polite})}
                 }
-                item{OutlinedTextField(amount,{amount=it},label={Text(if(kind=="loan-payments")"Principal paid" else "Amount")},enabled=!saving)}
+                if(kind!="loan-payments"||!chargeOnly)item{OutlinedTextField(amount,{amount=it},label={Text(if(kind=="loan-payments")"Principal paid" else "Amount")},enabled=!saving)}
                 item{OutlinedTextField(date,{date=it},label={Text("Date")},enabled=!saving)}
                 if(kind=="transfers")item{TextButton(enabled=!saving&&!transferImageLoading,onClick={imagePicker.launch("image/*")}){Text(if(transferImageLoading)"Reading image…" else "Add image (optional)")};transferImage?.let{image->Text(image.str("name"));TextButton(enabled=!saving,onClick={transferImage=null}){Text("Remove image")}};transferImageError?.let{Text(it,color=MaterialTheme.colorScheme.error);TextButton(enabled=!saving,onClick={transferImageError=null;transferImage=null}){Text("Remove image")}};Text("PNG, JPEG or WebP up to 5 MB.")}
                 if(kind=="transfers")item{OutlinedTextField(transferDescription,{if(it.length<=2000)transferDescription=it},label={Text("Description")},enabled=!saving)}
@@ -347,7 +352,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                 "transfers"->{transferImage?.let{put("image",it)};put("description",transferDescription);put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
                 "owners"->{if(type=="CAPITAL_WITHDRAWAL")put("fundingReturns",fundingReturns?:JsonArray(emptyList()));put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}
                 "loans"->{put("lender",name);put("loanType",loanType);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration);put("principal",amount);put("interestRate",interest);put("startDate",date)}
-                "loan-payments"->{put("loanId",selected?.str("id").orEmpty());put("paymentDate",date);put("principal",amount);put("interest",interest);put("charges",charges);put("description",paymentDescription)}
+                "loan-payments"->{put("loanId",selected?.str("id").orEmpty());put("paymentDate",date);put("principal",paymentPrincipal);put("interest",paymentInterest);put("charges",charges);put("description",paymentDescription)}
             }}
         }
     })}){Text(if(saving)"Saving…" else if(identity||kind=="accounts")"Save" else "Post transaction")}},dismissButton={TextButton(close,enabled=!saving){Text("Cancel")}})

@@ -10147,3 +10147,9 @@ Validation: 14 focused PostgreSQL tests and 82 cheque regression tests passed (9
 Eligible paid sales now expose the shared Edit/Delete capability to Web and Android. Web editing uses the same capability, while pending cheques and existing posted adjustments remain protected. Managed payment-history reversal has stable domain errors.
 
 Final related validation: 89 tests passed across five PostgreSQL/accounting suites (including concurrent cancellation/retry and role/company/branch denial); two desktop/mobile Chromium cases passed with actual Web Save plus authenticated mobile GET/PATCH/replay/DELETE; Android compile and14 focused JVM tests passed; full141-migration fresh-chain/legacy upgrade rehearsal passed; final TypeScript and changed-file lint passed. No native device/emulator runtime. Original A086-F05 remains PARTIAL pending the policy and implementation for an invoice with an already posted Credit Note, plus broader final-head checks. No totals or final statuses promoted.
+
+### A067-F03 — standalone Charges On Loan, 2026-10-20
+
+Now PARTIAL rather than NOT STARTED. Web and Android expose a charges-only payment using the existing authorized/idempotent service: zero principal, zero interest, independently linked fee/payment journal. Actual6500fee leaves100000principal unchanged. Opening processing-fee handling still needs the explicit net/gross disbursement policy; no assumption was implemented.
+
+Validation:50tests/6Web/backend/financial suites PASS,2desktop/mobile browser cases PASS, Android compile and15focused JVM tests PASS, TypeScript and lint PASS. No new migration or native device runtime. Current counts:181implemented-but-not-finally-verified,17PARTIAL,1NOT STARTED; all199IDs retained and final statuses unchanged.
