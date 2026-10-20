@@ -10129,3 +10129,9 @@ Commit `9e6d02dae0389ca39cd4d7b6cf6e65d9bc562b42` stores the applied master disc
 Commit `a157e31e4aa7ffecf5277dc96df51e7129047860` restores a missing legacy FIXED input from the posted discountAmount for Web duplicate/edit, atomic amendment/full credit and Android saved-Sale decoding. Historical rows stay unchanged. Explicit zero is preserved; missing percentages are not guessed. Linked findings A058-F02/A071-F05/A086-F06; statuses unchanged.
 
 205 grouped tests/15 files PASS, zero failures/skips; six actual desktop/mobile-web browser cases PASS (2.1m); Android compile plus14 JVM tests PASS (3m31s), zero failures/errors/skips. Final TypeScript, focused ESLint, YAML and diff checks PASS. Legacy duplicate/replacement/full credit keep original3/57 after master default changes; original null-value row remains unchanged and journals balance. No migration, production or native device runtime claim. Historical missing percentages and broader remaining scope remain pending.
+
+### Approved conversion and released-payment decisions — 20 October 2026
+
+User decisions recorded: released paid-invoice amounts stay as customer advance credit, with original receipts preserved; only approved estimates convert, and only real Sale Save/order confirmation closes the source. Paid release/reclassification/reapplication implementation remains pending and guarded.
+
+Commit `6d0c61092c6e770de19b91cbfbe0b8e868d434e8` enforces current document + revision APPROVED for read-only conversion preparation. A080-F02/A083-F01 remain PARTIAL for transactional Save/linkage/closure.159 grouped tests/7 files PASS,zero failures/skips,including real PostgreSQL approval/audit checks;actual desktop/mobile-profile HTTP cases2 PASS (17.8s),no target/journal/customer/Project/receipt/audit writes. TypeScript,focused ESLint/diff PASS. No migration or native device claim. All199 IDs/52pages retained;finding statuses unchanged.

@@ -54752,6 +54752,33 @@
           "linked_finding": "A082-F03",
           "remaining": "PARTIAL;no whole-finding completion inferred.",
           "implementation_commit": "4b24c0733e7dea9a84d68d579adc2161100a6d7a"
+        },
+        "approved_conversion_gate_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "6d0c61092c6e770de19b91cbfbe0b8e868d434e8",
+          "work": "User-approved eligibility rule: both current source document and current revision must be APPROVED before conversion preparation. Draft/Pending Approval/other statuses cannot bypass the shared Web/mobile domain check. Mobile API maps approval requirement to409; user-facing domain feedback explains approval. Existing branch/company/permission/module/revision/customer/total guards remain. Preparation remains read-only and does not authorize or implement target Save/source closure.",
+          "files": [
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/quotations/conversion-preview.test.ts",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.test.ts",
+            "src/lib/account/action-feedback.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "70 PASS /4 files, overlapping grouped tests.",
+            "grouped": "159 PASS /7 files,0 failures/skips,3.26s,including actual local PostgreSQL quotation draft/revision/approval audit integration and existing calculation/service/prefill/API/error regressions.",
+            "eligibility": "Eight non-approved source statuses rejected; current revision must also be approved. Existing foreign company/unassigned branch, denied role/module, stale revision, stale total and lead-only source guards preserved. Real Draft and Pending Approval API/domain denial creates no commercial target, customer, Project, receipt, journal or audit.",
+            "browser_api": "2 PASS in17.8s,0 failures/skips,actual desktop/mobile Chromium test profiles exercising authenticated mobile HTTP API:unapproved409;approved Sale and Sale Order exact safe prefill200/no-store;unauthenticated401,role403,unknown404,revision409,forged scope400;no writes and approved source remains APPROVED. This is API runtime, not native device/UI verification.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "android": "No native source/decoder contract changed;no new Android unit/build/device runtime executed for this server policy change.",
+            "migration": "No schema/migration changes.",
+            "prior_ci": "Exact previous headdd6a5ba4754900a2c2d05348c7fe3bb84b5c208e CI39361699854 passed web/migration/android;prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN;new-head CI requested separately."
+          },
+          "remaining": "A080-F02/A083-F01 remain PARTIAL. Explicit target Save/confirmation still needs stable source linkage, transactional approval/revision recheck and source closure. No persisted Sale draft or automatic posting introduced;no whole-finding completion inferred."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -57072,6 +57099,33 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A080-F02/A083-F01 remain PARTIAL: source linkage, replay/concurrency guards, Save/confirm closure and Web/native controls remain pending. Approval eligibility for Draft/Pending Approval sources is awaiting user decision; no rule invented. No migration or production operation."
+        },
+        "approved_conversion_gate_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "6d0c61092c6e770de19b91cbfbe0b8e868d434e8",
+          "work": "User-approved eligibility rule: both current source document and current revision must be APPROVED before conversion preparation. Draft/Pending Approval/other statuses cannot bypass the shared Web/mobile domain check. Mobile API maps approval requirement to409; user-facing domain feedback explains approval. Existing branch/company/permission/module/revision/customer/total guards remain. Preparation remains read-only and does not authorize or implement target Save/source closure.",
+          "files": [
+            "src/lib/quotations/conversion-preview.ts",
+            "src/lib/quotations/conversion-preview.test.ts",
+            "src/lib/quotations/draft-audit.integration.test.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/conversion-preview/route.test.ts",
+            "src/lib/account/action-feedback.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "70 PASS /4 files, overlapping grouped tests.",
+            "grouped": "159 PASS /7 files,0 failures/skips,3.26s,including actual local PostgreSQL quotation draft/revision/approval audit integration and existing calculation/service/prefill/API/error regressions.",
+            "eligibility": "Eight non-approved source statuses rejected; current revision must also be approved. Existing foreign company/unassigned branch, denied role/module, stale revision, stale total and lead-only source guards preserved. Real Draft and Pending Approval API/domain denial creates no commercial target, customer, Project, receipt, journal or audit.",
+            "browser_api": "2 PASS in17.8s,0 failures/skips,actual desktop/mobile Chromium test profiles exercising authenticated mobile HTTP API:unapproved409;approved Sale and Sale Order exact safe prefill200/no-store;unauthenticated401,role403,unknown404,revision409,forged scope400;no writes and approved source remains APPROVED. This is API runtime, not native device/UI verification.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "android": "No native source/decoder contract changed;no new Android unit/build/device runtime executed for this server policy change.",
+            "migration": "No schema/migration changes.",
+            "prior_ci": "Exact previous headdd6a5ba4754900a2c2d05348c7fe3bb84b5c208e CI39361699854 passed web/migration/android;prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN;new-head CI requested separately."
+          },
+          "remaining": "A080-F02/A083-F01 remain PARTIAL. Explicit target Save/confirmation still needs stable source linkage, transactional approval/revision recheck and source closure. No persisted Sale draft or automatic posting introduced;no whole-finding completion inferred."
         }
       },
       "push_checkpoint_evidence": {
@@ -64599,6 +64653,14 @@
         ],
         "verification_status": "PARTIAL",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "released_payment_policy_2026_10_20": {
+          "date": "2026-10-20",
+          "decision": "User selected keeping released paid-invoice amounts as customer advance credit;do not reverse original receipt automatically.",
+          "implementation_status": "DECISION RECORDED ONLY;financial release/reclassification/reapplication workflow not implemented by this commit. Existing paid-correction guard remains.",
+          "required_work": "Preserve immutable receipt/allocation history;release effective application/receipt amounts with auditable correction entries,keep original bank/cash receipt unchanged,make released balance reusable and reapply up to corrected invoice total. Verify ledger,history cutoff,company/branch/permissions,cheque state,idempotency/concurrency and rollback before enabling paid Edit/Delete."
+        }
       }
     },
     {
@@ -68958,6 +69020,16 @@
       ],
       "decision": "User approved primary-unit stock and saved prices. Example:1Box=10Pieces,primaryPiece,₹20/Piece;1Box sale deducts10Pieces and charges₹200. Preserve selected unit and immutable conversion snapshot. Existing setup factor means secondary units per1primary,so this example uses0.1Box/Piece. No independent secondary-unit price inferred.",
       "source": "User reply to call_06e881f823224da4b136cd5c37734a8d."
+    },
+    "paid_sale_correction_released_credit_2026_10_20": {
+      "decision": "Keep released payments as customer advance credit when a paid invoice is reduced or cancelled. Do not automatically reverse the original receipt.",
+      "source": "User answer to call_6781250954e14cbf984734bc95ef0872 question0",
+      "status": "DECISION RECORDED; append-only financial release/reclassification implementation and verification remain pending. Existing paid-correction safety guard remains until complete."
+    },
+    "estimate_conversion_eligibility_2026_10_20": {
+      "decision": "Approved estimates only. The source closes only after explicit real Sale Save/posts or Sale Order confirmation; opening Convert creates no persisted Sale draft.",
+      "source": "User answer to call_6781250954e14cbf984734bc95ef0872 question1 plus prior no-Sale-drafts instruction",
+      "status": "Approval gate implemented for read-only conversion preparation and locally verified. Transactional target Save/source linkage/approval recheck/closure remain pending."
     }
   },
   "push_checkpoint": {
