@@ -6890,7 +6890,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Sale/order field carryover; source authorization and target permission/module; Branch consistency; replay/cancel/failure; no duplicate posting.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
@@ -10209,3 +10209,14 @@ Code commits: `3e33e275` (transactional linkage and additive migration 142), `59
 - Final changed-file lint, TypeScript and diff checks **PASS**. Full 199-finding final-head validation remains pending.
 
 Remaining conversion scope includes Web order prefill, native conversion prefill/navigation, physical-unit converted Sale runtime, browser/HTTP order confirmation and complete reference parity. PR #153 stays Draft, A104 remains on hold, and main conflicts remain unresolved.
+
+
+### 2026-10-20 — A080-F02 conversion implementation completed
+
+Code `6143a2ee`: Web/native Convert chooser, Web Sale Order prefill, native read-only Sale/order preparation and navigation, full estimate reference, current-unit review, source identity/cancellation checks, and derived native Closed status. Shared Sale feedback renders once near the form top; converted Sales expose item review controls. No new migration beyond142.
+
+A080-F02 is now **IMPLEMENTED BUT NOT VERIFIED**. Counts: **184 IMPLEMENTED BUT NOT VERIFIED / 14 PARTIAL / 1 NOT STARTED**,199 unique original IDs. This changes code implementation tracking only; all final statuses remain unset. A083-F01 and A086-F06 retain their own incomplete reference scope. Linked unit evidence is mapped to A058-F06/A062-F02 without claiming those pages newly complete.
+
+Final focused validation:78 unit/API cases PASS;57 Android JVM cases PASS(6 new conversion codec tests),compile/lint PASS,lint0errors/4warnings/6information;TypeScript/ESLint/diff PASS. Browser8 distinct cases PASS:2 physical-unit cases(49.5s) and6 grouped Sale/order cases(2.1m),desktop+mobile. Save/Save&New/abandonment,90.00 negotiated Sale,190.00 physical Sale/baseQuantity20/factor0.1,one source closure,order confirmation/no journal,authenticated HTTP/retry/permission denial/route identity,chooser Escape/Axe/no overflow verified. Physical-product test uses trackInventory:false;no new tracked-warehouse movement runtime claim.
+
+Intermediate failing runs and corrections are retained in JSON. A premature mobile-pass progress statement was incorrect;completed logs and final2+6 browser results are authoritative. Native device/emulator/Coroutine UI/TalkBack runtime and the complete199-finding final-head validation remain pending. No merge,production operation,deployment or A104. Predecessor0e0a5fb4 targeted CI passed run39432331899;new head requires its own CI.

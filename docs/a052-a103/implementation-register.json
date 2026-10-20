@@ -14559,6 +14559,13 @@
           },
           "remaining": "Final exact-head complete validation and native emulator/device verification remain. No original business functionality intentionally left partial; no FIXED+VERIFIED/final finding status assigned.",
           "commit_sha": "f7171d14d06b343ac9f5965e7cb8e134e9d5c79a"
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "6143a2eeb6dfccd1d3dbfc08198dbe50a2c449dc",
+          "scope": "Linked A080-F02 conversion-specific current-unit review consumer",
+          "tests": "2 desktop/mobile actual Sale conversion cases PASS;negotiated100.00 perBox/fixed line10 discount retained,2Boxes saves190.00/baseQuantity20/currentfactor0.1 snapshot. No new tracked-warehouse runtime claim.",
+          "remaining": "No change to this finding’s existing IMPLEMENTED BUT NOT VERIFIED status or final-head/device limitations."
         }
       ]
     },
@@ -20029,6 +20036,13 @@
           },
           "remaining": "Final exact-head complete validation and native emulator/device verification remain. No original business functionality intentionally left partial; no FIXED+VERIFIED/final finding status assigned.",
           "commit_sha": "f7171d14d06b343ac9f5965e7cb8e134e9d5c79a"
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "6143a2eeb6dfccd1d3dbfc08198dbe50a2c449dc",
+          "scope": "Linked A080-F02 conversion-specific current-unit review consumer",
+          "tests": "2 desktop/mobile actual Sale conversion cases PASS;negotiated100.00 perBox/fixed line10 discount retained,2Boxes saves190.00/baseQuantity20/currentfactor0.1 snapshot. No new tracked-warehouse runtime claim.",
+          "remaining": "No change to this finding’s existing IMPLEMENTED BUT NOT VERIFIED status or final-head/device limitations."
         }
       ],
       "push_checkpoint_evidence": {
@@ -54901,13 +54915,17 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
         "A080-F01",
         "A080-F03",
-        "A080-F04"
+        "A080-F04",
+        "A083-F01",
+        "A058-F06",
+        "A062-F02",
+        "A086-F06"
       ],
       "push_checkpoint_evidence": {
         "original_problem": "Inspected detail/editor/native action API have transitions/revisions/share but no Sale/Sale Order conversion. Plus lead acceptance creates/links a Project; this is not the reference Convert menu.",
@@ -55210,6 +55228,43 @@
             "final_complete_checkpoint": "NOT RUN;this is focused slice evidence only."
           },
           "remaining": "PARTIAL: Web quotation-to-order prefill;native quotation-to-Sale/order prefill/navigation;physical-unit converted Sale browser coverage;order confirmation desktop/mobile/HTTP runtime;full original reference parity and final199-finding validation remain. No runtime device claim,merge,deployment or production writes."
+        },
+        "conversion_preparation_complete_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "6143a2eeb6dfccd1d3dbfc08198dbe50a2c449dc",
+          "actual_implementation": "Completed Web order prefill and native Sale/order preparation/navigation using the authorized read-only preview. Web and native Convert chooser expose only permitted targets. Full source reference stays separate from short notes. Native codec checks source/current revision/target and available branch/customer/items;request cancellation avoids late conversion preparation. Explicit unit review preserves negotiated secondary-unit rate/discount;converted Sale exposes item editing;Save remains real posting,order closure remains explicit confirmation. Native list/detail show derived Closed without rewriting Approved history. One existing Sale alert is rendered near the form top,avoiding duplicate/background alerts.",
+          "modified_files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/QuotationConversionDraft.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/QuotationConversionDraftTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/quotation-conversion-menu.tsx",
+            "src/lib/quotations/sale-prefill.test.ts",
+            "src/lib/quotations/sale-prefill.ts"
+          ],
+          "tests": {
+            "unit_api_final": "78 PASS/7 files,0 failed/skipped(2.39s):Sale/order prefill,duplicate isolation,HTTP auth/permission/entitlement/module/conflict/route identity and existing native contract checks. Overlaps earlier groups;do not sum runs.",
+            "browser_physical": "2 PASS desktop/mobile(49.5s),0 failed/skipped:chooser Escape/reopen/Axe,Save blocked with one visible review alert and zero writes,secondaryBox item review retains quantity2/rate100.00/fixed line discount10.00,actual posted190.00/baseQuantity20/factor0.1 snapshot/source closure/one Sale. Product is trackInventory:false;this is not a new tracked-warehouse movement runtime claim.",
+            "browser_group": "6 PASS desktop/mobile(2.1m),0 failed/skipped:chooser keyboard/Axe;Sale Save and Save&New/abandon/stale converted URL/no duplicate writes/full reference/billing/90.00 amount;order draft leaves source open,Web confirmation closes once,no journal;authenticated mobile preview/create/detail capability/401/denied-role403/confirm retry/forged body ignored/one audit/no journal. Combined with physical group8 distinct browser cases.",
+            "android": "Final code compile+lint PASS(8m10s);57 focused Sales/Quotation JVM tests PASS(1m25s),0 failures/errors/skips,including6 new conversion codec tests. Lint0 errors/4 warnings/6 informational. Earlier precursor compile+57tests+lint PASS6m35s;overlapping evidence,not114 tests.",
+            "typescript": "Final full no-emit typecheck PASS after browser server exit.",
+            "eslint": "Final changed-file ESLint including new chooser and git diff --check PASS.",
+            "test_corrections": "Physical runtime first exposed initialSale-only item controls;fixed for converted Sales. Chooser navigation closes its dialog before Next navigation. Plain-anchor attempt was reverted. Existing Sale feedback moved to top;temporary duplicate alert rendering removed. Physical test expected100 rather than canonical100.00;corrected expectation without altering negotiated pricing. One intermediate progress statement incorrectly inferred a mobile pass;completed logs are authoritative and final2 physical+6 grouped passes supersede it. Initial order HTTP fixture used sessionVersion from before Web sign-in;refreshed fixture version only,authentication unchanged.",
+            "final_checkpoint_head": "NOT RUN;full199-finding final-head validation pending."
+          },
+          "implementation_completion": "A080-F02 code implementation complete against original conversion requirements;its status is IMPLEMENTED BUT NOT VERIFIED,not a final verification claim. Earlier PARTIAL remaining-work entries are historical and superseded for the now-completed Web/native preparation,chooser,physical-unit runtime and order browser/HTTP scope.",
+          "remaining_limitations": "No native emulator/device navigation,Coroutine/UI lifecycle,TalkBack or physical device runtime executed. Full final199-finding regression/build/schema/migration/browser/Android validation remains pending. Other quotation presentation/list and Sale form findings retain their own incomplete scope. No new migration beyond142,no production write/merge/deploy/A104."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -57623,6 +57678,43 @@
             "final_complete_checkpoint": "NOT RUN;this is focused slice evidence only."
           },
           "remaining": "PARTIAL: Web quotation-to-order prefill;native quotation-to-Sale/order prefill/navigation;physical-unit converted Sale browser coverage;order confirmation desktop/mobile/HTTP runtime;full original reference parity and final199-finding validation remain. No runtime device claim,merge,deployment or production writes."
+        },
+        "conversion_preparation_complete_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "6143a2eeb6dfccd1d3dbfc08198dbe50a2c449dc",
+          "actual_implementation": "Completed Web order prefill and native Sale/order preparation/navigation using the authorized read-only preview. Web and native Convert chooser expose only permitted targets. Full source reference stays separate from short notes. Native codec checks source/current revision/target and available branch/customer/items;request cancellation avoids late conversion preparation. Explicit unit review preserves negotiated secondary-unit rate/discount;converted Sale exposes item editing;Save remains real posting,order closure remains explicit confirmation. Native list/detail show derived Closed without rewriting Approved history. One existing Sale alert is rendered near the form top,avoiding duplicate/background alerts.",
+          "modified_files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/QuotationConversionDraft.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/QuotationConversionDraftTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/[id]/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/quotation-conversion-menu.tsx",
+            "src/lib/quotations/sale-prefill.test.ts",
+            "src/lib/quotations/sale-prefill.ts"
+          ],
+          "tests": {
+            "unit_api_final": "78 PASS/7 files,0 failed/skipped(2.39s):Sale/order prefill,duplicate isolation,HTTP auth/permission/entitlement/module/conflict/route identity and existing native contract checks. Overlaps earlier groups;do not sum runs.",
+            "browser_physical": "2 PASS desktop/mobile(49.5s),0 failed/skipped:chooser Escape/reopen/Axe,Save blocked with one visible review alert and zero writes,secondaryBox item review retains quantity2/rate100.00/fixed line discount10.00,actual posted190.00/baseQuantity20/factor0.1 snapshot/source closure/one Sale. Product is trackInventory:false;this is not a new tracked-warehouse movement runtime claim.",
+            "browser_group": "6 PASS desktop/mobile(2.1m),0 failed/skipped:chooser keyboard/Axe;Sale Save and Save&New/abandon/stale converted URL/no duplicate writes/full reference/billing/90.00 amount;order draft leaves source open,Web confirmation closes once,no journal;authenticated mobile preview/create/detail capability/401/denied-role403/confirm retry/forged body ignored/one audit/no journal. Combined with physical group8 distinct browser cases.",
+            "android": "Final code compile+lint PASS(8m10s);57 focused Sales/Quotation JVM tests PASS(1m25s),0 failures/errors/skips,including6 new conversion codec tests. Lint0 errors/4 warnings/6 informational. Earlier precursor compile+57tests+lint PASS6m35s;overlapping evidence,not114 tests.",
+            "typescript": "Final full no-emit typecheck PASS after browser server exit.",
+            "eslint": "Final changed-file ESLint including new chooser and git diff --check PASS.",
+            "test_corrections": "Physical runtime first exposed initialSale-only item controls;fixed for converted Sales. Chooser navigation closes its dialog before Next navigation. Plain-anchor attempt was reverted. Existing Sale feedback moved to top;temporary duplicate alert rendering removed. Physical test expected100 rather than canonical100.00;corrected expectation without altering negotiated pricing. One intermediate progress statement incorrectly inferred a mobile pass;completed logs are authoritative and final2 physical+6 grouped passes supersede it. Initial order HTTP fixture used sessionVersion from before Web sign-in;refreshed fixture version only,authentication unchanged.",
+            "final_checkpoint_head": "NOT RUN;full199-finding final-head validation pending."
+          },
+          "implementation_completion": "A080-F02 code implementation complete against original conversion requirements;its status is IMPLEMENTED BUT NOT VERIFIED,not a final verification claim. Earlier PARTIAL remaining-work entries are historical and superseded for the now-completed Web/native preparation,chooser,physical-unit runtime and order browser/HTTP scope.",
+          "remaining_limitations": "No native emulator/device navigation,Coroutine/UI lifecycle,TalkBack or physical device runtime executed. Full final199-finding regression/build/schema/migration/browser/Android validation remains pending. Other quotation presentation/list and Sale form findings retain their own incomplete scope. No new migration beyond142,no production write/merge/deploy/A104."
         }
       },
       "push_checkpoint_evidence": {
@@ -65436,6 +65528,12 @@
             "final_checkpoint_head": "NOT RUN; new-head CI requested separately."
           },
           "remaining": "No finding status promoted. Historical PERCENTAGE rows missing the original input percentage still require safe compatibility handling without guessing from current master defaults. Public selected-unit entry/default-pricing/report/native-rule integration and broader original partial scopes remain pending. No full checkpoint final validation or production/device claim."
+        },
+        "shared_conversion_item_review_feedback_2026_10_20": {
+          "implementation_commit": "6143a2eeb6dfccd1d3dbfc08198dbe50a2c449dc",
+          "work": "Shared Add/Edit Sale component permits Edit/Remove item controls for converted Sales and renders the existing validation alert once near the form top instead of duplicating background alerts.",
+          "tests": "Conversion-specific desktop/mobile runtime2 PASS;no new full Edit Sale reference/runtime certification claimed.",
+          "remaining": "Original A086-F06 scope remains PARTIAL;shared-code coverage does not complete this finding."
         }
       },
       "push_checkpoint_evidence": {
@@ -70443,6 +70541,13 @@
       "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39427649237",
       "result": "SUCCESS",
       "scope": "Targeted CI including native PDF preview lint fix. Predecessor evidence only for uncommitted conversion changes; not final 199-finding validation."
+    },
+    {
+      "date": "2026-10-20",
+      "code_head": "0e0a5fb4185f7d6be6848a99cfedeefe1c05712d",
+      "github_actions_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/39432331899",
+      "result": "SUCCESS",
+      "scope": "Predecessor targeted CI only;not final validation of6143a2ee or all199 findings."
     }
   ]
 }
