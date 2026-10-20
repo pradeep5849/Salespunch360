@@ -10099,3 +10099,7 @@ Implementation commit: `388449e8cfc0a491e2653091a9bbdfa538490e97`.
 **final_checkpoint_head:** NOT RUN
 
 Both findings stay PARTIAL. Automatic saved Retail/Wholesale/Customer defaults and discounts in selected units,public input,source-preserving sale edit/duplicate,report consumers,Web/native selectors and converted mixed-Project/vendor-return financial runtime coverage remain. Explicit saved-price confirmation normalization is now wired and independently regression-tested. Counts unchanged:181 IMPLEMENTED BUT NOT VERIFIED/16 PARTIAL/2 NOT STARTED;all199 IDs/52pages retained.
+
+### Selected-unit catalogue defaults — 20 October 2026
+
+A058-F06/A062-F02 remain PARTIAL. Commit `f635ba31eee065329bc02c88d7d61c01121c9087` adds the shared pricing helper and 7 new focused cases; 38 tests across 3 files pass, full TypeScript and focused ESLint pass. Production callers/selectors remain unchanged pending safe source-preserving edits/duplicates. No browser, Android or database runtime verification claimed for this preparatory slice. No migration added.
