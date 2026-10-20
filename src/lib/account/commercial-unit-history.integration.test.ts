@@ -6,6 +6,7 @@ if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(ur
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {createCommercialDocumentForActor,postCommercialDocumentForActor} from "./commercial";
+import {replacePostedSaleForActor} from "./sale-amendments";
 import {salePriceProposalsForActor,confirmSalePriceForActor} from "./sale-price-updates";
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import type {ProjectActor} from "./projects";
@@ -103,6 +104,34 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    expect(await client.commercialDocument.findUniqueOrThrow({where:{id:sale.id},include:{lines:true}})).toEqual(before);
    expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_MASTER_PRICE_CONFIRMED",entityId:productId}})).toBe(1);
   }finally{await client.accountProduct.update({where:{id:productId},data:{salePrice:original.salePrice,pricing:original.pricing??Prisma.DbNull,secondaryUnitsPerBase:original.secondaryUnitsPerBase}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull}})}
+ });
+ it("retains authorized selected-unit history during an atomic posted-sale amendment",async()=>{
+  const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{...input.lines[0],quantity:"1",rate:"200"}]}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+  const snapshot={...line.unitConversionSnapshot as object,selection:"SECONDARY",unitName:"Box",unitSymbol:"box"};
+  await client.$executeRaw`UPDATE commercial_document_lines SET "baseQuantity"=10,"unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb,"unitName"='Box',"unitSymbol"='box' WHERE id=${line.id}::uuid`;
+  await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  const original=await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}});
+  await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.2"}});
+  try{
+   const request={branchId,partyId:customerId,issueDate:"2026-10-20",idempotencyKey:randomUUID(),lines:[{originalLineId:line.id,lineType:"PRODUCT",sourceId:productId,quantity:"2",rate:"200",taxRate:"0",unitName:"Forged",unitSymbol:"bad"}]};
+   await expect(createCommercialDocumentForActor(actor,input,undefined,{documentId:sale.id,lineIds:new Map([[0,line.id]])})).rejects.toThrow("SALE_AMENDMENT_TRANSACTION_REQUIRED");
+   const forged=await createCommercialDocumentForActor(actor,{...input,lines:[{...input.lines[0],originalLineId:line.id,unitConversionSnapshot:snapshot,baseQuantity:"20"}]});
+   const untrusted=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:forged.id}});
+   expect(untrusted.baseQuantity?.toString()).toBe("2");expect(untrusted.unitConversionSnapshot).toMatchObject({selection:"PRIMARY",secondaryUnitsPerBase:"0.2"});
+   const replacement=await replacePostedSaleForActor(actor,sale.id,request);
+   const retained=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:replacement.id}});
+   expect(replacement.status).toBe("POSTED");expect(replacement.grandTotal.toString()).toBe("400");
+   expect(retained.quantity.toString()).toBe("2");expect(retained.baseQuantity?.toString()).toBe("20");
+   expect(retained.unitConversionSnapshot).toEqual(snapshot);expect(retained.unitName).toBe("Box");expect(retained.unitSymbol).toBe("box");
+   expect(await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);
+   expect((await replacePostedSaleForActor(actor,sale.id,request)).id).toBe(replacement.id);
+   const credits=await client.commercialDocument.findMany({where:{companyId,sourceDocumentId:sale.id,type:"CREDIT_NOTE"},include:{lines:true}});
+   expect(credits).toHaveLength(1);expect(credits[0].lines[0].baseQuantity?.toString()).toBe("10");
+   for(const id of [sale.id,replacement.id,credits[0].id]){
+    const doc=await client.commercialDocument.findUniqueOrThrow({where:{id},include:{journalEntry:{include:{lines:true}}}});
+    expect(doc.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
+   }
+  }finally{await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.1"}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});

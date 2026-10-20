@@ -510,6 +510,7 @@ async function snapshotLine(
   purchaseInventory = true,
   transactionDefaults?:Prisma.JsonValue,
   documentTaxMode: "EXCLUSIVE"|"INCLUSIVE"="EXCLUSIVE",
+  retainedSaleLine?: {documentId:string;lineId:string},
 ) {
   assertCommercialItemLine(itemSettings, row);
   const purchase = policies[type].party === "vendor",
@@ -609,12 +610,20 @@ async function snapshotLine(
   const isCorrection=["CREDIT_NOTE","DEBIT_NOTE"].includes(type);
   if(isCorrection&&(!row.sourceCommercialLineId||!sourceDocumentId))throw new Error("SOURCE_LINE_REQUIRED");
   const sourceLine=isCorrection?await tx.commercialDocumentLine.findFirst({where:{id:row.sourceCommercialLineId,companyId:a.companyId,documentId:sourceDocumentId}}):null;
-  // Primary-only until selected-unit posting/valuation consumers are connected.
-  // Persist the current mapping now, so later master edits cannot reinterpret history.
-  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,master},sourceLine??undefined);
+  // Amendment provenance is supplied only by the authorized server workflow, never raw input.
+  const retainedLine=retainedSaleLine?await tx.commercialDocumentLine.findFirst({where:{
+    id:retainedSaleLine.lineId,companyId:a.companyId,documentId:retainedSaleLine.documentId,
+    document:{companyId:a.companyId,branchId,type:"SALES_INVOICE",status:"POSTED"},
+  }}):null;
+  if(retainedSaleLine&&(type!=="SALES_INVOICE"||!retainedLine||
+    retainedLine.lineType!==row.lineType||
+    (retainedLine.productId??retainedLine.serviceId??retainedLine.workPackageId??null)!==(row.sourceId??null)))
+    throw new Error("INVALID_SALE_LINE_SOURCE");
+  // Retained lines keep the original selected unit and factor even after master edits.
+  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,master},sourceLine??retainedLine??undefined);
   const defaultPricing=itemPriceForDocument(master?.rate,master?.tax,master?.pricing,documentTaxMode,purchase,row.quantity);
   const quantity = new D(row.quantity),
-    rate = new D(row.rate ?? sourceLine?.rate ?? defaultPricing.rate),
+    rate = new D(row.rate ?? sourceLine?.rate ?? retainedLine?.rate ?? defaultPricing.rate),
     taxRate = resolveCommercialTaxRate(row.taxRate, master?.tax ?? null),
     discountValue = new D(row.discountValue ?? (row.discountType===undefined&&itemSettings.itemWiseDiscount?defaultPricing.discountValue:0));
   const effectiveDiscountType=row.discountType===undefined&&itemSettings.itemWiseDiscount?defaultPricing.discountType:row.discountType;
@@ -757,8 +766,8 @@ async function snapshotLine(
     itemCode: row.itemCode ?? master?.code,
     description: row.description ?? master?.description,
     specification: row.specification,
-    unitName: sourceLine ? units.unitName : row.unitName ?? master?.unit?.name,
-    unitSymbol: sourceLine ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
+    unitName: sourceLine || retainedLine ? units.unitName : row.unitName ?? master?.unit?.name,
+    unitSymbol: sourceLine || retainedLine ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
     quantity,
     baseQuantity:new D(units.baseQuantity),
     unitConversionSnapshot:units.snapshot,
@@ -796,7 +805,9 @@ export async function createCommercialDocumentForActor(
   actor: Actor,
   raw: unknown,
   transaction?: Prisma.TransactionClient,
+  retainedSale?: {documentId:string;lineIds:ReadonlyMap<number,string>},
 ) {
+  if(retainedSale&&!transaction)throw new Error("SALE_AMENDMENT_TRANSACTION_REQUIRED");
   const d = commercialDocumentInput.parse(raw),
     p = policies[d.type];
   await requireAccountModules(actor, ...p.modules);
@@ -1096,6 +1107,7 @@ export async function createCommercialDocumentForActor(
                     )),
                 settings?.transactionDefaults??undefined,
                 d.taxMode,
+                retainedSale?.lineIds.has(i)?{documentId:retainedSale.documentId,lineId:retainedSale.lineIds.get(i)!}:undefined,
               ),
             ),
           ),

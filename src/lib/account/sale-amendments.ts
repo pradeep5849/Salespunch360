@@ -310,8 +310,9 @@ export function replacePostedSaleForActor(
         // Retained lines name an immutable line from this invoice. Never recover
         // a snapshot by position or by an ambiguous product/name match.
         const retainedLineIds = new Set<string>();
+        const retainedUnitLineIds = new Map<number,string>();
         if (Array.isArray(payload.lines))
-          payload.lines = payload.lines.map((input: unknown) => {
+          payload.lines = payload.lines.map((input: unknown, position:number) => {
             if (!input || typeof input !== "object" || Array.isArray(input))
               throw new Error("INVALID_INPUT");
             const line = { ...(input as Record<string, unknown>) };
@@ -328,6 +329,7 @@ export function replacePostedSaleForActor(
             )
               throw new Error("INVALID_SALE_LINE_SOURCE");
             retainedLineIds.add(source.id);
+            retainedUnitLineIds.set(position,source.id);
             const defaults: Record<string, unknown> = {
               itemName: source.itemName,
               itemCode: source.itemCode ?? undefined,
@@ -373,6 +375,7 @@ export function replacePostedSaleForActor(
           actor,
           payload,
           tx,
+          {documentId:sale.id,lineIds:retainedUnitLineIds},
         );
         if (replacement.id === sale.id || replacement.status !== "DRAFT")
           throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
