@@ -1,3 +1,4 @@
+import {retainedLineDiscountValue} from "@/lib/account/retained-line-discount";
 import Link from "next/link";
 import styles from "../sale-detail.module.css";
 import { commercialEditorOptions, getCommercialDocument } from "@/lib/account/commercial";
@@ -24,7 +25,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
     reverseCharge:sale.reverseCharge,
     stateOfSupplyCode:sale.stateOfSupplyCode??undefined,
     roundOffAmount:sale.roundOffAmount.toString(),
-    lines:sale.lines.map(line=>({originalLineId:line.id,lineType:line.lineType,sourceId:line.productId??line.serviceId??line.workPackageId??"",itemName:line.itemName,itemCode:line.itemCode??undefined,description:line.description??"",specification:line.specification??"",unitName:line.unitName??"",unitSymbol:line.unitSymbol??"",quantity:line.quantity.toString(),rate:line.rate.toString(),discountType:line.discountType??"",discountValue:line.discountValue?.toString()??"0",taxRate:line.taxRate.toString(),cessRate:line.cessRate.toString(),warehouseId:line.warehouseId??"",batchId:line.batchId??"",serialNumberId:line.serialNumberId??"",servicePeriodDays:line.servicePeriodDays===null?undefined:String(line.servicePeriodDays),stockReturnQuantity:"0",sourceCommercialLineId:"",purchaseAllocations:[]})),
+    lines:sale.lines.map(line=>({originalLineId:line.id,lineType:line.lineType,sourceId:line.productId??line.serviceId??line.workPackageId??"",itemName:line.itemName,itemCode:line.itemCode??undefined,description:line.description??"",specification:line.specification??"",unitName:line.unitName??"",unitSymbol:line.unitSymbol??"",quantity:line.quantity.toString(),rate:line.rate.toString(),discountType:line.discountType??"",discountValue:retainedLineDiscountValue(line)??"0",taxRate:line.taxRate.toString(),cessRate:line.cessRate.toString(),warehouseId:line.warehouseId??"",batchId:line.batchId??"",serialNumberId:line.serialNumberId??"",servicePeriodDays:line.servicePeriodDays===null?undefined:String(line.servicePeriodDays),stockReturnQuantity:"0",sourceCommercialLineId:"",purchaseAllocations:[]})),
   };
   return <SaleEditForm initial={initial} options={options}/>;
 }

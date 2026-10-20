@@ -58,4 +58,18 @@ class SalesEditSnapshotTest {
         assertEquals(listOf("paid","free"),request["lines"]!!.jsonArray.map{it.jsonObject["serialNumberId"]!!.jsonPrimitive.content})
         assertEquals(listOf("100","0"),request["lines"]!!.jsonArray.map{it.jsonObject["rate"]!!.jsonPrimitive.content})
     }
+    @Test fun legacyFixedDiscountUsesThePostedAmountWithoutChangingSource() {
+        val doc=Json.parseToJsonElement("""{"id":"sale","lines":[{"id":"line","lineType":"CUSTOM","quantity":"3","rate":"20","discountType":"FIXED","discountValue":null,"discountAmount":"3","taxRate":"0"}]}""").jsonObject
+        val draft=savedSaleEditorDraft(doc)
+        assertEquals("3",draft.lines.single().discountValue)
+        assertEquals("57.00",salesPreviewTotal(draft,SalesOptions()).setScale(2).toPlainString())
+        assertEquals("3",salesDraftPayload(draft)["lines"]!!.jsonArray.single().jsonObject["discountValue"]!!.jsonPrimitive.content)
+        assertEquals(JsonNull,doc["lines"]!!.jsonArray.single().jsonObject["discountValue"])
+    }
+    @Test fun restoredDiscountKeepsExplicitZeroAndDoesNotGuessPercentages() {
+        val doc=Json.parseToJsonElement("""{"lines":[{"discountType":"FIXED","discountValue":"0","discountAmount":"3"},{"discountType":"PERCENTAGE","discountValue":null,"discountAmount":"3"}]}""").jsonObject
+        val restored=savedSaleEditorDraft(doc).lines
+        assertEquals("0",restored[0].discountValue)
+        assertEquals("",restored[1].discountValue)
+    }
 }

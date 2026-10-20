@@ -177,6 +177,30 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    expect(posted.status).toBe("POSTED");expect(posted.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
   }finally{await client.accountProduct.update({where:{id:productId},data:{pricing:original.pricing??Prisma.DbNull}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull}})}
  });
+ it("recovers a legacy fixed discount for duplicate and atomic amendment without rewriting history",async()=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}}),originalMaster=await client.accountProduct.findUniqueOrThrow({where:{id:productId}});
+  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemWiseDiscount:true}}});
+  await client.accountProduct.update({where:{id:productId},data:{pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:"FIXED",discountValue:"1",normalizedDiscountValue:"1"}}});
+  try{
+   const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{...input.lines[0],quantity:"3"}]}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+   // Emulate old pre-snapshot persistence before posting, never mutate posted financial history.
+   await client.commercialDocumentLine.update({where:{id:line.id},data:{discountValue:null}});
+   await postCommercialDocumentForActor(actor,{documentId:sale.id});
+   const original=await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}});
+   await client.accountProduct.update({where:{id:productId},data:{pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:"FIXED",discountValue:"9",normalizedDiscountValue:"9"}}});
+   const copied=saleDuplicateDraft(await getCommercialDocumentForActor(actor,sale.id),"2026-10-20");
+   expect(copied.lines[0].discountValue).toBe("3");
+   const duplicate=await submitSaleForActor(actor,{...input,idempotencyKey:randomUUID(),lines:copied.lines.map(row=>({lineType:row.lineType,sourceId:row.sourceId,quantity:row.quantity,rate:row.rate,taxRate:row.taxRate,discountType:row.discountType,discountValue:row.discountValue}))});
+   const replacement=await replacePostedSaleForActor(actor,sale.id,{branchId,partyId:customerId,issueDate:"2026-10-20",idempotencyKey:randomUUID(),lines:[{originalLineId:line.id,lineType:"PRODUCT",sourceId:productId,quantity:"3",rate:"20",taxRate:"0"}]});
+   const credit=await client.commercialDocument.findFirstOrThrow({where:{companyId,sourceDocumentId:sale.id,type:"CREDIT_NOTE"}});
+   for(const id of [duplicate.id,replacement.id,credit.id]){
+    const doc=await client.commercialDocument.findUniqueOrThrow({where:{id},include:{lines:true,journalEntry:{include:{lines:true}}}});
+    expect(doc.status).toBe("POSTED");expect(doc.grandTotal.toString()).toBe("57");expect(doc.lines[0].discountValue?.toString()).toBe("3");
+    expect(doc.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
+   }
+   expect(await client.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);expect(original.discountValue).toBeNull();
+  }finally{await client.accountProduct.update({where:{id:productId},data:{pricing:originalMaster.pricing??Prisma.DbNull}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull}})}
+ });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});
   for(const snapshot of [{}, {...line.unitConversionSnapshot as object,selection:"OTHER"},{...line.unitConversionSnapshot as object,secondaryUnitsPerBase:"0"},{...line.unitConversionSnapshot as object,primaryUnitId:secondary},{...line.unitConversionSnapshot as object,version:"1"}])await expect(client.$executeRaw`UPDATE commercial_document_lines SET "unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb WHERE id=${line.id}::uuid`).rejects.toThrow("commercial_line_unit_snapshot_valid");

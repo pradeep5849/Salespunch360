@@ -1,3 +1,4 @@
+import {retainedLineDiscountValue} from "./retained-line-discount";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
@@ -87,7 +88,7 @@ function creditPayload(
       quantity: line.quantity.toString(),
       rate: line.rate.toString(),
       discountType: line.discountType ?? undefined,
-      discountValue: line.discountValue?.toString() ?? undefined,
+      discountValue: retainedLineDiscountValue(line),
       taxRate: line.taxRate.toString(),
       cessRate: line.cessRate.toString(),
       warehouseId: line.warehouseId ?? undefined,
@@ -340,7 +341,7 @@ export function replacePostedSaleForActor(
               taxRate: source.taxRate.toString(),
               cessRate: source.cessRate.toString(),
               discountType: source.discountType ?? undefined,
-              discountValue: source.discountValue?.toString(),
+              discountValue: retainedLineDiscountValue(source),
               servicePeriodDays: source.servicePeriodDays ?? undefined,
             };
             for (const [key, value] of Object.entries(defaults))
