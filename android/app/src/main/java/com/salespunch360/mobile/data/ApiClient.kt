@@ -64,6 +64,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun quotationPartyBalance(partyId:String,branchId:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/party-balance?partyId=${enc(partyId)}&branchId=${enc(branchId)}")).jsonObject
  suspend fun quotationOptions()=json.parseToJsonElement(call("api/v1/mobile/account/quotations/options")).jsonObject
  suspend fun quotations(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/quotations"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
+ suspend fun quotationConversionPreview(id:String,revisionId:String,targetType:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/conversion-preview?revisionId=${enc(revisionId)}&targetType=${enc(targetType)}")).jsonObject
  suspend fun quotation(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}")).jsonObject
  suspend fun createQuotation(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations","POST",payload.toString())).jsonObject
  suspend fun createQuotationWithAttachments(payload:JsonObject,files:List<QuotationCreationAttachment>)=withContext(Dispatchers.IO){

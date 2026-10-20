@@ -42,6 +42,14 @@ async function signInSettings(page:Page){
  settingsCookies=await page.context().cookies();
 }
 
+async function openQuotationConversion(page:Page){
+ await page.getByRole("button",{name:"Convert",exact:true}).click();
+ await expect(page.getByRole("dialog",{name:"Convert estimate"})).toBeVisible();
+ await page.keyboard.press("Escape");await expect(page.getByRole("dialog",{name:"Convert estimate"})).not.toBeVisible();
+ await page.getByRole("button",{name:"Convert",exact:true}).click();
+ expect((await new AxeBuilder({page}).include("dialog").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+}
+
 const db = new PrismaClient(),
   companyId = randomUUID(),
   branchId = randomUUID(),
@@ -3344,12 +3352,12 @@ for(const saveNew of [false,true])test(`A080 approved estimate opens unsaved Add
   await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
   const count=await db.commercialDocument.count({where:{companyId}}),journals=await db.journalEntry.count({where:{companyId}});
   await signInSettings(page);await page.goto(`/workspace/account/quotations/${quote.id}`);
-  await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
+  await openQuotationConversion(page);await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
   await expect(page.getByText("Agreed estimate work",{exact:true})).toBeVisible();await page.getByText("Estimate terms and payment schedule",{exact:true}).focus();await page.keyboard.press("Space");await expect(page.getByText("Original estimate terms",{exact:true})).toBeVisible();
   expect((await new AxeBuilder({page}).include('[aria-label="Source estimate"]').withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
   expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
   await page.goto(`/workspace/account/quotations/${quote.id}`);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}})).convertedAt).toBeNull();
-  await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
+  await openQuotationConversion(page);await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
   await page.getByRole("button",{name:saveNew?"Save & New":"Save",exact:true}).click();
   await expect.poll(async()=>Boolean((await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}})).convertedCommercialDocumentId),{timeout:30000}).toBe(true);
@@ -3360,4 +3368,41 @@ for(const saveNew of [false,true])test(`A080 approved estimate opens unsaved Add
   await page.goto(`/workspace/account/quotations/${quote.id}`);await expect(page.getByText(/CLOSED · Converted/)).toBeVisible();await expect(page.getByRole("link",{name:"Convert to Sale",exact:true})).toHaveCount(0);
   const revision=await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id},orderBy:{revisionNumber:"desc"}});await page.goto(`/workspace/account/transactions/new?type=SALES_INVOICE&quotationId=${quote.id}&quotationRevisionId=${revision.id}`);await expect(page.getByRole("heading",{name:"Estimate conversion unavailable"})).toBeVisible({timeout:15000});await expect(page.locator("main").getByRole("alert")).toContainText("already been converted");expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+1);
  }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:before.transactionDefaults??{}}})}
+});
+
+test("A080 Sale Order conversion confirms once in Web and authenticated mobile without journals",async({page})=>{
+ test.setTimeout(180000);
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ async function approvedEstimate(){const source=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-20",billingName:"Order billing",terms:"Order reference terms",lines:[{lineType:"CUSTOM",itemName:"Order estimate work",quantity:"1",rate:"100",taxRate:"0"}],adjustments:[{label:"Agreed discount",type:"DISCOUNT",valueType:"FIXED",value:"10"}]});await transitionQuotationForActor(actor,source.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,source.id,"APPROVED");return source;}
+ const source=await approvedEstimate(),journals=await db.journalEntry.count({where:{companyId}}),documents=await db.commercialDocument.count({where:{companyId}});
+ await signInSettings(page);await page.goto(`/workspace/account/quotations/${source.id}`);await openQuotationConversion(page);await page.getByRole("link",{name:"Convert to Sale Order",exact:true}).click();await expect(page.getByRole("heading",{name:"New sales / purchase document"})).toBeVisible({timeout:30000});
+ await expect(page.getByRole("combobox",{name:/^Document type/})).toBeDisabled();await expect(page.getByRole("combobox",{name:/^Branch/})).toBeDisabled();await expect(page.getByRole("combobox",{name:/^Customer/})).toBeDisabled();
+ expect(await db.commercialDocument.count({where:{companyId}})).toBe(documents);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+ await page.getByRole("button",{name:"Create Draft",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/account\/transactions\/[0-9a-f-]+$/,{timeout:30000});const orderId=page.url().split("/").at(-1)!;
+ const draft=await db.commercialDocument.findUniqueOrThrow({where:{id:orderId}});expect(draft.type).toBe("SALES_ORDER");expect(draft.status).toBe("DRAFT");expect(draft.grandTotal.toFixed(2)).toBe("90.00");expect(draft.billingName).toBe("Order billing");expect((await db.quotationDocument.findUniqueOrThrow({where:{id:source.id}})).convertedAt).toBeNull();expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ await page.getByRole("button",{name:"Confirm Sale Order",exact:true}).click();await expect.poll(async()=>(await db.commercialDocument.findUniqueOrThrow({where:{id:orderId}})).status).toBe("POSTED");expect((await db.quotationDocument.findUniqueOrThrow({where:{id:source.id}})).convertedCommercialDocumentId).toBe(orderId);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);await expect(page.getByRole("button",{name:"Confirm Sale Order",exact:true})).toHaveCount(0);
+ const currentSessionUser=await db.user.findUniqueOrThrow({where:{id:userId}});const token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:currentSessionUser.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+ const nativeSource=await approvedEstimate(),previewResponse=await page.request.get(`/api/v1/mobile/account/quotations/${nativeSource.id}/conversion-preview?targetType=SALES_ORDER`,{headers});expect(previewResponse.status()).toBe(200);const preparation=await previewResponse.json();
+ const created=await page.request.post("/api/v1/mobile/account/transactions",{headers,data:{type:"SALES_ORDER",idempotencyKey:randomUUID(),branchId,partyId:customerId,sourceQuotationRevisionId:preparation.sourceRevisionId,issueDate:"2026-10-20",taxMode:preparation.taxMode,roundOffAmount:preparation.roundOffAmount,lines:preparation.lines}});expect(created.status()).toBe(201);const nativeOrder=await created.json();expect(nativeOrder.status).toBe("DRAFT");
+ const detail=await page.request.get(`/api/v1/mobile/account/transactions/${nativeOrder.id}`,{headers});expect(detail.status()).toBe(200);expect((await detail.json()).capabilities.canConfirmSalesOrder).toBe(true);
+ const confirmPath=`/api/v1/mobile/account/transactions/${nativeOrder.id}/confirm`;expect((await page.request.post(confirmPath)).status()).toBe(401);
+ await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});try{expect((await page.request.post(confirmPath,{headers})).status()).toBe(403);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:nativeSource.id}})).convertedAt).toBeNull();}finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}})}
+ for(let attempt=0;attempt<2;attempt++){const confirmed=await page.request.post(confirmPath,{headers,data:{companyId:otherCompanyId,documentId:orderId}});expect(confirmed.status()).toBe(200);expect(await confirmed.json()).toMatchObject({id:nativeOrder.id,status:"POSTED"});}
+ expect((await db.quotationDocument.findUniqueOrThrow({where:{id:nativeSource.id}})).convertedCommercialDocumentId).toBe(nativeOrder.id);expect(await db.accountOperationalAudit.count({where:{companyId,eventType:"SALES_ORDER_CONFIRMED",entityId:nativeOrder.id}})).toBe(1);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ const confirmedDetail=await page.request.get(`/api/v1/mobile/account/transactions/${nativeOrder.id}`,{headers});expect((await confirmedDetail.json()).capabilities.canConfirmSalesOrder).toBe(false);
+});
+
+test("A080 physical estimate line requires unit review and preserves negotiated secondary-unit pricing",async({page})=>{
+ test.setTimeout(180000);
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Physical conversion year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ const primary=await db.accountUnit.create({data:{companyId,name:"Estimate Piece",symbol:"epc"}}),secondary=await db.accountUnit.create({data:{companyId,name:"Estimate Box",symbol:"ebx"}});
+ const product=await db.accountProduct.create({data:{companyId,name:"Negotiated estimate product",unitId:primary.id,secondaryUnitId:secondary.id,secondaryUnitsPerBase:"0.1",salePrice:"20",taxRate:"0",trackInventory:false}});
+ const quote=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:product.id,unitId:secondary.id,quantity:"2",rate:"100",taxRate:"0",discountType:"FIXED",discountValue:"10"}]});await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
+ await signInSettings(page);await page.goto(`/workspace/account/quotations/${quote.id}`);await openQuotationConversion(page);await page.getByRole("link",{name:"Convert to Sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale",exact:true})).toBeVisible({timeout:30000});
+ const count=await db.commercialDocument.count({where:{companyId}});await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page.locator("main").getByRole("alert")).toContainText("Review the unit");expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}})).convertedAt).toBeNull();
+ await page.getByRole("button",{name:/^Edit item /}).click();const picker=page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})});await expect(picker.getByLabel("Unit",{exact:true})).toHaveValue(secondary.id);await expect(picker.getByLabel("Rate (Price/Unit)",{exact:true})).toHaveValue("100.00");await expect(picker.getByLabel("Quantity",{exact:true})).toHaveValue("2");await picker.getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();
+ await expect.poll(async()=>Boolean((await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}})).convertedCommercialDocumentId),{timeout:30000}).toBe(true);const closed=await db.quotationDocument.findUniqueOrThrow({where:{id:quote.id}}),saved=await db.commercialDocument.findUniqueOrThrow({where:{id:closed.convertedCommercialDocumentId!},include:{lines:true}});
+ expect(saved.status).toBe("POSTED");expect(saved.grandTotal.toFixed(2)).toBe("190.00");expect(saved.lines[0].discountAmount.toFixed(2)).toBe("10.00");expect(saved.lines[0].baseQuantity?.toString()).toBe("20");expect(saved.lines[0].unitConversionSnapshot).toMatchObject({selection:"SECONDARY",secondaryUnitsPerBase:"0.1"});expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+1);
 });

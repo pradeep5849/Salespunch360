@@ -40,6 +40,7 @@ import com.salespunch360.mobile.QuotationState
 import com.salespunch360.mobile.QuotationViewModel
 import com.salespunch360.mobile.account.SalesLineDraft
 import com.salespunch360.mobile.account.array
+import com.salespunch360.mobile.account.quotationDisplayStatus
 import com.salespunch360.mobile.account.str
 import java.io.File
 import kotlinx.serialization.json.*
@@ -98,7 +99,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     }
 
     state.draft?.let { QuotationEditor(it, state, vm,navigate) }
-    if(state.draft==null&&!(state.pdfPreview&&state.pdf!=null))state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions) }
+    if(state.draft==null&&!(state.pdfPreview&&state.pdf!=null))state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions,navigate) }
 }
 
 @Composable
@@ -265,11 +266,26 @@ private fun QuotationLine(index: Int, line: SalesLineDraft, state: QuotationStat
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, preview: Boolean,states:List<Pair<String,String>>) {
+private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, preview: Boolean,states:List<Pair<String,String>>,navigate:(String)->Unit) {
     val revision = quotation.array("revisions").firstOrNull()
     val capabilities=quotation["capabilities"] as? JsonObject
     val allowedTransitions = quotation["allowedTransitions"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
+    val canConvertSale=capabilities?.get("canConvertToSale")?.jsonPrimitive?.booleanOrNull==true
+    val canConvertOrder=capabilities?.get("canConvertToSalesOrder")?.jsonPrimitive?.booleanOrNull==true
+    var choosingConversion by remember(quotation.str("id")){mutableStateOf(false)}
+    if(choosingConversion){
+        ModalBottomSheet(onDismissRequest={choosingConversion=false}){
+            Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                Text("Convert estimate",style=MaterialTheme.typography.titleLarge)
+                if(canConvertSale)OutlinedButton(onClick={choosingConversion=false;navigate("/workspace/account/transactions/new?type=SALES_INVOICE&quotationId=${quotation.str("id")}&quotationRevisionId=${revision?.str("id").orEmpty()}")},modifier=Modifier.fillMaxWidth()){Text("Convert to Sale")}
+                if(canConvertOrder)OutlinedButton(onClick={choosingConversion=false;navigate("/workspace/account/transactions/new?type=SALES_ORDER&quotationId=${quotation.str("id")}&quotationRevisionId=${revision?.str("id").orEmpty()}")},modifier=Modifier.fillMaxWidth()){Text("Convert to Sale Order")}
+                TextButton(onClick={choosingConversion=false}){Text("Cancel")}
+            }
+        }
+        return
+    }
     AlertDialog(
         onDismissRequest = vm::close,
         title = { Text(quotation.str("documentNumber")) },
@@ -278,7 +294,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Text("${quotation.str("documentType")} · ${quotation.str("status")}", fontWeight = FontWeight.Bold)
+                    Text("${quotation.str("documentType")} · ${quotationDisplayStatus(quotation)}", fontWeight = FontWeight.Bold)
                     Text(revision?.str("customerName").orEmpty())
                     Text("Rates ${if(revision?.str("taxMode")=="INCLUSIVE")"include"else"exclude"} tax.")
                     revision?.str("billingName")?.takeIf{it.isNotBlank()}?.let{Text("Billing name: $it")}
@@ -294,6 +310,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                         OutlinedButton(onClick = vm::revise, modifier = Modifier.fillMaxWidth()) { Text(if (quotation.str("status") == "DRAFT") "Edit" else "Create revision") }
                     }
                     if (!preview && capabilities?.get("canShare")?.jsonPrimitive?.booleanOrNull==true) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
+                    if(canConvertSale||canConvertOrder)OutlinedButton(onClick={choosingConversion=true},modifier=Modifier.fillMaxWidth()){Text("Convert")}
                     OutlinedButton(onClick = vm::previewPdf, modifier = Modifier.fillMaxWidth()) { Text("Print preview") }
                     OutlinedButton(onClick = {vm.download()}, modifier = Modifier.fillMaxWidth()) { Text("Download / share PDF") }
                 }

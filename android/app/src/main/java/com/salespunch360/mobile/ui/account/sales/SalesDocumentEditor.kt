@@ -61,7 +61,7 @@ fun SalesDocumentEditor(
         title = { Text("New ${draft.type.replace('_', ' ')}") },
         confirmButton = {
             Button(
-                enabled = !saving && draft.branchId.isNotBlank() && draft.customerId.isNotBlank() && draft.lines.all {
+                enabled = !saving && draft.lines.none{it.quotationUnitReviewRequired} && draft.branchId.isNotBlank() && draft.customerId.isNotBlank() && draft.lines.all {
                     (it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650)&&runCatching { primaryUnitQuantity(it.quantity,it.unitSelection,it.secondaryUnitsPerBase).signum()>0 }.getOrDefault(false) && (it.sourceId.isNotBlank() || it.itemName.isNotBlank())
                 },
                 onClick = { onSave(false) }
@@ -70,15 +70,16 @@ fun SalesDocumentEditor(
         dismissButton = { TextButton(enabled = !saving, onClick = onClose) { Text("Cancel") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item { SelectField("Document type", draft.type, options.types.map { it to it.replace('_', ' ') }) { onDraft(draft.copy(type = it)) } }
-                item { SelectField("Branch", draft.branchId, options.branches.map { it.id to it.name }) { onDraft(draft.copy(branchId = it, customerId = "")) } }
-                item { SelectField("Customer", draft.customerId, options.customers.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { onDraft(draft.copy(customerId = it)) } }
+                item { if(draft.sourceQuotationRevisionId.isNotBlank())Text("Document type: ${draft.type.replace('_',' ')}") else SelectField("Document type", draft.type, options.types.map { it to it.replace('_', ' ') }) { onDraft(draft.copy(type = it)) } }
+                item { if(draft.sourceQuotationRevisionId.isNotBlank())Text("Branch: ${options.branches.firstOrNull{it.id==draft.branchId}?.name.orEmpty()}") else SelectField("Branch", draft.branchId, options.branches.map { it.id to it.name }) { onDraft(draft.copy(branchId = it, customerId = "")) } }
+                item { if(draft.sourceQuotationRevisionId.isNotBlank())Text("Customer: ${options.customers.firstOrNull{it.id==draft.customerId}?.name.orEmpty()}") else SelectField("Customer", draft.customerId, options.customers.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { onDraft(draft.copy(customerId = it)) } }
                 if (draft.type == "CREDIT_NOTE") item { SelectField("Original invoice", draft.sourceDocumentId, sources.map { it.str("id") to it.str("documentNumber") }) { onDraft(draft.copy(sourceDocumentId = it)) } }
                 item { OutlinedTextField(draft.issueDate, { onDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date (YYYY-MM-DD)") }) }
                 item { OutlinedTextField(draft.dueDate, { onDraft(draft.copy(dueDate = it)) }, label = { Text("Due date (optional)") }) }
                 item { SelectField("Tax mode", draft.taxMode, listOf("EXCLUSIVE" to "Exclusive", "INCLUSIVE" to "Inclusive")) { onDraft(draft.copy(taxMode = it)) } }
                 item { OutlinedTextField(draft.stateOfSupplyCode, { onDraft(draft.copy(stateOfSupplyCode = it)) }, label = { Text("State of supply code") }) }
-                itemsIndexed(draft.lines) { index, line -> SalesLineEditor(index, line, draft, options, sourceLines, onLine, onRemove) }
+                if(draft.quotationReference!=null)item { QuotationConversionReference(draft) }
+            itemsIndexed(draft.lines) { index, line -> SalesLineEditor(index, line, draft, options, sourceLines, onLine, onRemove) }
                 item { OutlinedButton(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text("Add line") } }
                 item { OutlinedTextField(draft.notes, { onDraft(draft.copy(notes = it)) }, label = { Text("Notes") }, minLines = 2) }
                 item { Text("Displayed line values are previews. Tax, totals, numbering, stock, and posting are confirmed by the server.", style = MaterialTheme.typography.bodySmall) }
@@ -490,8 +491,8 @@ private fun DirectSaleInvoiceEditor(
                     Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)
                 ){
-                    OutlinedButton(onClick={onSave(true)},enabled=!saving&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text("Save & New")}
-                    Button(onClick={onSave(false)},enabled=!saving&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text(if(saving)"Saving…" else "Save")}
+                    OutlinedButton(onClick={onSave(true)},enabled=!saving&&draft.lines.none{it.quotationUnitReviewRequired}&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text("Save & New")}
+                    Button(onClick={onSave(false)},enabled=!saving&&draft.lines.none{it.quotationUnitReviewRequired}&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text(if(saving)"Saving…" else "Save")}
                     IconButton(onClick={more=true}){Text("⋮")}
                 }
             }
@@ -527,7 +528,7 @@ private fun DirectSaleInvoiceEditor(
                 }
             }
             item{
-                OutlinedButton(enabled=!saving&&!draft.projectRequired,onClick={customerSheet=true},modifier=Modifier.fillMaxWidth()){
+                OutlinedButton(enabled=!saving&&!draft.projectRequired&&draft.sourceQuotationRevisionId.isBlank(),onClick={customerSheet=true},modifier=Modifier.fillMaxWidth()){
                     Text(options.customers.firstOrNull{it.id==draft.customerId}?.name?:"Search or select customer")
                 }
             }
@@ -544,6 +545,7 @@ private fun DirectSaleInvoiceEditor(
             item{OutlinedTextField(draft.dueDate,{onDraft(draft.copy(dueDate=it))},enabled=!saving,label={Text("Due date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())}
             if(options.transactionPreference("itemCount"))item{Text("Total Qty: ${draft.lines.sumOf{it.quantity.toDoubleOrNull()?:0.0}}")}
             item{OutlinedButton(onClick={addItemPage=true},modifier=Modifier.fillMaxWidth()){Text("+ Add Items (Optional)")}}
+            if(draft.quotationReference!=null)item { QuotationConversionReference(draft) }
             itemsIndexed(draft.lines){index,line->
                 if(line.sourceId.isNotBlank()||line.itemName.isNotBlank())SalesLineEditor(index,line,draft,options,emptyList(),onLine,onRemove)
             }
@@ -714,11 +716,11 @@ private fun SalesLineEditor(
                     ))
                 }
             }
-            SelectField("Type", line.lineType, listOf("PRODUCT" to "Product", "SERVICE" to "Service", "WORK_PACKAGE" to "Work package", "CUSTOM" to "Custom")) { onLine(index, line.copy(lineType = it, sourceId = "",unitSelection="PRIMARY",secondaryUnitsPerBase="",copiedFromSaleLineId="",batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
+            SelectField("Type", line.lineType, listOf("PRODUCT" to "Product", "SERVICE" to "Service", "WORK_PACKAGE" to "Work package", "CUSTOM" to "Custom")) { onLine(index, line.copy(quotationUnitReviewRequired=false,lineType = it, sourceId = "",unitSelection="PRIMARY",secondaryUnitsPerBase="",copiedFromSaleLineId="",batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
             if (line.lineType == "CUSTOM") {
                 OutlinedTextField(line.itemName, { onLine(index, line.copy(itemName = it)) }, label = { Text("Item name") })
             } else {
-                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; val price=com.salespunch360.mobile.account.itemMasterPrice(master,draft.taxMode,draft.type in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE"),options.itemWiseDiscount,line.quantity); onLine(index, line.copy(sourceId = id,unitSelection="PRIMARY",secondaryUnitsPerBase="",copiedFromSaleLineId="", rate = price.rate,discountType=price.discountType,discountValue=price.discountValue, taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
+                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; val price=com.salespunch360.mobile.account.itemMasterPrice(master,draft.taxMode,draft.type in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE"),options.itemWiseDiscount,line.quantity); onLine(index, line.copy(quotationUnitReviewRequired=false,sourceId = id,unitSelection="PRIMARY",secondaryUnitsPerBase="",copiedFromSaleLineId="", rate = price.rate,discountType=price.discountType,discountValue=price.discountValue, taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
             }
             val master=masters.firstOrNull { it.id==line.sourceId }
             if(line.sourceCommercialLineId.isNotBlank()||line.originalLineId.isNotBlank()||line.copiedFromSaleLineId.isNotBlank()) {
@@ -727,9 +729,10 @@ private fun SalesLineEditor(
                 val assigned=listOf("PRIMARY" to master.unitId,"SECONDARY" to master.secondaryUnitId).filter { it.first=="PRIMARY"||it.second.isNotBlank() }
                 SelectField("Unit",line.unitSelection,assigned.map { (selection,id)-> selection to (options.units.firstOrNull{it.id==id}?.name?:if(selection=="PRIMARY")"Primary"else"Secondary") }) { selection ->
                     runCatching { salesUnitLine(line,master,draft.taxMode,selection,options.itemWiseDiscount,options.units.firstOrNull{it.id==if(selection=="SECONDARY")master.secondaryUnitId else master.unitId}) }
-                        .onSuccess { unitError=null;onLine(index,it) }.onFailure { unitError=it.message }
+                        .onSuccess { unitError=null;onLine(index,if(line.quotationUnitReviewRequired)it.copy(rate=line.rate,discountType=line.discountType,discountValue=line.discountValue,taxRate=line.taxRate) else it) }.onFailure { unitError=it.message }
                 }
             }
+            if(line.quotationUnitReviewRequired){Text("Estimate unit: ${line.unitName} ${line.unitSymbol}. Unit labels do not establish a stock conversion.");Row(verticalAlignment=Alignment.CenterVertically){Checkbox(checked=false,onCheckedChange={if(it)onLine(index,line.copy(quotationUnitReviewRequired=false))});Text("I confirm quantity and rate use the selected current unit and warehouse.")}}
             unitError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedTextField(line.quantity, { onLine(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))
@@ -768,4 +771,15 @@ fun SelectField(label: String, value: String, values: List<Pair<String, String>>
             values.forEach { (id, text) -> DropdownMenuItem(text = { Text(text) }, onClick = { onChange(id); open = false }) }
         }
     }
+}
+
+@Composable
+private fun QuotationConversionReference(draft:SalesEditorDraft){
+ val reference=draft.quotationReference?:return
+ Column(Modifier.fillMaxWidth().padding(8.dp)){
+  Text("From estimate ${draft.quotationNumber}",fontWeight=FontWeight.Bold)
+  Text(if(draft.type=="SALES_INVOICE")"Save posts this Sale and closes the estimate. Leaving without saving creates no Sale."else"Saving prepares the order. Confirmation closes the estimate without an accounting entry.")
+  listOf("terms","inclusions","exclusions","notes").forEach{field->reference.str(field).takeIf{it.isNotBlank()}?.let{Text(it)}}
+  reference.array("paymentSchedule").forEach{row->Text("${row.str("label")}: ${accountMoney(row.str("amount"))} ${row.str("dueDescription")}")}
+ }
 }

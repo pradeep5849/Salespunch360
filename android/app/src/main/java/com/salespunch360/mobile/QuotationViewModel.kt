@@ -113,7 +113,7 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                         it.str("documentNumber"),
                         it.str("documentType"),
                         revision?.str("customerName").orEmpty(),
-                        it.str("status"),
+                        quotationDisplayStatus(it),
                         revision?.str("grandTotal").orEmpty(),
                         it.str("currentRevisionNumber").toIntOrNull() ?: 0,
                         revision?.str("issueDate").orEmpty()

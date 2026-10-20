@@ -25,18 +25,20 @@ import com.salespunch360.mobile.AccountSalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, initialDocumentId:String?=null, initialDuplicateId:String?=null, vm: AccountSalesViewModel = viewModel()) {
+fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, initialDocumentId:String?=null, initialDuplicateId:String?=null, initialQuotationId:String?=null,initialQuotationRevisionId:String?=null, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType,state.options.types) { if (initialType != null && initialType!="SALES_INVOICE" && state.options.types.isNotEmpty()) vm.filter(initialType) }
-    var initialEditorOpened by remember(initialType, initialProjectId, projectMode,initialDuplicateId) { mutableStateOf(false) }
-    LaunchedEffect(initialType, initialProjectId, projectMode,initialDuplicateId, state.loading) {
-        if (!initialEditorOpened && initialType == "SALES_INVOICE" && !state.loading && state.options.types.isNotEmpty()) {
+    var initialEditorOpened by remember(initialType, initialProjectId, projectMode,initialDuplicateId,initialQuotationId,initialQuotationRevisionId) { mutableStateOf(false) }
+    LaunchedEffect(initialType, initialProjectId, projectMode,initialDuplicateId,initialQuotationId,initialQuotationRevisionId, state.loading) {
+        if (!initialEditorOpened && (initialType == "SALES_INVOICE"||initialQuotationId!=null) && !state.loading && state.options.types.isNotEmpty()) {
             initialEditorOpened = true
-            if(initialDuplicateId!=null)vm.duplicateSale(initialDuplicateId) else vm.newDocument(initialType, initialProjectId, projectMode)
+            if(initialQuotationId!=null&&initialQuotationRevisionId!=null&&initialType!=null)vm.convertQuotation(initialQuotationId,initialQuotationRevisionId,initialType) else if(initialDuplicateId!=null)vm.duplicateSale(initialDuplicateId) else if(initialType!=null)vm.newDocument(initialType, initialProjectId, projectMode)
         }
     }
+    DisposableEffect(initialQuotationId,initialQuotationRevisionId){onDispose{vm.cancelQuotationConversion()}}
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+        if(initialQuotationId!=null&&initialQuotationRevisionId!=null&&initialType!=null&&state.error!=null&&state.editor==null)TextButton(enabled=!state.loading,onClick={vm.convertQuotation(initialQuotationId,initialQuotationRevisionId,initialType)}){Text("Retry conversion")}
         if(initialDuplicateId!=null&&state.error!=null&&state.editor==null)TextButton(enabled=!state.loading,onClick={vm.duplicateSale(initialDuplicateId)}){Text("Retry duplicate")}
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or customer") }, singleLine = true, modifier = Modifier.weight(1f))

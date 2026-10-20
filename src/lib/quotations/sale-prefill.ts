@@ -3,8 +3,7 @@ import type {quotationConversionPreviewForActor} from "./conversion-preview";
 export type QuotationConversionPreview=Awaited<ReturnType<typeof quotationConversionPreviewForActor>>;
 /** Unsaved form state only. Long estimate reference text is retained separately;
  * warehouse, serial, receipt and document identities must be selected afresh. */
-export function quotationSalePrefill(preview:QuotationConversionPreview,issueDate:string):SaleDraftInitial{
- if(preview.targetType!=="SALES_INVOICE")throw new Error("INVALID_QUOTATION_CONVERSION_TARGET");
+function quotationFormPrefill(preview:QuotationConversionPreview,issueDate:string):SaleDraftInitial{
  return {
   sourceQuotationRevisionId:preview.sourceRevisionId,
   quotationReference:{documentId:preview.sourceDocumentId,number:preview.sourceNumber,...preview.reference},
@@ -20,4 +19,13 @@ export function quotationSalePrefill(preview:QuotationConversionPreview,issueDat
    quotationUnitReviewRequired:line.lineType==="PRODUCT",
   })),
  };
+}
+
+export function quotationSalePrefill(preview:QuotationConversionPreview,issueDate:string){
+ if(preview.targetType!=="SALES_INVOICE")throw new Error("INVALID_QUOTATION_CONVERSION_TARGET");
+ return quotationFormPrefill(preview,issueDate);
+}
+export function quotationOrderPrefill(preview:QuotationConversionPreview,issueDate:string){
+ if(preview.targetType!=="SALES_ORDER")throw new Error("INVALID_QUOTATION_CONVERSION_TARGET");
+ return quotationFormPrefill(preview,issueDate);
 }
