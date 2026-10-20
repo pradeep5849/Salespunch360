@@ -14525,6 +14525,23 @@
             "migration": "NONE added in this continuation."
           },
           "remaining": "Both findings remain PARTIAL for native generic order unit entry, report/export consumers and final exact-head checkpoint verification. Native emulator/device runtime remains unexecuted.",
+          "commit_sha": "1e492c7afc4378619d3151a15dc148dc95a77b98"
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_native_generic_sales",
+          "implementation": "Generic native sales/order editor now offers only item-assigned units, applies primary-price and per-primary-unit saved discount defaults, locks retained source units and disables Save for inexact/invalid primary conversion. Pure helper rejects historical source mutation and unavailable secondary assignment.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt"
+          ],
+          "evidence": {
+            "android": "Kotlin compile and48 focused Purchase/Sales/ItemMasterPricing JVM tests PASS,0fail/errors/skips; BUILD SUCCESSFUL2m15s. No native emulator/device runtime.",
+            "reports": "40PASS/5files/8.99s: quantity,stock-category,stock-detail,stock-level,profit-presentation regressions; retained billed units and primary stock units remain separate, mixed units are not fabricated into totals.",
+            "diff": "git diff --check PASS."
+          },
+          "remaining": "PARTIAL pending complete original finding reconciliation and final exact-head validation; native device runtime not executed.",
           "commit_sha": null
         }
       ]
@@ -19962,6 +19979,23 @@
             "migration": "NONE added in this continuation."
           },
           "remaining": "Both findings remain PARTIAL for native generic order unit entry, report/export consumers and final exact-head checkpoint verification. Native emulator/device runtime remains unexecuted.",
+          "commit_sha": "1e492c7afc4378619d3151a15dc148dc95a77b98"
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_native_generic_sales",
+          "implementation": "Generic native sales/order editor now offers only item-assigned units, applies primary-price and per-primary-unit saved discount defaults, locks retained source units and disables Save for inexact/invalid primary conversion. Pure helper rejects historical source mutation and unavailable secondary assignment.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/ItemMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ItemMasterPricingTest.kt"
+          ],
+          "evidence": {
+            "android": "Kotlin compile and48 focused Purchase/Sales/ItemMasterPricing JVM tests PASS,0fail/errors/skips; BUILD SUCCESSFUL2m15s. No native emulator/device runtime.",
+            "reports": "40PASS/5files/8.99s: quantity,stock-category,stock-detail,stock-level,profit-presentation regressions; retained billed units and primary stock units remain separate, mixed units are not fabricated into totals.",
+            "diff": "git diff --check PASS."
+          },
+          "remaining": "PARTIAL pending complete original finding reconciliation and final exact-head validation; native device runtime not executed.",
           "commit_sha": null
         }
       ],

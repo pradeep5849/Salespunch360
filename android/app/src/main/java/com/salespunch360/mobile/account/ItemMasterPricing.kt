@@ -48,3 +48,11 @@ fun itemMasterPriceForUnit(master:SalesOption?,taxMode:String,purchase:Boolean=f
  val price=itemMasterPrice(master,taxMode,purchase,discounts,base.toPlainString(),priceKind,customerRate,wholesaleRate)
  return if(selection=="SECONDARY")price.copy(rate=price.rate.toBigDecimal().divide(conversion.toBigDecimal(),2,RoundingMode.HALF_UP).toPlainString()) else price
 }
+
+/** Explicit new-line unit selection uses only the item's assigned units. */
+fun salesUnitLine(line:SalesLineDraft,master:SalesOption,taxMode:String,selection:String,discounts:Boolean=true,unit:SalesOption?=null):SalesLineDraft {
+ require(line.sourceCommercialLineId.isBlank()&&line.originalLineId.isBlank()&&line.copiedFromSaleLineId.isBlank()){ "Original line unit is retained" }
+ require(selection!="SECONDARY"||master.secondaryUnitId.isNotBlank()){ "Unit conversion unavailable" }
+ val price=itemMasterPriceForUnit(master,taxMode,discounts=discounts,quantity=line.quantity,selection=selection)
+ return line.copy(unitSelection=selection,secondaryUnitsPerBase=master.secondaryUnitsPerBase,rate=price.rate,discountType=price.discountType,discountValue=price.discountValue,unitName=unit?.name.orEmpty(),unitSymbol=unit?.symbol.orEmpty())
+}

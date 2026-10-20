@@ -53,4 +53,14 @@ class ItemMasterPricingTest {
   val option=Json.parseToJsonElement("""{"id":"item","name":"Item","salePrice":"20","unitId":"piece","secondaryUnitId":"box","secondaryUnitsPerBase":"0.1"}""").jsonObject.option()
   assertEquals("piece",option.unitId);assertEquals("box",option.secondaryUnitId);assertEquals("0.1",option.secondaryUnitsPerBase)
  }
+
+ @Test fun genericSalesUnitSelectionUsesAssignedPriceAndProtectsHistory(){
+  val item=master("FIXED").copy(unitId="piece",secondaryUnitId="box",secondaryUnitsPerBase="0.1")
+  val selected=salesUnitLine(SalesLineDraft(quantity="2"),item,"EXCLUSIVE","SECONDARY",unit=SalesOption("box","Box",symbol="Bx"))
+  assertEquals("1000.00",selected.rate);assertEquals("200",selected.discountValue);assertEquals("Box",selected.unitName)
+  assertEquals("SECONDARY",selected.unitSelection)
+  assertThrows(IllegalArgumentException::class.java){salesUnitLine(selected.copy(sourceCommercialLineId="original"),item,"EXCLUSIVE","PRIMARY")}
+  assertThrows(IllegalArgumentException::class.java){salesUnitLine(SalesLineDraft(),item.copy(secondaryUnitId=""),"EXCLUSIVE","SECONDARY")}
+  assertThrows(IllegalArgumentException::class.java){salesUnitLine(SalesLineDraft(quantity="0.00001"),item,"EXCLUSIVE","SECONDARY")}
+ }
 }

@@ -10164,3 +10164,8 @@ Validation:105related unit/service/PostgreSQL tests PASS;6Sales/API/legacy deskt
 ### Native purchase units and mixed Project returns — 2026-10-20
 
 A058-F06/A062-F02: native purchase assigned-unit selection, selected cost defaults, exact primary quantities and retained vendor-return units implemented. PostgreSQL18PASS; desktop/mobile browser plus authenticated mobile create/retry/post/replay2PASS; Android compile and47focused JVM tests PASS. No emulator/device runtime or new migration. Final TypeScript no-emit PASS. Both findings remain PARTIAL for native generic orders, report/export consumers and final-head validation; all199 IDs preserved.
+
+
+### Native generic sales/order units — 2026-10-20
+
+A058-F06/A062-F02: assigned-unit selector and selected primary-price defaults now wired to generic native sales/order entry; source-linked units retained, invalid conversions disable Save. Kotlin compile and48focused JVM tests PASS (0fail/errors/skips); report quantity/stock/profit regression40PASS/5files. No native device runtime claimed. Prior purchase continuation maps to1e492c7afc4378619d3151a15dc148dc95a77b98. Findings remain PARTIAL until complete original-scope reconciliation and final-head validation.

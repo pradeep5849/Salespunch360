@@ -62,7 +62,7 @@ fun SalesDocumentEditor(
         confirmButton = {
             Button(
                 enabled = !saving && draft.branchId.isNotBlank() && draft.customerId.isNotBlank() && draft.lines.all {
-                    (it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650)&&it.quantity.toDoubleOrNull()?.let { quantity -> quantity > 0 } == true && (it.sourceId.isNotBlank() || it.itemName.isNotBlank())
+                    (it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650)&&runCatching { primaryUnitQuantity(it.quantity,it.unitSelection,it.secondaryUnitsPerBase).signum()>0 }.getOrDefault(false) && (it.sourceId.isNotBlank() || it.itemName.isNotBlank())
                 },
                 onClick = { onSave(false) }
             ) { Text(if (saving) "Saving…" else "Create draft") }
@@ -692,6 +692,7 @@ private fun SalesLineEditor(
     onLine: (Int, SalesLineDraft) -> Unit,
     onRemove: (Int) -> Unit
 ) {
+    var unitError by remember(index) { mutableStateOf<String?>(null) }
     val masters = when (line.lineType) { "PRODUCT" -> options.products; "SERVICE" -> options.services; "WORK_PACKAGE" -> options.workPackages; else -> emptyList() }
     ElevatedCard {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -719,6 +720,17 @@ private fun SalesLineEditor(
             } else {
                 SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id -> val master = masters.first { it.id == id }; val price=com.salespunch360.mobile.account.itemMasterPrice(master,draft.taxMode,draft.type in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE"),options.itemWiseDiscount,line.quantity); onLine(index, line.copy(sourceId = id,unitSelection="PRIMARY",secondaryUnitsPerBase="",copiedFromSaleLineId="", rate = price.rate,discountType=price.discountType,discountValue=price.discountValue, taxRate = master.taxRate.orEmpty(),batchId="",serialNumberId="",servicePeriodDays="",originalLineId="",itemCode="",specification="",cessRate="0")) }
             }
+            val master=masters.firstOrNull { it.id==line.sourceId }
+            if(line.sourceCommercialLineId.isNotBlank()||line.originalLineId.isNotBlank()||line.copiedFromSaleLineId.isNotBlank()) {
+                Text("Original unit: ${line.unitSymbol.ifBlank{line.unitName}.ifBlank{line.unitSelection}}")
+            } else if(master!=null) {
+                val assigned=listOf("PRIMARY" to master.unitId,"SECONDARY" to master.secondaryUnitId).filter { it.first=="PRIMARY"||it.second.isNotBlank() }
+                SelectField("Unit",line.unitSelection,assigned.map { (selection,id)-> selection to (options.units.firstOrNull{it.id==id}?.name?:if(selection=="PRIMARY")"Primary"else"Secondary") }) { selection ->
+                    runCatching { salesUnitLine(line,master,draft.taxMode,selection,options.itemWiseDiscount,options.units.firstOrNull{it.id==if(selection=="SECONDARY")master.secondaryUnitId else master.unitId}) }
+                        .onSuccess { unitError=null;onLine(index,it) }.onFailure { unitError=it.message }
+                }
+            }
+            unitError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedTextField(line.quantity, { onLine(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))
                 OutlinedTextField(line.rate, { onLine(index, line.copy(rate = it)) }, label = { Text("Rate") }, modifier = Modifier.weight(1f))
