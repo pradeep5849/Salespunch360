@@ -10231,3 +10231,8 @@ A082-F01 is **IMPLEMENTED BUT NOT VERIFIED**. Current185 IMPLEMENTED BUT NOT VER
 Focused74unit/service/capability/attachment cases PASS. Final2desktop/mobile header cases PASS(1.6m);related4attachment/terms cases PASS on same application code in preceding group. That group’s2header fixture failures were corrected without changing permissions;do not report the original group as all6passed. Header checks cover same-row bounds,readonly references,realBack/Settings,role-gated Web/native options,Axe/no overflow,lifecycle redirects andno navigation-created document/journal. Earlier precursor6passed5.1m predates final layout/guard refinements.
 
 Android compile/40focusedQuotationJVM/lint PASS8m14s,0testfailures/errors/skips,lint0errors/4warnings/6information. Final TypeScript/ESLint/diff PASS. Native device/emulator/TalkBack/visual runtime andcomplete199-finding final-head verification remain pending. No DBmodel/migration,production write,merge/deploy/A104. Predecessorbf9c2bde targeted CI passed run39438358438;new head needs its own CI.
+
+
+### 2026-10-20 — focused conversion CI coverage
+
+`0212b43e` adds prefill/capability/confirmation-route regressions and a separate8-case real PostgreSQL conversion step to targeted CI. YAML parsed;exact DB step passed8/8 locally(2.29s),0failed/skipped. Existing pinned actions andNode22 unchanged. No whole2631+suite was added per fix. New GitHub head execution is pending;predecessor successes are not substituted. Counts remain185implemented-but-not-finally-verified/13partial/1notstarted;all199 IDs andfinal verification limitations preserved.
