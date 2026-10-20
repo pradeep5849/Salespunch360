@@ -10123,3 +10123,9 @@ Validation: 174 grouped tests/12 files PASS, zero failures/skips; final actual d
 Commit `9e6d02dae0389ca39cd4d7b6cf6e65d9bc562b42` stores the applied master discount value on new commercial lines, so later copies retain the billed fixed total or original percentage after master defaults change. Linked findings A058-F02/A071-F05/A086-F06; no finding status promoted. Historical posted rows are unchanged.
 
 201 grouped tests/14 files PASS (zero failures/skips); actual desktop + mobile-web browser cases4 PASS (43.6s); final TypeScript, focused ESLint and diff checks PASS. Three units at20 retain fixed3/total57 or10percent/total54 after master defaults change. Journals balance and source snapshots remain unchanged. No new migration/native runtime claim. Legacy null discount snapshots need a safe compatibility fallback; broader unit integration remains pending.
+
+### Legacy fixed-discount restoration — 20 October 2026
+
+Commit `a157e31e4aa7ffecf5277dc96df51e7129047860` restores a missing legacy FIXED input from the posted discountAmount for Web duplicate/edit, atomic amendment/full credit and Android saved-Sale decoding. Historical rows stay unchanged. Explicit zero is preserved; missing percentages are not guessed. Linked findings A058-F02/A071-F05/A086-F06; statuses unchanged.
+
+205 grouped tests/15 files PASS, zero failures/skips; six actual desktop/mobile-web browser cases PASS (2.1m); Android compile plus14 JVM tests PASS (3m31s), zero failures/errors/skips. Final TypeScript, focused ESLint, YAML and diff checks PASS. Legacy duplicate/replacement/full credit keep original3/57 after master default changes; original null-value row remains unchanged and journals balance. No migration, production or native device runtime claim. Historical missing percentages and broader remaining scope remain pending.

@@ -13095,6 +13095,41 @@
             "final_checkpoint_head": "NOT RUN; new-head targeted CI requested separately."
           },
           "remaining": "No finding status promoted. Legacy posted lines with null discountValue still require a safe edit/duplicate compatibility fallback without changing posted history. A058-F06/A062-F02 public unit entry/default-price/native/report integration remains PARTIAL. A071-F05/A086-F06 broader remaining original scope is unchanged."
+        },
+        "legacy_fixed_discount_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "a157e31e4aa7ffecf5277dc96df51e7129047860",
+          "linked_finding_ids": [
+            "A058-F02",
+            "A071-F05",
+            "A086-F06"
+          ],
+          "work": "Read-only legacy FIXED discount compatibility: when input value is null, use the original persisted discountAmount as the exact billed-line fixed value. Shared helper feeds Web duplicate/edit prefill and atomic amendment defaults/full credit; Android saved-Sale decoder applies the same fallback. Explicit zero and percentage inputs are retained. Missing percentages are not inferred. Historical posted records remain unchanged. Added focused helper guards to targeted CI.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/retained-line-discount.ts",
+            "src/lib/account/retained-line-discount.test.ts"
+          ],
+          "tests": {
+            "focused": "19 PASS / 3 files, overlaps grouped results.",
+            "grouped": "205 PASS / 15 files,0 failures/skips,26.17s. Actual local PostgreSQL unit history/legacy discount/cheque/Project plus Sale/pricing/editor/native boundary/Web action/request identity regressions.",
+            "database": "Legacy fixture removes FIXED input value before posting while retaining original discountAmount3,total57. After master default changes to9, duplicate and atomic amendment/full credit each retain3/57 and balanced journals. Original posted line remains exactly unchanged with null value.",
+            "web_browser": "6 PASS in2.1m,0 failures/skips: FIXED/PERCENTAGE snapshots and legacy FIXED on desktop + mobile Chromium. Legacy case opens both Duplicate and Edit without writes, saves independent duplicate and atomic replacement/credit at57, restores fixed3 and leaves original row unchanged. Root overflow checks pass. One nonfatal dev stream-closed log occurred; all six cases passed. No native emulator/runtime inferred.",
+            "android": "compileDebugKotlin + testDebugUnitTest filtered SalesEditSnapshotTest/SalesPreviewTest PASS, BUILD SUCCESSFUL3m31s. Actual XML:7+7=14 JVM tests,0 failures/errors/skips; includes2 new legacy-fixed/zero/no-percentage-inference cases. Native decoder/payload/preview covered; no emulator/device/TalkBack runtime or release build/lint locally executed for this slice.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint, workflow YAML PyYAML parse and git diff --check PASS.",
+            "migration": "No schema/migration/backfill or production data access.",
+            "prior_ci": "Exact preceding head9d68f5c662453a77daa024f84cc6812da145efe7 CI39360942104 passed web/migration/android; prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new-head CI requested separately."
+          },
+          "remaining": "No finding status promoted. Historical PERCENTAGE rows missing the original input percentage still require safe compatibility handling without guessing from current master defaults. Public selected-unit entry/default-pricing/report/native-rule integration and broader original partial scopes remain pending. No full checkpoint final validation or production/device claim."
         }
       }
     },
@@ -50913,6 +50948,41 @@
             "final_checkpoint_head": "NOT RUN; new-head targeted CI requested separately."
           },
           "remaining": "No finding status promoted. Legacy posted lines with null discountValue still require a safe edit/duplicate compatibility fallback without changing posted history. A058-F06/A062-F02 public unit entry/default-price/native/report integration remains PARTIAL. A071-F05/A086-F06 broader remaining original scope is unchanged."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "a157e31e4aa7ffecf5277dc96df51e7129047860",
+          "linked_finding_ids": [
+            "A058-F02",
+            "A071-F05",
+            "A086-F06"
+          ],
+          "work": "Read-only legacy FIXED discount compatibility: when input value is null, use the original persisted discountAmount as the exact billed-line fixed value. Shared helper feeds Web duplicate/edit prefill and atomic amendment defaults/full credit; Android saved-Sale decoder applies the same fallback. Explicit zero and percentage inputs are retained. Missing percentages are not inferred. Historical posted records remain unchanged. Added focused helper guards to targeted CI.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/retained-line-discount.ts",
+            "src/lib/account/retained-line-discount.test.ts"
+          ],
+          "tests": {
+            "focused": "19 PASS / 3 files, overlaps grouped results.",
+            "grouped": "205 PASS / 15 files,0 failures/skips,26.17s. Actual local PostgreSQL unit history/legacy discount/cheque/Project plus Sale/pricing/editor/native boundary/Web action/request identity regressions.",
+            "database": "Legacy fixture removes FIXED input value before posting while retaining original discountAmount3,total57. After master default changes to9, duplicate and atomic amendment/full credit each retain3/57 and balanced journals. Original posted line remains exactly unchanged with null value.",
+            "web_browser": "6 PASS in2.1m,0 failures/skips: FIXED/PERCENTAGE snapshots and legacy FIXED on desktop + mobile Chromium. Legacy case opens both Duplicate and Edit without writes, saves independent duplicate and atomic replacement/credit at57, restores fixed3 and leaves original row unchanged. Root overflow checks pass. One nonfatal dev stream-closed log occurred; all six cases passed. No native emulator/runtime inferred.",
+            "android": "compileDebugKotlin + testDebugUnitTest filtered SalesEditSnapshotTest/SalesPreviewTest PASS, BUILD SUCCESSFUL3m31s. Actual XML:7+7=14 JVM tests,0 failures/errors/skips; includes2 new legacy-fixed/zero/no-percentage-inference cases. Native decoder/payload/preview covered; no emulator/device/TalkBack runtime or release build/lint locally executed for this slice.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint, workflow YAML PyYAML parse and git diff --check PASS.",
+            "migration": "No schema/migration/backfill or production data access.",
+            "prior_ci": "Exact preceding head9d68f5c662453a77daa024f84cc6812da145efe7 CI39360942104 passed web/migration/android; prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new-head CI requested separately."
+          },
+          "remaining": "No finding status promoted. Historical PERCENTAGE rows missing the original input percentage still require safe compatibility handling without guessing from current master defaults. Public selected-unit entry/default-pricing/report/native-rule integration and broader original partial scopes remain pending. No full checkpoint final validation or production/device claim."
         }
       ],
       "push_checkpoint_evidence": {
@@ -64722,6 +64792,41 @@
             "final_checkpoint_head": "NOT RUN; new-head targeted CI requested separately."
           },
           "remaining": "No finding status promoted. Legacy posted lines with null discountValue still require a safe edit/duplicate compatibility fallback without changing posted history. A058-F06/A062-F02 public unit entry/default-price/native/report integration remains PARTIAL. A071-F05/A086-F06 broader remaining original scope is unchanged."
+        },
+        "legacy_fixed_discount_2026_10_20": {
+          "date": "2026-10-20",
+          "implementation_commit": "a157e31e4aa7ffecf5277dc96df51e7129047860",
+          "linked_finding_ids": [
+            "A058-F02",
+            "A071-F05",
+            "A086-F06"
+          ],
+          "work": "Read-only legacy FIXED discount compatibility: when input value is null, use the original persisted discountAmount as the exact billed-line fixed value. Shared helper feeds Web duplicate/edit prefill and atomic amendment defaults/full credit; Android saved-Sale decoder applies the same fallback. Explicit zero and percentage inputs are retained. Missing percentages are not inferred. Historical posted records remain unchanged. Added focused helper guards to targeted CI.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/retained-line-discount.ts",
+            "src/lib/account/retained-line-discount.test.ts"
+          ],
+          "tests": {
+            "focused": "19 PASS / 3 files, overlaps grouped results.",
+            "grouped": "205 PASS / 15 files,0 failures/skips,26.17s. Actual local PostgreSQL unit history/legacy discount/cheque/Project plus Sale/pricing/editor/native boundary/Web action/request identity regressions.",
+            "database": "Legacy fixture removes FIXED input value before posting while retaining original discountAmount3,total57. After master default changes to9, duplicate and atomic amendment/full credit each retain3/57 and balanced journals. Original posted line remains exactly unchanged with null value.",
+            "web_browser": "6 PASS in2.1m,0 failures/skips: FIXED/PERCENTAGE snapshots and legacy FIXED on desktop + mobile Chromium. Legacy case opens both Duplicate and Edit without writes, saves independent duplicate and atomic replacement/credit at57, restores fixed3 and leaves original row unchanged. Root overflow checks pass. One nonfatal dev stream-closed log occurred; all six cases passed. No native emulator/runtime inferred.",
+            "android": "compileDebugKotlin + testDebugUnitTest filtered SalesEditSnapshotTest/SalesPreviewTest PASS, BUILD SUCCESSFUL3m31s. Actual XML:7+7=14 JVM tests,0 failures/errors/skips; includes2 new legacy-fixed/zero/no-percentage-inference cases. Native decoder/payload/preview covered; no emulator/device/TalkBack runtime or release build/lint locally executed for this slice.",
+            "typescript": "Final full no-emit typecheck PASS after browser exit.",
+            "eslint": "Focused ESLint, workflow YAML PyYAML parse and git diff --check PASS.",
+            "migration": "No schema/migration/backfill or production data access.",
+            "prior_ci": "Exact preceding head9d68f5c662453a77daa024f84cc6812da145efe7 CI39360942104 passed web/migration/android; prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new-head CI requested separately."
+          },
+          "remaining": "No finding status promoted. Historical PERCENTAGE rows missing the original input percentage still require safe compatibility handling without guessing from current master defaults. Public selected-unit entry/default-pricing/report/native-rule integration and broader original partial scopes remain pending. No full checkpoint final validation or production/device claim."
         }
       },
       "push_checkpoint_evidence": {
