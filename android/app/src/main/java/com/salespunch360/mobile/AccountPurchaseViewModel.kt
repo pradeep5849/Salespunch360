@@ -58,6 +58,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                     types = options["allowedDocumentTypes"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
                     branches = options.array("branches").map { it.option() },
                     vendors = options.array("vendors").map { it.option() },
+                    units = options.array("units").map { it.option() },
                     products = options.array("products").map { it.option("costPrice") },
                     services = options.array("services").map { it.option("estimatedCost") },
                     workPackages = options.array("workPackages").map { it.option("estimatedCost") },

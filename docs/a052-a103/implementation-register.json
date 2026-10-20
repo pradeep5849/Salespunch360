@@ -14495,6 +14495,37 @@
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: native purchase/order unit selectors and rule wiring, converted mixed-Project/vendor-return allocation cases, report/export consumers and complete final-head validation remain. No native emulator/device runtime. No whole finding or linked page promoted.",
           "commit_sha": "cbfe0ce5d69844246178dbfc07d15930cc36fed2"
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_native_purchase_and_project_returns",
+          "primary_findings": [
+            "A058-F06",
+            "A062-F02"
+          ],
+          "implementation": "Native purchase options load assigned units; purchase entry converts primary costs into selected-unit rates, validates primary quantity/serial precision, retains historical vendor-return units and excludes client conversion metadata from requests. Added actual mixed inventory/Project purchase and retained-unit vendor-return regression, plus authenticated mobile purchase create/retry/post/replay browser coverage.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountPurchaseViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountPurchaseModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseRequest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseMasterPricingTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseRequestTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "evidence": {
+            "android": "Kotlin compile and focused Purchase/Sales/ItemMasterPricing JVM suite PASS:47 tests,0 failures/errors/skips; BUILD SUCCESSFUL2m8s. No emulator/device runtime.",
+            "database": "Actual PostgreSQL commercial-unit-history integration:18 PASS,0 failed/skipped,4.94s. Mixed purchase allocates5 primary inventory and5 Project; vendor return after master-factor change retains original conversion, returns2.5 each and posts once with balanced ledger.",
+            "browser_api": "Desktop and mobile Chromium:2 PASS46.8s. Actual purchase Save/Post plus authenticated mobile options/create/retry/post/replay;2Boxes total240/base20, one posted journal.",
+            "eslint": "Changed TypeScript test files PASS; git diff --check PASS.",
+            "fixture_corrections": "Corrected fixture Project enum and canonical inventory-to-Project movement expectation; supplied required MIXED vendor-return purpose. Local fixture cleanup follows existing isolated test guard pattern. No production guard/schema changes.",
+            "typescript": "PASS final full TypeScript no-emit check after browser exit.",
+            "migration": "NONE added in this continuation."
+          },
+          "remaining": "Both findings remain PARTIAL for native generic order unit entry, report/export consumers and final exact-head checkpoint verification. Native emulator/device runtime remains unexecuted.",
+          "commit_sha": null
         }
       ]
     },
@@ -19901,6 +19932,37 @@
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL: native purchase/order unit selectors and rule wiring, converted mixed-Project/vendor-return allocation cases, report/export consumers and complete final-head validation remain. No native emulator/device runtime. No whole finding or linked page promoted.",
           "commit_sha": "cbfe0ce5d69844246178dbfc07d15930cc36fed2"
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_native_purchase_and_project_returns",
+          "primary_findings": [
+            "A058-F06",
+            "A062-F02"
+          ],
+          "implementation": "Native purchase options load assigned units; purchase entry converts primary costs into selected-unit rates, validates primary quantity/serial precision, retains historical vendor-return units and excludes client conversion metadata from requests. Added actual mixed inventory/Project purchase and retained-unit vendor-return regression, plus authenticated mobile purchase create/retry/post/replay browser coverage.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountPurchaseViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountPurchaseModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseMasterPricing.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseRequest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseMasterPricingTest.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseRequestTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts"
+          ],
+          "evidence": {
+            "android": "Kotlin compile and focused Purchase/Sales/ItemMasterPricing JVM suite PASS:47 tests,0 failures/errors/skips; BUILD SUCCESSFUL2m8s. No emulator/device runtime.",
+            "database": "Actual PostgreSQL commercial-unit-history integration:18 PASS,0 failed/skipped,4.94s. Mixed purchase allocates5 primary inventory and5 Project; vendor return after master-factor change retains original conversion, returns2.5 each and posts once with balanced ledger.",
+            "browser_api": "Desktop and mobile Chromium:2 PASS46.8s. Actual purchase Save/Post plus authenticated mobile options/create/retry/post/replay;2Boxes total240/base20, one posted journal.",
+            "eslint": "Changed TypeScript test files PASS; git diff --check PASS.",
+            "fixture_corrections": "Corrected fixture Project enum and canonical inventory-to-Project movement expectation; supplied required MIXED vendor-return purpose. Local fixture cleanup follows existing isolated test guard pattern. No production guard/schema changes.",
+            "typescript": "PASS final full TypeScript no-emit check after browser exit.",
+            "migration": "NONE added in this continuation."
+          },
+          "remaining": "Both findings remain PARTIAL for native generic order unit entry, report/export consumers and final exact-head checkpoint verification. Native emulator/device runtime remains unexecuted.",
+          "commit_sha": null
         }
       ],
       "push_checkpoint_evidence": {

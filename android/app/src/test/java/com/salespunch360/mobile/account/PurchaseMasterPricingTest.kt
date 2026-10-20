@@ -11,4 +11,16 @@ class PurchaseMasterPricingTest {
  @Test fun manualLineDiscountIsRetainedAndOldItemTrackingLineageIsClearedOnNewSelection(){val old=SalesLineDraft(lineType="SERVICE",discountType="FIXED",discountValue="7",sourceCommercialLineId="old",batchId="batch",serialNumberId="serial");val next=purchaseMasterLine(old,master(),"INCLUSIVE");assertEquals("FIXED",next.discountType);assertEquals("7",next.discountValue);assertEquals("",next.sourceCommercialLineId);assertEquals("",next.batchId);assertEquals("",next.serialNumberId);assertEquals("old",old.sourceCommercialLineId)}
  @Test fun savedInclusivePurchaseCostKeepsItsOriginalCent(){val item=master().copy(rate="101.69",pricing=buildJsonObject{put("enteredSalePrice","0");put("enteredPurchasePrice","120.00");put("purchaseTaxMode","INCLUSIVE")});assertEquals("120.00",purchaseMasterLine(SalesLineDraft(),item,"INCLUSIVE").rate)}
  @Test fun legacyAndHistoricalSourceRatesAreNotGuessedFromCurrentMasterPricing(){assertEquals("59",purchaseMasterLine(SalesLineDraft(),SalesOption("old","Old",rate="59"),"INCLUSIVE").rate);val source=purchaseSourceLine(buildJsonObject{put("id","original");put("lineType","SERVICE");put("serviceId","service");put("rate","42");put("taxRate","18");put("quantity","1")});assertEquals("42",source.rate);assertEquals("original",source.sourceCommercialLineId)}
+
+ @Test fun secondaryPurchaseUsesPrimaryCostAndRetainsManualDiscount(){
+  val item=master().copy(unitId="piece",secondaryUnitId="box",secondaryUnitsPerBase="0.1")
+  val line=purchaseUnitLine(SalesLineDraft(lineType="SERVICE",quantity="1",discountType="FIXED",discountValue="7"),item,"INCLUSIVE","SECONDARY",SalesOption("box","Box",symbol="bx"))
+  assertEquals("590.00",line.rate);assertEquals("SECONDARY",line.unitSelection);assertEquals("Box",line.unitName);assertEquals("7",line.discountValue)
+  val request=purchasePayload(PurchaseDraft(lines=listOf(line))).array("lines").single()
+  assertEquals("SECONDARY",request.str("unitSelection"));assertFalse(request.containsKey("secondaryUnitsPerBase"));assertFalse(request.containsKey("unitConversionSnapshot"))
+ }
+ @Test fun vendorReturnRetainsOriginalUnitRuleInsteadOfConsultingTheCurrentMaster(){
+  val source=buildJsonObject{put("id","line");put("lineType","MATERIAL");put("productId","item");put("quantity","1");put("rate","120");put("unitName","Box");put("unitConversionSnapshot",buildJsonObject{put("selection","SECONDARY");put("secondaryUnitsPerBase","0.1")})}
+  val retained=purchaseSourceLine(source);assertEquals("SECONDARY",retained.unitSelection);assertEquals("0.1",retained.secondaryUnitsPerBase);assertEquals("120",retained.rate);assertEquals("Box",retained.unitName)
+ }
 }

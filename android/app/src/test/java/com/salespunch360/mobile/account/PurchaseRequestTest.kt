@@ -87,4 +87,15 @@ class PurchaseRequestTest {
         assertFalse(purchasePayload(draft).array("lines").single().array("purchaseAllocations").single().containsKey("projectBudgetLineId"))
     }
 
+
+ @Test fun secondaryQuantitiesAndAllocationsMustConvertExactlyBeforeSaving(){
+  val settings=state().copy(products=state().products.map{it.copy(unitId="piece",secondaryUnitId="box",secondaryUnitsPerBase="0.1")})
+  val converted=draft().copy(lines=draft().lines.map{it.copy(unitSelection="SECONDARY",secondaryUnitsPerBase="0.1")})
+  assertNull(purchaseValidation(converted,settings))
+  assertEquals("SECONDARY",purchasePayload(converted).array("lines").single().str("unitSelection"))
+  val precision=converted.copy(lines=converted.lines.map{it.copy(quantity="0.00001")})
+  assertTrue(purchaseValidation(precision,settings)?.contains("converts exactly")==true)
+  val unavailable=settings.copy(products=settings.products.map{it.copy(secondaryUnitId="")})
+  assertTrue(purchaseValidation(converted,unavailable)?.contains("assigned unit")==true)
+ }
 }

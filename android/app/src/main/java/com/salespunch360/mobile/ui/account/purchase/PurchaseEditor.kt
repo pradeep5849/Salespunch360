@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.salespunch360.mobile.AccountPurchaseViewModel
@@ -82,6 +82,7 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
         "SUBCONTRACT" -> state.workPackages
         else -> emptyList()
     }
+    var unitError by remember(line.sourceId){mutableStateOf<String?>(null)}
     ElevatedCard {
         Column(Modifier.padding(10.dp)) {
             if (draft.purpose == "MIXED" && draft.type != "DEBIT_NOTE") {
@@ -118,6 +119,14 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
                     vm.line(index, purchaseMasterLine(line,master,draft.taxMode))
                 }
             }
+            val master=masters.firstOrNull{it.id==line.sourceId}
+            if(draft.type=="DEBIT_NOTE"&&line.sourceCommercialLineId.isNotBlank())Text("Original unit: "+line.unitName.ifBlank{"Primary unit"})
+            else if(master?.unitId?.isNotBlank()==true){
+                SelectField("Unit",line.unitSelection,listOf("PRIMARY" to (state.units.firstOrNull{it.id==master.unitId}?.name?:"Primary unit"))+(if(master.secondaryUnitId.isNotBlank()&&master.secondaryUnitsPerBase.isNotBlank()&&state.units.any{it.id==master.secondaryUnitId})listOf("SECONDARY" to (state.units.firstOrNull{it.id==master.secondaryUnitId}?.name?:"Secondary unit"))else emptyList())){selection->
+                    try{val unit=state.units.firstOrNull{it.id==if(selection=="SECONDARY")master.secondaryUnitId else master.unitId};vm.line(index,purchaseUnitLine(line,master,draft.taxMode,selection,unit));unitError=null}catch(e:IllegalArgumentException){unitError=e.message}
+                }
+            }
+            unitError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             Row {
                 OutlinedTextField(line.quantity, { vm.line(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))
                 OutlinedTextField(line.rate, { vm.line(index, line.copy(rate = it)) }, label = { Text("Rate") }, modifier = Modifier.weight(1f))

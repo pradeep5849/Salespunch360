@@ -35,9 +35,14 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
  afterAll(async()=>{
   await client.$transaction(async tx=>{
    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+   await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
+   await tx.projectMaterialMovement.deleteMany({where:{companyId}});
+   await tx.$executeRawUnsafe("SET LOCAL session_replication_role = origin");
+   await tx.projectAuditEvent.deleteMany({where:{companyId}});
    await tx.stockMovement.deleteMany({where:{companyId}});await tx.purchaseLineAllocation.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});await tx.advanceApplication.deleteMany({where:{companyId}});await tx.settlementAllocation.deleteMany({where:{companyId}});await tx.accountSettlement.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{companyId}});await tx.commercialDocument.deleteMany({where:{companyId}});
    await tx.accountOperationalAudit.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});
    await tx.numberingSeries.deleteMany({where:{companyId}});await tx.ledgerAccount.deleteMany({where:{companyId}});await tx.financialYear.deleteMany({where:{companyId}});
+   await tx.project.deleteMany({where:{companyId}});
    await tx.accountProduct.deleteMany({where:{companyId}});await tx.warehouse.deleteMany({where:{companyId}});await tx.accountUnit.deleteMany({where:{companyId}});await tx.customer.deleteMany({where:{companyId}});await tx.vendor.deleteMany({where:{companyId}});await tx.accountSettings.deleteMany({where:{companyId}});await tx.user.deleteMany({where:{companyId}});await tx.branch.deleteMany({where:{companyId}});await tx.company.delete({where:{id:companyId}});
   });await client.$disconnect();
  });
@@ -311,6 +316,29 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    await client.accountUnit.update({where:{id:secondary},data:{isActive:false}});
    await expect(createCommercialDocumentForActor(actor,{...input,lines:[{lineType:"PRODUCT",sourceId:productId,unitSelection:"SECONDARY",quantity:"1"}]})).rejects.toThrow("UNIT_CONVERSION_UNAVAILABLE");
   }finally{await client.accountUnit.update({where:{id:secondary},data:{isActive:true}});await client.accountProduct.update({where:{id:productId},data:{pricing:master.pricing??Prisma.DbNull,secondaryUnitsPerBase:master.secondaryUnitsPerBase}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull,transactionDefaults:settings.transactionDefaults??Prisma.DbNull}})}
+ });
+ it("converts mixed inventory and Project allocations once and splits a vendor return at original units",async()=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  await client.accountSettings.update({where:{companyId},data:{enabledModules:["PROJECTS","PROJECT_COSTING"]}});
+  try{
+   const project=await client.project.create({data:{companyId,branchId,projectNumber:`UNIT-${randomUUID()}`,name:"Converted Project",customerId,createdById:userId,status:"ACTIVE"}});
+   const warehouse=await client.warehouse.create({data:{companyId,branchId,name:"Mixed converted warehouse",code:`W-${randomUUID().slice(0,8)}`}});
+   const product=await client.accountProduct.create({data:{companyId,name:"Mixed converted item",unitId:primary,secondaryUnitId:secondary,secondaryUnitsPerBase:"0.1",costPrice:"5",salePrice:"20",trackInventory:true}});
+   const bill=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"MIXED",vendorInvoiceNumber:`MIX-${randomUUID()}`,vendorInvoiceDate:"2026-10-20",lines:[{lineType:"MATERIAL",sourceId:product.id,unitSelection:"SECONDARY",quantity:"1",taxRate:"0",warehouseId:warehouse.id,purchaseAllocations:[{allocationType:"INVENTORY",quantity:"0.5",warehouseId:warehouse.id},{allocationType:"PROJECT",quantity:"0.5",projectId:project.id,materialTreatment:"DIRECT_TO_PROJECT",warehouseId:warehouse.id}]}]});
+   await postCommercialDocumentForActor(actor,{documentId:bill.id});
+   const original=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:bill.id},include:{purchaseAllocations:true}});
+   expect(original.rate.toString()).toBe("50");expect(original.baseQuantity?.toString()).toBe("10");expect(original.purchaseAllocations.map(x=>x.baseQuantity?.toString())).toEqual(["5","5"]);
+   const received=await client.projectMaterialMovement.findFirstOrThrow({where:{companyId,projectId:project.id,purchaseDocumentId:bill.id,movementType:"INVENTORY_ISSUE_TO_PROJECT"}});expect(received.quantity.toString()).toBe("5");expect(received.totalCost.toString()).toBe("25");
+   await client.accountProduct.update({where:{id:product.id},data:{secondaryUnitsPerBase:"0.2"}});
+   const returned=await createCommercialDocumentForActor(actor,{type:"DEBIT_NOTE",branchId,partyId:vendorId,sourceDocumentId:bill.id,issueDate:"2026-10-20",purchasePurpose:"MIXED",lines:[{lineType:"MATERIAL",sourceId:product.id,sourceCommercialLineId:original.id,unitSelection:"SECONDARY",quantity:"0.5",stockReturnQuantity:"0.5",taxRate:"0",warehouseId:warehouse.id}]});
+   await postCommercialDocumentForActor(actor,{documentId:returned.id});await postCommercialDocumentForActor(actor,{documentId:returned.id});
+   const correction=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:returned.id}});expect(correction.baseQuantity?.toString()).toBe("5");expect(correction.unitConversionSnapshot).toEqual(original.unitConversionSnapshot);expect(correction.lineTotal.toString()).toBe("25");
+   const projectReturn=await client.projectMaterialMovement.findFirstOrThrow({where:{companyId,projectId:project.id,correctionDocumentId:returned.id}});expect(projectReturn.quantity.toString()).toBe("2.5");expect(projectReturn.totalCost.toString()).toBe("12.5");
+   const inventoryReturn=await client.stockMovement.findFirstOrThrow({where:{companyId,sourceId:returned.id,movementType:"PURCHASE_RETURN"}});expect(inventoryReturn.quantity.toString()).toBe("2.5");expect(inventoryReturn.totalCost.toString()).toBe("12.5");
+   expect(await client.projectMaterialMovement.count({where:{companyId,correctionDocumentId:returned.id}})).toBe(1);expect(await client.stockMovement.count({where:{companyId,sourceId:returned.id,movementType:"PURCHASE_RETURN"}})).toBe(1);
+   expect(await client.commercialDocumentLine.findUniqueOrThrow({where:{id:original.id},include:{purchaseAllocations:true}})).toEqual(original);
+   const journal=await client.journalEntry.findFirstOrThrow({where:{companyId,sourceId:returned.id},include:{lines:true}});expect(journal.lines.reduce((sum,line)=>sum+Number(line.debit)-Number(line.credit),0)).toBe(0);
+  }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules}})}
  });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});
