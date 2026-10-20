@@ -160,6 +160,23 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
    expect(posted.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
   }finally{await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.1"}})}
  });
+ it.each([{type:"FIXED",initial:"1",value:"3",amount:"3",total:"57"},{type:"PERCENTAGE",initial:"10",value:"10",amount:"6",total:"54"}])("retains the applied $type discount when master defaults later change",async scenario=>{
+  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}}),original=await client.accountProduct.findUniqueOrThrow({where:{id:productId}});
+  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true,itemWiseDiscount:true}}});
+  await client.accountProduct.update({where:{id:productId},data:{pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:scenario.type,discountValue:scenario.initial,normalizedDiscountValue:scenario.initial}}});
+  try{
+   const sale=await createCommercialDocumentForActor(actor,{...input,lines:[{...input.lines[0],quantity:"3"}]}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+   expect(line.discountType).toBe(scenario.type);expect(line.discountValue?.toString()).toBe(scenario.value);expect(line.discountAmount.toString()).toBe(scenario.amount);expect(line.lineTotal.toString()).toBe(scenario.total);
+   await postCommercialDocumentForActor(actor,{documentId:sale.id});
+   await client.accountProduct.update({where:{id:productId},data:{pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:scenario.type,discountValue:"9",normalizedDiscountValue:"9"}}});
+   const copied=saleDuplicateDraft(await getCommercialDocumentForActor(actor,sale.id),"2026-10-20");
+   const saved=await submitSaleForActor(actor,{...input,idempotencyKey:randomUUID(),lines:copied.lines.map(row=>({lineType:row.lineType,sourceId:row.sourceId,quantity:row.quantity,rate:row.rate,taxRate:row.taxRate,discountType:row.discountType,discountValue:row.discountValue}))});
+   const retained=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:saved.id}});
+   expect(retained.discountType).toBe(scenario.type);expect(retained.discountValue?.toString()).toBe(scenario.value);expect(retained.discountAmount.toString()).toBe(scenario.amount);expect(retained.lineTotal.toString()).toBe(scenario.total);
+   const posted=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id},include:{journalEntry:{include:{lines:true}}}});
+   expect(posted.status).toBe("POSTED");expect(posted.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
+  }finally{await client.accountProduct.update({where:{id:productId},data:{pricing:original.pricing??Prisma.DbNull}});await client.accountSettings.update({where:{companyId},data:{itemSettings:settings.itemSettings??Prisma.DbNull}})}
+ });
  it("database rejects malformed or inconsistent snapshots, including direct writes",async()=>{
   const doc=await createCommercialDocumentForActor(actor,{...input,idempotencyKey:randomUUID()}),line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:doc.id}});
   for(const snapshot of [{}, {...line.unitConversionSnapshot as object,selection:"OTHER"},{...line.unitConversionSnapshot as object,secondaryUnitsPerBase:"0"},{...line.unitConversionSnapshot as object,primaryUnitId:secondary},{...line.unitConversionSnapshot as object,version:"1"}])await expect(client.$executeRaw`UPDATE commercial_document_lines SET "unitConversionSnapshot"=${JSON.stringify(snapshot)}::jsonb WHERE id=${line.id}::uuid`).rejects.toThrow("commercial_line_unit_snapshot_valid");

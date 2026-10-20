@@ -778,7 +778,8 @@ async function snapshotLine(
     unitConversionSnapshot:units.snapshot,
     rate,
     discountType: effectiveDiscountType,
-    discountValue: row.discountValue,
+    // Retain the applied defaults, not only overrides, for later edit/copy snapshots.
+    discountValue: effectiveDiscountType ? discountValue : row.discountValue,
     taxRate: sourceTax?.taxRate ?? taxRate,
     cessRate: sourceTax?.cessRate ?? new D(row.cessRate ?? 0),
     sourceCommercialLineId: row.sourceCommercialLineId,

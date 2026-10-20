@@ -3172,3 +3172,20 @@ test("A058 A062 Duplicate preserves original selected units after master convers
  expect(await db.commercialDocument.count({where:{companyId}})).toBe(count+2);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals+2);
  expect(await db.commercialDocumentLine.findUniqueOrThrow({where:{id:line.id}})).toEqual(original);
 });
+
+for(const scenario of [{type:"FIXED",value:"1",applied:"3",total:"57"},{type:"PERCENTAGE",value:"10",applied:"10",total:"54"}])test(`A058 applied ${scenario.type} discount survives a master change and browser duplicate`,async({page})=>{
+ test.setTimeout(180000);
+ await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","INVENTORY"],itemSettings:{enabled:true,itemWiseDiscount:true},transactionDefaults:{invoicePreview:false}}});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Discount snapshot verification",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const product=await db.accountProduct.create({data:{companyId,name:`Applied ${scenario.type} discount snapshot`,salePrice:"20",trackInventory:false,pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:scenario.type,discountValue:scenario.value,normalizedDiscountValue:scenario.value}}});
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+ const source=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:product.id,quantity:"3",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:source.id});
+ const original=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}});expect(original.discountValue?.toString()).toBe(scenario.applied);
+ await db.accountProduct.update({where:{id:product.id},data:{pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:scenario.type,discountValue:"9",normalizedDiscountValue:"9"}}});
+ const count=await db.commercialDocument.count({where:{companyId}});await signInSettings(page);await page.goto(`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${source.id}`);await expect(page.getByText(product.name,{exact:true})).toBeVisible({timeout:30000});expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);
+ await page.getByRole("button",{name:"Save",exact:true}).click();await expect.poll(async()=>await db.commercialDocument.count({where:{companyId}}),{timeout:30000}).toBe(count+1);
+ const copy=await db.commercialDocument.findFirstOrThrow({where:{companyId,id:{not:source.id},lines:{some:{productId:product.id}}},include:{lines:true,journalEntry:{include:{lines:true}}}});
+ expect(copy.status).toBe("POSTED");expect(copy.grandTotal.toString()).toBe(scenario.total);expect(copy.lines[0].discountType).toBe(scenario.type);expect(copy.lines[0].discountValue?.toString()).toBe(scenario.applied);expect(copy.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
+ expect(await db.commercialDocumentLine.findUniqueOrThrow({where:{id:original.id}})).toEqual(original);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
