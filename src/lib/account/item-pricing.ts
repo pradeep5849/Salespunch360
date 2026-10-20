@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { quantityInBaseUnits, rateInSelectedUnits, type ItemUnitSelection } from "./unit-quantities";
 import type { ItemSettings } from "./item-settings-policy";
 const amount = z.string().regex(/^\d{1,14}(\.\d{1,4})?$/);
 export const itemPricingInput = z
@@ -164,6 +165,38 @@ export function itemPriceForDocument(
             .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)
         : new Prisma.Decimal(raw)
       : new Prisma.Decimal(0),
+  };
+}
+/** Saved catalogue prices and fixed sale discounts are expressed per primary unit.
+ * Explicit invoice overrides must bypass these defaults. Zero is allowed only for editor previews.
+ */
+export function itemPriceForSelectedUnit(
+  input: {
+    rate?: Prisma.Decimal | string | number | null;
+    taxRate?: Prisma.Decimal | string | number | null;
+    pricing?: unknown;
+    mode: string;
+    purchase?: boolean;
+    quantity: string;
+    selection: ItemUnitSelection;
+    secondaryUnitsPerBase?: string;
+    priceKind?: "RETAIL" | "WHOLESALE" | "CUSTOMER";
+    customerRate?: string;
+    wholesaleRate?: string;
+  },
+) {
+  const quantity = input.quantity === "0"
+    ? "0"
+    : quantityInBaseUnits(input.quantity, input.selection, input.secondaryUnitsPerBase);
+  const defaults = itemPriceForDocument(
+    input.rate, input.taxRate, input.pricing, input.mode, input.purchase,
+    quantity, input.priceKind, input.customerRate, input.wholesaleRate,
+  );
+  return {
+    ...defaults,
+    rate: new Prisma.Decimal(rateInSelectedUnits(
+      defaults.rate.toString(), input.selection, input.secondaryUnitsPerBase,
+    )),
   };
 }
 /** Older editors send exclusive master rates; preserve the saved choices when those rates change. */
