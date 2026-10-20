@@ -23,6 +23,13 @@ export async function renderQuotationPdf(revision:CustomerQuotationDto) {
   const theme=quotationPdfTheme(revision.printPresentation),accent=rgb(...[1,3,5].map(start=>parseInt(theme.color.slice(start,start+2),16)/255) as [number,number,number]);
   const pageWidth=595,pageHeight=842,margin=theme.margin,size=9,lineHeight=16;
   let page=pdf.addPage([pageWidth,pageHeight]),y=pageHeight-margin;
+  async function drawImage(dataUrl:string,maxWidth:number,maxHeight:number){
+    if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(dataUrl))throw new Error("QUOTATION_PRINT_ASSET_INVALID");
+    const image=await pdf.embedPng(Buffer.from(dataUrl.split(",")[1],"base64")),scale=Math.min(maxWidth/image.width,maxHeight/image.height,1),width=image.width*scale,height=image.height*scale;
+    if(y<margin+height+lineHeight){page=pdf.addPage([pageWidth,pageHeight]);y=pageHeight-margin;}
+    page.drawImage(image,{x:margin,y:y-height,width,height});y-=height+lineHeight;
+  }
+  if(revision.printAssets?.logoDataUrl)await drawImage(revision.printAssets.logoDataUrl,150,50);
   let first=true;
   for(const paragraph of quotationText(revision)) {
     const title=first,section=title||["BOQ","Payment schedule"].includes(paragraph)||paragraph.startsWith("GRAND TOTAL:"),fontSize=title?theme.titleSize:size;
@@ -35,6 +42,13 @@ export async function renderQuotationPdf(revision:CustomerQuotationDto) {
         x+=run.font.widthOfTextAtSize(run.text,fontSize);
       }
       y-=lineHeight;
+    }
+  }
+  if(revision.printAssets?.signatureDataUrl)await drawImage(revision.printAssets.signatureDataUrl,160,60);
+  if(revision.printAssets?.authorizedSignatory){
+    for(const line of layout.lines(`Authorized signatory: ${revision.printAssets.authorizedSignatory}`,size,pageWidth-2*margin)){
+      if(y<margin+lineHeight){page=pdf.addPage([pageWidth,pageHeight]);y=pageHeight-margin;}
+      let x=margin;for(const run of layout.runs(line)){page.drawText(run.text,{x,y,size,font:run.font});x+=run.font.widthOfTextAtSize(run.text,size);}y-=lineHeight;
     }
   }
   return Buffer.from(await pdf.save({useObjectStreams:false}));

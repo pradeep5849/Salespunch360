@@ -10179,3 +10179,8 @@ A058-F06 and A062-F02 are now IMPLEMENTED BUT NOT VERIFIED after completing thei
 ### Quotation print theme and safe preview continuation — 2026-10-20
 
 A080-F01/A090-F01: validated existing company theme/amount-word preference now reaches safe customer DTO,actual PDF and saved Web preview. Named print themes/hex accents affect heading/rule/layout; exact shared amount words retained with company currency. Keyboard inline preview/download fallback implemented.85focused tests PASS; final desktop/mobile/public/native-HTTP browser2PASS43.9s,collapsed preview Axe AA,no overflow,no financial writes; full TypeScript/lint/diff PASS. Initial browser cleanup missing Prisma import corrected. No new migration/native source/device certification. A080-F01 remains PARTIAL for full reference themes,logo/signature/native controls; A090 other consumers remain partial. Counts183implemented-but-not-finally-verified/15PARTIAL/1NOT STARTED. Prior exactd0601376 targeted CI all3jobs PASS(run39396100467),not final checkpoint validation.
+
+
+### Quotation company branding — 2026-10-20
+
+A080-F01: company-scoped logo/current signature normalized from private storage, existing visibility switches honored, safe customer DTO contains image bytes/signatory text only. Saved Web preview/shared Web/public/native-HTTP PDF embed assets.215grouped tests PASS/16files (includes90focused cases),browser2PASS47.8s,TypeScript/lint/diff PASS. No schema/migration/native source/device runtime. Current branding only; historical commercial signature snapshots and saved quotation financial values unchanged. StillPARTIAL for full reference/native theme controls and final verification. Prior theme code maps to5f6c85ce.

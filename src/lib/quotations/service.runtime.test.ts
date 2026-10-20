@@ -1,3 +1,4 @@
+vi.mock("./print-assets",()=>({quotationPrintAssets:vi.fn(async()=>({}))}));
 vi.mock("./stock-options",()=>({quotationStockOptionsForActor:vi.fn(async()=>null)}));
 import {requireAccountModules} from "@/lib/account/modules";
 import {beforeEach,describe,expect,it,vi} from "vitest";import {Prisma} from "@prisma/client";

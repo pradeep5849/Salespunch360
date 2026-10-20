@@ -2943,9 +2943,15 @@ test("A086 shipping address snapshots survive party changes native edits and pri
 test("A090 quotation PDF uses scoped company display settings across web public and native downloads",async({page})=>{
  test.setTimeout(120000);
  const saved=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
- let sessionHash:string|undefined;
+ const originalCompany=await db.company.findUniqueOrThrow({where:{id:companyId},select:{logoObjectKey:true}}),oldSignatures=await db.authorizedSignatureVersion.findMany({where:{companyId,isCurrent:true},select:{id:true}}),logoKey=`companies/${companyId}/quotation-print/${randomUUID()}.png`,signatureKey=`companies/${companyId}/quotation-print/${randomUUID()}.png`;
+ let signatureId:string|undefined,sessionHash:string|undefined;
  try{
-  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY",transactionDefaults:{...((saved.transactionDefaults as Record<string,unknown>)??{}),invoicePrintSettings:{theme:"MODERN",amountWordsFormat:"INTERNATIONAL"}}}});
+  const sharp=(await import("sharp")).default,brand=await sharp({create:{width:20,height:10,channels:4,background:"#0f766e"}}).png().toBuffer();
+  await privateStorage().put(logoKey,brand);await privateStorage().put(signatureKey,brand);
+  await db.authorizedSignatureVersion.updateMany({where:{companyId,id:{in:oldSignatures.map(s=>s.id)}},data:{isCurrent:false}});
+  signatureId=(await db.authorizedSignatureVersion.create({data:{companyId,uploadedById:userId,objectKey:signatureKey}})).id;
+  await db.company.update({where:{id:companyId},data:{logoObjectKey:logoKey}});
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY",transactionDefaults:{...((saved.transactionDefaults as Record<string,unknown>)??{}),invoicePrintSettings:{theme:"MODERN",amountWordsFormat:"INTERNATIONAL",companyLogo:true,signatureText:true}},printProfile:{...((saved.printProfile as Record<string,unknown>)??{}),authorizedSignatory:"Quotation Fixture Signer"}}});
   const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]} as ProjectActor;
   const quote=await createQuotationForActor(actor,{branchId,customerId,documentType:"QUOTATION",issueDate:"2026-10-13",validUntil:"2026-11-13",lines:[{lineType:"CUSTOM",itemName:"Scoped display line",quantity:"1",rate:"100",taxRate:"18"}]});
   await transitionQuotationForActor(actor,quote.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,quote.id,"APPROVED");
@@ -2956,10 +2962,12 @@ test("A090 quotation PDF uses scoped company display settings across web public 
   for(const [path,headers] of [[`/workspace/account/quotations/${quote.id}/pdf`,undefined],[`/share/quotation/${share}/pdf`,undefined],[`/api/v1/mobile/account/quotations/${quote.id}/pdf`,{authorization:`Bearer ${token}`}]] as const){
    const response=await page.request.get(path,{headers});expect(response.status()).toBe(200);
    const text=(await extractPdfText(await response.body())).text;
-   expect(text).toContain("Amount in words: one hundred eighteen USD only");expect(text).toContain("GRAND TOTAL: $118.000");expect(text).toContain("Issue: 10/13/2026 | Valid until: 11/13/2026");expect(text).not.toContain("₹");expect(text).not.toMatch(/internalUnitCost|expectedProfit|companyId/);
+   expect(text).toContain("Authorized signatory: Quotation Fixture Signer");expect(text).toContain("Amount in words: one hundred eighteen USD only");expect(text).toContain("GRAND TOTAL: $118.000");expect(text).toContain("Issue: 10/13/2026 | Valid until: 11/13/2026");expect(text).not.toContain("₹");expect(text).not.toMatch(/internalUnitCost|expectedProfit|companyId/);
   }
   await page.goto(`/workspace/account/quotations/${quote.id}/preview`);
   const preview=page.getByRole("region",{name:"Saved document preview"});await expect(preview).toHaveCSS("border-top-color","rgb(15, 118, 110)");
+  await expect(page.getByRole("img",{name:"Company logo",exact:true})).toBeVisible();await expect(page.getByRole("img",{name:"Authorized signature",exact:true})).toBeVisible();
+  await expect(preview).toContainText("Authorized signatory: Quotation Fixture Signer");
   await expect(preview).toContainText("Amount in words: one hundred eighteen USD only");
   expect((await new AxeBuilder({page}).include('section[aria-label="Saved document preview"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);
   const printPreview=page.getByText("Print preview",{exact:true});await printPreview.focus();await page.keyboard.press("Enter");await expect(page.locator('iframe[title="Quotation print preview"]')).toBeVisible();
@@ -2969,8 +2977,12 @@ test("A090 quotation PDF uses scoped company display settings across web public 
   const revision=await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id,companyId}});expect(revision.grandTotal.toFixed(2)).toBe("118.00");
  }finally{
   if(sessionHash)await db.mobileSession.deleteMany({where:{userId,tokenHash:sessionHash}});
+  if(signatureId)await db.authorizedSignatureVersion.deleteMany({where:{companyId,id:signatureId}});
+  await db.authorizedSignatureVersion.updateMany({where:{companyId,id:{in:oldSignatures.map(s=>s.id)}},data:{isCurrent:true}});
+  await db.company.update({where:{id:companyId},data:{logoObjectKey:originalCompany.logoObjectKey}});
+  await privateStorage().delete(logoKey);await privateStorage().delete(signatureKey);
   // Issued quotation history is immutable; the existing guarded company fixture cleanup handles it after the suite.
-  await db.accountSettings.update({where:{companyId},data:{baseCurrency:saved.baseCurrency,displayDecimalPlaces:saved.displayDecimalPlaces,dateFormat:saved.dateFormat,transactionDefaults:saved.transactionDefaults??Prisma.DbNull}});
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:saved.baseCurrency,displayDecimalPlaces:saved.displayDecimalPlaces,dateFormat:saved.dateFormat,printProfile:saved.printProfile??Prisma.DbNull,transactionDefaults:saved.transactionDefaults??Prisma.DbNull}});
  }
 });
 

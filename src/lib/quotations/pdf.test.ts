@@ -64,3 +64,13 @@ describe("customer Unicode PDF",()=>{
    expect(text).toContain("GRAND TOTAL:");expect(text).not.toMatch(/internalCost|companyId/);
   } finally {draw.mockRestore()}
  });
+
+ it("embeds company logo and signature without serializing private keys",async()=>{
+  const sharp=(await import("sharp")).default;
+  const bytes=await sharp({create:{width:4,height:4,channels:4,background:"#123456"}}).png().toBuffer();
+  const image=`data:image/png;base64,${bytes.toString("base64")}`,draw=vi.spyOn(PDFPage.prototype,"drawImage");
+  try{
+   const {text}=await extractPdfText(await renderQuotationPdf({...dto,printAssets:{logoDataUrl:image,signatureDataUrl:image,authorizedSignatory:"Authorized Buyer"}} as never));
+   expect(draw).toHaveBeenCalledTimes(2);expect(text).toContain("Authorized signatory: Authorized Buyer");expect(text).toContain("GRAND TOTAL:");
+  }finally{draw.mockRestore()}
+ });

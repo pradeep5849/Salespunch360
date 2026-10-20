@@ -54744,6 +54744,31 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A080-F01 remains PARTIAL for full supplied GST1–6/Modern Elite themes, logo/signature and native preview/settings controls. A090-F01 other consumer/final validation remains PARTIAL; Hindi intentionally deferred. No financial mutation,production/deployment/merge/A104.",
+          "implementation_commit": "5f6c85ce9263088ef027d094e369f3fd09af881a"
+        },
+        "quotation_company_branding_2026_10_20": {
+          "work": "Quotation customer rendering loads logo and current authorized signature from company-scoped DB-owned private storage keys, normalizes bounded image bytes to PNG and exposes only data URLs and optional authorized-signatory text. Existing companyLogo/signatureText switches are honored. Safe saved Web preview and shared Web/public/mobile PDF renderer embed those assets; source object keys and bank/profile JSON stay private. Current branding is read-only; no posted commercial signature snapshot or stored quotation history is changed.",
+          "files": [
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/lib/quotations/pdf.test.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/service.runtime.test.ts",
+            "src/lib/quotations/service.ts",
+            "src/lib/quotations/print-assets.ts",
+            "src/lib/quotations/print-assets.test.ts"
+          ],
+          "tests": {
+            "focused": "90 PASS/5files,0fail/skip; includes actual PNG image embed/draw assertions, company-owned queries, private-field exclusion, hidden assets/no storage read, missing assets and oversized/corrupt input denial.",
+            "grouped": "215 PASS/16 quotation calculation, lifecycle/capability, conversion, prefill, attachment HTTP, stock-option, PDF/presentation and invoice-print files;0fail/skip17.71s. Includes focused cases,not215+90 unique tests.",
+            "browser": "Desktop/mobile Chromium2PASS47.8s: actual isolated PostgreSQL/private-storage logos/signature, real Web/public/mobile HTTP PDFs with signer text, visible normalized images in saved preview, matching themed amount words, keyboard inline preview,Axe AA collapsed preview/no root overflow,unchanged totals/journal count. Previous theme-only browser pairs overlap. Own fixture current-signature flags/logo/profile/storage restored; no production data.",
+            "typescript": "Final full no-emit PASS after browser exit.",
+            "eslint": "Final changed-file ESLint and git diff --check PASS.",
+            "android": "No native source change/device runtime; native authenticated HTTP PDF exercised.",
+            "migration": "NONE",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A080-F01 remains PARTIAL for all supplied GST1–6/Modern Elite layouts and complete native preview/theme/settings controls; current branding is not a historical quotation asset snapshot. Final checkpoint validation/device runtime remain pending.",
           "implementation_commit": null
         }
       }
@@ -67267,7 +67292,7 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A080-F01 remains PARTIAL for full supplied GST1–6/Modern Elite themes, logo/signature and native preview/settings controls. A090-F01 other consumer/final validation remains PARTIAL; Hindi intentionally deferred. No financial mutation,production/deployment/merge/A104.",
-          "implementation_commit": null
+          "implementation_commit": "5f6c85ce9263088ef027d094e369f3fd09af881a"
         }
       },
       "intermediate_validation": {
