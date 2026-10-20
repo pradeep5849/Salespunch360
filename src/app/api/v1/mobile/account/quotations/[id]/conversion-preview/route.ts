@@ -5,7 +5,7 @@ import {quotationConversionPreviewForActor} from "@/lib/quotations/conversion-pr
 import {mobileAuthorizationFailure, mobileJson, mobileUnauthorized, mobileUnexpected} from "@/lib/mobile/http";
 import type {QuotationActor} from "@/lib/quotations/service";
 const query = z.object({targetType: z.enum(["SALES_INVOICE", "SALES_ORDER"]), revisionId: z.string().uuid().optional()}).strict();
-const conflicts = new Set(["QUOTATION_REVISION_CHANGED", "QUOTATION_TOTALS_STALE"]);
+const conflicts = new Set(["QUOTATION_APPROVAL_REQUIRED", "QUOTATION_REVISION_CHANGED", "QUOTATION_TOTALS_STALE"]);
 const invalid = new Set(["QUOTATION_CUSTOMER_REQUIRED", "INVALID_QUOTATION_LINE_REFERENCE", "CONVERSION_LINE_LIMIT_EXCEEDED", "CONVERSION_TOTAL_MISMATCH"]);
 
 /** GET prepares an unsaved form only. No target creation or source transition. */

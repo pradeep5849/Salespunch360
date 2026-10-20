@@ -2676,9 +2676,13 @@ test("A080 conversion preview API is scoped, exact and never persists a target",
   const actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
   const source=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-18",lines:[{lineType:"CUSTOM",itemName:"Negotiated work",quantity:"3",rate:"100",taxRate:"18",internalUnitCost:"60"}],adjustments:[{label:"Discount",type:"DISCOUNT",valueType:"FIXED",value:"30"},{label:"Transport",type:"ADDITIONAL_CHARGE",valueType:"FIXED",value:"10",taxable:true,taxRate:"5"}]});
   const revision=await db.quotationRevision.findFirstOrThrow({where:{companyId,documentId:source.id}});
-  const counts=async()=>Promise.all([db.commercialDocument.count({where:{companyId}}),db.journalEntry.count({where:{companyId}}),db.accountSettlement.count({where:{companyId}}),db.customer.count({where:{companyId}}),db.project.count({where:{companyId}}),db.quotationAuditEvent.count({where:{companyId}})]),initial=await counts();
+  const counts=async()=>Promise.all([db.commercialDocument.count({where:{companyId}}),db.journalEntry.count({where:{companyId}}),db.accountSettlement.count({where:{companyId}}),db.customer.count({where:{companyId}}),db.project.count({where:{companyId}}),db.quotationAuditEvent.count({where:{companyId}})]);let initial=await counts();
   const path=`/api/v1/mobile/account/quotations/${source.id}/conversion-preview`;
   expect((await request.get(`${path}?targetType=SALES_INVOICE`)).status()).toBe(401);
+  expect((await request.get(`${path}?targetType=SALES_INVOICE`,{headers})).status()).toBe(409);expect(await counts()).toEqual(initial);
+  await transitionQuotationForActor(actor,source.id,"PENDING_APPROVAL");initial=await counts();
+  expect((await request.get(`${path}?targetType=SALES_ORDER`,{headers})).status()).toBe(409);expect(await counts()).toEqual(initial);
+  await transitionQuotationForActor(actor,source.id,"APPROVED");initial=await counts();
   for(const targetType of ["SALES_INVOICE","SALES_ORDER"]){
    const response=await request.get(`${path}?targetType=${targetType}&revisionId=${revision.id}`,{headers});expect(response.status()).toBe(200);expect(response.headers()["cache-control"]).toBe("no-store");const body=await response.json();expect(body).toMatchObject({sourceDocumentId:source.id,sourceRevisionId:revision.id,targetType,branchId,partyId:customerId,grandTotal:"329.10",taxTotal:"49.10",lines:[{quantity:"3",rate:"100.00",discountValue:"30.00"},{itemName:"Transport",rate:"10.00",taxRate:"5"}]});expect(JSON.stringify(body)).not.toMatch(/internalCost|internalUnitCost|expectedProfit|creationRequest/);
   }
@@ -2686,7 +2690,7 @@ test("A080 conversion preview API is scoped, exact and never persists a target",
   expect((await request.get(`${path}?targetType=SALES_INVOICE&companyId=${otherCompanyId}`,{headers})).status()).toBe(400);
   expect((await request.get(`/api/v1/mobile/account/quotations/${randomUUID()}/conversion-preview?targetType=SALES_INVOICE`,{headers})).status()).toBe(404);
   await db.user.update({where:{id:userId},data:{accountRole:"DATA_ENTRY"}});expect((await request.get(`${path}?targetType=SALES_INVOICE`,{headers})).status()).toBe(403);
-  expect(await counts()).toEqual(initial);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:source.id}})).status).toBe("DRAFT");
+  expect(await counts()).toEqual(initial);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:source.id}})).status).toBe("APPROVED");
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules}})}
 });
 

@@ -84,6 +84,10 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
    client.commercialDocument.count({where:{companyId}}),client.customer.count({where:{companyId}}),client.project.count({where:{companyId}}),
    client.accountSettlement.count({where:{companyId}}),client.journalEntry.count({where:{companyId}}),client.quotationAuditEvent.count({where:{companyId}}),
   ]);
+  const draftCounts=await counts();await expect(quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_INVOICE"})).rejects.toThrow("QUOTATION_APPROVAL_REQUIRED");expect(await counts()).toEqual(draftCounts);
+  await transitionQuotationForActor(actor,document.id,"PENDING_APPROVAL");
+  const pendingCounts=await counts();await expect(quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_ORDER"})).rejects.toThrow("QUOTATION_APPROVAL_REQUIRED");expect(await counts()).toEqual(pendingCounts);
+  await transitionQuotationForActor(actor,document.id,"APPROVED");
   const before=await counts(),saved=await getQuotationForActor(actor,document.id);
   const preview=await quotationConversionPreviewForActor(actor,{documentId:document.id,revisionId:saved.revisions[0].id,targetType:"SALES_INVOICE"});
   expect(preview).toMatchObject({sourceDocumentId:document.id,sourceRevisionId:saved.revisions[0].id,partyId:customerId,branchId,grandTotal:"329.10",taxTotal:"49.10",lines:[{quantity:"3",rate:"100.00",discountValue:"30.00"},{itemName:"Transport",rate:"10.00",taxRate:"5"}],reference:{paymentSchedule:[{amount:"329.10"}]}});
@@ -94,7 +98,7 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   const foreignCompany=randomUUID();await client.company.create({data:{id:foreignCompany,name:"Foreign conversion fixture",slug:`conversion-${foreignCompany}`,productEdition:"SALESPUNCH360_ACCOUNT"}});
   try{await expect(quotationConversionPreviewForActor({...actor,companyId:foreignCompany},{documentId:document.id,targetType:"SALES_INVOICE"})).rejects.toThrow("NOT_FOUND");}finally{await client.company.delete({where:{id:foreignCompany}})}
   expect(await counts()).toEqual(before);
-  expect((await getQuotationForActor(actor,document.id)).status).toBe("DRAFT");
+  expect((await getQuotationForActor(actor,document.id)).status).toBe("APPROVED");
  });
 
  it("persists rounding on create/edit/revision, preserves legacy-client omission and protects issued history",async()=>{
@@ -142,8 +146,9 @@ describe.skipIf(!url)("A079 draft audit real transaction",()=>{
   let saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBe("Site division");expect(saved.revisions[0].customerName).toBe("Fixture customer");
   await updateQuotationDraftForActor(actor,document.id,{...input,notes:"Legacy client"});
   saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBe("Site division");
-  expect((await quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_INVOICE"})).billingName).toBe("Site division");
+  await expect(quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_INVOICE"})).rejects.toThrow("QUOTATION_APPROVAL_REQUIRED");
   await transitionQuotationForActor(actor,document.id,"PENDING_APPROVAL");await transitionQuotationForActor(actor,document.id,"APPROVED");
+  expect((await quotationConversionPreviewForActor(actor,{documentId:document.id,targetType:"SALES_INVOICE"})).billingName).toBe("Site division");
   const issued=saved.revisions[0].id;
   await expect(client.quotationRevision.update({where:{id:issued},data:{billingName:"Overwrite issued"}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
   await createQuotationRevisionForActor(actor,document.id,input);saved=await getQuotationForActor(actor,document.id);expect(saved.revisions[0].billingName).toBe("Site division");

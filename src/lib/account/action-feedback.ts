@@ -52,6 +52,7 @@ const messages: Record<string, string> = {
     "Enter the cheque number before recording this payment.",
   CHEQUE_AMOUNT_REQUIRED:
     "Enter a positive cheque amount. A payment discount alone does not require a cheque.",
+  QUOTATION_APPROVAL_REQUIRED: "Only approved estimates can be converted. Approve the current revision first.",
   INVALID_SALE_LINE_SOURCE:
     "A retained item must belong to this invoice and keep its original item identity. Add a new line to change the item.",
   SALE_LEDGER_SOURCE_REQUIRED:

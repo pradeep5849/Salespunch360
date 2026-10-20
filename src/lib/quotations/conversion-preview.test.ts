@@ -12,7 +12,7 @@ const request = {documentId: ID, targetType: "SALES_INVOICE" as const};
 const D = (value: string) => new Prisma.Decimal(value);
 function source() {
   return {id: ID, companyId: "company", branchId: "branch", customerId: "customer", projectId: "project", documentNumber: "EST-7", status: "APPROVED", currentRevisionNumber: 2,
-    revisions: [{id: REV, revisionNumber: 2, customerName: "Buyer", terms: "Agreed terms", inclusions: "Installation", exclusions: null, notes: "Reference only", internalCostTotal: "SECRET", taxableTotal: D("300"), taxTotal: D("54"), grandTotal: D("354"),
+    revisions: [{id: REV, revisionNumber: 2, status:"APPROVED", customerName: "Buyer", terms: "Agreed terms", inclusions: "Installation", exclusions: null, notes: "Reference only", internalCostTotal: "SECRET", taxableTotal: D("300"), taxTotal: D("54"), grandTotal: D("354"),
       lines: [{lineType: "CUSTOM", itemName: "Work", quantity: D("3"), rate: D("100"), taxRate: D("18"), internalUnitCost: D("60")}],
       adjustments: [], paymentSchedule: [{label: "On completion", amount: D("354"), dueDescription: "On delivery"}]}]};
 }
@@ -51,6 +51,12 @@ describe("A080/A083 read-only conversion preparation", () => {
   it("fails closed for a source in an unassigned branch", async () => {
     await expect(quotationConversionPreviewForActor({...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: ["other"]}, request)).rejects.toThrow();
     await expect(quotationConversionPreviewForActor({...actor, branchAccessScope: "SELECTED_BRANCHES", branchIds: ["branch"]}, request)).resolves.toMatchObject({branchId: "branch"});
+  });
+  it.each(["DRAFT","PENDING_APPROVAL","REJECTED","SENT","ACCEPTED","DECLINED","EXPIRED","CANCELLED"])("requires current approval before preparing %s source",async status=>{
+    m.read.mockResolvedValue({...source(),status});
+    await expect(quotationConversionPreviewForActor(actor,request)).rejects.toThrow("QUOTATION_APPROVAL_REQUIRED");
+    const document=source();document.revisions[0].status=status;m.read.mockResolvedValue(document);
+    await expect(quotationConversionPreviewForActor(actor,{...request,targetType:"SALES_ORDER"})).rejects.toThrow("QUOTATION_APPROVAL_REQUIRED");
   });
   it("refuses a stale revision selection", async () => {
     await expect(quotationConversionPreviewForActor(actor, {...request, revisionId: ID})).rejects.toThrow("QUOTATION_REVISION_CHANGED");

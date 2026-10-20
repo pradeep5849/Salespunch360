@@ -32,6 +32,7 @@ export async function quotationConversionPreviewForActor(actor: QuotationActor, 
   const revision = document.revisions[0];
   if (!revision || revision.revisionNumber !== document.currentRevisionNumber
     || (request.revisionId && request.revisionId !== revision.id)) throw new Error("QUOTATION_REVISION_CHANGED");
+  if(document.status!=="APPROVED"||revision.status!=="APPROVED")throw new Error("QUOTATION_APPROVAL_REQUIRED");
   // Lead acceptance owns customer/Project creation. Merely opening a Sale form
   // must never create a customer or run that independent Plus workflow.
   if (!document.customerId) throw new Error("QUOTATION_CUSTOMER_REQUIRED");

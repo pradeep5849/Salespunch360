@@ -26,7 +26,7 @@ describe("A080/A083 native conversion prefill GET", () => {
   it.each([new AuthorizationError(), new Error("MOBILE_FORBIDDEN"), new Error("MODULE_DISABLED:SALES_ORDER")])("returns forbidden for role/module denial", async error => {
     m.preview.mockRejectedValue(error); expect((await GET(request(), context)).status).toBe(403);
   });
-  it.each([["NOT_FOUND", 404], ["QUOTATION_REVISION_CHANGED", 409], ["QUOTATION_TOTALS_STALE", 409], ["QUOTATION_CUSTOMER_REQUIRED", 400], ["CONVERSION_TOTAL_MISMATCH", 400], ["CONVERSION_LINE_LIMIT_EXCEEDED", 400]])("maps %s to controlled HTTP %s", async (code, status) => {
+  it.each([["QUOTATION_APPROVAL_REQUIRED", 409], ["NOT_FOUND", 404], ["QUOTATION_REVISION_CHANGED", 409], ["QUOTATION_TOTALS_STALE", 409], ["QUOTATION_CUSTOMER_REQUIRED", 400], ["CONVERSION_TOTAL_MISMATCH", 400], ["CONVERSION_LINE_LIMIT_EXCEEDED", 400]])("maps %s to controlled HTTP %s", async (code, status) => {
     m.preview.mockRejectedValue(new Error(code as string)); const result = await GET(request(), context); expect(result.status).toBe(status); expect(await result.json()).toEqual({error: code});
   });
 });
