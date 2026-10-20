@@ -10236,3 +10236,12 @@ Android compile/40focusedQuotationJVM/lint PASS8m14s,0testfailures/errors/skips,
 ### 2026-10-20 — focused conversion CI coverage
 
 `0212b43e` adds prefill/capability/confirmation-route regressions and a separate8-case real PostgreSQL conversion step to targeted CI. YAML parsed;exact DB step passed8/8 locally(2.29s),0failed/skipped. Existing pinned actions andNode22 unchanged. No whole2631+suite was added per fix. New GitHub head execution is pending;predecessor successes are not substituted. Counts remain185implemented-but-not-finally-verified/13partial/1notstarted;all199 IDs andfinal verification limitations preserved.
+
+
+### 2026-10-20 — native system PDF printing slice
+
+`3814047f` adds Print PDF from the authorized native preview,asynchronous original-byte output,sanitized job names,page metadata,cancellation/resource cleanup andShare fallback. No financial mutation ornewAPI/model/migration/dependency.
+
+Compile/45focusedQuotationJVM/lint PASS5m49s,0testfailure/error/skip,lint0error/4warning/6information. Five new pure tests cover exact-byte integrity,cancellation before/midcopy,invalid response rejection andname safety. Android PrintManager/spooler/page-range/callback/descriptor/unavailable-service device runtime NOT RUN. No physical print was executed.
+
+A080-F01 remains PARTIAL for full original themes/remaining settings controls;counts remain185IMPLEMENTED BUT NOT VERIFIED/13PARTIAL/1NOTSTARTED. All199 final statuses remain unset. Predecessor95d1513d targeted CI passed all3jobs includingnewconversionDBstep(run39443786746);this native code head requiresitsownCI. No merge/deploy/production/A104.
