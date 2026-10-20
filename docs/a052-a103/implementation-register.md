@@ -10169,3 +10169,8 @@ A058-F06/A062-F02: native purchase assigned-unit selection, selected cost defaul
 ### Native generic sales/order units — 2026-10-20
 
 A058-F06/A062-F02: assigned-unit selector and selected primary-price defaults now wired to generic native sales/order entry; source-linked units retained, invalid conversions disable Save. Kotlin compile and48focused JVM tests PASS (0fail/errors/skips); report quantity/stock/profit regression40PASS/5files. No native device runtime claimed. Prior purchase continuation maps to1e492c7afc4378619d3151a15dc148dc95a77b98. Findings remain PARTIAL until complete original-scope reconciliation and final-head validation.
+
+
+### Original unit-finding implementation reconciliation — 2026-10-20
+
+A058-F06 and A062-F02 are now IMPLEMENTED BUT NOT VERIFIED after completing their missing native purchase/order entry consumers. Original assignment, exact conversion, historical source, stock/COGS, return and mixed Project correction requirements have implementation and linked focused evidence; report quantities retain appropriate saved/primary units. Full final-head and native device runtime remain pending, so neither finding receives a final verification status. Current199 findings:183 IMPLEMENTED BUT NOT VERIFIED,15 PARTIAL,1 NOT STARTED. This changes implementation counts only. Generic native continuation maps tof7171d14.

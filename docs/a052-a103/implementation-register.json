@@ -14068,7 +14068,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -14542,7 +14542,23 @@
             "diff": "git diff --check PASS."
           },
           "remaining": "PARTIAL pending complete original finding reconciliation and final exact-head validation; native device runtime not executed.",
-          "commit_sha": null
+          "commit_sha": "f7171d14d06b343ac9f5965e7cb8e134e9d5c79a"
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_original_scope_reconciliation",
+          "implementation": "Original required correction is code-complete: company item secondary assignment/rules roundtrip; public commercial selection resolves authoritative primary quantities/prices; native purchase and generic order selectors complete the missing entry consumers. Historical retained rules, returns, mixed Project allocation and stock/COGS are implemented. Reports intentionally display retained billed units or primary stock units and do not fabricate mixed-unit totals.",
+          "evidence": "Earlier linked assignment/save/reload/isolation tests plus selected-unit105group; actual PostgreSQL18case mixed/physical/source suite; public Web/native HTTP create/replay/post desktop/mobile cases; native compile48JVM; quantity/stock/profit40test regression. All evidence remains intermediate and platform-specific, not final199-finding verification.",
+          "verification_status": {
+            "code": "IMPLEMENTED",
+            "automated": "Focused and grouped PASS; full final-head pending",
+            "web_browser": "Selected-unit desktop Chromium PASS",
+            "responsive_web": "Selected-unit mobile Chromium PASS",
+            "android_runtime": "NOT RUN; compile/JVM only",
+            "backend_database": "Actual isolated PostgreSQL PASS; production untouched"
+          },
+          "remaining": "Final exact-head complete validation and native emulator/device verification remain. No original business functionality intentionally left partial; no FIXED+VERIFIED/final finding status assigned.",
+          "commit_sha": "f7171d14d06b343ac9f5965e7cb8e134e9d5c79a"
         }
       ]
     },
@@ -19628,7 +19644,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -19996,7 +20012,23 @@
             "diff": "git diff --check PASS."
           },
           "remaining": "PARTIAL pending complete original finding reconciliation and final exact-head validation; native device runtime not executed.",
-          "commit_sha": null
+          "commit_sha": "f7171d14d06b343ac9f5965e7cb8e134e9d5c79a"
+        },
+        {
+          "date": "2026-10-20",
+          "shared_fix_key": "secondary_unit_original_scope_reconciliation",
+          "implementation": "Original required correction is code-complete: company item secondary assignment/rules roundtrip; public commercial selection resolves authoritative primary quantities/prices; native purchase and generic order selectors complete the missing entry consumers. Historical retained rules, returns, mixed Project allocation and stock/COGS are implemented. Reports intentionally display retained billed units or primary stock units and do not fabricate mixed-unit totals.",
+          "evidence": "Earlier linked assignment/save/reload/isolation tests plus selected-unit105group; actual PostgreSQL18case mixed/physical/source suite; public Web/native HTTP create/replay/post desktop/mobile cases; native compile48JVM; quantity/stock/profit40test regression. All evidence remains intermediate and platform-specific, not final199-finding verification.",
+          "verification_status": {
+            "code": "IMPLEMENTED",
+            "automated": "Focused and grouped PASS; full final-head pending",
+            "web_browser": "Selected-unit desktop Chromium PASS",
+            "responsive_web": "Selected-unit mobile Chromium PASS",
+            "android_runtime": "NOT RUN; compile/JVM only",
+            "backend_database": "Actual isolated PostgreSQL PASS; production untouched"
+          },
+          "remaining": "Final exact-head complete validation and native emulator/device verification remain. No original business functionality intentionally left partial; no FIXED+VERIFIED/final finding status assigned.",
+          "commit_sha": "f7171d14d06b343ac9f5965e7cb8e134e9d5c79a"
         }
       ],
       "push_checkpoint_evidence": {
