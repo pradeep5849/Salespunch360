@@ -614,7 +614,7 @@ async function snapshotLine(
   const units=resolveCommercialUnitSnapshot({quantity:row.quantity,master},sourceLine??undefined);
   const defaultPricing=itemPriceForDocument(master?.rate,master?.tax,master?.pricing,documentTaxMode,purchase,row.quantity);
   const quantity = new D(row.quantity),
-    rate = new D(row.rate ?? defaultPricing.rate),
+    rate = new D(row.rate ?? sourceLine?.rate ?? defaultPricing.rate),
     taxRate = resolveCommercialTaxRate(row.taxRate, master?.tax ?? null),
     discountValue = new D(row.discountValue ?? (row.discountType===undefined&&itemSettings.itemWiseDiscount?defaultPricing.discountValue:0));
   const effectiveDiscountType=row.discountType===undefined&&itemSettings.itemWiseDiscount?defaultPricing.discountType:row.discountType;
