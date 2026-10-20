@@ -14357,6 +14357,37 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL. Duplicate provenance, public selected-unit input and production default pricing, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return runtime coverage remain. Amendment retention is implemented and covered by actual local PostgreSQL regression, not a completed page/final-head claim."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "247c7b2a0de24a0154e8d486256be0510037007c",
+          "work": "Duplicate of a posted Sale with SECONDARY lines now carries only source Sale/line IDs. Shared writer validates company, same branch, Sale-entry/ledger-view permission, posted source type and item identity, then reloads original conversion from storage. Provenance participates in creation idempotency hash and remains separate from correction/settlement links. Web duplicate form preserves IDs through explicit Save, clears header provenance on Save & New and clears line provenance when changing item type. Ordinary PRIMARY duplicates retain existing behavior. Added selected-unit pricing tests to targeted CI.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "tests": {
+            "focused": "23 PASS / 3 files, 0 failures/skips; overlapping with final group, not additional tests.",
+            "grouped": "174 PASS / 12 files, 0 failures/skips, 22.86s. Local PostgreSQL unit history/cheque/Project, Sale save/submit/duplicate, forged input, request hash, selected-unit pricing, mobile boundary and Web action regressions.",
+            "database": "Explicit Save posts independent duplicate using retained 0.1Box/Piece after master changes to0.2: 1Box/base10/total200. Retry returns same invoice. Invalid source document/line or missing provenance header rejected without surviving document; changed source with same idempotency key rejected. No source adjustment, receipt allocation or posted-source mutation; new journal balanced. Fixture uses validated seeded SECONDARY draft, not a public selector.",
+            "web_browser": "Final actual Chromium desktop + mobile-web: 2 PASS in41.4s,0 failures/skips. Opening Duplicate writes no document/journal; Save posts independent copy preserving original snapshot/base10,total200,no copied settlement/advance and no original mutation; root overflow check passes.",
+            "mobile_api": "Within both actual browser tests: authenticated /api/v1/mobile/account/transactions rejects forged source line with400/no document, posts valid duplicate201 with original snapshot/base10 and replays same request201/sameID/no duplicate journal. This is server/mobile API runtime, not Android UI/device verification.",
+            "typescript": "Final full no-emit typecheck PASS after browser server stopped.",
+            "eslint": "Final focused ESLint PASS.",
+            "workflow": "Workflow YAML parsed with PyYAML PASS; git diff --check PASS. Initial node YAML probe unavailable because yaml npm package absent; no dependency installed.",
+            "initial_corrections": "Initial browser-fixture ledger spread failed TypeScript nested relation types despite browser runtime passing; replaced with explicit ledger fields. Concurrent dev-server type generation invalidated a later typecheck file list; reran after browser exit and final check passed. Earlier browser runs overlap and are not counted as extra unique cases.",
+            "android": "No Android source changed or native UI/emulator/device runtime executed. API compatibility tested independently.",
+            "migration": "No schema or migration change.",
+            "prior_ci": "Previous exact head00acc8aef3f5997e5df4bb53f261ce23697cfa25 CI39358827666 passed web/migration/android; this is prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new checkpoint CI requested separately."
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL: public selected-unit entry and production default-pricing wiring, native selectors/rule retrieval, report consumers and converted mixed-Project/vendor-return coverage remain. A071-F05 broader unsupported Home source/party-transfer work remains unchanged. No finding promoted or final verification inferred."
         }
       ]
     },
@@ -19688,6 +19719,37 @@
             "final_checkpoint_head": "NOT RUN"
           },
           "remaining": "A058-F06/A062-F02 remain PARTIAL. Duplicate provenance, public selected-unit input and production default pricing, Web/native selectors, report quantity consumers and converted mixed-Project/vendor-return runtime coverage remain. Amendment retention is implemented and covered by actual local PostgreSQL regression, not a completed page/final-head claim."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "247c7b2a0de24a0154e8d486256be0510037007c",
+          "work": "Duplicate of a posted Sale with SECONDARY lines now carries only source Sale/line IDs. Shared writer validates company, same branch, Sale-entry/ledger-view permission, posted source type and item identity, then reloads original conversion from storage. Provenance participates in creation idempotency hash and remains separate from correction/settlement links. Web duplicate form preserves IDs through explicit Save, clears header provenance on Save & New and clears line provenance when changing item type. Ordinary PRIMARY duplicates retain existing behavior. Added selected-unit pricing tests to targeted CI.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "tests": {
+            "focused": "23 PASS / 3 files, 0 failures/skips; overlapping with final group, not additional tests.",
+            "grouped": "174 PASS / 12 files, 0 failures/skips, 22.86s. Local PostgreSQL unit history/cheque/Project, Sale save/submit/duplicate, forged input, request hash, selected-unit pricing, mobile boundary and Web action regressions.",
+            "database": "Explicit Save posts independent duplicate using retained 0.1Box/Piece after master changes to0.2: 1Box/base10/total200. Retry returns same invoice. Invalid source document/line or missing provenance header rejected without surviving document; changed source with same idempotency key rejected. No source adjustment, receipt allocation or posted-source mutation; new journal balanced. Fixture uses validated seeded SECONDARY draft, not a public selector.",
+            "web_browser": "Final actual Chromium desktop + mobile-web: 2 PASS in41.4s,0 failures/skips. Opening Duplicate writes no document/journal; Save posts independent copy preserving original snapshot/base10,total200,no copied settlement/advance and no original mutation; root overflow check passes.",
+            "mobile_api": "Within both actual browser tests: authenticated /api/v1/mobile/account/transactions rejects forged source line with400/no document, posts valid duplicate201 with original snapshot/base10 and replays same request201/sameID/no duplicate journal. This is server/mobile API runtime, not Android UI/device verification.",
+            "typescript": "Final full no-emit typecheck PASS after browser server stopped.",
+            "eslint": "Final focused ESLint PASS.",
+            "workflow": "Workflow YAML parsed with PyYAML PASS; git diff --check PASS. Initial node YAML probe unavailable because yaml npm package absent; no dependency installed.",
+            "initial_corrections": "Initial browser-fixture ledger spread failed TypeScript nested relation types despite browser runtime passing; replaced with explicit ledger fields. Concurrent dev-server type generation invalidated a later typecheck file list; reran after browser exit and final check passed. Earlier browser runs overlap and are not counted as extra unique cases.",
+            "android": "No Android source changed or native UI/emulator/device runtime executed. API compatibility tested independently.",
+            "migration": "No schema or migration change.",
+            "prior_ci": "Previous exact head00acc8aef3f5997e5df4bb53f261ce23697cfa25 CI39358827666 passed web/migration/android; this is prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new checkpoint CI requested separately."
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL: public selected-unit entry and production default-pricing wiring, native selectors/rule retrieval, report consumers and converted mixed-Project/vendor-return coverage remain. A071-F05 broader unsupported Home source/party-transfer work remains unchanged. No finding promoted or final verification inferred."
         }
       ],
       "push_checkpoint_evidence": {
@@ -50764,6 +50826,37 @@
         {
           "work": "Connected Android Home source metadata, distinct row keys, source-specific expense/quotation detail opening and authorized payment PDF preview. Native hides unsupported print/share and non-debt balances. Updated client opts into homeVersion=2; absent version preserves commercial-only mobile responses. Web mixed-source Home is enabled. No migration or accounting writes.",
           "tests": "Android compile plus 5 focused JVM tests passed (2 source metadata/legacy defaults, 3 sharing/status; zero failures/errors/skips), 1m38s. Desktop/mobile Chromium 2/2 passed (29.9s), including actual legacy/v2 mobile API roundtrip, correct receipt metadata, scoped payment destination, no journal writes, scoped Axe AA and no horizontal overflow. 79 grouped service/render/print/PostgreSQL checks and 12 Home-focused tests passed. Physical device/other source routes and unsupported filter semantics remain pending; finding PARTIAL, no final-head verification."
+        },
+        {
+          "date": "2026-10-20",
+          "implementation_commit": "247c7b2a0de24a0154e8d486256be0510037007c",
+          "work": "Duplicate of a posted Sale with SECONDARY lines now carries only source Sale/line IDs. Shared writer validates company, same branch, Sale-entry/ledger-view permission, posted source type and item identity, then reloads original conversion from storage. Provenance participates in creation idempotency hash and remains separate from correction/settlement links. Web duplicate form preserves IDs through explicit Save, clears header provenance on Save & New and clears line provenance when changing item type. Ordinary PRIMARY duplicates retain existing behavior. Added selected-unit pricing tests to targeted CI.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/sale-duplicate.test.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "tests": {
+            "focused": "23 PASS / 3 files, 0 failures/skips; overlapping with final group, not additional tests.",
+            "grouped": "174 PASS / 12 files, 0 failures/skips, 22.86s. Local PostgreSQL unit history/cheque/Project, Sale save/submit/duplicate, forged input, request hash, selected-unit pricing, mobile boundary and Web action regressions.",
+            "database": "Explicit Save posts independent duplicate using retained 0.1Box/Piece after master changes to0.2: 1Box/base10/total200. Retry returns same invoice. Invalid source document/line or missing provenance header rejected without surviving document; changed source with same idempotency key rejected. No source adjustment, receipt allocation or posted-source mutation; new journal balanced. Fixture uses validated seeded SECONDARY draft, not a public selector.",
+            "web_browser": "Final actual Chromium desktop + mobile-web: 2 PASS in41.4s,0 failures/skips. Opening Duplicate writes no document/journal; Save posts independent copy preserving original snapshot/base10,total200,no copied settlement/advance and no original mutation; root overflow check passes.",
+            "mobile_api": "Within both actual browser tests: authenticated /api/v1/mobile/account/transactions rejects forged source line with400/no document, posts valid duplicate201 with original snapshot/base10 and replays same request201/sameID/no duplicate journal. This is server/mobile API runtime, not Android UI/device verification.",
+            "typescript": "Final full no-emit typecheck PASS after browser server stopped.",
+            "eslint": "Final focused ESLint PASS.",
+            "workflow": "Workflow YAML parsed with PyYAML PASS; git diff --check PASS. Initial node YAML probe unavailable because yaml npm package absent; no dependency installed.",
+            "initial_corrections": "Initial browser-fixture ledger spread failed TypeScript nested relation types despite browser runtime passing; replaced with explicit ledger fields. Concurrent dev-server type generation invalidated a later typecheck file list; reran after browser exit and final check passed. Earlier browser runs overlap and are not counted as extra unique cases.",
+            "android": "No Android source changed or native UI/emulator/device runtime executed. API compatibility tested independently.",
+            "migration": "No schema or migration change.",
+            "prior_ci": "Previous exact head00acc8aef3f5997e5df4bb53f261ce23697cfa25 CI39358827666 passed web/migration/android; this is prior-head evidence only.",
+            "final_checkpoint_head": "NOT RUN; new checkpoint CI requested separately."
+          },
+          "remaining": "A058-F06/A062-F02 remain PARTIAL: public selected-unit entry and production default-pricing wiring, native selectors/rule retrieval, report consumers and converted mixed-Project/vendor-return coverage remain. A071-F05 broader unsupported Home source/party-transfer work remains unchanged. No finding promoted or final verification inferred."
         }
       ],
       "push_checkpoint_evidence": {

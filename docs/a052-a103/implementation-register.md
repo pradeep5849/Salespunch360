@@ -10111,3 +10111,9 @@ A058-F06/A062-F02 remain PARTIAL. Commit `2aad97aaf2b7ca8b4f09fbb7a0abe066b66466
 ### Retained units in posted-sale amendments — 20 October 2026
 
 A058-F06/A062-F02 remain PARTIAL. Commit `5c5b259aa943a898c169e037044c9dbc9bc2c9ff` keeps verified original selected units through the atomic amendment workflow. Company/branch/source identity checks remain enforced; raw client snapshots cannot grant provenance. Local PostgreSQL/grouped regression: 125 tests across 7 files PASS, zero failures/skips. Final TypeScript, focused ESLint and diff checks PASS. Seeded converted-source test proves original factor retained after master changes, exact base quantities, balanced journals, unchanged posted history and retry idempotency. No new migration or browser/native runtime claim. Duplicate provenance, public selectors/default wiring and remaining report/Project coverage remain pending.
+
+### Selected-unit Sale duplication — 20 October 2026
+
+Commit `247c7b2a0de24a0154e8d486256be0510037007c` retains verified source unit provenance for posted Sale duplicates. Linked evidence: A058-F06/A062-F02/A071-F05; findings remain PARTIAL. Company/branch/permission/source-item checks and request hashing prevent forged or conflicting provenance. Opening Duplicate writes nothing; explicit Save posts an independent invoice with original conversion and no copied payments/returns. Save & New clears header provenance.
+
+Validation: 174 grouped tests/12 files PASS, zero failures/skips; final actual desktop + mobile-web browser/API cases 2 PASS (41.4s), including authenticated mobile save/retry and forged-source rejection. TypeScript, focused ESLint, YAML parsing and diff checks PASS. Initial fixture typing/dev-generated-file race corrected before final pass. No native Android runtime or migration claimed. Public selectors/default-pricing/report/native rule work remains pending.
