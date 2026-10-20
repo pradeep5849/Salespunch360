@@ -54789,6 +54789,20 @@
           },
           "remaining": "A080-F01 stays PARTIAL for all supplied GST1–6/Modern Elite layouts, complete native theme/settings/print controls and final validation; no emulator/device runtime.",
           "implementation_commit": "f2cf93a6dcd6fcb99d34131f9a871f7e1838945d"
+        },
+        "quotation_native_preview_lint_fix_2026_10_20": {
+          "work": "Replaced the PDF-page produceState block with explicit remembered state and a keyed LaunchedEffect, preserving asynchronous one-page rendering and cancellation/resource cleanup while satisfying the Compose lint detector.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationPdfPreview.kt"
+          ],
+          "tests": {
+            "prior_ci": "Exact140735807a2416876824aa992b0faaedc690502e/run39399517107 Web and migration PASS;Android FAILED ProduceStateDoesNotAssignValue. Reproduced locally:1error/4warnings. CI log download host denied by network policy;GitHub check annotations and local lint identified the exact source without bypassing the proxy.",
+            "local_final": "compileDebugKotlin +34Quotation JVM tests +lintDebug BUILD SUCCESSFUL5m29s;0unitfail/errors/skips;lint0errors/4existingwarnings.",
+            "runtime": "Native emulator/device rendering/chooser/TalkBack NOT RUN.",
+            "final_ci": "PENDING new exact-head run;no final verification inferred."
+          },
+          "remaining": "OriginalA080-F01 full reference theme/native settings/print controls and final checkpoint verification remain PARTIAL.",
+          "implementation_commit": null
         }
       }
     },

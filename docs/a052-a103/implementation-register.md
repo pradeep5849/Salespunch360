@@ -10189,3 +10189,8 @@ A080-F01: company-scoped logo/current signature normalized from private storage,
 ### Native quotation PDF-page preview — 2026-10-20
 
 A080-F01: native details now render exact authorized customer PDF with bounded one-page raster,Previous/Next,Close and same-byte Share. Resources/temp files closed; underlying detail hidden; stale different-document response ignored. Final Kotlin compile and34Quotation JVM tests PASS2m11s,0fail/errors/skips; no emulator/device/PdfRenderer/chooser/TalkBack runtime claimed. Current server branding maps to11481beb. Finding remainsPARTIAL for full reference theme/settings/print controls and final validation.
+
+
+### Native PDF preview lint correction — 2026-10-20
+
+A080-F01: exact14073580 CI39399517107 Web/migration PASS,Android lint failed ProduceStateDoesNotAssignValue. Local reproduction identified1error/4warnings. Explicit remembered state/keyed LaunchedEffect fixes the detector while retaining cancellation/resource handling. Final compile,34Quotation JVM andlintDebug PASS5m29s;0unitfail/errors/skips,lint0errors/4existingwarnings. No native runtime certification. New-head CI pending;original finding remainsPARTIAL. Conversion source/schema work in the workspace is separate and not included in this lint-only commit.

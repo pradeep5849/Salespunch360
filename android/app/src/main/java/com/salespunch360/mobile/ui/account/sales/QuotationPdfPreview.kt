@@ -27,9 +27,9 @@ private data class QuotationPdfPage(val bitmap:Bitmap,val count:Int)
 fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit){
  val context=LocalContext.current
  var number by remember(bytes){mutableIntStateOf(0)}
- val page by produceState<Result<QuotationPdfPage>?>(null,bytes,number){
-  value=null
-  value=try{Result.success(withContext(Dispatchers.IO){
+ var page by remember(bytes,number){mutableStateOf<Result<QuotationPdfPage>?>(null)}
+ LaunchedEffect(bytes,number){
+  page=try{Result.success(withContext(Dispatchers.IO){
    val file=File.createTempFile("quotation-preview-",".pdf",context.cacheDir)
    try{
     file.writeBytes(bytes)
