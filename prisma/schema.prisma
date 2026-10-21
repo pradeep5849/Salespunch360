@@ -2447,6 +2447,7 @@ model CommercialDocument {
   ewayBillNumber         String?                  @db.VarChar(12)
   sourceDocumentId       String?                  @db.Uuid
   sourcePurchaseOrderId  String?                  @db.Uuid
+  sourceSalesOrderId     String?                  @db.Uuid
   purchasePurpose        PurchasePurpose?
   purchaseClassification PurchaseClassification?
   materialTreatment      MaterialTreatment?
@@ -2509,6 +2510,8 @@ model CommercialDocument {
   adjustments            CommercialDocument[]     @relation("CommercialSource")
   sourcePurchaseOrder    CommercialDocument?      @relation("PurchaseOrderFulfillment", fields: [companyId, sourcePurchaseOrderId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   purchaseBills          CommercialDocument[]     @relation("PurchaseOrderFulfillment")
+  sourceSalesOrder       CommercialDocument? @relation("SalesOrderFulfillment", fields: [companyId, sourceSalesOrderId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  salesOrderInvoices     CommercialDocument[] @relation("SalesOrderFulfillment")
   lines                  CommercialDocumentLine[]
   reminders              PaymentReminder[]
   allocations            SettlementAllocation[]
@@ -2526,6 +2529,7 @@ model CommercialDocument {
   @@index([companyId, projectId])
   @@index([companyId, sourceQuotationRevisionId])
   @@index([companyId, sourcePurchaseOrderId, status])
+  @@index([companyId, sourceSalesOrderId, status])
   @@map("commercial_documents")
 }
 
@@ -2572,6 +2576,9 @@ model CommercialDocumentLine {
   companyId      String             @db.Uuid
   documentId     String             @db.Uuid
   sourceCommercialLineId String?    @db.Uuid
+  sourceOrderLineId String? @db.Uuid
+  sourceOrderLine CommercialDocumentLine? @relation("OrderLineFulfilment", fields: [companyId, sourceOrderLineId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  fulfilmentLines CommercialDocumentLine[] @relation("OrderLineFulfilment")
   position       Int
   lineType       CommercialLineType
   productId      String?            @db.Uuid

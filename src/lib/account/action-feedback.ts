@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  ORDER_NOT_CONFIRMED:"Confirm the order before closing its remaining quantities.",
+  ORDER_MANUALLY_CLOSED:"This order’s remaining quantities have been closed. Open its retained history.",
+  ORDER_QUANTITY_EXCEEDED:"The invoice or bill exceeds the order’s remaining quantity. Reload the order before saving.",
+  ORDER_LEGACY_FULFILMENT_UNALLOCATED:"Historical bills have no source-line allocation, so remaining quantities cannot be inferred safely.",
+  INVALID_SOURCE_ORDER_LINE:"Choose a line belonging to the source order and keep its original item.",
+  SOURCE_ORDER_LINE_REQUIRED:"Select the source order line for every billed item.",
   QUOTATION_ALREADY_CONVERTED:"This estimate has already been converted. Open its recorded sale or order.",
   QUOTATION_REVISION_CHANGED:"The estimate revision has changed. Reload the approved estimate before saving.",
   QUOTATION_CONVERSION_KEY_REQUIRED:"Reload the conversion form before saving so retries use the same request.",

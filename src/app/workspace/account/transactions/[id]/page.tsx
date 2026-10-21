@@ -1,3 +1,4 @@
+import {OrderProgress} from "@/components/account/order-progress";
 import {Money,AccountTimestamp} from "@/components/account/account-ui";
 import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
@@ -41,6 +42,7 @@ export default async function Page({
         Issue {<AccountDate value={x.issueDate.toISOString()}/>}{" "}
         {x.dueDate && <>· Due <AccountDate value={x.dueDate.toISOString()}/></>}
       </p>
+      {["SALES_ORDER","PURCHASE_ORDER"].includes(x.type)&&<OrderProgress id={x.id}/>}
       {x.purchasePurpose && (
         <section className="account-card">
           <h2>Purchase information</h2>

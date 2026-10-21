@@ -1,3 +1,4 @@
+import {validateOrderFulfilmentInTx} from "./orders/source";
 import {requireQuotationSourceInTx,closeQuotationSourceInTx,authorizeQuotationConversion} from "@/lib/quotations/commercial-link";
 import {commercialBaseQuantity,commercialReturnBaseQuantity} from "./commercial-stock-quantity";
 import {resolveCommercialUnitSnapshot} from "./commercial-unit-snapshot";
@@ -300,6 +301,7 @@ const lineSchema = z.object({
   serialNumberId: z.string().uuid().optional(),
   stockReturnQuantity: decimal.optional(),
   sourceCommercialLineId: z.string().uuid().optional(),
+  sourceOrderLineId: z.string().uuid().optional(),
   copiedFromSaleLineId: z.string().uuid().optional(),
   purchaseAllocations: z
     .array(
@@ -342,6 +344,7 @@ export const commercialDocumentInput = z
     sourceQuotationRevisionId:z.string().uuid().optional(),
     copiedFromSaleId: z.string().uuid().optional(),
     sourcePurchaseOrderId: z.string().uuid().optional(),
+    sourceSalesOrderId: z.string().uuid().optional(),
     purchasePurpose: z.nativeEnum(PurchasePurpose).optional(),
     purchaseClassification: z.nativeEnum(PurchaseClassification).optional(),
     projectReference: z.string().trim().max(240).optional(),
@@ -788,6 +791,7 @@ async function snapshotLine(
     taxRate: sourceTax?.taxRate ?? taxRate,
     cessRate: sourceTax?.cessRate ?? new D(row.cessRate ?? 0),
     sourceCommercialLineId: row.sourceCommercialLineId,
+    sourceOrderLineId: row.sourceOrderLineId,
     warehouseId: row.warehouseId,
     batchId: row.batchId,
     serialNumberId: row.serialNumberId,
@@ -1318,7 +1322,10 @@ export async function createCommercialDocumentForActor(
             }
           }
         }
-        if (d.sourcePurchaseOrderId) {
+        if(d.sourceSalesOrderId)await requireAccountModules(actor,"SALES_ORDER");
+        if(d.sourcePurchaseOrderId&&d.lines.some(line=>line.sourceOrderLineId))await requireAccountModules(actor,"PURCHASE_ORDER");
+        await validateOrderFulfilmentInTx(tx,{companyId:actor.companyId,branchId:d.branchId,type:d.type,customerId:p.party==="customer"?party.id:null,vendorId:p.party==="vendor"?party.id:null,projectId:d.projectId,sourceSalesOrderId:d.sourceSalesOrderId,sourcePurchaseOrderId:d.sourcePurchaseOrderId,lines},retainedSale?.documentId);
+        if (d.sourcePurchaseOrderId && !d.lines.some(line=>line.sourceOrderLineId)) {
           const po = await tx.commercialDocument.findFirst({
             where: {
               id: d.sourcePurchaseOrderId,
@@ -1400,6 +1407,7 @@ export async function createCommercialDocumentForActor(
               ewayBillNumber: d.ewayBillNumber,
               sourceDocumentId: d.sourceDocumentId,
               sourcePurchaseOrderId: d.sourcePurchaseOrderId,
+              sourceSalesOrderId: d.sourceSalesOrderId,
               purchasePurpose:
                 d.type === "DEBIT_NOTE"
                   ? source?.purchasePurpose
@@ -2084,6 +2092,9 @@ export async function postCommercialDocumentForActor(
         if (doc.status !== "DRAFT" || !p.financial)
           throw new Error("DOCUMENT_NOT_POSTABLE");
         await requireQuotationSourceInTx(tx,actor,doc);
+        if(doc.sourceSalesOrderId)await requireAccountModules(actor,"SALES_ORDER");
+        if(doc.sourcePurchaseOrderId&&doc.lines.some(line=>line.sourceOrderLineId))await requireAccountModules(actor,"PURCHASE_ORDER");
+        await validateOrderFulfilmentInTx(tx,doc);
         let source: Prisma.CommercialDocumentGetPayload<{
             include: { lines: { include: { purchaseAllocations: true } } };
           }> | null = null,

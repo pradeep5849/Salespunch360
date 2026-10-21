@@ -1,3 +1,4 @@
+import {confirmSalesOrderForActor} from "../src/lib/account/commercial";
 import {submitSaleForActor} from "../src/lib/account/sale-submit";
 import {currentPartyBalanceForActor} from "../src/lib/account/party-balance";
 import {reportCalendarDate,reportPeriodBounds} from "../src/lib/account/reports/dates";
@@ -3764,5 +3765,27 @@ test("A084 TDS TCS reports retain posted deductions returns scope and exports",a
    expect((await page.request.get(`/api/v1/mobile/account/reports/${key}?${query}&branchId=${randomUUID()}`,{headers})).status()).toBe(403);
   }
   await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get("/api/v1/mobile/account/reports/tds-receivable",{headers})).status()).toBe(403);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}})}
+});
+
+
+test("A084 order quantities and manual closure preserve financial history across Web and native API",async({page})=>{
+ test.setTimeout(180000);
+ const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ await db.financialYear.create({data:{companyId,name:"Order fulfilment year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const makeOrder=async()=>{const order=await createCommercialDocumentForActor(actor,{type:"SALES_ORDER",branchId,partyId:customerId,issueDate:"2026-10-13",lines:[{lineType:"CUSTOM",itemName:"Order browser work",quantity:"10",rate:"100",taxRate:"0"}]});await confirmSalesOrderForActor(actor,{documentId:order.id});return order};
+ const automatic=await makeOrder(),line=await db.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:automatic.id}});
+ const invoice=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-13",sourceSalesOrderId:automatic.id,lines:[{lineType:"CUSTOM",sourceOrderLineId:line.id,itemName:line.itemName,quantity:"10",rate:"1",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:invoice.id});
+ const manual=await makeOrder(),journals=await db.journalEntry.count({where:{companyId}}),stock=await db.stockMovement.count({where:{companyId}});let tokenHash="";
+ try{
+  await signInSettings(page);await page.goto(`/workspace/account/transactions/${automatic.id}`);const automaticCard=page.getByRole("region",{name:"Order fulfilment",exact:true});await expect(automaticCard).toContainText("Status: CLOSED");await expect(automaticCard).toContainText("FULFILLED");await expect(automaticCard.getByRole("button",{name:"Close remaining order"})).toHaveCount(0);
+  await page.goto(`/workspace/account/transactions/${manual.id}`);const card=page.getByRole("region",{name:"Order fulfilment",exact:true});await expect(card).toContainText("Status: OPEN");await card.getByLabel("Reason for closing remaining order").fill("Customer no longer needs the remaining quantity");await card.getByRole("button",{name:"Close remaining order",exact:true}).click();await expect(card).toContainText("Status: CLOSED");await expect(card).toContainText("MANUAL");await expect(card).toContainText("10.0000");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).include('[aria-label="Order fulfilment"]').withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  const state=await page.request.get(`/api/v1/mobile/account/orders/${automatic.id}`,{headers});expect(state.status()).toBe(200);expect(await state.json()).toMatchObject({status:"CLOSED",reason:"FULFILLED"});
+  const retry=await page.request.post(`/api/v1/mobile/account/orders/${manual.id}`,{headers,data:{reason:"Repeated manual request"}});expect(retry.status()).toBe(200);expect(await retry.json()).toMatchObject({status:"CLOSED",reason:"MANUAL"});expect(await db.accountOperationalAudit.count({where:{companyId,entityId:manual.id,eventType:"ORDER_REMAINING_CLOSED"}})).toBe(1);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.post(`/api/v1/mobile/account/orders/${manual.id}`,{headers,data:{reason:"Unauthorized close"}})).status()).toBe(403);
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(stock);expect((await db.commercialDocument.findUniqueOrThrow({where:{id:manual.id}})).status).toBe("POSTED");
  }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}})}
 });

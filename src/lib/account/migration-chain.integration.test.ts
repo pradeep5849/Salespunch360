@@ -45,13 +45,13 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   expect(convertedCommercialDocumentId).toBeNull();expect(convertedAt).toBeNull();expect(quoteDocumentRetained).toEqual(quoteDocumentBefore.record);
   const [quoteAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_revisions d WHERE id=${revisionId}::uuid`;
   const [lineAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(l) AS record FROM commercial_document_lines l WHERE id=${legacyLineId}::uuid`;
-  const {baseQuantity,unitConversionSnapshot,...lineRetained}=lineAfter.record;
-  expect(baseQuantity).toBeNull();expect(unitConversionSnapshot).toBeNull();expect(lineRetained).toEqual(lineBefore.record);
+  const {baseQuantity,unitConversionSnapshot,sourceOrderLineId,...lineRetained}=lineAfter.record;
+  expect(sourceOrderLineId).toBeNull();expect(baseQuantity).toBeNull();expect(unitConversionSnapshot).toBeNull();expect(lineRetained).toEqual(lineBefore.record);
   const {billingName,taxMode,stateOfSupplyCode,roundOffEnabled,roundOffAmount,...quoteRetained}=quoteAfter.record;
   expect(billingName).toBeNull();expect(taxMode).toBe("EXCLUSIVE");expect(stateOfSupplyCode).toBeNull();expect(roundOffEnabled).toBe(false);expect(Number(roundOffAmount)).toBe(0);expect(quoteRetained).toEqual(quoteBefore.record);
   await expect(db.quotationRevision.update({where:{id:revisionId},data:{roundOffEnabled:true}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
   expect(after.record.shippingAddress).toBeNull();
-  const {shippingAddress:_newField,sourceQuotationRevisionId,...retained}=after.record;void _newField;expect(sourceQuotationRevisionId).toBeNull();
+  const {shippingAddress:_newField,sourceQuotationRevisionId,sourceSalesOrderId,...retained}=after.record;void _newField;expect(sourceSalesOrderId).toBeNull();expect(sourceQuotationRevisionId).toBeNull();
   expect(retained).toEqual(before.record);
   expect(await db.customer.count({where:{companyId,shippingAddress:"Current customer site"}})).toBe(1);
   expect(await db.commercialDocument.count({where:{companyId}})).toBe(1);

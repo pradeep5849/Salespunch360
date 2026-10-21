@@ -153,3 +153,11 @@ export async function confirmSalesOrderAction(form:FormData){
  revalidatePath("/workspace/account/quotations");
  revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
 }
+
+export async function closeRemainingOrderAction(form:FormData){
+ return accountAction(async()=>{
+  const actor=await requirePermissionForMutation("ACCOUNT_LEDGER_VIEW");
+  await (await import("@/lib/account/orders/lifecycle")).closeRemainingOrderForActor(actor as Parameters<typeof import("@/lib/account/orders/lifecycle").closeRemainingOrderForActor>[0],{documentId:String(form.get("id")),reason:String(form.get("reason")??"")});
+  revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
+ },"Remaining order closed");
+}

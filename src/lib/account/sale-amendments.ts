@@ -349,6 +349,7 @@ export async function replacePostedSaleForActor(
               discountType: source.discountType ?? undefined,
               discountValue: retainedLineDiscountValue(source),
               servicePeriodDays: source.servicePeriodDays ?? undefined,
+              sourceOrderLineId: source.sourceOrderLineId ?? undefined,
             };
             for (const [key, value] of Object.entries(defaults))
               if (line[key] === undefined) line[key] = value;
@@ -375,6 +376,7 @@ export async function replacePostedSaleForActor(
             ]),
           );
         }
+        payload.sourceSalesOrderId=sale.sourceSalesOrderId??undefined;
         delete payload.receivedAmount;
         delete payload.receivedInFull;
         delete payload.paymentType;
@@ -404,6 +406,20 @@ export async function replacePostedSaleForActor(
         // The full credit returns stock before a replacement reuses a batch or serial.
         // Both postings and all journals/stock movements commit or roll back together.
         await creditInTx(tx, actor, sale);
+        await tx.accountOperationalAudit.create({
+          data: {
+            companyId: actor.companyId,
+            actorUserId: actor.id,
+            eventType: "SALE_AMENDED",
+            entityType: "SALES_INVOICE",
+            entityId: sale.id,
+            metadata: {
+              requestKey,
+              requestHash,
+              replacementId: replacement.id,
+            },
+          },
+        });
         await postCommercialDocumentForActor(
           actor,
           { documentId: replacement.id },
@@ -420,20 +436,6 @@ export async function replacePostedSaleForActor(
             if(amount.gt(0))await applyAdvanceForActor(actor,{advanceId:credit.id,documentId:replacement.id,amount:amount.toFixed(2),applicationDate:new Date(Math.max(credit.transactionDate.getTime(),replacement.issueDate.getTime())),idempotencyKey:`sale-correction:${replacement.id}:${credit.id}`},tx);
           }
         }
-        await tx.accountOperationalAudit.create({
-          data: {
-            companyId: actor.companyId,
-            actorUserId: actor.id,
-            eventType: "SALE_AMENDED",
-            entityType: "SALES_INVOICE",
-            entityId: sale.id,
-            metadata: {
-              requestKey,
-              requestHash,
-              replacementId: replacement.id,
-            },
-          },
-        });
         return tx.commercialDocument.findUniqueOrThrow({
           where: { id: replacement.id },
         });

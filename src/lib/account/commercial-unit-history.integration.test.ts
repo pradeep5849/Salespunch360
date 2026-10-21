@@ -1,3 +1,4 @@
+import {orderStateForActor,closeRemainingOrderForActor} from "./orders/lifecycle";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {reverseJournalInTx} from "@/lib/accounting/service";
 import {currentPartyBalanceForActor} from "./party-balance";
@@ -8,7 +9,7 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
-import {createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor,createSettlementForActor,documentOutstandingInTx,documentOutstandingsBatch,applyAdvanceForActor} from "./commercial";
+import {confirmSalesOrderForActor,createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor,createSettlementForActor,documentOutstandingInTx,documentOutstandingsBatch,applyAdvanceForActor} from "./commercial";
 import {submitSaleForActor} from "./sale-submit";
 import {saleDuplicateDraft} from "./sale-duplicate";
 import {saleDetailForActor} from "./sale-detail";
@@ -347,4 +348,44 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   const secondarySnapshot={...line.unitConversionSnapshot as object,selection:"SECONDARY"};
   const [valid]=await client.$queryRaw<Array<{valid:boolean}>>`SELECT valid_commercial_unit_snapshot(${JSON.stringify(secondarySnapshot)}::jsonb,1,10) AS valid`;expect(valid.valid).toBe(true);
  });
+ it("serializes explicit order-line fulfilment and rejects overposting without financial side effects",async()=>{
+  await client.company.update({where:{id:companyId},data:{subscriptionStatus:"TRIAL",trialStartedAt:new Date(),trialEndsAt:new Date(Date.now()+86400000)}});
+  const order=await createCommercialDocumentForActor(actor,{type:"SALES_ORDER",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Order quantity fixture",quantity:"10",rate:"100",taxRate:"0"}]});
+  await confirmSalesOrderForActor(actor,{documentId:order.id});
+  const source=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:order.id}});
+  const make=(quantity:string,rate="1")=>createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",sourceSalesOrderId:order.id,lines:[{lineType:"CUSTOM",sourceOrderLineId:source.id,itemName:source.itemName,quantity,rate,taxRate:"0"}]});
+  const first=await make("5");await postCommercialDocumentForActor(actor,{documentId:first.id});
+  // Drafts do not reserve quantity, and invoice rates need not equal order rates.
+  const a=await make("4"),b=await make("4");
+  const raced=await Promise.allSettled([postCommercialDocumentForActor(actor,{documentId:a.id}),postCommercialDocumentForActor(actor,{documentId:b.id})]);
+  expect(raced.filter(r=>r.status==="fulfilled")).toHaveLength(1);expect(raced.filter(r=>r.status==="rejected")).toHaveLength(1);
+  expect(await client.journalEntry.count({where:{companyId,sourceId:{in:[a.id,b.id]}}})).toBe(1);
+  const winner=raced[0].status==="fulfilled"?a:b;const loser=winner.id===a.id?b:a;expect(await client.journalEntry.count({where:{companyId,sourceId:loser.id}})).toBe(0);const journal=await postCommercialDocumentForActor(actor,{documentId:winner.id});expect(journal).toBeTruthy();expect(await client.journalEntry.count({where:{companyId,sourceId:winner.id}})).toBe(1);
+  await expect(make("2")).rejects.toThrow("ORDER_QUANTITY_EXCEEDED");
+  await expect(createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",sourceSalesOrderId:order.id,lines:[{lineType:"CUSTOM",itemName:source.itemName,quantity:"1",rate:"1"}]})).rejects.toThrow("SOURCE_ORDER_LINE_REQUIRED");
+  const final=await make("1");await postCommercialDocumentForActor(actor,{documentId:final.id});
+  await expect(make("0.0001")).rejects.toThrow("ORDER_QUANTITY_EXCEEDED");
+  expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"CLOSED",reason:"FULFILLED",lines:[{remaining:"0.0000"}]});
+  const firstLine=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:first.id}});
+  const changed=await replacePostedSaleForActor(actor,first.id,{branchId,partyId:customerId,issueDate:"2026-10-20",idempotencyKey:randomUUID(),lines:[{originalLineId:firstLine.id,lineType:"CUSTOM",itemName:source.itemName,quantity:"4",rate:"1",taxRate:"0"}]});
+  expect(changed.sourceSalesOrderId).toBe(order.id);expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"OPEN",lines:[{remaining:"1.0000"}]});
+  await reversePostedSaleForActor(actor,changed.id);expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"OPEN",lines:[{remaining:"5.0000"}]});
+
+  const manual=await createCommercialDocumentForActor(actor,{type:"SALES_ORDER",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",itemName:"Manual quantity fixture",quantity:"10",rate:"2"}]});await confirmSalesOrderForActor(actor,{documentId:manual.id});
+  const beforeClose=await client.journalEntry.count({where:{companyId}});
+  await expect(closeRemainingOrderForActor({...actor,accountRole:"PROJECT_MANAGER"},{documentId:manual.id,reason:"No longer required"})).rejects.toThrow();
+  await expect(closeRemainingOrderForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},{documentId:manual.id,reason:"No longer required"})).rejects.toThrow("NOT_FOUND");
+  await expect(orderStateForActor({...actor,companyId:randomUUID()},manual.id)).rejects.toThrow();
+  for(let i=0;i<2;i++)expect(await closeRemainingOrderForActor(actor,{documentId:manual.id,reason:"Customer cancelled remaining work"})).toMatchObject({status:"CLOSED",reason:"MANUAL",lines:[{remaining:"10.0000"}]});
+  expect(await client.accountOperationalAudit.count({where:{companyId,entityId:manual.id,eventType:"ORDER_REMAINING_CLOSED"}})).toBe(1);expect(await client.journalEntry.count({where:{companyId}})).toBe(beforeClose);
+  const manualLine=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:manual.id}});
+  await expect(client.commercialDocument.update({where:{id:first.id},data:{sourceSalesOrderId:null}})).rejects.toThrow("FINANCIAL_HISTORY_IMMUTABLE");
+  await expect(client.commercialDocumentLine.update({where:{id:firstLine.id},data:{sourceOrderLineId:null}})).rejects.toThrow("FINANCIAL_HISTORY_IMMUTABLE");
+  const {id:sourceLineId,...sourceValues}=source;void sourceLineId;
+  await expect(client.commercialDocumentLine.create({data:{...sourceValues,unitConversionSnapshot:sourceValues.unitConversionSnapshot??Prisma.DbNull,id:randomUUID(),documentId:loser.id,position:99,sourceOrderLineId:manualLine.id}})).rejects.toThrow("INVALID_SOURCE_ORDER_LINE");
+
+  await expect(createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,sourceSalesOrderId:manual.id,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:manualLine.id,itemName:manualLine.itemName,quantity:"1",rate:"1"}]})).rejects.toThrow("ORDER_MANUALLY_CLOSED");
+
+ });
+
 });
