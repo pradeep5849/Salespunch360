@@ -10436,3 +10436,7 @@ No schema/migration changes. Previous7f682ce6 targetedCI39626536614 passed all3j
 ### 2026-10-21 Purchase Order to Bill checkpoint
 
 A084-F03 / A085-F02: remaining-order Bill preparation and native/Web confirmation implemented. Database 21 PASS; desktop browser PASS; mobile navigation timeout corrected in test wait and rerun PASS; Android compile + 25 JVM tests PASS; source-contract 15 PASS after correcting function-boundary matcher; typecheck and focused lint PASS. No migration. Broad findings remain PARTIAL; no native device verification or final 199-finding verification claimed.
+
+### Converted order destination and date boundary follow-up
+
+A083-F01/A085-F02: corrected estimate-card Sale Order destination to transaction details; desktop/mobile Chromium 2 PASS (1.3m), no extra journal; typecheck/lint PASS. A084-F13: retained withdrawn allegation; 36 grouped checks PASS including two read-only PostgreSQL native-date/calendar-boundary checks, now in CI. Broad statuses remain unchanged; no final checkpoint/device claim.

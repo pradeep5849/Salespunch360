@@ -3400,6 +3400,8 @@ test("A080 Sale Order conversion confirms once in Web and authenticated mobile w
  for(let attempt=0;attempt<2;attempt++){const confirmed=await page.request.post(confirmPath,{headers,data:{companyId:otherCompanyId,documentId:orderId}});expect(confirmed.status()).toBe(200);expect(await confirmed.json()).toMatchObject({id:nativeOrder.id,status:"POSTED"});}
  expect((await db.quotationDocument.findUniqueOrThrow({where:{id:nativeSource.id}})).convertedCommercialDocumentId).toBe(nativeOrder.id);expect(await db.accountOperationalAudit.count({where:{companyId,eventType:"SALES_ORDER_CONFIRMED",entityId:nativeOrder.id}})).toBe(1);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  const confirmedDetail=await page.request.get(`/api/v1/mobile/account/transactions/${nativeOrder.id}`,{headers});expect((await confirmedDetail.json()).capabilities.canConfirmSalesOrder).toBe(false);
+ await page.goto("/workspace/account/quotations?status=CLOSED");const convertedCard=page.locator(".estimate-card").filter({hasText:source.documentNumber});const orderLink=convertedCard.getByRole("link",{name:`Sale Order ${draft.documentNumber}`,exact:true});await expect(orderLink).toHaveAttribute("href",`/workspace/account/transactions/${orderId}`);await orderLink.click();await expect(page).toHaveURL(`/workspace/account/transactions/${orderId}`,{timeout:30000});await expect(page.getByRole("region",{name:"Order fulfilment",exact:true})).toBeVisible({timeout:30000});expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+
 });
 
 test("A080 physical estimate line requires unit review and preserves negotiated secondary-unit pricing",async({page})=>{

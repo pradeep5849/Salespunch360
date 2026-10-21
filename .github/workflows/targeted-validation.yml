@@ -96,7 +96,7 @@ jobs:
       - name: Backup tenant isolation and reusable expense item retention
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
-        run: npx vitest run src/lib/account/backup-expense-items.integration.test.ts --maxWorkers=1
+        run: npx vitest run src/lib/account/backup-expense-items.integration.test.ts src/lib/account/reports/date-storage.integration.test.ts --maxWorkers=1
       - name: Quotation attachment retries, access and immutable revision history
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci

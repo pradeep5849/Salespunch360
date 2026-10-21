@@ -57869,6 +57869,15 @@
             "previous_ci": "39581826143 SUCCESS at635c55f53a1ea7fe199aa36e3f163c959c3c9461 (web/android/migration); not evidence for this later head."
           },
           "remaining": "Order fulfilment implementation pending. Full199 final-head regression/runtime validation pending. Native device runtime unavailable as previously recorded. No migration/production/deploy/merge/A104. Broad finding statuses unchanged; this slice does not complete all report layouts or destinations."
+        },
+        "converted_order_destination_2026_10_21": {
+          "implementation": "Corrected converted Sale Order link on estimate card to generic transaction detail; invoice-only Sale route rejects orders. Native already uses generic route and remains unchanged.",
+          "files": [
+            "src/app/workspace/account/quotations/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "Desktop/mobile Chromium2PASS1.3m: real estimate conversion, Web/native confirmation and retries, card href, actual Order fulfilment navigation, unchanged journal count. Full tsc and focused ESLint PASS.",
+          "remaining": "Original A083-F01/A085-F02 remain PARTIAL for their broader scopes and final checkpoint/device verification."
         }
       },
       "push_checkpoint_evidence": {
@@ -62303,6 +62312,15 @@
           ],
           "tests": "34 tests across dates, queries and service-boundaries PASS;0 failures/skips;1.48s.",
           "limitation": "Unit calendar and query contracts only; not a new database/export boundary matrix or final checkpoint verification. Finding remains PARTIAL."
+        },
+        "native_date_boundary_database_2026_10_21": {
+          "implementation": "No application fix justified: withdrawn original allegation retained. Added guarded read-only PostgreSQL regressions confirming both native DATE columns and Kolkata previous/start/noon/end/next-day inclusion, single-day/as-of bounds and export query preservation. Added to migration CI job.",
+          "files": [
+            "src/lib/account/reports/date-storage.integration.test.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": "36 PASS across4files,0fail/skip,1.44s; includes2 real isolated PostgreSQL tests. No production access or financial writes.",
+          "remaining": "Final full-head regression and report-specific end-to-end export matrix remain pending. No new application defect inferred; original finding ID preserved."
         }
       }
     },
@@ -64550,6 +64568,15 @@
           ],
           "migration": "No new migration in this slice.",
           "implementation_commit": "Recorded in next evidence commit."
+        },
+        "converted_order_destination_2026_10_21": {
+          "implementation": "Corrected converted Sale Order link on estimate card to generic transaction detail; invoice-only Sale route rejects orders. Native already uses generic route and remains unchanged.",
+          "files": [
+            "src/app/workspace/account/quotations/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": "Desktop/mobile Chromium2PASS1.3m: real estimate conversion, Web/native confirmation and retries, card href, actual Order fulfilment navigation, unchanged journal count. Full tsc and focused ESLint PASS.",
+          "remaining": "Original A083-F01/A085-F02 remain PARTIAL for their broader scopes and final checkpoint/device verification."
         }
       }
     },
@@ -71891,6 +71918,15 @@
       ],
       "migration": "No new migration in this slice.",
       "implementation_commit": "Recorded in next evidence commit."
+    },
+    "converted_order_destination_2026_10_21": {
+      "implementation": "Corrected converted Sale Order link on estimate card to generic transaction detail; invoice-only Sale route rejects orders. Native already uses generic route and remains unchanged.",
+      "files": [
+        "src/app/workspace/account/quotations/page.tsx",
+        "e2e/a090-settings.spec.ts"
+      ],
+      "tests": "Desktop/mobile Chromium2PASS1.3m: real estimate conversion, Web/native confirmation and retries, card href, actual Order fulfilment navigation, unchanged journal count. Full tsc and focused ESLint PASS.",
+      "remaining": "Original A083-F01/A085-F02 remain PARTIAL for their broader scopes and final checkpoint/device verification."
     }
   },
   "approved_business_decisions": {
