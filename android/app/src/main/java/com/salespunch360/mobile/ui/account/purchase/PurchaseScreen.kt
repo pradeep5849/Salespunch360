@@ -17,21 +17,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
 @Composable
-fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null, vm: AccountPurchaseViewModel = viewModel()) {
+fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null,initialOrderId:String?=null,navigate:(String)->Unit={}, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
-    var initialEditorOpened by remember(initialType, initialProjectId) { mutableStateOf(false) }
-    LaunchedEffect(initialType, initialProjectId, state.loading) {
+    var initialEditorOpened by remember(initialType, initialProjectId,initialOrderId) { mutableStateOf(false) }
+    LaunchedEffect(initialType, initialProjectId,initialOrderId, state.loading) {
         if (!initialEditorOpened && initialType != null && !state.loading && state.types.isNotEmpty()) {
             initialEditorOpened = true
-            vm.create(initialType, initialProjectId)
+            if(initialOrderId!=null)vm.prepareOrder(initialOrderId)else vm.create(initialType, initialProjectId)
         }
     }
+    DisposableEffect(initialOrderId){onDispose{vm.cancelOrderPreparation()}}
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+        if(initialOrderId!=null&&state.error!=null&&state.draft==null)TextButton(onClick={vm.prepareOrder(initialOrderId)},enabled=!state.loading){Text("Reload order")}
         Row {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or vendor") }, modifier = Modifier.weight(1f))
             IconButton(onClick = vm::refresh) { Icon(Icons.Default.Refresh, "Refresh") }
@@ -60,13 +63,13 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
         }
     }
     state.draft?.let { PurchaseEditor(it, state, vm) }
-    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost) }
+    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate) }
     state.posting?.let {
         AlertDialog(
             onDismissRequest = vm::cancelPost,
-            title = { Text("Post purchase document?") },
-            text = { Text("The server will validate the financial year, period lock, tax, stock, and ledger posting.") },
-            confirmButton = { Button(enabled = !state.saving, onClick = vm::post) { Text("Post") } },
+            title = { Text(if(state.detail?.str("type")=="PURCHASE_ORDER")"Confirm purchase order?"else"Post purchase document?") },
+            text = { Text(if(state.detail?.str("type")=="PURCHASE_ORDER")"Confirm this order without posting a journal or stock receipt. Posted bills fulfil its quantities."else"The server will validate the financial year, period lock, tax, stock, and ledger posting.") },
+            confirmButton = { Button(enabled = !state.saving, onClick = vm::post) { Text(if(state.detail?.str("type")=="PURCHASE_ORDER")"Confirm order"else"Post") } },
             dismissButton = { TextButton(enabled = !state.saving, onClick = vm::cancelPost) { Text("Cancel") } }
         )
     }

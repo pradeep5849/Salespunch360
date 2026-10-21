@@ -1329,10 +1329,11 @@ export async function createCommercialDocumentForActor(
             }
           }
         }
+        if(d.sourcePurchaseOrderId&&d.lines.some(line=>line.sourceOrderLineId)&&!d.purchaseClassification)throw new Error("PURCHASE_CLASSIFICATION_REQUIRED");
         if(d.sourceSalesOrderId)await requireAccountModules(actor,"SALES_ORDER");
         if(d.sourcePurchaseOrderId&&d.lines.some(line=>line.sourceOrderLineId))await requireAccountModules(actor,"PURCHASE_ORDER");
         await validateOrderFulfilmentInTx(tx,{companyId:actor.companyId,branchId:d.branchId,type:d.type,customerId:p.party==="customer"?party.id:null,vendorId:p.party==="vendor"?party.id:null,projectId:d.projectId,sourceSalesOrderId:d.sourceSalesOrderId,sourcePurchaseOrderId:d.sourcePurchaseOrderId,lines},retainedSale?.documentId);
-        if (d.sourcePurchaseOrderId && !d.lines.some(line=>line.sourceOrderLineId)) {
+        if (d.sourcePurchaseOrderId) {
           const po = await tx.commercialDocument.findFirst({
             where: {
               id: d.sourcePurchaseOrderId,
@@ -1502,15 +1503,10 @@ export async function createCommercialDocumentForActor(
       },
   );
 }
-export async function finalizeNonFinancialDocument(raw: unknown) {
-  const { documentId } = z
-      .object({ documentId: z.string().uuid() })
-      .strict()
-      .parse(raw),
-    actor = (await requirePermissionForMutation(
-      "ACCOUNT_PURCHASE_ENTRY",
-    )) as Actor;
-  return db.$transaction(
+export async function finalizeNonFinancialDocumentForActor(actor:Actor,raw: unknown) {
+  const { documentId } = z.object({ documentId: z.string().uuid() }).strict().parse(raw);
+  if(!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_PURCHASE_ENTRY"))throw new AuthorizationError();
+  return inAccountTransaction(undefined,
     async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
       const doc = await tx.commercialDocument.findFirst({
@@ -1522,6 +1518,9 @@ export async function finalizeNonFinancialDocument(raw: unknown) {
       await requireAccountModules(actor, ...policy.modules);
       if (policy.financial || doc.type !== "PURCHASE_ORDER")
         throw new Error("DOCUMENT_NOT_FINALIZABLE");
+      if(doc.projectId)await authorizeProjectForCommercial(actor,doc.projectId,doc.branchId,undefined,tx);
+      const projectAllocations=await tx.purchaseLineAllocation.findMany({where:{companyId:actor.companyId,projectId:{not:null},documentLine:{documentId:doc.id}},select:{projectId:true},distinct:["projectId"]});
+      for(const allocation of projectAllocations)if(allocation.projectId)await authorizeProjectForCommercial(actor,allocation.projectId,doc.branchId,undefined,tx);
       if (doc.status === "POSTED") return doc;
       if (doc.status !== "DRAFT" || doc.journalEntryId)
         throw new Error("DOCUMENT_NOT_FINALIZABLE");
@@ -1544,9 +1543,9 @@ export async function finalizeNonFinancialDocument(raw: unknown) {
       });
       return updated;
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 }
+export async function finalizeNonFinancialDocument(raw:unknown){return finalizeNonFinancialDocumentForActor((await requirePermissionForMutation("ACCOUNT_PURCHASE_ENTRY")) as Actor,raw)}
 export async function confirmSalesOrderForActor(actor:Actor,raw:unknown,transaction?:Prisma.TransactionClient){
  const {documentId}=z.object({documentId:z.string().uuid()}).strict().parse(raw);
  return inAccountTransaction(transaction,async tx=>{
@@ -2099,6 +2098,7 @@ export async function postCommercialDocumentForActor(
         if (doc.status !== "DRAFT" || !p.financial)
           throw new Error("DOCUMENT_NOT_POSTABLE");
         await requireQuotationSourceInTx(tx,actor,doc);
+        if(doc.sourcePurchaseOrderId&&doc.lines.some(line=>line.sourceOrderLineId)&&!doc.purchaseClassification)throw new Error("PURCHASE_CLASSIFICATION_REQUIRED");
         if(doc.sourceSalesOrderId)await requireAccountModules(actor,"SALES_ORDER");
         if(doc.sourcePurchaseOrderId&&doc.lines.some(line=>line.sourceOrderLineId))await requireAccountModules(actor,"PURCHASE_ORDER");
         await validateOrderFulfilmentInTx(tx,doc);
@@ -3527,7 +3527,7 @@ export async function commercialDocumentControlsForActor(actor:Actor,documentId:
     });
   if (!document)
     return {
-      canConfirmSalesOrder: false,
+      canPost:false,canConfirmPurchaseOrder:false,canConfirmSalesOrder: false,
       canManage: false,
       canRemind: false,
       advances: [],
@@ -3559,6 +3559,8 @@ export async function commercialDocumentControlsForActor(actor:Actor,documentId:
           })
         : [];
   return {
+    canPost:document.status==="DRAFT"&&policies[document.type].financial&&policies[document.type].modules.every(module=>enabledModules.includes(module))&&canUsePermission(actor,company.productEdition,"ACCOUNT_JOURNAL_POST"),
+    canConfirmPurchaseOrder:document.status==="DRAFT"&&document.type==="PURCHASE_ORDER"&&enabledModules.includes("PURCHASES")&&enabledModules.includes("PURCHASE_ORDER")&&canUsePermission(actor,company.productEdition,"ACCOUNT_PURCHASE_ENTRY"),
     canConfirmSalesOrder,
     canManage,
     canRemind:

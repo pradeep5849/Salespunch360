@@ -29,6 +29,7 @@ fun purchaseValidation(draft: PurchaseDraft, state: PurchaseState): String? {
     if (draft.type == "DEBIT_NOTE" && state.sources.none { it.str("id") == draft.sourceDocumentId && it.str("type") == "PURCHASE_BILL" && it.str("branchId") == draft.branchId && it.str("vendorId") == draft.vendorId }) return "Select a purchase bill for this branch and vendor."
     fun projectValid(id: String, budget: String) = state.projects.any { it.id == id && it.branchId == draft.branchId } && (budget.isBlank() || state.projectBudgetLines.any { it.str("id") == budget && it.str("projectId") == id })
     if (draft.type != "DEBIT_NOTE" && draft.purpose == "PROJECT" && !projectValid(draft.projectId, draft.projectBudgetLineId)) return "Select an available Project in this branch."
+    if(draft.sourcePurchaseOrderId.isNotBlank()&&draft.classification !in listOf("PURCHASE_COST","GENERAL_EXPENSES","FIXED_ASSET"))return "Select a purchase classification for this bill."
     if (draft.lines.isEmpty() || draft.lines.size > 500) return "Add between 1 and 500 lines."
     for ((index, line) in draft.lines.withIndex()) {
         val prefix = "Line ${index + 1}: "
@@ -38,8 +39,8 @@ fun purchaseValidation(draft: PurchaseDraft, state: PurchaseState): String? {
         if (line.taxRate.isNotBlank() && (number(line.taxRate)?.let { it >= BigDecimal.ZERO && it <= BigDecimal("100") } != true)) return prefix + "GST must be between 0 and 100."
         val master = when (line.lineType) { "MATERIAL" -> state.products; "SERVICE" -> state.services; "SUBCONTRACT" -> state.workPackages; else -> emptyList() }.firstOrNull { it.id == line.sourceId }
         if (line.lineType == "CUSTOM") { if (line.itemName.isBlank()) return prefix + "Enter an item name." } else if (master == null) return prefix + "Select an available item."
-        val conversion=if(draft.type=="DEBIT_NOTE")line.secondaryUnitsPerBase else master?.secondaryUnitsPerBase.orEmpty()
-        if(line.unitSelection=="SECONDARY"&&draft.type!="DEBIT_NOTE"&&master?.secondaryUnitId.isNullOrBlank())return prefix+"Select an assigned unit."
+        val conversion=if(draft.type=="DEBIT_NOTE"||line.sourceOrderLineId.isNotBlank())line.secondaryUnitsPerBase else master?.secondaryUnitsPerBase.orEmpty()
+        if(line.unitSelection=="SECONDARY"&&draft.type!="DEBIT_NOTE"&&line.sourceOrderLineId.isBlank()&&master?.secondaryUnitId.isNullOrBlank())return prefix+"Select an assigned unit."
         val primaryQty=try{primaryUnitQuantity(line.quantity,line.unitSelection,conversion)}catch(e:IllegalArgumentException){return prefix+"Enter a quantity that converts exactly to the primary unit."}
         if (master?.trackInventory == true) {
             if (state.warehouses.none { it.id == line.warehouseId && it.branchId == draft.branchId }) return prefix + "Select a warehouse in this branch."
@@ -90,7 +91,7 @@ fun purchasePayload(draft: PurchaseDraft) = buildJsonObject {
         draft.lines.forEach { line -> add(buildJsonObject {
             put("lineType", line.lineType);put("unitSelection",line.unitSelection)
             fun field(key: String, value: String) { if (value.isNotBlank()) put(key, value) }
-            field("sourceId", line.sourceId); field("itemName", line.itemName); field("description", line.description)
+            field("sourceOrderLineId",line.sourceOrderLineId);field("sourceId", line.sourceId); field("itemName", line.itemName); field("description", line.description)
             put("quantity", line.quantity); field("rate", line.rate); field("taxRate", line.taxRate)
             if (line.discountType.isNotBlank()) { put("discountType", line.discountType); put("discountValue", line.discountValue) }
             field("warehouseId", line.warehouseId); field("batchId", line.batchId); field("serialNumberId", line.serialNumberId)

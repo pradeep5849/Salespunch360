@@ -57,6 +57,8 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun confirmSalePrice(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}/sale-price","POST",payload.toString())).jsonObject
  suspend fun accountSalesDocument(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}")).jsonObject
  suspend fun createAccountSalesDocument(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions","POST",payload.toString())).jsonObject
+ suspend fun accountOrderPurchasePreparation(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/orders/${enc(id)}/preparation?targetType=PURCHASE_BILL")).jsonObject
+ suspend fun confirmAccountPurchaseOrder(id:String)=call("api/v1/mobile/account/purchases/${enc(id)}/confirm","POST")
  suspend fun accountOrderSalePreparation(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/orders/${enc(id)}/preparation")).jsonObject
  suspend fun accountOrderState(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/orders/${enc(id)}")).jsonObject
  suspend fun closeAccountOrder(id:String,reason:String)=json.parseToJsonElement(call("api/v1/mobile/account/orders/${enc(id)}","POST",buildJsonObject{put("reason",reason)}.toString())).jsonObject

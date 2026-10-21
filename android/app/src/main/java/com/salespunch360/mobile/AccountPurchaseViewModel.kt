@@ -19,6 +19,9 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<PurchaseState> = _state
 
     private val creationIdentity = CommercialCreationIdentity()
+    private var orderPreparationJob:Job?=null
+    fun cancelOrderPreparation(){val job=orderPreparationJob;orderPreparationJob=null;if(job?.isActive==true){job.cancel();_state.value=_state.value.copy(loading=false)}}
+    fun prepareOrder(id:String){if(_state.value.saving)return;cancelOrderPreparation();val previous=_state.value.draft;_state.value=_state.value.copy(loading=true,draft=null,detail=null,error=null);orderPreparationJob=viewModelScope.launch{try{val prepared=api.accountOrderPurchasePreparation(id);val draft=purchaseOrderDraft(prepared,_state.value,id);creationIdentity.reset();_state.value=_state.value.copy(loading=false,draft=draft,message="Review remaining order quantities. No bill is saved until Create Draft; posting fulfils the order.")}catch(e:CancellationException){throw e}catch(e:Exception){fail(e);_state.value=_state.value.copy(draft=previous)}}}
     private var refreshJob: Job? = null
     private var refreshGeneration = 0
 
@@ -115,6 +118,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
 
     fun closeDraft() {
         if (_state.value.saving) return
+        cancelOrderPreparation()
         _state.value = _state.value.copy(draft = null)
     }
 
@@ -192,15 +196,16 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
     fun post() {
         if (_state.value.saving) return
         val id = _state.value.posting ?: return
+        val confirmingOrder=_state.value.detail?.str("type")=="PURCHASE_ORDER"
         _state.value = _state.value.copy(saving = true, error = null)
         viewModelScope.launch {
             try {
-                api.postPurchase(id)
+                if(confirmingOrder)api.confirmAccountPurchaseOrder(id)else api.postPurchase(id)
                 _state.value = _state.value.copy(
                     posting = null,
                     saving = false,
                     detail = api.purchase(id),
-                    message = "Purchase document posted by the server."
+                    message = if(confirmingOrder)"Purchase order confirmed. No journal posted."else"Purchase document posted by the server."
                 )
                 refresh()
             } catch (e: Exception) {

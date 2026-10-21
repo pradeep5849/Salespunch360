@@ -10432,3 +10432,7 @@ Code `a80f9b586891ba52c22e56c9b62aebe99c87e19f` adds Web/native Sale preparation
 Final focused58tests PASS2.95s; local PostgreSQL20 PASS6.59s; desktop/mobile browser4 PASS1.8m; Android compile+26JVMtests PASS4m20s,0fail/error/skip. TypeScript/focused lint/diff PASS. Initial browser2PASS/2FAIL came from duplicate financial-year fixture setup for the second parameter case; corrected fixture rerun4PASS and final batch rerun4PASS. Runs overlap, not additive. Native device/runtime/local current-slice lint not executed. Last malformed UUID/null-party early guards have type/lint evidence, no separate malformed-input browser run.
 
 No schema/migration changes. Previous7f682ce6 targetedCI39626536614 passed all3jobs. Broad199finding statuses remain unchanged. A084/A085 stillPARTIAL for Purchase Bill preparation, report controls, selected-unit precision edge, manually closed-order correction path and final full199/device verification. No auto-apportionment of header charges across partial invoices. No merge/deploy/production/A104.
+
+### 2026-10-21 Purchase Order to Bill checkpoint
+
+A084-F03 / A085-F02: remaining-order Bill preparation and native/Web confirmation implemented. Database 21 PASS; desktop browser PASS; mobile navigation timeout corrected in test wait and rerun PASS; Android compile + 25 JVM tests PASS; source-contract 15 PASS after correcting function-boundary matcher; typecheck and focused lint PASS. No migration. Broad findings remain PARTIAL; no native device verification or final 199-finding verification claimed.

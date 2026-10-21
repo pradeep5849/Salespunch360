@@ -80,7 +80,7 @@ export default async function Page({
         </p>
       )}
       {x.sourcePurchaseOrder && (
-        <p>Purchase Order {x.sourcePurchaseOrder.documentNumber}</p>
+        <p><Link href={`/workspace/account/transactions/${x.sourcePurchaseOrder.id}`}>Purchase Order {x.sourcePurchaseOrder.documentNumber}</Link></p>
       )}
       <div className="table-wrap" role="region" aria-label="Commercial line items" tabIndex={0}><table>
         <thead>
@@ -134,13 +134,13 @@ export default async function Page({
         </p>
       )}
       {controls.canConfirmSalesOrder&&<form action={confirmSalesOrderAction}><input type="hidden" name="id" value={x.id}/><button>Confirm Sale Order</button><p>Confirmation closes the linked estimate. No accounting entry is posted for an order.</p></form>}
-      {x.status === "DRAFT" && x.type === "PURCHASE_ORDER" && (
+      {controls.canConfirmPurchaseOrder && x.status === "DRAFT" && x.type === "PURCHASE_ORDER" && (
         <form action={finalizeCommercialAction}>
           <input type="hidden" name="id" value={x.id} />
           <button>Finalize / Issue Purchase Order</button>
         </form>
       )}
-      {x.status === "DRAFT" &&
+      {controls.canPost && x.status === "DRAFT" &&
         [
           "SALES_INVOICE",
           "CREDIT_NOTE",

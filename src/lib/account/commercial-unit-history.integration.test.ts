@@ -1,4 +1,4 @@
-import {orderSalePreparationForActor} from "./orders/preparation";
+import {orderSalePreparationForActor,orderPurchasePreparationForActor} from "./orders/preparation";
 import {orderStateForActor,closeRemainingOrderForActor} from "./orders/lifecycle";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {reverseJournalInTx} from "@/lib/accounting/service";
@@ -10,7 +10,7 @@ const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
-import {confirmSalesOrderForActor,createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor,createSettlementForActor,documentOutstandingInTx,documentOutstandingsBatch,applyAdvanceForActor} from "./commercial";
+import {finalizeNonFinancialDocumentForActor,confirmSalesOrderForActor,createCommercialDocumentForActor,postCommercialDocumentForActor,getCommercialDocumentForActor,createSettlementForActor,documentOutstandingInTx,documentOutstandingsBatch,applyAdvanceForActor} from "./commercial";
 import {submitSaleForActor} from "./sale-submit";
 import {saleDuplicateDraft} from "./sale-duplicate";
 import {saleDetailForActor} from "./sale-detail";
@@ -401,6 +401,21 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   const draft=await orderSalePreparationForActor(actor,order.id),line=draft.lines[0];expect(line.unitSelection).toBe("SECONDARY");expect(line.quantity).toBe("1");expect(line.unitConversionSnapshot?.secondaryUnitsPerBase).toBe("0.1");
   const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",sourceSalesOrderId:order.id,branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:productId,sourceOrderLineId:line.sourceOrderLineId,unitSelection:"SECONDARY",quantity:line.quantity,rate:line.rate,taxRate:"0"}]});
   const stored=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:sale.id}});expect(stored.baseQuantity?.toString()).toBe("10");expect((stored.unitConversionSnapshot as {secondaryUnitsPerBase:string}).secondaryUnitsPerBase).toBe("0.1");await postCommercialDocumentForActor(actor,{documentId:sale.id});expect((await orderStateForActor(actor,order.id)).status).toBe("CLOSED");
+ });
+
+ it("confirms purchase orders once and fulfils explicit quantities only after bills post",async()=>{
+  const order=await createCommercialDocumentForActor(actor,{type:"PURCHASE_ORDER",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",lines:[{lineType:"CUSTOM",itemName:"Purchase order work",quantity:"10",rate:"100",taxRate:"0"}]});
+  const journals=await client.journalEntry.count({where:{companyId}});
+  await expect(finalizeNonFinancialDocumentForActor({...actor,accountRole:"PROJECT_MANAGER"},{documentId:order.id})).rejects.toThrow();
+  await expect(finalizeNonFinancialDocumentForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},{documentId:order.id})).rejects.toThrow();
+  const confirmations=await Promise.all([finalizeNonFinancialDocumentForActor(actor,{documentId:order.id}),finalizeNonFinancialDocumentForActor(actor,{documentId:order.id})]);expect(confirmations.every(d=>d.status==="POSTED")).toBe(true);expect(await client.accountOperationalAudit.count({where:{companyId,entityId:order.id,eventType:"PURCHASE_ORDER_FINALIZED"}})).toBe(1);expect(await client.journalEntry.count({where:{companyId}})).toBe(journals);
+  const beforePreparation=await client.commercialDocument.count({where:{companyId}}),draft=await orderPurchasePreparationForActor(actor,order.id);expect(draft.sourcePurchaseOrderId).toBe(order.id);expect(draft.purchasePurpose).toBe("GENERAL_OFFICE");expect(draft.lines[0].quantity).toBe("10");expect(await client.commercialDocument.count({where:{companyId}})).toBe(beforePreparation);
+  await expect(orderPurchasePreparationForActor({...actor,accountRole:"PROJECT_MANAGER"},order.id)).rejects.toThrow();await expect(orderPurchasePreparationForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},order.id)).rejects.toThrow("NOT_FOUND");
+  const make=(quantity:string,num:string)=>createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",purchaseClassification:"GENERAL_EXPENSES",sourcePurchaseOrderId:order.id,vendorInvoiceNumber:num,vendorInvoiceDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:draft.lines[0].sourceOrderLineId,itemName:"Purchase order work",quantity,rate:"1",taxRate:"0"}]});
+  await expect(createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",purchaseClassification:"GENERAL_EXPENSES",sourcePurchaseOrderId:order.id,vendorInvoiceNumber:"PO-VALUE-LIMIT",vendorInvoiceDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:draft.lines[0].sourceOrderLineId,itemName:"Purchase order work",quantity:"1",rate:"1001",taxRate:"0"}]})).rejects.toThrow("PURCHASE_ORDER_OVERBILLED");
+  await expect(createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",sourcePurchaseOrderId:order.id,vendorInvoiceNumber:"PO-CLASS-REQUIRED",vendorInvoiceDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:draft.lines[0].sourceOrderLineId,itemName:"Purchase order work",quantity:"1",rate:"1",taxRate:"0"}]})).rejects.toThrow("PURCHASE_CLASSIFICATION_REQUIRED");
+  const first=await make("4","PO-PART-1");expect((await orderStateForActor(actor,order.id)).lines[0].remaining).toBe("10.0000");await postCommercialDocumentForActor(actor,{documentId:first.id});expect((await orderPurchasePreparationForActor(actor,order.id)).lines[0].quantity).toBe("6");
+  const final=await make("6","PO-PART-2");await postCommercialDocumentForActor(actor,{documentId:final.id});expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"CLOSED",reason:"FULFILLED"});await expect(orderPurchasePreparationForActor(actor,order.id)).rejects.toThrow("ORDER_NOT_OPEN");await expect(make("1","PO-OVER")).rejects.toThrow("ORDER_QUANTITY_EXCEEDED");
  });
 
 });

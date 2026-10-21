@@ -8,7 +8,10 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
-  ORDER_PARTY_UNAVAILABLE:"The order’s branch or customer is inactive. Review the original party before invoicing this order.",
+  ORDER_PURPOSE_UNAVAILABLE:"This order has no saved purchase purpose. Create a standalone bill with an explicit purpose and close the remaining order manually.",
+  PURCHASE_CLASSIFICATION_REQUIRED:"Select a purchase classification for this source-linked bill before saving or posting.",
+  PURCHASE_ORDER_OVERBILLED:"This bill exceeds the purchase order’s value after existing bills and drafts. Review those bills before continuing.",
+  ORDER_PARTY_UNAVAILABLE:"The order’s branch or party is inactive. Review the original party before invoicing this order.",
   INVALID_SOURCE_ORDER:"Keep the order’s original company, branch, party and project when invoicing its quantities.",
   ORDER_NOT_OPEN:"This order has no open quantities available to invoice. Reload its current status.",
   ORDER_UNIT_REVIEW_REQUIRED:"The remaining primary quantity cannot be represented in the order’s selected unit at four decimal places. Review the unit before invoicing.",
