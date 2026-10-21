@@ -65210,7 +65210,9 @@
       "expected_behavior": "Support safe corrections with receipt/advance handling, changed totals and immutable posted history.",
       "root_cause": "Amendment guard rejects any payment or adjustment; reassignment workflow absent.",
       "affected_files": [
-        "src/lib/account/sale-amendments.ts"
+        "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-attachments.integration.test.ts",
+        "src/lib/account/sale-attachments.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -65370,6 +65372,26 @@
           },
           "remaining": "A086-F05 remains PARTIAL: original invoices with prior posted credit adjustments still require safe residual correction implementation; broader financial/period/rollback coverage and final-head validation pending. Android emulator/device runtime unavailable. No final_status promotion. User decision requested for invoices already carrying posted Credit Notes: correct remaining unreturned units versus retain separate correction-document workflow. No behavior invented.",
           "commit_sha": "45a115025c97a1b47c6f9e31ad52112b97ba3167"
+        },
+        "financial_correction_new_files_2026_10_21": {
+          "implementation_commit": "59e26494",
+          "work": "Financial Sale correction accepts validated in-memory files;server file manifest participates in amendment retry identity and replacement creation intent. Original immutable file references copied first;new files added to replacement before credit/posting in same transaction. Failed upload rolls back replacement,copy rows,numbering andallfinancial writes;proven-unreferenced newblobs cleaned,original bytes retained. Shared file writer/capacity logic reused bycreation,postedappend andcorrection. Existing no-file amendment hash contract retained.",
+          "files": [
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts"
+          ],
+          "tests": {
+            "financial_database": "Final54tests2files PASS(11.32s),0failed/skipped:17Sale-file integration cases plus37existingcheque/financialregressions. Includesconcurrentfilecorrection/retry/changedfileconflict/partialstoragefailrollback andpaid100invoice/90cash/10discount correctedto80 retainingactual10advance.",
+            "initial_refinement": "Initial54group PASS before strongerpaidfixture. Strongerfocusedrun had2passing assertions butsuitefailedteardown:AdvanceApplicationFK;tenantcleanup nowdeletesadvanceapplications beforesettlements. Final54group PASS afterfixturecleanupfix.",
+            "typescript": "FinalfullPASS",
+            "eslint": "FinalfocusedPASS",
+            "diff": "PASS",
+            "browser": "NOT RUN for EditSale newfiles;HTTP/UI/native editconnectionsstillpending. EarliernewSale browserchecks retained separately.",
+            "android": "No nativesourcechangedinthisslice;earlier25JVM/build/lint evidence retained. No device/emulatorruntime.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F05/F06 andA087-F02 keepcurrentPARTIAL statuses. Posted-credit-note correction decision andinvoiceidentity decision unchanged/pending. EditSale Web/native filecontrols/HTTPconnections andruntime/finalverificationpending. No newmigration beyond144/no production/merge/deploy/A104."
         }
       }
     },
@@ -65789,6 +65811,26 @@
           },
           "remaining": "A086-F06/A087-F02 remainPARTIAL:connectEditSale HTTP/Web/native controls toappend-onlySave,completefile-bearingfinancialcorrections andremainingidentity/actions;runtime/finalverificationpending. A088-F01 stillrequiresbroaderrestore/blob recoverycoverage. No merge/deploy/production/A104.",
           "deployment_requirement": "Futureapproveddeployment mustapplymigration144beforeusingposted-fileappend. No productionmigrationexecuted."
+        },
+        "financial_correction_new_files_2026_10_21": {
+          "implementation_commit": "59e26494",
+          "work": "Financial Sale correction accepts validated in-memory files;server file manifest participates in amendment retry identity and replacement creation intent. Original immutable file references copied first;new files added to replacement before credit/posting in same transaction. Failed upload rolls back replacement,copy rows,numbering andallfinancial writes;proven-unreferenced newblobs cleaned,original bytes retained. Shared file writer/capacity logic reused bycreation,postedappend andcorrection. Existing no-file amendment hash contract retained.",
+          "files": [
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts"
+          ],
+          "tests": {
+            "financial_database": "Final54tests2files PASS(11.32s),0failed/skipped:17Sale-file integration cases plus37existingcheque/financialregressions. Includesconcurrentfilecorrection/retry/changedfileconflict/partialstoragefailrollback andpaid100invoice/90cash/10discount correctedto80 retainingactual10advance.",
+            "initial_refinement": "Initial54group PASS before strongerpaidfixture. Strongerfocusedrun had2passing assertions butsuitefailedteardown:AdvanceApplicationFK;tenantcleanup nowdeletesadvanceapplications beforesettlements. Final54group PASS afterfixturecleanupfix.",
+            "typescript": "FinalfullPASS",
+            "eslint": "FinalfocusedPASS",
+            "diff": "PASS",
+            "browser": "NOT RUN for EditSale newfiles;HTTP/UI/native editconnectionsstillpending. EarliernewSale browserchecks retained separately.",
+            "android": "No nativesourcechangedinthisslice;earlier25JVM/build/lint evidence retained. No device/emulatorruntime.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F05/F06 andA087-F02 keepcurrentPARTIAL statuses. Posted-credit-note correction decision andinvoiceidentity decision unchanged/pending. EditSale Web/native filecontrols/HTTPconnections andruntime/finalverificationpending. No newmigration beyond144/no production/merge/deploy/A104."
         }
       },
       "push_checkpoint_evidence": {
@@ -66658,6 +66700,26 @@
           },
           "remaining": "A086-F06/A087-F02 remainPARTIAL:connectEditSale HTTP/Web/native controls toappend-onlySave,completefile-bearingfinancialcorrections andremainingidentity/actions;runtime/finalverificationpending. A088-F01 stillrequiresbroaderrestore/blob recoverycoverage. No merge/deploy/production/A104.",
           "deployment_requirement": "Futureapproveddeployment mustapplymigration144beforeusingposted-fileappend. No productionmigrationexecuted."
+        },
+        "financial_correction_new_files_2026_10_21": {
+          "implementation_commit": "59e26494",
+          "work": "Financial Sale correction accepts validated in-memory files;server file manifest participates in amendment retry identity and replacement creation intent. Original immutable file references copied first;new files added to replacement before credit/posting in same transaction. Failed upload rolls back replacement,copy rows,numbering andallfinancial writes;proven-unreferenced newblobs cleaned,original bytes retained. Shared file writer/capacity logic reused bycreation,postedappend andcorrection. Existing no-file amendment hash contract retained.",
+          "files": [
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts"
+          ],
+          "tests": {
+            "financial_database": "Final54tests2files PASS(11.32s),0failed/skipped:17Sale-file integration cases plus37existingcheque/financialregressions. Includesconcurrentfilecorrection/retry/changedfileconflict/partialstoragefailrollback andpaid100invoice/90cash/10discount correctedto80 retainingactual10advance.",
+            "initial_refinement": "Initial54group PASS before strongerpaidfixture. Strongerfocusedrun had2passing assertions butsuitefailedteardown:AdvanceApplicationFK;tenantcleanup nowdeletesadvanceapplications beforesettlements. Final54group PASS afterfixturecleanupfix.",
+            "typescript": "FinalfullPASS",
+            "eslint": "FinalfocusedPASS",
+            "diff": "PASS",
+            "browser": "NOT RUN for EditSale newfiles;HTTP/UI/native editconnectionsstillpending. EarliernewSale browserchecks retained separately.",
+            "android": "No nativesourcechangedinthisslice;earlier25JVM/build/lint evidence retained. No device/emulatorruntime.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F05/F06 andA087-F02 keepcurrentPARTIAL statuses. Posted-credit-note correction decision andinvoiceidentity decision unchanged/pending. EditSale Web/native filecontrols/HTTPconnections andruntime/finalverificationpending. No newmigration beyond144/no production/merge/deploy/A104."
         }
       },
       "push_checkpoint_evidence": {

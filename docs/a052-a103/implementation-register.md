@@ -10288,3 +10288,10 @@ A086-F06/A087-F02 remainPARTIAL forEditSale fileadd/metadata-onlySave,remainingi
 81tests5files PASS11.70s,0failed/skipped. Thenstrengthenedpaid-discounttest1PASS1.14s/14name-filterexcluded,retaining100invoice/90actualCash/10discount andallfinancialsnapshots. Fresh144chain/data-preservinglegacyupgrade/redeploy1PASS3.51s. FinalfullTypeScript/focusedESLint/diff PASS. NewappendHTTP/UI/native integration/runtime NOT RUN/pending;earliernewSale browserproof doesnotverifythisoperation.
 
 A086-F06/A087-F02 remainPARTIAL;counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs preserved.79cfbc05targetedCI39533999392SUCCESS;newheadCIpending. Futureapproveddeployment requires144beforeappend;no production/merge/deploy/A104.
+
+
+### 2026-10-21 — correction with newly selected files
+
+`59e26494`: in-memory filemanifest participates inamendment/replacementretryidentity;originalfile references retained,newfiles commit withfinancialcorrection. Uploadfailure rollsbackdocument/copies/numbering/financialwrites;new orphanbytes safelycleaned. No-filehash contract/approvedfinancialpolicy unchanged.
+
+Final54DBtests2files PASS11.32s,0failed/skipped,including17Sale-file+37cheque/financialcases. Paid100invoice/90cash/10discount correctionto80 retains10actualadvance. Initialstrongerfocusedrun2assertionspassed/suiteteardownfailedAdvanceApplicationFK;cleanuporderfixed,final54PASS. FinalTypeScript/focusedESLint/diff PASS. EditSale HTTP/UI/native connection/runtimepending. A086-F05/F06/A087-F02 remainPARTIAL;creditnote-adjusted/invoiceidentitypolicies pending. No newmigration beyond144/no production/merge/deploy/A104.
