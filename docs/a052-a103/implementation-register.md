@@ -10411,3 +10411,15 @@ Added an exact primary-unit, source-line-based quantity calculation: partial pos
 This component is not yet connected to persistence, posting, API, reports or Web/native controls. No user-visible order closure is claimed. Transaction locks, line provenance persistence and end-to-end tests remain. A084-F03/A085-F02 remain PARTIAL.
 
 Previous pushed head428d57867fdeacc2a7d20d327b6dbf472a581f08 passed all targeted CI jobs in39607193753; these results do not certify later changes. No migration/merge/deploy/production/A104.
+
+
+### 2026-10-21 — persisted order lifecycle, intermediate validation
+
+Code commit `cfbf6b836b70321c937dc70600b4a2ebceb84c4c`. One additive migration `20261021120000_order_line_fulfilment` (145 total), company-composite source-order/line FKs, immutable source/provenance guards. Explicitly mapped creation/posting locks the order and checks primary-unit quantities; legacy unallocated purchase bills are not guessed complete. Manual Close remaining records a reason/audit without journal, payment or stock mutation; Web and authenticated native API share the service, Android controls compile. Retained Sale edits/reversals preserve source mapping and retire originals through explicit atomic audit events.
+
+- Units28 PASS (includes16domain cases); final PostgreSQL19 PASS,0fail/skip; final TypeScript/focused lint PASS.
+- Desktop/mobile browser2 PASS1.7m, including native HTTP/auth, retry, scope and accessibility. No native device UI claim.
+- Android compile +13JVMtests PASS,0fail/error/skip,4m21s. Local current-slice lint/device runtime not executed.
+- Fresh local145-migration upgrade/preservation/redeploy rehearsal1 PASS13.49s. No production DB access. Initial test-fixture count/entitlement/nullableJSON failures and their corrected reruns are retained in JSON.
+
+A084-F03/A085-F02 remain PARTIAL: invoice/bill-from-order preparation and source-line controls, report destinations/filters and final full199/native runtime validation remain. Manually closed-order corrections remain rejected. Ordinary returns are not inferred as cancellations. Shared A086-F05 evidence is mapped without marking its unresolved original scope complete. All199IDs retained; broad status counts unchanged. Apply the migration before serving a client reading the new columns during a separately approved deployment. No merge/deploy/A104.

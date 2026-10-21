@@ -58814,7 +58814,25 @@
         "src/lib/account/reports/gst-rate.test.ts",
         "src/lib/account/reports/gst-rate.ts",
         "src/lib/account/reports/item-serial.test.ts",
-        "src/lib/account/reports/item-serial.ts"
+        "src/lib/account/reports/item-serial.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/actions/commercial.ts",
+        "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+        "src/app/workspace/account/transactions/[id]/page.tsx",
+        "src/components/account/order-progress.tsx",
+        "src/lib/account/action-feedback.ts",
+        "src/lib/account/commercial-unit-history.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/account/orders/effective-targets.ts",
+        "src/lib/account/orders/lifecycle.ts",
+        "src/lib/account/orders/source.ts",
+        "src/lib/account/sale-amendments.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -59770,6 +59788,61 @@
           "remaining": "Persist source-line provenance and manual-close audit; authorize/lock source orders on posting; expose confirmed order fulfilment and close-remaining workflows in Web/native and report filters; DB concurrency/retry/isolation/integration/browser/device validation. No schema/migration introduced by this component.",
           "previous_head_ci": "39607193753 SUCCESS at428d57867fdeacc2a7d20d327b6dbf472a581f08: web/android/migration. Does not certify this new component.",
           "status": "PARTIAL \u2014 domain component only; broad findings not promoted."
+        },
+        "order_lifecycle_2026_10_21": {
+          "commit": "cfbf6b836b70321c937dc70600b4a2ebceb84c4c",
+          "implementation": "Persisted sourceSalesOrderId and sourceOrderLineId with company-composite FKs and immutable/provenance triggers in one new additive migration. Explicitly mapped invoice/bill creation and posting serialize on source order, validate branch/party/project/item provenance and primary quantities, reject overfulfilment and manually closed commitments. Historical unallocated purchase bills retain existing behavior; completion is UNRESOLVED instead of guessed. Added shared authorized order-state/manual-close services, Web reason form, authenticated mobile GET/POST and Android order-progress/close controls. Manual closure appends one audit event on retries, without financial/document-history rewrites. Linked Sale edits retain provenance; immutable SALE_AMENDED/SALE_REVERSED events retire the original fulfilment atomically.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/commercial.ts",
+            "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+            "src/app/workspace/account/transactions/[id]/page.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/orders/effective-targets.ts",
+            "src/lib/account/orders/lifecycle.ts",
+            "src/lib/account/orders/source.ts",
+            "src/lib/account/sale-amendments.ts"
+          ],
+          "apis_actions": [
+            "GET /api/v1/mobile/account/orders/[id]",
+            "POST /api/v1/mobile/account/orders/[id]",
+            "closeRemainingOrderAction",
+            "createCommercialDocumentForActor (explicit source validation)",
+            "postCommercialDocumentForActor (serialized source quantity validation)",
+            "replacePostedSaleForActor (retained source mapping/atomic correction retirement)"
+          ],
+          "models": [
+            "CommercialDocument.sourceSalesOrderId",
+            "CommercialDocumentLine.sourceOrderLineId"
+          ],
+          "migrations": [
+            "20261021120000_order_line_fulfilment"
+          ],
+          "tests": {
+            "units": "28 tests/4 files PASS,0fail/skip,2.74s,includes16quantity-domain tests (not additive).",
+            "database": "Final19 PostgreSQL commercial history tests PASS,0fail/skip,5.75s/4.79s execution: concurrent postings only one admitted; rejected document no journal; retry one source journal; automatic/manual closure; branch/company/role checks; edit/reversal retaining primary quantities; DB immutable source/provenance guards. Earlier19PASS6.51s and26.48s are overlapping runs.",
+            "browser": "Desktop/mobile Chromium2PASS1.7m: automatic full quantity closure, manual reason form/action, repeat request single audit, authorized mobile HTTP state/close, PM403, unchanged journal/stock counts, Axe/no overflow. Authenticated HTTP is not native device UI verification.",
+            "android": "compileDebugKotlin +13 selected JVM tests PASS,0fail/error/skip,4m21s. OrderProgressCard compiled; no Compose/emulator/device runtime; current-slice local lint not run.",
+            "migration": "145-migration fresh local *_ci full-chain/legacy upgrade rehearsal PASS1test13.49s (12.78s execution), old document/line values retained, new source fields NULL, idempotent redeploy no pending migrations. Existing isolated local test DB migrate deploy also PASS. No production access.",
+            "schema": "Prisma validate PASS and generate PASS. Initial validate lacked DIRECT_URL; rerun used isolated placeholder config and passed, actual local migration applied successfully.",
+            "typescript": "Final full tsc --noEmit PASS after fixture nullable JSON used Prisma.DbNull.",
+            "lint": "Final focused ESLint PASS,0warnings; workflow YAML parsed successfully; git diff --check PASS.",
+            "failures_retained": "Initial full DB run18PASS/1FAIL: company-wide journal-count assertion included other fixture advance activity; changed to assert source-document journals, rejected source has0 and retry has1. Next18PASS/1FAIL: manual-close subscription guard correctly rejected an unentitled fixture; fixture granted its own local trial, no entitlement logic weakened. Final TypeScript caught fixture nullable JSON create type; corrected Prisma.DbNull and reran tsc/lint/all19DB successfully.",
+            "final_199_head": "NOT RUN; targeted CI to run after evidence commit."
+          },
+          "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
+          "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
         }
       }
     },
@@ -63295,7 +63368,25 @@
         "src/lib/account/reports/gst-rate.test.ts",
         "src/lib/account/reports/gst-rate.ts",
         "src/lib/account/reports/item-serial.test.ts",
-        "src/lib/account/reports/item-serial.ts"
+        "src/lib/account/reports/item-serial.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/actions/commercial.ts",
+        "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+        "src/app/workspace/account/transactions/[id]/page.tsx",
+        "src/components/account/order-progress.tsx",
+        "src/lib/account/action-feedback.ts",
+        "src/lib/account/commercial-unit-history.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/account/orders/effective-targets.ts",
+        "src/lib/account/orders/lifecycle.ts",
+        "src/lib/account/orders/source.ts",
+        "src/lib/account/sale-amendments.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -64172,6 +64263,61 @@
           "remaining": "Persist source-line provenance and manual-close audit; authorize/lock source orders on posting; expose confirmed order fulfilment and close-remaining workflows in Web/native and report filters; DB concurrency/retry/isolation/integration/browser/device validation. No schema/migration introduced by this component.",
           "previous_head_ci": "39607193753 SUCCESS at428d57867fdeacc2a7d20d327b6dbf472a581f08: web/android/migration. Does not certify this new component.",
           "status": "PARTIAL \u2014 domain component only; broad findings not promoted."
+        },
+        "order_lifecycle_2026_10_21": {
+          "commit": "cfbf6b836b70321c937dc70600b4a2ebceb84c4c",
+          "implementation": "Persisted sourceSalesOrderId and sourceOrderLineId with company-composite FKs and immutable/provenance triggers in one new additive migration. Explicitly mapped invoice/bill creation and posting serialize on source order, validate branch/party/project/item provenance and primary quantities, reject overfulfilment and manually closed commitments. Historical unallocated purchase bills retain existing behavior; completion is UNRESOLVED instead of guessed. Added shared authorized order-state/manual-close services, Web reason form, authenticated mobile GET/POST and Android order-progress/close controls. Manual closure appends one audit event on retries, without financial/document-history rewrites. Linked Sale edits retain provenance; immutable SALE_AMENDED/SALE_REVERSED events retire the original fulfilment atomically.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/commercial.ts",
+            "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+            "src/app/workspace/account/transactions/[id]/page.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/orders/effective-targets.ts",
+            "src/lib/account/orders/lifecycle.ts",
+            "src/lib/account/orders/source.ts",
+            "src/lib/account/sale-amendments.ts"
+          ],
+          "apis_actions": [
+            "GET /api/v1/mobile/account/orders/[id]",
+            "POST /api/v1/mobile/account/orders/[id]",
+            "closeRemainingOrderAction",
+            "createCommercialDocumentForActor (explicit source validation)",
+            "postCommercialDocumentForActor (serialized source quantity validation)",
+            "replacePostedSaleForActor (retained source mapping/atomic correction retirement)"
+          ],
+          "models": [
+            "CommercialDocument.sourceSalesOrderId",
+            "CommercialDocumentLine.sourceOrderLineId"
+          ],
+          "migrations": [
+            "20261021120000_order_line_fulfilment"
+          ],
+          "tests": {
+            "units": "28 tests/4 files PASS,0fail/skip,2.74s,includes16quantity-domain tests (not additive).",
+            "database": "Final19 PostgreSQL commercial history tests PASS,0fail/skip,5.75s/4.79s execution: concurrent postings only one admitted; rejected document no journal; retry one source journal; automatic/manual closure; branch/company/role checks; edit/reversal retaining primary quantities; DB immutable source/provenance guards. Earlier19PASS6.51s and26.48s are overlapping runs.",
+            "browser": "Desktop/mobile Chromium2PASS1.7m: automatic full quantity closure, manual reason form/action, repeat request single audit, authorized mobile HTTP state/close, PM403, unchanged journal/stock counts, Axe/no overflow. Authenticated HTTP is not native device UI verification.",
+            "android": "compileDebugKotlin +13 selected JVM tests PASS,0fail/error/skip,4m21s. OrderProgressCard compiled; no Compose/emulator/device runtime; current-slice local lint not run.",
+            "migration": "145-migration fresh local *_ci full-chain/legacy upgrade rehearsal PASS1test13.49s (12.78s execution), old document/line values retained, new source fields NULL, idempotent redeploy no pending migrations. Existing isolated local test DB migrate deploy also PASS. No production access.",
+            "schema": "Prisma validate PASS and generate PASS. Initial validate lacked DIRECT_URL; rerun used isolated placeholder config and passed, actual local migration applied successfully.",
+            "typescript": "Final full tsc --noEmit PASS after fixture nullable JSON used Prisma.DbNull.",
+            "lint": "Final focused ESLint PASS,0warnings; workflow YAML parsed successfully; git diff --check PASS.",
+            "failures_retained": "Initial full DB run18PASS/1FAIL: company-wide journal-count assertion included other fixture advance activity; changed to assert source-document journals, rejected source has0 and retry has1. Next18PASS/1FAIL: manual-close subscription guard correctly rejected an unentitled fixture; fixture granted its own local trial, no entitlement logic weakened. Final TypeScript caught fixture nullable JSON create type; corrected Prisma.DbNull and reran tsc/lint/all19DB successfully.",
+            "final_199_head": "NOT RUN; targeted CI to run after evidence commit."
+          },
+          "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
+          "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
         }
       }
     },
@@ -65872,7 +66018,24 @@
         "src/lib/account/sale-attachment-routes.test.ts",
         "src/lib/account/sale-attachment-upload.test.ts",
         "src/lib/account/sale-attachment-upload.ts",
-        "src/lib/account/sale-edit-initial.ts"
+        "src/lib/account/sale-edit-initial.ts",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/actions/commercial.ts",
+        "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+        "src/app/workspace/account/transactions/[id]/page.tsx",
+        "src/components/account/order-progress.tsx",
+        "src/lib/account/action-feedback.ts",
+        "src/lib/account/commercial-unit-history.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/account/orders/effective-targets.ts",
+        "src/lib/account/orders/lifecycle.ts",
+        "src/lib/account/orders/source.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -66091,6 +66254,61 @@
             "targeted_ci": "Run39539032421 SUCCESS at exact prior checkpoint ba59d3ba2b3a354a952eeed730631164d7e2a93c:Web,Android,migration allPASS. Does not certify later GST changes or final full199-finding validation."
           },
           "remaining": "A086-F05/F06 and A087-F02 retain PARTIAL. Outstanding posted-credit-note correction and invoice identity business decisions unchanged; other original reference/action scope and final full-head/device verification remain. All199 original IDs preserved; no finding promoted solely by shared work. A104/merge/deploy/production writes remain prohibited."
+        },
+        "order_lifecycle_2026_10_21": {
+          "commit": "cfbf6b836b70321c937dc70600b4a2ebceb84c4c",
+          "implementation": "Persisted sourceSalesOrderId and sourceOrderLineId with company-composite FKs and immutable/provenance triggers in one new additive migration. Explicitly mapped invoice/bill creation and posting serialize on source order, validate branch/party/project/item provenance and primary quantities, reject overfulfilment and manually closed commitments. Historical unallocated purchase bills retain existing behavior; completion is UNRESOLVED instead of guessed. Added shared authorized order-state/manual-close services, Web reason form, authenticated mobile GET/POST and Android order-progress/close controls. Manual closure appends one audit event on retries, without financial/document-history rewrites. Linked Sale edits retain provenance; immutable SALE_AMENDED/SALE_REVERSED events retire the original fulfilment atomically.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/actions/commercial.ts",
+            "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+            "src/app/workspace/account/transactions/[id]/page.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/orders/effective-targets.ts",
+            "src/lib/account/orders/lifecycle.ts",
+            "src/lib/account/orders/source.ts",
+            "src/lib/account/sale-amendments.ts"
+          ],
+          "apis_actions": [
+            "GET /api/v1/mobile/account/orders/[id]",
+            "POST /api/v1/mobile/account/orders/[id]",
+            "closeRemainingOrderAction",
+            "createCommercialDocumentForActor (explicit source validation)",
+            "postCommercialDocumentForActor (serialized source quantity validation)",
+            "replacePostedSaleForActor (retained source mapping/atomic correction retirement)"
+          ],
+          "models": [
+            "CommercialDocument.sourceSalesOrderId",
+            "CommercialDocumentLine.sourceOrderLineId"
+          ],
+          "migrations": [
+            "20261021120000_order_line_fulfilment"
+          ],
+          "tests": {
+            "units": "28 tests/4 files PASS,0fail/skip,2.74s,includes16quantity-domain tests (not additive).",
+            "database": "Final19 PostgreSQL commercial history tests PASS,0fail/skip,5.75s/4.79s execution: concurrent postings only one admitted; rejected document no journal; retry one source journal; automatic/manual closure; branch/company/role checks; edit/reversal retaining primary quantities; DB immutable source/provenance guards. Earlier19PASS6.51s and26.48s are overlapping runs.",
+            "browser": "Desktop/mobile Chromium2PASS1.7m: automatic full quantity closure, manual reason form/action, repeat request single audit, authorized mobile HTTP state/close, PM403, unchanged journal/stock counts, Axe/no overflow. Authenticated HTTP is not native device UI verification.",
+            "android": "compileDebugKotlin +13 selected JVM tests PASS,0fail/error/skip,4m21s. OrderProgressCard compiled; no Compose/emulator/device runtime; current-slice local lint not run.",
+            "migration": "145-migration fresh local *_ci full-chain/legacy upgrade rehearsal PASS1test13.49s (12.78s execution), old document/line values retained, new source fields NULL, idempotent redeploy no pending migrations. Existing isolated local test DB migrate deploy also PASS. No production access.",
+            "schema": "Prisma validate PASS and generate PASS. Initial validate lacked DIRECT_URL; rerun used isolated placeholder config and passed, actual local migration applied successfully.",
+            "typescript": "Final full tsc --noEmit PASS after fixture nullable JSON used Prisma.DbNull.",
+            "lint": "Final focused ESLint PASS,0warnings; workflow YAML parsed successfully; git diff --check PASS.",
+            "failures_retained": "Initial full DB run18PASS/1FAIL: company-wide journal-count assertion included other fixture advance activity; changed to assert source-document journals, rejected source has0 and retry has1. Next18PASS/1FAIL: manual-close subscription guard correctly rejected an unentitled fixture; fixture granted its own local trial, no entitlement logic weakened. Final TypeScript caught fixture nullable JSON create type; corrected Prisma.DbNull and reran tsc/lint/all19DB successfully.",
+            "final_199_head": "NOT RUN; targeted CI to run after evidence commit."
+          },
+          "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
+          "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
         }
       }
     },
@@ -71241,6 +71459,61 @@
       "remaining": "Persist source-line provenance and manual-close audit; authorize/lock source orders on posting; expose confirmed order fulfilment and close-remaining workflows in Web/native and report filters; DB concurrency/retry/isolation/integration/browser/device validation. No schema/migration introduced by this component.",
       "previous_head_ci": "39607193753 SUCCESS at428d57867fdeacc2a7d20d327b6dbf472a581f08: web/android/migration. Does not certify this new component.",
       "status": "PARTIAL \u2014 domain component only; broad findings not promoted."
+    },
+    "order_lifecycle_2026_10_21": {
+      "commit": "cfbf6b836b70321c937dc70600b4a2ebceb84c4c",
+      "implementation": "Persisted sourceSalesOrderId and sourceOrderLineId with company-composite FKs and immutable/provenance triggers in one new additive migration. Explicitly mapped invoice/bill creation and posting serialize on source order, validate branch/party/project/item provenance and primary quantities, reject overfulfilment and manually closed commitments. Historical unallocated purchase bills retain existing behavior; completion is UNRESOLVED instead of guessed. Added shared authorized order-state/manual-close services, Web reason form, authenticated mobile GET/POST and Android order-progress/close controls. Manual closure appends one audit event on retries, without financial/document-history rewrites. Linked Sale edits retain provenance; immutable SALE_AMENDED/SALE_REVERSED events retire the original fulfilment atomically.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/migrations/20261021120000_order_line_fulfilment/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/actions/commercial.ts",
+        "src/app/api/v1/mobile/account/orders/[id]/route.ts",
+        "src/app/workspace/account/transactions/[id]/page.tsx",
+        "src/components/account/order-progress.tsx",
+        "src/lib/account/action-feedback.ts",
+        "src/lib/account/commercial-unit-history.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/account/orders/effective-targets.ts",
+        "src/lib/account/orders/lifecycle.ts",
+        "src/lib/account/orders/source.ts",
+        "src/lib/account/sale-amendments.ts"
+      ],
+      "apis_actions": [
+        "GET /api/v1/mobile/account/orders/[id]",
+        "POST /api/v1/mobile/account/orders/[id]",
+        "closeRemainingOrderAction",
+        "createCommercialDocumentForActor (explicit source validation)",
+        "postCommercialDocumentForActor (serialized source quantity validation)",
+        "replacePostedSaleForActor (retained source mapping/atomic correction retirement)"
+      ],
+      "models": [
+        "CommercialDocument.sourceSalesOrderId",
+        "CommercialDocumentLine.sourceOrderLineId"
+      ],
+      "migrations": [
+        "20261021120000_order_line_fulfilment"
+      ],
+      "tests": {
+        "units": "28 tests/4 files PASS,0fail/skip,2.74s,includes16quantity-domain tests (not additive).",
+        "database": "Final19 PostgreSQL commercial history tests PASS,0fail/skip,5.75s/4.79s execution: concurrent postings only one admitted; rejected document no journal; retry one source journal; automatic/manual closure; branch/company/role checks; edit/reversal retaining primary quantities; DB immutable source/provenance guards. Earlier19PASS6.51s and26.48s are overlapping runs.",
+        "browser": "Desktop/mobile Chromium2PASS1.7m: automatic full quantity closure, manual reason form/action, repeat request single audit, authorized mobile HTTP state/close, PM403, unchanged journal/stock counts, Axe/no overflow. Authenticated HTTP is not native device UI verification.",
+        "android": "compileDebugKotlin +13 selected JVM tests PASS,0fail/error/skip,4m21s. OrderProgressCard compiled; no Compose/emulator/device runtime; current-slice local lint not run.",
+        "migration": "145-migration fresh local *_ci full-chain/legacy upgrade rehearsal PASS1test13.49s (12.78s execution), old document/line values retained, new source fields NULL, idempotent redeploy no pending migrations. Existing isolated local test DB migrate deploy also PASS. No production access.",
+        "schema": "Prisma validate PASS and generate PASS. Initial validate lacked DIRECT_URL; rerun used isolated placeholder config and passed, actual local migration applied successfully.",
+        "typescript": "Final full tsc --noEmit PASS after fixture nullable JSON used Prisma.DbNull.",
+        "lint": "Final focused ESLint PASS,0warnings; workflow YAML parsed successfully; git diff --check PASS.",
+        "failures_retained": "Initial full DB run18PASS/1FAIL: company-wide journal-count assertion included other fixture advance activity; changed to assert source-document journals, rejected source has0 and retry has1. Next18PASS/1FAIL: manual-close subscription guard correctly rejected an unentitled fixture; fixture granted its own local trial, no entitlement logic weakened. Final TypeScript caught fixture nullable JSON create type; corrected Prisma.DbNull and reran tsc/lint/all19DB successfully.",
+        "final_199_head": "NOT RUN; targeted CI to run after evidence commit."
+      },
+      "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
+      "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
     }
   },
   "approved_business_decisions": {
