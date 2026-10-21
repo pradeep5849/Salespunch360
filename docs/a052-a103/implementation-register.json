@@ -68990,6 +68990,44 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for remaining catalogue/reference scope,including Order reports pending Closed semantics and Form27EQ pending filing/source-report requirement. A090 other consumers/final validation remainPARTIAL. No whole-finding completion inferred."
+        },
+        "calendar_consumers_2026_10_21": {
+          "implementation_commit": "6d620b8941fad7a4a1f781ba4fa172fb100f72bf",
+          "work": "Web expense/asset approval,assignment,lifecycle timestamps use a new AccountUtcTimestamp preserving their prior ISO UTC clock/zone while applying company calendar format; existing server-local AccountTimestamp unchanged. Stock as-of,batch expiry,journal selectors/history,backup download date labels use AccountDate. Native expense/asset metadata timestamp formatter retains source clock/offset/milliseconds;expense/journal lists,Sales/Purchases/payment history and Sale date-button display now use accountDate. ISO API/form values,quantities,numeric limits and accounting dates unchanged. No DB/API/financial write change.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountDisplayPreferences.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/accounting/AssetScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/accounting/JournalScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/VendorPaymentScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/CustomerReceiptScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountDisplayPreferencesTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/accounting/[section]/page.tsx",
+            "src/app/workspace/account/assets/[id]/page.tsx",
+            "src/app/workspace/account/expenses/[id]/page.tsx",
+            "src/app/workspace/account/inventory/[section]/page.tsx",
+            "src/app/workspace/account/inventory/page.tsx",
+            "src/app/workspace/account/settings/backup/page.tsx",
+            "src/components/account/account-timestamp.test.tsx",
+            "src/components/account/account-ui.tsx"
+          ],
+          "tests": {
+            "grouped": "26 tests/3files PASS,0fail/skip,711ms;existing server-local timestamp tests +new UTC boundary/preferences +exact formatting. Earlier20/2file runs overlap. New test initially triggered react/no-children-prop lint;converted to TSX with nested JSX,no rule suppression/provider change.",
+            "browser": "Desktop/mobile Chromium2PASS1.3m: real own expense history fixedUTC23:45:15.123Z becomes saved MM/DD calendar with exact clock,expense total USD/3decimals,recurring dates/money directory,Axe/no root overflow,unchanged stored amount/journals. Newly wired accounting/inventory/asset/backup consumer pages were typechecked but their separate direct browser scenarios were not rerun in this slice.",
+            "android": "Final Kotlin compilation +12display/expenseJVM tests PASS,0failures/errors/skips,1m56s,XML confirmed. Earlier successful3m15s and2m5s runs precede final native list wiring and overlap;not additive. Test preserves midnight UTC day,offset/milliseconds,calendar-only and unknown text. Native emulator/Compose/device/TalkBack runtime NOT RUN,emulator boot limitation recorded globally;local current-slice lint NOT RUN.",
+            "typescript": "Final full tsc --noEmit PASS after Web/TSX/browser additions;later edits native-only.",
+            "eslint": "Final focused ESLint PASS for all changed Web/helper/test consumers.",
+            "workflow": "YAML parsed;UTC timestamp regression added to targeted CI.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39579772294 SUCCESS at34a07c4c90734e89b79394860580badde4917cb2:Web/Android/migration. Does notcertify this latercalendar slice or final199 head.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090-F01 remains PARTIAL for complete final consumer/runtime verification;Hindi explicitly user-deferred. No whole finding completion inferred from shared helper wiring. No production/merge/deploy/A104."
         }
       },
       "intermediate_validation": {
