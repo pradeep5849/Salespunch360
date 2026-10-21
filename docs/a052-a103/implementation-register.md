@@ -10270,3 +10270,12 @@ A086-F06/A087-F02 remain PARTIAL: HTTP/UI/native connections,attachment-only edi
 38unit/HTTPtests6files PASS(1.76s). Finaldesktop/mobilebrowser2PASS(55.2s),includinglostcommittedresponse retryoneSale/journal/file,leavewithoutSave,privateWebdownload,nativeGETlist/download/POST/retry,unauth401,AxeAA/nooverflow. InitialmobilePASS/desktopcontrastFAIL;newlabeldarkened,assertionpreserved,finalbothPASS. InitialTypeScriptcompany-nullguards/ledgerfixture fixed;finalfullTypeScript/focusedESLint/diff PASS. NoAndroiddevice/emulatorruntimeclaim.
 
 Predecessor0a1e7a43targetedCIrun39531246915SUCCESS(all3jobs,newSale-fileDBstep);newheadneedsCI. Counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs/allfinalstatuses preserved. No extraDBmigration beyond143/no production/merge/deploy/A104.
+
+
+### 2026-10-21 — native Sale files and receipt-intent retry protection
+
+`b91f0141`: native memory-only newSale filepicker,Save blockingwhile reading,file-sensitive retryidentity,no filebytes/names in documentJSON,atomicmultipartSave,private savedfile list/download/share. No emulator/device/URI-provider/share-sheet/TalkBack runtimeclaim. compileDebugKotlin/25focusedJVM/lintDebug PASS7m22s;0testfail/error/skip;lint0errors/4warnings/6information.
+
+`c1a49903`: normalized receiptintent included in trusted Sale-fileSave fingerprint. NewDBtest initially FAILED becausechangedpaymentretry addedreceipt;fixed.39focusedtests5files PASS6.44s,0failed/skipped. ExistingEditSale/shippingbrowser4PASS3.4m precededthissmallfinancialhardening;afterfixprivatefilebrowser2desktop/mobilePASS1.3m. FinalcombinedTypeScript/focusedESLint/diff PASS. Broaderfinal199verification pending.
+
+A086-F06/A087-F02 remainPARTIAL forEditSale fileadd/metadata-onlySave,remainingidentity/actions andfinal/runtimeverification. Counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs preserved. No extraDBmigration beyond143/no production/merge/deploy/A104.

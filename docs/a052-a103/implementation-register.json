@@ -65387,10 +65387,15 @@
         ".github/workflows/targeted-validation.yml",
         "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/CommercialCreationIdentity.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/SaleCreationAttachment.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SaleAttachmentControls.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SaleCreationAttachmentTest.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
@@ -65722,6 +65727,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 stay PARTIAL: Android file picker/upload/private-file display;Edit Sale file addition andmetadata-only edit handling;remaining invoice identity policy/actions andfinal complete/device validation. No new migration beyond prior143;no production changes."
+        },
+        "sale_native_files_and_payment_retry_2026_10_21": {
+          "implementation_commits": [
+            "b91f0141",
+            "c1a49903"
+          ],
+          "work": "Native new Sale selects PDF/PNG/JPEG in memory,blocks Save while reading,retains files after error,and uses file-sensitive creation identity without serializing bytes/names into document JSON. ApiClient sends document/payment/files atomically to existing authenticated native file Save;private Details file list/download/share controls use authenticated endpoints and app-private FileProvider cache. Existing quotation and non-Sale flows unchanged. File-byte/name/order changes create distinct native editor intent. Added server protection: Sale-file retry fingerprint now also includes normalized receipt intent,so changing payment under an existing Save key cannot add a receipt. Original no-file creation hash contract unchanged.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/CommercialCreationIdentity.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SaleCreationAttachment.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SaleAttachmentControls.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SaleCreationAttachmentTest.kt",
+            "src/lib/account/sale-submit.ts",
+            "src/lib/account/sale-attachments.integration.test.ts"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin +25focusedJVM +lintDebug PASS(7m22s). XML25tests/0failure/0error/0skip:SaleCreationAttachment4,CommercialCreationIdentity2,QuotationConversionDraft6,SaleDuplicate3,SalesEditSnapshot8,ChequeSalePayload2. Lint0errors/4warnings/6information. Existing Android analytics writable-directory warning;build succeeded.",
+            "android_runtime": "NOT RUN:emulator/device/URI-provider/FileProvider/share-sheet/TalkBack. Native HTTP endpoints were exercised from real browser/API contexts in prior/current Web tests,not an Android app runtime.",
+            "payment_retry_red_green": "New isolated PostgreSQL regression initially FAILED:changed-payment retry resolved and added a receipt. Normalized receipt intent added to trusted file Save hash. Final39tests across5files PASS(6.44s),0failed/skipped,includingthatregression andallSale-fileDB/submit/HTTP/transportcases.",
+            "existing_browser_regression": "4desktop/mobile EditSale/shipping/native-edit/print regression cases PASS(3.4m) on same Web UI source,before additionalpaymentretryhardening.",
+            "current_browser": "After paymentretryhardening,2desktop/mobile privateSale-file browser cases PASS(1.3m):selection/removal/abandon,lostcommittedresponse retryoneSale/file/journal,privateWeb/nativeGET/nativePOST+retry,unauth401,AxeAA/nooverflow.",
+            "typescript": "Final combined fullTypeScript PASS after finalbrowser",
+            "eslint": "Focused financialretry ESLint PASS;priorcompleteWeb lint PASS",
+            "diff": "PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL:EditSale attachment add/attachment-only Save without financial replacement;remaining original identity/actions policy;finalcompletehead+device/runtime verification. Native picker/share runtime unexecuted. No newmigration beyond143;no production/merge/deploy/A104."
         }
       },
       "push_checkpoint_evidence": {
@@ -66230,10 +66267,15 @@
         ".github/workflows/targeted-validation.yml",
         "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/CommercialCreationIdentity.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/SaleCreationAttachment.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SaleAttachmentControls.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SaleCreationAttachmentTest.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
@@ -66524,6 +66566,38 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 stay PARTIAL: Android file picker/upload/private-file display;Edit Sale file addition andmetadata-only edit handling;remaining invoice identity policy/actions andfinal complete/device validation. No new migration beyond prior143;no production changes."
+        },
+        "sale_native_files_and_payment_retry_2026_10_21": {
+          "implementation_commits": [
+            "b91f0141",
+            "c1a49903"
+          ],
+          "work": "Native new Sale selects PDF/PNG/JPEG in memory,blocks Save while reading,retains files after error,and uses file-sensitive creation identity without serializing bytes/names into document JSON. ApiClient sends document/payment/files atomically to existing authenticated native file Save;private Details file list/download/share controls use authenticated endpoints and app-private FileProvider cache. Existing quotation and non-Sale flows unchanged. File-byte/name/order changes create distinct native editor intent. Added server protection: Sale-file retry fingerprint now also includes normalized receipt intent,so changing payment under an existing Save key cannot add a receipt. Original no-file creation hash contract unchanged.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/CommercialCreationIdentity.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SaleCreationAttachment.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SaleAttachmentControls.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SaleCreationAttachmentTest.kt",
+            "src/lib/account/sale-submit.ts",
+            "src/lib/account/sale-attachments.integration.test.ts"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin +25focusedJVM +lintDebug PASS(7m22s). XML25tests/0failure/0error/0skip:SaleCreationAttachment4,CommercialCreationIdentity2,QuotationConversionDraft6,SaleDuplicate3,SalesEditSnapshot8,ChequeSalePayload2. Lint0errors/4warnings/6information. Existing Android analytics writable-directory warning;build succeeded.",
+            "android_runtime": "NOT RUN:emulator/device/URI-provider/FileProvider/share-sheet/TalkBack. Native HTTP endpoints were exercised from real browser/API contexts in prior/current Web tests,not an Android app runtime.",
+            "payment_retry_red_green": "New isolated PostgreSQL regression initially FAILED:changed-payment retry resolved and added a receipt. Normalized receipt intent added to trusted file Save hash. Final39tests across5files PASS(6.44s),0failed/skipped,includingthatregression andallSale-fileDB/submit/HTTP/transportcases.",
+            "existing_browser_regression": "4desktop/mobile EditSale/shipping/native-edit/print regression cases PASS(3.4m) on same Web UI source,before additionalpaymentretryhardening.",
+            "current_browser": "After paymentretryhardening,2desktop/mobile privateSale-file browser cases PASS(1.3m):selection/removal/abandon,lostcommittedresponse retryoneSale/file/journal,privateWeb/nativeGET/nativePOST+retry,unauth401,AxeAA/nooverflow.",
+            "typescript": "Final combined fullTypeScript PASS after finalbrowser",
+            "eslint": "Focused financialretry ESLint PASS;priorcompleteWeb lint PASS",
+            "diff": "PASS",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL:EditSale attachment add/attachment-only Save without financial replacement;remaining original identity/actions policy;finalcompletehead+device/runtime verification. Native picker/share runtime unexecuted. No newmigration beyond143;no production/merge/deploy/A104."
         }
       },
       "push_checkpoint_evidence": {
