@@ -59409,6 +59409,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
+        },
+        "party_gst_report_2026_10_21": {
+          "implementation_commit": "d9c75f7932ecf8f4452f8e629889a5351592b698",
+          "work": "Added gst-party / GST Report as a separate catalogue/service destination while preserving existing document GST/Tax report. Reuses repeatable-read paginated economic-document scope and saved party identities/roles. Sums stored CGST+SGST+IGST+CESS, nets credit/debit notes, excludes TDS/TCS. Shared Web/native/export currency formatting and native party cards consume Sale Tax / Purchase/Expense Tax columns. Core GST availability remains intact with optional modules empty; Project Managers cannot access it. Standalone expenses have no party identity and are explicitly excluded from party attribution,not fabricated. No financial write or schema migration.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped": "105 tests /16 report/tax files PASS,0failed/skipped,27.62s; includes33 focused tests across4files(1.72s),not additive.",
+            "database_catalogue": "7 integration tests PASS,0failed/skipped,793ms; isolated local *_ci database,core GST availability under optional modules empty and Project Manager restriction.",
+            "browser_exports": "Final desktop/mobile Chromium2PASS1.8m: actual posted sale/purchase plus quarter-return taxes net12.14/7.28,Web summaries/native authenticated JSON/CSV/XLSX/PDF,Project Manager403,AxeAA/no root overflow,no journal/stock writes. Initial2failed because fixture expected theoretical unsplit rounding12.15/7.29;corrected expectation to stored independently-rounded CGST/SGST totals,report/ledger semantics unchanged.",
+            "initial_unit_fixture": "Initial32PASS/1FAIL: test incorrectly assumed core GST could be switched off using optional-module list. Replaced invalid fixture with wrong-edition denial;existing core-module policy preserved.",
+            "android": "compileDebugKotlin + focused AccountReportDataTest:BUILD SUCCESSFUL3m12s;20JVM tests,0failures/errors/skips. Native screen/device/emulator/TalkBack runtime NOT RUN. Android lint not rerun locally in this slice;previous Edit Sale slice lint retained only for its own source;targeted CI requested on new checkpoint.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused report/service/browser files PASS.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device validation. A090-F01 other formatting consumers remain PARTIAL. No whole-finding completion inferred;all199IDs/final statuses preserved. No production/merge/deploy/A104."
         }
       }
     },
@@ -63533,6 +63562,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Same broad report/display findings remain PARTIAL;native emulator/device and checkpoint-wide final verification remain pending."
+        },
+        "party_gst_report_2026_10_21": {
+          "implementation_commit": "d9c75f7932ecf8f4452f8e629889a5351592b698",
+          "work": "Added gst-party / GST Report as a separate catalogue/service destination while preserving existing document GST/Tax report. Reuses repeatable-read paginated economic-document scope and saved party identities/roles. Sums stored CGST+SGST+IGST+CESS, nets credit/debit notes, excludes TDS/TCS. Shared Web/native/export currency formatting and native party cards consume Sale Tax / Purchase/Expense Tax columns. Core GST availability remains intact with optional modules empty; Project Managers cannot access it. Standalone expenses have no party identity and are explicitly excluded from party attribution,not fabricated. No financial write or schema migration.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped": "105 tests /16 report/tax files PASS,0failed/skipped,27.62s; includes33 focused tests across4files(1.72s),not additive.",
+            "database_catalogue": "7 integration tests PASS,0failed/skipped,793ms; isolated local *_ci database,core GST availability under optional modules empty and Project Manager restriction.",
+            "browser_exports": "Final desktop/mobile Chromium2PASS1.8m: actual posted sale/purchase plus quarter-return taxes net12.14/7.28,Web summaries/native authenticated JSON/CSV/XLSX/PDF,Project Manager403,AxeAA/no root overflow,no journal/stock writes. Initial2failed because fixture expected theoretical unsplit rounding12.15/7.29;corrected expectation to stored independently-rounded CGST/SGST totals,report/ledger semantics unchanged.",
+            "initial_unit_fixture": "Initial32PASS/1FAIL: test incorrectly assumed core GST could be switched off using optional-module list. Replaced invalid fixture with wrong-edition denial;existing core-module policy preserved.",
+            "android": "compileDebugKotlin + focused AccountReportDataTest:BUILD SUCCESSFUL3m12s;20JVM tests,0failures/errors/skips. Native screen/device/emulator/TalkBack runtime NOT RUN. Android lint not rerun locally in this slice;previous Edit Sale slice lint retained only for its own source;targeted CI requested on new checkpoint.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused report/service/browser files PASS.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device validation. A090-F01 other formatting consumers remain PARTIAL. No whole-finding completion inferred;all199IDs/final statuses preserved. No production/merge/deploy/A104."
         }
       }
     },
@@ -65448,7 +65506,8 @@
             "typescript": "Final full tsc --noEmit PASS after all browser test additions.",
             "eslint": "Final focused routes/helpers/form/browser ESLint PASS.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN; checkpoint-wide final validation remains pending."
+            "final_complete_head": "NOT RUN; checkpoint-wide final validation remains pending.",
+            "targeted_ci": "Run39539032421 SUCCESS at exact prior checkpoint ba59d3ba2b3a354a952eeed730631164d7e2a93c:Web,Android,migration allPASS. Does not certify later GST changes or final full199-finding validation."
           },
           "remaining": "A086-F05/F06 and A087-F02 retain PARTIAL. Outstanding posted-credit-note correction and invoice identity business decisions unchanged; other original reference/action scope and final full-head/device verification remain. All199 original IDs preserved; no finding promoted solely by shared work. A104/merge/deploy/production writes remain prohibited."
         }
@@ -65929,7 +65988,8 @@
             "typescript": "Final full tsc --noEmit PASS after all browser test additions.",
             "eslint": "Final focused routes/helpers/form/browser ESLint PASS.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN; checkpoint-wide final validation remains pending."
+            "final_complete_head": "NOT RUN; checkpoint-wide final validation remains pending.",
+            "targeted_ci": "Run39539032421 SUCCESS at exact prior checkpoint ba59d3ba2b3a354a952eeed730631164d7e2a93c:Web,Android,migration allPASS. Does not certify later GST changes or final full199-finding validation."
           },
           "remaining": "A086-F05/F06 and A087-F02 retain PARTIAL. Outstanding posted-credit-note correction and invoice identity business decisions unchanged; other original reference/action scope and final full-head/device verification remain. All199 original IDs preserved; no finding promoted solely by shared work. A104/merge/deploy/production writes remain prohibited."
         }
@@ -66860,7 +66920,8 @@
             "typescript": "Final full tsc --noEmit PASS after all browser test additions.",
             "eslint": "Final focused routes/helpers/form/browser ESLint PASS.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN; checkpoint-wide final validation remains pending."
+            "final_complete_head": "NOT RUN; checkpoint-wide final validation remains pending.",
+            "targeted_ci": "Run39539032421 SUCCESS at exact prior checkpoint ba59d3ba2b3a354a952eeed730631164d7e2a93c:Web,Android,migration allPASS. Does not certify later GST changes or final full199-finding validation."
           },
           "remaining": "A086-F05/F06 and A087-F02 retain PARTIAL. Outstanding posted-credit-note correction and invoice identity business decisions unchanged; other original reference/action scope and final full-head/device verification remain. All199 original IDs preserved; no finding promoted solely by shared work. A104/merge/deploy/production writes remain prohibited."
         }
@@ -68212,6 +68273,35 @@
           },
           "remaining": "A080-F01 remains PARTIAL for full supplied GST1–6/Modern Elite themes, logo/signature and native preview/settings controls. A090-F01 other consumer/final validation remains PARTIAL; Hindi intentionally deferred. No financial mutation,production/deployment/merge/A104.",
           "implementation_commit": "5f6c85ce9263088ef027d094e369f3fd09af881a"
+        },
+        "party_gst_report_2026_10_21": {
+          "implementation_commit": "d9c75f7932ecf8f4452f8e629889a5351592b698",
+          "work": "Added gst-party / GST Report as a separate catalogue/service destination while preserving existing document GST/Tax report. Reuses repeatable-read paginated economic-document scope and saved party identities/roles. Sums stored CGST+SGST+IGST+CESS, nets credit/debit notes, excludes TDS/TCS. Shared Web/native/export currency formatting and native party cards consume Sale Tax / Purchase/Expense Tax columns. Core GST availability remains intact with optional modules empty; Project Managers cannot access it. Standalone expenses have no party identity and are explicitly excluded from party attribution,not fabricated. No financial write or schema migration.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-trade.test.ts",
+            "src/lib/account/reports/party-trade.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped": "105 tests /16 report/tax files PASS,0failed/skipped,27.62s; includes33 focused tests across4files(1.72s),not additive.",
+            "database_catalogue": "7 integration tests PASS,0failed/skipped,793ms; isolated local *_ci database,core GST availability under optional modules empty and Project Manager restriction.",
+            "browser_exports": "Final desktop/mobile Chromium2PASS1.8m: actual posted sale/purchase plus quarter-return taxes net12.14/7.28,Web summaries/native authenticated JSON/CSV/XLSX/PDF,Project Manager403,AxeAA/no root overflow,no journal/stock writes. Initial2failed because fixture expected theoretical unsplit rounding12.15/7.29;corrected expectation to stored independently-rounded CGST/SGST totals,report/ledger semantics unchanged.",
+            "initial_unit_fixture": "Initial32PASS/1FAIL: test incorrectly assumed core GST could be switched off using optional-module list. Replaced invalid fixture with wrong-edition denial;existing core-module policy preserved.",
+            "android": "compileDebugKotlin + focused AccountReportDataTest:BUILD SUCCESSFUL3m12s;20JVM tests,0failures/errors/skips. Native screen/device/emulator/TalkBack runtime NOT RUN. Android lint not rerun locally in this slice;previous Edit Sale slice lint retained only for its own source;targeted CI requested on new checkpoint.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused report/service/browser files PASS.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device validation. A090-F01 other formatting consumers remain PARTIAL. No whole-finding completion inferred;all199IDs/final statuses preserved. No production/merge/deploy/A104."
         }
       },
       "intermediate_validation": {
