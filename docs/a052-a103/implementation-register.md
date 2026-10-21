@@ -10295,3 +10295,12 @@ A086-F06/A087-F02 remainPARTIAL;counts185implemented-but-not-finally-verified/13
 `59e26494`: in-memory filemanifest participates inamendment/replacementretryidentity;originalfile references retained,newfiles commit withfinancialcorrection. Uploadfailure rollsbackdocument/copies/numbering/financialwrites;new orphanbytes safelycleaned. No-filehash contract/approvedfinancialpolicy unchanged.
 
 Final54DBtests2files PASS11.32s,0failed/skipped,including17Sale-file+37cheque/financialcases. Paid100invoice/90cash/10discount correctionto80 retains10actualadvance. Initialstrongerfocusedrun2assertionspassed/suiteteardownfailedAdvanceApplicationFK;cleanuporderfixed,final54PASS. FinalTypeScript/focusedESLint/diff PASS. EditSale HTTP/UI/native connection/runtimepending. A086-F05/F06/A087-F02 remainPARTIAL;creditnote-adjusted/invoiceidentitypolicies pending. No newmigration beyond144/no production/merge/deploy/A104.
+
+
+## 21 October — Edit Sale private files on Web and Android
+
+Implementation `c655424c3fa9c240b2f2293bc4e4227b74127b8e` maps to A086-F05/F06 and A087-F02. File-only Edit saves append private support files without changing the invoice, number, receipt, discount, journal or document count. Changed fields and new files use the existing atomic correction path. Web/native authenticated routes retain stable retry identity; Android retains an in-memory initial snapshot and clears it for duplication. No migration was added in this slice (chain remains 144).
+
+Validation: 47 HTTP/client tests passed; desktop/mobile browser correction cases 2 passed (2.3m), including paid append lost-response retry, unchanged financial snapshot, refreshed file links, Axe AA and no overflow. Native real HTTP append/correction/retry case 1 passed (34.4s). Android compilation, 26 focused JVM tests and lint succeeded (7m33s); lint 0 errors, 4 warnings, 6 information. Final full TypeScript, focused ESLint and diff checks passed. Native device/emulator picker/share/lifecycle/TalkBack and checkpoint-wide final verification remain unexecuted. The initial append-only browser run also passed but overlaps the strengthened cases.
+
+Counts stay 185 IMPLEMENTED BUT NOT VERIFIED, 13 PARTIAL and 1 NOT STARTED; all 199 final statuses remain unset. This does not close the unresolved invoice-identity/posted-credit-note decisions or other original Sale reference/action scope. No merge, deployment, production operation or A104.
