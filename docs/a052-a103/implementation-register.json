@@ -58729,17 +58729,27 @@
         "src/lib/account/reports/party-trade.test.ts",
         "src/lib/account/reports/party-trade.ts",
         "src/lib/account/reports/gst-rate.test.ts",
-        "src/lib/account/reports/gst-rate.ts"
+        "src/lib/account/reports/gst-rate.ts",
+        "src/lib/account/reports/item-serial.test.ts",
+        "src/lib/account/reports/item-serial.ts"
       ],
       "affected_services_apis_actions": [
-        "Report list/options/read and CSV/XLSX/PDF routes"
+        "Report list/options/read and CSV/XLSX/PDF routes",
+        "runFinancialReportForActor(item-serial)",
+        "GET /api/v1/mobile/account/reports/item-serial",
+        "GET /api/account/reports/item-serial/{csv,xlsx,pdf}"
       ],
       "affected_models": [
         "JournalEntry",
         "JournalLine",
         "CommercialDocument",
         "QuotationDocument",
-        "OwnerFinancialAccount"
+        "OwnerFinancialAccount",
+        "InventorySerialNumber",
+        "StockMovement",
+        "AccountProduct",
+        "Warehouse",
+        "AccountUnit"
       ],
       "module_impact": "Each catalogue destination must retain its report-specific module/service gates; a visible label is not proof of implementation.",
       "permission_impact": "Retain ACCOUNT_REPORTS and role/cost restrictions; Project Manager financial reports remain denied by shared context.",
@@ -59466,9 +59476,56 @@
             "eslint": "Final focused report/service/browser ESLint PASS.",
             "workflow": "PyYAML parsed workflow/jobs successfully;Node yaml helper unavailable(MODULE_NOT_FOUND),used installed Python parser;no dependencyinstall or manifestchanges.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "targeted_ci": "Run39541009116 SUCCESS at exact prior head7413ea591f233de285e24afa71fa7bff87b01249:Web,Android,migration passed. This does not certify subsequent serial changes or final checkpoint validation."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 other consumers remain PARTIAL. All199IDs and final statuses preserved;no production/merge/deploy/A104."
+        },
+        "item_serial_report_2026_10_21": {
+          "implementation_commit": "45efde65a75ff253f9616641484aa1f1d202837d",
+          "work": "Implemented Item Serial Report with repeatable-read paginated serial masters and stock history. Tenant/branch/warehouse scope is enforced. Restricted users see only serials with authorized movement history; company-wide users can see unassigned masters with zero stock. Quantities use primary units through the selected end-of-day cutoff and include inactive warehouses. Cross-product references are ignored; identical serial text on different items stays separate. Web/native item filters, search/clear, As of controls, expiry preferences, native cards, exports, catalogue/favourites and CI coverage are connected. No stock, ledger or schema changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/item-serial.test.ts",
+            "src/lib/account/reports/item-serial.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "read_models": [
+            "InventorySerialNumber",
+            "StockMovement",
+            "AccountProduct",
+            "Warehouse",
+            "AccountUnit"
+          ],
+          "services": [
+            "runFinancialReportForActor(item-serial)",
+            "GET /api/v1/mobile/account/reports/item-serial",
+            "GET /api/account/reports/item-serial/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "grouped": "125 tests / 18 report-tax files PASS, 0 failed/skipped, 36.03s. Includes 10 serial cases: 1001 master rows, 1001 movement rows, permission/settings, scoped queries, literal search, mixed units, cross-product references and expiry formatting. Earlier 41-test focused subset overlaps.",
+            "database_catalogue": "7 tests PASS, 0 failed/skipped, 889ms. Items OFF and favourite retention now cover the serial destination.",
+            "browser": "Final desktop/mobile Chromium 2 PASS, 51.7s: As of control, opening/sale/future-return cutoff, inactive warehouse history, branch-restricted native HTTP/other-branch403, unassigned privacy, search/clear, expiry preferences, CSV/XLSX/PDF, Items OFF400, Project Manager403, Axe AA/no overflow and no stock/journal changes. Earlier 2 PASS59.8s before As of refinement overlap.",
+            "shared_browser_regression": "Existing Stock Detail/Summary/Low Stock search, category/status/level and Web/native/export/accessibility scenario: desktop/mobile 2 PASS, 3.8m.",
+            "android": "Final Kotlin compilation + AccountReportDataTest BUILD SUCCESSFUL, 2m51s;22 JVM tests,0 failures/errors/skips. Initial run compiled but had21 passing/1 failing test: serial itemSearch was dropped by an older hardcoded request filter. Fixed the actual filter while retaining category/status restrictions. No device/emulator/TalkBack runtime or local Android lint rerun in this slice.",
+            "initial_unit_fixtures": "Initial7 serial tests failed because the actor fixture lacked required active/workspace fields; corrected fixture without changing guards. Next run had39 passing/1 failing test because expiry export expectation ignored existing company-formatted dates; corrected expectation and also assert raw ISO data is retained.",
+            "typescript": "Final full tsc --noEmit PASS after all source/test additions.",
+            "eslint": "Final focused report/service/Web/browser ESLint PASS.",
+            "workflow": "Workflow YAML parsed; serial regressions are included in targeted CI.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN; complete checkpoint-wide final validation remains pending."
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 retains other formatting consumers. All199 original IDs/final statuses preserved. No production operation, merge, deployment or A104."
         }
       }
     },
@@ -62992,17 +63049,27 @@
         "src/lib/account/reports/party-trade.test.ts",
         "src/lib/account/reports/party-trade.ts",
         "src/lib/account/reports/gst-rate.test.ts",
-        "src/lib/account/reports/gst-rate.ts"
+        "src/lib/account/reports/gst-rate.ts",
+        "src/lib/account/reports/item-serial.test.ts",
+        "src/lib/account/reports/item-serial.ts"
       ],
       "affected_services_apis_actions": [
-        "Report list/options/read and CSV/XLSX/PDF routes"
+        "Report list/options/read and CSV/XLSX/PDF routes",
+        "runFinancialReportForActor(item-serial)",
+        "GET /api/v1/mobile/account/reports/item-serial",
+        "GET /api/account/reports/item-serial/{csv,xlsx,pdf}"
       ],
       "affected_models": [
         "JournalEntry",
         "JournalLine",
         "CommercialDocument",
         "QuotationDocument",
-        "OwnerFinancialAccount"
+        "OwnerFinancialAccount",
+        "InventorySerialNumber",
+        "StockMovement",
+        "AccountProduct",
+        "Warehouse",
+        "AccountUnit"
       ],
       "module_impact": "Each catalogue destination must retain its report-specific module/service gates; a visible label is not proof of implementation.",
       "permission_impact": "Retain ACCOUNT_REPORTS and role/cost restrictions; Project Manager financial reports remain denied by shared context.",
@@ -63650,9 +63717,56 @@
             "eslint": "Final focused report/service/browser ESLint PASS.",
             "workflow": "PyYAML parsed workflow/jobs successfully;Node yaml helper unavailable(MODULE_NOT_FOUND),used installed Python parser;no dependencyinstall or manifestchanges.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "targeted_ci": "Run39541009116 SUCCESS at exact prior head7413ea591f233de285e24afa71fa7bff87b01249:Web,Android,migration passed. This does not certify subsequent serial changes or final checkpoint validation."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 other consumers remain PARTIAL. All199IDs and final statuses preserved;no production/merge/deploy/A104."
+        },
+        "item_serial_report_2026_10_21": {
+          "implementation_commit": "45efde65a75ff253f9616641484aa1f1d202837d",
+          "work": "Implemented Item Serial Report with repeatable-read paginated serial masters and stock history. Tenant/branch/warehouse scope is enforced. Restricted users see only serials with authorized movement history; company-wide users can see unassigned masters with zero stock. Quantities use primary units through the selected end-of-day cutoff and include inactive warehouses. Cross-product references are ignored; identical serial text on different items stays separate. Web/native item filters, search/clear, As of controls, expiry preferences, native cards, exports, catalogue/favourites and CI coverage are connected. No stock, ledger or schema changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/item-serial.test.ts",
+            "src/lib/account/reports/item-serial.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "read_models": [
+            "InventorySerialNumber",
+            "StockMovement",
+            "AccountProduct",
+            "Warehouse",
+            "AccountUnit"
+          ],
+          "services": [
+            "runFinancialReportForActor(item-serial)",
+            "GET /api/v1/mobile/account/reports/item-serial",
+            "GET /api/account/reports/item-serial/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "grouped": "125 tests / 18 report-tax files PASS, 0 failed/skipped, 36.03s. Includes 10 serial cases: 1001 master rows, 1001 movement rows, permission/settings, scoped queries, literal search, mixed units, cross-product references and expiry formatting. Earlier 41-test focused subset overlaps.",
+            "database_catalogue": "7 tests PASS, 0 failed/skipped, 889ms. Items OFF and favourite retention now cover the serial destination.",
+            "browser": "Final desktop/mobile Chromium 2 PASS, 51.7s: As of control, opening/sale/future-return cutoff, inactive warehouse history, branch-restricted native HTTP/other-branch403, unassigned privacy, search/clear, expiry preferences, CSV/XLSX/PDF, Items OFF400, Project Manager403, Axe AA/no overflow and no stock/journal changes. Earlier 2 PASS59.8s before As of refinement overlap.",
+            "shared_browser_regression": "Existing Stock Detail/Summary/Low Stock search, category/status/level and Web/native/export/accessibility scenario: desktop/mobile 2 PASS, 3.8m.",
+            "android": "Final Kotlin compilation + AccountReportDataTest BUILD SUCCESSFUL, 2m51s;22 JVM tests,0 failures/errors/skips. Initial run compiled but had21 passing/1 failing test: serial itemSearch was dropped by an older hardcoded request filter. Fixed the actual filter while retaining category/status restrictions. No device/emulator/TalkBack runtime or local Android lint rerun in this slice.",
+            "initial_unit_fixtures": "Initial7 serial tests failed because the actor fixture lacked required active/workspace fields; corrected fixture without changing guards. Next run had39 passing/1 failing test because expiry export expectation ignored existing company-formatted dates; corrected expectation and also assert raw ISO data is retained.",
+            "typescript": "Final full tsc --noEmit PASS after all source/test additions.",
+            "eslint": "Final focused report/service/Web/browser ESLint PASS.",
+            "workflow": "Workflow YAML parsed; serial regressions are included in targeted CI.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN; complete checkpoint-wide final validation remains pending."
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 retains other formatting consumers. All199 original IDs/final statuses preserved. No production operation, merge, deployment or A104."
         }
       }
     },
@@ -67746,7 +67860,9 @@
         "src/lib/account/reports/party-trade.ts",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt",
         "src/lib/account/reports/gst-rate.test.ts",
-        "src/lib/account/reports/gst-rate.ts"
+        "src/lib/account/reports/gst-rate.ts",
+        "src/lib/account/reports/item-serial.test.ts",
+        "src/lib/account/reports/item-serial.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -68392,9 +68508,56 @@
             "eslint": "Final focused report/service/browser ESLint PASS.",
             "workflow": "PyYAML parsed workflow/jobs successfully;Node yaml helper unavailable(MODULE_NOT_FOUND),used installed Python parser;no dependencyinstall or manifestchanges.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "targeted_ci": "Run39541009116 SUCCESS at exact prior head7413ea591f233de285e24afa71fa7bff87b01249:Web,Android,migration passed. This does not certify subsequent serial changes or final checkpoint validation."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 other consumers remain PARTIAL. All199IDs and final statuses preserved;no production/merge/deploy/A104."
+        },
+        "item_serial_report_2026_10_21": {
+          "implementation_commit": "45efde65a75ff253f9616641484aa1f1d202837d",
+          "work": "Implemented Item Serial Report with repeatable-read paginated serial masters and stock history. Tenant/branch/warehouse scope is enforced. Restricted users see only serials with authorized movement history; company-wide users can see unassigned masters with zero stock. Quantities use primary units through the selected end-of-day cutoff and include inactive warehouses. Cross-product references are ignored; identical serial text on different items stays separate. Web/native item filters, search/clear, As of controls, expiry preferences, native cards, exports, catalogue/favourites and CI coverage are connected. No stock, ledger or schema changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/item-serial.test.ts",
+            "src/lib/account/reports/item-serial.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "read_models": [
+            "InventorySerialNumber",
+            "StockMovement",
+            "AccountProduct",
+            "Warehouse",
+            "AccountUnit"
+          ],
+          "services": [
+            "runFinancialReportForActor(item-serial)",
+            "GET /api/v1/mobile/account/reports/item-serial",
+            "GET /api/account/reports/item-serial/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "grouped": "125 tests / 18 report-tax files PASS, 0 failed/skipped, 36.03s. Includes 10 serial cases: 1001 master rows, 1001 movement rows, permission/settings, scoped queries, literal search, mixed units, cross-product references and expiry formatting. Earlier 41-test focused subset overlaps.",
+            "database_catalogue": "7 tests PASS, 0 failed/skipped, 889ms. Items OFF and favourite retention now cover the serial destination.",
+            "browser": "Final desktop/mobile Chromium 2 PASS, 51.7s: As of control, opening/sale/future-return cutoff, inactive warehouse history, branch-restricted native HTTP/other-branch403, unassigned privacy, search/clear, expiry preferences, CSV/XLSX/PDF, Items OFF400, Project Manager403, Axe AA/no overflow and no stock/journal changes. Earlier 2 PASS59.8s before As of refinement overlap.",
+            "shared_browser_regression": "Existing Stock Detail/Summary/Low Stock search, category/status/level and Web/native/export/accessibility scenario: desktop/mobile 2 PASS, 3.8m.",
+            "android": "Final Kotlin compilation + AccountReportDataTest BUILD SUCCESSFUL, 2m51s;22 JVM tests,0 failures/errors/skips. Initial run compiled but had21 passing/1 failing test: serial itemSearch was dropped by an older hardcoded request filter. Fixed the actual filter while retaining category/status restrictions. No device/emulator/TalkBack runtime or local Android lint rerun in this slice.",
+            "initial_unit_fixtures": "Initial7 serial tests failed because the actor fixture lacked required active/workspace fields; corrected fixture without changing guards. Next run had39 passing/1 failing test because expiry export expectation ignored existing company-formatted dates; corrected expectation and also assert raw ISO data is retained.",
+            "typescript": "Final full tsc --noEmit PASS after all source/test additions.",
+            "eslint": "Final focused report/service/Web/browser ESLint PASS.",
+            "workflow": "Workflow YAML parsed; serial regressions are included in targeted CI.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN; complete checkpoint-wide final validation remains pending."
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 retains other formatting consumers. All199 original IDs/final statuses preserved. No production operation, merge, deployment or A104."
         }
       },
       "intermediate_validation": {
