@@ -1,3 +1,4 @@
+import {itemDiscountReport} from "./item-discount";
 import {itemSerialReport} from "./item-serial";
 import {gstRateReport} from "./gst-rate";
 import {partyTradeReport} from "./party-trade";
@@ -225,6 +226,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
+  if(name==="item-discount")return itemDiscountReport(await context(raw,false,actor));
   if(name==="item-serial")return itemSerialReport(await context(raw,false,actor));
   if(name==="gst-rate")return gstRateReport(await context(raw,false,actor));
   if(["sale-purchase-party","discount-party","gst-party"].includes(name))return partyTradeReport(await context(raw,false,actor),name==="gst-party"?"GST":name==="discount-party"?"DISCOUNT":"TRADE");
@@ -1035,16 +1037,18 @@ export async function reportOptionsForActor(a: ProjectActor) {
     a.branchAccessScope === "SELECTED_BRANCHES"
       ? { id: { in: a.branchIds ?? [] } }
       : {};
-  const projectBranches = await authorizedProjectBranchIds(a);
+  const projectBranches = await authorizedProjectBranchIds(a),projectOnly=a.accountRole==="PROJECT_MANAGER";
   const [branches, ledgers, customers, vendors, products, projects, owners] =
     await Promise.all([
       db.branch.findMany({
         where: { companyId: a.companyId, isActive: true, ...branchFilter },
+        select:{id:true,name:true,code:true},
       }),
-      db.ledgerAccount.findMany({
+      projectOnly?Promise.resolve([]):db.ledgerAccount.findMany({
         where: { companyId: a.companyId, isActive: true },
+        select:{id:true,name:true,code:true},
       }),
-      db.customer.findMany({
+      projectOnly?Promise.resolve([]):db.customer.findMany({
         where: {
           companyId: a.companyId,
           isActive: true,
@@ -1053,10 +1057,12 @@ export async function reportOptionsForActor(a: ProjectActor) {
             ? { branchId: { in: a.branchIds ?? [] } }
             : {}),
         },
+        select:{id:true,name:true},
       }),
-      db.vendor.findMany({ where: { companyId: a.companyId, isActive: true } }),
-      db.accountProduct.findMany({
+      projectOnly?Promise.resolve([]):db.vendor.findMany({ where: { companyId: a.companyId, isActive: true },select:{id:true,name:true} }),
+      projectOnly?Promise.resolve([]):db.accountProduct.findMany({
         where: { companyId: a.companyId, isActive: true },
+        select:{id:true,name:true,code:true},
       }),
       db.project.findMany({
         where: { ...projectRecordScope(a, projectBranches) },

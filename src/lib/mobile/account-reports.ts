@@ -1,3 +1,4 @@
+import {itemDiscountCategoriesForActor} from "@/lib/account/reports/item-discount";
 import {bankStatementOptionsForActor} from "@/lib/account/reports/bank-statement";
 import {stockDetailCategoriesForActor} from "@/lib/account/reports/stock-detail-options";
 import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
@@ -34,6 +35,7 @@ export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
     options = await reportOptionsForActor(a),catalogue=await availableReportCatalogueForActor(a);
   return {
     bankAccounts: catalogue.some(x=>x.key === "bank-statement") ? await bankStatementOptionsForActor(a) : [],
+    itemCategories: catalogue.some(x=>x.key==="item-discount")?await itemDiscountCategoriesForActor(a):[],
     stockCategories: catalogue.some(x=>["stock-detail","stock-summary","low-stock-summary"].includes(x.key)) ? await stockDetailCategoriesForActor(a) : [],
     reports:catalogue.map(x=>x.key),
     catalogue,

@@ -116,8 +116,12 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val choose = buildJsonObject { put("id", "");put("name", "Select bank account") }
             Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
         }
-        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial")) {
-            OutlinedTextField(state.itemSearch,{vm.filter("itemSearch",it.take(240))},label={Text("Search items")},singleLine=true,trailingIcon={if(state.itemSearch.isNotEmpty())TextButton(onClick={vm.filter("itemSearch","");vm.run()}){Text("Clear")}})
+        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-discount")) {
+            OutlinedTextField(state.itemSearch,{vm.filter("itemSearch",it.take(240))},label={Text(if(state.report=="item-discount")"Item name" else "Search items")},singleLine=true,trailingIcon={if(state.itemSearch.isNotEmpty())TextButton(onClick={vm.filter("itemSearch","");vm.run()}){Text("Clear")}})
+        }
+        if(state.report=="item-discount"){
+            val all=buildJsonObject{put("id","");put("name","All")}
+            Option("Item category",state.categoryId,listOf(all)+state.options.array("itemCategories")){vm.filter("categoryId",it)}
         }
         if (state.report in setOf("stock-detail","stock-summary","low-stock-summary")) {
             val all = buildJsonObject { put("id", ""); put("name", "All") }
@@ -185,6 +189,18 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                             Text("Inventory cost: ${row.getOrNull(3).orEmpty()} · Margin: ${row.getOrNull(5).orEmpty()}%",style=MaterialTheme.typography.bodySmall)
                         } }
                     }
+                }
+            } else if(state.report=="item-discount") {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty())Text("No Items")
+                if(rows.isNotEmpty())LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    items(rows){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){
+                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
+                        Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.bodySmall)
+                        Text("Quantity: ${row.getOrNull(3).orEmpty()} ${row.getOrNull(2).orEmpty()}")
+                        Text("Sale Amount: ${row.getOrNull(4).orEmpty()}")
+                        Text("Discount Amount: ${row.getOrNull(5).orEmpty()}")
+                    }}}
                 }
             } else if(state.report=="item-serial") {
                 val rows=accountReportRows(data)

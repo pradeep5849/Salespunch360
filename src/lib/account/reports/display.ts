@@ -12,6 +12,8 @@ const moneyColumns = new Set([
   "Amount",
   "Sales",
   "Sale Discount",
+  "Sale Amount",
+  "Discount Amount",
   "Sale Tax",
   "Tax In",
   "Tax Out",

@@ -79,6 +79,7 @@ describe("A084 report filter, accounting and native authentication boundaries", 
         isAccountCustomer: true,
         branchId: { in: ["allowed"] },
       },
+      select:{id:true,name:true},
     });
     await reportOptionsForActor({ ...actor, branchIds: [] });
     expect(mocks.customers).toHaveBeenLastCalledWith({
@@ -88,6 +89,7 @@ describe("A084 report filter, accounting and native authentication boundaries", 
         isAccountCustomer: true,
         branchId: { in: [] },
       },
+      select:{id:true,name:true},
     });
     await reportOptionsForActor({
       ...actor,
@@ -95,6 +97,7 @@ describe("A084 report filter, accounting and native authentication boundaries", 
     });
     expect(mocks.customers).toHaveBeenLastCalledWith({
       where: { companyId: "company", isActive: true, isAccountCustomer: true },
+      select:{id:true,name:true},
     });
   });
   it("accepts blank All selectors and company scope without widening assigned branches", async () => {
@@ -329,4 +332,18 @@ it("A084-F17 denies Accountant material costs even when material read is allowed
 
 it("rejects nonblank ignored filter dimensions before any financial read",async()=>{
  await expect(runFinancialReportForActor({companyId:"company",accountRole:"ACCOUNT_ADMIN"} as never,"profit-loss",{customerId:"00000000-0000-0000-0000-000000000001"})).rejects.toThrow("REPORT_FILTER_NOT_SUPPORTED");
+});
+
+it("projects report selector fields without private costs keys or contact metadata",async()=>{
+ await reportOptionsForActor(actor);
+ expect(mocks.products).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",isActive:true},select:{id:true,name:true,code:true}}));
+ expect(mocks.accounts).toHaveBeenCalledWith(expect.objectContaining({select:{id:true,name:true,code:true}}));
+ expect(mocks.vendors).toHaveBeenCalledWith(expect.objectContaining({select:{id:true,name:true}}));
+ expect(mocks.branches).toHaveBeenCalledWith(expect.objectContaining({select:{id:true,name:true,code:true}}));
+});
+it("does not query unrelated financial selectors for Project Managers",async()=>{
+ const options=await reportOptionsForActor({...actor,accountRole:"PROJECT_MANAGER"});
+ for(const key of ["products","ledgers","customers","vendors","owners"] as const)expect(options[key]).toEqual([]);
+ for(const mock of [mocks.products,mocks.accounts,mocks.customers,mocks.vendors,mocks.owners])expect(mock).not.toHaveBeenCalled();
+ expect(mocks.projects).toHaveBeenCalled();
 });

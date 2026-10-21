@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun itemDiscountKeepsPartyCategoryAndItemNameButDropsStockStatus(){
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"item-discount","name":"Item Wise Discount Report","group":"Item/Stock reports","filters":["customerId","categoryId","itemSearch"]}]}""").jsonObject
+        assertEquals("item-discount",accountReportCatalogue(options,"Item Wise Discount").single().key)
+        assertEquals(mapOf("customerId" to "party","categoryId" to "category","itemSearch" to "Service"),accountReportRequestFilters(options,"item-discount",mapOf("customerId" to "party","categoryId" to "category","itemSearch" to "Service","itemStatus" to "ACTIVE","productId" to "stale")))
+        val data=Json.parseToJsonElement("""{"rows":[["Service","Category","pc","2.0000","₹180.00","₹20.00"]]}""").jsonObject
+        assertEquals(listOf("Service","Category","pc","2.0000","₹180.00","₹20.00"),accountReportRows(data).single())
+    }
+
     @Test fun itemSerialRetainsExpiryQuantityAndOnlyDeclaredItemFilters(){
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"item-serial","name":"Item Serial Report","group":"Item/Stock reports","filters":["productId","itemSearch"]}]}""").jsonObject
         assertEquals("item-serial",accountReportCatalogue(options,"serial").single().key)

@@ -204,3 +204,8 @@ it.skipIf(!url)("keeps party GST in core accounting and hides it from Project Ma
  await client.user.update({where:{id:a},data:{accountRole:"PROJECT_MANAGER"}});
  try{expect((await availableReportCatalogueForActor({id:a,companyId})).some(x=>x.key==="gst-party")).toBe(false)}finally{await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}})}
 });
+
+it.skipIf(!url)("keeps historical item discounts available when Items is off but enforces report role",async()=>{
+ const actor={id:a,companyId};await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});
+ try{expect((await availableReportCatalogueForActor(actor)).find(x=>x.key==="item-discount")).toMatchObject({filters:["customerId","categoryId","itemSearch"]});await setReportFavouriteForActor(actor,{reportKey:"item-discount",favourite:true});expect(await reportFavouritesForActor(actor)).toContain("item-discount");await client.user.update({where:{id:a},data:{accountRole:"PROJECT_MANAGER"}});expect((await availableReportCatalogueForActor(actor)).some(x=>x.key==="item-discount")).toBe(false);await expect(setReportFavouriteForActor(actor,{reportKey:"item-discount",favourite:true})).rejects.toThrow()}finally{await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true}}})}
+});
