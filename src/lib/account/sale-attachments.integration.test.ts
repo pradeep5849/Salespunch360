@@ -77,6 +77,13 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     expect(await client.commercialDocument.count({ where: { companyId, creationRequestKey: input.idempotencyKey } })).toBe(1);
   });
 
+  it("binds receipt intent to a file Save key so a changed retry cannot add a payment",async()=>{
+    const input=raw(),saved=await save(input),before=await client.accountSettlement.count({where:{companyId}});
+    await expect(submitSaleForActor(actor,input,{receivedAmount:"100",paymentType:"CASH"},"sale-save-receipt",[pdf()])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    expect(await client.accountSettlement.count({where:{companyId}})).toBe(before);
+    expect((await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}})).balanceDue.toFixed(2)).toBe("100.00");
+  });
+
   it("rolls back files, document, numbering and journals if storing a later file fails", async () => {
     const input = raw(), beforeObjects = objects.size, beforeJournals = await client.journalEntry.count({ where: { companyId } }), series = await client.numberingSeries.findMany({ where: { companyId } });
     put.mockImplementationOnce(async (key, bytes) => { objects.set(key, Buffer.from(bytes)); }).mockRejectedValueOnce(new Error("storage unavailable"));

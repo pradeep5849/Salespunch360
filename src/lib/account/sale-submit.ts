@@ -7,6 +7,7 @@ import {ensureOpenFinancialYearForDate} from "./financial-year";
 import {inAccountTransaction} from "./transaction-scope";
 import {chequePaymentDetails} from "./cheque-payment-input";
 import {prepareSaleAttachments,saleAttachmentManifest,storeSaleAttachmentsInTx,cleanSaleAttachmentAttempts} from "./sale-attachments";
+import {commercialCreationHash} from "./commercial-request-identity";
 type Actor=Parameters<typeof createCommercialDocumentForActor>[0];
 const paymentInput=z.object({receivedAmount:z.union([z.number(),z.string()]).default("0").refine(value=>/^-?\d+(?:\.\d+)?$/.test(String(value)),"Invalid received amount"),receivedInFull:z.boolean().default(false),paymentType:z.string().default("CASH"),chequeNumber:z.string().optional(),chequeDate:z.string().optional(),moneyAccountId:z.string().uuid().optional(),reference:z.string().optional()});
 /** Sale Save is one commit: invoice, posting and any receipt. No independent draft survives failure. */
@@ -20,8 +21,9 @@ export async function submitSaleForActor(actor:Actor,raw:unknown,payment:unknown
  if(hasPayment&&p.paymentType==="CHEQUE")chequePaymentDetails.parse(p);
  const prepared=await prepareSaleAttachments(actor,files),attemptedKeys=new Set<string>();
  if(prepared.length&&!z.string().uuid().safeParse((raw as {idempotencyKey?:unknown}).idempotencyKey).success)throw new Error("SALE_ATTACHMENT_REQUEST_KEY_REQUIRED");
+ const attachmentSaveIntent=prepared.length?commercialCreationHash({files:saleAttachmentManifest(prepared),payment:{...p,receivedAmount:received.toString()}}):undefined;
  try{return await inAccountTransaction(undefined,async tx=>{
-  const row=prepared.length?await createCommercialDocumentForActor(actor,raw,tx,undefined,saleAttachmentManifest(prepared)):await createCommercialDocumentForActor(actor,raw,tx);
+  const row=prepared.length?await createCommercialDocumentForActor(actor,raw,tx,undefined,attachmentSaveIntent):await createCommercialDocumentForActor(actor,raw,tx);
   await storeSaleAttachmentsInTx(tx,actor,row.id,prepared,attemptedKeys);
   await ensureOpenFinancialYearForDate(actor.companyId,row.issueDate,tx);
   await postCommercialDocumentForActor(actor,{documentId:row.id},tx);
