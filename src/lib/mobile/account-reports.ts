@@ -1,3 +1,4 @@
+import {loanStatementOptionsForActor} from "@/lib/account/reports/loan-statement";
 import {itemDiscountCategoriesForActor} from "@/lib/account/reports/item-discount";
 import {bankStatementOptionsForActor} from "@/lib/account/reports/bank-statement";
 import {stockDetailCategoriesForActor} from "@/lib/account/reports/stock-detail-options";
@@ -34,6 +35,7 @@ export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
   const a = actor(u),
     options = await reportOptionsForActor(a),catalogue=await availableReportCatalogueForActor(a);
   return {
+    loanAccounts: catalogue.some(x=>x.key==="loan-statement")?await loanStatementOptionsForActor(a):[],
     bankAccounts: catalogue.some(x=>x.key === "bank-statement") ? await bankStatementOptionsForActor(a) : [],
     itemCategories: catalogue.some(x=>x.key==="item-discount")?await itemDiscountCategoriesForActor(a):[],
     stockCategories: catalogue.some(x=>["stock-detail","stock-summary","low-stock-summary"].includes(x.key)) ? await stockDetailCategoriesForActor(a) : [],

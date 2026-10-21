@@ -5,6 +5,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun loanStatementRetainsOnlyItsLoanSelector(){
+        val options=buildJsonObject{putJsonArray("catalogue"){add(buildJsonObject{put("key","loan-statement");put("name","Loan Statement");put("group","Business status");putJsonArray("filters"){add("loanId")}})}}
+        assertEquals(mapOf("loanId" to "loan"),accountReportRequestFilters(options,"loan-statement",mapOf("loanId" to "loan","moneyAccountId" to "stale","productId" to "stale")))
+        assertFalse(accountReportRequestFilters(buildJsonObject{},"bank-statement",mapOf("loanId" to "stale")).containsKey("loanId"))
+    }
+
     @Test fun itemDiscountKeepsPartyCategoryAndItemNameButDropsStockStatus(){
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"item-discount","name":"Item Wise Discount Report","group":"Item/Stock reports","filters":["customerId","categoryId","itemSearch"]}]}""").jsonObject
         assertEquals("item-discount",accountReportCatalogue(options,"Item Wise Discount").single().key)

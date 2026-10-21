@@ -15,6 +15,7 @@ export const REPORT_CATALOGUE = [
   ["vendor-ledger", "Vendor Ledger", "Parties"],
   ["receivable-aging", "Receivable Aging", "Parties"],
   ["payable-aging", "Payable Aging", "Parties"],
+  ["loan-statement", "Loan Statement", "Business status"],
   ["bank-statement", "Bank Statement", "Business status"],
   ["cash-bank", "Cash & Bank", "Cash & Bank"],
   ["owner-capital", "Owner / Partner Capital", "Owners & Partners"],
@@ -57,6 +58,7 @@ export function searchReportCatalogue(
 
 const specificFilters: Record<string, string[]> = {
   "cash-bank":["accountType"],
+  "loan-statement": ["loanId"],
   "bank-statement": ["moneyAccountId"],
   "stock-summary": ["categoryId", "itemStatus", "stockLevel", "itemSearch"],
   "low-stock-summary": ["categoryId", "itemStatus", "itemSearch"],

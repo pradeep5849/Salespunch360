@@ -1,3 +1,4 @@
+import {loanStatementReport} from "./loan-statement";
 import {itemDiscountReport} from "./item-discount";
 import {itemSerialReport} from "./item-serial";
 import {gstRateReport} from "./gst-rate";
@@ -63,6 +64,7 @@ const D = Prisma.Decimal.clone({precision:48}),
       productId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ledgerId: z.preprocess(blankFilter, z.string().uuid().optional()),
       ownerId: z.preprocess(blankFilter, z.string().uuid().optional()),
+      loanId: z.preprocess(blankFilter, z.string().uuid().optional()),
       moneyAccountId: z.preprocess(blankFilter, z.string().uuid().optional()),
       categoryId: z.preprocess(blankFilter, z.union([z.string().uuid(), z.literal("UNCATEGORIZED")]).optional()),
       stockLevel: z.preprocess(blankFilter,z.enum(["AVAILABLE","LOW","NEGATIVE"]).optional()),
@@ -233,6 +235,7 @@ export async function runFinancialReportForActor(
   if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(name==="stock-category")return stockCategoryReport(await context(raw,false,actor));
   if(["stock-summary","low-stock-summary"].includes(name))return stockLevelReport(name,await context(raw,false,actor));
+  if(name==="loan-statement")return loanStatementReport(await context(raw,false,actor));
   if(name==="bank-statement")return bankStatementReport(await context(raw,false,actor));
   if(name==="stock-detail")return stockDetailReport(await context(raw,false,actor));
   if(TRANSACTION_REPORTS.includes(name))return transactionReport(name,await context(raw,false,actor));

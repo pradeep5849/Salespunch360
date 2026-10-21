@@ -30,7 +30,7 @@ export async function availableReportCatalogueForActor(actor: Actor) {
       (!["sale-purchase-party","discount-party"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
       (!["gst-party","gst-rate"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
       (x.key!=="item-discount"||modules.includes("SALES"))&&
-      (x.key!=="bank-statement"||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
+      (!["bank-statement","loan-statement"].includes(x.key)||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
       (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
       (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||

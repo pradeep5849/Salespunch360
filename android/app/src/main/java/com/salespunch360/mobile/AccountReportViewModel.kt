@@ -28,6 +28,7 @@ data class AccountReportState(
     val productId: String = "",
     val ownerId: String = "",
     val accountType:String="",
+    val loanId:String="",
     val moneyAccountId:String="",
     val categoryId:String="",
     val itemStatus:String="",
@@ -71,7 +72,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun context(query:String) {
         val q=android.net.Uri.parse("https://internal.invalid/?$query")
-        _state.value=_state.value.copy(itemSearch=q.getQueryParameter("itemSearch").orEmpty(),stockLevel=q.getQueryParameter("stockLevel").orEmpty(),moneyAccountId=q.getQueryParameter("moneyAccountId").orEmpty(),categoryId=q.getQueryParameter("categoryId").orEmpty(),itemStatus=q.getQueryParameter("itemStatus").orEmpty(),accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
+        _state.value=_state.value.copy(loanId=q.getQueryParameter("loanId").orEmpty(),itemSearch=q.getQueryParameter("itemSearch").orEmpty(),stockLevel=q.getQueryParameter("stockLevel").orEmpty(),moneyAccountId=q.getQueryParameter("moneyAccountId").orEmpty(),categoryId=q.getQueryParameter("categoryId").orEmpty(),itemStatus=q.getQueryParameter("itemStatus").orEmpty(),accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
     }
     fun choose(report: String?) {
         requestGeneration++
@@ -94,6 +95,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "customer" -> _state.value.copy(customerId = value)
             "vendor" -> _state.value.copy(vendorId = value)
             "owner" -> _state.value.copy(ownerId = value)
+            "loanId" -> _state.value.copy(loanId=value)
             "moneyAccountId" -> _state.value.copy(moneyAccountId=value)
             "categoryId" -> _state.value.copy(categoryId=value)
             "stockLevel" -> _state.value.copy(stockLevel=value)
@@ -110,7 +112,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "branchId" to _state.value.branchId,"projectId" to _state.value.projectId,
             "ledgerId" to _state.value.ledgerId,"customerId" to _state.value.customerId,
             "vendorId" to _state.value.vendorId,"ownerId" to _state.value.ownerId,
-            "moneyAccountId" to _state.value.moneyAccountId,"categoryId" to _state.value.categoryId,"itemSearch" to _state.value.itemSearch,"itemStatus" to _state.value.itemStatus,"stockLevel" to _state.value.stockLevel,
+            "loanId" to _state.value.loanId,"moneyAccountId" to _state.value.moneyAccountId,"categoryId" to _state.value.categoryId,"itemSearch" to _state.value.itemSearch,"itemStatus" to _state.value.itemStatus,"stockLevel" to _state.value.stockLevel,
             "productId" to _state.value.productId,"accountType" to _state.value.accountType
         )
     )

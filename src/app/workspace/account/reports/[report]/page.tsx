@@ -1,3 +1,4 @@
+import {loanStatementOptions} from "@/lib/account/reports/loan-statement";
 import {itemDiscountCategories} from "@/lib/account/reports/item-discount";
 import {ProfitReportView} from "@/components/account/profit-report-view";
 import {StockLevelView} from "@/components/account/stock-level-view";
@@ -56,6 +57,7 @@ export default async function Page({
             ledgerId: q.ledgerId,
             ownerId: q.ownerId,
             accountType:q.accountType,
+            loanId:q.loanId,
             moneyAccountId:q.moneyAccountId,
             categoryId:q.categoryId,
             itemSearch:q.itemSearch,
@@ -72,6 +74,7 @@ export default async function Page({
       note: isAccountDomainError(e)?accountErrorMessage((e as Error).message):e instanceof Error ? e.message : "Unable to load report",
     };
   }
+  const loans = report==="loan-statement"&&data.columns.length?await loanStatementOptions():[];
   const banks = report === "bank-statement" && data.columns.length ? await bankStatementOptions() : [];
   const categories = report==="item-discount"&&data.columns.length?await itemDiscountCategories():["stock-detail","stock-summary","low-stock-summary"].includes(report) && data.columns.length ? await stockDetailCategories() : [];
   const query = reportExportQuery(q,from,to,projectLifetime);
@@ -145,6 +148,7 @@ export default async function Page({
             </>
           )}
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
+          {report==="loan-statement"&&<Select name="loanId" label="Loan account" value={q.loanId} rows={loans}/>}
           {report === "bank-statement" && <Select name="moneyAccountId" label="Bank account" value={q.moneyAccountId} rows={banks}/>}
           {applicableFilters.includes("itemSearch") && <>
             <label>{report==="item-discount"?"Item name":"Search items"}<input placeholder={report==="item-discount"?"All items":undefined} key={q.itemSearch??""} type="search" name="itemSearch" defaultValue={q.itemSearch??""} maxLength={240}/></label>
