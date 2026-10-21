@@ -100,7 +100,7 @@ internal suspend fun readExpenseAttachment(context:android.content.Context,uri:U
  item{Text("Category ${related("category")} · Project ${related("project")}")}
  item{Text("Cash / bank ${related("moneyAccount")}")}
  item{Text("Taxable ${accountMoney(x.str("taxableAmount"))} · Tax ${accountMoney(x.str("taxAmount"))}")}
- item{Text("CGST ${x.str("cgstAmount")} · SGST ${x.str("sgstAmount")} · IGST ${x.str("igstAmount")} · CESS ${x.str("cessAmount")}")}
+ item{Text("CGST ${accountMoney(x.str("cgstAmount"))} · SGST ${accountMoney(x.str("sgstAmount"))} · IGST ${accountMoney(x.str("igstAmount"))} · CESS ${accountMoney(x.str("cessAmount"))}")}
  item{Text("${x.str("taxMode")} · ITC ${x.str("taxCreditTreatment")} · Supply ${x.str("stateOfSupplyCode")}")}
  items(x.array("billedItems")){l->val v=l.jsonObject;Text("${v.str("name")} · ${v.str("quantity")} × ${accountMoney(v.str("rate"))}")}
  item{Text("Charges ${accountMoney(x.str("additionalCharges"))} · Round off ${accountMoney(x.str("roundOffAmount"))}")}
