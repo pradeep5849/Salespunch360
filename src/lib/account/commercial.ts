@@ -3563,11 +3563,12 @@ export async function documentOutstandingsBatch(
     payableAmount: Prisma.Decimal | null;
   }>,
   asOf?: Date,
+  reader: Prisma.TransactionClient = db,
 ) {
   if (!documents.length) return new Map<string, Prisma.Decimal>();
   const ids = documents.map((x) => x.id),
     [adjustments, allocations, applications] = await Promise.all([
-      db.commercialDocument.findMany({
+      reader.commercialDocument.findMany({
         where: { companyId, status: asOf?{in:["POSTED","CANCELLED"]}:"POSTED", sourceDocumentId: { in: ids }, ...(asOf?{issueDate:{lte:asOf},journalEntry:{is:postedJournalAt(asOf)}}:{}) },
         select: {
           sourceDocumentId: true,
@@ -3575,12 +3576,12 @@ export async function documentOutstandingsBatch(
           payableAmount: true,
         },
       }),
-      db.settlementAllocation.groupBy({
+      reader.settlementAllocation.groupBy({
         by: ["documentId"],
         where: { ...(asOf?effectiveDocumentAllocationAt(asOf):EFFECTIVE_DOCUMENT_ALLOCATION), companyId, documentId: { in: ids } },
         _sum: { amount: true },
       }),
-      db.advanceApplication.groupBy({
+      reader.advanceApplication.groupBy({
         by: ["documentId"],
         where: { ...(asOf?effectiveAdvanceApplicationAt(asOf):EFFECTIVE_ADVANCE_APPLICATION), companyId, documentId: { in: ids } },
         _sum: { amount: true },

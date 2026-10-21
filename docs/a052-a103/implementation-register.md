@@ -10390,3 +10390,15 @@ Implementation `6d620b8941fad7a4a1f781ba4fa172fb100f72bf` maps to A090-F01. Web 
 26 grouped tests passed(3files,711ms);earlier20tests overlap. TSX fixture fixes children-prop lint without suppression. Desktop/mobile2browsercases passed(1.3m):own expense history preserves23:45:15.123Z with MM/DD calendar,USD/3decimals,schedules/money directory,Axe/no overflow,no source amount/journal changes. Separate new accounting/inventory/asset/backup page runtime scenarios not rerun here. Final Android compile+12display/expenseJVM tests passed(1m56s),0fail/error/skip,XML-confirmed. Earlier3m15s/2m5s runs overlap and precede final wiring. No device/Compose/TalkBack runtime or local current-slice lint;emulator boot limitation retained. FullTypeScript/focusedESLint/YAML/diff passed.
 
 A090 remainsPARTIAL for complete final consumer verification;Hindi deferred. Counts185/13/1 and199IDs preserved. Prior exact-head CI39579772294 passed at34a07c4c;latercalendar code requiresnewCI. PR153 Draft;no merge/deploy/production/A104.
+
+
+### 2026-10-21 — approved TCS and estimate billing policies
+
+User approved quantity-based automatic order closure plus manual remaining closure, estimate Total Amount/Not billed/actual Sale outstanding, and a separate TCS Collected Report. This slice implements the latter two; order fulfilment remains pending. All 199 original IDs and broad statuses are retained.
+
+- TCS report: stored sales collections net posted credit notes, shared Web/native filters and exports; explicitly separate from official Form 27EQ filing.
+- Estimate cards: authorized actual Sale link and batched authoritative outstanding in one repeatable-read snapshot; unconverted estimates and Sale Orders remain Not billed. No financial writes or schema change.
+- Focused tests19 PASS; grouped23 PASS (overlap, not additive); local PostgreSQL9 PASS. Final TypeScript and focused lint PASS.
+- Report desktop/mobile browser2 PASS. Conversion browser initially3 PASS/1 navigation-timeout FAIL; unchanged-source isolated mobile rerun1 PASS. All four desktop/mobile Save/Save & New cases have passing results.
+- Android compile and70 selected JVM tests PASS,0fail/error/skip; native device runtime and current-slice local lint not executed.
+- These are intermediate results, not final199 verification. No migration, merge, deploy or A104.

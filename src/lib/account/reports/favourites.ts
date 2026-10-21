@@ -28,7 +28,7 @@ export async function availableReportCatalogueForActor(actor: Actor) {
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
       (!["sale-purchase-party","discount-party"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
-      (!["gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
+      (!["gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable","tcs-collected"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
       (x.key!=="item-discount"||modules.includes("SALES"))&&
       (!["bank-statement","loan-statement"].includes(x.key)||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
       (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial"].includes(x.key)||canStock)&&

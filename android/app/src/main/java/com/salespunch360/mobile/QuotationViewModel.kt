@@ -47,7 +47,12 @@ data class QuotationRow(
     val issueDate:String="",
     val revisionId:String="",
     val canConvertSale:Boolean=false,
-    val canConvertOrder:Boolean=false
+    val canConvertOrder:Boolean=false,
+    val billingKind:String="NOT_BILLED",
+    val billedDocumentId:String="",
+    val billedDocumentNumber:String="",
+    val billedStatus:String="",
+    val outstanding:String=""
 )
 
 data class QuotationState(
@@ -123,7 +128,12 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                         revision?.str("issueDate").orEmpty(),
                         revision?.str("id").orEmpty(),
                         (it["capabilities"] as? JsonObject)?.bool("canConvertToSale")==true,
-                        (it["capabilities"] as? JsonObject)?.bool("canConvertToSalesOrder")==true
+                        (it["capabilities"] as? JsonObject)?.bool("canConvertToSalesOrder")==true,
+                        (it["billing"] as? JsonObject)?.str("kind").orEmpty(),
+                        (it["billing"] as? JsonObject)?.str("documentId").orEmpty(),
+                        (it["billing"] as? JsonObject)?.str("documentNumber").orEmpty(),
+                        (it["billing"] as? JsonObject)?.str("status").orEmpty(),
+                        (it["billing"] as? JsonObject)?.str("outstanding").orEmpty()
                     )
                 }
 

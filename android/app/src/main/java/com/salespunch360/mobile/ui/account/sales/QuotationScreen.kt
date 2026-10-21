@@ -91,7 +91,12 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
             items(state.rows, key = { it.id }) { quotation ->
                 ElevatedCard(onClick={vm.open(quotation.id)},modifier=Modifier.fillMaxWidth()){
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.customer.ifBlank{"Customer not provided"},fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text(accountMoney(quotation.total),fontWeight=FontWeight.Bold)}
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.customer.ifBlank{"Customer not provided"},fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text("Total Amount: ${accountMoney(quotation.total)}",fontWeight=FontWeight.Bold)}
+                        when(quotation.billingKind){
+                            "SALE"->{Text("${quotation.billedStatus} · Outstanding ${accountMoney(quotation.outstanding)}");TextButton(onClick={navigate("/workspace/account/sales/${quotation.billedDocumentId}")}){Text("Sale ${quotation.billedDocumentNumber}")}}
+                            "UNAVAILABLE"->Text("Converted document balance unavailable")
+                            else->{Text("Not billed");if(quotation.billingKind=="SALE_ORDER")TextButton(onClick={navigate("/workspace/account/transactions/${quotation.billedDocumentId}")}){Text("Sale Order ${quotation.billedDocumentNumber}")}}
+                        }
                         if(quotation.canConvertSale||quotation.canConvertOrder)OutlinedButton(onClick={convertingRow=quotation}){Text("Convert")}
                         Text("${quotation.type} · ${quotation.number} · R${quotation.revision}")
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.status.replace('_',' '));Text(accountDate(quotation.issueDate))}

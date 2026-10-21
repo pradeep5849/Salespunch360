@@ -6,8 +6,8 @@ import org.junit.Test
 
 class AccountReportDataTest {
     @Test fun withholdingReportsUseDeclaredPartyFilters(){
-        for(key in listOf("tds-receivable","tds-payable","tcs-receivable")){
-            val field=if(key=="tds-receivable")"customerId" else "vendorId"
+        for(key in listOf("tcs-collected","tds-receivable","tds-payable","tcs-receivable")){
+            val field=if(key in listOf("tds-receivable","tcs-collected"))"customerId" else "vendorId"
             val options=buildJsonObject{putJsonArray("catalogue"){add(buildJsonObject{put("key",key);put("name",key);put("group","Tax");putJsonArray("filters"){add(field)}})}}
             assertEquals(mapOf(field to "party"),accountReportRequestFilters(options,key,mapOf("customerId" to "party","vendorId" to "party","productId" to "stale")))
         }

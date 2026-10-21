@@ -39,6 +39,7 @@ export const REPORT_CATALOGUE = [
   ["gst-party", "GST Report", "Business status"],
   ["tds-receivable", "TDS Receivable", "Tax"],
   ["tds-payable", "TDS Payable", "Tax"],
+  ["tcs-collected", "TCS Collected Report", "Tax"],
   ["tcs-receivable", "TCS Receivable", "Tax"],
   ["gst-rate", "GST Rate Report", "Business status"],
   ["budget-vs-actual", "Budget vs Actual", "Projects"],
@@ -61,6 +62,7 @@ export function searchReportCatalogue(
 
 const specificFilters: Record<string, string[]> = {
   "cash-bank":["accountType"],
+  "tcs-collected": ["customerId"],
   "tds-receivable": ["customerId"],
   "tds-payable": ["vendorId"],
   "tcs-receivable": ["vendorId"],
