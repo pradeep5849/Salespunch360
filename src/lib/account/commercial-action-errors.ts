@@ -1,6 +1,10 @@
 import { ZodError } from "zod";
 
 const messages: Record<string, string> = {
+  INVALID_SALE_ATTACHMENT: "Select a valid PDF, PNG or JPEG attachment of up to 10 MB.",
+  SALE_ATTACHMENT_LIMIT: "Select up to 50 attachments with a combined size of no more than 10 MB.",
+  SALE_ATTACHMENT_REQUEST_KEY_REQUIRED: "Reload the Sale form and try saving again with a fresh request reference.",
+  SALE_ATTACHMENT_SAVE_REQUIRED: "Attachments must be saved together with the Sale.",
   IDEMPOTENCY_KEY_REUSED: "This request reference was used for different document details. Review the saved document before continuing.",
   WAREHOUSE_REQUIRED_FOR_INVENTORY:
     "Select Warehouse for this inventory item. If none is available, add an active warehouse for this branch.",

@@ -2,15 +2,9 @@ import {z} from "zod";
 import {AuthenticationError,AuthorizationError} from "@/lib/auth/authorization";
 import {isRedirectError} from "next/dist/client/components/redirect-error";
 import {QuotationAttachmentError} from "./attachments";
+import {boundedPrivateDocumentMultipart} from "@/lib/account/private-document-multipart";
 export async function boundedQuotationMultipart(request:Request){
- const limit=11*1024*1024,length=Number(request.headers.get("content-length"));
- if(length>limit)throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT");
- const reader=request.body?.getReader();if(!reader)throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT");
- const parts:Uint8Array[]= [];let total=0;
- try{while(true){const part=await reader.read();if(part.done)break;total+=part.value.length;if(total>limit){await reader.cancel();throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT")}parts.push(part.value)}}finally{reader.releaseLock()}
- const bytes=new Uint8Array(total);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length}
- let form:FormData;try{form=await new Response(bytes,{headers:{"content-type":request.headers.get("content-type")??""}}).formData()}catch{throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT")}
- return form;
+ return boundedPrivateDocumentMultipart(request,()=>new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT"));
 }
 export async function quotationAttachmentForm(request:Request){
  const form=await boundedQuotationMultipart(request);

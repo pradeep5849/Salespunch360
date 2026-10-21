@@ -9,11 +9,16 @@ import { saleDetail } from "@/lib/account/sale-detail";
 import { Money } from "@/components/account/account-ui";
 import { SaleDetailActions } from "./sale-detail-actions";
 import styles from "./sale-detail.module.css";
+import {AuthorizationError,requirePermission} from "@/lib/auth/authorization";
+import {listSaleAttachmentsForActor} from "@/lib/account/sale-attachments";
 
 export default async function Page({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
   const sale=await saleDetail(id);
   if(sale.type!=="SALES_INVOICE")throw new Error("NOT_FOUND");
+  const actor=await requirePermission("ACCOUNT_LEDGER_VIEW");
+  if(!actor.companyId)throw new AuthorizationError();
+  const attachments=await listSaleAttachmentsForActor({...actor,companyId:actor.companyId},sale.id);
   const [settings,party,company]=await Promise.all([db.accountSettings.findUnique({where:{companyId:sale.companyId}}),sale.customerId?db.customer.findFirst({where:{id:sale.customerId,companyId:sale.companyId},select:{phone:true}}):null,db.company.findUnique({where:{id:sale.companyId},select:{primaryPhone:true}})]);
   const messaging=resolveTransactionMessaging(settings?.transactionDefaults),prefs=resolveDisplayPreferences(settings);
   const message=`Hi ${sale.partyName}, invoice ${sale.documentNumber} dated ${formatCalendarDate(sale.issueDate,prefs)} totals ${formatMoney(sale.payableAmount??sale.grandTotal,prefs)}.${messaging.includeInvoiceLink&&sale.status==="POSTED"?`\n${invoiceShareUrl(sale)}`:""}`;
@@ -69,6 +74,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       {sale.transactionTime&&<div className={styles.field}><label>Transaction time</label><strong>{sale.transactionTime}</strong></div>}
       {sale.shippingAddress&&<div className={styles.field}><label>Shipping Address</label><p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{sale.shippingAddress}</p></div>}
       {sale.notes&&<div className={styles.field}><label>Terms & Conditions / Description</label><p style={{whiteSpace:"pre-wrap"}}>{sale.notes}</p></div>}
+      {attachments.length>0&&<section className={styles.field} aria-label="Sale attachments"><h2>Attachments</h2><ul>{attachments.map(file=><li key={file.id} style={{overflowWrap:"anywhere"}}><a href={`/api/account/sale-attachments/${file.id}`}>{file.displayName}</a></li>)}</ul></section>}
     </section>
     {(messaging.sendToParty||messaging.copyToSelf)&&<section className={styles.body}>{messaging.sendToParty&&<ManualMessage message={message} phone={party?.phone}/ >}{messaging.copyToSelf&&<><h3>Copy to Self</h3><ManualMessage message={message} phone={company?.primaryPhone}/></>}{messaging.includeInvoiceLink&&<p><Link href={`/api/account/print/${sale.type}/${sale.id}?format=pdf`}>Download invoice to attach</Link></p>}</section>}
     <SaleDetailActions id={sale.id} canChange={canChange}/>

@@ -144,6 +144,7 @@ test.afterAll(async () => {
   await tx.quotationAttachment.deleteMany({where:{companyId}});await tx.quotationRevision.deleteMany({where:{companyId}});
   await tx.quotationDocument.deleteMany({where:{companyId}});
 
+    await tx.commercialAttachment.deleteMany({where:{companyId}});
     await tx.commercialDocument.deleteMany({where:{companyId}});
     await tx.projectChangeOrder.deleteMany({where:{companyId}});
     await tx.ownerTransaction.deleteMany({where:{companyId}});
@@ -3429,4 +3430,53 @@ test("A082 reference header back and authorized settings preserve unsaved quotat
   await page.goto(`/workspace/account/quotations/${draft.id}/revisions/new`);await expect(page.getByRole("heading",{name:/^New revision from/})).toBeVisible({timeout:30000});
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}})}
  expect(await Promise.all([db.quotationDocument.count({where:{companyId}}),db.journalEntry.count({where:{companyId}})])).toEqual(counts);
+});
+
+test("A086 A087 private Sale files save once after lost response and remain available on Web and native APIs",async({page,request})=>{
+ test.setTimeout(240000);
+ const original=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),defaults=(original.transactionDefaults??{}) as Prisma.JsonObject;
+ let sessionHash:string|null=null;
+ const bytes=Buffer.from("%PDF-1.7\nPrivate Sale file fixture"),file={name:"sale-plan.pdf",mimeType:"application/pdf",buffer:bytes};
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES"],transactionDefaults:{...defaults,transactionPreferences:{invoicePreview:false,termsEnabled:true,linkPayments:false}}}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Sale files year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const input={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-21",lines:[{lineType:"CUSTOM",itemName:"Private Sale work",quantity:"1",rate:"100",taxRate:"0"}]};
+  const source=await createCommercialDocumentForActor(actor,input);await postCommercialDocumentForActor(actor,{documentId:source.id});
+  await signInSettings(page);
+  const url=`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${source.id}`;
+  await page.goto(url);const selection=page.getByRole("region",{name:"Sale attachments",exact:true});
+  const before=await db.commercialDocument.count({where:{companyId}}),beforeDrafts=await db.commercialDocument.count({where:{companyId,status:"DRAFT"}});
+  await selection.getByLabel("Add image or document",{exact:true}).setInputFiles(file);await expect(selection.getByRole("button",{name:"Remove attachment sale-plan.pdf",exact:true})).toBeVisible();
+  await page.getByRole("link",{name:"Back",exact:true}).last().click();await expect(page).toHaveURL(/\/account\/transactions$/,{timeout:30000});
+  expect(await db.commercialDocument.count({where:{companyId}})).toBe(before);expect(await db.commercialAttachment.count({where:{companyId}})).toBe(0);
+  await page.goto(url);await selection.getByLabel("Add image or document",{exact:true}).setInputFiles(file);
+  await selection.getByLabel("Add image or document",{exact:true}).setInputFiles({name:"remove.pdf",mimeType:"application/pdf",buffer:bytes});await selection.getByRole("button",{name:"Remove attachment remove.pdf",exact:true}).click();
+  expect((await new AxeBuilder({page}).include('section[aria-label="Sale attachments"]').withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  let drop=true,savedId="";
+  await page.route("**/api/account/sales/with-attachments",async route=>{if(drop){drop=false;const committed=await route.fetch();expect(committed.status()).toBe(201);savedId=(await committed.json()).id;await route.abort()}else await route.continue()});
+  await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page.locator("main").last().getByRole("alert")).toBeVisible({timeout:30000});
+  await expect(selection.getByRole("button",{name:"Remove attachment sale-plan.pdf",exact:true})).toBeVisible();
+  expect(await db.commercialDocument.count({where:{companyId}})).toBe(before+1);expect(await db.commercialDocument.count({where:{companyId,status:"DRAFT"}})).toBe(beforeDrafts);
+  await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/sales/${savedId}$`),{timeout:30000});
+  expect(await db.commercialDocument.count({where:{companyId}})).toBe(before+1);expect(await db.journalEntry.count({where:{companyId,sourceId:savedId,status:"POSTED"}})).toBe(1);
+  const attachments=page.getByRole("region",{name:"Sale attachments",exact:true});await expect(attachments.getByRole("link",{name:"sale-plan.pdf",exact:true})).toBeVisible();
+  const [stored]=await db.commercialAttachment.findMany({where:{companyId,documentId:savedId}});expect(stored.displayName).toBe("sale-plan.pdf");
+  const web=await page.request.get(`/api/account/sale-attachments/${stored.id}`);expect(web.status()).toBe(200);expect(await web.body()).toEqual(bytes);expect(web.headers()["cache-control"]).toContain("private");expect(web.headers()["x-content-type-options"]).toBe("nosniff");
+  expect((await new AxeBuilder({page}).include('section[aria-label="Sale attachments"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();sessionHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash:sessionHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  const list=await page.request.get(`/api/v1/mobile/account/sales/${savedId}/attachments`,{headers});expect(list.status()).toBe(200);const metadata=await list.json();expect(metadata).toHaveLength(1);expect(JSON.stringify(metadata)).not.toMatch(/storageKey|contentHash|uploadedById/);
+  const native=await page.request.get(`/api/v1/mobile/account/sale-attachments/${stored.id}`,{headers});expect(native.status()).toBe(200);expect(await native.body()).toEqual(bytes);
+  expect((await request.get(`/api/v1/mobile/account/sale-attachments/${stored.id}`)).status()).toBe(401);
+  const nativeInput={...input,idempotencyKey:randomUUID()},multipart={document:JSON.stringify(nativeInput),payment:"{}",attachments:file};
+  const created=await page.request.post("/api/v1/mobile/account/sales/with-attachments",{headers,multipart});expect(created.status()).toBe(201);const nativeSale=await created.json();expect(nativeSale.status).toBe("POSTED");
+  const replay=await page.request.post("/api/v1/mobile/account/sales/with-attachments",{headers,multipart});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(nativeSale.id);expect(await db.commercialAttachment.count({where:{companyId,documentId:nativeSale.id}})).toBe(1);
+ }finally{
+  if(sessionHash)await db.mobileSession.deleteMany({where:{tokenHash:sessionHash}});
+  const rows=await db.commercialAttachment.findMany({where:{companyId},select:{storageKey:true}});
+  await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;await tx.commercialAttachment.deleteMany({where:{companyId}})});
+  for(const row of rows)await privateStorage().delete(row.storageKey);
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules,transactionDefaults:original.transactionDefaults as Prisma.InputJsonValue}});
+ }
 });
