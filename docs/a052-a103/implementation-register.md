@@ -10252,3 +10252,12 @@ A080-F01 remains PARTIAL for full original themes/remaining settings controls;co
 `c512f182`: shared memory-only PDF/PNG/JPEG preparation;quotation creation preserves its existing contract. Selection limits/types checked before body reads;actual lengths/signatures verified;names sanitized andhashes computed server-side. No upload/document/ledger mutation during preparation. Sale integration pending;A086-F06/A087-F02 stayPARTIAL.
 
 25focused tests across3files PASS(886ms);10existing PostgreSQL attachment cases PASS(1.40s),0failed/skipped on final run. Initial DBattempt skipped10 because existinglocalcontainer was stopped;samecontainer restarted withoutreset,then successfully rerun. TypeScript/focusedESLint/diff PASS. No browser/native runtime claim/newmigration. Counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs preserved. Targeted CI9a8d935c PASS run39446799026;newhead needs itsownCI. No merge/deploy/production/A104.
+
+
+### 2026-10-21 — transactional Sale attachment core
+
+`beffab62`: additive CommercialAttachment model/migration143;immutable history,company composite FKs,scoped private metadata/download services,server-computed retry manifest,atomic Sale/file/posting/receipt commit andsafe rollback cleanup. Financial corrections copy original file references before replacement posting;no financial-number policy change. Backup snapshot retains metadata/hashes;separate blob backup remains required.
+
+Final74tests across5files PASS(9.79s),0failed/skipped;includesnewSale-file DB cases andexistingcheque/paid-sale group. Prior44testgroup included8conversion DB regressions;overlap,do not sum. Prisma generate/validate/localdeploy PASS. Fresh143migrationchain/data-preserving legacyupgrade/redeploy1PASS(6.59s);legacyfiles0. FinalTypeScript/focusedESLint/diff PASS. No browser/native/device runtime claim for this slice.
+
+A086-F06/A087-F02 remain PARTIAL: HTTP/UI/native connections,attachment-only edits andruntimeverification pending.185implemented-but-not-finally-verified/13partial/1notstarted;199IDs/allfinalstatuses preserved. NewheadCIpending. Futureapproveddeployment requiresmigration143beforecode;production untouched. No merge/deploy/A104.

@@ -65384,7 +65384,6 @@
       "expected_behavior": "Shared Add Sale form must restore/reference all supported fields and present safe correction identity clearly.",
       "root_cause": "Shared form lacks fields and correction identity model differs from reference.",
       "affected_files": [
-        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
         ".github/workflows/targeted-validation.yml",
         "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
@@ -65395,21 +65394,29 @@
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+        "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
         "prisma/schema.prisma",
         "src/app/workspace/account/sales/[id]/edit/page.tsx",
         "src/app/workspace/account/sales/[id]/page.tsx",
         "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/backup-snapshot.runtime.test.ts",
         "src/lib/account/cheque-finance.integration.test.ts",
         "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
         "src/lib/account/print.ts",
         "src/lib/account/project-invoice-selection.ts",
         "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-attachments.integration.test.ts",
+        "src/lib/account/sale-attachments.ts",
         "src/lib/account/sale-duplicate.test.ts",
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/sale-submit.ts",
         "src/lib/account/transaction-header.test.ts",
         "src/lib/account/transaction-header.ts",
-        "src/lib/account/migration-chain.integration.test.ts"
+        "src/lib/account/transaction-scope.ts",
+        "src/lib/account/utilities.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -65624,6 +65631,43 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL: transactional Sale attachment storage/retry manifest/edit retention/private downloads/Web/native UI/runtime verification pending. No migration or financial behavior change."
+        },
+        "sale_private_attachment_core_2026_10_21": {
+          "implementation_commit": "beffab62",
+          "work": "Added CommercialAttachment private metadata with company/document/uploader composite foreign keys, bounds and DB guard: insert only onto draft Sale inside explicit Save; immutable update/delete/posted append. Sale Save accepts validated in-memory files, includes trusted server-computed file manifest in document retry fingerprint, stores before posting in same serializable transaction and compensates only proven-unreferenced rollback blobs. Failed/ambiguous DB cleanup retains bytes. Corrections copy immutable references to replacement before posting, retaining original history and bytes. Company/branch/permission/module checked list/download services expose safe metadata and verify byte integrity. Backup snapshot includes ordered attachment metadata and hashes; blobs still require separate private-storage backup. No financial-number policy change.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "prisma/schema.prisma",
+            "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/backup-snapshot.runtime.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-submit.ts",
+            "src/lib/account/transaction-scope.ts",
+            "src/lib/account/utilities.ts"
+          ],
+          "models_changed": [
+            "CommercialAttachment; Company/User/CommercialDocument relation arrays"
+          ],
+          "migrations": [
+            "20261021010000_commercial_private_attachments"
+          ],
+          "tests": {
+            "final_group": "74 PASS across5files,0failed/skipped(9.79s): new Sale-file PostgreSQL integration suite, existing cheque/paid-Sale integration group, Sale-submit unit, backup snapshot and shared file preparation. Covers concurrent retry/changed intent/storage failure/receipt failure/scope/edition/corruption/immutable DB history/correction/replay.",
+            "prior_group": "44 PASS across5files(3.78s),including8 real PostgreSQL quotation conversion regressions; overlaps final group,do not sum as distinct tests.",
+            "migration": "Prisma generate/validate/deploy PASS on isolated local settings_2ec7dea6_ci. Fresh143-migration-chain/data-preserving legacy upgrade/redeploy rehearsal1PASS(6.59s) on newly created local empty *_ci DB; no reset/drop/production writes. Legacy Sale attachment count0.",
+            "typescript": "Final PASS",
+            "eslint": "Final focused PASS",
+            "diff": "PASS",
+            "browser": "NOT RUN; no Sale file HTTP/UI connected in this slice",
+            "android": "NOT RUN; no native file UI/API connected in this slice",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL. Still required: Web/mobile authenticated attachment HTTP transport; Add/Edit Sale image/document selection and saved-file display; native selection/upload/download; attachment-only edit behavior avoiding financial correction; runtime/accessibility/device verification. Invoice identity question remains pending. Backup restore/blob recovery broader A088-F01 remains incomplete. All199 final statuses unset.",
+          "deployment_requirement": "Future approved deployment must apply additive migration chain through20261021010000_commercial_private_attachments before application code. No production deployment or migration executed."
         }
       },
       "push_checkpoint_evidence": {
@@ -66129,7 +66173,6 @@
       "expected_behavior": "Show retained detail fields and working share/menu/Edit/Delete destinations.",
       "root_cause": "Detail renderer/action surface lacks reference controls.",
       "affected_files": [
-        "src/app/workspace/account/sales/[id]/page.tsx",
         ".github/workflows/targeted-validation.yml",
         "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
@@ -66140,21 +66183,29 @@
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
+        "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
         "prisma/schema.prisma",
         "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/sales/[id]/page.tsx",
         "src/app/workspace/account/sales/[id]/sale-detail.module.css",
         "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/backup-snapshot.runtime.test.ts",
         "src/lib/account/cheque-finance.integration.test.ts",
         "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
         "src/lib/account/print.ts",
         "src/lib/account/project-invoice-selection.ts",
         "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-attachments.integration.test.ts",
+        "src/lib/account/sale-attachments.ts",
         "src/lib/account/sale-duplicate.test.ts",
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/sale-submit.ts",
         "src/lib/account/transaction-header.test.ts",
         "src/lib/account/transaction-header.ts",
-        "src/lib/account/migration-chain.integration.test.ts"
+        "src/lib/account/transaction-scope.ts",
+        "src/lib/account/utilities.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -66328,6 +66379,43 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL: transactional Sale attachment storage/retry manifest/edit retention/private downloads/Web/native UI/runtime verification pending. No migration or financial behavior change."
+        },
+        "sale_private_attachment_core_2026_10_21": {
+          "implementation_commit": "beffab62",
+          "work": "Added CommercialAttachment private metadata with company/document/uploader composite foreign keys, bounds and DB guard: insert only onto draft Sale inside explicit Save; immutable update/delete/posted append. Sale Save accepts validated in-memory files, includes trusted server-computed file manifest in document retry fingerprint, stores before posting in same serializable transaction and compensates only proven-unreferenced rollback blobs. Failed/ambiguous DB cleanup retains bytes. Corrections copy immutable references to replacement before posting, retaining original history and bytes. Company/branch/permission/module checked list/download services expose safe metadata and verify byte integrity. Backup snapshot includes ordered attachment metadata and hashes; blobs still require separate private-storage backup. No financial-number policy change.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "prisma/schema.prisma",
+            "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/backup-snapshot.runtime.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-submit.ts",
+            "src/lib/account/transaction-scope.ts",
+            "src/lib/account/utilities.ts"
+          ],
+          "models_changed": [
+            "CommercialAttachment; Company/User/CommercialDocument relation arrays"
+          ],
+          "migrations": [
+            "20261021010000_commercial_private_attachments"
+          ],
+          "tests": {
+            "final_group": "74 PASS across5files,0failed/skipped(9.79s): new Sale-file PostgreSQL integration suite, existing cheque/paid-Sale integration group, Sale-submit unit, backup snapshot and shared file preparation. Covers concurrent retry/changed intent/storage failure/receipt failure/scope/edition/corruption/immutable DB history/correction/replay.",
+            "prior_group": "44 PASS across5files(3.78s),including8 real PostgreSQL quotation conversion regressions; overlaps final group,do not sum as distinct tests.",
+            "migration": "Prisma generate/validate/deploy PASS on isolated local settings_2ec7dea6_ci. Fresh143-migration-chain/data-preserving legacy upgrade/redeploy rehearsal1PASS(6.59s) on newly created local empty *_ci DB; no reset/drop/production writes. Legacy Sale attachment count0.",
+            "typescript": "Final PASS",
+            "eslint": "Final focused PASS",
+            "diff": "PASS",
+            "browser": "NOT RUN; no Sale file HTTP/UI connected in this slice",
+            "android": "NOT RUN; no native file UI/API connected in this slice",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL. Still required: Web/mobile authenticated attachment HTTP transport; Add/Edit Sale image/document selection and saved-file display; native selection/upload/download; attachment-only edit behavior avoiding financial correction; runtime/accessibility/device verification. Invoice identity question remains pending. Backup restore/blob recovery broader A088-F01 remains incomplete. All199 final statuses unset.",
+          "deployment_requirement": "Future approved deployment must apply additive migration chain through20261021010000_commercial_private_attachments before application code. No production deployment or migration executed."
         }
       },
       "push_checkpoint_evidence": {
