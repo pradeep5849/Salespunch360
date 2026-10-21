@@ -59759,6 +59759,17 @@
             "previous_ci": "39581826143 SUCCESS at635c55f53a1ea7fe199aa36e3f163c959c3c9461 (web/android/migration); not evidence for this later head."
           },
           "remaining": "Order fulfilment implementation pending. Full199 final-head regression/runtime validation pending. Native device runtime unavailable as previously recorded. No migration/production/deploy/merge/A104. Broad finding statuses unchanged; this slice does not complete all report layouts or destinations."
+        },
+        "order_quantity_domain_2026_10_21": {
+          "implementation": "Added pure orderQuantitySummary domain calculation using explicit source-order-line IDs and primary-unit quantities. All source lines must be fulfilled; drafts/cancelled/reversed targets ignored; manual closure preserves remaining quantities. Rejects overfulfilment, invalid/duplicate provenance and precision loss. This is a tested domain component ONLY; not yet wired into posting, persistence, API, reports or Web/native actions.",
+          "files": [
+            "src/lib/account/orders/fulfilment.ts",
+            "src/lib/account/orders/fulfilment.test.ts"
+          ],
+          "tests": "16 focused Vitest tests PASS,0fail/skip,278ms. Focused ESLint and full tsc --noEmit PASS. No DB/browser/Android runtime claimed for this component.",
+          "remaining": "Persist source-line provenance and manual-close audit; authorize/lock source orders on posting; expose confirmed order fulfilment and close-remaining workflows in Web/native and report filters; DB concurrency/retry/isolation/integration/browser/device validation. No schema/migration introduced by this component.",
+          "previous_head_ci": "39607193753 SUCCESS at428d57867fdeacc2a7d20d327b6dbf472a581f08: web/android/migration. Does not certify this new component.",
+          "status": "PARTIAL \u2014 domain component only; broad findings not promoted."
         }
       }
     },
@@ -64150,6 +64161,17 @@
             "previous_ci": "39581826143 SUCCESS at635c55f53a1ea7fe199aa36e3f163c959c3c9461 (web/android/migration); not evidence for this later head."
           },
           "remaining": "Order fulfilment implementation pending. Full199 final-head regression/runtime validation pending. Native device runtime unavailable as previously recorded. No migration/production/deploy/merge/A104. Broad finding statuses unchanged; this slice does not complete all report layouts or destinations."
+        },
+        "order_quantity_domain_2026_10_21": {
+          "implementation": "Added pure orderQuantitySummary domain calculation using explicit source-order-line IDs and primary-unit quantities. All source lines must be fulfilled; drafts/cancelled/reversed targets ignored; manual closure preserves remaining quantities. Rejects overfulfilment, invalid/duplicate provenance and precision loss. This is a tested domain component ONLY; not yet wired into posting, persistence, API, reports or Web/native actions.",
+          "files": [
+            "src/lib/account/orders/fulfilment.ts",
+            "src/lib/account/orders/fulfilment.test.ts"
+          ],
+          "tests": "16 focused Vitest tests PASS,0fail/skip,278ms. Focused ESLint and full tsc --noEmit PASS. No DB/browser/Android runtime claimed for this component.",
+          "remaining": "Persist source-line provenance and manual-close audit; authorize/lock source orders on posting; expose confirmed order fulfilment and close-remaining workflows in Web/native and report filters; DB concurrency/retry/isolation/integration/browser/device validation. No schema/migration introduced by this component.",
+          "previous_head_ci": "39607193753 SUCCESS at428d57867fdeacc2a7d20d327b6dbf472a581f08: web/android/migration. Does not certify this new component.",
+          "status": "PARTIAL \u2014 domain component only; broad findings not promoted."
         }
       }
     },
@@ -71208,6 +71230,17 @@
         "previous_ci": "39581826143 SUCCESS at635c55f53a1ea7fe199aa36e3f163c959c3c9461 (web/android/migration); not evidence for this later head."
       },
       "remaining": "Order fulfilment implementation pending. Full199 final-head regression/runtime validation pending. Native device runtime unavailable as previously recorded. No migration/production/deploy/merge/A104. Broad finding statuses unchanged; this slice does not complete all report layouts or destinations."
+    },
+    "order_quantity_domain_2026_10_21": {
+      "implementation": "Added pure orderQuantitySummary domain calculation using explicit source-order-line IDs and primary-unit quantities. All source lines must be fulfilled; drafts/cancelled/reversed targets ignored; manual closure preserves remaining quantities. Rejects overfulfilment, invalid/duplicate provenance and precision loss. This is a tested domain component ONLY; not yet wired into posting, persistence, API, reports or Web/native actions.",
+      "files": [
+        "src/lib/account/orders/fulfilment.ts",
+        "src/lib/account/orders/fulfilment.test.ts"
+      ],
+      "tests": "16 focused Vitest tests PASS,0fail/skip,278ms. Focused ESLint and full tsc --noEmit PASS. No DB/browser/Android runtime claimed for this component.",
+      "remaining": "Persist source-line provenance and manual-close audit; authorize/lock source orders on posting; expose confirmed order fulfilment and close-remaining workflows in Web/native and report filters; DB concurrency/retry/isolation/integration/browser/device validation. No schema/migration introduced by this component.",
+      "previous_head_ci": "39607193753 SUCCESS at428d57867fdeacc2a7d20d327b6dbf472a581f08: web/android/migration. Does not certify this new component.",
+      "status": "PARTIAL \u2014 domain component only; broad findings not promoted."
     }
   },
   "approved_business_decisions": {

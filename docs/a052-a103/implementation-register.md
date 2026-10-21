@@ -10402,3 +10402,12 @@ User approved quantity-based automatic order closure plus manual remaining closu
 - Report desktop/mobile browser2 PASS. Conversion browser initially3 PASS/1 navigation-timeout FAIL; unchanged-source isolated mobile rerun1 PASS. All four desktop/mobile Save/Save & New cases have passing results.
 - Android compile and70 selected JVM tests PASS,0fail/error/skip; native device runtime and current-slice local lint not executed.
 - These are intermediate results, not final199 verification. No migration, merge, deploy or A104.
+
+
+### 2026-10-21 — order quantity domain component (partial)
+
+Added an exact primary-unit, source-line-based quantity calculation: partial posted invoices accumulate, every order line must be fulfilled, drafts/cancellations/reversals do not count, manual closure retains remaining quantities. Invalid quantities, duplicate provenance and overfulfilment are rejected.16 focused tests PASS; focused lint and full TypeScript PASS.
+
+This component is not yet connected to persistence, posting, API, reports or Web/native controls. No user-visible order closure is claimed. Transaction locks, line provenance persistence and end-to-end tests remain. A084-F03/A085-F02 remain PARTIAL.
+
+Previous pushed head428d57867fdeacc2a7d20d327b6dbf472a581f08 passed all targeted CI jobs in39607193753; these results do not certify later changes. No migration/merge/deploy/production/A104.
