@@ -34,6 +34,7 @@ export const REPORT_CATALOGUE = [
   ["customers", "Party Wise Profit & Loss", "Party reports"],
   ["tax", "GST / Tax Report", "Tax"],
   ["gst-party", "GST Report", "Business status"],
+  ["gst-rate", "GST Rate Report", "Business status"],
   ["budget-vs-actual", "Budget vs Actual", "Projects"],
 ].map(([key, name, group]) => ({ key, name, group }));
 export const ACCOUNT_REPORT_KEYS = REPORT_CATALOGUE.map((x) => x.key);

@@ -1,3 +1,4 @@
+import {gstRateReport} from "./gst-rate";
 import {partyTradeReport} from "./party-trade";
 import {stockLevelReport} from "./stock-level";
 import {bankStatementReport} from "./bank-statement";
@@ -223,6 +224,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
+  if(name==="gst-rate")return gstRateReport(await context(raw,false,actor));
   if(["sale-purchase-party","discount-party","gst-party"].includes(name))return partyTradeReport(await context(raw,false,actor),name==="gst-party"?"GST":name==="discount-party"?"DISCOUNT":"TRADE");
   if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(name==="stock-category")return stockCategoryReport(await context(raw,false,actor));

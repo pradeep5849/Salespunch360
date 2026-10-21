@@ -13,6 +13,8 @@ const moneyColumns = new Set([
   "Sales",
   "Sale Discount",
   "Sale Tax",
+  "Tax In",
+  "Tax Out",
   "Purchase/Expense Tax",
   "Purchase/Expense Discount",
   "Purchases",

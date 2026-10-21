@@ -43,3 +43,5 @@ it("maps Sale/Purchase by Party with common period/branch scope only",()=>{expec
 it("maps Discount Report without inventing unsupported filters",()=>{expect(searchReportCatalogue("ACCOUNT_ADMIN","Discount Report")).toEqual([{key:"discount-party",name:"Discount Report",group:"Business status"}]);expect(reportSpecificFilters("discount-party")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","Discount Report")).toEqual([])});
 
 it("retains document GST report and maps party GST to its own destination",()=>{expect(REPORT_CATALOGUE.find(x=>x.key==="gst-party")).toEqual({key:"gst-party",name:"GST Report",group:"Business status"});expect(REPORT_CATALOGUE.some(x=>x.key==="tax")).toBe(true);expect(reportSpecificFilters("gst-party")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","GST")).toEqual([])});
+
+it("maps GST Rate Report to component-rate totals without unrelated item filters",()=>{expect(REPORT_CATALOGUE.find(x=>x.key==="gst-rate")).toEqual({key:"gst-rate",name:"GST Rate Report",group:"Business status"});expect(reportSpecificFilters("gst-rate")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","GST Rate")).toEqual([])});

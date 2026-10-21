@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun gstRateKeepsPercentageSeparateFromCurrencyAndDropsStaleItemFilter(){
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"gst-rate","name":"GST Rate Report","group":"Business status","filters":[]}]}""").jsonObject
+        assertEquals("gst-rate",accountReportCatalogue(options,"GST Rate").single().key)
+        assertEquals(mapOf("branchId" to "branch"),accountReportRequestFilters(options,"gst-rate",mapOf("branchId" to "branch","productId" to "stale")))
+        val data=Json.parseToJsonElement("""{"rows":[["CGST@9%","9%","₹121.50","₹0.00"]]}""").jsonObject
+        assertEquals(listOf("CGST@9%","9%","₹121.50","₹0.00"),accountReportRows(data).single())
+    }
+
     @Test fun partyGstUsesServerCatalogueAndPreservesSignedTaxAndScope() {
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"gst-party","name":"GST Report","group":"Business status","filters":[]}]}""").jsonObject
         assertEquals("gst-party",accountReportCatalogue(options,"GST Report").single().key)

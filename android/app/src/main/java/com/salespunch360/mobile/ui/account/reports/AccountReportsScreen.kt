@@ -184,6 +184,17 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                         } }
                     }
                 }
+            } else if(state.report=="gst-rate") {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty())Text("No recorded GST matches the selected filters.")
+                if(rows.isNotEmpty())LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    items(rows){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){
+                        Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
+                        row.getOrNull(1)?.takeIf{it.isNotBlank()}?.let{Text("Tax Percent: $it")}
+                        Text("Tax In: ${row.getOrNull(2).orEmpty()}")
+                        Text("Tax Out: ${row.getOrNull(3).orEmpty()}")
+                    }}}
+                }
             } else if(state.report in setOf("sale-purchase-party","discount-party","gst-party")) {
                 val rows=accountReportRows(data)
                 if(rows.isEmpty()) Text("No party transactions match the selected filters.")

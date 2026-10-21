@@ -155,10 +155,14 @@ test.afterAll(async () => {
     await tx.loanPayment.deleteMany({where:{companyId}});
     await tx.loan.deleteMany({where:{companyId}});
     await tx.partyOpeningBalance.deleteMany({where:{companyId}});
+    await tx.expenseAttachment.deleteMany({where:{companyId}});
+    await tx.expenseTransaction.deleteMany({where:{companyId}});
     await tx.journalLine.deleteMany({where:{companyId}});
     await tx.journalEntry.deleteMany({where:{companyId}});
     await tx.accountingAuditEvent.deleteMany({where:{companyId}});
   });
+  await db.recurringExpenseTemplate.deleteMany({where:{companyId}});
+  await db.expenseCategory.deleteMany({where:{companyId}});
   await db.projectAuditEvent.deleteMany({where:{companyId}});
   await db.projectMember.deleteMany({where:{companyId}});
   await db.project.deleteMany({where:{companyId}});
@@ -3577,6 +3581,38 @@ test("A084 GST Report nets party tax across Web native and exports",async({page}
   for(const format of ["csv","xlsx","pdf"]){const exported=await page.request.get(`/api/account/reports/gst-party/${format}?${query}`);expect(exported.status()).toBe(200);if(format==="csv"){const text=await exported.text();expect(text).toContain("12.14");expect(text).toContain("7.28")}else if(format==="pdf"){expect((await extractPdfText(await exported.body())).text).toContain("12.14")}else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await exported.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain("7.28")}}
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
   await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/gst-party?${query}`,{headers})).status()).toBe(403);
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);
+ }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
+});
+
+
+test("A084 GST Rate Report groups stored component tax across Web native and exports",async({page})=>{
+ test.setTimeout(240000);
+ const branchId=(await db.branch.create({data:{companyId,name:"Isolated GST report branch",code:`GST-${randomUUID().slice(0,8)}`,gstStateCode:"29"}})).id;
+ const customerId=(await db.customer.create({data:{companyId,branchId,name:"Print fixture customer",isAccountCustomer:true}})).id;
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchIds:[]} as ProjectActor;
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:[],baseCurrency:"INR",displayDecimalPlaces:2}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Party report year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  const vendor=await db.vendor.create({data:{companyId,name:"Print fixture customer"}});
+  for(const [type,partyId,rate,returnType] of [["SALES_INVOICE",customerId,"100","CREDIT_NOTE"],["PURCHASE_BILL",vendor.id,"60","DEBIT_NOTE"]] as const){
+   const source=await createCommercialDocumentForActor(actor,{type,branchId,partyId,stateOfSupplyCode:"29",issueDate:"2026-10-05",...(type==="PURCHASE_BILL"?{purchasePurpose:"GENERAL_OFFICE" as const,vendorInvoiceNumber:`PARTY-${randomUUID()}`,vendorInvoiceDate:"2026-10-05"}:{}),lines:[{lineType:"CUSTOM",itemName:"Party report service",unitName:"Pieces",unitSymbol:"Nos",quantity:"1",rate,taxRate:"18",discountType:"PERCENTAGE",discountValue:"10"}]});await postCommercialDocumentForActor(actor,{documentId:source.id});
+   const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}});
+   const returned=await createCommercialDocumentForActor(actor,{type:returnType,branchId,partyId,stateOfSupplyCode:"29",sourceDocumentId:source.id,issueDate:"2026-10-18",...(returnType==="DEBIT_NOTE"?{purchasePurpose:"GENERAL_OFFICE" as const}:{}),lines:[{lineType:"CUSTOM",sourceCommercialLineId:line.id,itemName:line.itemName,unitName:"Pieces",unitSymbol:"Nos",quantity:"0.25",rate,taxRate:"18",discountType:"PERCENTAGE",discountValue:"10"}]});await postCommercialDocumentForActor(actor,{documentId:returned.id});
+  }
+  const expenseLedger=randomUUID(),cashLedger=randomUUID(),categoryId=randomUUID(),moneyId=randomUUID(),suffix=randomUUID().slice(0,8);
+  await db.ledgerAccount.createMany({data:[{id:expenseLedger,companyId,code:`GE-${suffix}`,name:"GST fixture expense",accountClass:"EXPENSE",normalBalance:"DEBIT"},{id:cashLedger,companyId,code:`GC-${suffix}`,name:"GST fixture cash",accountClass:"ASSET",normalBalance:"DEBIT"}]});
+  await db.expenseCategory.create({data:{id:categoryId,companyId,name:`GST expense ${suffix}`,scope:"EXPENSE",defaultLedgerAccountId:expenseLedger}});await db.moneyAccount.create({data:{id:moneyId,companyId,branchId,name:`GST cash ${suffix}`,type:"CASH",ledgerAccountId:cashLedger}});
+  const expense=await createExpenseForActor(actor,{type:"OFFICE_EXPENSE",branchId,categoryId,moneyAccountId:moneyId,transactionDate:"2026-10-18",taxableAmount:"100",taxRate:"18",stateOfSupplyCode:"29",recordAsPaid:true,requestKey:randomUUID()});expect(expense.status).toBe("POSTED");
+  const journals=await db.journalEntry.count({where:{companyId}}),movements=await db.stockMovement.count({where:{companyId}}),query=`branchId=${branchId}&from=2026-10-01&to=2026-10-18`;
+  const result=await runFinancialReportForActor(actor,"gst-rate",{branchId,from:"2026-10-01",to:"2026-10-18"});expect(result.rows).toEqual([["CGST@9%","9%","6.07","12.64"],["SGST@9%","9%","6.07","12.64"]]);
+  await signInSettings(page);const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  await page.goto(`/workspace/account/reports/gst-rate?${query}`);await expect(page.getByRole("heading",{name:"GST Rate Report",exact:true})).toBeVisible({timeout:15000});const summary=page.getByRole("region",{name:"Report summary",exact:true});await expect(summary).toContainText("₹12.14");await expect(summary).toContainText("₹25.28");await expect(page.getByRole("cell",{name:"CGST@9%",exact:true})).toBeVisible();await expect(page.getByRole("cell",{name:"SGST@9%",exact:true})).toBeVisible();
+  const response=await page.request.get(`/api/v1/mobile/account/reports/gst-rate?${query}`,{headers});expect(response.status()).toBe(200);expect((await response.json()).summary.map((x:{value:string})=>x.value)).toEqual(["12.14","25.28"]);
+  for(const format of ["csv","xlsx","pdf"]){const exported=await page.request.get(`/api/account/reports/gst-rate/${format}?${query}`);expect(exported.status()).toBe(200);if(format==="csv"){const text=await exported.text();expect(text).toContain("12.14");expect(text).toContain("25.28")}else if(format==="pdf"){expect((await extractPdfText(await exported.body())).text).toContain("12.14")}else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await exported.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain("25.28")}}
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/gst-rate?${query}`,{headers})).status()).toBe(403);
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
 });
