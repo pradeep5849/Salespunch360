@@ -6,6 +6,7 @@ import {AuthorizationError} from "@/lib/auth/authorization";
 import {canUsePermission} from "@/lib/auth/permissions";
 import {requireAccountModules} from "@/lib/account/modules";
 import {attachmentDisplayName} from "@/lib/account/attachment-name";
+import {preparePrivateDocumentFiles,validPrivateDocumentFile} from "@/lib/account/private-document-files";
 import {privateStorage} from "@/lib/storage";
 import type {QuotationActor} from "./service";
 const request=z.object({documentId:z.string().uuid(),revisionNumber:z.number().int().min(0),requestKey:z.string().uuid()}).strict();
@@ -32,11 +33,7 @@ async function lock(tx:Prisma.TransactionClient,actor:QuotationActor,documentId:
  await tx.$queryRaw`SELECT "id" FROM "quotation_documents" WHERE "id"=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
 }
 export function validQuotationAttachment(bytes:Buffer,mime:string){
- return bytes.length>0&&bytes.length<=MAX_BYTES&&(
-  mime==="application/pdf"&&bytes.subarray(0,5).toString()==="%PDF-"||
-  mime==="image/png"&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))||
-  mime==="image/jpeg"&&bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255
- );
+ return validPrivateDocumentFile(bytes,mime);
 }
 /** Never delete bytes while a copied issued revision still references them.
  * All quotation writes acquire the same company lock before copying/removing refs. */
@@ -50,13 +47,7 @@ async function discardUnreferenced(companyId:string,key:string){
 export async function prepareQuotationCreationAttachments(actor:QuotationActor,files:File[]){
  if(!files.length)return [];
  await authorize(actor,true);
- if(files.length>MAX_ATTACHMENTS||files.reduce((sum,file)=>sum+file.size,0)>MAX_BYTES)throw new QuotationAttachmentError("QUOTATION_ATTACHMENT_LIMIT");
- return Promise.all(files.map(async file=>{
-  if(!file.size||file.size>MAX_BYTES)throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT");
-  const bytes=Buffer.from(await file.arrayBuffer());
-  if(!validQuotationAttachment(bytes,file.type))throw new QuotationAttachmentError("INVALID_QUOTATION_ATTACHMENT");
-  return {bytes,displayName:attachmentDisplayName(file.name),mimeType:file.type,contentHash:createHash("sha256").update(bytes).digest("hex"),sizeBytes:bytes.length};
- }));
+ return preparePrivateDocumentFiles(files,kind=>new QuotationAttachmentError(kind==="LIMIT"?"QUOTATION_ATTACHMENT_LIMIT":"INVALID_QUOTATION_ATTACHMENT"));
 }
 export async function storeQuotationCreationAttachmentsInTx(tx:Prisma.TransactionClient,actor:QuotationActor,documentId:string,revisionId:string,files:Awaited<ReturnType<typeof prepareQuotationCreationAttachments>>,attemptedKeys:Set<string>){
  for(const file of files){
