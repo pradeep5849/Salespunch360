@@ -3709,3 +3709,21 @@ test("A084 Loan Statement reconciles posted history across Web native and export
   await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/loan-statement?${query}`,{headers})).status()).toBe(403);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);
  }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}})}
 });
+
+test("A090 commercial detail honors currency precision dates without changing amounts",async({page})=>{
+ test.setTimeout(120000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ await db.financialYear.create({data:{companyId,name:"Commercial display year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ const vendor=await db.vendor.create({data:{companyId,name:"Display vendor"}});
+ const doc=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendor.id,issueDate:"2026-10-13",vendorInvoiceNumber:"DISPLAY-1",vendorInvoiceDate:"2026-10-13",purchasePurpose:"GENERAL_OFFICE",freightAmount:"1.25",otherChargesAmount:"2.35",lines:[{lineType:"CUSTOM",itemName:"Display component",quantity:"3",rate:"123.45",discountType:"FIXED",discountValue:"10",taxRate:"18"}]});
+ const saved=await db.commercialDocument.findUniqueOrThrow({where:{id:doc.id},include:{lines:true}}),journals=await db.journalEntry.count({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});const preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"});
+  await signInSettings(page);await page.goto(`/workspace/account/transactions/${doc.id}`);const row=page.getByRole("row").filter({has:page.getByRole("cell",{name:"Display component",exact:true})});
+  for(const value of [saved.lines[0].rate,saved.lines[0].discountAmount,saved.lines[0].taxAmount,saved.lines[0].lineTotal])await expect(row.getByRole("cell",{name:formatMoney(value.toString(),preferences),exact:true})).toBeVisible();
+  await expect(row.getByRole("cell",{name:"3",exact:true})).toBeVisible();const main=page.locator("main").last();await expect(main).toContainText("10/13/2026");await expect(main).toContainText(formatMoney(saved.grandTotal.toString(),preferences));await expect(main).toContainText(formatMoney("1.25",preferences));await expect(main).not.toContainText("₹");
+  await page.getByRole("region",{name:"Commercial line items",exact:true}).focus();await expect(page.getByRole("region",{name:"Commercial line items",exact:true})).toBeFocused();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  expect((await db.commercialDocument.findUniqueOrThrow({where:{id:doc.id}})).grandTotal.toString()).toBe(saved.grandTotal.toString());expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ }finally{await db.accountSettings.update({where:{companyId},data:{baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces,dateFormat:before.dateFormat}})}
+});

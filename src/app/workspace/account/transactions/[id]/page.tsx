@@ -1,4 +1,4 @@
-import {AccountTimestamp} from "@/components/account/account-ui";
+import {Money,AccountTimestamp} from "@/components/account/account-ui";
 import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
@@ -66,9 +66,9 @@ export default async function Page({
             {x.purchaseLocation ?? "—"}
           </p>
           <p>
-            Freight {x.freightAmount.toString()} · Other charges{" "}
-            {x.otherChargesAmount.toString()} · Round-off{" "}
-            {x.roundOffAmount.toString()}
+            Freight {<Money value={x.freightAmount}/>} · Other charges{" "}
+            {<Money value={x.otherChargesAmount}/>} · Round-off{" "}
+            {<Money value={x.roundOffAmount}/>}
           </p>
         </section>
       )}
@@ -80,7 +80,7 @@ export default async function Page({
       {x.sourcePurchaseOrder && (
         <p>Purchase Order {x.sourcePurchaseOrder.documentNumber}</p>
       )}
-      <table>
+      <div className="table-wrap" role="region" aria-label="Commercial line items" tabIndex={0}><table>
         <thead>
           <tr>
             <th>Item</th>
@@ -98,10 +98,10 @@ export default async function Page({
               <td>{line.itemName}</td>
               <td>{line.description}</td>
               <td>{line.quantity.toString()}</td>
-              <td>{line.rate.toString()}</td>
-              <td>{line.discountAmount.toString()}</td>
-              <td>{line.taxAmount.toString()}</td>
-              <td>{line.lineTotal.toString()}</td>
+              <td>{<Money value={line.rate}/>}</td>
+              <td>{<Money value={line.discountAmount}/>}</td>
+              <td>{<Money value={line.taxAmount}/>}</td>
+              <td>{<Money value={line.lineTotal}/>}</td>
             </tr>
           ))}
           {x.lines
@@ -111,23 +111,23 @@ export default async function Page({
                   <td colSpan={7}>
                     Allocation: {allocation.allocationType.replaceAll("_", " ")}{" "}
                     · Qty {allocation.quantity.toString()} · Taxable{" "}
-                    {allocation.taxableAmount.toString()} · Tax{" "}
-                    {allocation.taxAmount.toString()}
+                    {<Money value={allocation.taxableAmount}/>} · Tax{" "}
+                    {<Money value={allocation.taxAmount}/>}
                   </td>
                 </tr>
               )),
             )
             .map((row) => row)}
         </tbody>
-      </table>
+      </table></div>
       <p>
-        Subtotal {x.subtotal.toString()} · Discounts{" "}
-        {x.discountTotal.toString()} · Taxable {x.taxableTotal.toString()} · Tax{" "}
-        {x.taxTotal.toString()} · Total {x.grandTotal.toString()}
+        Subtotal {<Money value={x.subtotal}/>} · Discounts{" "}
+        {<Money value={x.discountTotal}/>} · Taxable {<Money value={x.taxableTotal}/>} · Tax{" "}
+        {<Money value={x.taxTotal}/>} · Total {<Money value={x.grandTotal}/>}
       </p>
       {x.financial && (
         <p>
-          Outstanding {x.financial.outstanding.toString()} ·{" "}
+          Outstanding {<Money value={x.financial.outstanding}/>} ·{" "}
           {x.financial.paymentStatus}
         </p>
       )}
@@ -157,13 +157,13 @@ export default async function Page({
           {x.stockMovements.map((m) => (
             <p key={m.id}>
               Stock {m.movementType.replaceAll("_", " ")} · Qty{" "}
-              {m.quantity.toString()} · Value {m.totalCost.toString()}
+              {m.quantity.toString()} · Value {<Money value={m.totalCost}/>}
             </p>
           ))}
           {x.projectMaterialMovements.map((m) => (
             <p key={m.id}>
               Project material {m.movementType.replaceAll("_", " ")} · Qty{" "}
-              {m.quantity.toString()} · Value {m.totalCost.toString()}
+              {m.quantity.toString()} · Value {<Money value={m.totalCost}/>}
             </p>
           ))}
         </section>
@@ -180,15 +180,15 @@ export default async function Page({
       <h2>Adjustments and payments</h2>
       {x.adjustments.map((a) => (
         <p key={a.id}>
-          {a.type} {a.documentNumber}: {a.grandTotal.toString()}
+          {a.type} {a.documentNumber}: {<Money value={a.grandTotal}/>}
         </p>
       ))}
       {x.allocations.map((a) => (
-        <p key={a.id}>Allocated payment: {a.amount.toString()}</p>
+        <p key={a.id}>Allocated payment: {<Money value={a.amount}/>}</p>
       ))}
       {x.advanceApplications.map((a) => (
         <p key={a.id}>
-          Applied advance: {a.amount.toString()} on{" "}
+          Applied advance: {<Money value={a.amount}/>} on{" "}
           {<AccountDate value={a.applicationDate.toISOString()}/>}
         </p>
       ))}
@@ -209,7 +209,7 @@ export default async function Page({
                 />
                 <span>
                   {a.settlementNumber} · Available{" "}
-                  {a.remainingAmount.toString()}{" "}
+                  {<Money value={a.remainingAmount}/>}{" "}
                 </span>
                 <label>
                   Amount{" "}
