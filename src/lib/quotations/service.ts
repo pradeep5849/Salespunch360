@@ -10,7 +10,7 @@ import {resolvePartySettings} from "@/lib/account/party-settings";
 import {commercialCreationHash} from "@/lib/account/commercial-request-identity";
 import {retrySerializable} from "@/lib/account/transaction-retry";
 import {quotationListFilter} from "./list-filter";
-import { quotationActionCapabilities } from "./action-capabilities";
+import { quotationActionCapabilities, quotationConversionCapabilities } from "./action-capabilities";
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma, type QuotationStatus } from "@prisma/client";
 import { z } from "zod";
@@ -149,11 +149,11 @@ export async function updateQuotationDraftForActor(actor: Actor, id: string, raw
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
-export async function listQuotationsForActor(actor: Actor,raw:unknown={}) { await requireAccountModules(actor,"QUOTATIONS_BOQ"); const {query,where}=quotationListFilter(raw); const documents = (await db.quotationDocument.findMany({ where: { companyId: actor.companyId!, ...documentScope(actor), ...where }, include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } }, orderBy: [{ updatedAt: "desc" },{id:"desc"}],skip:query.offset,take:query.limit })).map(publicQuotationDocument); return canViewQuotationCost(actor) ? documents : documents.map(document => ({ ...document, revisions: document.revisions.map(revision => ({ ...revision, internalCostTotal: undefined, expectedProfit: undefined, expectedMarginPercent: undefined })) })); }
+export async function listQuotationsForActor(actor: Actor,raw:unknown={}) { await requireAccountModules(actor,"QUOTATIONS_BOQ"); const {query,where}=quotationListFilter(raw); const enabled=await enabledModulesForCompany(actor.companyId!); const documents = (await db.quotationDocument.findMany({ where: { companyId: actor.companyId!, ...documentScope(actor), ...where }, include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } }, orderBy: [{ updatedAt: "desc" },{id:"desc"}],skip:query.offset,take:query.limit })).map(publicQuotationDocument).map(document=>({...document,capabilities:quotationConversionCapabilities(actor,document,enabled)})); return canViewQuotationCost(actor) ? documents : documents.map(document => ({ ...document, revisions: document.revisions.map(revision => ({ ...revision, internalCostTotal: undefined, expectedProfit: undefined, expectedMarginPercent: undefined })) })); }
 export async function getQuotationForActor(actor:Actor,id:string){
  await requireAccountModules(actor,"QUOTATIONS_BOQ");const document=await loadDocument(db,actor,id),closed=Boolean(document.convertedCommercialDocumentId),enabled=await enabledModulesForCompany(actor.companyId!);
- const lifecycle=quotationActionCapabilities(actor,document.status,document.company?.productEdition),canConvert=Boolean(document.customerId)&&!closed&&document.status==="APPROVED"&&document.revisions[0]?.status==="APPROVED"&&enabled.includes("SALES")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SALES_ENTRY");
- const capabilities={canCost:canViewQuotationCost(actor),...lifecycle,canEdit:!closed&&lifecycle.canEdit,canRevise:!closed&&lifecycle.canRevise,canApprove:!closed&&lifecycle.canApprove,canLifecycle:!closed&&lifecycle.canLifecycle,canConvertToSale:canConvert&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST"),canConvertToSalesOrder:canConvert&&enabled.includes("SALES_ORDER")};
+ const lifecycle=quotationActionCapabilities(actor,document.status,document.company?.productEdition);
+ const capabilities={canCost:canViewQuotationCost(actor),...lifecycle,canEdit:!closed&&lifecycle.canEdit,canRevise:!closed&&lifecycle.canRevise,canApprove:!closed&&lifecycle.canApprove,canLifecycle:!closed&&lifecycle.canLifecycle,...quotationConversionCapabilities(actor,document,enabled)};
  if(capabilities.canCost)return {...document,capabilities};
  return {...document,capabilities,revisions:document.revisions.map(revision=>{const {internalCostTotal:_cost,expectedProfit:_profit,expectedMarginPercent:_margin,...safeRevision}=revision;void _cost;void _profit;void _margin;return {...safeRevision,lines:revision.lines.map(line=>{const {internalUnitCost:_unitCost,internalCostTotal:_lineCost,...safeLine}=line;void _unitCost;void _lineCost;return safeLine})}})};
 }

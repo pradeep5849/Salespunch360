@@ -35,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.salespunch360.mobile.AccountAddItemViewModel
 import com.salespunch360.mobile.ui.account.inventory.AddItemScreen
+import com.salespunch360.mobile.QuotationRow
 import com.salespunch360.mobile.QuotationDraft
 import com.salespunch360.mobile.QuotationState
 import com.salespunch360.mobile.QuotationViewModel
@@ -48,6 +49,7 @@ import kotlinx.serialization.json.*
 @Composable
 fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel(), initialDocumentId:String?=null,navigate:(String)->Unit) {
     LaunchedEffect(initialDocumentId){initialDocumentId?.let(vm::open)}
+    var convertingRow by remember { mutableStateOf<QuotationRow?>(null) }
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     LaunchedEffect(state.pdf,state.pdfPreview) {
@@ -90,6 +92,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
                 ElevatedCard(onClick={vm.open(quotation.id)},modifier=Modifier.fillMaxWidth()){
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.customer.ifBlank{"Customer not provided"},fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text(accountMoney(quotation.total),fontWeight=FontWeight.Bold)}
+                        if(quotation.canConvertSale||quotation.canConvertOrder)OutlinedButton(onClick={convertingRow=quotation}){Text("Convert")}
                         Text("${quotation.type} · ${quotation.number} · R${quotation.revision}")
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(quotation.status.replace('_',' '));Text(accountDate(quotation.issueDate))}
                     }
@@ -98,6 +101,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
         }
     }
 
+    convertingRow?.let{row->AlertDialog(onDismissRequest={convertingRow=null},title={Text("Convert estimate")},text={Column{if(row.canConvertSale)TextButton(onClick={convertingRow=null;navigate("/workspace/account/transactions/new?type=SALES_INVOICE&quotationId=${row.id}&quotationRevisionId=${row.revisionId}")}){Text("Convert to Sale")};if(row.canConvertOrder)TextButton(onClick={convertingRow=null;navigate("/workspace/account/transactions/new?type=SALES_ORDER&quotationId=${row.id}&quotationRevisionId=${row.revisionId}")}){Text("Convert to Sale Order")}}},confirmButton={TextButton(onClick={convertingRow=null}){Text("Cancel")}})}
     state.draft?.let { QuotationEditor(it, state, vm,navigate) }
     if(state.draft==null&&!(state.pdfPreview&&state.pdf!=null))state.detail?.let { QuotationDetail(it, vm, state.preview,state.stateOfSupplyOptions,navigate) }
 }

@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {quotationActionCapabilities,permittedQuotationTransitions} from "./action-capabilities";
+import {quotationActionCapabilities,permittedQuotationTransitions,quotationConversionCapabilities} from "./action-capabilities";
 import type {AccountRole} from "@prisma/client";
 const actor=(accountRole:AccountRole)=>({role:"ACCOUNT_USER" as const,isActive:true,companyId:"company",accountRole,accountAccessActive:true,salesAccessActive:false,salesRole:null,managerType:null});
 describe("quotation role and state action controls",()=>{
@@ -22,4 +22,13 @@ describe("quotation role and state action controls",()=>{
   expect(permittedQuotationTransitions({...actor("ACCOUNT_ADMIN"),isActive:false},"DRAFT",["CANCELLED"])).toEqual([]);
   expect(quotationActionCapabilities(actor("ACCOUNT_ADMIN"),"DRAFT","SALESPUNCH360")).toMatchObject({canEdit:false,canShare:false,canLifecycle:false});
  });
+});
+
+it("list and detail conversion choices require current approved party revision and permissions",()=>{
+ const approved={customerId:"party",status:"APPROVED",revisions:[{status:"APPROVED"}]};
+ expect(quotationConversionCapabilities(actor("ACCOUNT_ADMIN"),approved,["SALES","SALES_ORDER"])).toEqual({canConvertToSale:true,canConvertToSalesOrder:true});
+ expect(quotationConversionCapabilities(actor("ACCOUNT_ADMIN"),approved,["SALES"])).toEqual({canConvertToSale:true,canConvertToSalesOrder:false});
+ for(const doc of [{...approved,status:"DRAFT"},{...approved,revisions:[{status:"DRAFT"}]},{...approved,customerId:null},{...approved,convertedCommercialDocumentId:"sale"},{...approved,revisions:[]}])expect(quotationConversionCapabilities(actor("ACCOUNT_ADMIN"),doc,["SALES","SALES_ORDER"])).toEqual({canConvertToSale:false,canConvertToSalesOrder:false});
+ for(const identity of [actor("PROJECT_MANAGER"),{...actor("ACCOUNT_ADMIN"),isActive:false}])expect(quotationConversionCapabilities(identity,approved,["SALES","SALES_ORDER"])).toEqual({canConvertToSale:false,canConvertToSalesOrder:false});
+ expect(quotationConversionCapabilities(actor("ACCOUNT_ADMIN"),approved,[])).toEqual({canConvertToSale:false,canConvertToSalesOrder:false});
 });

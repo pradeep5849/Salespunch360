@@ -16,3 +16,9 @@ export function permittedQuotationTransitions(actor:Actor,status:QuotationStatus
  if(!capabilities.canLifecycle)return [];
  return transitions.filter(target=>target==="APPROVED"||target==="REJECTED"?capabilities.canApprove:target==="SENT"?capabilities.canShare:true);
 }
+
+/** List and Details expose the same preparation choices; writes reauthorize on Save. */
+export function quotationConversionCapabilities(actor:Actor,document:{customerId?:string|null;convertedCommercialDocumentId?:string|null;status:string;revisions:Array<{status?:string}>},enabled:readonly string[]){
+ const allowed=Boolean(document.customerId)&&!document.convertedCommercialDocumentId&&document.status==="APPROVED"&&document.revisions[0]?.status==="APPROVED"&&enabled.includes("SALES")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SALES_ENTRY");
+ return{canConvertToSale:allowed&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST"),canConvertToSalesOrder:allowed&&enabled.includes("SALES_ORDER")};
+}

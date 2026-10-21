@@ -44,7 +44,10 @@ data class QuotationRow(
     val status: String,
     val total: String,
     val revision: Int,
-    val issueDate:String=""
+    val issueDate:String="",
+    val revisionId:String="",
+    val canConvertSale:Boolean=false,
+    val canConvertOrder:Boolean=false
 )
 
 data class QuotationState(
@@ -117,7 +120,10 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
                         quotationDisplayStatus(it),
                         revision?.str("grandTotal").orEmpty(),
                         it.str("currentRevisionNumber").toIntOrNull() ?: 0,
-                        revision?.str("issueDate").orEmpty()
+                        revision?.str("issueDate").orEmpty(),
+                        revision?.str("id").orEmpty(),
+                        (it["capabilities"] as? JsonObject)?.bool("canConvertToSale")==true,
+                        (it["capabilities"] as? JsonObject)?.bool("canConvertToSalesOrder")==true
                     )
                 }
 
