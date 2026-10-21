@@ -80,7 +80,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     val applicable=com.salespunch360.mobile.account.accountReportSpecificFilters(state.options,state.report.orEmpty())
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
-        if(state.report in setOf("stock-category","stock-summary","low-stock-summary")){
+        if(state.report in setOf("stock-category","stock-summary","low-stock-summary","item-serial")){
             OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("As of (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
         }else if(state.report !in listOf("projects","budget-vs-actual")){
         var periodOpen by remember{mutableStateOf(false)}
@@ -116,8 +116,10 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val choose = buildJsonObject { put("id", "");put("name", "Select bank account") }
             Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
         }
-        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary")) {
+        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial")) {
             OutlinedTextField(state.itemSearch,{vm.filter("itemSearch",it.take(240))},label={Text("Search items")},singleLine=true,trailingIcon={if(state.itemSearch.isNotEmpty())TextButton(onClick={vm.filter("itemSearch","");vm.run()}){Text("Clear")}})
+        }
+        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary")) {
             val all = buildJsonObject { put("id", ""); put("name", "All") }
             Option("Item category",state.categoryId,listOf(all)+state.options.array("stockCategories")){vm.filter("categoryId",it)}
             val statuses = listOf(all)+listOf("ACTIVE" to "Active", "INACTIVE" to "Inactive").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
@@ -183,6 +185,18 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                             Text("Inventory cost: ${row.getOrNull(3).orEmpty()} · Margin: ${row.getOrNull(5).orEmpty()}%",style=MaterialTheme.typography.bodySmall)
                         } }
                     }
+                }
+            } else if(state.report=="item-serial") {
+                val rows=accountReportRows(data)
+                if(rows.isEmpty())Text("No serial records match the selected items and branch scope.")
+                if(rows.isNotEmpty())LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    items(rows){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){
+                        Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
+                        Text(row.getOrNull(0).orEmpty())
+                        Text("Quantity: ${row.getOrNull(3).orEmpty()} ${row.getOrNull(2).orEmpty()}")
+                        row.getOrNull(4)?.takeIf{it.isNotBlank()}?.let{Text("Expiry: $it")}
+                        Text(row.getOrNull(5).orEmpty(),style=MaterialTheme.typography.bodySmall)
+                    }}}
                 }
             } else if(state.report=="gst-rate") {
                 val rows=accountReportRows(data)

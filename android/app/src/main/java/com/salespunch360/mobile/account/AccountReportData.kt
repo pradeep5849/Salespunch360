@@ -41,7 +41,8 @@ fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<
   (!lifetime||key=="branchId"||key=="projectId")&&
   (key!="stockLevel"||report=="stock-summary")&&
   (key!="moneyAccountId"||report=="bank-statement")&&
-  (key !in setOf("categoryId","itemStatus","itemSearch") || report in setOf("stock-detail","stock-summary","low-stock-summary"))&&
+  (key !in setOf("categoryId","itemStatus") || report in setOf("stock-detail","stock-summary","low-stock-summary"))&&
+  (key!="itemSearch"||report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial"))&&
   (key!="accountType"||report=="cash-bank")&&
   (key!="ownerId"||report=="owner-capital"||report=="profit-withdrawal")&&
   (key in setOf("from","to","branchId")||(key=="accountType"&&report=="cash-bank")||supported?.contains(key)!=false)

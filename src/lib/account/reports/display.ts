@@ -58,7 +58,7 @@ const moneyColumns = new Set([
   "Actual Cost",
   "Budget Variance",
 ]);
-const dateColumns = new Set(["Date", "Due"]);
+const dateColumns = new Set(["Date", "Due", "Expiry"]);
 const numeric = /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 
 export function formatReportCell(

@@ -45,3 +45,5 @@ it("maps Discount Report without inventing unsupported filters",()=>{expect(sear
 it("retains document GST report and maps party GST to its own destination",()=>{expect(REPORT_CATALOGUE.find(x=>x.key==="gst-party")).toEqual({key:"gst-party",name:"GST Report",group:"Business status"});expect(REPORT_CATALOGUE.some(x=>x.key==="tax")).toBe(true);expect(reportSpecificFilters("gst-party")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","GST")).toEqual([])});
 
 it("maps GST Rate Report to component-rate totals without unrelated item filters",()=>{expect(REPORT_CATALOGUE.find(x=>x.key==="gst-rate")).toEqual({key:"gst-rate",name:"GST Rate Report",group:"Business status"});expect(reportSpecificFilters("gst-rate")).toEqual([]);expect(searchReportCatalogue("PROJECT_MANAGER","GST Rate")).toEqual([])});
+
+it("maps Item Serial Report with item selection/search only",()=>{expect(REPORT_CATALOGUE.find(x=>x.key==="item-serial")).toEqual({key:"item-serial",name:"Item Serial Report",group:"Item/Stock reports"});expect(reportSpecificFilters("item-serial")).toEqual(["productId","itemSearch"]);expect(searchReportCatalogue("PROJECT_MANAGER","serial")).toEqual([])});

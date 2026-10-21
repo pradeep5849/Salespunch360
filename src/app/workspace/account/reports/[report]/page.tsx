@@ -88,7 +88,7 @@ export default async function Page({
               Project profitability and budget-versus-actual figures are
               lifetime-to-date. Date filters do not apply.
             </p>
-          ) : ["stock-category","stock-summary","low-stock-summary"].includes(report) ? (
+          ) : ["stock-category","stock-summary","low-stock-summary","item-serial"].includes(report) ? (
             <label>As of <input type="date" name="to" defaultValue={to} required/></label>
           ) : (
             <ReportDateRange initialFrom={from} initialTo={to} today={reportCalendarDate()}/>
@@ -145,9 +145,11 @@ export default async function Page({
           )}
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
           {report === "bank-statement" && <Select name="moneyAccountId" label="Bank account" value={q.moneyAccountId} rows={banks}/>}
-          {["stock-detail","stock-summary","low-stock-summary"].includes(report) && <>
+          {applicableFilters.includes("itemSearch") && <>
             <label>Search items<input key={q.itemSearch??""} type="search" name="itemSearch" defaultValue={q.itemSearch??""} maxLength={240}/></label>
             {q.itemSearch&&<Link href={`/workspace/account/reports/${report}?${clearSearchQuery.toString()}`}>Clear item search</Link>}
+          </>}
+          {["stock-detail","stock-summary","low-stock-summary"].includes(report) && <>
             <Select name="categoryId" label="Item category" value={q.categoryId} rows={categories}/>
             <Select name="itemStatus" label="Item status" value={q.itemStatus} rows={[{id:"ACTIVE",name:"Active"},{id:"INACTIVE",name:"Inactive"}]}/>
           </>}

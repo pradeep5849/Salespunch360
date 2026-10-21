@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun itemSerialRetainsExpiryQuantityAndOnlyDeclaredItemFilters(){
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"item-serial","name":"Item Serial Report","group":"Item/Stock reports","filters":["productId","itemSearch"]}]}""").jsonObject
+        assertEquals("item-serial",accountReportCatalogue(options,"serial").single().key)
+        assertEquals(mapOf("productId" to "item","itemSearch" to "Bolt"),accountReportRequestFilters(options,"item-serial",mapOf("productId" to "item","itemSearch" to "Bolt","categoryId" to "stale")))
+        val data=Json.parseToJsonElement("""{"rows":[["Bolt","000123","pc","1.0000","02/01/2027","Main: 1.0000"]]}""").jsonObject
+        assertEquals(listOf("Bolt","000123","pc","1.0000","02/01/2027","Main: 1.0000"),accountReportRows(data).single())
+    }
+
     @Test fun gstRateKeepsPercentageSeparateFromCurrencyAndDropsStaleItemFilter(){
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"gst-rate","name":"GST Rate Report","group":"Business status","filters":[]}]}""").jsonObject
         assertEquals("gst-rate",accountReportCatalogue(options,"GST Rate").single().key)
