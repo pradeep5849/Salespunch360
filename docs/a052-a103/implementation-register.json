@@ -58832,7 +58832,20 @@
         "src/lib/account/orders/effective-targets.ts",
         "src/lib/account/orders/lifecycle.ts",
         "src/lib/account/orders/source.ts",
-        "src/lib/account/sale-amendments.ts"
+        "src/lib/account/sale-amendments.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+        "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "src/app/workspace/account/transactions/new/page.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/orders/preparation.ts",
+        "src/lib/account/sale-duplicate.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -59843,6 +59856,52 @@
           },
           "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
           "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
+        },
+        "order_sale_preparation_2026_10_21": {
+          "commit": "a80f9b586891ba52c22e56c9b62aebe99c87e19f",
+          "implementation": "Added read-only remaining-Sales-Order preparation and private mobile GET endpoint. Web and Android open unsaved Sale forms with exact source header/line IDs, remaining quantities, retained selected-unit conversions, rates/discounts/taxes and party/project context. Save reauthorizes and atomically posts; Save & New clears source context. Web quantity/rate edits and native line controls preserve mappings; unrelated line creation is hidden for prepared orders. Source units are fetched once per order, not per target line, and snapshotLine resolves retained order conversions. Inactive/missing source party/branch is rejected; order URL UUID validated.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/orders/lifecycle.ts",
+            "src/lib/account/orders/preparation.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "apis_actions": [
+            "GET /api/v1/mobile/account/orders/[id]/preparation",
+            "orderSalePreparationForActor",
+            "orderSalePreparation",
+            "Sale Save / Save & New consume sourceSalesOrderId/sourceOrderLineId"
+          ],
+          "tests": {
+            "unit_group": "Final58 tests/8files PASS,0fail/skip,2.95s; initial58PASS8.09s overlaps. Includes16quantity cases plus quotation/duplicate/Save/UI/unit snapshot/stock quantity regression.",
+            "database": "20 local PostgreSQL tests PASS,0fail/skip,6.59s (5.55s execution): preparation makes no document, remaining quantities updated after posting, permission/branch/inactive party rejection, full orders unavailable, retained secondary conversion after master factor changes, existing concurrency/edit/reversal tests. Initial20PASS6.70s overlaps.",
+            "browser": "Final4 desktop/mobile Chromium PASS1.8m after batch/active-party changes: Save and Save & New, exact source/quantity/20.00 partial invoice, unsubmitted abandon no writes, remaining3 then automatic closure, native HTTP preparation parity/PM403, locked customer, no overflow/Axe Source order. Earlier corrected4PASS1.8m overlaps. Initial2PASS/2FAIL3.2m due duplicate financial-year fixture on second parameter case, corrected to reuse fixture year; no business guard weakened. Last UUID/null-party early guards were type/lint checked; their malformed-input browser scenarios not executed.",
+            "android": "compileDebugKotlin +26 selected JVM tests PASS,0fail/error/skip,4m20s; includes4new source draft/transport tests,6estimate conversion,8edit snapshot,8preview. Native Compose/navigation/emulator/device/TalkBack NOTRUN; current-slice local lint NOTRUN.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS,0warnings; git diff --check PASS.",
+            "schema_migrations": "NONE added/changed in this slice. Existing145-migration rehearsal from prior lifecycle checkpoint retained; not repeated without schema changes.",
+            "previous_ci": "39626536614 SUCCESS at7f682ce691b1c73397a8fff77e0655bde51087ac: web/android/migration; not certification of this later preparation commit.",
+            "final_199_validation": "NOT RUN; current finding statuses not promoted."
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: Purchase Order -> explicit source-line Bill preparation, order-report destinations/filters, precision edge-case primary-unit review, manually closed-order corrections, final full199 validation and native device runtime. If remaining primary quantity cannot be expressed in original selected unit within4decimals, preparation safely blocks with ORDER_UNIT_REVIEW_REQUIRED; no rounding/guessing. Source header freight/other charges/withholdings are not automatically apportioned across partial invoices. No new migration/production/merge/deploy/A104."
         }
       }
     },
@@ -63386,7 +63445,20 @@
         "src/lib/account/orders/effective-targets.ts",
         "src/lib/account/orders/lifecycle.ts",
         "src/lib/account/orders/source.ts",
-        "src/lib/account/sale-amendments.ts"
+        "src/lib/account/sale-amendments.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+        "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "src/app/workspace/account/transactions/new/page.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/orders/preparation.ts",
+        "src/lib/account/sale-duplicate.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -64318,6 +64390,52 @@
           },
           "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
           "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
+        },
+        "order_sale_preparation_2026_10_21": {
+          "commit": "a80f9b586891ba52c22e56c9b62aebe99c87e19f",
+          "implementation": "Added read-only remaining-Sales-Order preparation and private mobile GET endpoint. Web and Android open unsaved Sale forms with exact source header/line IDs, remaining quantities, retained selected-unit conversions, rates/discounts/taxes and party/project context. Save reauthorizes and atomically posts; Save & New clears source context. Web quantity/rate edits and native line controls preserve mappings; unrelated line creation is hidden for prepared orders. Source units are fetched once per order, not per target line, and snapshotLine resolves retained order conversions. Inactive/missing source party/branch is rejected; order URL UUID validated.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/orders/lifecycle.ts",
+            "src/lib/account/orders/preparation.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "apis_actions": [
+            "GET /api/v1/mobile/account/orders/[id]/preparation",
+            "orderSalePreparationForActor",
+            "orderSalePreparation",
+            "Sale Save / Save & New consume sourceSalesOrderId/sourceOrderLineId"
+          ],
+          "tests": {
+            "unit_group": "Final58 tests/8files PASS,0fail/skip,2.95s; initial58PASS8.09s overlaps. Includes16quantity cases plus quotation/duplicate/Save/UI/unit snapshot/stock quantity regression.",
+            "database": "20 local PostgreSQL tests PASS,0fail/skip,6.59s (5.55s execution): preparation makes no document, remaining quantities updated after posting, permission/branch/inactive party rejection, full orders unavailable, retained secondary conversion after master factor changes, existing concurrency/edit/reversal tests. Initial20PASS6.70s overlaps.",
+            "browser": "Final4 desktop/mobile Chromium PASS1.8m after batch/active-party changes: Save and Save & New, exact source/quantity/20.00 partial invoice, unsubmitted abandon no writes, remaining3 then automatic closure, native HTTP preparation parity/PM403, locked customer, no overflow/Axe Source order. Earlier corrected4PASS1.8m overlaps. Initial2PASS/2FAIL3.2m due duplicate financial-year fixture on second parameter case, corrected to reuse fixture year; no business guard weakened. Last UUID/null-party early guards were type/lint checked; their malformed-input browser scenarios not executed.",
+            "android": "compileDebugKotlin +26 selected JVM tests PASS,0fail/error/skip,4m20s; includes4new source draft/transport tests,6estimate conversion,8edit snapshot,8preview. Native Compose/navigation/emulator/device/TalkBack NOTRUN; current-slice local lint NOTRUN.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS,0warnings; git diff --check PASS.",
+            "schema_migrations": "NONE added/changed in this slice. Existing145-migration rehearsal from prior lifecycle checkpoint retained; not repeated without schema changes.",
+            "previous_ci": "39626536614 SUCCESS at7f682ce691b1c73397a8fff77e0655bde51087ac: web/android/migration; not certification of this later preparation commit.",
+            "final_199_validation": "NOT RUN; current finding statuses not promoted."
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: Purchase Order -> explicit source-line Bill preparation, order-report destinations/filters, precision edge-case primary-unit review, manually closed-order corrections, final full199 validation and native device runtime. If remaining primary quantity cannot be expressed in original selected unit within4decimals, preparation safely blocks with ORDER_UNIT_REVIEW_REQUIRED; no rounding/guessing. Source header freight/other charges/withholdings are not automatically apportioned across partial invoices. No new migration/production/merge/deploy/A104."
         }
       }
     },
@@ -66035,7 +66153,16 @@
         "src/lib/account/migration-chain.integration.test.ts",
         "src/lib/account/orders/effective-targets.ts",
         "src/lib/account/orders/lifecycle.ts",
-        "src/lib/account/orders/source.ts"
+        "src/lib/account/orders/source.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+        "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "src/app/workspace/account/transactions/new/page.tsx",
+        "src/lib/account/orders/preparation.ts",
+        "src/lib/account/sale-duplicate.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -66309,6 +66436,52 @@
           },
           "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
           "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
+        },
+        "order_sale_preparation_2026_10_21": {
+          "commit": "a80f9b586891ba52c22e56c9b62aebe99c87e19f",
+          "implementation": "Added read-only remaining-Sales-Order preparation and private mobile GET endpoint. Web and Android open unsaved Sale forms with exact source header/line IDs, remaining quantities, retained selected-unit conversions, rates/discounts/taxes and party/project context. Save reauthorizes and atomically posts; Save & New clears source context. Web quantity/rate edits and native line controls preserve mappings; unrelated line creation is hidden for prepared orders. Source units are fetched once per order, not per target line, and snapshotLine resolves retained order conversions. Inactive/missing source party/branch is rejected; order URL UUID validated.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/orders/lifecycle.ts",
+            "src/lib/account/orders/preparation.ts",
+            "src/lib/account/sale-duplicate.ts"
+          ],
+          "apis_actions": [
+            "GET /api/v1/mobile/account/orders/[id]/preparation",
+            "orderSalePreparationForActor",
+            "orderSalePreparation",
+            "Sale Save / Save & New consume sourceSalesOrderId/sourceOrderLineId"
+          ],
+          "tests": {
+            "unit_group": "Final58 tests/8files PASS,0fail/skip,2.95s; initial58PASS8.09s overlaps. Includes16quantity cases plus quotation/duplicate/Save/UI/unit snapshot/stock quantity regression.",
+            "database": "20 local PostgreSQL tests PASS,0fail/skip,6.59s (5.55s execution): preparation makes no document, remaining quantities updated after posting, permission/branch/inactive party rejection, full orders unavailable, retained secondary conversion after master factor changes, existing concurrency/edit/reversal tests. Initial20PASS6.70s overlaps.",
+            "browser": "Final4 desktop/mobile Chromium PASS1.8m after batch/active-party changes: Save and Save & New, exact source/quantity/20.00 partial invoice, unsubmitted abandon no writes, remaining3 then automatic closure, native HTTP preparation parity/PM403, locked customer, no overflow/Axe Source order. Earlier corrected4PASS1.8m overlaps. Initial2PASS/2FAIL3.2m due duplicate financial-year fixture on second parameter case, corrected to reuse fixture year; no business guard weakened. Last UUID/null-party early guards were type/lint checked; their malformed-input browser scenarios not executed.",
+            "android": "compileDebugKotlin +26 selected JVM tests PASS,0fail/error/skip,4m20s; includes4new source draft/transport tests,6estimate conversion,8edit snapshot,8preview. Native Compose/navigation/emulator/device/TalkBack NOTRUN; current-slice local lint NOTRUN.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS,0warnings; git diff --check PASS.",
+            "schema_migrations": "NONE added/changed in this slice. Existing145-migration rehearsal from prior lifecycle checkpoint retained; not repeated without schema changes.",
+            "previous_ci": "39626536614 SUCCESS at7f682ce691b1c73397a8fff77e0655bde51087ac: web/android/migration; not certification of this later preparation commit.",
+            "final_199_validation": "NOT RUN; current finding statuses not promoted."
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: Purchase Order -> explicit source-line Bill preparation, order-report destinations/filters, precision edge-case primary-unit review, manually closed-order corrections, final full199 validation and native device runtime. If remaining primary quantity cannot be expressed in original selected unit within4decimals, preparation safely blocks with ORDER_UNIT_REVIEW_REQUIRED; no rounding/guessing. Source header freight/other charges/withholdings are not automatically apportioned across partial invoices. No new migration/production/merge/deploy/A104."
         }
       }
     },
@@ -71514,6 +71687,52 @@
       },
       "remaining": "A084-F03/A085-F02 stay PARTIAL: user-facing invoice/bill-from-order preparation and explicit line selection, order report destinations/filters, final grouped/full199 validation and native device runtime remain. Historical unallocated fulfilment requires explicit handling; no guessed backfill. Corrections of manually closed orders remain safely rejected pending a complete workflow. Ordinary return notes are not inferred as order cancellations; only explicit Sale amendment/reversal events retire originals. No A104/merge/deploy/production data mutation.",
       "deployment": "Apply all pending migrations including20261021120000_order_line_fulfilment before serving generated Prisma client that reads new fields. Preserve backups and existing deployment migration gate. This checkpoint does not authorize production deployment."
+    },
+    "order_sale_preparation_2026_10_21": {
+      "commit": "a80f9b586891ba52c22e56c9b62aebe99c87e19f",
+      "implementation": "Added read-only remaining-Sales-Order preparation and private mobile GET endpoint. Web and Android open unsaved Sale forms with exact source header/line IDs, remaining quantities, retained selected-unit conversions, rates/discounts/taxes and party/project context. Save reauthorizes and atomically posts; Save & New clears source context. Web quantity/rate edits and native line controls preserve mappings; unrelated line creation is hidden for prepared orders. Source units are fetched once per order, not per target line, and snapshotLine resolves retained order conversions. Inactive/missing source party/branch is rejected; order URL UUID validated.",
+      "files": [
+        "android/app/src/main/java/com/salespunch360/mobile/AccountSalesViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/OrderSaleDraft.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/OrderProgressCard.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/AccountSalesScreen.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/OrderSaleDraftTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/api/v1/mobile/account/orders/[id]/preparation/route.ts",
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "src/app/workspace/account/transactions/new/page.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/components/account/order-progress.tsx",
+        "src/lib/account/action-feedback.ts",
+        "src/lib/account/commercial-unit-history.integration.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/orders/lifecycle.ts",
+        "src/lib/account/orders/preparation.ts",
+        "src/lib/account/sale-duplicate.ts"
+      ],
+      "apis_actions": [
+        "GET /api/v1/mobile/account/orders/[id]/preparation",
+        "orderSalePreparationForActor",
+        "orderSalePreparation",
+        "Sale Save / Save & New consume sourceSalesOrderId/sourceOrderLineId"
+      ],
+      "tests": {
+        "unit_group": "Final58 tests/8files PASS,0fail/skip,2.95s; initial58PASS8.09s overlaps. Includes16quantity cases plus quotation/duplicate/Save/UI/unit snapshot/stock quantity regression.",
+        "database": "20 local PostgreSQL tests PASS,0fail/skip,6.59s (5.55s execution): preparation makes no document, remaining quantities updated after posting, permission/branch/inactive party rejection, full orders unavailable, retained secondary conversion after master factor changes, existing concurrency/edit/reversal tests. Initial20PASS6.70s overlaps.",
+        "browser": "Final4 desktop/mobile Chromium PASS1.8m after batch/active-party changes: Save and Save & New, exact source/quantity/20.00 partial invoice, unsubmitted abandon no writes, remaining3 then automatic closure, native HTTP preparation parity/PM403, locked customer, no overflow/Axe Source order. Earlier corrected4PASS1.8m overlaps. Initial2PASS/2FAIL3.2m due duplicate financial-year fixture on second parameter case, corrected to reuse fixture year; no business guard weakened. Last UUID/null-party early guards were type/lint checked; their malformed-input browser scenarios not executed.",
+        "android": "compileDebugKotlin +26 selected JVM tests PASS,0fail/error/skip,4m20s; includes4new source draft/transport tests,6estimate conversion,8edit snapshot,8preview. Native Compose/navigation/emulator/device/TalkBack NOTRUN; current-slice local lint NOTRUN.",
+        "typescript": "Final full tsc --noEmit PASS.",
+        "eslint": "Final focused ESLint PASS,0warnings; git diff --check PASS.",
+        "schema_migrations": "NONE added/changed in this slice. Existing145-migration rehearsal from prior lifecycle checkpoint retained; not repeated without schema changes.",
+        "previous_ci": "39626536614 SUCCESS at7f682ce691b1c73397a8fff77e0655bde51087ac: web/android/migration; not certification of this later preparation commit.",
+        "final_199_validation": "NOT RUN; current finding statuses not promoted."
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL: Purchase Order -> explicit source-line Bill preparation, order-report destinations/filters, precision edge-case primary-unit review, manually closed-order corrections, final full199 validation and native device runtime. If remaining primary quantity cannot be expressed in original selected unit within4decimals, preparation safely blocks with ORDER_UNIT_REVIEW_REQUIRED; no rounding/guessing. Source header freight/other charges/withholdings are not automatically apportioned across partial invoices. No new migration/production/merge/deploy/A104."
     }
   },
   "approved_business_decisions": {
