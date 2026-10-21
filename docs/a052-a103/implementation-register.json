@@ -59526,6 +59526,40 @@
             "final_complete_head": "NOT RUN; complete checkpoint-wide final validation remains pending."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 retains other formatting consumers. All199 original IDs/final statuses preserved. No production operation, merge, deployment or A104."
+        },
+        "item_discount_report_2026_10_21": {
+          "implementation_commit": "d2aca1ee66288eb0422af136bfbfed0058279a3f",
+          "work": "Added Item Wise Discount Report using stored discounted sales/credit-note lines, saved units and net line totals; company/branch/date/customer/category/literal item-name filters, repeatable-read pagination, shared currency formatting, Web/native controls/cards, empty state and CSV/XLSX/PDF. Financial history remains readable with Items OFF. Report selector metadata now projects only display fields and omits unrelated masters for Project Managers. No ledger writes or migrations.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/item-discount.test.ts",
+            "src/lib/account/reports/item-discount.ts",
+            "src/lib/account/reports/service-boundaries.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped": "153 tests / 20 files PASS, 0 failed/skipped,18.86s; focused subsets overlap.",
+            "database_catalogue": "8 PASS,1.29s; Items OFF/favourite retention/role availability.",
+            "browser": "Final desktop/mobile Chromium 2 PASS,1.1m: real saved discounts and return notes produce198 sale/22 discount; filters, native HTTP, CSV/XLSX/PDF, module/role scope, selector privacy, Axe/no overflow, no financial writes. Earlier two failures were fixture-only nonexistent purchasePrice; corrected to costPrice before final successful run.",
+            "android": "Kotlin compilation +23 report JVM tests PASS,0 failures/errors/skips,2m44s. No device/emulator/TalkBack runtime or local lint rerun.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused ESLint PASS.",
+            "workflow": "YAML parsed.",
+            "final_complete_head": "NOT RUN",
+            "prior_targeted_ci": "39567042606 SUCCESS at76ecb3b4fb89bb542c3ce56be3d5cafdf5136f11; Web,Android,migration; not certification of this later slice."
+          },
+          "remaining": "Broad report/reference and other formatting work remains PARTIAL; no whole-finding completion inferred. Final checkpoint validation and native runtime remain pending."
         }
       }
     },
@@ -63767,6 +63801,40 @@
             "final_complete_head": "NOT RUN; complete checkpoint-wide final validation remains pending."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 retains other formatting consumers. All199 original IDs/final statuses preserved. No production operation, merge, deployment or A104."
+        },
+        "item_discount_report_2026_10_21": {
+          "implementation_commit": "d2aca1ee66288eb0422af136bfbfed0058279a3f",
+          "work": "Added Item Wise Discount Report using stored discounted sales/credit-note lines, saved units and net line totals; company/branch/date/customer/category/literal item-name filters, repeatable-read pagination, shared currency formatting, Web/native controls/cards, empty state and CSV/XLSX/PDF. Financial history remains readable with Items OFF. Report selector metadata now projects only display fields and omits unrelated masters for Project Managers. No ledger writes or migrations.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/item-discount.test.ts",
+            "src/lib/account/reports/item-discount.ts",
+            "src/lib/account/reports/service-boundaries.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped": "153 tests / 20 files PASS, 0 failed/skipped,18.86s; focused subsets overlap.",
+            "database_catalogue": "8 PASS,1.29s; Items OFF/favourite retention/role availability.",
+            "browser": "Final desktop/mobile Chromium 2 PASS,1.1m: real saved discounts and return notes produce198 sale/22 discount; filters, native HTTP, CSV/XLSX/PDF, module/role scope, selector privacy, Axe/no overflow, no financial writes. Earlier two failures were fixture-only nonexistent purchasePrice; corrected to costPrice before final successful run.",
+            "android": "Kotlin compilation +23 report JVM tests PASS,0 failures/errors/skips,2m44s. No device/emulator/TalkBack runtime or local lint rerun.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused ESLint PASS.",
+            "workflow": "YAML parsed.",
+            "final_complete_head": "NOT RUN",
+            "prior_targeted_ci": "39567042606 SUCCESS at76ecb3b4fb89bb542c3ce56be3d5cafdf5136f11; Web,Android,migration; not certification of this later slice."
+          },
+          "remaining": "Broad report/reference and other formatting work remains PARTIAL; no whole-finding completion inferred. Final checkpoint validation and native runtime remain pending."
         }
       }
     },
@@ -68558,6 +68626,40 @@
             "final_complete_head": "NOT RUN; complete checkpoint-wide final validation remains pending."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 retains other formatting consumers. All199 original IDs/final statuses preserved. No production operation, merge, deployment or A104."
+        },
+        "item_discount_report_2026_10_21": {
+          "implementation_commit": "d2aca1ee66288eb0422af136bfbfed0058279a3f",
+          "work": "Added Item Wise Discount Report using stored discounted sales/credit-note lines, saved units and net line totals; company/branch/date/customer/category/literal item-name filters, repeatable-read pagination, shared currency formatting, Web/native controls/cards, empty state and CSV/XLSX/PDF. Financial history remains readable with Items OFF. Report selector metadata now projects only display fields and omits unrelated masters for Project Managers. No ledger writes or migrations.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/item-discount.test.ts",
+            "src/lib/account/reports/item-discount.ts",
+            "src/lib/account/reports/service-boundaries.test.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "tests": {
+            "grouped": "153 tests / 20 files PASS, 0 failed/skipped,18.86s; focused subsets overlap.",
+            "database_catalogue": "8 PASS,1.29s; Items OFF/favourite retention/role availability.",
+            "browser": "Final desktop/mobile Chromium 2 PASS,1.1m: real saved discounts and return notes produce198 sale/22 discount; filters, native HTTP, CSV/XLSX/PDF, module/role scope, selector privacy, Axe/no overflow, no financial writes. Earlier two failures were fixture-only nonexistent purchasePrice; corrected to costPrice before final successful run.",
+            "android": "Kotlin compilation +23 report JVM tests PASS,0 failures/errors/skips,2m44s. No device/emulator/TalkBack runtime or local lint rerun.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused ESLint PASS.",
+            "workflow": "YAML parsed.",
+            "final_complete_head": "NOT RUN",
+            "prior_targeted_ci": "39567042606 SUCCESS at76ecb3b4fb89bb542c3ce56be3d5cafdf5136f11; Web,Android,migration; not certification of this later slice."
+          },
+          "remaining": "Broad report/reference and other formatting work remains PARTIAL; no whole-finding completion inferred. Final checkpoint validation and native runtime remain pending."
         }
       },
       "intermediate_validation": {

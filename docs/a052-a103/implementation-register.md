@@ -10333,3 +10333,12 @@ Implementation `45efde65a75ff253f9616641484aa1f1d202837d` maps to A084-F03/A085-
 Android compilation and all 22 focused report JVM tests passed (2m51s). The initial Android run caught a real missing itemSearch request-filter connection; it is fixed without allowing serial category/status filters. Initial Web unit fixtures omitted active principal fields and assumed ISO export dates; fixtures now follow existing permission/date contracts. Final full TypeScript, focused ESLint, workflow YAML and diff checks passed. Native device/emulator/TalkBack and current-slice local Android lint remain unexecuted. Evidence preserves older text/list field shapes and supplements them with explicit files/services/read models.
 
 Prior exact-head CI39541009116 succeeded at `7413ea591f233de285e24afa71fa7bff87b01249` for Web, Android and migrations. Counts remain185 IMPLEMENTED BUT NOT VERIFIED /13 PARTIAL /1 NOT STARTED because the broad report findings still contain other supplied destinations and final verification. All199 final statuses remain unset. PR153 stays Draft; no merge, deployment, production operation or A104.
+
+
+## 21 October — Item Wise Discount Report and selector privacy
+
+Implementation `d2aca1ee66288eb0422af136bfbfed0058279a3f` maps to A084-F03/A085-F02/A090-F01. Stored discounted sale/return lines retain units and net amounts, with scoped customer/category/item-name filters, Web/native controls/cards, currency formatting and exports. Selector APIs expose display fields only; Project Managers receive no unrelated master records. No financial writes or migration.
+
+153 grouped tests passed (20 files,18.86s);8 catalogue database tests passed. Final desktop/mobile browser2passed(1.1m), including native HTTP/exports,198 sale/22 discount, filters, Items OFF history, roles, metadata privacy, Axe/no overflow and no ledger/stock mutations. Initial privacy run failed on fixture purchasePrice; corrected to costPrice. Android compile and23 JVM tests passed(2m44s); no device runtime/local lint rerun. Full TypeScript/focused ESLint/YAML/diff checks passed. Earlier focused results overlap.
+
+Counts remain185 IMPLEMENTED BUT NOT VERIFIED /13 PARTIAL /1 NOT STARTED;199 original IDs preserved, final statuses unset. Prior exact-head CI39567042606 passed Web/Android/migration at76ecb3b4. Complete final-head verification remains pending. PR153 stays Draft; no merge/deploy/production/A104.
