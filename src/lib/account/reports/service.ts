@@ -1,3 +1,4 @@
+import {WITHHOLDING_REPORTS,withholdingReport} from "./withholding";
 import {loanStatementReport} from "./loan-statement";
 import {itemDiscountReport} from "./item-discount";
 import {itemSerialReport} from "./item-serial";
@@ -235,6 +236,7 @@ export async function runFinancialReportForActor(
   if(EXPENSE_REPORTS.includes(name))return expenseReport(name,await context(raw,false,actor));
   if(name==="stock-category")return stockCategoryReport(await context(raw,false,actor));
   if(["stock-summary","low-stock-summary"].includes(name))return stockLevelReport(name,await context(raw,false,actor));
+  if(WITHHOLDING_REPORTS.includes(name))return withholdingReport(await context(raw,false,actor),name);
   if(name==="loan-statement")return loanStatementReport(await context(raw,false,actor));
   if(name==="bank-statement")return bankStatementReport(await context(raw,false,actor));
   if(name==="stock-detail")return stockDetailReport(await context(raw,false,actor));

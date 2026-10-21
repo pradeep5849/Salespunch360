@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun withholdingReportsUseDeclaredPartyFilters(){
+        for(key in listOf("tds-receivable","tds-payable","tcs-receivable")){
+            val field=if(key=="tds-receivable")"customerId" else "vendorId"
+            val options=buildJsonObject{putJsonArray("catalogue"){add(buildJsonObject{put("key",key);put("name",key);put("group","Tax");putJsonArray("filters"){add(field)}})}}
+            assertEquals(mapOf(field to "party"),accountReportRequestFilters(options,key,mapOf("customerId" to "party","vendorId" to "party","productId" to "stale")))
+        }
+    }
+
     @Test fun loanStatementRetainsOnlyItsLoanSelector(){
         val options=buildJsonObject{putJsonArray("catalogue"){add(buildJsonObject{put("key","loan-statement");put("name","Loan Statement");put("group","Business status");putJsonArray("filters"){add("loanId")}})}}
         assertEquals(mapOf("loanId" to "loan"),accountReportRequestFilters(options,"loan-statement",mapOf("loanId" to "loan","moneyAccountId" to "stale","productId" to "stale")))

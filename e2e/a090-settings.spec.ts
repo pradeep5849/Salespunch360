@@ -3740,3 +3740,26 @@ test("A083 estimate list offers approved conversion choices without creating dra
   expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);expect((await db.quotationDocument.findUniqueOrThrow({where:{id:approved.id}})).convertedAt).toBeNull();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}})}
 });
+
+test("A084 TDS TCS reports retain posted deductions returns scope and exports",async({page})=>{
+ test.setTimeout(150000);const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+ await db.financialYear.create({data:{companyId,name:"Withholding report year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+ const vendor=await db.vendor.create({data:{companyId,name:"Withholding vendor"}});
+ for(const type of ["SALES_INVOICE","PURCHASE_BILL"] as const){
+  const source=await createCommercialDocumentForActor(actor,{type,branchId,partyId:type==="SALES_INVOICE"?customerId:vendor.id,issueDate:"2026-10-13",tdsRate:"10",tcsRate:type==="PURCHASE_BILL"?"5":"0",...(type==="PURCHASE_BILL"?{purchasePurpose:"GENERAL_OFFICE" as const,vendorInvoiceNumber:"TAX-1",vendorInvoiceDate:"2026-10-13"}:{}),lines:[{lineType:"CUSTOM",itemName:"Recorded tax work",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:source.id});const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id,companyId}});
+  const returned=await createCommercialDocumentForActor(actor,{type:type==="SALES_INVOICE"?"CREDIT_NOTE":"DEBIT_NOTE",branchId,partyId:type==="SALES_INVOICE"?customerId:vendor.id,issueDate:"2026-10-14",sourceDocumentId:source.id,...(type==="PURCHASE_BILL"?{purchasePurpose:"GENERAL_OFFICE" as const}:{}),lines:[{lineType:"CUSTOM",sourceCommercialLineId:line.id,itemName:line.itemName,quantity:"0.25",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:returned.id});
+ }
+ const journals=await db.journalEntry.count({where:{companyId}});let tokenHash="";
+ try{
+  await signInSettings(page);const current=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  for(const [key,field,party,amount] of [["tds-receivable","customerId",customerId,"7.50"],["tds-payable","vendorId",vendor.id,"7.50"],["tcs-receivable","vendorId",vendor.id,"3.75"]]){
+   const query=new URLSearchParams({branchId,from:"2026-10-01",to:"2026-10-21",[field]:party}).toString();await page.goto(`/workspace/account/reports/${key}?${query}`);await expect(page.getByRole("region",{name:"Report summary",exact:true})).toContainText(`₹${amount}`);await expect(page.getByLabel(field==="customerId"?"Customer":"Vendor",{exact:true})).toHaveValue(party);
+   const response=await page.request.get(`/api/v1/mobile/account/reports/${key}?${query}`,{headers});expect(response.status()).toBe(200);const result=await response.json();expect(result.summary[0].value).toBe(amount);expect(result.rows).toHaveLength(2);expect(result.note).toContain("not proof of remittance");
+   for(const format of ["csv","xlsx","pdf"]){const exported=await page.request.get(`/api/account/reports/${key}/${format}?${query}`);expect(exported.status()).toBe(200);if(format==="csv")expect(await exported.text()).toContain(amount);else if(format==="pdf")expect((await extractPdfText(await exported.body())).text).toContain(amount);else{const book=new ExcelJS.Workbook();await book.xlsx.load(new Uint8Array(await exported.body()).buffer);expect(book.worksheets[0].getSheetValues().flat().join(" ")).toContain(amount)}}
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).include(".report-table-scroll").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+   expect((await page.request.get(`/api/v1/mobile/account/reports/${key}?${query}&branchId=${randomUUID()}`,{headers})).status()).toBe(403);
+  }
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get("/api/v1/mobile/account/reports/tds-receivable",{headers})).status()).toBe(403);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}})}
+});

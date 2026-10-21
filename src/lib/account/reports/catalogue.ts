@@ -37,6 +37,9 @@ export const REPORT_CATALOGUE = [
   ["customers", "Party Wise Profit & Loss", "Party reports"],
   ["tax", "GST / Tax Report", "Tax"],
   ["gst-party", "GST Report", "Business status"],
+  ["tds-receivable", "TDS Receivable", "Tax"],
+  ["tds-payable", "TDS Payable", "Tax"],
+  ["tcs-receivable", "TCS Receivable", "Tax"],
   ["gst-rate", "GST Rate Report", "Business status"],
   ["budget-vs-actual", "Budget vs Actual", "Projects"],
 ].map(([key, name, group]) => ({ key, name, group }));
@@ -58,6 +61,9 @@ export function searchReportCatalogue(
 
 const specificFilters: Record<string, string[]> = {
   "cash-bank":["accountType"],
+  "tds-receivable": ["customerId"],
+  "tds-payable": ["vendorId"],
+  "tcs-receivable": ["vendorId"],
   "loan-statement": ["loanId"],
   "bank-statement": ["moneyAccountId"],
   "stock-summary": ["categoryId", "itemStatus", "stockLevel", "itemSearch"],
