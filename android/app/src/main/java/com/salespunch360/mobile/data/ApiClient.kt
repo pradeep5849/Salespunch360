@@ -101,6 +101,25 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
    json.parseToJsonElement(raw).jsonObject
   }
  }
+ suspend fun editSaleWithAttachments(id:String,payload:JsonObject,files:List<SaleCreationAttachment>,filesOnly:Boolean)=withContext(Dispatchers.IO){
+  require(validSaleCreationAttachments(files)&&files.isNotEmpty()){ "Choose PDF, PNG or JPEG files, up to 50 files and 10 MB combined." }
+  val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{
+   if(filesOnly)addFormDataPart("requestKey",payload["idempotencyKey"]!!.jsonPrimitive.content)
+   else {addFormDataPart("document",payload.toString());addFormDataPart("payment","{}")}
+   files.forEach{file->addFormDataPart("attachments",file.name,file.bytes.toRequestBody(file.mime.toMediaType()))}
+  }.build()
+  val requestToken=session.token()
+  val path="api/v1/mobile/account/sales/${enc(id)}/"+if(filesOnly)"attachments" else "with-attachments"
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{
+   requestToken?.let{header("Authorization","Bearer $it")}
+   if(filesOnly)post(body) else patch(body)
+  }.build()
+  http.newCall(request).awaitResponse().use{response->
+   val raw=response.body?.string()?:"{}"
+   if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(requestToken);throw ApiException(response.code,runCatching{val value=json.parseToJsonElement(raw).jsonObject;(value["error"]?:value["errorCode"])?.jsonPrimitive?.content}.getOrNull())}
+   if(filesOnly)buildJsonObject{put("id",id)} else json.parseToJsonElement(raw).jsonObject
+  }
+ }
  suspend fun saleAttachments(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/sales/${enc(id)}/attachments")).jsonArray
  suspend fun saleAttachment(id:String)=download("api/v1/mobile/account/sale-attachments/${enc(id)}")
  suspend fun quotationAttachments(id:String,revision:Int)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/attachments?revisionNumber=$revision")).jsonArray

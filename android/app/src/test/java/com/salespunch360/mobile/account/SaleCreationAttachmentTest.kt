@@ -39,4 +39,15 @@ class SaleCreationAttachmentTest {
   assertTrue(draft.attachmentFiles.isNotEmpty())
   assertTrue(SalesEditorDraft().attachmentFiles.isEmpty())
  }
+ @Test fun unchangedEditWithFilesUsesAppendButChangedOrUnknownBaselineRequiresCorrection(){
+  val doc=buildJsonObject{put("id","sale");put("branchId","branch");put("partyId","party");put("issueDate","2026-10-21");putJsonArray("lines"){add(buildJsonObject{put("id","line");put("lineType","SERVICE");put("serviceId","service");put("quantity","1");put("rate","100")})}}
+  val draft=savedSaleEditorDraft(doc).copy(attachmentFiles=listOf(file()))
+  assertTrue(saleFilesOnlyEdit(draft))
+  assertFalse(saleFilesOnlyEdit(draft.copy(notes="Changed")))
+  assertFalse(saleFilesOnlyEdit(draft.copy(editingInitialPayload=null)))
+  assertFalse(saleFilesOnlyEdit(draft.copy(lines=draft.lines.map{it.copy(rate="80")})))
+  assertFalse(saleFilesOnlyEdit(draft.copy(customFields=mapOf("site" to "Changed"))))
+  assertFalse(salesDraftPayload(draft).containsKey("editingInitialPayload"))
+  assertFalse(saleFilesOnlyEdit(draft.copy(attachmentFiles=emptyList())))
+ }
 }

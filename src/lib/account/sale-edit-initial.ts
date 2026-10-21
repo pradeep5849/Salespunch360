@@ -26,4 +26,5 @@ export type SaleEditInitial = {
   stateOfSupplyCode?: string;
   customValues?: Record<string, unknown>;
   lines: EditableLine[];
+  attachments?: Array<{id:string;displayName:string;mimeType:string;sizeBytes:number}>;
 };

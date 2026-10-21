@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/db", () => ({ db: {} }));
 import { SaleAttachmentError } from "./sale-attachments";
-import { saleAttachmentFailure, saleAttachmentResponse, saleCreationAttachmentForm } from "./sale-attachment-http";
+import { saleAppendAttachmentForm,saleAttachmentFailure, saleAttachmentResponse, saleCreationAttachmentForm } from "./sale-attachment-http";
 describe("private Sale attachment HTTP boundary", () => {
   it("parses a document, separate payment and files without creating anything", async () => {
     const form = new FormData(); form.set("document", JSON.stringify({ type: "SALES_INVOICE", idempotencyKey: "save-key" })); form.set("payment", JSON.stringify({ receivedAmount: "90" }));
     form.append("attachments", new File(["%PDF-1.7"], "plan.pdf", { type: "application/pdf" }));
     const result = await saleCreationAttachmentForm(new Request("http://example.test/", { method: "POST", body: form }));
     expect(result.document).toEqual({ type: "SALES_INVOICE", idempotencyKey: "save-key" }); expect(result.payment).toEqual({ receivedAmount: "90" }); expect(result.files).toHaveLength(1);
+  });
+  it("parses append intent without accepting client-owned financial or document identity",async()=>{
+    const body=new FormData();body.set("requestKey","append-key");body.set("documentId","forged");body.set("payment",JSON.stringify({receivedAmount:"999"}));body.append("attachments",new File(["%PDF-1.7"],"support.pdf",{type:"application/pdf"}));
+    const result=await saleAppendAttachmentForm(new Request("http://example.test/",{method:"POST",body}));
+    expect(result.requestKey).toBe("append-key");expect(result.files).toHaveLength(1);expect(result).not.toHaveProperty("payment");expect(result).not.toHaveProperty("documentId");
   });
   it("rejects strings in file fields and arrays in document or payment fields", async () => {
     for (const [document, payment, file] of [["{}", "{}", "string"], ["[]", "{}", null], ["{}", "[]", null], ["broken", "{}", null]]) {
@@ -33,6 +38,7 @@ describe("private Sale attachment HTTP boundary", () => {
     for (const [message, status] of [["INVALID_INPUT", 400], ["MOBILE_UNAUTHORIZED", 401], ["MOBILE_FORBIDDEN", 403], ["MODULE_DISABLED:SALES", 403], ["SUBSCRIPTION_REQUIRED", 403], ["RATE_LIMITED", 429], ["IDEMPOTENCY_KEY_REUSED", 409]] as const) expect(saleAttachmentFailure(new Error(message)).status).toBe(status);
     expect(saleAttachmentFailure(new SaleAttachmentError("INVALID_SALE_ATTACHMENT")).status).toBe(400);
     expect(saleAttachmentFailure(new SaleAttachmentError("SALE_ATTACHMENT_CORRUPT")).status).toBe(503);
+    expect(saleAttachmentFailure(new Error("SALE_HAS_PENDING_CHEQUE")).status).toBe(409);
     const response = saleAttachmentFailure(new Error("private-storage-secret")); expect(response.status).toBe(503); expect(await response.text()).not.toContain("private-storage-secret");
   });
 });

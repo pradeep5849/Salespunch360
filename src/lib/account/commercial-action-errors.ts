@@ -5,6 +5,11 @@ const messages: Record<string, string> = {
   SALE_ATTACHMENT_LIMIT: "Select up to 50 attachments with a combined size of no more than 10 MB.",
   SALE_ATTACHMENT_REQUEST_KEY_REQUIRED: "Reload the Sale form and try saving again with a fresh request reference.",
   SALE_ATTACHMENT_SAVE_REQUIRED: "Attachments must be saved together with the Sale.",
+  SALE_HAS_PENDING_CHEQUE: "This Sale has a pending cheque. Close or resolve it before correcting the invoice.",
+  SALE_HAS_PAYMENTS_OR_ADJUSTMENTS: "This Sale’s adjustment history prevents this edit. Its saved records are unchanged.",
+  SALE_NOT_EDITABLE: "This Sale cannot be edited in its current state.",
+  SALE_REPLACEMENT_ALREADY_POSTED: "This correction reference already belongs to a saved document. Reload the Sale before continuing.",
+  INVALID_SALE_LINE_SOURCE: "An item reference no longer matches this saved Sale. Reload it before making the correction.",
   IDEMPOTENCY_KEY_REUSED: "This request reference was used for different document details. Review the saved document before continuing.",
   WAREHOUSE_REQUIRED_FOR_INVENTORY:
     "Select Warehouse for this inventory item. If none is available, add an active warehouse for this branch.",

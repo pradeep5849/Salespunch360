@@ -16,6 +16,11 @@ export async function saleCreationAttachmentForm(request: Request) {
   if (!document || typeof document !== "object" || Array.isArray(document) || !payment || typeof payment !== "object" || Array.isArray(payment)) throw new Error("INVALID_INPUT");
   return { document, payment, files: files as File[] };
 }
+export async function saleAppendAttachmentForm(request:Request){
+  const form=await boundedPrivateDocumentMultipart(request,()=>new SaleAttachmentError("INVALID_SALE_ATTACHMENT")),files=form.getAll("attachments");
+  if(files.some(file=>!(file instanceof File)))throw new SaleAttachmentError("INVALID_SALE_ATTACHMENT");
+  return {requestKey:String(form.get("requestKey")??""),files:files as File[]};
+}
 export function saleAttachmentFailure(error: unknown) {
   if (isRedirectError(error)) throw error;
   const message = error instanceof Error ? error.message : "";
@@ -27,6 +32,7 @@ export function saleAttachmentFailure(error: unknown) {
   if (message === "INVALID_INPUT") return saleAttachmentJson({ error: "INVALID_INPUT" }, 400);
   const result = commercialActionFailure(error);
   if (message === "IDEMPOTENCY_KEY_REUSED") return saleAttachmentJson(result, 409);
+  if (["SALE_HAS_PENDING_CHEQUE","SALE_HAS_PAYMENTS_OR_ADJUSTMENTS","SALE_NOT_EDITABLE","SALE_REPLACEMENT_ALREADY_POSTED"].includes(message)) return saleAttachmentJson(result,409);
   if (error instanceof z.ZodError || result.errorCode !== "SAVE_FAILED") {
     return saleAttachmentJson(result, 400);
   }

@@ -15,3 +15,8 @@ fun saleAttachmentIntent(files:List<SaleCreationAttachment>):String {
         put("hash",MessageDigest.getInstance("SHA-256").digest(file.bytes).joinToString(""){"%02x".format(it)})
     })}}.toString()
 }
+
+/** Unknown baselines must use normal financial correction checks, never silently ignore edits. */
+fun saleFilesOnlyEdit(draft:SalesEditorDraft):Boolean = draft.editingSourceId.isNotBlank() &&
+    draft.attachmentFiles.isNotEmpty() && draft.editingInitialPayload!=null &&
+    salesDraftPayload(draft)==draft.editingInitialPayload

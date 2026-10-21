@@ -4,5 +4,5 @@ import { SaleInvoiceVyapar, type SaleInvoiceOptions } from "../../../transaction
 import type { SaleEditInitial } from "@/lib/account/sale-edit-initial";
 
 export function SaleEditForm({ initial, options }: { initial: SaleEditInitial; options: SaleInvoiceOptions }) {
-  return <SaleInvoiceVyapar options={options} initialSale={initial} />;
+  return <SaleInvoiceVyapar key={initial.id} options={options} initialSale={initial} />;
 }

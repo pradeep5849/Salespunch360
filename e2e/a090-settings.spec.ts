@@ -1,3 +1,4 @@
+import {submitSaleForActor} from "../src/lib/account/sale-submit";
 import {currentPartyBalanceForActor} from "../src/lib/account/party-balance";
 import {reportCalendarDate,reportPeriodBounds} from "../src/lib/account/reports/dates";
 import {formatMoney,resolveDisplayPreferences} from "../src/lib/account/display-preferences";
@@ -3478,5 +3479,76 @@ test("A086 A087 private Sale files save once after lost response and remain avai
   await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;await tx.commercialAttachment.deleteMany({where:{companyId}})});
   for(const row of rows)await privateStorage().delete(row.storageKey);
   await db.accountSettings.update({where:{companyId},data:{enabledModules:original.enabledModules,transactionDefaults:original.transactionDefaults as Prisma.InputJsonValue}});
+ }
+});
+
+
+test("A086 A087 Edit Sale support files preserve paid accounting and retry once",async({page})=>{
+ test.setTimeout(240000);
+ const settings=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ const bytes=Buffer.from("%PDF-1.7\nEdit Sale support fixture"),pdf=(name:string)=>({name,mimeType:"application/pdf",buffer:bytes});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CUSTOMER_RECEIPTS","CUSTOMER_ADVANCES"],transactionDefaults:{transactionPreferences:{invoicePreview:false,linkPayments:false,discountDuringPayment:true}}}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Edit files year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const service=await db.accountService.create({data:{companyId,name:"Edit support service",sellingRate:"100",taxRate:"0"}});
+  const source=await submitSaleForActor(actor,{type:"SALES_INVOICE",idempotencyKey:randomUUID(),branchId,partyId:customerId,issueDate:"2026-10-21",lines:[{lineType:"SERVICE",sourceId:service.id,quantity:"1",rate:"100",taxRate:"0"}]},{},"sale-save-receipt",[new File([bytes],"original.pdf",{type:"application/pdf"})]);
+  const receipt=await createSettlementForActor(actor,{idempotencyKey:randomUUID(),type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-21",allocations:[{documentId:source.id,amount:"100",discountAmount:"10"}]});
+  const snapshot=async()=>JSON.stringify({doc:await db.commercialDocument.findUniqueOrThrow({where:{id:source.id},include:{lines:true}}),receipt:await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id},include:{allocations:true}}),journals:await db.journalEntry.findMany({where:{companyId},orderBy:{id:"asc"}}),documents:await db.commercialDocument.count({where:{companyId}})});
+  const before=await snapshot();
+  await signInSettings(page);await page.goto(`/workspace/account/sales/${source.id}`);await page.getByRole("link",{name:"Edit",exact:true}).click();
+  const region=page.getByRole("region",{name:"Sale attachments",exact:true});await expect(region.getByRole("link",{name:"original.pdf",exact:true})).toBeVisible();
+  await region.getByLabel("Add image or document",{exact:true}).setInputFiles(pdf("support.pdf"));
+  let lost=true;await page.route(`**/api/account/sales/${source.id}/attachments`,async route=>{if(lost){lost=false;expect((await route.fetch()).status()).toBe(201);await route.abort()}else await route.continue()});
+  await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page.locator("main").last().getByRole("alert")).toBeVisible({timeout:30000});
+  expect(await snapshot()).toBe(before);expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);
+  await expect(region.getByRole("button",{name:"Remove attachment support.pdf",exact:true})).toBeVisible();await page.getByRole("button",{name:"Save",exact:true}).click();
+  await expect(page).toHaveURL(new RegExp(`/sales/${source.id}$`),{timeout:30000});await expect(page.getByRole("region",{name:"Sale attachments",exact:true}).getByRole("link",{name:"support.pdf",exact:true})).toBeVisible();
+  expect(await snapshot()).toBe(before);expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);
+  expect((await new AxeBuilder({page}).include('section[aria-label="Sale attachments"]').withTags(["wcag2a","wcag2aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByRole("link",{name:"Edit",exact:true}).click();await region.getByLabel("Add image or document",{exact:true}).setInputFiles(pdf("correction.pdf"));
+  await page.getByRole("button",{name:`Edit item ${service.name}`,exact:true}).click();await page.getByLabel("Rate (Price/Unit)",{exact:true}).fill("80");
+  await page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})}).getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();
+  await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/,{timeout:30000});const correctedId=page.url().split("/").at(-1)!;expect(correctedId).not.toBe(source.id);
+  const corrected=await db.commercialDocument.findUniqueOrThrow({where:{id:correctedId}});expect(corrected.grandTotal.toString()).toBe("80");
+  expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);expect(await db.commercialAttachment.count({where:{companyId,documentId:correctedId}})).toBe(3);
+  await expect(page.getByRole("region",{name:"Sale attachments",exact:true}).getByRole("link",{name:"correction.pdf",exact:true})).toBeVisible();
+  expect((await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id}})).amount.toString()).toBe("90");
+
+ }finally{
+  const files=await db.commercialAttachment.findMany({where:{companyId},select:{storageKey:true}});
+  await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;await tx.commercialAttachment.deleteMany({where:{companyId}})});
+  for(const file of files)await privateStorage().delete(file.storageKey);
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults as Prisma.InputJsonValue}});
+ }
+});
+
+test("A086 native HTTP Edit Sale files append and correct with stable retry keys",async({request})=>{
+ test.setTimeout(180000);
+ const settings=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),token=createSessionToken(),tokenHash=hashSessionToken(token);
+ const file={name:"native-support.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.7\nNative Edit fixture")};
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES"],transactionDefaults:{transactionPreferences:{linkPayments:false}}}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Native Edit files year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const current=await db.user.findUniqueOrThrow({where:{id:userId}});await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:current.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  const service=await db.accountService.create({data:{companyId,name:"Native HTTP file service",sellingRate:"100",taxRate:"0"}});
+  const input={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-21",lines:[{lineType:"SERVICE",sourceId:service.id,quantity:"1",rate:"100",taxRate:"0"}]};
+  const created=await request.post("/api/v1/mobile/account/sales/with-attachments",{headers,multipart:{document:JSON.stringify({...input,idempotencyKey:randomUUID()}),payment:"{}",attachments:file}});expect(created.status()).toBe(201);const source=await created.json();
+  const key=randomUUID(),append={requestKey:key,attachments:{...file,name:"native-extra.pdf"}},url=`/api/v1/mobile/account/sales/${source.id}/attachments`;
+  expect((await request.post(url,{multipart:append})).status()).toBe(401);
+  for(let i=0;i<2;i++)expect((await request.post(url,{headers,multipart:append})).status()).toBe(201);
+  expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);expect(await db.commercialDocument.count({where:{companyId,type:"SALES_INVOICE",lines:{some:{serviceId:service.id}}}})).toBe(1);
+  const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}}),body={document:JSON.stringify({...input,idempotencyKey:randomUUID(),lines:[{...input.lines[0],originalLineId:line.id,rate:"80"}]}),payment:"{}",attachments:{...file,name:"native-corrected.pdf"}};
+  const patchUrl=`/api/v1/mobile/account/sales/${source.id}/with-attachments`,corrected=await request.patch(patchUrl,{headers,multipart:body});expect(corrected.status()).toBe(200);const row=await corrected.json();expect(row.id).not.toBe(source.id);
+  const replay=await request.patch(patchUrl,{headers,multipart:body});expect(replay.status()).toBe(200);expect((await replay.json()).id).toBe(row.id);
+  expect((await db.commercialDocument.findUniqueOrThrow({where:{id:row.id}})).grandTotal.toString()).toBe("80");expect(await db.commercialAttachment.count({where:{companyId,documentId:row.id}})).toBe(3);
+  const metadata=await request.get(`/api/v1/mobile/account/sales/${row.id}/attachments`,{headers});expect(metadata.status()).toBe(200);const files=await metadata.json();expect(files).toHaveLength(3);expect(JSON.stringify(files)).not.toMatch(/storageKey|contentHash|uploadedById/);
+ }finally{
+  await db.mobileSession.deleteMany({where:{tokenHash}});const files=await db.commercialAttachment.findMany({where:{companyId},select:{storageKey:true}});
+  await db.$transaction(async tx=>{await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;await tx.commercialAttachment.deleteMany({where:{companyId}})});
+  for(const file of files)await privateStorage().delete(file.storageKey);
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,transactionDefaults:settings.transactionDefaults as Prisma.InputJsonValue}});
  }
 });

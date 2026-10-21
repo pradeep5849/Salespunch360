@@ -5,6 +5,8 @@ import Link from "next/link";
 import styles from "../sale-detail.module.css";
 import { commercialEditorOptions } from "@/lib/account/commercial";
 import { SaleEditForm } from "./sale-edit-form";
+import {AuthorizationError,requirePermission} from "@/lib/auth/authorization";
+import {listSaleAttachmentsForActor} from "@/lib/account/sale-attachments";
 
 export default async function Page({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
@@ -12,7 +14,10 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   if(sale.type!=="SALES_INVOICE"||sale.status!=="POSTED"||!sale.partyId)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This document cannot be edited as a posted sale.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
   if(!sale.paymentSummary.canChange)return <main className={styles.root}><section className={styles.body}><h1>Edit Sale</h1><p>This sale cannot be edited with your current permissions or its current correction history.</p><Link href={`/workspace/account/sales/${id}`}>View Sale</Link></section></main>;
   const options=JSON.parse(JSON.stringify(rawOptions));
+  const actor=await requirePermission("ACCOUNT_LEDGER_VIEW");if(!actor.companyId)throw new AuthorizationError();
+  const attachments=await listSaleAttachmentsForActor({...actor,companyId:actor.companyId},sale.id);
   const initial={
+    attachments:attachments.map(({id,displayName,mimeType,sizeBytes})=>({id,displayName,mimeType,sizeBytes})),
     id:sale.id,documentNumber:sale.documentNumber,
     projectId:sale.projectId??undefined,
     freightAmount:sale.freightAmount.toString(),otherChargesAmount:sale.otherChargesAmount.toString(),
