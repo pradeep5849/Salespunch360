@@ -1,4 +1,4 @@
-import {Money} from "@/components/account/account-ui";
+import {Money,AccountUtcTimestamp} from "@/components/account/account-ui";
 import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { assetPageRead } from "../page-access";
@@ -112,8 +112,8 @@ export default async function Page({
               by {names.get(x.assignedById) ?? "Unavailable user"}
             </p>
             <p>
-              {x.assignedAt.toISOString()} —{" "}
-              {x.returnedAt?.toISOString() ?? "Current assignment"}
+              {<AccountUtcTimestamp value={x.assignedAt}/>} —{" "}
+              {x.returnedAt ? <AccountUtcTimestamp value={x.returnedAt}/> : "Current assignment"}
             </p>
             {x.notes && <p>Assignment notes: {x.notes}</p>}
           </article>
@@ -124,7 +124,7 @@ export default async function Page({
             <p>
               {x.eventType.replaceAll("_", " ")} ·{" "}
               {names.get(x.actorUserId) ?? "Unavailable user"} ·{" "}
-              {x.createdAt.toISOString()}
+              {<AccountUtcTimestamp value={x.createdAt}/>}
             </p>
             {x.metadata && (
               <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>

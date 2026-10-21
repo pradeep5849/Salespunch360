@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.ui.account.sales
+import com.salespunch360.mobile.ui.account.accountDate
 
 import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.layout.*
@@ -45,6 +46,6 @@ fun CustomerReceiptScreen(padding: PaddingValues, initialProjectId:String?=null,
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.notes, { value -> vm.update { it.copy(notes = value) } }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth()) }
         item { Button(onClick = vm::save, enabled = !state.saving && !state.loading && state.type in state.allowedTypes && state.customerId.isNotBlank() && (state.type=="CUSTOMER_ADVANCE" || state.invoiceId.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text(if (state.saving) "Posting…" else if(state.type=="APPLY_ADVANCE")"Apply advance" else if(state.type=="CUSTOMER_ADVANCE")"Post advance" else "Post receipt") } }
         item { Text("Recent receipts and advances", style = MaterialTheme.typography.titleLarge) }
-        items(state.history, key = { it.id }) { row -> ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${row.date} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) }) }
+        items(state.history, key = { it.id }) { row -> ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${accountDate(row.date)} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) }) }
     }
 }

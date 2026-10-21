@@ -1,3 +1,4 @@
+import {AccountDate} from "@/components/account/display-preferences";
 import { inventoryContext } from "@/lib/account/inventory-context";
 import type { ProjectActor } from "@/lib/account/projects";
 import { inventorySnapshotForActor } from "@/lib/account/inventory";
@@ -92,7 +93,7 @@ export default async function Page({
     <>
       <p>
         Company product/service catalog · Stock as of{" "}
-        {scoped.asOf?.toISOString().slice(0, 10) ?? "today"}:{" "}
+        {scoped.asOf ? <AccountDate value={scoped.asOf.toISOString()}/> : "today"}:{" "}
         {scoped.context.mode === "COMPANY"
           ? "company consolidated"
           : scoped.context.branchName}

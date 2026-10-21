@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.ui.account.purchase
+import com.salespunch360.mobile.ui.account.accountDate
 
 import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.layout.*
@@ -38,7 +39,7 @@ fun VendorPaymentScreen(padding: PaddingValues, vm: VendorPaymentViewModel = vie
         item { Button(onClick = vm::save, enabled = !state.saving && state.billId.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(if (state.saving) "Posting…" else "Post payment") } }
         item { Text("Recent payments", style = MaterialTheme.typography.titleLarge) }
         items(state.history, key = { it.id }) { row ->
-            ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${row.date} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) })
+            ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${accountDate(row.date)} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) })
         }
     }
 }

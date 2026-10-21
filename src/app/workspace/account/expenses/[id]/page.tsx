@@ -1,5 +1,5 @@
 import { AccountDate } from "@/components/account/display-preferences";
-import { Money } from "@/components/account/account-ui";
+import { Money, AccountUtcTimestamp } from "@/components/account/account-ui";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import { indiaDateText } from "@/lib/follow-up-tasks/date";
@@ -79,7 +79,7 @@ export default async function Page({
             Approver: x.approvedById
               ? who(x.approvedById)
               : "Automatic / not approved",
-            "Approved at": x.approvedAt?.toISOString() ?? "Not recorded",
+            "Approved at": x.approvedAt ? <AccountUtcTimestamp value={x.approvedAt}/> : "Not recorded",
           }).map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
@@ -200,7 +200,7 @@ export default async function Page({
             <a href={`/api/expense-attachments/${a.id}`}>
               Download {a.displayName}
             </a>{" "}
-            · {a.sizeBytes} bytes · {a.createdAt.toISOString().slice(0, 10)}
+            · {a.sizeBytes} bytes · {<AccountDate value={a.createdAt.toISOString()}/>}
           </p>
         ))}
         {!x.attachments.length && <p>No attachments.</p>}
@@ -210,7 +210,7 @@ export default async function Page({
           return (
             <p key={h.id}>
               {h.eventType.replaceAll("_", " ")} · {who(h.actorUserId)} ·{" "}
-              {h.createdAt.toISOString()}
+              {<AccountUtcTimestamp value={h.createdAt}/>}
               {m?.reason && ` · ${m.reason}`}
             </p>
           );

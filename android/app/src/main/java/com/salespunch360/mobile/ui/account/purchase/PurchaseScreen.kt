@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.ui.account.purchase
+import com.salespunch360.mobile.ui.account.accountDate
 
 import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
@@ -51,7 +52,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
             items(state.rows, key = { it.id }) { row ->
                 ListItem(
                     headlineContent = { Text(row.number, fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text("${row.party} · ${row.date} · ${row.type.replace('_', ' ')}") },
+                    supportingContent = { Text("${row.party} · ${accountDate(row.date)} · ${row.type.replace('_', ' ')}") },
                     trailingContent = { Column { Text(accountMoney(row.total)); Text(row.status) } },
                     modifier = Modifier.clickable { vm.open(row.id) }
                 )

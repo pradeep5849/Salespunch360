@@ -259,7 +259,7 @@ export default async function Page({
         {batches.map((x) => (
           <p key={x.id}>
             Batch {x.batchNumber} · Expiry{" "}
-            {x.expiryDate?.toISOString().slice(0, 10) ?? "—"}
+            {x.expiryDate ? <AccountDate value={x.expiryDate.toISOString()}/> : "—"}
           </p>
         ))}
         {serials.map((x) => (

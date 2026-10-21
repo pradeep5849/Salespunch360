@@ -3,6 +3,13 @@ import com.salespunch360.mobile.ui.account.AccountDisplayPreferences
 import org.junit.Assert.*
 import org.junit.Test
 class AccountDisplayPreferencesTest {
+ @Test fun metadataCalendarFormatRetainsOriginalClockZoneAndMilliseconds(){
+  val p=AccountDisplayPreferences(dateFormat="MM/DD/YYYY")
+  assertEquals("10/13/2026 · 00:30:15.123Z",p.timestamp("2026-10-13T00:30:15.123Z"))
+  assertEquals("10/13/2026 · 23:30:15+05:30",p.timestamp("2026-10-13T23:30:15+05:30"))
+  assertEquals("10/13/2026",p.timestamp("2026-10-13"));assertEquals("Not recorded",p.timestamp("Not recorded"))
+ }
+
  @Test fun reportDisplayUsesTheSameHalfUpRoundingAsExports(){
   assertTrue(AccountDisplayPreferences("INR",0).money("12.5").contains("13"))
   assertTrue(AccountDisplayPreferences("INR",1).money("1.25").contains("1.3"))

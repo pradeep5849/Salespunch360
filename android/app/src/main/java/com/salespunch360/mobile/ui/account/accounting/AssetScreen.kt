@@ -1,4 +1,5 @@
 package com.salespunch360.mobile.ui.account.accounting
+import com.salespunch360.mobile.ui.account.accountTimestamp
 
 import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
@@ -97,9 +98,9 @@ import kotlinx.serialization.json.*
   item{Text("Assigned to: ${names[x.str("assignedUserId")]?:"Unassigned"}")}
   items(listOf("vendorId" to "Vendor","purchaseDocumentId" to "Purchase bill","purchaseDocumentLineId" to "Purchase line","assetLedgerId" to "Asset ledger","accumulatedDepreciationLedgerId" to "Accumulated depreciation ledger","depreciationExpenseLedgerId" to "Depreciation expense ledger")){(key,label)->val source=when(key){"vendorId"->o.array("vendors");"purchaseDocumentId"->o.array("purchases");"purchaseDocumentLineId"->o.array("purchases").flatMap{it.jsonObject.array("lines")};else->o.array("ledgers")};val item=source.map{it.jsonObject}.firstOrNull{it.str("id")==x.str(key)};Text("$label: ${item?.str("name")?.ifBlank{item.str("documentNumber").ifBlank{item.str("itemName")}}?:"Not set"}")}
   item{Text("Assignment history",fontWeight=FontWeight.Bold)}
-  items(d.array("history")){h->val a=h.jsonObject;Text("${names[a.str("assignedToId")]?:"Unavailable employee"} · Assigned by ${names[a.str("assignedById")]?:"Unavailable user"}\n${a.str("assignedAt")} — ${a.str("returnedAt").ifBlank{"Current"}}\n${a.str("notes")}")}
+  items(d.array("history")){h->val a=h.jsonObject;Text("${names[a.str("assignedToId")]?:"Unavailable employee"} · Assigned by ${names[a.str("assignedById")]?:"Unavailable user"}\n${accountTimestamp(a.str("assignedAt"))} — ${accountTimestamp(a.str("returnedAt")).ifBlank{"Current"}}\n${a.str("notes")}")}
   item{Text("Lifecycle history",fontWeight=FontWeight.Bold)}
-  items(d.array("events")){e->val event=e.jsonObject;val m=event["metadata"] as? JsonObject;Text("${event.str("eventType").replace('_',' ')} · ${names[event.str("actorUserId")]?:"Unavailable user"} · ${event.str("createdAt")}\n${m?.str("returnNotes").orEmpty()}${m?.str("status").orEmpty()}")}
+  items(d.array("events")){e->val event=e.jsonObject;val m=event["metadata"] as? JsonObject;Text("${event.str("eventType").replace('_',' ')} · ${names[event.str("actorUserId")]?:"Unavailable user"} · ${accountTimestamp(event.str("createdAt"))}\n${m?.str("returnNotes").orEmpty()}${m?.str("status").orEmpty()}")}
   if(x.str("status") in listOf("ACTIVE","ASSIGNED"))item{Option("Assign employee",user,users){user=it}}
   if(x.str("status")!="DISPOSED")item{OutlinedTextField(notes,{notes=it},label={Text("Assignment / return notes")},enabled=!saving)}
   if(x.str("status") !in listOf("ASSIGNED","DISPOSED"))item{TextOption("Change status",status,listOf("ACTIVE","UNDER_MAINTENANCE","RETIRED","DISPOSED")){status=it};if(status=="DISPOSED")Text("A disposed asset cannot be reactivated.");OutlinedButton(enabled=!saving,onClick={action(x.str("id"),buildJsonObject{put("action","STATUS");put("status",status)})}){Text("Update status")}}

@@ -9,3 +9,9 @@ export function AccountTimestamp({value}:{value:Date}){
  const calendar=`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
  return <time dateTime={value.toISOString()}><AccountDate value={calendar}/>{" · "}{value.toLocaleTimeString()}</time>;
 }
+
+/** Preserve the original ISO/UTC clock and zone for metadata previously rendered with toISOString(). */
+export function AccountUtcTimestamp({value}:{value:Date}){
+ const iso=value.toISOString();
+ return <time dateTime={iso}><AccountDate value={iso}/>{" · "}{iso.slice(11)}</time>;
+}

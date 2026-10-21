@@ -2340,10 +2340,12 @@ test("A090 expense detail schedules and money directory honor saved currency pre
  await db.moneyAccount.create({data:{id:moneyId,companyId,branchId,name:`Display bank ${suffix}`,type:"BANK",ledgerAccountId:ledgerId}});
  await db.expenseTransaction.create({data:{id:expenseId,companyId,branchId,categoryId,type:"OFFICE_EXPENSE",status:"DRAFT",transactionNumber:`DISPLAY-${suffix}`,transactionDate:new Date("2026-10-13"),taxableAmount:"123.45",totalAmount:"123.45",createdById:userId}});
  await db.recurringExpenseTemplate.create({data:{id:templateId,companyId,branchId,categoryId,frequency:"MONTHLY",nextDueDate:new Date("2026-10-13"),amount:"90071992547409.91",createdById:userId,isActive:false}});
+ await db.accountOperationalAudit.create({data:{companyId,actorUserId:userId,eventType:"EXPENSE_CREATED",entityType:"EXPENSE",entityId:expenseId,createdAt:new Date("2026-10-13T23:45:15.123Z")}});
  try{
   await db.accountSettings.update({where:{companyId},data:{baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}});
   const preferences=resolveDisplayPreferences({baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"});
   await signInSettings(page);await page.goto(`/workspace/account/expenses/${expenseId}`);
+  await expect(page.locator("main").last()).toContainText("10/13/2026 · 23:45:15.123Z");
   const details=page.locator("dl").first();await expect(details.locator("div").filter({has:page.getByText("Total",{exact:true})}).locator("dd")).toHaveText(formatMoney("123.45",preferences));
   await expect(details.locator("div").filter({has:page.getByText("Date",{exact:true})}).locator("dd")).toHaveText("10/13/2026");
   await page.goto("/workspace/account/expenses/recurring");const schedule=page.getByRole("region",{name:`Schedule ${templateId}`,exact:true});await expect(schedule).toContainText(formatMoney("90071992547409.91",preferences));await expect(schedule).toContainText("Next due 10/13/2026");

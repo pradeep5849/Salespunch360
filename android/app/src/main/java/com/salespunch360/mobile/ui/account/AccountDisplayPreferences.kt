@@ -26,6 +26,10 @@ data class AccountDisplayPreferences(val currency:String="INR",val decimals:Int=
         val parts=date.split("-")
         return when(dateFormat){"YYYY-MM-DD"->date;"MM/DD/YYYY"->"${parts[1]}/${parts[2]}/${parts[0]}";else->"${parts[2]}/${parts[1]}/${parts[0]}"}
     }
+    fun timestamp(value:String):String {
+        if(!Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}.*").matches(value))return if(value.length==10)date(value)else value
+        return "${date(value)} · ${value.drop(11)}"
+    }
     companion object {
         fun from(data:JsonObject?):AccountDisplayPreferences {
             val currency=data?.get("baseCurrency")?.jsonPrimitive?.content?.takeIf{it in listOf("INR","USD","EUR","GBP","AED")}?:"INR"
@@ -36,6 +40,7 @@ data class AccountDisplayPreferences(val currency:String="INR",val decimals:Int=
 val LocalAccountDisplayPreferences=staticCompositionLocalOf{AccountDisplayPreferences()}
 @Composable fun accountMoney(value:String)=LocalAccountDisplayPreferences.current.money(value)
 @Composable fun accountMoney(value:BigDecimal)=LocalAccountDisplayPreferences.current.money(value.toPlainString())
+@Composable fun accountTimestamp(value:String)=LocalAccountDisplayPreferences.current.timestamp(value)
 @Composable fun accountDate(value:String)=LocalAccountDisplayPreferences.current.date(value)
 
 private val hindiAccountLabels=mapOf(

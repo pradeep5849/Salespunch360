@@ -516,7 +516,7 @@ private fun DirectSaleInvoiceEditor(
                     }
                     Column(Modifier.clickable{datePicker=true},horizontalAlignment=Alignment.End){
                         Text("Date",style=MaterialTheme.typography.labelSmall)
-                        Text("${draft.issueDate}⌄",fontWeight=FontWeight.Bold)
+                        Text("${accountDate(draft.issueDate)}⌄",fontWeight=FontWeight.Bold)
                     }
                 }
             }
