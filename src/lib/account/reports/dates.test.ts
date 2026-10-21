@@ -34,3 +34,15 @@ it("period presets honor full calendar months,leap years and April financial yea
     to: "2026-10-16",
   });
 });
+
+it.each([
+  ["2026-10-20T18:29:59.999Z", "2026-10-20"],
+  ["2026-10-20T18:30:00.000Z", "2026-10-21"],
+  ["2026-10-21T06:30:00.000Z", "2026-10-21"],
+  ["2026-10-21T18:29:59.999Z", "2026-10-21"],
+  ["2026-10-21T18:30:00.000Z", "2026-10-22"],
+])("single-day preset follows Kolkata boundary at %s", (instant, expected) => {
+  const day = reportCalendarDate(new Date(instant));
+  expect(day).toBe(expected);
+  expect(reportPeriodBounds("TODAY", day)).toEqual({ from: expected, to: expected });
+});

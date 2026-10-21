@@ -62295,6 +62295,14 @@
           "work": "Read-only local PostgreSQL information_schema check confirms commercial_documents.issueDate and journal_entries.entryDate are both native date. Original WITHDRAWN disposition preserved;no application correction justified or made.",
           "tests": "Actual database metadata check PASS for both columns;zero writes. Latest party-report browser fixture includes credit/debit notes issued on the selected final day and verifies their inclusion in Web/native HTTP/CSV/XLSX/PDF totals.",
           "remaining": "Not a complete start/noon/end/timezone/single-day/as-of matrix. Retain PARTIAL evidence status and pending final-head validation;do not relabel withdrawn claim as a new defect."
+        },
+        "business_calendar_boundary_2026_10_21": {
+          "work": "Added explicit Kolkata midnight, midday, final millisecond and next-day preset regressions. No application fix; original withdrawn cutoff allegation retained.",
+          "files": [
+            "src/lib/account/reports/dates.test.ts"
+          ],
+          "tests": "34 tests across dates, queries and service-boundaries PASS;0 failures/skips;1.48s.",
+          "limitation": "Unit calendar and query contracts only; not a new database/export boundary matrix or final checkpoint verification. Finding remains PARTIAL."
         }
       }
     },
