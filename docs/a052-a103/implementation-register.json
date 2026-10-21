@@ -58727,7 +58727,9 @@
         "src/components/account/profit-report-view.tsx",
         "src/lib/account/reports/profit-presentation.test.ts",
         "src/lib/account/reports/party-trade.test.ts",
-        "src/lib/account/reports/party-trade.ts"
+        "src/lib/account/reports/party-trade.ts",
+        "src/lib/account/reports/gst-rate.test.ts",
+        "src/lib/account/reports/gst-rate.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -59435,9 +59437,38 @@
             "typescript": "Full tsc --noEmit PASS.",
             "eslint": "Focused report/service/browser files PASS.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "targeted_ci": "Run39539868758 SUCCESS at exact prior checkpointda26607ba81e0eeccbbd650ea004813e2a42fb98:Web,Android,migration allPASS. Does notcertify laterGSTrate changes or final199-finding validation."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device validation. A090-F01 other formatting consumers remain PARTIAL. No whole-finding completion inferred;all199IDs/final statuses preserved. No production/merge/deploy/A104."
+        },
+        "gst_rate_report_2026_10_21": {
+          "implementation_commit": "2298e052ced2ae513ab6132d82994bcd579e2d76",
+          "work": "Added gst-rate / GST Rate Report, separate from existing document and party GST reports. Repeatable-read paginated company/branch/period queries aggregate stored commercial line CGST/SGST/IGST/cess by component/rate, net credit/debit notes, retain unknown-rate document adjustments and effective posted expense tax (historical reversal cutoff via existing journal policy). Tax In denotes recorded sales GST;Tax Out purchase/expense GST per supplied activity layout;not a tax-credit eligibility/filing calculation. Shared monetary formatting/exports,rate-aware native cards and catalogue availability use existing report contracts;CI grouped step includes new regressions. Isolated browser fixture cleanup removes expense references before journals under existing local tenant marker. No migration/ledger write.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/gst-rate.test.ts",
+            "src/lib/account/reports/gst-rate.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped": "114 tests/17 report-tax files PASS,0failed/skipped,16.92s;includes42 focused5filetests2.30s,not additive. After explicit TypeScript-only expense-row annotation,new8testsPASS again.",
+            "browser": "Final desktop/mobile Chromium2PASS1.0m. Real sale/purchase and quarter-return component rounding plus100expense/18GST produce12.14TaxIn/25.28TaxOut;Web/nativeHTTP/CSV/XLSX/PDF,PM403,AxeAA/nooverflow,no new journal/stock writes. First run had2failed dueafterAllExpenseTransaction->Journal FK cleanup;report assertions completed butrunfailed. Fixed isolatedfixturecleanup order;finalrun fullypasses.",
+            "android": "compileDebugKotlin + AccountReportDataTest BUILD SUCCESSFUL2m53s;21JVM tests,0failures/errors/skips. Native screen/device/emulator/TalkBack runtime NOT RUN. Local Android lint not rerun for this slice;new exact-head targetedCI requested.",
+            "typescript": "Initial fullcheck foundTS7022/TS7006inpaginatedexpensequery;explicit generated ExpenseTransaction Pick annotation fixes inference without runtime changes. Finalfull tsc --noEmit PASS.",
+            "eslint": "Final focused report/service/browser ESLint PASS.",
+            "workflow": "PyYAML parsed workflow/jobs successfully;Node yaml helper unavailable(MODULE_NOT_FOUND),used installed Python parser;no dependencyinstall or manifestchanges.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 other consumers remain PARTIAL. All199IDs and final statuses preserved;no production/merge/deploy/A104."
         }
       }
     },
@@ -62959,7 +62990,9 @@
         "src/components/account/profit-report-view.tsx",
         "src/lib/account/reports/profit-presentation.test.ts",
         "src/lib/account/reports/party-trade.test.ts",
-        "src/lib/account/reports/party-trade.ts"
+        "src/lib/account/reports/party-trade.ts",
+        "src/lib/account/reports/gst-rate.test.ts",
+        "src/lib/account/reports/gst-rate.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -63588,9 +63621,38 @@
             "typescript": "Full tsc --noEmit PASS.",
             "eslint": "Focused report/service/browser files PASS.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "targeted_ci": "Run39539868758 SUCCESS at exact prior checkpointda26607ba81e0eeccbbd650ea004813e2a42fb98:Web,Android,migration allPASS. Does notcertify laterGSTrate changes or final199-finding validation."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device validation. A090-F01 other formatting consumers remain PARTIAL. No whole-finding completion inferred;all199IDs/final statuses preserved. No production/merge/deploy/A104."
+        },
+        "gst_rate_report_2026_10_21": {
+          "implementation_commit": "2298e052ced2ae513ab6132d82994bcd579e2d76",
+          "work": "Added gst-rate / GST Rate Report, separate from existing document and party GST reports. Repeatable-read paginated company/branch/period queries aggregate stored commercial line CGST/SGST/IGST/cess by component/rate, net credit/debit notes, retain unknown-rate document adjustments and effective posted expense tax (historical reversal cutoff via existing journal policy). Tax In denotes recorded sales GST;Tax Out purchase/expense GST per supplied activity layout;not a tax-credit eligibility/filing calculation. Shared monetary formatting/exports,rate-aware native cards and catalogue availability use existing report contracts;CI grouped step includes new regressions. Isolated browser fixture cleanup removes expense references before journals under existing local tenant marker. No migration/ledger write.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/gst-rate.test.ts",
+            "src/lib/account/reports/gst-rate.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped": "114 tests/17 report-tax files PASS,0failed/skipped,16.92s;includes42 focused5filetests2.30s,not additive. After explicit TypeScript-only expense-row annotation,new8testsPASS again.",
+            "browser": "Final desktop/mobile Chromium2PASS1.0m. Real sale/purchase and quarter-return component rounding plus100expense/18GST produce12.14TaxIn/25.28TaxOut;Web/nativeHTTP/CSV/XLSX/PDF,PM403,AxeAA/nooverflow,no new journal/stock writes. First run had2failed dueafterAllExpenseTransaction->Journal FK cleanup;report assertions completed butrunfailed. Fixed isolatedfixturecleanup order;finalrun fullypasses.",
+            "android": "compileDebugKotlin + AccountReportDataTest BUILD SUCCESSFUL2m53s;21JVM tests,0failures/errors/skips. Native screen/device/emulator/TalkBack runtime NOT RUN. Local Android lint not rerun for this slice;new exact-head targetedCI requested.",
+            "typescript": "Initial fullcheck foundTS7022/TS7006inpaginatedexpensequery;explicit generated ExpenseTransaction Pick annotation fixes inference without runtime changes. Finalfull tsc --noEmit PASS.",
+            "eslint": "Final focused report/service/browser ESLint PASS.",
+            "workflow": "PyYAML parsed workflow/jobs successfully;Node yaml helper unavailable(MODULE_NOT_FOUND),used installed Python parser;no dependencyinstall or manifestchanges.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 other consumers remain PARTIAL. All199IDs and final statuses preserved;no production/merge/deploy/A104."
         }
       }
     },
@@ -67682,7 +67744,9 @@
         "src/lib/account/reports/profit-presentation.test.ts",
         "src/lib/account/reports/party-trade.test.ts",
         "src/lib/account/reports/party-trade.ts",
-        "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt",
+        "src/lib/account/reports/gst-rate.test.ts",
+        "src/lib/account/reports/gst-rate.ts"
       ],
       "affected_services_apis_actions": "See affected files and evidence; shared service/action consumers.",
       "affected_models": "AccountSettings.transactionDefaults and general preferences",
@@ -68299,9 +68363,38 @@
             "typescript": "Full tsc --noEmit PASS.",
             "eslint": "Focused report/service/browser files PASS.",
             "diff": "git diff --check PASS.",
-            "final_complete_head": "NOT RUN"
+            "final_complete_head": "NOT RUN",
+            "targeted_ci": "Run39539868758 SUCCESS at exact prior checkpointda26607ba81e0eeccbbd650ea004813e2a42fb98:Web,Android,migration allPASS. Does notcertify laterGSTrate changes or final199-finding validation."
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device validation. A090-F01 other formatting consumers remain PARTIAL. No whole-finding completion inferred;all199IDs/final statuses preserved. No production/merge/deploy/A104."
+        },
+        "gst_rate_report_2026_10_21": {
+          "implementation_commit": "2298e052ced2ae513ab6132d82994bcd579e2d76",
+          "work": "Added gst-rate / GST Rate Report, separate from existing document and party GST reports. Repeatable-read paginated company/branch/period queries aggregate stored commercial line CGST/SGST/IGST/cess by component/rate, net credit/debit notes, retain unknown-rate document adjustments and effective posted expense tax (historical reversal cutoff via existing journal policy). Tax In denotes recorded sales GST;Tax Out purchase/expense GST per supplied activity layout;not a tax-credit eligibility/filing calculation. Shared monetary formatting/exports,rate-aware native cards and catalogue availability use existing report contracts;CI grouped step includes new regressions. Isolated browser fixture cleanup removes expense references before journals under existing local tenant marker. No migration/ledger write.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/gst-rate.test.ts",
+            "src/lib/account/reports/gst-rate.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "grouped": "114 tests/17 report-tax files PASS,0failed/skipped,16.92s;includes42 focused5filetests2.30s,not additive. After explicit TypeScript-only expense-row annotation,new8testsPASS again.",
+            "browser": "Final desktop/mobile Chromium2PASS1.0m. Real sale/purchase and quarter-return component rounding plus100expense/18GST produce12.14TaxIn/25.28TaxOut;Web/nativeHTTP/CSV/XLSX/PDF,PM403,AxeAA/nooverflow,no new journal/stock writes. First run had2failed dueafterAllExpenseTransaction->Journal FK cleanup;report assertions completed butrunfailed. Fixed isolatedfixturecleanup order;finalrun fullypasses.",
+            "android": "compileDebugKotlin + AccountReportDataTest BUILD SUCCESSFUL2m53s;21JVM tests,0failures/errors/skips. Native screen/device/emulator/TalkBack runtime NOT RUN. Local Android lint not rerun for this slice;new exact-head targetedCI requested.",
+            "typescript": "Initial fullcheck foundTS7022/TS7006inpaginatedexpensequery;explicit generated ExpenseTransaction Pick annotation fixes inference without runtime changes. Finalfull tsc --noEmit PASS.",
+            "eslint": "Final focused report/service/browser ESLint PASS.",
+            "workflow": "PyYAML parsed workflow/jobs successfully;Node yaml helper unavailable(MODULE_NOT_FOUND),used installed Python parser;no dependencyinstall or manifestchanges.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other supplied report destinations/reference presentation and final-head/device verification. A090-F01 other consumers remain PARTIAL. All199IDs and final statuses preserved;no production/merge/deploy/A104."
         }
       },
       "intermediate_validation": {
