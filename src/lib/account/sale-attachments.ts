@@ -9,6 +9,7 @@ import { requireAccountModules } from "./modules";
 import { commercialCreationHash } from "./commercial-request-identity";
 import { preparePrivateDocumentFiles, type PreparedPrivateDocumentFile } from "./private-document-files";
 import type { ProjectActor } from "./projects";
+import { retrySerializable } from "./transaction-retry";
 
 export class SaleAttachmentError extends Error {}
 export const saleAttachmentManifest = (files: PreparedPrivateDocumentFile[]) => commercialCreationHash({
@@ -20,6 +21,7 @@ async function authorize(actor: ProjectActor, write = false) {
   await requireAccountModules(actor, "SALES");
 }
 const scope = (actor: ProjectActor) => actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {};
+const metadataSelect={id:true,displayName:true,mimeType:true,sizeBytes:true,createdAt:true} satisfies Prisma.CommercialAttachmentSelect;
 export async function prepareSaleAttachments(actor: ProjectActor, files: File[]) {
   if (!files.length) return [];
   await authorize(actor, true);
@@ -65,11 +67,49 @@ export async function cleanSaleAttachmentAttempts(companyId: string, keys: Set<s
     if (!await tx.commercialAttachment.count({ where: { companyId, storageKey: key } })) await privateStorage().delete(key);
   }, { timeout: 30000 }).catch(() => undefined);
 }
+
+/** Append-only supporting evidence. No commercial document, receipt, stock,
+ * discount, journal or numbering row is updated by this operation. */
+export async function appendSaleAttachmentsForActor(actor:ProjectActor,documentId:string,requestKey:string,files:File[]){
+  await authorize(actor,true);
+  const id=z.string().uuid().parse(documentId).toLowerCase(),key=z.string().uuid().parse(requestKey).toLowerCase();
+  const prepared=await prepareSaleAttachments(actor,files);
+  if(!prepared.length)throw new SaleAttachmentError("INVALID_SALE_ATTACHMENT");
+  const requestHash=commercialCreationHash({documentId:id,files:saleAttachmentManifest(prepared)}),attemptedKeys=new Set<string>();
+  try{return await retrySerializable(()=>db.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId}::uuid FOR UPDATE`;
+    await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${id}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+    const document=await tx.commercialDocument.findFirst({where:{id,companyId:actor.companyId,type:"SALES_INVOICE",...scope(actor)},select:{id:true,status:true}});
+    if(!document)throw new AuthorizationError();
+    if(document.status!=="POSTED")throw new SaleAttachmentError("SALE_ATTACHMENT_SAVE_REQUIRED");
+    const prior=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,eventType:"SALE_ATTACHMENTS_ADDED",metadata:{path:["requestKey"],equals:key}}});
+    if(prior){
+      const parsed=z.object({requestHash:z.string(),files:z.array(z.object({id:z.string().uuid()})).min(1)}).safeParse(prior.metadata);
+      if(!parsed.success)throw new SaleAttachmentError("SALE_ATTACHMENT_HISTORY_INVALID");
+      const metadata=parsed.data;
+      if(prior.entityId!==id||metadata.requestHash!==requestHash)throw new SaleAttachmentError("IDEMPOTENCY_KEY_REUSED");
+      const rows=await tx.commercialAttachment.findMany({where:{companyId:actor.companyId,documentId:id,id:{in:metadata.files.map(file=>file.id)}},orderBy:{position:"asc"},select:metadataSelect});
+      if(rows.length!==metadata.files.length)throw new SaleAttachmentError("SALE_ATTACHMENT_HISTORY_INVALID");
+      return rows;
+    }
+    const existing=await tx.commercialAttachment.findMany({where:{companyId:actor.companyId,documentId:id},select:{position:true,sizeBytes:true}});
+    const start=existing.reduce((next,row)=>Math.max(next,row.position+1),0);
+    if(start+prepared.length>50||existing.reduce((sum,row)=>sum+row.sizeBytes,0)+prepared.reduce((sum,file)=>sum+file.sizeBytes,0)>10*1024*1024)throw new SaleAttachmentError("SALE_ATTACHMENT_LIMIT");
+    const metadata=prepared.map((file,index)=>({id:randomUUID(),position:start+index,displayName:file.displayName,mimeType:file.mimeType,sizeBytes:file.sizeBytes,contentHash:file.contentHash}));
+    await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"SALE_ATTACHMENTS_ADDED",entityType:"SALES_INVOICE",entityId:id,metadata:{requestKey:key,requestHash,files:metadata}}});
+    for(const [index,file] of prepared.entries()){
+      const storageKey=`companies/${actor.companyId}/sale-attachments/${id}/${randomUUID()}`;
+      attemptedKeys.add(storageKey);await privateStorage().put(storageKey,file.bytes);
+      await tx.commercialAttachment.create({data:{...metadata[index],companyId:actor.companyId,documentId:id,storageKey,uploadedById:actor.id}});
+    }
+    return tx.commercialAttachment.findMany({where:{companyId:actor.companyId,documentId:id,id:{in:metadata.map(file=>file.id)}},orderBy:{position:"asc"},select:metadataSelect});
+  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:30000}));}finally{if(attemptedKeys.size)await cleanSaleAttachmentAttempts(actor.companyId,attemptedKeys)}
+}
 export async function listSaleAttachmentsForActor(actor: ProjectActor, documentId: string) {
   await authorize(actor); z.string().uuid().parse(documentId);
   return db.$transaction(async tx => {
     if (!await tx.commercialDocument.findFirst({ where: { id: documentId, companyId: actor.companyId, type: "SALES_INVOICE", ...scope(actor) }, select: { id: true } })) throw new AuthorizationError();
-    return tx.commercialAttachment.findMany({ where: { companyId: actor.companyId, documentId }, orderBy: { position: "asc" }, take: 50, select: { id: true, displayName: true, mimeType: true, sizeBytes: true, createdAt: true } });
+    return tx.commercialAttachment.findMany({ where: { companyId: actor.companyId, documentId }, orderBy: { position: "asc" }, take: 50, select: metadataSelect });
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 export async function downloadSaleAttachmentForActor(actor: ProjectActor, id: string) {

@@ -158,6 +158,13 @@ describe("A088 backup shared financial dependencies", () => {
     expect(m.reads.get("commercialAttachment")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{documentId:"asc"},{position:"asc"}]});
     expect(result.manifest.uploadedFiles).toContain("private-storage backup");
   });
+  it("retains scoped operational correction and attachment-append retry history",async()=>{
+    const row={id:"append-audit",companyId:actor.companyId,actorUserId:"uploader",eventType:"SALE_ATTACHMENTS_ADDED",entityType:"SALES_INVOICE",entityId:"sale",metadata:{requestKey:"original-key",requestHash:"hash",files:[{id:"file"}]}};
+    m.reads.set("accountOperationalAudit",vi.fn().mockResolvedValue([row]));
+    const bundle=JSON.parse(new TextDecoder().decode((await createAccountBackupForActor(actor)).bytes));
+    expect(bundle.data.accountOperationalAudit).toEqual([row]);expect(bundle.manifest.recordCounts.accountOperationalAudit).toBe(1);
+    expect(m.reads.get("accountOperationalAudit")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]});
+  });
   it("denies backup generation before reading financial data for a non-administrator", async () => {
     await expect(
       createAccountBackupForActor({ ...actor, accountRole: "ACCOUNTANT" }),

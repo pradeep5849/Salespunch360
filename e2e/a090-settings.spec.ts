@@ -120,10 +120,10 @@ test.afterAll(async () => {
   await db.assetOwnerFunding.deleteMany({where:{companyId}});
   await db.assetAssignmentHistory.deleteMany({ where: { companyId } });
   await db.asset.deleteMany({ where: { companyId } });
-  await db.accountOperationalAudit.deleteMany({ where: { companyId } });
   await db.numberingSeries.deleteMany({ where: { companyId } });
   await db.$transaction(async tx=>{
     await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+    await tx.accountOperationalAudit.deleteMany({where:{companyId}});
     // Only the localhost *_ci fixture tenant is removed. Production material guards remain unchanged.
     await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
     await tx.projectMaterialMovement.deleteMany({where:{companyId}});

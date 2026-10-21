@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const url = process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if (url && (!["localhost", "127.0.0.1"].includes(new URL(url).hostname) || !new URL(url).pathname.endsWith("_ci"))) throw new Error("Isolated local *_ci database required");
@@ -9,7 +9,8 @@ import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 import { setPrivateStorageForTests } from "@/lib/storage";
 import { submitSaleForActor } from "./sale-submit";
 import { replacePostedSaleForActor } from "./sale-amendments";
-import { downloadSaleAttachmentForActor, listSaleAttachmentsForActor } from "./sale-attachments";
+import { createSettlementForActor } from "./commercial";
+import { appendSaleAttachmentsForActor, downloadSaleAttachmentForActor, listSaleAttachmentsForActor } from "./sale-attachments";
 import type { ProjectActor } from "./projects";
 
 const companyId = randomUUID(), foreignId = randomUUID(), branchId = randomUUID(), userId = randomUUID(), customerId = randomUUID();
@@ -146,5 +147,53 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
       await expect(downloadSaleAttachmentForActor(actor,file.id)).rejects.toThrow();
       await expect(save()).rejects.toThrow();expect(put).not.toHaveBeenCalled();
     }finally{await client.company.update({where:{id:companyId},data:{productEdition:"SALESPUNCH360_ACCOUNT"}})}
+  });
+
+  it("appends supporting files once without changing paid invoice, receipt, numbering or ledger history",async()=>{
+    const input=raw(),saved=await save(input),settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+    try{
+      await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{transactionPreferences:{discountDuringPayment:true}}}});
+      await createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-21",allocations:[{documentId:saved.id,amount:"100",discountAmount:"10"}]});
+    }finally{await client.accountSettings.update({where:{companyId},data:{transactionDefaults:settings.transactionDefaults===null?Prisma.DbNull:settings.transactionDefaults as Prisma.InputJsonValue}})}
+    expect((await client.settlementAllocation.findFirstOrThrow({where:{companyId,documentId:saved.id}})).discountAmount.toFixed(2)).toBe("10.00");
+    const snapshot=async()=>({document:await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}}),journals:await client.journalEntry.findMany({where:{companyId},orderBy:{id:"asc"},include:{lines:{orderBy:{id:"asc"}}}}),receipts:await client.accountSettlement.findMany({where:{companyId},orderBy:{id:"asc"}}),allocations:await client.settlementAllocation.findMany({where:{companyId},orderBy:{id:"asc"}}),series:await client.numberingSeries.findMany({where:{companyId},orderBy:{id:"asc"}})});
+    const before=await snapshot(),key=randomUUID();put.mockClear();
+    const [first,replay]=await Promise.all([appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("support.pdf")]),appendSaleAttachmentsForActor(actor,saved.id,key.toUpperCase(),[pdf("support.pdf")])]);
+    expect(first[0].id).toBe(replay[0].id);expect(put).toHaveBeenCalledTimes(1);
+    expect(await snapshot()).toEqual(before);expect(await listSaleAttachmentsForActor(actor,saved.id)).toHaveLength(2);
+    expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_ATTACHMENTS_ADDED",entityId:saved.id}})).toBe(1);
+    await expect(appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("changed.pdf")])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    expect(JSON.stringify(first)).not.toMatch(/storageKey|contentHash|uploadedById/);
+  });
+
+  it("rolls back the append audit and all new files on storage failure, then safely retries",async()=>{
+    const saved=await save(),key=randomUUID(),beforeObjects=objects.size,before=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}});
+    put.mockImplementationOnce(async(k,b)=>{objects.set(k,Buffer.from(b))}).mockRejectedValueOnce(new Error("append storage unavailable"));
+    await expect(appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("one.pdf"),pdf("two.pdf")])).rejects.toThrow("append storage unavailable");
+    expect(objects.size).toBe(beforeObjects);expect(await listSaleAttachmentsForActor(actor,saved.id)).toHaveLength(1);
+    expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_ATTACHMENTS_ADDED",entityId:saved.id}})).toBe(0);
+    await appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("one.pdf"),pdf("two.pdf")]);
+    expect(await listSaleAttachmentsForActor(actor,saved.id)).toHaveLength(3);expect(await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}})).toEqual(before);
+  });
+
+  it("denies append on foreign/unassigned/unauthorized documents before storage and rejects cross-document key reuse",async()=>{
+    const saved=await save(),other=await save(),key=randomUUID();await appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("support.pdf")]);put.mockClear();
+    await expect(appendSaleAttachmentsForActor(actor,other.id,key,[pdf("support.pdf")])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    for(const denied of [{...actor,companyId:foreignId},{...actor,branchAccessScope:"SELECTED_BRANCHES" as const,branchIds:[]},{...actor,accountRole:null}])await expect(appendSaleAttachmentsForActor(denied,saved.id,randomUUID(),[pdf()])).rejects.toThrow();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("protects append audit history and rejects incomplete posted-file append transactions at commit",async()=>{
+    const saved=await save(),key=randomUUID();await appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("support.pdf")]);
+    const audit=await client.accountOperationalAudit.findFirstOrThrow({where:{companyId,eventType:"SALE_ATTACHMENTS_ADDED",entityId:saved.id}});
+    await expect(client.accountOperationalAudit.update({where:{id:audit.id},data:{eventType:"OTHER"}})).rejects.toThrow("SALE_ATTACHMENT_AUDIT_IMMUTABLE");
+    await expect(client.accountOperationalAudit.delete({where:{id:audit.id}})).rejects.toThrow("SALE_ATTACHMENT_AUDIT_IMMUTABLE");
+    await expect(client.$transaction(async tx=>tx.accountOperationalAudit.create({data:{companyId,actorUserId:userId,eventType:"SALE_ATTACHMENTS_ADDED",entityType:"SALES_INVOICE",entityId:saved.id,metadata:{requestKey:randomUUID(),requestHash:"a".repeat(64),files:[{id:randomUUID(),position:2,displayName:"missing.pdf",mimeType:"application/pdf",sizeBytes:8,contentHash:"b".repeat(64)}]}}}))).rejects.toThrow("SALE_ATTACHMENT_APPEND_INCOMPLETE");
+  });
+
+  it("enforces the total stored-file limit without writing an append event or blob",async()=>{
+    const saved=await save(),before=objects.size;put.mockClear();
+    await expect(appendSaleAttachmentsForActor(actor,saved.id,randomUUID(),Array.from({length:50},(_,i)=>pdf(`${i}.pdf`)))).rejects.toThrow("SALE_ATTACHMENT_LIMIT");
+    expect(put).not.toHaveBeenCalled();expect(objects.size).toBe(before);expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_ATTACHMENTS_ADDED",entityId:saved.id}})).toBe(0);
   });
 });
