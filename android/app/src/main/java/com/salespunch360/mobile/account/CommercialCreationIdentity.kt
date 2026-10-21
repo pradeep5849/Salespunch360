@@ -7,8 +7,8 @@ import kotlinx.serialization.json.*
 class CommercialCreationIdentity(private val newKey: () -> String = { UUID.randomUUID().toString() }) {
     private var intent: String? = null
     private var key: String? = null
-    fun payload(input: JsonObject): JsonObject {
-        val current = input.toString()
+    fun payload(input: JsonObject, attachmentIntent:String=""): JsonObject {
+        val current = if(attachmentIntent.isEmpty())input.toString()else buildJsonObject{put("document",input);put("files",attachmentIntent)}.toString()
         if (intent != current) { intent = current; key = newKey() }
         return buildJsonObject { input.forEach { (field, value) -> put(field, value) }; put("idempotencyKey", key!!) }
     }

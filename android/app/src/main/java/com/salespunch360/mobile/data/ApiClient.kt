@@ -19,6 +19,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.OkHttpClient
 import okhttp3.MultipartBody
+import com.salespunch360.mobile.account.SaleCreationAttachment
+import com.salespunch360.mobile.account.validSaleCreationAttachments
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
@@ -82,6 +84,25 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  }
  suspend fun updateQuotation(id:String,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/quotations/${enc(id)}","PATCH",payload.toString())
  suspend fun quotationAction(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/action","POST",payload.toString()))
+ suspend fun createSaleWithAttachments(payload:JsonObject,files:List<SaleCreationAttachment>)=withContext(Dispatchers.IO){
+  require(validSaleCreationAttachments(files)){"Choose PDF, PNG or JPEG files, up to 50 files and 10 MB combined."}
+  val payment=buildJsonObject{
+   listOf("receivedAmount","receivedInFull","paymentType","chequeNumber","chequeDate","moneyAccountId").forEach{field->payload[field]?.let{put(field,it)}}
+   payload["paymentReference"]?.let{put("reference",it)}
+  }
+  val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("document",payload.toString()).addFormDataPart("payment",payment.toString()).apply{
+   files.forEach{file->addFormDataPart("attachments",file.name,file.bytes.toRequestBody(file.mime.toMediaType()))}
+  }.build()
+  val requestToken=session.token()
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/sales/with-attachments").apply{requestToken?.let{header("Authorization","Bearer $it")}}.post(body).build()
+  http.newCall(request).awaitResponse().use{response->
+   val raw=response.body?.string()?:"{}"
+   if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(requestToken);val code=runCatching{val value=json.parseToJsonElement(raw).jsonObject;(value["error"]?:value["errorCode"])?.jsonPrimitive?.content}.getOrNull();throw ApiException(response.code,code)}
+   json.parseToJsonElement(raw).jsonObject
+  }
+ }
+ suspend fun saleAttachments(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/sales/${enc(id)}/attachments")).jsonArray
+ suspend fun saleAttachment(id:String)=download("api/v1/mobile/account/sale-attachments/${enc(id)}")
  suspend fun quotationAttachments(id:String,revision:Int)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/attachments?revisionNumber=$revision")).jsonArray
  suspend fun uploadQuotationAttachment(id:String,revision:Int,key:String,name:String,mime:String,bytes:ByteArray):String{val requestToken=session.token();return try{multipart("api/v1/mobile/account/quotations/${enc(id)}/attachments","file",name,mime,bytes,mapOf("revisionNumber" to revision.toString(),"requestKey" to key))}catch(e:ApiException){if(e.status==401)session.invalidateIfCurrent(requestToken);throw e}}
  suspend fun removeQuotationAttachment(id:String,documentId:String,revision:Int)=call("api/v1/mobile/account/quotation-attachments/${enc(id)}?documentId=${enc(documentId)}&revisionNumber=$revision","DELETE")

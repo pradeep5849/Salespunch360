@@ -106,6 +106,8 @@ private fun DirectSaleInvoiceEditor(
     navigate:(String)->Unit
 ){
     val context=LocalContext.current
+    var readingAttachments by remember{mutableStateOf(false)}
+    val latestDraft by rememberUpdatedState(draft)
     val cash=draft.receivedInFull
     var customerSheet by remember{mutableStateOf(false)}
     var customerQuery by remember{mutableStateOf("")}
@@ -491,8 +493,8 @@ private fun DirectSaleInvoiceEditor(
                     Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)
                 ){
-                    OutlinedButton(onClick={onSave(true)},enabled=!saving&&draft.lines.none{it.quotationUnitReviewRequired}&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text("Save & New")}
-                    Button(onClick={onSave(false)},enabled=!saving&&draft.lines.none{it.quotationUnitReviewRequired}&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text(if(saving)"Saving…" else "Save")}
+                    OutlinedButton(onClick={onSave(true)},enabled=!saving&&!readingAttachments&&draft.lines.none{it.quotationUnitReviewRequired}&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text("Save & New")}
+                    Button(onClick={onSave(false)},enabled=!saving&&!readingAttachments&&draft.lines.none{it.quotationUnitReviewRequired}&&invoiceCustomFieldsValid(options.invoiceCustomFields,draft.type,draft.customFields)&&draft.lines.all{it.servicePeriodDays.isBlank()||it.servicePeriodDays.toIntOrNull() in 1..3650},modifier=Modifier.weight(1f)){Text(if(saving)"Saving…" else "Save")}
                     IconButton(onClick={more=true}){Text("⋮")}
                 }
             }
@@ -541,6 +543,7 @@ private fun DirectSaleInvoiceEditor(
             if(options.transactionPreference("ewayBillNumber"))item{OutlinedTextField(draft.ewayBillNumber,{if(it.length<=12&&it.all(Char::isDigit))onDraft(draft.copy(ewayBillNumber=it))},enabled=!saving,label={Text("E-Way Bill No.")},modifier=Modifier.fillMaxWidth())}
             item{InvoiceCustomFields(options.invoiceCustomFields,draft.type,draft.customFields,saving){onDraft(draft.copy(customFields=it))}}
             if(options.shippingAddressEnabled)item{OutlinedTextField(draft.shippingAddress,{if(it.length<=5000)onDraft(draft.copy(shippingAddress=it))},enabled=!saving,label={Text("Shipping Address")},minLines=2,modifier=Modifier.fillMaxWidth())}
+            if(draft.editingSourceId.isBlank())item{SaleCreationFiles(draft.attachmentFiles,saving,{files->onDraft(latestDraft.copy(attachmentFiles=files))},{readingAttachments=it})}
             if(options.transactionPreference("termsEnabled",true))item{OutlinedTextField(draft.notes,{if(it.length<=5000)onDraft(draft.copy(notes=it))},enabled=!saving,label={Text("Terms & Conditions")},minLines=2,modifier=Modifier.fillMaxWidth())}
             item{OutlinedTextField(draft.dueDate,{onDraft(draft.copy(dueDate=it))},enabled=!saving,label={Text("Due date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())}
             if(options.transactionPreference("itemCount"))item{Text("Total Qty: ${draft.lines.sumOf{it.quantity.toDoubleOrNull()?:0.0}}")}
