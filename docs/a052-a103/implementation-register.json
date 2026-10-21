@@ -65400,6 +65400,7 @@
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
         "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
+        "prisma/migrations/20261021020000_sale_attachment_append_history/migration.sql",
         "prisma/schema.prisma",
         "src/app/api/account/sale-attachments/[id]/route.ts",
         "src/app/api/account/sales/with-attachments/route.ts",
@@ -65759,6 +65760,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL:EditSale attachment add/attachment-only Save without financial replacement;remaining original identity/actions policy;finalcompletehead+device/runtime verification. Native picker/share runtime unexecuted. No newmigration beyond143;no production/merge/deploy/A104."
+        },
+        "sale_attachment_append_foundation_2026_10_21": {
+          "implementation_commit": "a8d47e78",
+          "work": "Added appendSaleAttachmentsForActor for explicit supporting-file additions to an existing posted Sale without updating the commercial document,numbering,stock,receipts,discounts orledger. Company/document locks serialize retries;same key/content returns same metadata,changed intent/cross-document reuse rejects. New append records have immutable operational audits andDB completeness checks;posted-file inserts require matching actor/company/document/audited metadata. Existing file update/delete protection retained. Backup snapshot now includes company-scoped operational correction/append retry history. Browser fixture cleanup moved operational audit removal into existing tenant cleanup transaction.",
+          "files": [
+            "prisma/migrations/20261021020000_sale_attachment_append_history/migration.sql",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/utilities.ts",
+            "src/lib/account/backup-snapshot.runtime.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "migrations": [
+            "20261021020000_sale_attachment_append_history"
+          ],
+          "models_changed": "No new Prisma model/column in this slice;new constraints/index/triggers on existing CommercialAttachment/AccountOperationalAudit storage. No historical migration edits.",
+          "tests": {
+            "group": "81tests5files PASS(11.70s),0failed/skipped,includingallSale-file/cheque-finance/backup/submit/private-file regressions.",
+            "paid_discount_refinement": "Aftergroup,focused strengthenedcase1PASS(1.14s),14excludedbynamefilter. Invoice100/actualCash90/paymentDiscount10 retained exactly duringconcurrent supporting-file append/retry;invoice/journals/receipts/allocations/numbering snapshot unchanged. Other14cases unchanged from81group.",
+            "migration": "Additive144 applied only toisolatedlocalCI DB. Fresh144-chain/data-preserving legacyupgrade/redeploy1PASS(3.51s),no reset/drop/productionwrites.",
+            "typescript": "FinalfullPASS",
+            "eslint": "FinalfocusedPASS includingbrowserfixturecleanup",
+            "diff": "PASS",
+            "browser": "NOT RUN for posted append;service notconnectedtoHTTP/UIyet. EarliernewSale browser results do NOT verifythisnewappendoperation.",
+            "android": "No Android sourcechanged in thisslice;previous25JVM/build/lint evidence retained,not rerun. No device/emulatorruntime.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remainPARTIAL:connectEditSale HTTP/Web/native controls toappend-onlySave,completefile-bearingfinancialcorrections andremainingidentity/actions;runtime/finalverificationpending. A088-F01 stillrequiresbroaderrestore/blob recoverycoverage. No merge/deploy/production/A104.",
+          "deployment_requirement": "Futureapproveddeployment mustapplymigration144beforeusingposted-fileappend. No productionmigrationexecuted."
         }
       },
       "push_checkpoint_evidence": {
@@ -66280,6 +66310,7 @@
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
         "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
+        "prisma/migrations/20261021020000_sale_attachment_append_history/migration.sql",
         "prisma/schema.prisma",
         "src/app/api/account/sale-attachments/[id]/route.ts",
         "src/app/api/account/sales/with-attachments/route.ts",
@@ -66598,6 +66629,35 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL:EditSale attachment add/attachment-only Save without financial replacement;remaining original identity/actions policy;finalcompletehead+device/runtime verification. Native picker/share runtime unexecuted. No newmigration beyond143;no production/merge/deploy/A104."
+        },
+        "sale_attachment_append_foundation_2026_10_21": {
+          "implementation_commit": "a8d47e78",
+          "work": "Added appendSaleAttachmentsForActor for explicit supporting-file additions to an existing posted Sale without updating the commercial document,numbering,stock,receipts,discounts orledger. Company/document locks serialize retries;same key/content returns same metadata,changed intent/cross-document reuse rejects. New append records have immutable operational audits andDB completeness checks;posted-file inserts require matching actor/company/document/audited metadata. Existing file update/delete protection retained. Backup snapshot now includes company-scoped operational correction/append retry history. Browser fixture cleanup moved operational audit removal into existing tenant cleanup transaction.",
+          "files": [
+            "prisma/migrations/20261021020000_sale_attachment_append_history/migration.sql",
+            "src/lib/account/sale-attachments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/utilities.ts",
+            "src/lib/account/backup-snapshot.runtime.test.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "migrations": [
+            "20261021020000_sale_attachment_append_history"
+          ],
+          "models_changed": "No new Prisma model/column in this slice;new constraints/index/triggers on existing CommercialAttachment/AccountOperationalAudit storage. No historical migration edits.",
+          "tests": {
+            "group": "81tests5files PASS(11.70s),0failed/skipped,includingallSale-file/cheque-finance/backup/submit/private-file regressions.",
+            "paid_discount_refinement": "Aftergroup,focused strengthenedcase1PASS(1.14s),14excludedbynamefilter. Invoice100/actualCash90/paymentDiscount10 retained exactly duringconcurrent supporting-file append/retry;invoice/journals/receipts/allocations/numbering snapshot unchanged. Other14cases unchanged from81group.",
+            "migration": "Additive144 applied only toisolatedlocalCI DB. Fresh144-chain/data-preserving legacyupgrade/redeploy1PASS(3.51s),no reset/drop/productionwrites.",
+            "typescript": "FinalfullPASS",
+            "eslint": "FinalfocusedPASS includingbrowserfixturecleanup",
+            "diff": "PASS",
+            "browser": "NOT RUN for posted append;service notconnectedtoHTTP/UIyet. EarliernewSale browser results do NOT verifythisnewappendoperation.",
+            "android": "No Android sourcechanged in thisslice;previous25JVM/build/lint evidence retained,not rerun. No device/emulatorruntime.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remainPARTIAL:connectEditSale HTTP/Web/native controls toappend-onlySave,completefile-bearingfinancialcorrections andremainingidentity/actions;runtime/finalverificationpending. A088-F01 stillrequiresbroaderrestore/blob recoverycoverage. No merge/deploy/production/A104.",
+          "deployment_requirement": "Futureapproveddeployment mustapplymigration144beforeusingposted-fileappend. No productionmigrationexecuted."
         }
       },
       "push_checkpoint_evidence": {
@@ -66886,6 +66946,18 @@
           "work": "Company-scoped repeatable-read backup now retains quotationAttachment original IDs,revision links,retry/hash metadata and private object keys in deterministic order. This carries attachment restore dependencies into the register;does not include file bytes or complete A088.",
           "tests": "Populated scoped snapshot regression included in90-test group;actual browser backup contains persisted attachment metadata. Provider/blob recovery/validated restore/final-head coverage remain pending.",
           "commit": "7e71f02615bd8f58682dc33fef7e943600e3cc8e"
+        },
+        {
+          "operational_audit_backup_2026_10_21": {
+            "implementation_commit": "a8d47e78",
+            "work": "Backup JSON now retains ordered company-scoped AccountOperationalAudit rows,including correction andprivatefile-append request fingerprints/actor/file history. Addedscope/retentiontest. No completedrestore/blob archive claim.",
+            "files": [
+              "src/lib/account/utilities.ts",
+              "src/lib/account/backup-snapshot.runtime.test.ts"
+            ],
+            "tests": "Includedin81PASSgroup;focusedbackupscopeassertionpassed. Broaderrecovery/browser/device/finalvalidationpending.",
+            "remaining": "A088-F01 remainsPARTIAL;complete recovery/restore/private-storage backupstillpending."
+          }
         }
       ],
       "push_checkpoint_evidence": {
@@ -70960,6 +71032,13 @@
       "run_id": 39531246915,
       "conclusion": "success",
       "scope": "Targeted3jobs including newSale-fileDBstep;notcompletefinalverification."
+    },
+    {
+      "checkpoint": "targeted_ci_79cfbc05",
+      "head": "79cfbc05eb7b446b39c6789b6e94e82b16cfb1e5",
+      "run_id": 39533999392,
+      "conclusion": "success",
+      "scope": "Targeted3jobs;notcompletefinal199verification. Postedappendmigration144notinthishead."
     }
   ]
 }

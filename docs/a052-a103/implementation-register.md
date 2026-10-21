@@ -10279,3 +10279,12 @@ Predecessor0a1e7a43targetedCIrun39531246915SUCCESS(all3jobs,newSale-fileDBstep);
 `c1a49903`: normalized receiptintent included in trusted Sale-fileSave fingerprint. NewDBtest initially FAILED becausechangedpaymentretry addedreceipt;fixed.39focusedtests5files PASS6.44s,0failed/skipped. ExistingEditSale/shippingbrowser4PASS3.4m precededthissmallfinancialhardening;afterfixprivatefilebrowser2desktop/mobilePASS1.3m. FinalcombinedTypeScript/focusedESLint/diff PASS. Broaderfinal199verification pending.
 
 A086-F06/A087-F02 remainPARTIAL forEditSale fileadd/metadata-onlySave,remainingidentity/actions andfinal/runtimeverification. Counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs preserved. No extraDBmigration beyond143/no production/merge/deploy/A104.
+
+
+### 2026-10-21 — nonfinancial posted-file append foundation
+
+`a8d47e78`: company/document-locked explicit support-file append,stable retry/changed-intent rejection,immutable audit andDB completion checks. Invoice/receipt/discount/stock/ledger/number unchanged. Newmigration144;nohistoricalmigrationedit. Backupnowretainsorderedcompany-scopedoperational correction/append retry audits (A088-F01 stillPARTIAL). Fixtureauditcleanup usesexistingtenantcleanuptransaction.
+
+81tests5files PASS11.70s,0failed/skipped. Thenstrengthenedpaid-discounttest1PASS1.14s/14name-filterexcluded,retaining100invoice/90actualCash/10discount andallfinancialsnapshots. Fresh144chain/data-preservinglegacyupgrade/redeploy1PASS3.51s. FinalfullTypeScript/focusedESLint/diff PASS. NewappendHTTP/UI/native integration/runtime NOT RUN/pending;earliernewSale browserproof doesnotverifythisoperation.
+
+A086-F06/A087-F02 remainPARTIAL;counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs preserved.79cfbc05targetedCI39533999392SUCCESS;newheadCIpending. Futureapproveddeployment requires144beforeappend;no production/merge/deploy/A104.
