@@ -65396,17 +65396,29 @@
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
         "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
         "prisma/schema.prisma",
+        "src/app/api/account/sale-attachments/[id]/route.ts",
+        "src/app/api/account/sales/with-attachments/route.ts",
+        "src/app/api/v1/mobile/account/sale-attachments/[id]/route.ts",
+        "src/app/api/v1/mobile/account/sales/[id]/attachments/route.ts",
+        "src/app/api/v1/mobile/account/sales/with-attachments/route.ts",
         "src/app/workspace/account/sales/[id]/edit/page.tsx",
         "src/app/workspace/account/sales/[id]/page.tsx",
         "src/app/workspace/account/sales/[id]/sale-detail.module.css",
         "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
         "src/lib/account/backup-snapshot.runtime.test.ts",
         "src/lib/account/cheque-finance.integration.test.ts",
+        "src/lib/account/commercial-action-errors.ts",
         "src/lib/account/commercial.ts",
         "src/lib/account/migration-chain.integration.test.ts",
         "src/lib/account/print.ts",
+        "src/lib/account/private-document-multipart.ts",
         "src/lib/account/project-invoice-selection.ts",
         "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-attachment-http.test.ts",
+        "src/lib/account/sale-attachment-http.ts",
+        "src/lib/account/sale-attachment-routes.test.ts",
+        "src/lib/account/sale-attachment-upload.test.ts",
+        "src/lib/account/sale-attachment-upload.ts",
         "src/lib/account/sale-attachments.integration.test.ts",
         "src/lib/account/sale-attachments.ts",
         "src/lib/account/sale-duplicate.test.ts",
@@ -65416,7 +65428,8 @@
         "src/lib/account/transaction-header.test.ts",
         "src/lib/account/transaction-header.ts",
         "src/lib/account/transaction-scope.ts",
-        "src/lib/account/utilities.ts"
+        "src/lib/account/utilities.ts",
+        "src/lib/quotations/attachment-http.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -65668,6 +65681,47 @@
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL. Still required: Web/mobile authenticated attachment HTTP transport; Add/Edit Sale image/document selection and saved-file display; native selection/upload/download; attachment-only edit behavior avoiding financial correction; runtime/accessibility/device verification. Invoice identity question remains pending. Backup restore/blob recovery broader A088-F01 remains incomplete. All199 final statuses unset.",
           "deployment_requirement": "Future approved deployment must apply additive migration chain through20261021010000_commercial_private_attachments before application code. No production deployment or migration executed."
+        },
+        "sale_private_attachment_web_http_2026_10_21": {
+          "implementation_commit": "3e7bedde",
+          "work": "New Sale file selection/removal stays memory-only until explicit Save. Multipart transport uses existing stable Sale identity, keeps selection after failed/lost response,clears on Save & New. Web authenticated Save has mutation/origin/rate guard; native Save checks permission/entitlement before parsing. Shared multipart helper caps streamed body bytes;quotation transport retains original errors. Web Sale Details displays private attachment links;Web/native authenticated download andnative metadata list use scoped services,no public/share DTO attachment fields. Explicit company-null guards on Web routes. New controls include AA label contrast correction.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial-action-errors.ts",
+            "src/lib/quotations/attachment-http.ts",
+            "src/lib/account/private-document-multipart.ts",
+            "src/lib/account/sale-attachment-http.test.ts",
+            "src/lib/account/sale-attachment-http.ts",
+            "src/lib/account/sale-attachment-routes.test.ts",
+            "src/lib/account/sale-attachment-upload.test.ts",
+            "src/lib/account/sale-attachment-upload.ts",
+            "src/app/api/account/sale-attachments/[id]/route.ts",
+            "src/app/api/account/sales/with-attachments/route.ts",
+            "src/app/api/v1/mobile/account/sale-attachments/[id]/route.ts",
+            "src/app/api/v1/mobile/account/sales/[id]/attachments/route.ts",
+            "src/app/api/v1/mobile/account/sales/with-attachments/route.ts"
+          ],
+          "apis_actions": [
+            "POST /api/account/sales/with-attachments",
+            "GET /api/account/sale-attachments/{id}",
+            "POST /api/v1/mobile/account/sales/with-attachments",
+            "GET /api/v1/mobile/account/sale-attachments/{id}",
+            "GET /api/v1/mobile/account/sales/{id}/attachments"
+          ],
+          "tests": {
+            "unit_http": "38PASS across6files(1.76s),0failed/skipped;includesexistingquotation multipart/routes/commercial-error regressions,actual chunked-body cancellation,auth/entitlement-before-read,company-null guard,stable transport/no implicit retry andsecret redaction.",
+            "browser": "Final2desktop/mobile Chromium cases PASS(55.2s):selection/removal;leavewithoutSave/no writes;lostcommittedresponse retryoneSale/onejournal/onefile/noextraDraft;privateDetails/download;authenticatednativeGETlist/download/POST/retry;unauthnative401;AxeAA/nooverflow.",
+            "initial_browser": "1PASS mobile/1FAIL desktop for newlabel contrast3.92. Scopedlabel darkened to#4b5563;assertion preserved;finalbothPASS.",
+            "typescript": "Final fullPASS after browser;earliernullablecompany Web Save/download guard omissions andtypedledgerfixture spread fixed before passing.",
+            "eslint": "Final focusedPASS including e2e",
+            "diff": "PASS",
+            "android": "Native HTTP executed from real browser/API context only. Android UI/emulator/device NOT RUN;native UI connection still pending.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 stay PARTIAL: Android file picker/upload/private-file display;Edit Sale file addition andmetadata-only edit handling;remaining invoice identity policy/actions andfinal complete/device validation. No new migration beyond prior143;no production changes."
         }
       },
       "push_checkpoint_evidence": {
@@ -66185,17 +66239,29 @@
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
         "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
         "prisma/schema.prisma",
+        "src/app/api/account/sale-attachments/[id]/route.ts",
+        "src/app/api/account/sales/with-attachments/route.ts",
+        "src/app/api/v1/mobile/account/sale-attachments/[id]/route.ts",
+        "src/app/api/v1/mobile/account/sales/[id]/attachments/route.ts",
+        "src/app/api/v1/mobile/account/sales/with-attachments/route.ts",
         "src/app/workspace/account/sales/[id]/edit/page.tsx",
         "src/app/workspace/account/sales/[id]/page.tsx",
         "src/app/workspace/account/sales/[id]/sale-detail.module.css",
         "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
         "src/lib/account/backup-snapshot.runtime.test.ts",
         "src/lib/account/cheque-finance.integration.test.ts",
+        "src/lib/account/commercial-action-errors.ts",
         "src/lib/account/commercial.ts",
         "src/lib/account/migration-chain.integration.test.ts",
         "src/lib/account/print.ts",
+        "src/lib/account/private-document-multipart.ts",
         "src/lib/account/project-invoice-selection.ts",
         "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-attachment-http.test.ts",
+        "src/lib/account/sale-attachment-http.ts",
+        "src/lib/account/sale-attachment-routes.test.ts",
+        "src/lib/account/sale-attachment-upload.test.ts",
+        "src/lib/account/sale-attachment-upload.ts",
         "src/lib/account/sale-attachments.integration.test.ts",
         "src/lib/account/sale-attachments.ts",
         "src/lib/account/sale-duplicate.test.ts",
@@ -66205,7 +66271,8 @@
         "src/lib/account/transaction-header.test.ts",
         "src/lib/account/transaction-header.ts",
         "src/lib/account/transaction-scope.ts",
-        "src/lib/account/utilities.ts"
+        "src/lib/account/utilities.ts",
+        "src/lib/quotations/attachment-http.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -66416,6 +66483,47 @@
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL. Still required: Web/mobile authenticated attachment HTTP transport; Add/Edit Sale image/document selection and saved-file display; native selection/upload/download; attachment-only edit behavior avoiding financial correction; runtime/accessibility/device verification. Invoice identity question remains pending. Backup restore/blob recovery broader A088-F01 remains incomplete. All199 final statuses unset.",
           "deployment_requirement": "Future approved deployment must apply additive migration chain through20261021010000_commercial_private_attachments before application code. No production deployment or migration executed."
+        },
+        "sale_private_attachment_web_http_2026_10_21": {
+          "implementation_commit": "3e7bedde",
+          "work": "New Sale file selection/removal stays memory-only until explicit Save. Multipart transport uses existing stable Sale identity, keeps selection after failed/lost response,clears on Save & New. Web authenticated Save has mutation/origin/rate guard; native Save checks permission/entitlement before parsing. Shared multipart helper caps streamed body bytes;quotation transport retains original errors. Web Sale Details displays private attachment links;Web/native authenticated download andnative metadata list use scoped services,no public/share DTO attachment fields. Explicit company-null guards on Web routes. New controls include AA label contrast correction.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/commercial-action-errors.ts",
+            "src/lib/quotations/attachment-http.ts",
+            "src/lib/account/private-document-multipart.ts",
+            "src/lib/account/sale-attachment-http.test.ts",
+            "src/lib/account/sale-attachment-http.ts",
+            "src/lib/account/sale-attachment-routes.test.ts",
+            "src/lib/account/sale-attachment-upload.test.ts",
+            "src/lib/account/sale-attachment-upload.ts",
+            "src/app/api/account/sale-attachments/[id]/route.ts",
+            "src/app/api/account/sales/with-attachments/route.ts",
+            "src/app/api/v1/mobile/account/sale-attachments/[id]/route.ts",
+            "src/app/api/v1/mobile/account/sales/[id]/attachments/route.ts",
+            "src/app/api/v1/mobile/account/sales/with-attachments/route.ts"
+          ],
+          "apis_actions": [
+            "POST /api/account/sales/with-attachments",
+            "GET /api/account/sale-attachments/{id}",
+            "POST /api/v1/mobile/account/sales/with-attachments",
+            "GET /api/v1/mobile/account/sale-attachments/{id}",
+            "GET /api/v1/mobile/account/sales/{id}/attachments"
+          ],
+          "tests": {
+            "unit_http": "38PASS across6files(1.76s),0failed/skipped;includesexistingquotation multipart/routes/commercial-error regressions,actual chunked-body cancellation,auth/entitlement-before-read,company-null guard,stable transport/no implicit retry andsecret redaction.",
+            "browser": "Final2desktop/mobile Chromium cases PASS(55.2s):selection/removal;leavewithoutSave/no writes;lostcommittedresponse retryoneSale/onejournal/onefile/noextraDraft;privateDetails/download;authenticatednativeGETlist/download/POST/retry;unauthnative401;AxeAA/nooverflow.",
+            "initial_browser": "1PASS mobile/1FAIL desktop for newlabel contrast3.92. Scopedlabel darkened to#4b5563;assertion preserved;finalbothPASS.",
+            "typescript": "Final fullPASS after browser;earliernullablecompany Web Save/download guard omissions andtypedledgerfixture spread fixed before passing.",
+            "eslint": "Final focusedPASS including e2e",
+            "diff": "PASS",
+            "android": "Native HTTP executed from real browser/API context only. Android UI/emulator/device NOT RUN;native UI connection still pending.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 stay PARTIAL: Android file picker/upload/private-file display;Edit Sale file addition andmetadata-only edit handling;remaining invoice identity policy/actions andfinal complete/device validation. No new migration beyond prior143;no production changes."
         }
       },
       "push_checkpoint_evidence": {
@@ -70771,6 +70879,13 @@
       "run_id": 39446799026,
       "conclusion": "success",
       "scope": "Targeted validation only; not final complete verification."
+    },
+    {
+      "checkpoint": "targeted_ci_0a1e7a43",
+      "head": "0a1e7a43ba83bb901a7d27598c96f53fad3f8c82",
+      "run_id": 39531246915,
+      "conclusion": "success",
+      "scope": "Targeted3jobs including newSale-fileDBstep;notcompletefinalverification."
     }
   ]
 }

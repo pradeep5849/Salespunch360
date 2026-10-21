@@ -10261,3 +10261,12 @@ A080-F01 remains PARTIAL for full original themes/remaining settings controls;co
 Final74tests across5files PASS(9.79s),0failed/skipped;includesnewSale-file DB cases andexistingcheque/paid-sale group. Prior44testgroup included8conversion DB regressions;overlap,do not sum. Prisma generate/validate/localdeploy PASS. Fresh143migrationchain/data-preserving legacyupgrade/redeploy1PASS(6.59s);legacyfiles0. FinalTypeScript/focusedESLint/diff PASS. No browser/native/device runtime claim for this slice.
 
 A086-F06/A087-F02 remain PARTIAL: HTTP/UI/native connections,attachment-only edits andruntimeverification pending.185implemented-but-not-finally-verified/13partial/1notstarted;199IDs/allfinalstatuses preserved. NewheadCIpending. Futureapproveddeployment requiresmigration143beforecode;production untouched. No merge/deploy/A104.
+
+
+### 2026-10-21 — explicit Sale file Web/native HTTP
+
+`3e7bedde`: AddSale memory-only file selection/removal,explicitmultipartSave/retry,SaveNewclearing,privateDetailslinks andauthenticatedWeb/nativefiledownload/nativefilelist. Webmutation/origin/rate andnativepermission/entitlement before parsing;boundedactualstreambytes. No publicinvoice attachment exposure. NativeAndroidUI andEditSale fileadd/metadata-onlyedits remain pending;A086-F06/A087-F02 stayPARTIAL.
+
+38unit/HTTPtests6files PASS(1.76s). Finaldesktop/mobilebrowser2PASS(55.2s),includinglostcommittedresponse retryoneSale/journal/file,leavewithoutSave,privateWebdownload,nativeGETlist/download/POST/retry,unauth401,AxeAA/nooverflow. InitialmobilePASS/desktopcontrastFAIL;newlabeldarkened,assertionpreserved,finalbothPASS. InitialTypeScriptcompany-nullguards/ledgerfixture fixed;finalfullTypeScript/focusedESLint/diff PASS. NoAndroiddevice/emulatorruntimeclaim.
+
+Predecessor0a1e7a43targetedCIrun39531246915SUCCESS(all3jobs,newSale-fileDBstep);newheadneedsCI. Counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs/allfinalstatuses preserved. No extraDBmigration beyond143/no production/merge/deploy/A104.
