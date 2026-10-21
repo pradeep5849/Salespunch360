@@ -68876,7 +68876,7 @@
             "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt"
           ],
           "tests": {
-            "android": "compileDebugKotlin + focused AccountDisplayPreferencesTest/ExpensePreviewTest/ExpenseLegacyJsonTest BUILD SUCCESSFUL1m58s; actual XML counts recorded in Markdown. Current-slice local Android lint/device/emulator/Compose/TalkBack runtime NOT RUN.",
+            "android": "compileDebugKotlin + AccountDisplayPreferencesTest/ExpensePreviewTest/ExpenseLegacyJsonTest BUILD SUCCESSFUL1m58s;11JVM tests,0failures/errors/skips,confirmed from XML. Current-slice local Android lint/device/emulator/Compose/TalkBack runtime NOT RUN.",
             "diff": "git diff --check PASS.",
             "web_backend": "No Web/backend change or new Web runtime claim.",
             "final_complete_head": "NOT RUN"

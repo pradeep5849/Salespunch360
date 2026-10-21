@@ -10371,4 +10371,4 @@ Estimate Balance display meaning and report Closed-order state were asked as bus
 
 ## 21 October — Android Expense tax display
 
-Implementation `7bb825fda17ee38b33f323ac873231a54463cd6e` maps to A090-F01. Expense Details CGST/SGST/IGST/cess now use the shared business currency/decimal formatter,matching combinedtax. No amount/API/ledger/schema change. Android Kotlin compilation and focused display/expense JVM group passed(1m58s);no current-slice local lint/device/Compose/TalkBack runtime. Diff check passed. Complete consumer/final checkpoint verification remains pending;Hindi deferred.199IDs/counts unchanged.
+Implementation `7bb825fda17ee38b33f323ac873231a54463cd6e` maps to A090-F01. Expense Details CGST/SGST/IGST/cess now use the shared business currency/decimal formatter,matching combinedtax. No amount/API/ledger/schema change. Android Kotlin compilation and11focused display/expense JVM tests passed(1m58s),0failures/errors/skips confirmed from XML;no current-slice local lint/device/Compose/TalkBack runtime. Diff check passed. Complete consumer/final checkpoint verification remains pending;Hindi deferred.199IDs/counts unchanged.
