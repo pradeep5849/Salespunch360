@@ -68868,6 +68868,20 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "Other General formatting consumers and Hindi(user deferred)/final checkpoint-head validation remain pending; no whole-finding promotion."
+        },
+        "native_expense_tax_display_2026_10_21": {
+          "implementation_commit": "7bb825fda17ee38b33f323ac873231a54463cd6e",
+          "work": "Android Expense Details CGST/SGST/IGST/cess now use accountMoney with saved business currency and decimal places, matching its already-formatted combined tax total. No numerical,API,ledger or schema changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/expense/ExpenseScreen.kt"
+          ],
+          "tests": {
+            "android": "compileDebugKotlin + focused AccountDisplayPreferencesTest/ExpensePreviewTest/ExpenseLegacyJsonTest BUILD SUCCESSFUL1m58s; actual XML counts recorded in Markdown. Current-slice local Android lint/device/emulator/Compose/TalkBack runtime NOT RUN.",
+            "diff": "git diff --check PASS.",
+            "web_backend": "No Web/backend change or new Web runtime claim.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A090-F01 remains PARTIAL for complete consumer/final verification;Hindi explicitly deferred. No whole-finding completion inferred."
         }
       },
       "intermediate_validation": {

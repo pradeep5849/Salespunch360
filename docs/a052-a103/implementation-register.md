@@ -10367,3 +10367,8 @@ Implementation `e23cccfa2359b89181920359aa633e46addb2a6c` maps to A083-F01/share
 123 grouped tests passed(8files,6.86s);9 PostgreSQL tests passed(2.02s) including corpus>200 and company/branch/cost/module scope. Initial DB invocation skipped9 due missing dedicated variable; finalguardedlocalrun executedall9. Desktop/mobile2browsercases passed(2.0m),chooser/choices/draftdenial/cancel focus/Axe/unsavedpreparation/no writes/nativeHTTP parity. Android compile+45quotationJVM tests passed(3m38s),0fail/error/skip; no device/current-slice local lint. FinalfullTypeScript/focusedESLint/diff passed.
 
 Estimate Balance display meaning and report Closed-order state were asked as business decisions; pending answers recorded in JSON. A083 remainsPARTIAL;A080-F02 existing implementation status preserved. Counts185/13/1 and199uniqueIDs unchanged. Prior exact-head CI39574551712 passed at06381afa;later source needs newCI. Draft153;no merge/deploy/production/A104.
+
+
+## 21 October — Android Expense tax display
+
+Implementation `7bb825fda17ee38b33f323ac873231a54463cd6e` maps to A090-F01. Expense Details CGST/SGST/IGST/cess now use the shared business currency/decimal formatter,matching combinedtax. No amount/API/ledger/schema change. Android Kotlin compilation and focused display/expense JVM group passed(1m58s);no current-slice local lint/device/Compose/TalkBack runtime. Diff check passed. Complete consumer/final checkpoint verification remains pending;Hindi deferred.199IDs/counts unchanged.
