@@ -197,3 +197,10 @@ it.skipIf(!url)("hides stock report destinations when Items is off without delet
  for(const reportKey of keys){expect(hidden).not.toContain(reportKey);expect(favourites).not.toContain(reportKey);await expect(setReportFavouriteForActor(actor,{reportKey,favourite:true})).rejects.toThrow();expect(await client.accountReportFavourite.count({where:{companyId,userId:a,reportKey}})).toBe(1)}
  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true}}});expect(await reportFavouritesForActor(actor)).toEqual(expect.arrayContaining(keys));
 });
+
+it.skipIf(!url)("keeps party GST in core accounting and hides it from Project Managers",async()=>{
+ await client.accountSettings.upsert({where:{companyId},create:{companyId,enabledModules:[]},update:{enabledModules:[]}});
+ expect((await availableReportCatalogueForActor({id:a,companyId})).some(x=>x.key==="gst-party")).toBe(true);
+ await client.user.update({where:{id:a},data:{accountRole:"PROJECT_MANAGER"}});
+ try{expect((await availableReportCatalogueForActor({id:a,companyId})).some(x=>x.key==="gst-party")).toBe(false)}finally{await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}})}
+});

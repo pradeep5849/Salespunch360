@@ -184,15 +184,15 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                         } }
                     }
                 }
-            } else if(state.report in setOf("sale-purchase-party","discount-party")) {
+            } else if(state.report in setOf("sale-purchase-party","discount-party","gst-party")) {
                 val rows=accountReportRows(data)
                 if(rows.isEmpty()) Text("No party transactions match the selected filters.")
                 if(rows.isNotEmpty()) LazyColumn(Modifier.fillMaxWidth().heightIn(max=600.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     items(rows) { row -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
                         Text(row.getOrNull(0).orEmpty(),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics{heading()})
                         Text(row.getOrNull(1).orEmpty(),style=MaterialTheme.typography.bodySmall)
-                        Text("${if(state.report=="discount-party") "Sale Discount" else "Sales"}: ${row.getOrNull(2).orEmpty()}")
-                        Text("${if(state.report=="discount-party") "Purchase/Expense Discount" else "Purchases"}: ${row.getOrNull(3).orEmpty()}")
+                        Text("${if(state.report=="gst-party") "Sale Tax" else if(state.report=="discount-party") "Sale Discount" else "Sales"}: ${row.getOrNull(2).orEmpty()}")
+                        Text("${if(state.report=="gst-party") "Purchase/Expense Tax" else if(state.report=="discount-party") "Purchase/Expense Discount" else "Purchases"}: ${row.getOrNull(3).orEmpty()}")
                     } } }
                 }
             } else LazyRow {

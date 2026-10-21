@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun partyGstUsesServerCatalogueAndPreservesSignedTaxAndScope() {
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"gst-party","name":"GST Report","group":"Business status","filters":[]}]}""").jsonObject
+        assertEquals("gst-party",accountReportCatalogue(options,"GST Report").single().key)
+        assertEquals(mapOf("from" to "2026-10-01","branchId" to "branch"),accountReportRequestFilters(options,"gst-party",mapOf("from" to "2026-10-01","branchId" to "branch","productId" to "stale")))
+        val data=Json.parseToJsonElement("""{"rows":[["Party","Customer","₹12.15","₹0.00"],["Party","Vendor","₹0.00","-₹7.29"]]}""").jsonObject
+        assertEquals("-₹7.29",accountReportRows(data)[1][3])
+    }
+
     @Test fun discountReportRetainsSignedMoneyAndRejectsStaleItemScope() {
         val options=Json.parseToJsonElement("""{"catalogue":[{"key":"discount-party","name":"Discount Report","group":"Business status","filters":[]}]}""").jsonObject
         assertEquals("discount-party",accountReportCatalogue(options,"Discount Report").single().key)

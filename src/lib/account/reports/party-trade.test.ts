@@ -20,3 +20,23 @@ it("denies companies without the accounting edition before document reads",async
 
 it("reports recorded discounts instead of document totals and nets returns",async()=>{const r=await runFinancialReportForActor(actor,"discount-party",{});expect(r.title).toBe("Discount Report");expect(r.columns).toEqual(["Party","Party Type","Sale Discount","Purchase/Expense Discount"]);expect(r.rows).toEqual([["Same name","Customer","9.44","0.00"],["Same name","Vendor","0.00","4.72"]]);expect(r.summary?.map(x=>x.value)).toEqual(["9.44","4.72"]);expect(r.note).toContain("no expense discount is inferred");expect(formatReport(r,{...DEFAULT_DISPLAY_PREFERENCES,baseCurrency:"USD"}).rows[0][2]).toContain("$");expect(formatReport(r,DEFAULT_DISPLAY_PREFERENCES,true).rows[1][3]).toBe("4.72")});
 it("retains zero-discount parties without fabricating discounts",async()=>{m.documents.mockResolvedValue([doc("zero","SALES_INVOICE","0")]);const r=await runFinancialReportForActor(actor,"discount-party",{});expect(r.rows).toEqual([["Same name","Customer","0.00","0.00"]]);expect(r.summary?.map(x=>x.value)).toEqual(["0.00","0.00"])});
+
+it("reports GST by saved party identity with signed return taxes and no TDS/TCS",async()=>{
+ m.documents.mockResolvedValue([doc("s","SALES_INVOICE","100"),doc("c","CREDIT_NOTE","20"),doc("p","PURCHASE_BILL","50"),doc("d","DEBIT_NOTE","10")].map(row=>({...row,cgstTotal:row.grandTotal.mul("0.09"),sgstTotal:row.grandTotal.mul("0.09"),igstTotal:new Prisma.Decimal(0),cessTotal:row.grandTotal.mul("0.02"),tdsAmount:new Prisma.Decimal(700),tcsAmount:new Prisma.Decimal(800)})));
+ const r=await runFinancialReportForActor(actor,"gst-party",{from:"2026-10-01",to:"2026-10-21"});
+ expect(r.title).toBe("GST Report");expect(r.columns).toEqual(["Party","Party Type","Sale Tax","Purchase/Expense Tax"]);
+ expect(r.rows).toEqual([["Same name","Customer","16.00","0.00"],["Same name","Vendor","0.00","8.00"]]);expect(r.totals).toEqual(["Total","","16.00","8.00"]);
+ expect(r.note).toContain("Standalone expenses have no party identity");expect(r.note).toContain("TDS and TCS");
+ expect(formatReport(r,{...DEFAULT_DISPLAY_PREFERENCES,baseCurrency:"USD"}).rows[0][2]).toContain("$");expect(formatReport(r,DEFAULT_DISPLAY_PREFERENCES,true).rows[1][3]).toBe("8.00");
+ expect(m.documents.mock.calls[0][0].where).toMatchObject({companyId:"company",branchId:{in:["branch"]},issueDate:{gte:new Date("2026-10-01"),lte:new Date("2026-10-21")}});
+});
+it("requires accounting edition and report permission before tax document reads",async()=>{
+ m.company.mockResolvedValue({productEdition:"SALESPUNCH360",accountSettings:null});
+ await expect(runFinancialReportForActor(actor,"gst-party",{})).rejects.toThrow("MODULE_DISABLED:GST_ADVANCED");
+ await expect(runFinancialReportForActor({...actor,accountRole:"PROJECT_MANAGER"},"gst-party",{})).rejects.toThrow();expect(m.documents).not.toHaveBeenCalled();
+});
+it("keeps zero tax parties and exact large signed decimal tax values",async()=>{
+ m.documents.mockResolvedValue([{...doc("large","SALES_INVOICE","1"),cgstTotal:new Prisma.Decimal("9007199254740999.91"),sgstTotal:new Prisma.Decimal("0.01"),igstTotal:new Prisma.Decimal(0),cessTotal:new Prisma.Decimal(0)}]);
+ expect((await runFinancialReportForActor(actor,"gst-party",{})).summary?.[0].value).toBe("9007199254740999.92");
+ m.documents.mockResolvedValue([]);expect((await runFinancialReportForActor(actor,"gst-party",{})).totals).toEqual(["Total","","0.00","0.00"]);
+});
