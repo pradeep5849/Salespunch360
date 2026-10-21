@@ -1,7 +1,7 @@
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {EFFECTIVE_DOCUMENT_ALLOCATION,EFFECTIVE_ADVANCE_APPLICATION} from "./settlement-policy";
 import {retainedLineDiscountValue} from "./retained-line-discount";
-import {copySaleAttachmentsInTx} from "./sale-attachments";
+import {addDraftSaleAttachmentsInTx,cleanSaleAttachmentAttempts,copySaleAttachmentsInTx,prepareSaleAttachments,saleAttachmentManifest} from "./sale-attachments";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
@@ -222,10 +222,11 @@ export function reversePostedSaleForActor(actor: ProjectActor, id: string) {
     ),
   );
 }
-export function replacePostedSaleForActor(
+export async function replacePostedSaleForActor(
   actor: ProjectActor,
   id: string,
   raw: unknown,
+  files: File[] = [],
 ) {
   if (
     !canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_SALES_ENTRY") ||
@@ -239,8 +240,10 @@ export function replacePostedSaleForActor(
     .string()
     .uuid()
     .parse((raw as Record<string, unknown>).idempotencyKey);
-  const requestHash = commercialCreationHash({ sourceId: id, payload: raw });
-  return retrySerializable(() =>
+  const prepared=await prepareSaleAttachments(actor,files),attemptedKeys=new Set<string>();
+  const attachmentManifest=prepared.length?saleAttachmentManifest(prepared):undefined;
+  const requestHash = commercialCreationHash({ sourceId: id, payload: raw,...(attachmentManifest?{attachmentManifest}:{}) });
+  try{return await retrySerializable(() =>
     db.$transaction(
       async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${actor.companyId}::uuid FOR UPDATE`;
@@ -380,10 +383,12 @@ export function replacePostedSaleForActor(
           payload,
           tx,
           {documentId:sale.id,lineIds:retainedUnitLineIds},
+          attachmentManifest?commercialCreationHash({sourceSaleId:sale.id,attachmentManifest}):undefined,
         );
         if (replacement.id === sale.id || replacement.status !== "DRAFT")
           throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
         await copySaleAttachmentsInTx(tx,actor,sale.id,replacement.id);
+        await addDraftSaleAttachmentsInTx(tx,actor,replacement.id,prepared,attemptedKeys);
         // A renamed project must not rewrite an unedited invoice reference.
         // This value comes only from the authorized original document.
         if(payload.projectId===sale.projectId&&(raw as Record<string,unknown>).projectReference===undefined){
@@ -438,5 +443,5 @@ export function replacePostedSaleForActor(
         timeout: 30000,
       },
     ),
-  );
+  );}finally{if(attemptedKeys.size)await cleanSaleAttachmentAttempts(actor.companyId,attemptedKeys)}
 }

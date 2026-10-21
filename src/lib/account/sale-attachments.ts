@@ -22,6 +22,16 @@ async function authorize(actor: ProjectActor, write = false) {
 }
 const scope = (actor: ProjectActor) => actor.branchAccessScope === "SELECTED_BRANCHES" ? { branchId: { in: actor.branchIds ?? [] } } : {};
 const metadataSelect={id:true,displayName:true,mimeType:true,sizeBytes:true,createdAt:true} satisfies Prisma.CommercialAttachmentSelect;
+function nextFilePosition(existing:Array<{position:number;sizeBytes:number}>,files:PreparedPrivateDocumentFile[]){
+  const start=existing.reduce((next,row)=>Math.max(next,row.position+1),0);
+  if(start+files.length>50||existing.reduce((sum,row)=>sum+row.sizeBytes,0)+files.reduce((sum,file)=>sum+file.sizeBytes,0)>10*1024*1024)throw new SaleAttachmentError("SALE_ATTACHMENT_LIMIT");
+  return start;
+}
+async function writeSaleAttachmentInTx(tx:Prisma.TransactionClient,actor:ProjectActor,documentId:string,position:number,file:PreparedPrivateDocumentFile,attemptedKeys:Set<string>,id=randomUUID()){
+  const storageKey=`companies/${actor.companyId}/sale-attachments/${documentId}/${randomUUID()}`;
+  attemptedKeys.add(storageKey);await privateStorage().put(storageKey,file.bytes);
+  await tx.commercialAttachment.create({data:{id,companyId:actor.companyId,documentId,position,displayName:file.displayName,mimeType:file.mimeType,sizeBytes:file.sizeBytes,contentHash:file.contentHash,storageKey,uploadedById:actor.id}});
+}
 export async function prepareSaleAttachments(actor: ProjectActor, files: File[]) {
   if (!files.length) return [];
   await authorize(actor, true);
@@ -41,11 +51,19 @@ export async function storeSaleAttachmentsInTx(tx: Prisma.TransactionClient, act
   }
   if (document.status !== "DRAFT") throw new SaleAttachmentError("SALE_ATTACHMENT_SAVE_REQUIRED");
   for (const [position, file] of files.entries()) {
-    const storageKey = `companies/${actor.companyId}/sale-attachments/${documentId}/${randomUUID()}`;
-    attemptedKeys.add(storageKey);
-    await privateStorage().put(storageKey, file.bytes);
-    await tx.commercialAttachment.create({ data: { companyId: actor.companyId, documentId, position, displayName: file.displayName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, contentHash: file.contentHash, storageKey, uploadedById: actor.id } });
+    await writeSaleAttachmentInTx(tx,actor,documentId,position,file,attemptedKeys);
   }
+}
+
+/** A correction has already copied the source's immutable references. New files
+ * join that replacement before posting, in the same financial transaction. */
+export async function addDraftSaleAttachmentsInTx(tx:Prisma.TransactionClient,actor:ProjectActor,documentId:string,files:PreparedPrivateDocumentFile[],attemptedKeys:Set<string>){
+  if(!files.length)return;
+  await authorize(actor,true);
+  await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  if(!await tx.commercialDocument.findFirst({where:{id:documentId,companyId:actor.companyId,type:"SALES_INVOICE",status:"DRAFT",...scope(actor)},select:{id:true}}))throw new AuthorizationError();
+  const existing=await tx.commercialAttachment.findMany({where:{companyId:actor.companyId,documentId},select:{position:true,sizeBytes:true}}),start=nextFilePosition(existing,files);
+  for(const [index,file] of files.entries())await writeSaleAttachmentInTx(tx,actor,documentId,start+index,file,attemptedKeys);
 }
 
 /** Preserve immutable originals when the approved correction workflow creates
@@ -93,14 +111,11 @@ export async function appendSaleAttachmentsForActor(actor:ProjectActor,documentI
       return rows;
     }
     const existing=await tx.commercialAttachment.findMany({where:{companyId:actor.companyId,documentId:id},select:{position:true,sizeBytes:true}});
-    const start=existing.reduce((next,row)=>Math.max(next,row.position+1),0);
-    if(start+prepared.length>50||existing.reduce((sum,row)=>sum+row.sizeBytes,0)+prepared.reduce((sum,file)=>sum+file.sizeBytes,0)>10*1024*1024)throw new SaleAttachmentError("SALE_ATTACHMENT_LIMIT");
+    const start=nextFilePosition(existing,prepared);
     const metadata=prepared.map((file,index)=>({id:randomUUID(),position:start+index,displayName:file.displayName,mimeType:file.mimeType,sizeBytes:file.sizeBytes,contentHash:file.contentHash}));
     await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"SALE_ATTACHMENTS_ADDED",entityType:"SALES_INVOICE",entityId:id,metadata:{requestKey:key,requestHash,files:metadata}}});
     for(const [index,file] of prepared.entries()){
-      const storageKey=`companies/${actor.companyId}/sale-attachments/${id}/${randomUUID()}`;
-      attemptedKeys.add(storageKey);await privateStorage().put(storageKey,file.bytes);
-      await tx.commercialAttachment.create({data:{...metadata[index],companyId:actor.companyId,documentId:id,storageKey,uploadedById:actor.id}});
+      await writeSaleAttachmentInTx(tx,actor,id,metadata[index].position,file,attemptedKeys,metadata[index].id);
     }
     return tx.commercialAttachment.findMany({where:{companyId:actor.companyId,documentId:id,id:{in:metadata.map(file=>file.id)}},orderBy:{position:"asc"},select:metadataSelect});
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:30000}));}finally{if(attemptedKeys.size)await cleanSaleAttachmentAttempts(actor.companyId,attemptedKeys)}

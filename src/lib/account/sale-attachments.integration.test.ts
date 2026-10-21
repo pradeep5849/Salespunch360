@@ -21,6 +21,15 @@ const objects = new Map<string, Buffer>();
 const put = vi.fn(async (key: string, bytes: Buffer) => { objects.set(key, Buffer.from(bytes)); });
 const remove = vi.fn(async (key: string) => { objects.delete(key); });
 const save = (input = raw(), files = [pdf()]) => submitSaleForActor(actor, input, {}, "sale-save-receipt", files);
+async function payWithDiscount(documentId:string){
+ const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{transactionPreferences:{discountDuringPayment:true,linkPayments:false}}}});
+  await createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-21",allocations:[{documentId,amount:"100",discountAmount:"10"}]});
+ }finally{await client.accountSettings.update({where:{companyId},data:{transactionDefaults:settings.transactionDefaults===null?Prisma.DbNull:settings.transactionDefaults as Prisma.InputJsonValue}})}
+ return client.settlementAllocation.findFirstOrThrow({where:{companyId,documentId}});
+}
+
 
 describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () => {
   beforeAll(async () => {
@@ -28,7 +37,7 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     await client.branch.create({ data: { id: branchId, companyId, name: "Main", code: "MAIN", isPrimary: true } });
     await client.user.create({ data: { id: userId, companyId, name: actor.name, email: actor.email, passwordHash: "fixture-only", role: "ACCOUNT_USER", accountRole: "ACCOUNT_ADMIN", accountAccessActive: true } });
     await client.customer.create({ data: { id: customerId, companyId, branchId, name: "Sale files customer", isAccountCustomer: true } });
-    await client.accountSettings.create({ data: { companyId, enabledModules: [] } });
+    await client.accountSettings.create({ data: { companyId, enabledModules: [], transactionDefaults:{transactionPreferences:{linkPayments:false}} } });
     await client.financialYear.create({ data: { companyId, name: "2026-27", startDate: new Date("2026-04-01"), endDate: new Date("2027-03-31") } });
     await client.ledgerAccount.createMany({ data: DEFAULT_LEDGER_ACCOUNTS.map(row => ({ ...row, companyId })) });
     setPrivateStorageForTests({ put, delete: remove, get: async key => { const bytes = objects.get(key); if (!bytes) throw new Error("file missing"); return bytes; } });
@@ -41,6 +50,7 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
       await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
       await tx.accountOperationalAudit.deleteMany({ where: { companyId } });
       await tx.accountingAuditEvent.deleteMany({ where: { companyId } });
+      await tx.advanceApplication.deleteMany({ where: { companyId } });
       await tx.settlementAllocation.deleteMany({ where: { companyId } });
       await tx.accountSettlement.deleteMany({ where: { companyId } });
       await tx.commercialDocumentLine.deleteMany({ where: { companyId } });
@@ -139,6 +149,29 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     expect(await client.commercialAttachment.count({where:{companyId,documentId:replacement.id}})).toBe(1);
   });
 
+  it("adds newly selected files with a financial correction once and retains all original file references",async()=>{
+    const saved=await save(),allocation=await payWithDiscount(saved.id),[original]=await listSaleAttachmentsForActor(actor,saved.id),correction={...raw(),lines:[{lineType:"CUSTOM",itemName:"Corrected work",quantity:"1",rate:"80",taxRate:"0"}]};put.mockClear();
+    const [first,replay]=await Promise.all([replacePostedSaleForActor(actor,saved.id,correction,[pdf("new-support.pdf")]),replacePostedSaleForActor(actor,saved.id,correction,[pdf("new-support.pdf")])]);
+    expect(first.id).toBe(replay.id);expect(first.grandTotal.toFixed(2)).toBe("80.00");expect(put).toHaveBeenCalledTimes(1);
+    const credit=await client.accountSettlement.findFirstOrThrow({where:{companyId,receiptCreditSourceAllocationId:allocation.id}});
+    expect(credit.amount.toFixed(2)).toBe("90.00");expect(credit.remainingAmount.toFixed(2)).toBe("10.00");
+    const files=await listSaleAttachmentsForActor(actor,first.id);expect(files.map(file=>file.displayName)).toEqual(["plan.pdf","new-support.pdf"]);
+    expect((await downloadSaleAttachmentForActor(actor,files[0].id)).data).toEqual((await downloadSaleAttachmentForActor(actor,original.id)).data);
+    expect(await listSaleAttachmentsForActor(actor,saved.id)).toHaveLength(1);
+    await expect(replacePostedSaleForActor(actor,saved.id,correction,[pdf("changed-support.pdf")])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+    expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_AMENDED",entityId:saved.id}})).toBe(1);
+  });
+
+  it("rolls back a file-bearing correction completely when its new upload fails",async()=>{
+    const saved=await save(),beforeObjects=objects.size,before=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}}),beforeJournals=await client.journalEntry.count({where:{companyId}}),series=await client.numberingSeries.findMany({where:{companyId}}),correction={...raw(),lines:[{lineType:"CUSTOM",itemName:"Changed",quantity:"1",rate:"80",taxRate:"0"}]};
+    put.mockImplementationOnce(async(key,bytes)=>{objects.set(key,Buffer.from(bytes));throw new Error("correction storage unavailable")});
+    await expect(replacePostedSaleForActor(actor,saved.id,correction,[pdf("support.pdf")])).rejects.toThrow("correction storage unavailable");
+    expect(objects.size).toBe(beforeObjects);expect(await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}})).toEqual(before);
+    expect(await client.journalEntry.count({where:{companyId}})).toBe(beforeJournals);expect(await client.numberingSeries.findMany({where:{companyId}})).toEqual(series);
+    expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_AMENDED",entityId:saved.id}})).toBe(0);
+    const recovered=await replacePostedSaleForActor(actor,saved.id,correction,[pdf("support.pdf")]);expect(await listSaleAttachmentsForActor(actor,recovered.id)).toHaveLength(2);
+  });
+
   it("enforces Account edition/module availability before reading or uploading private bytes",async()=>{
     const saved=await save(),[file]=await listSaleAttachmentsForActor(actor,saved.id);put.mockClear();
     await client.company.update({where:{id:companyId},data:{productEdition:"SALESPUNCH360"}});
@@ -150,12 +183,8 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
   });
 
   it("appends supporting files once without changing paid invoice, receipt, numbering or ledger history",async()=>{
-    const input=raw(),saved=await save(input),settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
-    try{
-      await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{transactionPreferences:{discountDuringPayment:true}}}});
-      await createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:customerId,paymentMode:"CASH",amount:"90",transactionDate:"2026-10-21",allocations:[{documentId:saved.id,amount:"100",discountAmount:"10"}]});
-    }finally{await client.accountSettings.update({where:{companyId},data:{transactionDefaults:settings.transactionDefaults===null?Prisma.DbNull:settings.transactionDefaults as Prisma.InputJsonValue}})}
-    expect((await client.settlementAllocation.findFirstOrThrow({where:{companyId,documentId:saved.id}})).discountAmount.toFixed(2)).toBe("10.00");
+    const input=raw(),saved=await save(input),allocation=await payWithDiscount(saved.id);
+    expect(allocation.discountAmount.toFixed(2)).toBe("10.00");
     const snapshot=async()=>({document:await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id}}),journals:await client.journalEntry.findMany({where:{companyId},orderBy:{id:"asc"},include:{lines:{orderBy:{id:"asc"}}}}),receipts:await client.accountSettlement.findMany({where:{companyId},orderBy:{id:"asc"}}),allocations:await client.settlementAllocation.findMany({where:{companyId},orderBy:{id:"asc"}}),series:await client.numberingSeries.findMany({where:{companyId},orderBy:{id:"asc"}})});
     const before=await snapshot(),key=randomUUID();put.mockClear();
     const [first,replay]=await Promise.all([appendSaleAttachmentsForActor(actor,saved.id,key,[pdf("support.pdf")]),appendSaleAttachmentsForActor(actor,saved.id,key.toUpperCase(),[pdf("support.pdf")])]);
