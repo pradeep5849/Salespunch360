@@ -10358,3 +10358,12 @@ Counts remain185 IMPLEMENTED BUT NOT VERIFIED/13 PARTIAL/1 NOT STARTED;199 IDs r
 Implementation `aee70a9b63b7c3809bb1ba0f06da3cc2b35ef290` maps to A090-F01: shared currency/precision now formats non-Sale commercial rates/discounts/taxes/totals, charges, allocations, outstanding, adjustments, advances and stock/material values. Quantities/form numeric limits unchanged. Line table is a named keyboard-focusable horizontal scroll region. No financial/API/schema change.
 
 24 formatter/presentation unit tests passed; final desktop/mobile2browsercases passed(32.5s),USD/3decimals/date preferences,unchanged stored amount/journals,no overflow,keyboardfocus/AxeAA. Fixture errors(Vendor.branchId,missing invoice number) corrected; initial mobile scroll-region accessibility failure fixed before finalpass. FinalfullTypeScript/focusedESLint/diff passed. No Android change/device verification. A090-F01 remainsPARTIAL for other consumers/final validation;Hindi deferred. Counts185/13/1;199IDs preserved.
+
+
+## 21 October — Estimate list Convert
+
+Implementation `e23cccfa2359b89181920359aa633e46addb2a6c` maps to A083-F01/sharedA080-F02. Approved estimate cards expose the existing chooser on Web/Android using a shared list/Details capability helper. Current approved revision/customer/unconverted source/modules/permissions required; Save reauthorizes. Native row retains revision ID and server capability flags. Cancel/abandon creates no document or journal.
+
+123 grouped tests passed(8files,6.86s);9 PostgreSQL tests passed(2.02s) including corpus>200 and company/branch/cost/module scope. Initial DB invocation skipped9 due missing dedicated variable; finalguardedlocalrun executedall9. Desktop/mobile2browsercases passed(2.0m),chooser/choices/draftdenial/cancel focus/Axe/unsavedpreparation/no writes/nativeHTTP parity. Android compile+45quotationJVM tests passed(3m38s),0fail/error/skip; no device/current-slice local lint. FinalfullTypeScript/focusedESLint/diff passed.
+
+Estimate Balance display meaning and report Closed-order state were asked as business decisions; pending answers recorded in JSON. A083 remainsPARTIAL;A080-F02 existing implementation status preserved. Counts185/13/1 and199uniqueIDs unchanged. Prior exact-head CI39574551712 passed at06381afa;later source needs newCI. Draft153;no merge/deploy/production/A104.

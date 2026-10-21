@@ -55294,6 +55294,31 @@
           "work": "Targeted CI now includes Sale/order form prefill,quotation action-capability andmobile order-confirmation route tests. Migration job runs the8 real PostgreSQL approved conversion/retry/rollback/order confirmation cases separately. Existing pinned actions and Node22 runtime unchanged;no full2631+suite added per change.",
           "local_validation": "Workflow YAML parsed withjs-yaml;diff checkPASS;exact new DB test command withonly ACCOUNT_CHECKPOINT_DATABASE_URL passed8/8,0failed/skipped(2.29s). GitHub execution ofthis newhead remainspending;do not reuse predecessor success as current-head evidence.",
           "remaining": "Complete199-finding final-head validation andnative device/runtime limitations unchanged."
+        },
+        "estimate_list_conversion_2026_10_21": {
+          "implementation_commit": "e23cccfa2359b89181920359aa633e46addb2a6c",
+          "work": "Estimate cards now offer the existing conversion chooser on Web and Android. List and Details share a pure capability helper requiring the current approved revision/customer/unconverted source, Sales permissions and modules; server list exposes only the two conversion capability booleans. Android retains current revision ID/capabilities and opens unsaved Sale/Sale Order preparation. Save still reauthorizes; cancel/abandon creates no target or journal. No schema/financial write changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/page.tsx",
+            "src/lib/quotations/action-capabilities.test.ts",
+            "src/lib/quotations/action-capabilities.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "grouped": "123 tests/8 files PASS,0fail/skip,6.86s; includes9focused capability/list cases,not additive.",
+            "database": "Final9 local PostgreSQL tests PASS,0fail/skip,2.02s: corpus>200,paging/company/branch/cost/module scope,creation replay,immutable audit,revision and preparation retention. Initial invocation omitted ACCOUNT_CHECKPOINT_DATABASE_URL and skipped all9; corrected guarded local variable,final9executed successfully.",
+            "browser": "Desktop/mobile Chromium2PASS2.0m: approved-card chooser, draft-card no Convert, both choices, Axe dialog, cancel focus restoration, prefilled Sale/abandon leaves source Open,no commercial document/journal, native HTTP list capability parity.",
+            "android": "compileDebugKotlin +45 quotation JVM tests PASS,0fail/error/skip,3m38s. Native emulator/device/Compose-dialog/navigation/TalkBack runtime NOT RUN;current-slice local lint NOT RUN.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN",
+            "prior_targeted_ci": "39574551712 SUCCESS at06381afa334839ddb811c93d053f020d1d961923 Web/Android/migration;does notcertify later commercial display/list changes."
+          },
+          "remaining": "A083-F01 remains PARTIAL pending estimate Balance display meaning and final full checkpoint/native runtime. A080-F02 existing implemented status preserved; list helper does not prove all related findings complete. No merge/deploy/production/A104."
         }
       },
       "required_fix_before_user_sale_clarification": "Create authorized target draft through existing commercial services with stable source revision/linkage and replay identity. Define Open/Closed projection on successful conversion, retaining detailed lifecycle/history. Do not auto-post based solely on preview or clicking Convert."
@@ -57786,6 +57811,31 @@
           },
           "implementation_completion": "A080-F02 code implementation complete against original conversion requirements;its status is IMPLEMENTED BUT NOT VERIFIED,not a final verification claim. Earlier PARTIAL remaining-work entries are historical and superseded for the now-completed Web/native preparation,chooser,physical-unit runtime and order browser/HTTP scope.",
           "remaining_limitations": "No native emulator/device navigation,Coroutine/UI lifecycle,TalkBack or physical device runtime executed. Full final199-finding regression/build/schema/migration/browser/Android validation remains pending. Other quotation presentation/list and Sale form findings retain their own incomplete scope. No new migration beyond142,no production write/merge/deploy/A104."
+        },
+        "estimate_list_conversion_2026_10_21": {
+          "implementation_commit": "e23cccfa2359b89181920359aa633e46addb2a6c",
+          "work": "Estimate cards now offer the existing conversion chooser on Web and Android. List and Details share a pure capability helper requiring the current approved revision/customer/unconverted source, Sales permissions and modules; server list exposes only the two conversion capability booleans. Android retains current revision ID/capabilities and opens unsaved Sale/Sale Order preparation. Save still reauthorizes; cancel/abandon creates no target or journal. No schema/financial write changes.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/quotations/page.tsx",
+            "src/lib/quotations/action-capabilities.test.ts",
+            "src/lib/quotations/action-capabilities.ts",
+            "src/lib/quotations/service.ts"
+          ],
+          "tests": {
+            "grouped": "123 tests/8 files PASS,0fail/skip,6.86s; includes9focused capability/list cases,not additive.",
+            "database": "Final9 local PostgreSQL tests PASS,0fail/skip,2.02s: corpus>200,paging/company/branch/cost/module scope,creation replay,immutable audit,revision and preparation retention. Initial invocation omitted ACCOUNT_CHECKPOINT_DATABASE_URL and skipped all9; corrected guarded local variable,final9executed successfully.",
+            "browser": "Desktop/mobile Chromium2PASS2.0m: approved-card chooser, draft-card no Convert, both choices, Axe dialog, cancel focus restoration, prefilled Sale/abandon leaves source Open,no commercial document/journal, native HTTP list capability parity.",
+            "android": "compileDebugKotlin +45 quotation JVM tests PASS,0fail/error/skip,3m38s. Native emulator/device/Compose-dialog/navigation/TalkBack runtime NOT RUN;current-slice local lint NOT RUN.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "diff": "git diff --check PASS.",
+            "final_complete_head": "NOT RUN",
+            "prior_targeted_ci": "39574551712 SUCCESS at06381afa334839ddb811c93d053f020d1d961923 Web/Android/migration;does notcertify later commercial display/list changes."
+          },
+          "remaining": "A083-F01 remains PARTIAL pending estimate Balance display meaning and final full checkpoint/native runtime. A080-F02 existing implemented status preserved; list helper does not prove all related findings complete. No merge/deploy/production/A104."
         }
       },
       "push_checkpoint_evidence": {
@@ -71851,5 +71901,22 @@
       "conclusion": "success",
       "scope": "Targeted3jobs;notcompletefinal199verification. Postedappendmigration144notinthishead."
     }
-  ]
+  ],
+  "checkpoint_pending_questions_2026_10_21": {
+    "order_closed_state": {
+      "findings": [
+        "A084-F03",
+        "A085-F02"
+      ],
+      "status": "AWAITING USER ANSWER",
+      "question": "Closed orders: fully invoiced/billed versus explicitly marked closed? Existing confirmation does not define separate closure."
+    },
+    "estimate_card_balance": {
+      "findings": [
+        "A083-F01"
+      ],
+      "status": "AWAITING USER ANSWER",
+      "question": "Balance label: Not applicable estimate versus quoted total until conversion? No estimate receivable exists."
+    }
+  }
 }
