@@ -817,10 +817,13 @@ export async function createCommercialDocumentForActor(
   raw: unknown,
   transaction?: Prisma.TransactionClient,
   retainedSale?: {documentId:string;lineIds:ReadonlyMap<number,string>},
+  trustedAttachmentManifest?: string,
 ) {
   if(retainedSale&&!transaction)throw new Error("SALE_AMENDMENT_TRANSACTION_REQUIRED");
+  if(trustedAttachmentManifest&&(!transaction||!/^[a-f0-9]{64}$/.test(trustedAttachmentManifest)))throw new Error("SALE_ATTACHMENT_SAVE_REQUIRED");
   const d = commercialDocumentInput.parse(raw),
     p = policies[d.type];
+  if(trustedAttachmentManifest&&(d.type!=="SALES_INVOICE"||!d.idempotencyKey))throw new Error("SALE_ATTACHMENT_SAVE_REQUIRED");
   await requireAccountModules(actor, ...p.modules);
   assertBranch(actor, d.branchId);
   const [enabled, companyPolicy] = await Promise.all([
@@ -868,7 +871,7 @@ export async function createCommercialDocumentForActor(
         }
         const resolvedDefaults=applyTransactionDefaults(d,settings?.transactionDefaults);
         const creationRequestHash = d.idempotencyKey
-          ? commercialCreationHash(d)
+          ? commercialCreationHash(trustedAttachmentManifest?{...d,attachmentManifest:trustedAttachmentManifest}:d)
           : null;
         if (d.idempotencyKey) {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`commercial-create:${actor.companyId}:${d.idempotencyKey}`},0))`;

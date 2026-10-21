@@ -55,6 +55,8 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   expect(retained).toEqual(before.record);
   expect(await db.customer.count({where:{companyId,shippingAddress:"Current customer site"}})).toBe(1);
   expect(await db.commercialDocument.count({where:{companyId}})).toBe(1);
+  // The additive attachment migration must not invent files for legacy sales.
+  expect(await db.commercialAttachment.count({where:{companyId}})).toBe(0);
   const columns=await db.$queryRaw<Array<{table_name:string;column_name:string}>>`SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND ((table_name='commercial_documents' AND column_name='shippingAddress') OR (table_name='expense_transactions' AND column_name='creationRequestKey'))`;
   expect(columns).toHaveLength(2);
   const ownerKey=await db.$queryRaw<Array<{indexdef:string}>>`SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='owner_financial_accounts_companyId_id_key'`;

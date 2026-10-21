@@ -101,6 +101,10 @@ jobs:
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/quotations/commercial-link.integration.test.ts --maxWorkers=1
+      - name: Sale private file atomicity, retries, access and immutable history
+        env:
+          ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+        run: npx vitest run src/lib/account/sale-attachments.integration.test.ts src/lib/account/private-document-files.test.ts src/lib/account/sale-submit.test.ts --maxWorkers=1
       - name: Commercial primary-unit snapshots and historical corrections
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci

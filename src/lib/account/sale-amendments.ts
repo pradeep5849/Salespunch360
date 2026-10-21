@@ -1,6 +1,7 @@
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {EFFECTIVE_DOCUMENT_ALLOCATION,EFFECTIVE_ADVANCE_APPLICATION} from "./settlement-policy";
 import {retainedLineDiscountValue} from "./retained-line-discount";
+import {copySaleAttachmentsInTx} from "./sale-attachments";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
@@ -382,6 +383,7 @@ export function replacePostedSaleForActor(
         );
         if (replacement.id === sale.id || replacement.status !== "DRAFT")
           throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
+        await copySaleAttachmentsInTx(tx,actor,sale.id,replacement.id);
         // A renamed project must not rewrite an unedited invoice reference.
         // This value comes only from the authorized original document.
         if(payload.projectId===sale.projectId&&(raw as Record<string,unknown>).projectReference===undefined){

@@ -828,6 +828,7 @@ model Company {
   quotationDocuments                  QuotationDocument[]
   quotationRevisions                  QuotationRevision[]
   quotationAttachments                QuotationAttachment[]
+  commercialAttachments               CommercialAttachment[]
   quotationLines                      QuotationLine[]
   quotationAdjustments                QuotationAdjustment[]
   quotationPaymentSchedules           QuotationPaymentSchedule[]
@@ -926,6 +927,7 @@ model User {
   acceptedQuotationDocuments QuotationDocument[]      @relation("QuotationAcceptor")
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
   quotationAttachments      QuotationAttachment[]
+  commercialAttachments     CommercialAttachment[]
   commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
   settlements                AccountSettlement[]      @relation("SettlementCreator")
   commercialAudits           CommercialAuditEvent[]   @relation("CommercialAuditActor")
@@ -2511,6 +2513,7 @@ model CommercialDocument {
   reminders              PaymentReminder[]
   allocations            SettlementAllocation[]
   advanceApplications    AdvanceApplication[]
+  attachments            CommercialAttachment[]
 
   @@unique([companyId, id])
   @@unique([companyId, creationRequestKey])
@@ -2524,6 +2527,27 @@ model CommercialDocument {
   @@index([companyId, sourceQuotationRevisionId])
   @@index([companyId, sourcePurchaseOrderId, status])
   @@map("commercial_documents")
+}
+
+model CommercialAttachment {
+  id           String @id @default(uuid()) @db.Uuid
+  companyId    String @db.Uuid
+  documentId   String @db.Uuid
+  position     Int
+  displayName  String @db.VarChar(240)
+  mimeType     String @db.VarChar(120)
+  sizeBytes    Int
+  contentHash  String @db.Char(64)
+  storageKey   String @db.VarChar(512)
+  uploadedById String @db.Uuid
+  createdAt    DateTime @default(now())
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document     CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  uploadedBy   User @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, documentId, position])
+  @@index([companyId, storageKey])
+  @@map("commercial_attachments")
 }
 
 model ServiceReminderCompletion {

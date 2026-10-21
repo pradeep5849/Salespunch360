@@ -150,6 +150,14 @@ describe("A088 backup shared financial dependencies", () => {
     expect(bundle.data.quotationAttachment).toEqual([row]);expect(bundle.manifest.recordCounts.quotationAttachment).toBe(1);
     expect(m.reads.get("quotationAttachment")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]});
   });
+  it("retains immutable private Sale file identity, order and content fingerprints",async()=>{
+    const row={id:"sale-file",companyId:actor.companyId,documentId:"posted-sale",position:0,storageKey:"companies/company-a/sale-attachments/private",contentHash:"b".repeat(64),displayName:"Plan.pdf",mimeType:"application/pdf",sizeBytes:128};
+    m.reads.set("commercialAttachment",vi.fn().mockResolvedValue([row]));
+    const result=await createAccountBackupForActor(actor),bundle=JSON.parse(new TextDecoder().decode(result.bytes));
+    expect(bundle.data.commercialAttachment).toEqual([row]);expect(bundle.manifest.recordCounts.commercialAttachment).toBe(1);
+    expect(m.reads.get("commercialAttachment")).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId},orderBy:[{documentId:"asc"},{position:"asc"}]});
+    expect(result.manifest.uploadedFiles).toContain("private-storage backup");
+  });
   it("denies backup generation before reading financial data for a non-administrator", async () => {
     await expect(
       createAccountBackupForActor({ ...actor, accountRole: "ACCOUNTANT" }),
