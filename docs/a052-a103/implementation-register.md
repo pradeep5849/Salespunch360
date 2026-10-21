@@ -10372,3 +10372,12 @@ Estimate Balance display meaning and report Closed-order state were asked as bus
 ## 21 October — Android Expense tax display
 
 Implementation `7bb825fda17ee38b33f323ac873231a54463cd6e` maps to A090-F01. Expense Details CGST/SGST/IGST/cess now use the shared business currency/decimal formatter,matching combinedtax. No amount/API/ledger/schema change. Android Kotlin compilation and11focused display/expense JVM tests passed(1m58s),0failures/errors/skips confirmed from XML;no current-slice local lint/device/Compose/TalkBack runtime. Diff check passed. Complete consumer/final checkpoint verification remains pending;Hindi deferred.199IDs/counts unchanged.
+
+
+## 21 October — Recorded TDS/TCS reports
+
+Implementation `abbe2190d2f71aa7e55df4748c57eaff1a5580bc` maps to A084-F03/A085-F02/A090-F01. TDS Receivable(sales),TDS Payable(purchases),TCS Receivable(purchases) use stored posted documents and signed return notes with repeatable-read pagination/company/branch/date/party scope. Catalogue/favourites/module/role controls,Web/native party filters,date/currency formatting and exports connected. Recorded invoice activity is explicitly distinguished from government reconciliation/remittance/statutory balances/official filing. No ledger/schema/migration change.
+
+159 grouped tests passed(21files,43.42s);38focusedsubset overlaps. Desktop/mobile2browsercases passed(2.4m),all3reports/nativeHTTP,real10TDS/5TCS andquarterreturns=>7.50/3.75,party/branch/role scope,all exports,Axe/nooverflow,no journal writes. Android compile+25reportJVM tests passed(3m38s),0fail/error/skip;no current-slice local lint/device runtime. FullTypeScript/focusedESLint/diff passed.
+
+Emulator probe did not boot:AVD userdata requires7372.80MB but7330.21MB available;smaller dedicated AVD partition attempt did not resolve. No source/user data deleted or native UI verification claimed. Exact error retained in JSON. Form27EQ filing-versus-recorded-source-report question added to pending business questions;Order Closed/estimate Balance answers still pending. Broad findings/counts185/13/1 unchanged;199IDs retained. Prior exact-head CI39577840091 passed at6187a4c3;newsource/final199verification pending. PR153 Draft;no merge/deploy/production/A104.

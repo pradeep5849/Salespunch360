@@ -59657,6 +59657,42 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 broad report/reference scope and A090-F01 other consumers remain PARTIAL; full checkpoint-head/device validation pending. A067-F03 opening processing-fee decision unchanged, not resolved by this read-only report."
+        },
+        "withholding_reports_2026_10_21": {
+          "implementation_commit": "abbe2190d2f71aa7e55df4748c57eaff1a5580bc",
+          "work": "Added TDS Receivable(sales),TDS Payable(purchases),TCS Receivable(purchases) destinations. Paginated repeatable-read company/branch/date/party queries read stored posted invoice deductions/collections and sign corresponding return notes. Saved document taxable base and amounts retained without recalculation;zero-value documents excluded. Shared catalogue,favourites,module guards,Web/native party controls,currency/date formatting and exports connected. Notes distinguish recorded invoice tax activity from remittance/government-credit reconciliation/unpaid statutory balances/official filing. No Form27EQ filing implementation inferred;no ledger/schema/migration changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/withholding.test.ts",
+            "src/lib/account/reports/withholding.ts"
+          ],
+          "read_models": [
+            "CommercialDocument",
+            "JournalEntry"
+          ],
+          "services": [
+            "runFinancialReportForActor(tds-receivable/tds-payable/tcs-receivable)",
+            "GET /api/v1/mobile/account/reports/{report}",
+            "GET /api/account/reports/{report}/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "focused": "38 tests/3files PASS,2.21s,overlaps grouped.",
+            "grouped": "159 tests/21files PASS,0fail/skip,43.42s;pagination>1000/exact large amounts,scope,module/role/unsupported filters,return signs,empty state,date/currency/export precision.",
+            "browser": "Desktop/mobile Chromium2PASS2.4m;real posted100sales/purchase with10TDS/5purchaseTCS andquarterreturns produce7.50TDS/3.75TCS. All3Web/nativeHTTP reports,party filters,foreignbranch403,PM403,CSV/XLSX/PDF,Axe/nooverflow,no additional journal writes.",
+            "android": "Kotlin compilation +25reportJVM tests PASS,0failures/errors/skips,3m38s. Native device/Compose/emulator/TalkBack runtime NOT RUN;local current-slice lint NOT RUN.",
+            "typescript": "Full tsc --noEmit PASS after all source/browser additions,before runtime.",
+            "eslint": "Focused ESLint PASS.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39577840091 SUCCESS at6187a4c398471d818d86805c5f94d821765ffeaf:Web,Android,migration. Does not certify this later tax slice or final199 validation.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for remaining catalogue/reference scope,including Order reports pending Closed semantics and Form27EQ pending filing/source-report requirement. A090 other consumers/final validation remainPARTIAL. No whole-finding completion inferred."
         }
       }
     },
@@ -63979,6 +64015,42 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 broad report/reference scope and A090-F01 other consumers remain PARTIAL; full checkpoint-head/device validation pending. A067-F03 opening processing-fee decision unchanged, not resolved by this read-only report."
+        },
+        "withholding_reports_2026_10_21": {
+          "implementation_commit": "abbe2190d2f71aa7e55df4748c57eaff1a5580bc",
+          "work": "Added TDS Receivable(sales),TDS Payable(purchases),TCS Receivable(purchases) destinations. Paginated repeatable-read company/branch/date/party queries read stored posted invoice deductions/collections and sign corresponding return notes. Saved document taxable base and amounts retained without recalculation;zero-value documents excluded. Shared catalogue,favourites,module guards,Web/native party controls,currency/date formatting and exports connected. Notes distinguish recorded invoice tax activity from remittance/government-credit reconciliation/unpaid statutory balances/official filing. No Form27EQ filing implementation inferred;no ledger/schema/migration changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/withholding.test.ts",
+            "src/lib/account/reports/withholding.ts"
+          ],
+          "read_models": [
+            "CommercialDocument",
+            "JournalEntry"
+          ],
+          "services": [
+            "runFinancialReportForActor(tds-receivable/tds-payable/tcs-receivable)",
+            "GET /api/v1/mobile/account/reports/{report}",
+            "GET /api/account/reports/{report}/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "focused": "38 tests/3files PASS,2.21s,overlaps grouped.",
+            "grouped": "159 tests/21files PASS,0fail/skip,43.42s;pagination>1000/exact large amounts,scope,module/role/unsupported filters,return signs,empty state,date/currency/export precision.",
+            "browser": "Desktop/mobile Chromium2PASS2.4m;real posted100sales/purchase with10TDS/5purchaseTCS andquarterreturns produce7.50TDS/3.75TCS. All3Web/nativeHTTP reports,party filters,foreignbranch403,PM403,CSV/XLSX/PDF,Axe/nooverflow,no additional journal writes.",
+            "android": "Kotlin compilation +25reportJVM tests PASS,0failures/errors/skips,3m38s. Native device/Compose/emulator/TalkBack runtime NOT RUN;local current-slice lint NOT RUN.",
+            "typescript": "Full tsc --noEmit PASS after all source/browser additions,before runtime.",
+            "eslint": "Focused ESLint PASS.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39577840091 SUCCESS at6187a4c398471d818d86805c5f94d821765ffeaf:Web,Android,migration. Does not certify this later tax slice or final199 validation.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for remaining catalogue/reference scope,including Order reports pending Closed semantics and Form27EQ pending filing/source-report requirement. A090 other consumers/final validation remainPARTIAL. No whole-finding completion inferred."
         }
       }
     },
@@ -68882,6 +68954,42 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A090-F01 remains PARTIAL for complete consumer/final verification;Hindi explicitly deferred. No whole-finding completion inferred."
+        },
+        "withholding_reports_2026_10_21": {
+          "implementation_commit": "abbe2190d2f71aa7e55df4748c57eaff1a5580bc",
+          "work": "Added TDS Receivable(sales),TDS Payable(purchases),TCS Receivable(purchases) destinations. Paginated repeatable-read company/branch/date/party queries read stored posted invoice deductions/collections and sign corresponding return notes. Saved document taxable base and amounts retained without recalculation;zero-value documents excluded. Shared catalogue,favourites,module guards,Web/native party controls,currency/date formatting and exports connected. Notes distinguish recorded invoice tax activity from remittance/government-credit reconciliation/unpaid statutory balances/official filing. No Form27EQ filing implementation inferred;no ledger/schema/migration changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/withholding.test.ts",
+            "src/lib/account/reports/withholding.ts"
+          ],
+          "read_models": [
+            "CommercialDocument",
+            "JournalEntry"
+          ],
+          "services": [
+            "runFinancialReportForActor(tds-receivable/tds-payable/tcs-receivable)",
+            "GET /api/v1/mobile/account/reports/{report}",
+            "GET /api/account/reports/{report}/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "focused": "38 tests/3files PASS,2.21s,overlaps grouped.",
+            "grouped": "159 tests/21files PASS,0fail/skip,43.42s;pagination>1000/exact large amounts,scope,module/role/unsupported filters,return signs,empty state,date/currency/export precision.",
+            "browser": "Desktop/mobile Chromium2PASS2.4m;real posted100sales/purchase with10TDS/5purchaseTCS andquarterreturns produce7.50TDS/3.75TCS. All3Web/nativeHTTP reports,party filters,foreignbranch403,PM403,CSV/XLSX/PDF,Axe/nooverflow,no additional journal writes.",
+            "android": "Kotlin compilation +25reportJVM tests PASS,0failures/errors/skips,3m38s. Native device/Compose/emulator/TalkBack runtime NOT RUN;local current-slice lint NOT RUN.",
+            "typescript": "Full tsc --noEmit PASS after all source/browser additions,before runtime.",
+            "eslint": "Focused ESLint PASS.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39577840091 SUCCESS at6187a4c398471d818d86805c5f94d821765ffeaf:Web,Android,migration. Does not certify this later tax slice or final199 validation.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for remaining catalogue/reference scope,including Order reports pending Closed semantics and Form27EQ pending filing/source-report requirement. A090 other consumers/final validation remainPARTIAL. No whole-finding completion inferred."
         }
       },
       "intermediate_validation": {
@@ -70924,6 +71032,12 @@
       "focused_lint": "PASS",
       "migrations": "NONE",
       "final_head_verification": false
+    },
+    "emulator_probe_2026_10_21": {
+      "status": "DID NOT BOOT — ENVIRONMENT LIMITATION",
+      "attempt": "Created isolated a052_checkpoint AVD under writable Android cache;Android35googleapisx86_64,software acceleration off/headless. Did not change source/production data.",
+      "result": "Emulator fatal userdata disk-space check:7330.21MB available,7372.80MB required. Dedicated new AVD2GB partition configuration and2048MB partition flag did not resolve check. No cache/source/user data deleted. No native UI runtime claimed.",
+      "evidence": "Scratch emulator-create.log,emulator-runtime.log,emulator-runtime-small.log;machine register preserves exact error."
     }
   },
   "approved_business_decisions": {
@@ -71931,6 +72045,14 @@
       ],
       "status": "AWAITING USER ANSWER",
       "question": "Balance label: Not applicable estimate versus quoted total until conversion? No estimate receivable exists."
+    },
+    "form_27eq": {
+      "findings": [
+        "A084-F03",
+        "A085-F02"
+      ],
+      "status": "AWAITING USER ANSWER",
+      "question": "Official filing export with challan/section/deductee details versus recorded sales TCS report? Existing models lack full filing data."
     }
   }
 }
