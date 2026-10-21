@@ -9,7 +9,7 @@ import {requireAccountModules} from "../modules";
 import {authorizeProjectForCommercial,type ProjectActor} from "../projects";
 import {inAccountTransaction} from "../transaction-scope";
 import {orderQuantitySummary} from "./fulfilment";
-async function authorizedOrder(tx:Prisma.TransactionClient,actor:ProjectActor,id:string,write=false){
+export async function authorizedOrder(tx:Prisma.TransactionClient,actor:ProjectActor,id:string,write=false){
  const company=await tx.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true}});
  if(!canUsePermission(actor,company.productEdition,"ACCOUNT_LEDGER_VIEW"))throw new AuthorizationError();
  const order=await tx.commercialDocument.findFirst({where:{id,companyId:actor.companyId,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:actor.branchIds??[]}}:{}),type:{in:["SALES_ORDER","PURCHASE_ORDER"]}},include:{lines:{orderBy:{position:"asc"}}}});
@@ -29,7 +29,7 @@ export async function orderStateInTx(tx:Prisma.TransactionClient,actor:ProjectAc
  const targets=await effectiveOrderTargetsInTx(tx,actor.companyId,allTargets);
  const legacy=targets.some(t=>t.lines.some(l=>!l.sourceOrderLineId));
  const quantities=order.lines.length?orderQuantitySummary(order.lines,legacy?[]:targets.map(t=>({...t,status:"POSTED" as const,lines:t.lines.map(l=>({...l,sourceOrderLineId:l.sourceOrderLineId!}))})),Boolean(closed)):null;
- return{canClose:order.status==="POSTED"&&canUsePermissionForMutation(actor,"SALESPUNCH360_ACCOUNT",order.type==="SALES_ORDER"?"ACCOUNT_SALES_ENTRY":"ACCOUNT_PURCHASE_ENTRY"),orderId:order.id,type:order.type,documentStatus:order.status,status:order.status!=="POSTED"?order.status:closed?"CLOSED":legacy?"UNRESOLVED":quantities?.status??"UNRESOLVED",reason:closed?"MANUAL":legacy?"LEGACY_UNALLOCATED":quantities?.reason??"EMPTY_ORDER",closedAt:closed?.createdAt??null,lines:(legacy?[]:quantities?.lines??[]).map(line=>({...line,itemName:order.lines.find(source=>source.id===line.id)?.itemName??"Order line"})),note:legacy?"Historical invoices/bills have no source-line allocation. Quantity completion cannot be inferred from money or item names.":null};
+ return{canPrepareSale:order.type==="SALES_ORDER"&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SALES_ENTRY"),canClose:order.status==="POSTED"&&canUsePermissionForMutation(actor,"SALESPUNCH360_ACCOUNT",order.type==="SALES_ORDER"?"ACCOUNT_SALES_ENTRY":"ACCOUNT_PURCHASE_ENTRY"),orderId:order.id,type:order.type,documentStatus:order.status,status:order.status!=="POSTED"?order.status:closed?"CLOSED":legacy?"UNRESOLVED":quantities?.status??"UNRESOLVED",reason:closed?"MANUAL":legacy?"LEGACY_UNALLOCATED":quantities?.reason??"EMPTY_ORDER",closedAt:closed?.createdAt??null,lines:(legacy?[]:quantities?.lines??[]).map(line=>({...line,itemName:order.lines.find(source=>source.id===line.id)?.itemName??"Order line"})),note:legacy?"Historical invoices/bills have no source-line allocation. Quantity completion cannot be inferred from money or item names.":null};
 }
 export async function orderStateForActor(actor:ProjectActor,id:string){return db.$transaction(tx=>orderStateInTx(tx,actor,z.string().uuid().parse(id)),{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead})}
 export async function closeRemainingOrderForActor(actor:ProjectActor,raw:unknown){

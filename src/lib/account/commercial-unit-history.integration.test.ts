@@ -1,3 +1,4 @@
+import {orderSalePreparationForActor} from "./orders/preparation";
 import {orderStateForActor,closeRemainingOrderForActor} from "./orders/lifecycle";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {reverseJournalInTx} from "@/lib/accounting/service";
@@ -354,7 +355,11 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   await confirmSalesOrderForActor(actor,{documentId:order.id});
   const source=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:order.id}});
   const make=(quantity:string,rate="1")=>createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",sourceSalesOrderId:order.id,lines:[{lineType:"CUSTOM",sourceOrderLineId:source.id,itemName:source.itemName,quantity,rate,taxRate:"0"}]});
+  const countBeforePreparation=await client.commercialDocument.count({where:{companyId}}),prepared=await orderSalePreparationForActor(actor,order.id);expect(prepared.sourceSalesOrderId).toBe(order.id);expect(prepared.lines[0]).toMatchObject({sourceOrderLineId:source.id,quantity:"10",rate:"100"});expect(await client.commercialDocument.count({where:{companyId}})).toBe(countBeforePreparation);
+  await client.customer.update({where:{id:customerId},data:{isActive:false}});try{await expect(orderSalePreparationForActor(actor,order.id)).rejects.toThrow("ORDER_PARTY_UNAVAILABLE")}finally{await client.customer.update({where:{id:customerId},data:{isActive:true}})}
+  await expect(orderSalePreparationForActor({...actor,accountRole:"DATA_ENTRY"},order.id)).rejects.toThrow();await expect(orderSalePreparationForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},order.id)).rejects.toThrow("NOT_FOUND");
   const first=await make("5");await postCommercialDocumentForActor(actor,{documentId:first.id});
+  expect((await orderSalePreparationForActor(actor,order.id)).lines[0].quantity).toBe("5");
   // Drafts do not reserve quantity, and invoice rates need not equal order rates.
   const a=await make("4"),b=await make("4");
   const raced=await Promise.allSettled([postCommercialDocumentForActor(actor,{documentId:a.id}),postCommercialDocumentForActor(actor,{documentId:b.id})]);
@@ -366,6 +371,7 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   const final=await make("1");await postCommercialDocumentForActor(actor,{documentId:final.id});
   await expect(make("0.0001")).rejects.toThrow("ORDER_QUANTITY_EXCEEDED");
   expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"CLOSED",reason:"FULFILLED",lines:[{remaining:"0.0000"}]});
+  await expect(orderSalePreparationForActor(actor,order.id)).rejects.toThrow("ORDER_NOT_OPEN");
   const firstLine=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:first.id}});
   const changed=await replacePostedSaleForActor(actor,first.id,{branchId,partyId:customerId,issueDate:"2026-10-20",idempotencyKey:randomUUID(),lines:[{originalLineId:firstLine.id,lineType:"CUSTOM",itemName:source.itemName,quantity:"4",rate:"1",taxRate:"0"}]});
   expect(changed.sourceSalesOrderId).toBe(order.id);expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"OPEN",lines:[{remaining:"1.0000"}]});
@@ -386,6 +392,15 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
 
   await expect(createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customerId,sourceSalesOrderId:manual.id,issueDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:manualLine.id,itemName:manualLine.itemName,quantity:"1",rate:"1"}]})).rejects.toThrow("ORDER_MANUALLY_CLOSED");
 
+ });
+
+ it("prepares and invoices secondary order units using the retained conversion after master changes",async()=>{
+  await client.accountProduct.update({where:{id:productId},data:{unitId:primary,secondaryUnitId:secondary,secondaryUnitsPerBase:"0.1"}});
+  const order=await createCommercialDocumentForActor(actor,{type:"SALES_ORDER",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:productId,unitSelection:"SECONDARY",quantity:"1",rate:"200",taxRate:"0"}]});await confirmSalesOrderForActor(actor,{documentId:order.id});
+  await client.accountProduct.update({where:{id:productId},data:{secondaryUnitsPerBase:"0.2"}});
+  const draft=await orderSalePreparationForActor(actor,order.id),line=draft.lines[0];expect(line.unitSelection).toBe("SECONDARY");expect(line.quantity).toBe("1");expect(line.unitConversionSnapshot?.secondaryUnitsPerBase).toBe("0.1");
+  const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",sourceSalesOrderId:order.id,branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"PRODUCT",sourceId:productId,sourceOrderLineId:line.sourceOrderLineId,unitSelection:"SECONDARY",quantity:line.quantity,rate:line.rate,taxRate:"0"}]});
+  const stored=await client.commercialDocumentLine.findFirstOrThrow({where:{companyId,documentId:sale.id}});expect(stored.baseQuantity?.toString()).toBe("10");expect((stored.unitConversionSnapshot as {secondaryUnitsPerBase:string}).secondaryUnitsPerBase).toBe("0.1");await postCommercialDocumentForActor(actor,{documentId:sale.id});expect((await orderStateForActor(actor,order.id)).status).toBe("CLOSED");
  });
 
 });

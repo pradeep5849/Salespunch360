@@ -8,6 +8,10 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  ORDER_PARTY_UNAVAILABLE:"The order’s branch or customer is inactive. Review the original party before invoicing this order.",
+  INVALID_SOURCE_ORDER:"Keep the order’s original company, branch, party and project when invoicing its quantities.",
+  ORDER_NOT_OPEN:"This order has no open quantities available to invoice. Reload its current status.",
+  ORDER_UNIT_REVIEW_REQUIRED:"The remaining primary quantity cannot be represented in the order’s selected unit at four decimal places. Review the unit before invoicing.",
   ORDER_NOT_CONFIRMED:"Confirm the order before closing its remaining quantities.",
   ORDER_MANUALLY_CLOSED:"This order’s remaining quantities have been closed. Open its retained history.",
   ORDER_QUANTITY_EXCEEDED:"The invoice or bill exceeds the order’s remaining quantity. Reload the order before saving.",

@@ -2,7 +2,7 @@ import {parseCommercialUnitSnapshot} from "./commercial-unit-snapshot";
 import {retainedLineDiscountValue} from "./retained-line-discount";
 import type {getCommercialDocumentForActor} from "./commercial";
 import type {SaleEditInitial} from "./sale-edit-initial";
-export type SaleDraftInitial=Omit<SaleEditInitial,"id"|"documentNumber">&{copiedFromSaleId?:string;sourceQuotationRevisionId?:string;quotationReference?:{documentId:string;number:string;terms:string|null;inclusions:string|null;exclusions:string|null;notes:string|null;paymentSchedule:Array<{label:string;amount:string;dueDescription:string|null}>}};
+export type SaleDraftInitial=Omit<SaleEditInitial,"id"|"documentNumber">&{copiedFromSaleId?:string;sourceSalesOrderId?:string;orderNumber?:string;sourceQuotationRevisionId?:string;quotationReference?:{documentId:string;number:string;terms:string|null;inclusions:string|null;exclusions:string|null;notes:string|null;paymentSchedule:Array<{label:string;amount:string;dueDescription:string|null}>}};
 type Source=Awaited<ReturnType<typeof getCommercialDocumentForActor>>;
 /** New-document input retains only recheckable IDs for selected-unit provenance.
  * Posting, receipts, return links, serial assignment and stock movements are never copied. */

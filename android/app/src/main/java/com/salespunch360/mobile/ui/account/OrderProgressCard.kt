@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
 @Composable
-fun OrderProgressCard(id:String){
+fun OrderProgressCard(id:String,navigate:(String)->Unit={}){
  val context=LocalContext.current
  val api=remember(context){ApiClient(SecureSession(context))}
  val scope=rememberCoroutineScope()
@@ -34,6 +34,7 @@ fun OrderProgressCard(id:String){
    Text("Status: ${current.str("status")} · ${current.str("reason").replace('_',' ')}")
    current.str("note").takeIf{it.isNotBlank()}?.let{Text(it)}
    current.array("lines").forEach{line->Text("${line.str("itemName")}: Ordered ${line.str("ordered")} · Invoiced / billed ${line.str("fulfilled")} · Remaining ${line.str("remaining")}")}
+   if(current.str("type")=="SALES_ORDER"&&current.str("status")=="OPEN"&&current.bool("canPrepareSale"))TextButton(enabled=!loading,onClick={navigate("/workspace/account/transactions/new?type=SALES_INVOICE&orderId=$id")}){Text("Create Sale from remaining order")}
    if(current.bool("canClose")&&current.str("status")!="CLOSED"){
     OutlinedTextField(reason,{if(it.length<=1000)reason=it},label={Text("Reason for closing remaining order")},enabled=!loading,modifier=Modifier.fillMaxWidth())
     Text("Closes the remaining commitment. No invoice, payment or journal is created.")

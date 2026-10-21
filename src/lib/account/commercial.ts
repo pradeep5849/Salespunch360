@@ -522,6 +522,7 @@ async function snapshotLine(
   transactionDefaults?:Prisma.JsonValue,
   documentTaxMode: "EXCLUSIVE"|"INCLUSIVE"="EXCLUSIVE",
   retainedSaleLine?: {documentId:string;lineId:string},
+  orderSourceUnits?:ReadonlyMap<string,{unitConversionSnapshot:Prisma.JsonValue;unitName:string|null;unitSymbol:string|null}>,
 ) {
   assertCommercialItemLine(itemSettings, row);
   const purchase = policies[type].party === "vendor",
@@ -633,7 +634,9 @@ async function snapshotLine(
     (retainedLine.productId??retainedLine.serviceId??retainedLine.workPackageId??null)!==(row.sourceId??null)))
     throw new Error("INVALID_SALE_LINE_SOURCE");
   // Retained lines keep the original selected unit and factor even after master edits.
-  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,selection:row.unitSelection,master},sourceLine??retainedLine??undefined);
+  const orderLine=row.sourceOrderLineId?orderSourceUnits?.get(row.sourceOrderLineId):undefined;
+  if(row.sourceOrderLineId&&!orderLine)throw new Error("INVALID_SOURCE_ORDER_LINE");
+  const units=resolveCommercialUnitSnapshot({quantity:row.quantity,selection:row.unitSelection,master},sourceLine??retainedLine??orderLine??undefined);
   const defaultPricing=itemPriceForSelectedUnit({rate:master?.rate,taxRate:master?.tax,pricing:master?.pricing,mode:documentTaxMode,purchase,quantity:row.quantity,selection:units.snapshot?.selection??"PRIMARY",secondaryUnitsPerBase:units.snapshot?.secondaryUnitsPerBase});
   const quantity = new D(row.quantity),
     rate = new D(row.rate ?? sourceLine?.rate ?? retainedLine?.rate ?? defaultPricing.rate),
@@ -779,8 +782,8 @@ async function snapshotLine(
     itemCode: row.itemCode ?? master?.code,
     description: row.description ?? master?.description,
     specification: row.specification,
-    unitName: sourceLine || retainedLine || units.snapshot ? units.unitName : row.unitName ?? master?.unit?.name,
-    unitSymbol: sourceLine || retainedLine || units.snapshot ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
+    unitName: sourceLine || retainedLine || orderLine || units.snapshot ? units.unitName : row.unitName ?? master?.unit?.name,
+    unitSymbol: sourceLine || retainedLine || orderLine || units.snapshot ? units.unitSymbol : row.unitSymbol ?? master?.unit?.symbol,
     quantity,
     baseQuantity:new D(units.baseQuantity),
     unitConversionSnapshot:units.snapshot,
@@ -1114,6 +1117,9 @@ export async function createCommercialDocumentForActor(
           )
             throw new Error("INVALID_SOURCE_PURCHASE_ORDER");
         }
+        const orderSourceId=d.sourceSalesOrderId??d.sourcePurchaseOrderId;
+        if(d.lines.some(line=>line.sourceOrderLineId)&&!orderSourceId)throw new Error("SOURCE_ORDER_REQUIRED");
+        const orderSourceUnits=new Map((orderSourceId&&d.lines.some(line=>line.sourceOrderLineId)?await tx.commercialDocumentLine.findMany({where:{companyId:actor.companyId,documentId:orderSourceId,document:{branchId:d.branchId,type:{in:["SALES_ORDER","PURCHASE_ORDER"]}}},select:{id:true,unitName:true,unitSymbol:true,unitConversionSnapshot:true}}):[]).map(line=>[line.id,line]));
         const rawLines = await Promise.all(
             d.lines.map((x, i) =>
               snapshotLine(
@@ -1138,6 +1144,7 @@ export async function createCommercialDocumentForActor(
                 settings?.transactionDefaults??undefined,
                 d.taxMode,
                 retainedSale?.lineIds.has(i)?{documentId:retainedSale.documentId,lineId:retainedSale.lineIds.get(i)!}:d.copiedFromSaleId&&x.copiedFromSaleLineId?{documentId:d.copiedFromSaleId,lineId:x.copiedFromSaleLineId}:undefined,
+                orderSourceUnits,
               ),
             ),
           ),
