@@ -68801,6 +68801,23 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 broad report/reference scope and A090-F01 other consumers remain PARTIAL; full checkpoint-head/device validation pending. A067-F03 opening processing-fee decision unchanged, not resolved by this read-only report."
+        },
+        "commercial_detail_display_2026_10_21": {
+          "implementation_commit": "aee70a9b63b7c3809bb1ba0f06da3cc2b35ef290",
+          "work": "Generic non-Sale commercial details now use shared business currency/precision for line rates/discounts/taxes/totals, charges, allocations, outstanding, adjustments, advances and stock/material values. Numeric form limits and quantities remain raw. Line table has a named focusable horizontal scroll region. No financial/API/schema change.",
+          "files": [
+            "src/app/workspace/account/transactions/[id]/page.tsx",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "unit": "24 tests/2 files PASS,0fail/skip; existing exact formatter/profit presentation regressions.",
+            "browser": "Final desktop/mobile2PASS32.5s: actual purchase details USD/3 decimals/MM-DD date preferences, unchanged quantities/source grandTotal/journal count, no root overflow, focusable line region and Axe AA. Initial fixture tsc invalid Vendor.branchId corrected; first browser2fail missing required vendor invoice number corrected. Next mobile accessibility failure exposed unfocusable scroll wrapper; added role/name/tabIndex and explicit focus assertion before final2PASS.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "android": "No native source changed; no new device/build/runtime claim.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "Other General formatting consumers and Hindi(user deferred)/final checkpoint-head validation remain pending; no whole-finding promotion."
         }
       },
       "intermediate_validation": {

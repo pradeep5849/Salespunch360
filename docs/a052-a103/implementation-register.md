@@ -10351,3 +10351,10 @@ Implementation `12a1f7e3db31a7e6a2b21487fe9ed274c11ab9d8` maps to A084-F03/A085-
 150 grouped tests passed(20 files,19.07s); initial149pass/1fail stale mobile source contract fixed to check catalogue binding. Final19 focused tests passed after Web/export loanId connection (overlap). Final desktop/mobile2browsercases passed(53.0s): real100000receipt,2000principal+550interest,100fee,opening100000/balance98000; nativeHTTP/exports/options/role/foreign403/Axe/nooverflow/no financial writes. First browser run used wrong To label and was interrupted; next2fail exposed dropped Web/export loanId, fixed with regression before finalpass. Android compile+24JVM tests passed(3m11s),no device/local current-slice lint. FinalfullTypeScript/focusedESLint/YAML/diff passed.
 
 Counts remain185 IMPLEMENTED BUT NOT VERIFIED/13 PARTIAL/1 NOT STARTED;199 IDs retained and final statuses unset. Prior exact-head CI39572314737 passed Web/Android/migration atd8e6e34b. Broader report/general formatting and final validation remain pending; A067-F03 fee decision untouched. PR153 Draft;no merge/deploy/production/A104.
+
+
+## 21 October — Commercial detail display preferences
+
+Implementation `aee70a9b63b7c3809bb1ba0f06da3cc2b35ef290` maps to A090-F01: shared currency/precision now formats non-Sale commercial rates/discounts/taxes/totals, charges, allocations, outstanding, adjustments, advances and stock/material values. Quantities/form numeric limits unchanged. Line table is a named keyboard-focusable horizontal scroll region. No financial/API/schema change.
+
+24 formatter/presentation unit tests passed; final desktop/mobile2browsercases passed(32.5s),USD/3decimals/date preferences,unchanged stored amount/journals,no overflow,keyboardfocus/AxeAA. Fixture errors(Vendor.branchId,missing invoice number) corrected; initial mobile scroll-region accessibility failure fixed before finalpass. FinalfullTypeScript/focusedESLint/diff passed. No Android change/device verification. A090-F01 remainsPARTIAL for other consumers/final validation;Hindi deferred. Counts185/13/1;199IDs preserved.
