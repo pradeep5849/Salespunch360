@@ -59560,6 +59560,53 @@
             "prior_targeted_ci": "39567042606 SUCCESS at76ecb3b4fb89bb542c3ce56be3d5cafdf5136f11; Web,Android,migration; not certification of this later slice."
           },
           "remaining": "Broad report/reference and other formatting work remains PARTIAL; no whole-finding completion inferred. Final checkpoint validation and native runtime remain pending."
+        },
+        "loan_statement_report_2026_10_21": {
+          "implementation_commit": "12a1f7e3db31a7e6a2b21487fe9ed274c11ab9d8",
+          "work": "Added Loan Statement shared catalogue/service/Web/native/API/export destination. Selected authorized loan only, repeatable-read full liability running balances before period pagination, posted/reversed history through cutoff; payment amounts include principal/interest/charges and correcting reversals subtract payment components. Opening before period, closing liability and period principal/interest summaries. Shared legacy liability ledgers and unposted balances explicitly unknown. Archived loan names remain selectable with display-only metadata. Fixed Web and export loanId plumbing exposed by browser test. Existing opening-fee policy unchanged; no financial writes/migration.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/loan-statement.test.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-accounting-reports.contract.test.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "read_models": [
+            "Loan",
+            "LoanPayment",
+            "JournalEntry",
+            "JournalLine"
+          ],
+          "services": [
+            "runFinancialReportForActor(loan-statement)",
+            "GET /api/v1/mobile/account/reports/loan-statement",
+            "GET /api/account/reports/loan-statement/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "focused": "38 tests/3 files PASS,2.10s.",
+            "grouped": "Final150 tests/20 files PASS,0 failed/skipped,19.07s. Initial149passed/1failed: stale mobile source contract expected report literals in service; corrected to assert shared catalogue and service binding.",
+            "filter_final": "19 tests/3 files PASS,3.03s after Web/export loanId connection; overlaps grouped tests except new export regression.",
+            "browser": "Final desktop/mobile Chromium2PASS53.0s, real100000 receipt/2000principal+550interest/100fee; opening100000,balance98000,period principal2000/interest550; Web/native HTTP/scoped loan options/foreign loan403/role403/CSV/XLSX/PDF/Axe/nooverflow/no financial writes. First run timed out on fixture To label and was interrupted during second profile. Next2failed exposed missing Web/export loanId plumbing; fixed actual plumbing and added export regression before final2PASS.",
+            "android": "compileDebugKotlin +24 report JVM tests PASS,0 failures/errors/skips,3m11s. Device/emulator/TalkBack runtime and local current-slice lint NOT RUN.",
+            "typescript": "Final full tsc --noEmit PASS after all Web/export changes.",
+            "eslint": "Final focused ESLint PASS.",
+            "workflow": "YAML parsed; new service regressions added to targeted CI.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39572314737 SUCCESS atd8e6e34b92d6735c41e7f85b66425ea11752ca8a Web/Android/migration; not certification of this later loan slice.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 broad report/reference scope and A090-F01 other consumers remain PARTIAL; full checkpoint-head/device validation pending. A067-F03 opening processing-fee decision unchanged, not resolved by this read-only report."
         }
       }
     },
@@ -63835,6 +63882,53 @@
             "prior_targeted_ci": "39567042606 SUCCESS at76ecb3b4fb89bb542c3ce56be3d5cafdf5136f11; Web,Android,migration; not certification of this later slice."
           },
           "remaining": "Broad report/reference and other formatting work remains PARTIAL; no whole-finding completion inferred. Final checkpoint validation and native runtime remain pending."
+        },
+        "loan_statement_report_2026_10_21": {
+          "implementation_commit": "12a1f7e3db31a7e6a2b21487fe9ed274c11ab9d8",
+          "work": "Added Loan Statement shared catalogue/service/Web/native/API/export destination. Selected authorized loan only, repeatable-read full liability running balances before period pagination, posted/reversed history through cutoff; payment amounts include principal/interest/charges and correcting reversals subtract payment components. Opening before period, closing liability and period principal/interest summaries. Shared legacy liability ledgers and unposted balances explicitly unknown. Archived loan names remain selectable with display-only metadata. Fixed Web and export loanId plumbing exposed by browser test. Existing opening-fee policy unchanged; no financial writes/migration.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/loan-statement.test.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-accounting-reports.contract.test.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "read_models": [
+            "Loan",
+            "LoanPayment",
+            "JournalEntry",
+            "JournalLine"
+          ],
+          "services": [
+            "runFinancialReportForActor(loan-statement)",
+            "GET /api/v1/mobile/account/reports/loan-statement",
+            "GET /api/account/reports/loan-statement/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "focused": "38 tests/3 files PASS,2.10s.",
+            "grouped": "Final150 tests/20 files PASS,0 failed/skipped,19.07s. Initial149passed/1failed: stale mobile source contract expected report literals in service; corrected to assert shared catalogue and service binding.",
+            "filter_final": "19 tests/3 files PASS,3.03s after Web/export loanId connection; overlaps grouped tests except new export regression.",
+            "browser": "Final desktop/mobile Chromium2PASS53.0s, real100000 receipt/2000principal+550interest/100fee; opening100000,balance98000,period principal2000/interest550; Web/native HTTP/scoped loan options/foreign loan403/role403/CSV/XLSX/PDF/Axe/nooverflow/no financial writes. First run timed out on fixture To label and was interrupted during second profile. Next2failed exposed missing Web/export loanId plumbing; fixed actual plumbing and added export regression before final2PASS.",
+            "android": "compileDebugKotlin +24 report JVM tests PASS,0 failures/errors/skips,3m11s. Device/emulator/TalkBack runtime and local current-slice lint NOT RUN.",
+            "typescript": "Final full tsc --noEmit PASS after all Web/export changes.",
+            "eslint": "Final focused ESLint PASS.",
+            "workflow": "YAML parsed; new service regressions added to targeted CI.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39572314737 SUCCESS atd8e6e34b92d6735c41e7f85b66425ea11752ca8a Web/Android/migration; not certification of this later loan slice.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 broad report/reference scope and A090-F01 other consumers remain PARTIAL; full checkpoint-head/device validation pending. A067-F03 opening processing-fee decision unchanged, not resolved by this read-only report."
         }
       }
     },
@@ -68660,6 +68754,53 @@
             "prior_targeted_ci": "39567042606 SUCCESS at76ecb3b4fb89bb542c3ce56be3d5cafdf5136f11; Web,Android,migration; not certification of this later slice."
           },
           "remaining": "Broad report/reference and other formatting work remains PARTIAL; no whole-finding completion inferred. Final checkpoint validation and native runtime remain pending."
+        },
+        "loan_statement_report_2026_10_21": {
+          "implementation_commit": "12a1f7e3db31a7e6a2b21487fe9ed274c11ab9d8",
+          "work": "Added Loan Statement shared catalogue/service/Web/native/API/export destination. Selected authorized loan only, repeatable-read full liability running balances before period pagination, posted/reversed history through cutoff; payment amounts include principal/interest/charges and correcting reversals subtract payment components. Opening before period, closing liability and period principal/interest summaries. Shared legacy liability ledgers and unposted balances explicitly unknown. Archived loan names remain selectable with display-only metadata. Fixed Web and export loanId plumbing exposed by browser test. Existing opening-fee policy unchanged; no financial writes/migration.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/loan-statement.test.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/reports/queries.test.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts",
+            "src/lib/mobile/account-accounting-reports.contract.test.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "read_models": [
+            "Loan",
+            "LoanPayment",
+            "JournalEntry",
+            "JournalLine"
+          ],
+          "services": [
+            "runFinancialReportForActor(loan-statement)",
+            "GET /api/v1/mobile/account/reports/loan-statement",
+            "GET /api/account/reports/loan-statement/{csv,xlsx,pdf}"
+          ],
+          "tests": {
+            "focused": "38 tests/3 files PASS,2.10s.",
+            "grouped": "Final150 tests/20 files PASS,0 failed/skipped,19.07s. Initial149passed/1failed: stale mobile source contract expected report literals in service; corrected to assert shared catalogue and service binding.",
+            "filter_final": "19 tests/3 files PASS,3.03s after Web/export loanId connection; overlaps grouped tests except new export regression.",
+            "browser": "Final desktop/mobile Chromium2PASS53.0s, real100000 receipt/2000principal+550interest/100fee; opening100000,balance98000,period principal2000/interest550; Web/native HTTP/scoped loan options/foreign loan403/role403/CSV/XLSX/PDF/Axe/nooverflow/no financial writes. First run timed out on fixture To label and was interrupted during second profile. Next2failed exposed missing Web/export loanId plumbing; fixed actual plumbing and added export regression before final2PASS.",
+            "android": "compileDebugKotlin +24 report JVM tests PASS,0 failures/errors/skips,3m11s. Device/emulator/TalkBack runtime and local current-slice lint NOT RUN.",
+            "typescript": "Final full tsc --noEmit PASS after all Web/export changes.",
+            "eslint": "Final focused ESLint PASS.",
+            "workflow": "YAML parsed; new service regressions added to targeted CI.",
+            "diff": "git diff --check PASS.",
+            "prior_targeted_ci": "39572314737 SUCCESS atd8e6e34b92d6735c41e7f85b66425ea11752ca8a Web/Android/migration; not certification of this later loan slice.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 broad report/reference scope and A090-F01 other consumers remain PARTIAL; full checkpoint-head/device validation pending. A067-F03 opening processing-fee decision unchanged, not resolved by this read-only report."
         }
       },
       "intermediate_validation": {

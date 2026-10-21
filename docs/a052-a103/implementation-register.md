@@ -10342,3 +10342,12 @@ Implementation `d2aca1ee66288eb0422af136bfbfed0058279a3f` maps to A084-F03/A085-
 153 grouped tests passed (20 files,18.86s);8 catalogue database tests passed. Final desktop/mobile browser2passed(1.1m), including native HTTP/exports,198 sale/22 discount, filters, Items OFF history, roles, metadata privacy, Axe/no overflow and no ledger/stock mutations. Initial privacy run failed on fixture purchasePrice; corrected to costPrice. Android compile and23 JVM tests passed(2m44s); no device runtime/local lint rerun. Full TypeScript/focused ESLint/YAML/diff checks passed. Earlier focused results overlap.
 
 Counts remain185 IMPLEMENTED BUT NOT VERIFIED /13 PARTIAL /1 NOT STARTED;199 original IDs preserved, final statuses unset. Prior exact-head CI39567042606 passed Web/Android/migration at76ecb3b4. Complete final-head verification remains pending. PR153 stays Draft; no merge/deploy/production/A104.
+
+
+## 21 October — Loan Statement Report
+
+Implementation `12a1f7e3db31a7e6a2b21487fe9ed274c11ab9d8` maps to A084-F03/A085-F02/A090-F01. Selected authorized loans use full posted/reversed liability history and recorded payment components, with opening/closing and period principal/interest summaries. Correcting reversals subtract payments; archived history remains available, shared legacy ledgers/unposted balances remain unknown. Web/native selectors, display-only options, catalogue, date/currency formatting and exports connected. No migration/financial write or opening-fee policy change.
+
+150 grouped tests passed(20 files,19.07s); initial149pass/1fail stale mobile source contract fixed to check catalogue binding. Final19 focused tests passed after Web/export loanId connection (overlap). Final desktop/mobile2browsercases passed(53.0s): real100000receipt,2000principal+550interest,100fee,opening100000/balance98000; nativeHTTP/exports/options/role/foreign403/Axe/nooverflow/no financial writes. First browser run used wrong To label and was interrupted; next2fail exposed dropped Web/export loanId, fixed with regression before finalpass. Android compile+24JVM tests passed(3m11s),no device/local current-slice lint. FinalfullTypeScript/focusedESLint/YAML/diff passed.
+
+Counts remain185 IMPLEMENTED BUT NOT VERIFIED/13 PARTIAL/1 NOT STARTED;199 IDs retained and final statuses unset. Prior exact-head CI39572314737 passed Web/Android/migration atd8e6e34b. Broader report/general formatting and final validation remain pending; A067-F03 fee decision untouched. PR153 Draft;no merge/deploy/production/A104.
