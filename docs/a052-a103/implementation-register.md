@@ -10245,3 +10245,10 @@ Android compile/40focusedQuotationJVM/lint PASS8m14s,0testfailures/errors/skips,
 Compile/45focusedQuotationJVM/lint PASS5m49s,0testfailure/error/skip,lint0error/4warning/6information. Five new pure tests cover exact-byte integrity,cancellation before/midcopy,invalid response rejection andname safety. Android PrintManager/spooler/page-range/callback/descriptor/unavailable-service device runtime NOT RUN. No physical print was executed.
 
 A080-F01 remains PARTIAL for full original themes/remaining settings controls;counts remain185IMPLEMENTED BUT NOT VERIFIED/13PARTIAL/1NOTSTARTED. All199 final statuses remain unset. Predecessor95d1513d targeted CI passed all3jobs includingnewconversionDBstep(run39443786746);this native code head requiresitsownCI. No merge/deploy/production/A104.
+
+
+### 2026-10-21 — private document preparation boundary
+
+`c512f182`: shared memory-only PDF/PNG/JPEG preparation;quotation creation preserves its existing contract. Selection limits/types checked before body reads;actual lengths/signatures verified;names sanitized andhashes computed server-side. No upload/document/ledger mutation during preparation. Sale integration pending;A086-F06/A087-F02 stayPARTIAL.
+
+25focused tests across3files PASS(886ms);10existing PostgreSQL attachment cases PASS(1.40s),0failed/skipped on final run. Initial DBattempt skipped10 because existinglocalcontainer was stopped;samecontainer restarted withoutreset,then successfully rerun. TypeScript/focusedESLint/diff PASS. No browser/native runtime claim/newmigration. Counts185implemented-but-not-finally-verified/13partial/1notstarted;199IDs preserved. Targeted CI9a8d935c PASS run39446799026;newhead needs itsownCI. No merge/deploy/production/A104.
