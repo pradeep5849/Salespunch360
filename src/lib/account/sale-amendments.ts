@@ -1,3 +1,4 @@
+import {recordSaleInvoiceIdentity} from "./sale-invoice-identity";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {EFFECTIVE_DOCUMENT_ALLOCATION,EFFECTIVE_ADVANCE_APPLICATION} from "./settlement-policy";
 import {retainedLineDiscountValue} from "./retained-line-discount";
@@ -389,6 +390,7 @@ export async function replacePostedSaleForActor(
         );
         if (replacement.id === sale.id || replacement.status !== "DRAFT")
           throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
+        await recordSaleInvoiceIdentity(tx,actor.id,sale,replacement);
         await copySaleAttachmentsInTx(tx,actor,sale.id,replacement.id);
         await addDraftSaleAttachmentsInTx(tx,actor,replacement.id,prepared,attemptedKeys);
         // A renamed project must not rewrite an unedited invoice reference.

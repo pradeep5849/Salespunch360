@@ -29,6 +29,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
     <header className={styles.header}>
       <Link className={styles.back} href="/workspace/account" aria-label="Back">←</Link>
       <h1>Sale</h1>
+      {sale.invoiceRevision>0&&<p>Revision {sale.invoiceRevision}{sale.previousInvoiceId&&<> · <Link href={`/workspace/account/sales/${sale.previousInvoiceId}`}>View previous revision</Link></>}</p>}
       <Link className={styles.icon} href={`/api/account/print/${sale.type}/${sale.id}?format=pdf`} aria-label="Share invoice">↗</Link>
       <Link className={styles.icon} href={`/workspace/account/transactions/${sale.id}`} aria-label="More invoice details">⋮</Link>
     </header>

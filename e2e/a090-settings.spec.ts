@@ -3528,6 +3528,8 @@ test("A086 A087 Edit Sale support files preserve paid accounting and retry once"
   const corrected=await db.commercialDocument.findUniqueOrThrow({where:{id:correctedId}});expect(corrected.grandTotal.toString()).toBe("80");
   expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);expect(await db.commercialAttachment.count({where:{companyId,documentId:correctedId}})).toBe(3);
   await expect(page.getByRole("region",{name:"Sale attachments",exact:true}).getByRole("link",{name:"correction.pdf",exact:true})).toBeVisible();
+  await expect(page.getByText(`${source.documentNumber}⌄`,{exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"View previous revision",exact:true})).toHaveAttribute("href",`/workspace/account/sales/${source.id}`);
+  const printed=await page.request.get(`/api/account/print/SALES_INVOICE/${correctedId}?format=pdf`);expect(printed.status()).toBe(200);const printedText=(await extractPdfText(await printed.body())).text;expect(printedText).toContain(source.documentNumber);expect(printedText).toMatch(/Revision\s+1/);
   expect((await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id}})).amount.toString()).toBe("90");
 
  }finally{
@@ -3556,6 +3558,8 @@ test("A086 native HTTP Edit Sale files append and correct with stable retry keys
   expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);expect(await db.commercialDocument.count({where:{companyId,type:"SALES_INVOICE",lines:{some:{serviceId:service.id}}}})).toBe(1);
   const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}}),body={document:JSON.stringify({...input,idempotencyKey:randomUUID(),lines:[{...input.lines[0],originalLineId:line.id,rate:"80"}]}),payment:"{}",attachments:{...file,name:"native-corrected.pdf"}};
   const patchUrl=`/api/v1/mobile/account/sales/${source.id}/with-attachments`,corrected=await request.patch(patchUrl,{headers,multipart:body});expect(corrected.status()).toBe(200);const row=await corrected.json();expect(row.id).not.toBe(source.id);
+  const identity=await request.get(`/api/v1/mobile/account/transactions/${row.id}`,{headers});expect(identity.status()).toBe(200);expect(await identity.json()).toMatchObject({documentNumber:source.documentNumber,internalDocumentNumber:row.documentNumber,invoiceRevision:1,previousInvoiceId:source.id});
+  const printed=await request.get(`/api/v1/mobile/account/print/SALES_INVOICE/${row.id}`,{headers});expect(printed.status()).toBe(200);expect((await extractPdfText(await printed.body())).text).toContain(source.documentNumber);
   const replay=await request.patch(patchUrl,{headers,multipart:body});expect(replay.status()).toBe(200);expect((await replay.json()).id).toBe(row.id);
   expect((await db.commercialDocument.findUniqueOrThrow({where:{id:row.id}})).grandTotal.toString()).toBe("80");expect(await db.commercialAttachment.count({where:{companyId,documentId:row.id}})).toBe(3);
   const metadata=await request.get(`/api/v1/mobile/account/sales/${row.id}/attachments`,{headers});expect(metadata.status()).toBe(200);const files=await metadata.json();expect(files).toHaveLength(3);expect(JSON.stringify(files)).not.toMatch(/storageKey|contentHash|uploadedById/);

@@ -1,3 +1,5 @@
+import {saleDetailForActor} from "./sale-detail";
+import {loadPrintDocumentForActor} from "./print";
 import { randomUUID } from "node:crypto";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -160,6 +162,17 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     expect(await listSaleAttachmentsForActor(actor,saved.id)).toHaveLength(1);
     await expect(replacePostedSaleForActor(actor,saved.id,correction,[pdf("changed-support.pdf")])).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
     expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_AMENDED",entityId:saved.id}})).toBe(1);
+  });
+
+  it("retains the printed invoice number across immutable correction revisions",async()=>{
+    const saved=await save(),original=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id},select:{id:true,documentNumber:true,issueDate:true,grandTotal:true,lines:{orderBy:{position:"asc"}}}}),firstRequest={...raw(),lines:[{lineType:"CUSTOM",itemName:"Work",quantity:"1",rate:"80",taxRate:"0"}]};
+    const first=await replacePostedSaleForActor(actor,saved.id,firstRequest);expect(first.documentNumber).not.toBe(original.documentNumber);
+    const detail=await saleDetailForActor(actor,first.id);expect(detail).toMatchObject({documentNumber:original.documentNumber,internalDocumentNumber:first.documentNumber,invoiceRevision:1,previousInvoiceId:saved.id});
+    expect((await loadPrintDocumentForActor(actor,"SALES_INVOICE",first.id)).document).toMatchObject({number:original.documentNumber,title:"SALES INVOICE — Revision 1"});
+    expect((await replacePostedSaleForActor(actor,saved.id,firstRequest)).id).toBe(first.id);expect(await client.accountOperationalAudit.count({where:{companyId,entityId:first.id,eventType:"SALE_INVOICE_IDENTITY"}})).toBe(1);
+    const second=await replacePostedSaleForActor(actor,first.id,{...raw(),lines:[{lineType:"CUSTOM",itemName:"Work",quantity:"1",rate:"60",taxRate:"0"}]});expect((await saleDetailForActor(actor,second.id))).toMatchObject({documentNumber:original.documentNumber,internalDocumentNumber:second.documentNumber,invoiceRevision:2,previousInvoiceId:first.id});expect((await loadPrintDocumentForActor(actor,"SALES_INVOICE",second.id)).document.number).toBe(original.documentNumber);
+    const unchanged=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id},select:{id:true,documentNumber:true,issueDate:true,grandTotal:true,lines:{orderBy:{position:"asc"}}}});expect(JSON.stringify(unchanged)).toBe(JSON.stringify(original));
+    await expect(saleDetailForActor({...actor,companyId:foreignId},second.id)).rejects.toThrow();await expect(loadPrintDocumentForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},"SALES_INVOICE",second.id)).rejects.toThrow();
   });
 
   it("rolls back a file-bearing correction completely when its new upload fails",async()=>{

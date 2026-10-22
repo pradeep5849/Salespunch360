@@ -5,7 +5,7 @@ import sharp from "sharp";
 import {beforeEach,describe,expect,it,vi} from "vitest";
 const mocks=vi.hoisted(()=>({bank:vi.fn(),auth:vi.fn(),company:vi.fn(),quotation:vi.fn(),commercial:vi.fn(),settlement:vi.fn(),signature:vi.fn(),storageGet:vi.fn(),template:vi.fn(),transaction:vi.fn(),outstanding:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({requirePermission:mocks.auth}));
-vi.mock("@/lib/db",()=>({db:{project:{findMany:vi.fn(async()=>[{id:"55555555-5555-4555-8555-555555555555"}])},moneyAccount:{findFirst:mocks.bank},customFieldDefinition:{findMany:vi.fn(async()=>[])},company:{findUniqueOrThrow:mocks.company},quotationDocument:{findFirst:mocks.quotation},commercialDocument:{findFirst:mocks.commercial},accountSettlement:{findFirst:mocks.settlement},authorizedSignatureVersion:{findFirst:mocks.signature},$transaction:mocks.transaction}}));
+vi.mock("@/lib/db",()=>({db:{accountOperationalAudit:{findFirst:vi.fn(async()=>null)},project:{findMany:vi.fn(async()=>[{id:"55555555-5555-4555-8555-555555555555"}])},moneyAccount:{findFirst:mocks.bank},customFieldDefinition:{findMany:vi.fn(async()=>[])},company:{findUniqueOrThrow:mocks.company},quotationDocument:{findFirst:mocks.quotation},commercialDocument:{findFirst:mocks.commercial},accountSettlement:{findFirst:mocks.settlement},authorizedSignatureVersion:{findFirst:mocks.signature},$transaction:mocks.transaction}}));
 vi.mock("@/lib/storage",()=>({privateStorage:()=>({get:mocks.storageGet})}));
 vi.mock("./commercial",()=>({documentOutstandingInTx:mocks.outstanding}));
 vi.mock("./settings",async original=>{const actual=await original<typeof import("./settings")>();return{...actual,resolvePrintTemplate:mocks.template}});

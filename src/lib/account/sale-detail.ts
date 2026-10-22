@@ -1,3 +1,4 @@
+import {saleInvoiceIdentity} from "./sale-invoice-identity";
 import { gstStateName } from "./gst-states";
 import { db } from "@/lib/db";
 import { canUsePermission } from "@/lib/auth/permissions";
@@ -16,6 +17,7 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
     async (tx) => {
       const sale = await getCommercialDocumentForActor(actor, id, tx);
       if (sale.type !== "SALES_INVOICE") throw new Error("NOT_FOUND");
+      const identity=await saleInvoiceIdentity(tx,sale);
       const zero = sale.grandTotal.mul(0);
       const receipts = sale.allocations.filter(
         (row) => row.settlement.type === "CUSTOMER_RECEIPT",
@@ -33,6 +35,10 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
       const outstanding = active ? (sale.financial?.outstanding ?? base) : zero;
       return {
         ...sale,
+        documentNumber:identity.printedNumber,
+        internalDocumentNumber:sale.documentNumber,
+        invoiceRevision:identity.revision,
+        previousInvoiceId:identity.previousInvoiceId,
         stateOfSupplyName: gstStateName(sale.stateOfSupplyCode),
         partyBalance,
         paymentSummary: {
