@@ -10478,3 +10478,9 @@ A067-F03 decision received:user may choose per loan whether opening processing f
 A067-F03:`d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2` completes approved deducted/separately-paid fee choice on Web/native creation/shared backend. Gross liability remains100000;fee2000 posts netbank98000/expense2000;separate mode receives gross then pays chosenaccount. Existing LoanOperation linkage,retry protection,history/statement andcancellationguard;no model/migration change. Standalone charge-only work preserved.
 
 Final37focused tests,26realPostgreSQL financial tests,2desktop/mobilebrowser cases,5AndroidloanJVMtests passed;Androidcompile,fullTypeScript,focusedESLint,diff/workflowYAML passed. Earlier test-import/typecheck errors andincorrectHTTP400expectation corrected;failures retained inJSON. Native device/runtime,current-slice localAndroidlint/final199complete-head verification pending. A067-F03 IMPLEMENTED BUT NOT VERIFIED. Totals:187implemented-but-not-verified,11partial,1notstarted;199originalIDs/no final_status promoted.
+
+## Notifications tabs —22October2026
+
+A070-F02:`ea602d4ca2454e68a05612010d4f88b9b352f109` implements App Notifications vs transaction-related notifications only,header/back,bell empty state,Web keyboard tabs,scoped native category metadata andretained actions/pagination.9focused tests,4desktop/mobile realDBbrowser cases and2AndroidJVMtests passed;Androidcompile/fulltsc/focusedlint/diff passed. Two initialbrowser runs failed on preexisting dynamic alias imports;static imports corrected them. Native device/final199verification pending. Status now IMPLEMENTED BUT NOT VERIFIED. Totals:188implemented-but-not-verified,11partial,0notstarted;199originalIDs retained.
+
+A086 decisions received:corrected sale retains original printed invoice number with revision history;posted-credit-note edits permitted only ifreplacementcovers allreturneditems/quantities. Implementation still pending;no completion inferred.

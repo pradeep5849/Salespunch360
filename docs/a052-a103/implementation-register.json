@@ -48330,7 +48330,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "NOT STARTED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -48530,6 +48530,34 @@
         ],
         "verification_status": "NOT STARTED",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "notification_tabs_2026_10_22": {
+          "implementation_commit": "ea602d4ca2454e68a05612010d4f88b9b352f109",
+          "decision": "All Transactions contains transaction-related notifications only,not a transaction ledger.",
+          "work": "Notifications header/back,two accessible Web/native tabs andbell empty state. Backup app alerts separate from expense-review,payment andservice alerts. Existing scoped sources/actions retained;pagination retains transaction tab;keyboard navigation andmobile category metadata added without dropping legacy rows.",
+          "files": [
+            "src/lib/account/notification-tabs.ts",
+            "src/lib/account/notification-tabs.test.ts",
+            "src/components/account/notification-tabs.tsx",
+            "src/app/workspace/account/notifications/page.tsx",
+            "src/lib/mobile/account-administration.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountNotificationCategory.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountNotificationCategoryTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused": "9PASS/3files,0fail/skip,includes2newcategorytests and existingexpensepermission/APIauth checks.",
+            "browser": "Final4PASS1.2m desktop/mobileChromium realPostgreSQL:App/Transactions separation,keyboard switch,101expense alerts50/50/1pagination,scope/badge/restricted-roleprivacy,Axe,servicecompletion. Initialtwo runs each2PASS/2FAIL due old testdynamic alias import;leftover shadowing import then removed;final static imports pass.",
+            "android": "compileDebugKotlin+2categoryJVMtestsPASS,0fail/errors/skips,3m13s.No emulator/device/TalkBack runtime.",
+            "typescript": "Final full tsc PASS;reconfirmed after command-session loss.",
+            "eslint": "FinalfocusedPASS;gitdiffPASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "Implementation complete;final complete-head/device/visual verification pending.No financial/schema change."
+        }
       }
     },
     {
@@ -72529,6 +72557,13 @@
       },
       "final_complete_head": "NOT RUN",
       "commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2"
+    },
+    "notification_tabs_2026_10_22": {
+      "counts": {
+        "PARTIAL": 11,
+        "IMPLEMENTED BUT NOT VERIFIED": 188
+      },
+      "final_complete_head": "NOT RUN"
     }
   },
   "approved_business_decisions": {
@@ -72570,9 +72605,9 @@
       "obe_rules": "OBE is Equity alongside Retained Earnings; account creation and balanced opening journal commit atomically; authorized manual journals may clear OBE to Retained Earnings or Owner Capital. Explicit user instruction 2026-10-13."
     },
     "pending_notifications_tab_clarification": {
-      "finding": "A070-F02",
-      "question": "All Transactions means only transaction notifications/alerts or all authorized business transactions?",
-      "status": "Awaiting user reply; other checkpoint work continues."
+      "decision": "Transaction-related notifications only",
+      "status": "ANSWERED AND IMPLEMENTED",
+      "commit": "ea602d4ca2454e68a05612010d4f88b9b352f109"
     },
     "fixed_item_discount": {
       "decision": "Fixed Disc. On Sale Price applies per unit:₹10×3 units deducts₹30.",
@@ -72649,6 +72684,11 @@
     "loan_opening_fee_2026_10_22": {
       "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
       "commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2"
+    },
+    "posted_sale_identity_and_returns_2026_10_22": {
+      "printed_number": "Retain original printed number with revision history",
+      "posted_credit_notes": "Allow edits only when replacement covers all returned items/quantities",
+      "implementation": "PENDING"
     }
   },
   "push_checkpoint": {
