@@ -10492,3 +10492,7 @@ A086 decisions received:corrected sale retains original printed invoice number w
 ## Private-file backup bundles — 22 October 2026
 
 `0d08c3a589e082d81d59cbdb68297d89c4dc8574` adds explicit Web/Android record-and-live-file downloads with per-file SHA256, byte counts, scope checks and fail-closed missing-file handling. Record-only and scheduled backups unchanged. 30 focused service/API tests and2desktop/mobile realDBbrowser cases PASS; Androidcompile/lint PASS (0errors,4warnings,6information),fullTypeScript/focusedESLint PASS. No device runtime/new nativeJVM claim. A088-F01 remains PARTIAL for complete validated restore/historical storage recovery and final validation. Counts remain188implemented-but-not-verified/11partial; all199 IDs retained.
+
+## Sale freight and other-charge controls — 22 October 2026
+
+`dcadba5ad8ddc2b74d9d3173c68b8bddcb23e7d2` exposes saved freight/other charges on Web/native editors and retains existing financial rules. 23focused tests,55serialized financialDBtests,4desktop/mobile browser cases,17AndroidJVMtests passed;Androidcompile/fulltsc/focusedESLint/diff passed. Initial parallel-fileDBrun48pass/7fail on40001serialization;serializedrerun55pass. Changed charges produce262 with prior252.25history unchanged. No native device/current-slice lint claim. A086-F06/A087-F02 remainPARTIAL for separate description/reference controls,returned-invoice corrections andfinalmatrix. Totals remain188implemented-but-not-verified/11partial/199IDs.

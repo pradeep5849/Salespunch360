@@ -67681,6 +67681,26 @@
             "earlier_failures": "Print mock lacked audit reader (8 failures); browser assertions omitted existing dropdown glyph and treated PDF extraction object as string (4 failures). Mocks/assertions corrected and recorded final runs passed."
           },
           "remaining": "Finding remains PARTIAL. Posted return correction carry/value policy, remaining original reference scope and final-head/full device validation are not certified. No migration or production change."
+        },
+        "sale_charge_edit_controls_2026_10_22": {
+          "implementation_commit": "dcadba5ad8ddc2b74d9d3173c68b8bddcb23e7d2",
+          "work": "Web and native Sale editors expose retained Freight amount and Other charges amount. Web initializes saved snapshots, updates preview and explicit save payload, validates nonnegative two-decimal amounts, resets charges on Save & New. Native controls update existing draft/preview/payload fields. Existing backend correction/ledger rules unchanged.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx"
+          ],
+          "tests": {
+            "focused": "23 PASS/3 suites: Sale preview, immutable invoice identity and attachment upload.",
+            "database": "Final55 PASS/2 suites,12.10s,serialized maxWorkers1. Initial concurrent-file run48PASS/7FAIL with PostgreSQL40001 serialization conflicts; rerun serial preserved intended internal concurrency assertions. No production retry or assertion changes.",
+            "browser": "4 PASS/3.7m desktop/mobile Chromium: original retained fields/inclusive tax/cess/charges, changed freight5->13.50 and other7->8.25 produce262 while prior252.25 invoice unchanged; paid attachment append/retry remains nonfinancial and subsequent correction preserves files/receipt.",
+            "android": "compileDebugKotlin +17 JVM tests PASS,0failures/errors/skips,4m25s:SalesPreview9 andSalesEditSnapshot8. One new changed-charge preview/payload test. No new device/UI runtime or lint for this slice; previous backup slice lint0errors/4warnings/6info.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused editor/browser ESLint PASS; gitdiff--check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06 and A087-F02 remain PARTIAL. Separate invoice-level description/reference-control scope, posted return correction financial carry/value decision and full checkpoint/device validation remain. This slice does not claim those original gaps complete."
         }
       },
       "push_checkpoint_evidence": {
@@ -68640,6 +68660,26 @@
             "earlier_failures": "Print mock lacked audit reader (8 failures); browser assertions omitted existing dropdown glyph and treated PDF extraction object as string (4 failures). Mocks/assertions corrected and recorded final runs passed."
           },
           "remaining": "Finding remains PARTIAL. Posted return correction carry/value policy, remaining original reference scope and final-head/full device validation are not certified. No migration or production change."
+        },
+        "sale_charge_edit_controls_2026_10_22": {
+          "implementation_commit": "dcadba5ad8ddc2b74d9d3173c68b8bddcb23e7d2",
+          "work": "Web and native Sale editors expose retained Freight amount and Other charges amount. Web initializes saved snapshots, updates preview and explicit save payload, validates nonnegative two-decimal amounts, resets charges on Save & New. Native controls update existing draft/preview/payload fields. Existing backend correction/ledger rules unchanged.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx"
+          ],
+          "tests": {
+            "focused": "23 PASS/3 suites: Sale preview, immutable invoice identity and attachment upload.",
+            "database": "Final55 PASS/2 suites,12.10s,serialized maxWorkers1. Initial concurrent-file run48PASS/7FAIL with PostgreSQL40001 serialization conflicts; rerun serial preserved intended internal concurrency assertions. No production retry or assertion changes.",
+            "browser": "4 PASS/3.7m desktop/mobile Chromium: original retained fields/inclusive tax/cess/charges, changed freight5->13.50 and other7->8.25 produce262 while prior252.25 invoice unchanged; paid attachment append/retry remains nonfinancial and subsequent correction preserves files/receipt.",
+            "android": "compileDebugKotlin +17 JVM tests PASS,0failures/errors/skips,4m25s:SalesPreview9 andSalesEditSnapshot8. One new changed-charge preview/payload test. No new device/UI runtime or lint for this slice; previous backup slice lint0errors/4warnings/6info.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused editor/browser ESLint PASS; gitdiff--check PASS.",
+            "final_complete_head": "NOT RUN"
+          },
+          "remaining": "A086-F06 and A087-F02 remain PARTIAL. Separate invoice-level description/reference-control scope, posted return correction financial carry/value decision and full checkpoint/device validation remain. This slice does not claim those original gaps complete."
         }
       },
       "push_checkpoint_evidence": {
@@ -72736,6 +72776,26 @@
         "final_199_validation": "NOT RUN"
       },
       "remaining": "A088-F01 remains PARTIAL. Full validated database restore/recovery, historical deleted-file bytes, provider backups, native device/share runtime and checkpoint-wide final validation pending. File reads use existing buffer-based storage API; this is a bounded application bundle, not a streaming provider disaster-recovery archive."
+    },
+    "sale_charge_edit_controls_2026_10_22": {
+      "implementation_commit": "dcadba5ad8ddc2b74d9d3173c68b8bddcb23e7d2",
+      "work": "Web and native Sale editors expose retained Freight amount and Other charges amount. Web initializes saved snapshots, updates preview and explicit save payload, validates nonnegative two-decimal amounts, resets charges on Save & New. Native controls update existing draft/preview/payload fields. Existing backend correction/ledger rules unchanged.",
+      "files": [
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx"
+      ],
+      "tests": {
+        "focused": "23 PASS/3 suites: Sale preview, immutable invoice identity and attachment upload.",
+        "database": "Final55 PASS/2 suites,12.10s,serialized maxWorkers1. Initial concurrent-file run48PASS/7FAIL with PostgreSQL40001 serialization conflicts; rerun serial preserved intended internal concurrency assertions. No production retry or assertion changes.",
+        "browser": "4 PASS/3.7m desktop/mobile Chromium: original retained fields/inclusive tax/cess/charges, changed freight5->13.50 and other7->8.25 produce262 while prior252.25 invoice unchanged; paid attachment append/retry remains nonfinancial and subsequent correction preserves files/receipt.",
+        "android": "compileDebugKotlin +17 JVM tests PASS,0failures/errors/skips,4m25s:SalesPreview9 andSalesEditSnapshot8. One new changed-charge preview/payload test. No new device/UI runtime or lint for this slice; previous backup slice lint0errors/4warnings/6info.",
+        "typescript": "Final full tsc PASS.",
+        "eslint": "Focused editor/browser ESLint PASS; gitdiff--check PASS.",
+        "final_complete_head": "NOT RUN"
+      },
+      "remaining": "A086-F06 and A087-F02 remain PARTIAL. Separate invoice-level description/reference-control scope, posted return correction financial carry/value decision and full checkpoint/device validation remain. This slice does not claim those original gaps complete."
     }
   },
   "approved_business_decisions": {
