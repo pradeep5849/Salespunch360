@@ -3853,3 +3853,34 @@ test("A080 fifteen quotation themes preview cancel apply and native authorizatio
   expect(JSON.stringify(await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id},include:{lines:true}}))).toBe(before);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  }finally{await db.accountSettings.update({where:{companyId},data:{transactionDefaults:original.transactionDefaults as Prisma.InputJsonValue}});if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}})}
 });
+
+test("A084 HSN SAC saved sales classifications Web native and exports",async({page})=>{
+ test.setTimeout(240000);
+ const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),suffix=randomUUID().slice(0,8);let tokenHash:string|null=null;
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CREDIT_NOTE","GST_ADVANCED"],baseCurrency:"INR",displayDecimalPlaces:2}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Classification year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]};
+  const service=await db.accountService.create({data:{companyId,name:`Saved classification ${suffix}`,sacCode:"998311",sellingRate:"100",taxRate:"0"}}),customer=await db.customer.create({data:{companyId,branchId,name:`Classification customer ${suffix}`,isAccountCustomer:true}});
+  const sale=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customer.id,issueDate:"2026-10-22",lines:[{lineType:"SERVICE",sourceId:service.id,quantity:"2",rate:"100",taxRate:"0",unitName:"Hour",unitSymbol:"hr"}]});await postCommercialDocumentForActor(actor,{documentId:sale.id});
+  const source=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});expect(source.hsnSacCode).toBe("998311");
+  const credit=await createCommercialDocumentForActor(actor,{type:"CREDIT_NOTE",branchId,partyId:customer.id,sourceDocumentId:sale.id,issueDate:"2026-10-22",lines:[{lineType:"SERVICE",sourceId:service.id,sourceCommercialLineId:source.id,quantity:"1",rate:"100",taxRate:"0",unitName:"Hour",unitSymbol:"hr"}]});await postCommercialDocumentForActor(actor,{documentId:credit.id});
+  await db.accountService.update({where:{id:service.id},data:{sacCode:"999999",name:`Changed master ${suffix}`}});
+  const journals=await db.journalEntry.count({where:{companyId}}),query=`branchId=${branchId}&from=2026-10-22&to=2026-10-22`;
+  await signInSettings(page);
+  const principal=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:principal.sessionVersion}});const headers={authorization:`Bearer ${token}`};
+  for(const key of ["hsn-sales","sac-sales"]){
+   await page.goto(`/workspace/account/reports/${key}?${query}`);await expect(page.getByRole("heading",{name:key==="hsn-sales"?"Sale Summary by HSN":"SAC Sales Report",exact:true})).toBeVisible({timeout:30000});
+   const native=await page.request.get(`/api/v1/mobile/account/reports/${key}?${query}`,{headers});expect(native.status()).toBe(200);const result=await native.json();
+   if(key==="sac-sales"){expect(result.rows).toEqual([["998311",service.name,"1.0000","hr","₹100.00","₹0.00","₹0.00","₹0.00","₹0.00","₹100.00"]]);await expect(page.getByRole("cell",{name:service.name,exact:true})).toBeVisible();expect(JSON.stringify(result)).not.toContain("999999")}
+   else expect(result.rows).toEqual([]);
+   for(const extension of ["csv","xlsx","pdf"]){const exported=await page.request.get(`/api/account/reports/${key}/${extension}?${query}`);expect(exported.status()).toBe(200);expect((await exported.body()).length).toBeGreaterThan(100)}
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+  }
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES"]}});expect((await page.request.get(`/api/v1/mobile/account/reports/sac-sales?${query}`,{headers})).status()).toBe(200);
+  expect((await page.request.get(`/api/v1/mobile/account/reports/sac-sales?${query}&branchId=${randomUUID()}`,{headers})).status()).toBe(403);
+  await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/sac-sales?${query}`,{headers})).status()).toBe(403);
+  expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
+ }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
+});

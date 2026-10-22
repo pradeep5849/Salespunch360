@@ -1,3 +1,4 @@
+import {classificationSalesReport} from "./classification-sales";
 import {orderReport} from "./order-reports";
 import {WITHHOLDING_REPORTS,withholdingReport} from "./withholding";
 import {loanStatementReport} from "./loan-statement";
@@ -233,6 +234,7 @@ export async function runFinancialReportForActor(
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
   if(["order-transactions","order-items"].includes(name))return orderReport(await context(raw,false,actor),name==="order-items");
+  if(["hsn-sales","sac-sales"].includes(name))return classificationSalesReport(await context(raw,false,actor),name==="sac-sales");
   if(name==="item-discount")return itemDiscountReport(await context(raw,false,actor));
   if(name==="item-serial")return itemSerialReport(await context(raw,false,actor));
   if(name==="gst-rate")return gstRateReport(await context(raw,false,actor));

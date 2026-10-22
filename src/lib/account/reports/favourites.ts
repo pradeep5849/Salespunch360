@@ -29,8 +29,8 @@ export async function availableReportCatalogueForActor(actor: Actor) {
     (x) =>
       (!["order-transactions","order-items"].includes(x.key)||((modules.includes("SALES")&&modules.includes("SALES_ORDER"))||(modules.includes("PURCHASES")&&modules.includes("PURCHASE_ORDER"))))&&
       (!["sale-purchase-party","discount-party"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
-      (!["gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable","tcs-collected"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
-      (x.key!=="item-discount"||modules.includes("SALES"))&&
+      (!["hsn-sales","sac-sales","gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable","tcs-collected"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
+      (!["hsn-sales","sac-sales","item-discount"].includes(x.key)||modules.includes("SALES"))&&
       (!["bank-statement","loan-statement"].includes(x.key)||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
       (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&

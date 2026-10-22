@@ -1,5 +1,7 @@
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["hsn-sales", "Sale Summary by HSN", "Tax"],
+  ["sac-sales", "SAC Sales Report", "Tax"],
   ["order-transactions", "Order Transaction Report", "Order reports"],
   ["order-items", "Order Item Report", "Order reports"],
   ["expense-transactions", "Expense Transactions", "Expense reports"],
