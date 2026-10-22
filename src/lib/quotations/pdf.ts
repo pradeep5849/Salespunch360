@@ -1,3 +1,4 @@
+import {renderThemedQuotationPdf} from "./themed-pdf";
 import {gstStateName} from "@/lib/account/gst-states";
 import {formatCalendarDate,formatMoney,resolveDisplayPreferences} from "@/lib/account/display-preferences";
 import "regenerator-runtime/runtime";
@@ -17,6 +18,7 @@ function quotationText(revision:CustomerQuotationDto):string[] {
 /** Only explicit customer DTO fields enter the PDF. Fonts and measured wrapping
  * retain Unicode text; no source IDs, internal costs or margins are serialized. */
 export async function renderQuotationPdf(revision:CustomerQuotationDto) {
+  if(quotationPdfTheme(revision.printPresentation).profile)return renderThemedQuotationPdf(revision);
   const pdf=await PDFDocument.create();
   const layout=await createPdfTextLayout(pdf,"QUOTATION_PDF_UNSUPPORTED_CHARACTER");
   pdf.setTitle(`${revision.document.documentNumber} / Revision ${revision.revisionNumber}`);

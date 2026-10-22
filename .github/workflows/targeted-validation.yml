@@ -34,6 +34,8 @@ jobs:
         run: npx vitest run src/lib/account/sale-attachment-http.test.ts src/lib/account/sale-attachment-routes.test.ts src/lib/account/sale-attachment-upload.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/creation-attachments-route.test.ts
       - name: Money mutation validation boundaries
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
+      - name: Quotation theme layouts and scoped settings
+        run: npx vitest run src/lib/quotations/themed-pdf.test.ts src/lib/quotations/theme-settings.test.ts src/lib/quotations/print-presentation.test.ts src/lib/quotations/pdf.test.ts
       - name: Order quantity and estimate billing domains
         run: npx vitest run src/lib/account/orders/fulfilment.test.ts src/lib/quotations/billing.test.ts src/lib/account/reports/order-reports.test.ts src/lib/account/reports/catalogue.test.ts src/lib/account/reports/queries.test.ts
       - name: Exact unit quantity and immutable snapshot guards

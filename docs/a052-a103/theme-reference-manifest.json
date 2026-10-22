@@ -1,0 +1,99 @@
+{
+  "page": "A080",
+  "received_date": "2026-10-22",
+  "source": "15 user-supplied conversation reference images; names may be changed as authorized by user",
+  "themes": [
+    {
+      "id": "GST_1",
+      "reference_label": "GST Theme 1",
+      "reference_layout": "Company left/logo right; centred accent title; three metadata columns; short open item rows; words/terms left and totals right; acknowledgement."
+    },
+    {
+      "id": "GST_2",
+      "reference_label": "GST Theme 2",
+      "reference_layout": "Company right/logo left; bill/transport/details columns; compact bordered item grid with taxable and component tax columns; tax summary left/totals right; words/payment row and bank/terms/signature footer."
+    },
+    {
+      "id": "GST_3",
+      "reference_label": "GST Theme 3",
+      "reference_layout": "Boxed split header with company/billing left and document/shipping right; tall monochrome item grid; words/description left and amounts right; HSN tax summary and bank/terms/signature footer."
+    },
+    {
+      "id": "GST_4",
+      "reference_label": "GST Theme 4",
+      "reference_layout": "Company right/logo left; three metadata columns; tall item grid; words/payment left and amounts right; tax summary and description row below."
+    },
+    {
+      "id": "GST_5",
+      "reference_label": "GST Theme 5",
+      "reference_layout": "Company right/logo left; tall item grid; tax summary left and amounts right; words/payment left and description right below."
+    },
+    {
+      "id": "GST_6",
+      "reference_label": "GST Theme 6",
+      "reference_layout": "Company right/logo left; tall bordered grid with taxable amount and separate component tax/cess columns; totals and words/payment/description sections; bank/terms/signature footer."
+    },
+    {
+      "id": "LANDSCAPE_1",
+      "reference_label": "Landscape Theme 1",
+      "reference_layout": "Wide compact company/document header; bill/shipping/transport row; item grid; horizontal totals; tax summary left and payment/bank right; terms/signature and acknowledgement."
+    },
+    {
+      "id": "LANDSCAPE_2",
+      "reference_label": "Landscape Theme 2",
+      "reference_layout": "Wide compact header and item grid; tax summary left and amounts/words right; separate terms and bank/signature rows; acknowledgement."
+    },
+    {
+      "id": "SIMPLE_1",
+      "reference_label": "Theme 1",
+      "reference_layout": "Company right/logo left; accent rules and title; short open item rows; words/payment/description left and amounts right; signature and acknowledgement."
+    },
+    {
+      "id": "SIMPLE_2",
+      "reference_label": "Theme 2",
+      "reference_layout": "Company right/logo left; black title rule; short open item rows; words/payment/description left and totals right; acknowledgement."
+    },
+    {
+      "id": "SIMPLE_3",
+      "reference_label": "Theme 3",
+      "reference_layout": "Accent company banner; bordered short item rows; words/payment/description left and totals right; acknowledgement."
+    },
+    {
+      "id": "SIMPLE_4",
+      "reference_label": "Theme 4",
+      "reference_layout": "Company left/logo right; minimal header and open rows; compact words/payment/description left and totals right; signature and acknowledgement."
+    },
+    {
+      "id": "DOUBLE_DIVINE",
+      "reference_label": "Double Divine",
+      "reference_layout": "Dark and vivid dual-colour curved header/footer; accented item grid and totals; bank/description/words/terms/signature left; styled acknowledgement."
+    },
+    {
+      "id": "TALLY",
+      "reference_label": "Tally Theme",
+      "reference_layout": "Monochrome grey bordered company/bill/shipping/transport sections; item grid; HSN/component tax summary left and amounts/words right; bank/signature footer and boxed acknowledgement."
+    },
+    {
+      "id": "FRENCH_ELITE",
+      "reference_label": "French Elite",
+      "reference_layout": "Half-width accent title left/logo right; accent company name and address/contact/GST columns; document/bill/transport columns; bordered item rows; bank/words/terms/signature left and totals right; accent acknowledgement."
+    }
+  ],
+  "controls": [
+    "Back",
+    "Previous theme",
+    "Next theme",
+    "Colour selection where supported",
+    "Cancel without saving",
+    "Apply Changes"
+  ],
+  "data_policy": "Example businesses, logos, addresses, bank data and signatures are not application fixtures; render only authorized saved company/quotation data. Missing invoice-only fields must not be invented.",
+  "verification_status": "IMPLEMENTATION IN PROGRESS; not a visual-parity certification",
+  "quotation_data_adaptations": [
+    "Quotation/estimate title instead of falsely labelling it a posted tax invoice.",
+    "Only saved customer-safe item codes are available; a product SKU must not be labelled HSN/SAC.",
+    "Do not infer CGST/SGST/IGST splits from current master data when the quotation snapshot has only aggregate GST.",
+    "Do not invent received payments, debt, bank details, QR payment instructions or transport fields absent from the safe quotation DTO.",
+    "Latest supplied fifteen-image set and user-authorized naming govern the catalogue; original audit wording remains preserved in the finding register."
+  ]
+}

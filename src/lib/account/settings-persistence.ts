@@ -1,3 +1,4 @@
+import {quotationThemeSchema} from "@/lib/quotations/theme-catalogue";
 import {invoicePrintSettingsSchema} from "./invoice-print-settings";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -12,6 +13,7 @@ export async function updateSettingsSectionForActor(
 ) {
   if (!actor.companyId || actor.accountRole !== "ACCOUNT_ADMIN")
     throw new AuthorizationError();
+  if(section==="quotationPrintTheme")patch=quotationThemeSchema.parse(patch);
   if(section==="invoicePrintSettings")patch=invoicePrintSettingsSchema.parse(patch);
   return db.$transaction(async (tx) => {
     if(section==="invoicePrintSettings"&&patch.bankAccountId){const bank=await tx.moneyAccount.findFirst({where:{id:String(patch.bankAccountId),companyId:actor.companyId!,isActive:true,type:"BANK",...(actor.branchAccessScope==="SELECTED_BRANCHES"?{OR:[{branchId:null},{branchId:{in:actor.branchIds??[]}}]}:{})},select:{id:true}});if(!bank)throw new Error("BANK_ACCOUNT_NOT_AVAILABLE");}

@@ -89,6 +89,9 @@ data class QuotationState(
     val message: String? = null,
     val preview: Boolean = false,
     val pdfPreview:Boolean=false,
+    val themePicker:JsonObject?=null,
+    val selectedTheme:String="",
+    val selectedThemeColor:String="#998BDF",
     val canManageSettings:Boolean=false
 )
 
@@ -365,6 +368,27 @@ class QuotationViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun openThemePicker()=viewModelScope.launch{
+        val id=_state.value.detail?.str("id")?:return@launch
+        try{val data=api.quotationTheme(id);if(_state.value.detail?.str("id")==id){val (selected,color)=quotationThemeSelection(data);_state.value=_state.value.copy(themePicker=data,selectedTheme=selected,selectedThemeColor=color,error=null)}}
+        catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}
+    }
+    fun chooseTheme(id:String){if(_state.value.themePicker?.array("themes")?.any{it.str("id")==id}==true)_state.value=_state.value.copy(selectedTheme=id)}
+    fun chooseThemeColor(color:String){if(Regex("^#[0-9a-fA-F]{6}$").matches(color))_state.value=_state.value.copy(selectedThemeColor=color)}
+    fun cancelTheme(){_state.value=_state.value.copy(themePicker=null,pdf=null,pdfPreview=false,error=null)}
+    fun previewTheme()=viewModelScope.launch{
+        val id=_state.value.detail?.str("id")?:return@launch
+        val selected=_state.value.selectedTheme;val color=_state.value.selectedThemeColor
+        try{val bytes=api.quotationPdf(id,selected,color);if(_state.value.detail?.str("id")==id&&_state.value.themePicker!=null&&_state.value.selectedTheme==selected&&_state.value.selectedThemeColor==color)_state.value=_state.value.copy(pdf=bytes,pdfPreview=true,error=null)}
+        catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}
+    }
+    fun applyTheme()=viewModelScope.launch{
+        val id=_state.value.detail?.str("id")?:return@launch
+        if(_state.value.saving)return@launch
+        _state.value=_state.value.copy(saving=true,error=null)
+        try{api.saveQuotationTheme(id,_state.value.selectedTheme,_state.value.selectedThemeColor);_state.value=_state.value.copy(saving=false,themePicker=null,pdf=null,pdfPreview=false,message="Quotation theme saved.")}
+        catch(e:CancellationException){throw e}catch(e:Exception){_state.value=_state.value.copy(saving=false);fail(e)}
+    }
     fun previewPdf(){download(true)}
     fun sharePreviewPdf(){_state.value=_state.value.copy(pdfPreview=false)}
 

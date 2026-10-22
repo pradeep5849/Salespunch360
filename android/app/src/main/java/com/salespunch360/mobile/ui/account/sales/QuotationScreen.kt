@@ -9,6 +9,9 @@ import com.salespunch360.mobile.data.QuotationCreationAttachment
 import com.salespunch360.mobile.ui.account.expense.readExpenseAttachment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -53,7 +56,7 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     LaunchedEffect(state.pdf,state.pdfPreview) {
-        if(state.pdfPreview)return@LaunchedEffect
+    if(state.pdfPreview)return@LaunchedEffect
         state.pdf?.let { bytes ->
             val file = File(context.cacheDir, "quotation.pdf")
             file.writeBytes(bytes)
@@ -62,6 +65,18 @@ fun QuotationScreen(padding: PaddingValues, vm: QuotationViewModel = viewModel()
             context.startActivity(Intent.createChooser(send, "Share quotation"))
             vm.consumedPdf()
         }
+    }
+        if(state.themePicker!=null&&!state.pdfPreview){
+        val data=state.themePicker!!;val themes=data.array("themes");val selected=themes.indexOfFirst{it.str("id")==state.selectedTheme}.coerceAtLeast(0)
+        AlertDialog(onDismissRequest={if(!state.saving)vm.cancelTheme()},title={Text("Transaction Theme")},confirmButton={if(data["canSave"]?.jsonPrimitive?.booleanOrNull==true)TextButton(onClick={vm.applyTheme()},enabled=!state.saving){Text("Apply Changes")}},dismissButton={TextButton(onClick={vm.cancelTheme()},enabled=!state.saving){Text("Cancel")}},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+            Text(themes.getOrNull(selected)?.str("name").orEmpty(),style=MaterialTheme.typography.titleLarge)
+            Row{TextButton(enabled=!state.saving,onClick={if(themes.isNotEmpty())vm.chooseTheme(themes[(selected+themes.size-1)%themes.size].str("id"))}){Text("Previous theme")};TextButton(enabled=!state.saving,onClick={if(themes.isNotEmpty())vm.chooseTheme(themes[(selected+1)%themes.size].str("id"))}){Text("Next theme")}}
+            if(state.selectedTheme!="TALLY")LazyRow{items(data["colors"]?.jsonArray?.map{it.jsonPrimitive.content}.orEmpty()){color->FilterChip(enabled=!state.saving,selected=state.selectedThemeColor==color,onClick={vm.chooseThemeColor(color)},leadingIcon={Box(Modifier.size(18.dp).background(Color(android.graphics.Color.parseColor(color)),CircleShape))},label={Text(color)})}}
+            TextButton(onClick={vm.previewTheme()},enabled=!state.saving){Text("Preview selected theme")}
+            Text("Preview is temporary until applied. Document values and status stay unchanged.")
+            state.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+        }})
+        return
     }
     if(state.pdfPreview)state.pdf?.let { bytes ->QuotationPdfPreview(bytes,onClose=vm::consumedPdf,onShare=vm::sharePreviewPdf,documentName=state.detail?.str("documentNumber").orEmpty().ifBlank{"Quotation"}) }
     state.shareToken?.let { token ->
@@ -324,6 +339,7 @@ private fun QuotationDetail(quotation: JsonObject, vm: QuotationViewModel, previ
                     }
                     if (!preview && capabilities?.get("canShare")?.jsonPrimitive?.booleanOrNull==true) OutlinedButton(onClick = vm::share, modifier = Modifier.fillMaxWidth()) { Text("Share link") }
                     if(canConvertSale||canConvertOrder)OutlinedButton(onClick={choosingConversion=true},modifier=Modifier.fillMaxWidth()){Text("Convert")}
+                    OutlinedButton(onClick = {vm.openThemePicker()}, modifier = Modifier.fillMaxWidth()) { Text("Change theme and colours") }
                     OutlinedButton(onClick = vm::previewPdf, modifier = Modifier.fillMaxWidth()) { Text("Print preview") }
                     OutlinedButton(onClick = {vm.download()}, modifier = Modifier.fillMaxWidth()) { Text("Download / share PDF") }
                 }

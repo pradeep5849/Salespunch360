@@ -11,3 +11,5 @@ describe("safe quotation print presentation",()=>{
   expect(quotationPdfTheme({theme:"#aBc123",amountWordsFormat:"INDIAN"}).color).toBe("#ABC123");
  });
 });
+
+it("keeps layout and accent independent without exposing raw settings",()=>{expect(quotationPrintPresentation({quotationPrintTheme:{theme:"GST_6",color:"#abc123"},invoicePrintSettings:{theme:"CLASSIC",amountWordsFormat:"INTERNATIONAL",bankAccountId:"private"}})).toEqual({theme:"GST_6",color:"#ABC123",amountWordsFormat:"INTERNATIONAL"});expect(quotationPdfTheme({theme:"LANDSCAPE_1",color:"#998BDF",amountWordsFormat:"INDIAN"}).profile?.id).toBe("LANDSCAPE_1")});

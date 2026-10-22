@@ -131,7 +131,9 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun uploadQuotationAttachment(id:String,revision:Int,key:String,name:String,mime:String,bytes:ByteArray):String{val requestToken=session.token();return try{multipart("api/v1/mobile/account/quotations/${enc(id)}/attachments","file",name,mime,bytes,mapOf("revisionNumber" to revision.toString(),"requestKey" to key))}catch(e:ApiException){if(e.status==401)session.invalidateIfCurrent(requestToken);throw e}}
  suspend fun removeQuotationAttachment(id:String,documentId:String,revision:Int)=call("api/v1/mobile/account/quotation-attachments/${enc(id)}?documentId=${enc(documentId)}&revisionNumber=$revision","DELETE")
  suspend fun quotationAttachment(id:String)=download("api/v1/mobile/account/quotation-attachments/${enc(id)}")
- suspend fun quotationPdf(id:String):ByteArray=download("api/v1/mobile/account/quotations/${enc(id)}/pdf")
+ suspend fun quotationPdf(id:String,theme:String="",color:String=""):ByteArray=download("api/v1/mobile/account/quotations/${enc(id)}/pdf"+if(theme.isNotBlank())"?theme=${enc(theme)}&color=${enc(color)}"else "")
+ suspend fun quotationTheme(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/quotations/${enc(id)}/theme")).jsonObject
+ suspend fun saveQuotationTheme(id:String,theme:String,color:String)=call("api/v1/mobile/account/quotations/${enc(id)}/theme","POST",buildJsonObject{put("theme",theme);put("color",color)}.toString())
  suspend fun purchaseOptions()=json.parseToJsonElement(call("api/v1/mobile/account/purchases/options")).jsonObject
  suspend fun purchases(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/purchases"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
  suspend fun purchase(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/purchases/${enc(id)}")).jsonObject
