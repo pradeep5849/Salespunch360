@@ -69781,6 +69781,12 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A090-F01 remains PARTIAL for complete final consumer/runtime verification;Hindi explicitly user-deferred. No whole finding completion inferred from shared helper wiring. No production/merge/deploy/A104."
+        },
+        "preference_consumer_regression_2026_10_22": {
+          "tested_source_head": "f131d2bf65a0d6d6c484b207ca84f4068a1602a7",
+          "work": "Followed the recorded remaining preference-consumer scope. No further application changes in this slice: remaining fixed numeric UI values found are form/ledger serialization or percentage precision, not hardcoded business currency displays. Currency settings menu glyph is decorative; ISO date controls retain machine format. Hindi remains explicitly user-deferred.",
+          "tests": "8 desktop/mobile Chromium cases PASS,0fail/skip,1.6m: General save/reload/unsaved navigation; expense detail/schedules/money directory; GST report display/source retention; commercial detail money/calendar fields,accessibility/no overflow. Tests execute at f131d2bf; no claim that every consumer/native screen is finally verified.",
+          "remaining": "A090-F01 remains PARTIAL: Hindi intentionally deferred, complete original consumer matrix/native runtime and checkpoint-wide final verification pending."
         }
       },
       "intermediate_validation": {
@@ -72065,6 +72071,12 @@
         "final_199_validation": "NOT RUN"
       },
       "remaining": "A084-F03/A085-F02 remain PARTIAL: other supplied report destinations,reference-specific layouts/filter scope and final checkpoint/device runtime are still pending. Precision-unrepresentable order preparation and manually closed-order correction remain safely blocked as recorded. No A104,merge,deploy or production changes."
+    },
+    "preference_consumer_regression_2026_10_22": {
+      "tested_source_head": "f131d2bf65a0d6d6c484b207ca84f4068a1602a7",
+      "work": "Followed the recorded remaining preference-consumer scope. No further application changes in this slice: remaining fixed numeric UI values found are form/ledger serialization or percentage precision, not hardcoded business currency displays. Currency settings menu glyph is decorative; ISO date controls retain machine format. Hindi remains explicitly user-deferred.",
+      "tests": "8 desktop/mobile Chromium cases PASS,0fail/skip,1.6m: General save/reload/unsaved navigation; expense detail/schedules/money directory; GST report display/source retention; commercial detail money/calendar fields,accessibility/no overflow. Tests execute at f131d2bf; no claim that every consumer/native screen is finally verified.",
+      "remaining": "A090-F01 remains PARTIAL: Hindi intentionally deferred, complete original consumer matrix/native runtime and checkpoint-wide final verification pending."
     }
   },
   "approved_business_decisions": {

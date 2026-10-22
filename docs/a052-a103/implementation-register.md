@@ -10446,3 +10446,7 @@ A083-F01/A085-F02: corrected estimate-card Sale Order destination to transaction
 Implementation commit `bdfe4b01c1544fa74e68f3a053d98efd0272f943`: A084-F03/A085-F02 now include Order Transaction/Order Item reports, scoped type/status/party filters, explicit primary-unit fulfilment and retained amounts, source links and exports on Web/native. Financial editor readiness/value capture fixes the four browser failures that saved5units instead of2. Final combined browser6PASS; focused financial72PASS; grouped reports192PASS; final report precision/pagination28PASS(overlap); real PostgreSQL21PASS; Android compile+26JVM PASS; type/lint/YAML/diff checks PASS. No schema/migration. Native device and final199 validation NOT RUN.
 
 A083-F01 code scope completed,including approved estimate billing presentation and corrected order destination: IMPLEMENTED BUT NOT VERIFIED. Current totals186IMPLEMENTED BUT NOT VERIFIED/12PARTIAL/1NOT STARTED;199IDs retained;no final finding status claimed.
+
+### 2026-10-22 General preference consumer regression
+
+A090-F01: current source head f131d2bf passed8desktop/mobile browser scenarios(1.6m),0fail/skip: General save/reload/unsaved guard,expense/schedule/money directory,GST report and commercial details; saved currency/precision/calendar formatting,source amounts,Axe/overflow checks retained. No application change in this follow-up. A090 remains PARTIAL;Hindi is user-deferred and final full consumer/device/checkpoint validation remains pending. Counts186implemented-but-not-finally-verified/12partial/1notstarted.
