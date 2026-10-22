@@ -10472,3 +10472,9 @@ Grouped report regressions:201PASS/26files,0fail/skip. Final desktop/mobile Chro
 A084-F03/A085-F02: `18638e2ec362357e2f7dd98a343647bbd5ca3fbf` connects Sales/Purchases selection on Web/native and exports;purchase bills net debit notes retain saved classification snapshots.203report tests passed;2desktop/mobile browser cases passed2.0m with real PostgreSQL;Android compile+27report JVM tests passed3m41s;fullTypeScript/focusedESLint passed. No device runtime or final199verification claimed. Findings remain PARTIAL for remaining original report scope. Prior7e6cfb6f CI39718393021 allSUCCESS.
 
 A067-F03 decision received:user may choose per loan whether opening processing fee is deducted from gross receipt or paid separately after gross receipt. Opening-fee implementation remains pending;this decision is not implementation evidence.
+
+## Per-loan opening processing fees —22October2026
+
+A067-F03:`d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2` completes approved deducted/separately-paid fee choice on Web/native creation/shared backend. Gross liability remains100000;fee2000 posts netbank98000/expense2000;separate mode receives gross then pays chosenaccount. Existing LoanOperation linkage,retry protection,history/statement andcancellationguard;no model/migration change. Standalone charge-only work preserved.
+
+Final37focused tests,26realPostgreSQL financial tests,2desktop/mobilebrowser cases,5AndroidloanJVMtests passed;Androidcompile,fullTypeScript,focusedESLint,diff/workflowYAML passed. Earlier test-import/typecheck errors andincorrectHTTP400expectation corrected;failures retained inJSON. Native device/runtime,current-slice localAndroidlint/final199complete-head verification pending. A067-F03 IMPLEMENTED BUT NOT VERIFIED. Totals:187implemented-but-not-verified,11partial,1notstarted;199originalIDs/no final_status promoted.

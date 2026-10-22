@@ -40860,6 +40860,39 @@
           ],
           "tests": "78 focused unit/PostgreSQL loan/expense tests PASS;4 desktop/mobile paid-entry and loan scenarios PASS(1.2m). Latest onboarding/search-clear/detail/statement/edit/AXE/overflow2desktop/mobile scenarios PASS(1.5m);Android compileDebugKotlin and focused JVM tests PASS(2m56s):{'com.salespunch360.mobile.account.ExpenseLegacyJsonTest': {'tests': 2, 'failures': 0, 'skipped': 0}, 'com.salespunch360.mobile.account.ExpensePreviewTest': {'tests': 5, 'failures': 0, 'skipped': 0}, 'com.salespunch360.mobile.account.LoanPaymentTotalTest': {'tests': 2, 'failures': 0, 'skipped': 0}}. TypeScript/full ESLint results in a067-empty-types.log/a067-empty-lint.log.",
           "remaining": "Final full implementation-head regressions and physical Android accessibility/device runtime pending. Not FIXED + VERIFIED."
+        },
+        {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -42248,7 +42281,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -42798,6 +42831,39 @@
         "opening_fee_decision_2026_10_22": {
           "user_decision": "Let user choose per loan:deduct opening fee from gross receipt OR receive gross principal and pay fee separately.",
           "status": "Decision received;opening-fee implementation still pending. Existing standalone charge work preserved. No financial implementation/verification claimed by this decision."
+        },
+        "opening_loan_fee_choice_2026_10_22": {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       }
     },
@@ -42963,6 +43029,39 @@
           "date": "2026-10-13",
           "work": "Shared legacy loan ledger balances are unknown/excluded rather than counted for each loan; repayments, top-ups and cancellation reject ambiguous ownership. Scoped history returns an explanatory state. Exact minor-unit summation retains cents for large aggregate balances.",
           "tests": "23 isolated financial tests passed including legacy duplicate ledger, company/branch/mutation guards; 32 grouped money sum, overview/history/accounting runtime tests passed; TypeScript and ESLint passed. Android compile at lifecycle head passed; newest native shared-ledger explanatory text awaits grouped/final compile."
+        },
+        {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -45109,6 +45208,39 @@
         {
           "date": "2026-10-13",
           "work": "Related A067-F04 lifecycle slice supplies archive filters, company-first financial locking, immutable operation retries and controlled receipt reversal. Generic receipt/payment/top-up reversals tested; original finding remains subject to independent complete final-head verification."
+        },
+        {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -45788,7 +45920,40 @@
         "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
         "work": "Native money editor retains one request key for retries and disables confirmation/dismissal while saving; ViewModel rejects concurrent submission.",
         "remaining_work": "Final-head regression and original finding verification remain pending.",
-        "verification_stage": "INTERMEDIATE ONLY; final status remains unset"
+        "verification_stage": "INTERMEDIATE ONLY; final status remains unset",
+        "opening_loan_fee_choice_2026_10_22": {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
+        }
       },
       "push_checkpoint_evidence": {
         "original_problem": "Shared save coroutine has no saving/in-flight guard and editor generates a new UUID on each confirmation click. Distinct keys can create duplicate loan receipts; repeated partial EMI can post twice while principal remains available.",
@@ -47159,6 +47324,39 @@
         {
           "work": "Explicit accessible names, unique field-error references, typed retained web feedback, pending controls and mutation permission gating. No nested main. Native positive-amount/duration validation and polite total/failure announcements. Overpayment feedback retains input and permits corrected retry.",
           "tests": "40 grouped focused/real PostgreSQL regressions passed; 3 mobile domain-error tests passed; 4 desktop/mobile-web workflow/permission/accessibility checks passed (46.0s). Android compilation and 2 exact-total JVM tests passed; final native validation/accessibility compile passed. Node22 TypeScript, targeted ESLint, Prisma validation/generation and isolated migration 119 deploy passed. Final-head suite/build/rehearsal and physical-device checks remain pending."
+        },
+        {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -60137,6 +60335,39 @@
             "final_199_validation": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL:other report destinations and reference controls,HSN gross presentation/populated goods browser matrix,full device andfinalcheckpoint verification. SAC purchase-selector implementation gap is resolved;prior evidence retained."
+        },
+        "opening_loan_fee_choice_2026_10_22": {
+          "checkpoint": "opening_loan_fee_choice_2026_10_22",
+          "implementation_commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2",
+          "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+          "implementation": "Web/native input/shared backend complete. Deducted:Drbank98000,Drexpense2000,Crloan100000. Separate:gross receipt plus fee expense payment. Gross principal unchanged;existing LoanOperation captures mode,amount,gross/net,source andjournal. Canonical intent fingerprint preserves no-fee hashes,concurrent retry atomic,changed intent409. Independent fee appears in history/statement;deducted fee in receipt narration. Cancellation blocks paid-fee activity rather than inventing refunds. Existing standalone charge work preserved. No schema/migration.",
+          "tests": {
+            "focused": "37PASS/7files,0fail/skip,5.32s;includes4newdomain/fingerprint cases.",
+            "database": "26PASS/1file,0fail/skip,7.43s isolatedPostgreSQL:both fee modes,balancedjournals,netbank98000/grossliability100000,concurrent retry,cancellationguard,history/statement,invalid-account rollback andexisting financial/charge regressions. Initial2runs25PASS/1FAILeach due missing testimports;corrected.",
+            "browser": "Final2PASS49.3s desktop/mobileChromium realPostgreSQL:both choices through Webform,AxeAA/nooverflow,loan/fee metadata,nativeHTTPsame-intentretry/changedintent409. Initial2FAIL expected400vsactualcorrect409;assertion corrected.",
+            "android": "compileDebugKotlin +5loanJVMtestsPASS,0fail/errors/skips,2m49s;includes3newfee-previewtests.No current-slice localAndroidlint/device/Compose/TalkBack runtime.",
+            "typescript": "FinalfullPASS;initialmisplacedguard andexpenseledger type restriction corrected before financial verification.",
+            "eslint": "FinalfocusedPASS;gitdiff/workflowYAML parsePASS.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A067-F03 IMPLEMENTED BUT NOT VERIFIED pending finalcompletehead/deviceverification.Fee refund correction safelyblocked;noA104/merge/deploy/production.",
+          "files": [
+            "src/lib/account/loan-opening-fee.ts",
+            "src/lib/account/loan-opening-fee.test.ts",
+            "src/lib/account/money.ts",
+            "src/lib/account/loan-fingerprint.ts",
+            "src/lib/account/loan-history.ts",
+            "src/lib/account/loan-operations.ts",
+            "src/lib/account/reports/loan-statement.ts",
+            "src/lib/account/action-feedback.ts",
+            "src/lib/account/money-edit.integration.test.ts",
+            "src/components/account/loan-forms.tsx",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/LoanOpeningFee.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/LoanOpeningFeeTest.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       }
     },
@@ -72289,6 +72520,15 @@
         "final_199_validation": "NOT RUN"
       },
       "remaining": "A080-F01 remains PARTIAL: native picker currently uses a selection dialog plus separate PDF preview rather than the supplied full-page combined picker;device runtime and full visual/reference/final checkpoint verification remain. No fake HSN,transport,CGST/SGST split,bank/payment values inserted when absent from authorized quotation DTO. No A104/merge/deploy/production operation."
+    },
+    "opening_loan_fee_2026_10_22": {
+      "counts": {
+        "PARTIAL": 11,
+        "IMPLEMENTED BUT NOT VERIFIED": 187,
+        "NOT STARTED": 1
+      },
+      "final_complete_head": "NOT RUN",
+      "commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2"
     }
   },
   "approved_business_decisions": {
@@ -72405,6 +72645,10 @@
       "order_closed_state": "Approved: close automatically when all ordered quantities are invoiced/billed; provide a manual Close remaining order action. Closure creates no payment or accounting entry.",
       "estimate_card_balance": "Approved: show Total Amount and Not billed on estimates, not an invoice receivable. For converted documents provide the actual Sale link and its authorized outstanding balance.",
       "form_27eq": "Approved: provide TCS Collected Report for recorded sales TCS; keep official Form27EQ filing separate and unavailable until required filing data/validation are implemented. Do not label activity exports as official filings."
+    },
+    "loan_opening_fee_2026_10_22": {
+      "decision": "User chooses per-loan deducted fee or gross receipt with separately-paid fee from an explicit account.",
+      "commit": "d2998871e72d55fb4d06695f06cc1a1a6f7dd3d2"
     }
   },
   "push_checkpoint": {
