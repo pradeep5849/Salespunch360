@@ -2,9 +2,19 @@ package com.salespunch360.mobile.account
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.Json
 
 class SalesPreviewTest {
+    @Test fun editedChargesChangePreviewAndPayloadWithoutChangingOriginalDraft() {
+        val original=SalesEditorDraft(editingSourceId="saved",freightAmount="5",otherChargesAmount="7",roundOffAmount="0.25",lines=listOf(SalesLineDraft(sourceId="service",quantity="2",rate="120")))
+        val edited=original.copy(freightAmount="13.50",otherChargesAmount="8.25")
+        assertEquals("252.25",salesPreviewTotal(original,SalesOptions()).toPlainString())
+        assertEquals("262.00",salesPreviewTotal(edited,SalesOptions()).toPlainString())
+        assertEquals("13.50",salesDraftPayload(edited)["freightAmount"]?.jsonPrimitive?.content)
+        assertEquals("8.25",salesDraftPayload(edited)["otherChargesAmount"]?.jsonPrimitive?.content)
+    }
+
     @Test fun advancesRespectCustomerBranchProjectAndLinkingSwitch() {
         val draft=SalesEditorDraft(branchId="branch",customerId="customer",lines=listOf(SalesLineDraft(quantity="1",rate="100")))
         val options=SalesOptions(customerAdvances=listOf(

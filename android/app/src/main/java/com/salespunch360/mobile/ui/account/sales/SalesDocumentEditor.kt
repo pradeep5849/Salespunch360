@@ -556,6 +556,9 @@ private fun DirectSaleInvoiceEditor(
                 if(line.sourceId.isNotBlank()||line.itemName.isNotBlank())SalesLineEditor(index,line,draft,options,emptyList(),onLine,onRemove)
             }
             if(options.transactionPreference("showProfit"))item{val profit=salesPreviewProfit(draft,options);Text(if(profit==null)"Enter purchase costs for these items to calculate profit." else "Estimated profit: ${accountMoney(profit.toPlainString())}")}
+            item{Text("Charges",fontWeight=FontWeight.Bold)}
+            item{OutlinedTextField(draft.freightAmount,{onDraft(draft.copy(freightAmount=it))},enabled=!saving,label={Text("Freight amount")},modifier=Modifier.fillMaxWidth())}
+            item{OutlinedTextField(draft.otherChargesAmount,{onDraft(draft.copy(otherChargesAmount=it))},enabled=!saving,label={Text("Other charges amount")},modifier=Modifier.fillMaxWidth())}
             val advance=com.salespunch360.mobile.account.salesPreviewAdvance(draft,options)
             if(advance.signum()>0)item{Text("Advance applied: ${accountMoney(advance.toPlainString())}")}
             if(cash)item{Text("New payment: ${accountMoney((salesPreviewTotal(draft,options)-advance).max(java.math.BigDecimal.ZERO).toPlainString())}",color=MaterialTheme.colorScheme.primary)}
