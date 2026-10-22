@@ -10488,3 +10488,7 @@ A086 decisions received:corrected sale retains original printed invoice number w
 ## Printed invoice correction identity — 22 October 2026
 
 `12743e36e6e106f2be60bf539e7b9dc4ff1f4616` preserves the original printed invoice number with immutable revision/previous-invoice history in Web/native details and shared PDF output. Internal unique accounting numbers remain unchanged. 74 focused unit, 55 financial database, 4 desktop/mobile browser and 11 Android JVM tests passed; Android compilation, TypeScript and focused lint passed. Earlier mock/assertion failures are retained in JSON. A086-F05/F06 and A087-F02 remain PARTIAL; posted return valuation/carry, original remaining scope and final device/head validation are pending. Counts unchanged: 188 implemented but not verified, 11 partial, 199 original IDs. No migration.
+
+## Private-file backup bundles — 22 October 2026
+
+`0d08c3a589e082d81d59cbdb68297d89c4dc8574` adds explicit Web/Android record-and-live-file downloads with per-file SHA256, byte counts, scope checks and fail-closed missing-file handling. Record-only and scheduled backups unchanged. 30 focused service/API tests and2desktop/mobile realDBbrowser cases PASS; Androidcompile/lint PASS (0errors,4warnings,6information),fullTypeScript/focusedESLint PASS. No device runtime/new nativeJVM claim. A088-F01 remains PARTIAL for complete validated restore/historical storage recovery and final validation. Counts remain188implemented-but-not-verified/11partial; all199 IDs retained.

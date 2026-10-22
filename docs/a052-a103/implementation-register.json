@@ -68940,6 +68940,39 @@
             "tests": "Includedin81PASSgroup;focusedbackupscopeassertionpassed. Broaderrecovery/browser/device/finalvalidationpending.",
             "remaining": "A088-F01 remainsPARTIAL;complete recovery/restore/private-storage backupstillpending."
           }
+        },
+        {
+          "private_file_backup_bundle_2026_10_22": {
+            "implementation_commit": "0d08c3a589e082d81d59cbdb68297d89c4dc8574",
+            "work": "Explicit Web/native file-inclusive backup option embeds deduplicated live typed private file references with exact bytes/base64, sizes and SHA256 hashes. Company/path checks, missing-file failure, 2000 file/64MiB binary limits and offline integrity verification before success recording. Existing record-only/scheduled format2 exports unchanged; file-inclusive format3 is opt-in. Web/native errors actionable and downloads uncached. No restore writes or migration.",
+            "files": [
+              ".github/workflows/targeted-validation.yml",
+              "android/app/src/main/java/com/salespunch360/mobile/AccountUtilityViewModel.kt",
+              "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+              "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountUtilityScreen.kt",
+              "e2e/a090-settings.spec.ts",
+              "src/app/api/account/utilities/backup/route.test.ts",
+              "src/app/api/account/utilities/backup/route.ts",
+              "src/app/api/v1/mobile/account/backup/route.test.ts",
+              "src/app/api/v1/mobile/account/backup/route.ts",
+              "src/app/workspace/account/utilities/backup/page.tsx",
+              "src/lib/account/backup-private-files.test.ts",
+              "src/lib/account/backup-private-files.ts",
+              "src/lib/account/backup-snapshot.runtime.test.ts",
+              "src/lib/account/utilities.ts",
+              "src/lib/mobile/account-administration.ts"
+            ],
+            "tests": {
+              "focused": "30 PASS/5 suites, 0 failed/skipped; backup service/snapshot/scheduler and Web/native API tests. Earlier overlapping24/27 test runs passed.",
+              "browser": "2 PASS desktop/mobile Chromium,43.8s; real isolated PostgreSQL snapshot/download checksums, missing-file503 with no success record, exact binary photo preservation, tenant isolation and existing settings/history/manual download regression.",
+              "android": "compileDebugKotlin + lintDebug PASS,5m52s. Lint0errors/4warnings/6information. No new native JVM tests or device download/share runtime claimed.",
+              "typescript": "Final full tsc PASS after native API additions.",
+              "eslint": "Focused changed TS/TSX PASS; git diff --check PASS.",
+              "prior_ci": "Exact687df92c CI39757885477 Web/Android/migration allSUCCESS.",
+              "final_199_validation": "NOT RUN"
+            },
+            "remaining": "A088-F01 remains PARTIAL. Full validated database restore/recovery, historical deleted-file bytes, provider backups, native device/share runtime and checkpoint-wide final validation pending. File reads use existing buffer-based storage API; this is a bounded application bundle, not a streaming provider disaster-recovery archive."
+          }
         }
       ],
       "push_checkpoint_evidence": {
@@ -72672,6 +72705,37 @@
         "earlier_failures": "Print mock lacked audit reader (8 failures); browser assertions omitted existing dropdown glyph and treated PDF extraction object as string (4 failures). Mocks/assertions corrected and recorded final runs passed."
       },
       "remaining": "Finding remains PARTIAL. Posted return correction carry/value policy, remaining original reference scope and final-head/full device validation are not certified. No migration or production change."
+    },
+    "private_file_backup_bundle_2026_10_22": {
+      "implementation_commit": "0d08c3a589e082d81d59cbdb68297d89c4dc8574",
+      "work": "Explicit Web/native file-inclusive backup option embeds deduplicated live typed private file references with exact bytes/base64, sizes and SHA256 hashes. Company/path checks, missing-file failure, 2000 file/64MiB binary limits and offline integrity verification before success recording. Existing record-only/scheduled format2 exports unchanged; file-inclusive format3 is opt-in. Web/native errors actionable and downloads uncached. No restore writes or migration.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountUtilityViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountUtilityScreen.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/api/account/utilities/backup/route.test.ts",
+        "src/app/api/account/utilities/backup/route.ts",
+        "src/app/api/v1/mobile/account/backup/route.test.ts",
+        "src/app/api/v1/mobile/account/backup/route.ts",
+        "src/app/workspace/account/utilities/backup/page.tsx",
+        "src/lib/account/backup-private-files.test.ts",
+        "src/lib/account/backup-private-files.ts",
+        "src/lib/account/backup-snapshot.runtime.test.ts",
+        "src/lib/account/utilities.ts",
+        "src/lib/mobile/account-administration.ts"
+      ],
+      "tests": {
+        "focused": "30 PASS/5 suites, 0 failed/skipped; backup service/snapshot/scheduler and Web/native API tests. Earlier overlapping24/27 test runs passed.",
+        "browser": "2 PASS desktop/mobile Chromium,43.8s; real isolated PostgreSQL snapshot/download checksums, missing-file503 with no success record, exact binary photo preservation, tenant isolation and existing settings/history/manual download regression.",
+        "android": "compileDebugKotlin + lintDebug PASS,5m52s. Lint0errors/4warnings/6information. No new native JVM tests or device download/share runtime claimed.",
+        "typescript": "Final full tsc PASS after native API additions.",
+        "eslint": "Focused changed TS/TSX PASS; git diff --check PASS.",
+        "prior_ci": "Exact687df92c CI39757885477 Web/Android/migration allSUCCESS.",
+        "final_199_validation": "NOT RUN"
+      },
+      "remaining": "A088-F01 remains PARTIAL. Full validated database restore/recovery, historical deleted-file bytes, provider backups, native device/share runtime and checkpoint-wide final validation pending. File reads use existing buffer-based storage API; this is a bounded application bundle, not a streaming provider disaster-recovery archive."
     }
   },
   "approved_business_decisions": {
