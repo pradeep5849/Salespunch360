@@ -10450,3 +10450,7 @@ A083-F01 code scope completed,including approved estimate billing presentation a
 ### 2026-10-22 General preference consumer regression
 
 A090-F01: current source head f131d2bf passed8desktop/mobile browser scenarios(1.6m),0fail/skip: General save/reload/unsaved guard,expense/schedule/money directory,GST report and commercial details; saved currency/precision/calendar formatting,source amounts,Axe/overflow checks retained. No application change in this follow-up. A090 remains PARTIAL;Hindi is user-deferred and final full consumer/device/checkpoint validation remains pending. Counts186implemented-but-not-finally-verified/12partial/1notstarted.
+
+### 2026-10-22 Fifteen quotation themes
+
+A080-F01 implementation `279333248d56d92298fe9f0a219232751fa77457`: latest15 references mapped in theme-reference-manifest.json;customer-safe layouts,colour selection,Web/native preview/adminApply/Cancel,scoped JSON settings patch. Final44focused tests PASS;desktop/mobile browser2PASS2.4m;Android compile+48JVM PASS3m25s;tsc/lint/YAML/diff PASS. Initialfixture,contrast,Compose placement andlint failures retained inJSONevidence. No new migration or financial posting. Original199IDs/counts retained. A080 remainsPARTIAL for full-page native picker/reference presentation and final device/visual/checkpoint verification.

@@ -54518,7 +54518,30 @@
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
         "src/app/workspace/account/quotations/[id]/page.tsx",
         "src/lib/quotations/pdf.ts",
-        "src/lib/account/settings.ts"
+        "src/lib/account/settings.ts",
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/QuotationThemeSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/QuotationThemeSelectionTest.kt",
+        "docs/a052-a103/theme-reference-manifest.json",
+        "e2e/a090-settings.spec.ts",
+        "src/app/actions/quotation-theme.ts",
+        "src/app/api/v1/mobile/account/quotations/[id]/pdf/route.ts",
+        "src/app/api/v1/mobile/account/quotations/[id]/theme/route.ts",
+        "src/app/workspace/account/quotations/[id]/pdf/route.ts",
+        "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+        "src/app/workspace/account/quotations/[id]/preview/theme/page.tsx",
+        "src/components/account/quotation-theme-picker.module.css",
+        "src/components/account/quotation-theme-picker.tsx",
+        "src/lib/account/settings-persistence.ts",
+        "src/lib/quotations/print-presentation.test.ts",
+        "src/lib/quotations/print-presentation.ts",
+        "src/lib/quotations/theme-catalogue.ts",
+        "src/lib/quotations/theme-settings.test.ts",
+        "src/lib/quotations/theme-settings.ts",
+        "src/lib/quotations/themed-pdf.test.ts",
+        "src/lib/quotations/themed-pdf.ts"
       ],
       "affected_services_apis_actions": [
         "Quotation web pages/actions and corresponding native/API paths, as identified in affected files"
@@ -54836,6 +54859,49 @@
             "web_backend": "NOT RUN for this native-only slice;no Web/backend source changed. Full checkpoint final-head validation pending."
           },
           "remaining": "A080-F01 remains PARTIAL for original GST1\u20136/ModernElite/reference themes andremaining preview/settings controls,plus native runtime/final checkpoint verification. No final status assigned."
+        },
+        "fifteen_quotation_themes_2026_10_22": {
+          "implementation_commit": "279333248d56d92298fe9f0a219232751fa77457",
+          "references": "All15 theme images supplied22October2026; user authorizes clear alternative names. IDs/reference descriptions retained in docs/a052-a103/theme-reference-manifest.json. Latest supplied set governs names; original audit wording retained.",
+          "implementation": "Fifteen named quotation PDF profiles with independent validated accents,portrait/landscape paper,table/border/header/summary/acknowledgement variations,normalized company logo/signature support and long-content pagination. Shared customer-safe renderer serves Web/private native/public saved quotation PDFs. Authenticated preview overrides do not write; Apply is admin/entitlement/module/source-scope authorized and audits only a serialized company quotationPrintTheme settings patch. Cancel leaves settings unchanged. Existing invoice print settings and financial documents remain intact. Web picker provides all15choices,previous/next,colours,temporary PDF preview and Apply/Cancel. Native picker loads same catalogue,retains legacy colours,offers preview and Apply/Cancel.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/QuotationThemeSelection.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/QuotationThemeSelectionTest.kt",
+            "docs/a052-a103/theme-reference-manifest.json",
+            "e2e/a090-settings.spec.ts",
+            "src/app/actions/quotation-theme.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/pdf/route.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/theme/route.ts",
+            "src/app/workspace/account/quotations/[id]/pdf/route.ts",
+            "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+            "src/app/workspace/account/quotations/[id]/preview/theme/page.tsx",
+            "src/components/account/quotation-theme-picker.module.css",
+            "src/components/account/quotation-theme-picker.tsx",
+            "src/lib/account/settings-persistence.ts",
+            "src/lib/quotations/pdf.ts",
+            "src/lib/quotations/print-presentation.test.ts",
+            "src/lib/quotations/print-presentation.ts",
+            "src/lib/quotations/theme-catalogue.ts",
+            "src/lib/quotations/theme-settings.test.ts",
+            "src/lib/quotations/theme-settings.ts",
+            "src/lib/quotations/themed-pdf.test.ts",
+            "src/lib/quotations/themed-pdf.ts"
+          ],
+          "tests": {
+            "focused": "Final44 tests/5files PASS,0fail/skip:all15layouts,paper orientation,retained values,Unicode/long multipage content,unsafe inputs,legacy behaviour,company currency/date/state labels,source/role/entitlement rejection and existing private print assets. Earlier43/39/33runs overlap. Initial16layout failures came from Decimal-like test fixture values; accepting their toString representation fixed the renderer input boundary.",
+            "browser": "Final2desktop/mobile Chromium PASS2.4m on final source:15option catalogue,temporarycolour/Cancel no write,all15PDFdownloads/paper sizes,savedApply/nativesavedPDF,admin-vs-accountant POST403,unauthenticated401,missing source404,malformed theme400,Axe/no overflow,unchanged original quotation revision/lines/journal count. Initial2FAILApply-buttoncontrast4.28:1;darkened button and reran. Intermediate2PASS2.4m overlaps.",
+            "android": "FinalcompileDebugKotlin +48quotation JVMtests PASS,0fail/errors/skips,3m25s;includes3new legacy/named theme selection cases. First compile failed because picker was placed inside a LaunchedEffect; moved it into composition,corrected compile and tests passed. No emulator/device/Compose picker/PrintManager/TalkBack runtime performed. Current-slice local lintDebug not run.",
+            "typescript": "Finalfulltsc --noEmit PASS.",
+            "lint": "FinalfocusedESLint PASS,0warnings;workflow YAML and git diff --check PASS. Initialprefer-const lint corrected with a const header descriptor.",
+            "visual": "Synthetic local GST6/French raster previews inspected;not a full15theme pixel-parity certification. Reference text descriptors retained;sample PDFs/PNGs are scratch evidence,not shipped assets.",
+            "database": "Real authenticated browser requests exercised localPostgreSQL settings writes and snapshot preservation;no new schema/migration. Settings serialization/audit/company scoping reused. No production writes.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A080-F01 remains PARTIAL: native picker currently uses a selection dialog plus separate PDF preview rather than the supplied full-page combined picker;device runtime and full visual/reference/final checkpoint verification remain. No fake HSN,transport,CGST/SGST split,bank/payment values inserted when absent from authorized quotation DTO. No A104/merge/deploy/production operation."
         }
       }
     },
@@ -69787,6 +69853,12 @@
           "work": "Followed the recorded remaining preference-consumer scope. No further application changes in this slice: remaining fixed numeric UI values found are form/ledger serialization or percentage precision, not hardcoded business currency displays. Currency settings menu glyph is decorative; ISO date controls retain machine format. Hindi remains explicitly user-deferred.",
           "tests": "8 desktop/mobile Chromium cases PASS,0fail/skip,1.6m: General save/reload/unsaved navigation; expense detail/schedules/money directory; GST report display/source retention; commercial detail money/calendar fields,accessibility/no overflow. Tests execute at f131d2bf; no claim that every consumer/native screen is finally verified.",
           "remaining": "A090-F01 remains PARTIAL: Hindi intentionally deferred, complete original consumer matrix/native runtime and checkpoint-wide final verification pending."
+        },
+        "named_theme_display_preferences_2026_10_22": {
+          "implementation_commit": "279333248d56d92298fe9f0a219232751fa77457",
+          "work": "New named quotation renderer uses saved company money/date preferences,unchanged quantities and recorded tax values.",
+          "tests": "Included in final44PASSgroup:USD3decimals,MM/DDcalendar,Karnataka supply label and unchanged source total.",
+          "remaining": "A090 remainsPARTIAL;Hindi user-deferred and final consumer/device matrix pending."
         }
       },
       "intermediate_validation": {
@@ -72077,6 +72149,49 @@
       "work": "Followed the recorded remaining preference-consumer scope. No further application changes in this slice: remaining fixed numeric UI values found are form/ledger serialization or percentage precision, not hardcoded business currency displays. Currency settings menu glyph is decorative; ISO date controls retain machine format. Hindi remains explicitly user-deferred.",
       "tests": "8 desktop/mobile Chromium cases PASS,0fail/skip,1.6m: General save/reload/unsaved navigation; expense detail/schedules/money directory; GST report display/source retention; commercial detail money/calendar fields,accessibility/no overflow. Tests execute at f131d2bf; no claim that every consumer/native screen is finally verified.",
       "remaining": "A090-F01 remains PARTIAL: Hindi intentionally deferred, complete original consumer matrix/native runtime and checkpoint-wide final verification pending."
+    },
+    "fifteen_quotation_themes_2026_10_22": {
+      "implementation_commit": "279333248d56d92298fe9f0a219232751fa77457",
+      "references": "All15 theme images supplied22October2026; user authorizes clear alternative names. IDs/reference descriptions retained in docs/a052-a103/theme-reference-manifest.json. Latest supplied set governs names; original audit wording retained.",
+      "implementation": "Fifteen named quotation PDF profiles with independent validated accents,portrait/landscape paper,table/border/header/summary/acknowledgement variations,normalized company logo/signature support and long-content pagination. Shared customer-safe renderer serves Web/private native/public saved quotation PDFs. Authenticated preview overrides do not write; Apply is admin/entitlement/module/source-scope authorized and audits only a serialized company quotationPrintTheme settings patch. Cancel leaves settings unchanged. Existing invoice print settings and financial documents remain intact. Web picker provides all15choices,previous/next,colours,temporary PDF preview and Apply/Cancel. Native picker loads same catalogue,retains legacy colours,offers preview and Apply/Cancel.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/QuotationViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/QuotationThemeSelection.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/QuotationScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/QuotationThemeSelectionTest.kt",
+        "docs/a052-a103/theme-reference-manifest.json",
+        "e2e/a090-settings.spec.ts",
+        "src/app/actions/quotation-theme.ts",
+        "src/app/api/v1/mobile/account/quotations/[id]/pdf/route.ts",
+        "src/app/api/v1/mobile/account/quotations/[id]/theme/route.ts",
+        "src/app/workspace/account/quotations/[id]/pdf/route.ts",
+        "src/app/workspace/account/quotations/[id]/preview/page.tsx",
+        "src/app/workspace/account/quotations/[id]/preview/theme/page.tsx",
+        "src/components/account/quotation-theme-picker.module.css",
+        "src/components/account/quotation-theme-picker.tsx",
+        "src/lib/account/settings-persistence.ts",
+        "src/lib/quotations/pdf.ts",
+        "src/lib/quotations/print-presentation.test.ts",
+        "src/lib/quotations/print-presentation.ts",
+        "src/lib/quotations/theme-catalogue.ts",
+        "src/lib/quotations/theme-settings.test.ts",
+        "src/lib/quotations/theme-settings.ts",
+        "src/lib/quotations/themed-pdf.test.ts",
+        "src/lib/quotations/themed-pdf.ts"
+      ],
+      "tests": {
+        "focused": "Final44 tests/5files PASS,0fail/skip:all15layouts,paper orientation,retained values,Unicode/long multipage content,unsafe inputs,legacy behaviour,company currency/date/state labels,source/role/entitlement rejection and existing private print assets. Earlier43/39/33runs overlap. Initial16layout failures came from Decimal-like test fixture values; accepting their toString representation fixed the renderer input boundary.",
+        "browser": "Final2desktop/mobile Chromium PASS2.4m on final source:15option catalogue,temporarycolour/Cancel no write,all15PDFdownloads/paper sizes,savedApply/nativesavedPDF,admin-vs-accountant POST403,unauthenticated401,missing source404,malformed theme400,Axe/no overflow,unchanged original quotation revision/lines/journal count. Initial2FAILApply-buttoncontrast4.28:1;darkened button and reran. Intermediate2PASS2.4m overlaps.",
+        "android": "FinalcompileDebugKotlin +48quotation JVMtests PASS,0fail/errors/skips,3m25s;includes3new legacy/named theme selection cases. First compile failed because picker was placed inside a LaunchedEffect; moved it into composition,corrected compile and tests passed. No emulator/device/Compose picker/PrintManager/TalkBack runtime performed. Current-slice local lintDebug not run.",
+        "typescript": "Finalfulltsc --noEmit PASS.",
+        "lint": "FinalfocusedESLint PASS,0warnings;workflow YAML and git diff --check PASS. Initialprefer-const lint corrected with a const header descriptor.",
+        "visual": "Synthetic local GST6/French raster previews inspected;not a full15theme pixel-parity certification. Reference text descriptors retained;sample PDFs/PNGs are scratch evidence,not shipped assets.",
+        "database": "Real authenticated browser requests exercised localPostgreSQL settings writes and snapshot preservation;no new schema/migration. Settings serialization/audit/company scoping reused. No production writes.",
+        "final_199_validation": "NOT RUN"
+      },
+      "remaining": "A080-F01 remains PARTIAL: native picker currently uses a selection dialog plus separate PDF preview rather than the supplied full-page combined picker;device runtime and full visual/reference/final checkpoint verification remain. No fake HSN,transport,CGST/SGST split,bank/payment values inserted when absent from authorized quotation DTO. No A104/merge/deploy/production operation."
     }
   },
   "approved_business_decisions": {
