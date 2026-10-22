@@ -151,7 +151,11 @@ fun AccountUtilityScreen(
                     }
                 }
             }
-            "backup" -> Button(onClick = vm::backup) { Text("Generate and share backup") }
+            "backup" -> Column {
+                Button(onClick = {vm.backup()}) { Text("Generate and share backup") }
+                Text("Include live uploaded files and signatures, up to 64 MiB. Missing files stop generation. Provider backups are still required for full recovery.")
+                Button(onClick = {vm.backup(true)}) { Text("Share records and private files") }
+            }
             else -> JsonList(state.rows) { id -> confirmRestore = id }
         }
     }

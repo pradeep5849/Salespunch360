@@ -490,10 +490,10 @@ export async function mobileExport(
     { exportAccountDataForActor } = await import("@/lib/account/exports");
   return exportAccountDataForActor(a, type, format);
 }
-export async function mobileBackup(u: MobileAppPrincipal) {
+export async function mobileBackup(u: MobileAppPrincipal,includePrivateFiles=false) {
   const a = admin(u),
     { createAccountBackupForActor } = await import("@/lib/account/utilities");
-  return createAccountBackupForActor(a);
+  return createAccountBackupForActor(a,false,includePrivateFiles);
 }
 export async function mobileRecycleRestore(u: MobileAppPrincipal, id: string) {
   const a = admin(u);

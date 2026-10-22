@@ -29,7 +29,7 @@ jobs:
       - name: Dashboard company date formatting regression
         run: npx vitest run src/app/workspace/account/dashboard/page.test.tsx src/lib/account/display-preferences.test.ts src/components/account/account-ui.test.tsx src/lib/account/dashboard-policy.test.ts
       - name: Backup snapshot and scheduling regression
-        run: npx vitest run src/lib/account/backup-snapshot.runtime.test.ts src/lib/account/backup-settings.runtime.test.ts
+        run: npx vitest run src/lib/account/backup-private-files.test.ts src/app/api/account/utilities/backup/route.test.ts src/app/api/v1/mobile/account/backup/route.test.ts src/lib/account/backup-snapshot.runtime.test.ts src/lib/account/backup-settings.runtime.test.ts
       - name: Private Sale multipart, authorization and explicit Save transport
         run: npx vitest run src/lib/account/sale-attachment-http.test.ts src/lib/account/sale-attachment-routes.test.ts src/lib/account/sale-attachment-upload.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/creation-attachments-route.test.ts
       - name: Money mutation validation boundaries

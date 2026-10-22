@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
+  storageGet: vi.fn(),
   reads: new Map<string, ReturnType<typeof vi.fn>>(),
   identity: vi.fn(),
   record: vi.fn(),
   audit: vi.fn(),
   transaction: vi.fn(),
 }));
+vi.mock("@/lib/storage",()=>({privateStorage:()=>({get:m.storageGet})}));
 vi.mock("@/lib/db", () => {
   const tx = new Proxy(
     {},
@@ -172,4 +174,14 @@ describe("A088 backup shared financial dependencies", () => {
     expect(m.identity).not.toHaveBeenCalled();
     expect(m.reads.size).toBe(0);
   });
+});
+
+it("embeds and verifies private bytes only on explicit file-inclusive backup",async()=>{
+ const key="companies/company-a/items/photo";m.identity.mockResolvedValue({id:"company-a",name:"A",slug:"a",customers:[],vendors:[],accountProducts:[{id:"item",photoObjectKey:key}],projects:[],ledgerAccounts:[],financialYears:[]});m.storageGet.mockResolvedValue(Buffer.from("photo"));
+ const output=await createAccountBackupForActor(actor,false,true),bundle=JSON.parse(new TextDecoder().decode(output.bytes));
+ expect(bundle.manifest.formatVersion).toBe(3);expect(bundle.manifest.privateFileCount).toBe(1);expect(bundle.privateFiles[0]).toMatchObject({objectKey:key,size:5,encoding:"base64",data:Buffer.from("photo").toString("base64")});expect(m.record).toHaveBeenCalledOnce();
+});
+it("never records successful backup when a required private file cannot be read",async()=>{
+ m.identity.mockResolvedValue({id:"company-a",name:"A",slug:"a",logoObjectKey:"companies/company-a/logo",customers:[],vendors:[],accountProducts:[],projects:[],ledgerAccounts:[],financialYears:[]});m.storageGet.mockRejectedValue(new Error("missing"));
+ await expect(createAccountBackupForActor(actor,false,true)).rejects.toThrow("BACKUP_FILE_UNAVAILABLE");expect(m.record).not.toHaveBeenCalled();expect(m.audit).not.toHaveBeenCalled();
 });

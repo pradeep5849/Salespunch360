@@ -1,3 +1,4 @@
+import {collectBackupPrivateFiles,verifyBackupPrivateFiles} from "./backup-private-files";
 import {privateStorage} from "@/lib/storage";
 import { createHash,randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
@@ -483,7 +484,7 @@ export async function createAccountBackupForActor(actor: {
   id: string;
   companyId: string;
   accountRole: string | null;
-},archive=false) {
+},archive=false,includePrivateFiles=false) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const companyId = actor.companyId!;
   // Repeatable read keeps invoices, payments and ledger balances from different moments out of one bundle.
@@ -643,9 +644,11 @@ export async function createAccountBackupForActor(actor: {
       assetAssignmentHistory,
     };
   },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:60000});
+  const privateFiles=includePrivateFiles?await collectBackupPrivateFiles(companyId,company,privateStorage()):undefined;
+  if(privateFiles)verifyBackupPrivateFiles(companyId,company,privateFiles);
   const manifest = {
     format: "SalesPunch360 Account Backup",
-    formatVersion: 2,
+    formatVersion: includePrivateFiles?3:2,
     generatedAt: new Date().toISOString(),
     company: { id: company.id, name: company.name },
     appVersion: process.env.npm_package_version ?? "unknown",
@@ -658,11 +661,12 @@ export async function createAccountBackupForActor(actor: {
       ledgers: company.ledgerAccounts.length,
       financialYears: company.financialYears.length,
     },
-    uploadedFiles: "Uploaded files and signatures are referenced by private object keys; retain the corresponding private-storage backup.",
+    uploadedFiles: includePrivateFiles?"Live typed private-file references are embedded with SHA-256 checksums. Historical audit/recycle metadata references are excluded; retain provider storage backups for full historical recovery.":"Uploaded files and signatures are referenced by private object keys; retain the corresponding private-storage backup.",
+    privateFileCount: privateFiles?.length??0,
     recovery:
       "Use authenticated imports and Recycle Bin for application recovery. Provider PostgreSQL backups remain required for disaster recovery.",
   };
-  const bundle = { manifest, data: company },
+  const bundle = { manifest, data: company, ...(privateFiles?{privateFiles}:{}) },
     bytes = new TextEncoder().encode(
       JSON.stringify(
         bundle,
@@ -707,8 +711,9 @@ export async function restoreMaster(recycleId: string) {
     recycleId,
   );
 }
-export async function createAccountBackup() {
+export async function createAccountBackup(includePrivateFiles=false) {
   return createAccountBackupForActor(
     (await requirePermissionForMutation("ACCOUNT_SETTINGS")) as never,
+    false,includePrivateFiles,
   );
 }

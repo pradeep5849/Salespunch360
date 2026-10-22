@@ -224,7 +224,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}")).jsonObject
  suspend fun executeAccountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}/execute","POST")).jsonObject
  suspend fun accountMasterExport(type:String,format:String)=download("api/v1/mobile/account/exports/${enc(type)}/${enc(format)}")
- suspend fun accountBackup()=download("api/v1/mobile/account/backup")
+ suspend fun accountBackup(includePrivateFiles:Boolean=false)=download("api/v1/mobile/account/backup"+if(includePrivateFiles)"?includeFiles=true" else "")
  suspend fun restoreAccountRecycle(id:String)=call("api/v1/mobile/account/recycle-bin/${enc(id)}/restore","POST")
  private suspend fun multipart(path:String,field:String,name:String,mime:String,bytes:ByteArray,fields:Map<String,String>)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{fields.forEach{(k,v)->addFormDataPart(k,v)}}.addFormDataPart(field,name,bytes.toRequestBody(mime.toMediaType())).build();val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).awaitResponse().use{val raw=it.body?.string()?: "{}";if(!it.isSuccessful)throw ApiException(it.code,runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull());raw}}
  suspend fun accountUsers()=json.parseToJsonElement(call("api/v1/mobile/account/users")).jsonObject
