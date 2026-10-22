@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -73,7 +74,7 @@ fun AccountAdministrationScreen(
         MutationFeedback(state.message,state.error,vm::consumeFeedback)
         Row {
             Text(
-                mode.replace('-', ' ').replaceFirstChar { it.uppercase() },
+                if(mode=="notifications")"Notifications"else mode.replace('-', ' ').replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f)
             )
@@ -682,11 +683,15 @@ private fun ChoiceSetting(label:String,value:String,choices:List<Pair<String,Str
  Column{SwitchRow("Enable auto backup",auto){auto=it};OutlinedTextField(interval,{interval=it},label={Text("Automatic Backup Interval (days)")});OutlinedTextField(reminder,{reminder=it},label={Text("Manual Backup Reminder (days)")});Button(enabled=interval.toIntOrNull() in 1..365&&reminder.toIntOrNull() in 1..365,onClick={vm.save("backup-settings",buildJsonObject{put("autoBackup",auto);put("intervalDays",interval.toInt());put("manualReminderDays",reminder.toInt())})}){Text("Save")};TextButton({navigate("/workspace/account/utilities/backup")}){Text("Open Manual Backup")}}
 }
 @Composable private fun AttentionView(data:JsonElement,navigate:(String)->Unit,complete:(String)->Unit,busy:Boolean,page:(Int)->Unit){
- val context=LocalContext.current;val rows=((data as? JsonArray)?:((data as? JsonObject)?.get("rows") as? JsonArray)).orEmpty();var error by remember{mutableStateOf<String?>(null)}
+ var selectedTab by androidx.compose.runtime.saveable.rememberSaveable{mutableStateOf("APP")}
+ val context=LocalContext.current;val allRows=((data as? JsonArray)?:((data as? JsonObject)?.get("rows") as? JsonArray)).orEmpty();var error by remember{mutableStateOf<String?>(null)}
+ val rows=allRows.filter{com.salespunch360.mobile.account.accountNotificationCategory(it.jsonObject.str("type"))==selectedTab}
  val dto=data as? JsonObject
  val offset=dto?.get("expenseOffset")?.jsonPrimitive?.intOrNull?:0
  val limit=dto?.get("expenseLimit")?.jsonPrimitive?.intOrNull?:50
- LazyColumn{dto?.get("branchContext")?.jsonObject?.let{scope->item{Text("Scope: "+if(scope["mode"]?.jsonPrimitive?.content=="COMPANY")"All company branches"else scope["branchName"]?.jsonPrimitive?.content.orEmpty())}};if(rows.isEmpty()&&!busy)item{Text("All caught up")};error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}};items(rows){row->val x=row.jsonObject;val kind=x["type"]?.jsonPrimitive?.content.orEmpty();val message=x["message"]?.jsonPrimitive?.content.orEmpty();val document=x["documentId"]?.jsonPrimitive?.content.orEmpty();val number=x["documentNumber"]?.jsonPrimitive?.content.orEmpty();val party=x["partyName"]?.jsonPrimitive?.content.orEmpty()
+ Column(Modifier.fillMaxSize()){TabRow(selectedTabIndex=if(selectedTab=="APP")0 else 1){listOf("APP" to "App Notifications","TRANSACTIONS" to "All Transactions").forEach{(key,label)->Tab(selected=selectedTab==key,onClick={selectedTab=key;error=null},text={Text(label)})}}
+ LazyColumn(Modifier.weight(1f)){dto?.get("branchContext")?.jsonObject?.let{scope->item{Text("Scope: "+if(scope["mode"]?.jsonPrimitive?.content=="COMPANY")"All company branches"else scope["branchName"]?.jsonPrimitive?.content.orEmpty())}};if(rows.isEmpty()&&!busy)item{Column(Modifier.fillMaxWidth().padding(vertical=48.dp),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally){Icon(Icons.Default.Notifications,contentDescription=null,modifier=Modifier.size(64.dp));Text("No notifications",style=MaterialTheme.typography.titleMedium);Text("You’re all caught up.")}};error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}};items(rows){row->val x=row.jsonObject;val kind=x["type"]?.jsonPrimitive?.content.orEmpty();val message=x["message"]?.jsonPrimitive?.content.orEmpty();val document=x["documentId"]?.jsonPrimitive?.content.orEmpty();val number=x["documentNumber"]?.jsonPrimitive?.content.orEmpty();val party=x["partyName"]?.jsonPrimitive?.content.orEmpty()
  Card(Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(14.dp)){Text(if(kind=="SERVICE_REMINDER")"Service reminder — $party" else if(kind=="PAYMENT_REMINDER")"Payment reminder — $party" else x["title"]?.jsonPrimitive?.content?:x["transactionNumber"]?.jsonPrimitive?.content?:kind);if(message.isNotBlank()){Text(message);Button({try{context.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).apply{type="text/plain";putExtra(android.content.Intent.EXTRA_TEXT,message)},"Send reminder"))}catch(_:Exception){error="No app is available to share this message"}}){Text("Share message")}};TextButton({navigate(if(document.isNotBlank())"/workspace/account/sales/$document" else x["navigationTarget"]?.jsonPrimitive?.content?:"/workspace/account/expenses?status=PENDING_APPROVAL")}){Text(if(number.isNotBlank())"Open $number" else "Open")};if(kind=="SERVICE_REMINDER")Button(enabled=!busy,onClick={complete(x["lineId"]?.jsonPrimitive?.content.orEmpty())}){Text("Mark service completed")}}}
- };item{Row{if(offset>0)TextButton({page((offset-limit).coerceAtLeast(0))},enabled=!busy){Text("Previous")};if(dto?.get("hasMoreExpenses")?.jsonPrimitive?.booleanOrNull==true)TextButton({page(offset+limit)},enabled=!busy){Text("Next")}}}}
+ };if(selectedTab=="TRANSACTIONS")item{Row{if(offset>0)TextButton({page((offset-limit).coerceAtLeast(0))},enabled=!busy){Text("Previous")};if(dto?.get("hasMoreExpenses")?.jsonPrimitive?.booleanOrNull==true)TextButton({page(offset+limit)},enabled=!busy){Text("Next")}}}}
+}
 }

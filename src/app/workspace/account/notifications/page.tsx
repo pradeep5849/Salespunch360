@@ -1,11 +1,10 @@
+import {NotificationTabs} from "@/components/account/notification-tabs";
 import { backupReminderDue } from "@/lib/account/backup-settings";
 import { duePaymentReminders } from "@/lib/account/payment-reminder-execution";
 import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
 import type { ProjectActor } from "@/lib/account/projects";
 import Link from "next/link";
 import {
-  AccountCard,
-  AccountEmptyState,
   AccountPageHeader,
 } from "@/components/account/account-shell";
 import { ManualMessage } from "@/components/account/manual-message";
@@ -30,7 +29,8 @@ export default async function Page({
   searchParams: Promise<Record<string, string>>;
 }) {
   const actor = await requirePermission("ACCOUNT_DASHBOARD"),
-    query = await searchParams;
+    rawQuery = await searchParams;
+  const {tab,...query}=rawQuery;
   const alerts = await pendingExpenseAlertsForActor(
     { ...actor, companyId: actor.companyId! } as ProjectActor,
     query,
@@ -64,18 +64,19 @@ export default async function Page({
       ? { scope: "all" }
       : { branchId: alerts.branchContext.branchId };
   const href = (offset: number) =>
-    `?${new URLSearchParams({ ...scope, offset: String(offset), limit: String(alerts.limit) })}`;
+    `?${new URLSearchParams({ ...scope, tab:"TRANSACTIONS", offset: String(offset), limit: String(alerts.limit) })}`;
   return (
     <>
       <AccountPageHeader
-        title="Attention"
+        title="Notifications"
+        backHref="/workspace/account"
         subtitle={
           alerts.branchContext.mode === "COMPANY"
             ? "All company branches"
             : alerts.branchContext.branchName
         }
       />
-      <AccountCard>
+      <NotificationTabs initialTab={tab==="TRANSACTIONS"?"TRANSACTIONS":"APP"} appContent={backupDue?<p><Link href="/workspace/account/utilities/backup">Your manual backup is due →</Link></p>:null} hasTransactions={alerts.total>0||reminders.length>0||payments.length>0} transactionContent={<>
         {alerts.total > 0 && (
           <section>
             <h2>{alerts.total} expenses await review</h2>
@@ -104,22 +105,6 @@ export default async function Page({
             </nav>
           </section>
         )}
-        {!alerts.total &&
-          !reminders.length &&
-          !payments.length &&
-          !backupDue && (
-            <AccountEmptyState
-              title="All caught up"
-              detail="There are no current Account alerts in this Branch scope."
-            />
-          )}
-        {backupDue && (
-          <p>
-            <Link href="/workspace/account/utilities/backup">
-              Your manual backup is due →
-            </Link>
-          </p>
-        )}
         {payments.map((x) => (
           <section key={x.id}>
             <h3>Payment reminder — {x.partyName}</h3>
@@ -147,7 +132,7 @@ export default async function Page({
             </ActionFeedbackForm>
           </section>
         ))}
-      </AccountCard>
+      </>}/>
     </>
   );
 }

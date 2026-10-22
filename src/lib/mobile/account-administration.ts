@@ -1,3 +1,4 @@
+import {ACCOUNT_NOTIFICATION_TABS,accountNotificationCategory} from "@/lib/account/notification-tabs";
 import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
 import { updateQuickItemSettingForActor } from "@/lib/account/item-settings-quick";
 import {
@@ -277,7 +278,8 @@ export async function mobileNotifications(
       : []),
   ];
   return {
-    rows,
+    rows:rows.map(row=>({...row,notificationCategory:accountNotificationCategory(row.type)})),
+    tabs:ACCOUNT_NOTIFICATION_TABS,
     expenseTotal: alerts.total,
     expenseOffset: alerts.offset,
     expenseLimit: alerts.limit,
