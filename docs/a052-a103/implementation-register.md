@@ -10454,3 +10454,9 @@ A090-F01: current source head f131d2bf passed8desktop/mobile browser scenarios(1
 ### 2026-10-22 Fifteen quotation themes
 
 A080-F01 implementation `279333248d56d92298fe9f0a219232751fa77457`: latest15 references mapped in theme-reference-manifest.json;customer-safe layouts,colour selection,Web/native preview/adminApply/Cancel,scoped JSON settings patch. Final44focused tests PASS;desktop/mobile browser2PASS2.4m;Android compile+48JVM PASS3m25s;tsc/lint/YAML/diff PASS. Initialfixture,contrast,Compose placement andlint failures retained inJSONevidence. No new migration or financial posting. Original199IDs/counts retained. A080 remainsPARTIAL for full-page native picker/reference presentation and final device/visual/checkpoint verification.
+
+## Native combined quotation theme picker — 22 October 2026
+
+A080-F01: `ef06d093249a9857ccdd66152096448326e4af6c` replaces the selection dialog with a full-screen theme/colour/PDF picker for all 15 supplied themes. Temporary previews cancel stale requests; Cancel discards selection, Apply uses existing scoped settings. Existing multipage print/share remains available. No document values, status, ledger or schema change.
+
+Final native compilation, 48 quotation JVM tests and lintDebug passed in 4m37s: zero test failures/errors/skips; lint zero errors, four warnings and six informational notices. No emulator/device, TalkBack or full reference visual verification performed. A080 remains PARTIAL for those checks and final checkpoint validation. Register totals remain 186 implemented-but-not-verified, 12 partial and 1 not started; all 199 original IDs retained.
