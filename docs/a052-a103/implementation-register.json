@@ -57594,7 +57594,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -57878,6 +57878,13 @@
           ],
           "tests": "Desktop/mobile Chromium2PASS1.3m: real estimate conversion, Web/native confirmation and retries, card href, actual Order fulfilment navigation, unchanged journal count. Full tsc and focused ESLint PASS.",
           "remaining": "Original A083-F01/A085-F02 remain PARTIAL for their broader scopes and final checkpoint/device verification."
+        },
+        "code_scope_completion_2026_10_22": {
+          "implementation_commit": "3fc830a90b0d72cd4ada02051df2a3a95bedb8ed",
+          "status": "IMPLEMENTED BUT NOT VERIFIED",
+          "work": "Original code scope now present on Web/native: Estimate Details,All/Open/Closed mapping,search,party/date/number/total cards,empty/no-results state,Add Estimate,approved Convert choices and source links. Approved Total Amount/Not billed/authorized saved Sale outstanding replaces ambiguous balance; corrected Sale Order link uses actual transaction details. Prior partial status included an answered balance decision and final verification rather than a remaining code change.",
+          "tests": "14 current billing/capability/list-filter unit tests PASS. Prior recorded list desktop/mobile search/empty/Axe and native compile/JVM evidence retained; converted order actual card/link browser2PASS1.3m at3fc830a9.",
+          "remaining": "Final full checkpoint regression and native device/emulator runtime remain pending. No FIXED+VERIFIED or runtime claim added."
         }
       },
       "push_checkpoint_evidence": {
@@ -58863,7 +58870,10 @@
         "src/lib/mobile/account-purchases.ts",
         "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseOrderDraft.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseOrderDraftTest.kt",
-        "src/app/api/v1/mobile/account/purchases/[id]/confirm/route.ts"
+        "src/app/api/v1/mobile/account/purchases/[id]/confirm/route.ts",
+        "src/components/account/use-editor-ready.ts",
+        "src/lib/account/reports/order-reports.test.ts",
+        "src/lib/account/reports/order-reports.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -59964,6 +59974,44 @@
           ],
           "migration": "No new migration in this slice.",
           "implementation_commit": "Recorded in next evidence commit."
+        },
+        "order_reports_2026_10_22": {
+          "implementation_commit": "bdfe4b01c1544fa74e68f3a053d98efd0272f943",
+          "implementation": "Added Order Transaction and Order Item destinations to shared Web/native catalogue, company/branch/party/type/status scoped report reads, explicit source-line primary quantities, manual closure/current fulfilment status, source detail links and existing export formats. Batched repeatable-read reads preserve unresolved legacy allocations and exclude explicit sale corrections; no financial writes. Primary quantities stay per item and are never merged across units. Full recorded order commitments are identified separately from payments/debt. Remaining-order form links now force fresh server reads. Financial editors render a loading state until client handlers are ready and capture queued quantity/rate edits.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/components/account/use-editor-ready.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/order-reports.test.ts",
+            "src/lib/account/reports/order-reports.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "reports_grouped": "192 PASS/25 files,0fail/skip,46.92s; before final Decimal precision hardening.",
+            "final_reports_focused": "28 PASS/3 files,0fail/skip; includes1001orders across3pages and exact large-cent total after48digit Decimal change. Overlaps grouped report tests.",
+            "financial_editor": "72 PASS/6 files,0fail/skip after readiness fix.",
+            "database": "21 PASS/1 real isolated PostgreSQL file,0fail/skip,7.94s; order report before/after actual posted bills,branch-empty denial,quantity closure,value ceiling and prior financial corrections.",
+            "browser": "Final6PASS3.4m desktop/mobile Chromium after client-readiness fix: exact2of5 Sale20.00 thenremaining3; Save/SaveNew; abandoned forms no writes; PO bill4then1; both order reports/nativeHTTP/CSV/XLSX/PDF; Axe/nooverflow. Earlier report-only2PASS2.5m overlaps. Initial combined2FAILnavigation; plain anchors fixed fresh navigation. Subsequent4SaleFAIL: expected20.00 got50.00; readiness/value-capture fix,then final6PASS. Those failures retained. Browser final6 preceded Decimal-only precision hardening,which has final focused unit coverage.",
+            "android": "compileDebugKotlin +26 AccountReportDataTest JVM PASS,0fail/errors/skips,5m28s. Native emulator/device/Compose/TalkBack NOT RUN.",
+            "typescript": "Final tsc --noEmit PASS after readiness and Decimal changes.",
+            "lint": "Final focused ESLint PASS; workflow YAML parse and git diff --check PASS.",
+            "migration": "No schema/migration added or changed. Prior3fc830a9 CI39642576139 allSUCCESS;does not certify later head.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: other supplied report destinations,reference-specific layouts/filter scope and final checkpoint/device runtime are still pending. Precision-unrepresentable order preparation and manually closed-order correction remain safely blocked as recorded. No A104,merge,deploy or production changes."
         }
       }
     },
@@ -63546,7 +63594,10 @@
         "src/lib/mobile/account-purchases.ts",
         "android/app/src/main/java/com/salespunch360/mobile/account/PurchaseOrderDraft.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/PurchaseOrderDraftTest.kt",
-        "src/app/api/v1/mobile/account/purchases/[id]/confirm/route.ts"
+        "src/app/api/v1/mobile/account/purchases/[id]/confirm/route.ts",
+        "src/components/account/use-editor-ready.ts",
+        "src/lib/account/reports/order-reports.test.ts",
+        "src/lib/account/reports/order-reports.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -64577,6 +64628,44 @@
           ],
           "tests": "Desktop/mobile Chromium2PASS1.3m: real estimate conversion, Web/native confirmation and retries, card href, actual Order fulfilment navigation, unchanged journal count. Full tsc and focused ESLint PASS.",
           "remaining": "Original A083-F01/A085-F02 remain PARTIAL for their broader scopes and final checkpoint/device verification."
+        },
+        "order_reports_2026_10_22": {
+          "implementation_commit": "bdfe4b01c1544fa74e68f3a053d98efd0272f943",
+          "implementation": "Added Order Transaction and Order Item destinations to shared Web/native catalogue, company/branch/party/type/status scoped report reads, explicit source-line primary quantities, manual closure/current fulfilment status, source detail links and existing export formats. Batched repeatable-read reads preserve unresolved legacy allocations and exclude explicit sale corrections; no financial writes. Primary quantities stay per item and are never merged across units. Full recorded order commitments are identified separately from payments/debt. Remaining-order form links now force fresh server reads. Financial editors render a loading state until client handlers are ready and capture queued quantity/rate edits.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/order-progress.tsx",
+            "src/components/account/use-editor-ready.ts",
+            "src/lib/account/commercial-unit-history.integration.test.ts",
+            "src/lib/account/reports/catalogue.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/order-reports.test.ts",
+            "src/lib/account/reports/order-reports.ts",
+            "src/lib/account/reports/queries.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "reports_grouped": "192 PASS/25 files,0fail/skip,46.92s; before final Decimal precision hardening.",
+            "final_reports_focused": "28 PASS/3 files,0fail/skip; includes1001orders across3pages and exact large-cent total after48digit Decimal change. Overlaps grouped report tests.",
+            "financial_editor": "72 PASS/6 files,0fail/skip after readiness fix.",
+            "database": "21 PASS/1 real isolated PostgreSQL file,0fail/skip,7.94s; order report before/after actual posted bills,branch-empty denial,quantity closure,value ceiling and prior financial corrections.",
+            "browser": "Final6PASS3.4m desktop/mobile Chromium after client-readiness fix: exact2of5 Sale20.00 thenremaining3; Save/SaveNew; abandoned forms no writes; PO bill4then1; both order reports/nativeHTTP/CSV/XLSX/PDF; Axe/nooverflow. Earlier report-only2PASS2.5m overlaps. Initial combined2FAILnavigation; plain anchors fixed fresh navigation. Subsequent4SaleFAIL: expected20.00 got50.00; readiness/value-capture fix,then final6PASS. Those failures retained. Browser final6 preceded Decimal-only precision hardening,which has final focused unit coverage.",
+            "android": "compileDebugKotlin +26 AccountReportDataTest JVM PASS,0fail/errors/skips,5m28s. Native emulator/device/Compose/TalkBack NOT RUN.",
+            "typescript": "Final tsc --noEmit PASS after readiness and Decimal changes.",
+            "lint": "Final focused ESLint PASS; workflow YAML parse and git diff --check PASS.",
+            "migration": "No schema/migration added or changed. Prior3fc830a9 CI39642576139 allSUCCESS;does not certify later head.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL: other supplied report destinations,reference-specific layouts/filter scope and final checkpoint/device runtime are still pending. Precision-unrepresentable order preparation and manually closed-order correction remain safely blocked as recorded. No A104,merge,deploy or production changes."
         }
       }
     },
@@ -67105,6 +67194,17 @@
             "targeted_ci": "Run39539032421 SUCCESS at exact prior checkpoint ba59d3ba2b3a354a952eeed730631164d7e2a93c:Web,Android,migration allPASS. Does not certify later GST changes or final full199-finding validation."
           },
           "remaining": "A086-F05/F06 and A087-F02 retain PARTIAL. Outstanding posted-credit-note correction and invoice identity business decisions unchanged; other original reference/action scope and final full-head/device verification remain. All199 original IDs preserved; no finding promoted solely by shared work. A104/merge/deploy/production writes remain prohibited."
+        },
+        "financial_editor_readiness_2026_10_22": {
+          "implementation_commit": "bdfe4b01c1544fa74e68f3a053d98efd0272f943",
+          "work": "Prevent fast financial inputs being changed before client handlers attach; capture quantity/rate values before queued state updates. Shared Sale and commercial editor readiness gate.",
+          "files": [
+            "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/components/account/use-editor-ready.ts"
+          ],
+          "tests": "Four Sale browser failures(20.00expected/50.00actual) corrected; final six desktop/mobile order/Sale/Bill/report cases PASS;72 focused financial tests PASS;tsc/lint PASS.",
+          "remaining": "A086-F06 remains PARTIAL; invoice identity decision and full final/native verification not resolved by this fix."
         }
       },
       "push_checkpoint_evidence": {
@@ -71927,6 +72027,44 @@
       ],
       "tests": "Desktop/mobile Chromium2PASS1.3m: real estimate conversion, Web/native confirmation and retries, card href, actual Order fulfilment navigation, unchanged journal count. Full tsc and focused ESLint PASS.",
       "remaining": "Original A083-F01/A085-F02 remain PARTIAL for their broader scopes and final checkpoint/device verification."
+    },
+    "order_reports_2026_10_22": {
+      "implementation_commit": "bdfe4b01c1544fa74e68f3a053d98efd0272f943",
+      "implementation": "Added Order Transaction and Order Item destinations to shared Web/native catalogue, company/branch/party/type/status scoped report reads, explicit source-line primary quantities, manual closure/current fulfilment status, source detail links and existing export formats. Batched repeatable-read reads preserve unresolved legacy allocations and exclude explicit sale corrections; no financial writes. Primary quantities stay per item and are never merged across units. Full recorded order commitments are identified separately from payments/debt. Remaining-order form links now force fresh server reads. Financial editors render a loading state until client handlers are ready and capture queued quantity/rate edits.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/AccountReportViewModel.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/AccountReportDataTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/reports/[report]/page.tsx",
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/components/account/order-progress.tsx",
+        "src/components/account/use-editor-ready.ts",
+        "src/lib/account/commercial-unit-history.integration.test.ts",
+        "src/lib/account/reports/catalogue.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/order-reports.test.ts",
+        "src/lib/account/reports/order-reports.ts",
+        "src/lib/account/reports/queries.ts",
+        "src/lib/account/reports/service.ts"
+      ],
+      "tests": {
+        "reports_grouped": "192 PASS/25 files,0fail/skip,46.92s; before final Decimal precision hardening.",
+        "final_reports_focused": "28 PASS/3 files,0fail/skip; includes1001orders across3pages and exact large-cent total after48digit Decimal change. Overlaps grouped report tests.",
+        "financial_editor": "72 PASS/6 files,0fail/skip after readiness fix.",
+        "database": "21 PASS/1 real isolated PostgreSQL file,0fail/skip,7.94s; order report before/after actual posted bills,branch-empty denial,quantity closure,value ceiling and prior financial corrections.",
+        "browser": "Final6PASS3.4m desktop/mobile Chromium after client-readiness fix: exact2of5 Sale20.00 thenremaining3; Save/SaveNew; abandoned forms no writes; PO bill4then1; both order reports/nativeHTTP/CSV/XLSX/PDF; Axe/nooverflow. Earlier report-only2PASS2.5m overlaps. Initial combined2FAILnavigation; plain anchors fixed fresh navigation. Subsequent4SaleFAIL: expected20.00 got50.00; readiness/value-capture fix,then final6PASS. Those failures retained. Browser final6 preceded Decimal-only precision hardening,which has final focused unit coverage.",
+        "android": "compileDebugKotlin +26 AccountReportDataTest JVM PASS,0fail/errors/skips,5m28s. Native emulator/device/Compose/TalkBack NOT RUN.",
+        "typescript": "Final tsc --noEmit PASS after readiness and Decimal changes.",
+        "lint": "Final focused ESLint PASS; workflow YAML parse and git diff --check PASS.",
+        "migration": "No schema/migration added or changed. Prior3fc830a9 CI39642576139 allSUCCESS;does not certify later head.",
+        "final_199_validation": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL: other supplied report destinations,reference-specific layouts/filter scope and final checkpoint/device runtime are still pending. Precision-unrepresentable order preparation and manually closed-order correction remain safely blocked as recorded. No A104,merge,deploy or production changes."
     }
   },
   "approved_business_decisions": {

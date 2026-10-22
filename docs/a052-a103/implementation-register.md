@@ -10440,3 +10440,9 @@ A084-F03 / A085-F02: remaining-order Bill preparation and native/Web confirmatio
 ### Converted order destination and date boundary follow-up
 
 A083-F01/A085-F02: corrected estimate-card Sale Order destination to transaction details; desktop/mobile Chromium 2 PASS (1.3m), no extra journal; typecheck/lint PASS. A084-F13: retained withdrawn allegation; 36 grouped checks PASS including two read-only PostgreSQL native-date/calendar-boundary checks, now in CI. Broad statuses remain unchanged; no final checkpoint/device claim.
+
+### 2026-10-22 Order report and financial editor checkpoint
+
+Implementation commit `bdfe4b01c1544fa74e68f3a053d98efd0272f943`: A084-F03/A085-F02 now include Order Transaction/Order Item reports, scoped type/status/party filters, explicit primary-unit fulfilment and retained amounts, source links and exports on Web/native. Financial editor readiness/value capture fixes the four browser failures that saved5units instead of2. Final combined browser6PASS; focused financial72PASS; grouped reports192PASS; final report precision/pagination28PASS(overlap); real PostgreSQL21PASS; Android compile+26JVM PASS; type/lint/YAML/diff checks PASS. No schema/migration. Native device and final199 validation NOT RUN.
+
+A083-F01 code scope completed,including approved estimate billing presentation and corrected order destination: IMPLEMENTED BUT NOT VERIFIED. Current totals186IMPLEMENTED BUT NOT VERIFIED/12PARTIAL/1NOT STARTED;199IDs retained;no final finding status claimed.
