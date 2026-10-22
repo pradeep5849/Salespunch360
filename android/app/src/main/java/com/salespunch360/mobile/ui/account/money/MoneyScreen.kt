@@ -201,6 +201,9 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
     var openingBranch by remember{mutableStateOf("")}
     var amount by remember{mutableStateOf("")}
     var interest by remember{mutableStateOf("0")}
+    var openingFeeAmount by remember{mutableStateOf("0")}
+    var openingFeeMode by remember{mutableStateOf("")}
+    var openingFeeSource by remember{mutableStateOf("")}
     var loanName by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("displayName").orEmpty()else "")}
     var loanNumber by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("loanAccountNumber").orEmpty()else "")}
     var loanDescription by remember{mutableStateOf(if(kind=="loan-edit")selected?.str("description").orEmpty()else "")}
@@ -237,7 +240,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
         kind=="adjustments"->branch.isNotBlank()&&offsetLedger.isNotBlank()&&amount.isNotBlank()&&adjustmentReason.trim().length>=3
         kind=="loan-operations"->date.isNotBlank()&&(if(loanAction=="TOP_UP")source.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1 else adjustmentReason.trim().length in 3..1000)
         kind=="loan-edit"->loanName.length<=240&&loanNumber.length<=160&&loanDescription.length<=2000&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
-        kind=="loans"->source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
+        kind=="loans"->com.salespunch360.mobile.account.loanOpeningNetReceipt(amount,openingFeeAmount,openingFeeMode)!=null&&(openingFeeMode!="SEPARATE"||loanPaymentTotal(openingFeeAmount)?.signum()!=1||openingFeeSource.isNotBlank())&&source.isNotBlank()&&branch.isNotBlank()&&name.isNotBlank()&&loanType.isNotBlank()&&loanPaymentTotal(amount)?.signum()==1&&(loanDuration.isBlank()||loanDuration.toIntOrNull()?.let{it in 1..1200}==true)
         kind=="loan-payments"->source.isNotBlank()&&branch.isNotBlank()&&loanPaymentTotal(paymentPrincipal,paymentInterest,charges)?.signum()==1
         kind=="accounts"->name.isNotBlank()&&(type!="BANK"||bankErrors.valid)
         else->source.isNotBlank()&&amount.isNotBlank()&&branch.isNotBlank()&&(kind!="owners"||(owner.isNotBlank()&&fundingReturns!=null))
@@ -298,7 +301,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{Text("A non-zero starting balance posts against Opening Balance Equity.")}
                 }
             }else{
-                item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;fundingAmounts=emptyMap();if(kind=="loans")source=""}}
+                item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;fundingAmounts=emptyMap();if(kind=="loans"){source="";openingFeeSource=""}}}
                 if(kind=="transfers"){
                     item{Text("Deposit / Withdraw");MoneyTransferMode.entries.forEach{mode->Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){RadioButton(selected=transferMode==mode,onClick={transferMode=mode;source="";destination=""},enabled=!saving);Text(mode.label)}}}
                     item{Pick("Source account",source,accounts.filter{transferModeAccepts(transferMode,it.jsonObject.str("type"),true)&&it.jsonObject.str("id")!=destination},enabled=!saving){source=it}}
@@ -317,6 +320,11 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     if(fundingReturns==null&&amount.isNotBlank())item{Text("Enter positive amounts within the payment and remaining funding, with at most two decimal places.",color=MaterialTheme.colorScheme.error)}
                 }
                 if(kind=="loans"){
+                    item{OutlinedTextField(openingFeeAmount,{openingFeeAmount=it},label={Text("Opening processing fee")},enabled=!saving)}
+                    item{Column{Text("Opening fee handling");listOf("DEDUCTED" to "Deduct from gross receipt","SEPARATE" to "Receive gross principal; pay separately").forEach{(value,label)->Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){RadioButton(selected=openingFeeMode==value,onClick={openingFeeMode=value;openingFeeSource=""},enabled=!saving,modifier=Modifier.semantics{contentDescription=label});Text(label)}}}}
+                    if(openingFeeMode=="SEPARATE")item{Pick("Opening fee payment account",openingFeeSource,accounts,enabled=!saving){openingFeeSource=it}}
+                    item{Text("Principal stays the gross borrowing. Net receipt: "+(com.salespunch360.mobile.account.loanOpeningNetReceipt(amount,openingFeeAmount,openingFeeMode)?.let{accountMoney(it.toPlainString())}?:"Enter valid amounts and choose fee handling"))}
+
                     item{OutlinedTextField(loanName,{loanName=it},label={Text("Loan name")},enabled=!saving)}
                     item{OutlinedTextField(loanNumber,{loanNumber=it},label={Text("Loan account number")},enabled=!saving)}
                     item{OutlinedTextField(loanDescription,{loanDescription=it},label={Text("Description")},enabled=!saving)}
@@ -351,7 +359,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
             else->{put("branchId",branch);put("moneyAccountId",source);put("reference",reference);put("idempotencyKey",requestKey);when(kind){
                 "transfers"->{transferImage?.let{put("image",it)};put("description",transferDescription);put("sourceAccountId",source);put("destinationAccountId",destination);put("transferDate",date);put("amount",amount)}
                 "owners"->{if(type=="CAPITAL_WITHDRAWAL")put("fundingReturns",fundingReturns?:JsonArray(emptyList()));put("ownerFinancialAccountId",owner);put("type",type);put("transactionDate",date);put("amount",amount)}
-                "loans"->{put("lender",name);put("loanType",loanType);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration);put("principal",amount);put("interestRate",interest);put("startDate",date)}
+                "loans"->{put("openingFeeAmount",openingFeeAmount);put("openingFeeMode",openingFeeMode);if(openingFeeMode=="SEPARATE")put("openingFeeAccountId",openingFeeSource);put("lender",name);put("loanType",loanType);put("displayName",loanName);put("loanAccountNumber",loanNumber);put("description",loanDescription);put("durationMonths",loanDuration);put("principal",amount);put("interestRate",interest);put("startDate",date)}
                 "loan-payments"->{put("loanId",selected?.str("id").orEmpty());put("paymentDate",date);put("principal",paymentPrincipal);put("interest",paymentInterest);put("charges",charges);put("description",paymentDescription)}
             }}
         }

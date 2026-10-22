@@ -86,7 +86,7 @@ export async function changeLoanLifecycleForActor(actor:ProjectActor,id:string,r
   if(d.action==="CANCEL"){
    if(loan.archivedAt||loan.status!=="ACTIVE"||!loan.receivedJournalId)throw new Error("INVALID_LOAN");
    if(d.operationDate<loan.startDate)throw new Error("INVALID_LOAN_DATE");
-   const [payments,topups]=await Promise.all([tx.loanPayment.count({where:{companyId:actor.companyId,loanId:id}}),tx.loanOperation.count({where:{companyId:actor.companyId,loanId:id,action:"TOP_UP"}})]);
+   const [payments,topups]=await Promise.all([tx.loanPayment.count({where:{companyId:actor.companyId,loanId:id}}),tx.loanOperation.count({where:{companyId:actor.companyId,loanId:id,action:{in:["TOP_UP","OPENING_FEE"]}}})]);
    if(payments||topups||!outstanding.eq(loan.principal))throw new Error("LOAN_HAS_FINANCIAL_ACTIVITY");
    const receiptAccount=await tx.moneyAccount.findFirst({where:{id:loan.moneyAccountId,companyId:actor.companyId}});
    if(!receiptAccount)throw new Error("INVALID_MONEY_ACCOUNT");

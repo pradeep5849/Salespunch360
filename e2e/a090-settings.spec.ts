@@ -3892,3 +3892,23 @@ test("A084 HSN SAC saved sales classifications Web native and exports",async({pa
   expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:user.accountRole}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,baseCurrency:before.baseCurrency,displayDecimalPlaces:before.displayDecimalPlaces}})}
 });
+
+test("A067 opening fee choices post gross loans net receipts and native retry safely",async({page})=>{
+ test.setTimeout(240000);
+ const user=await db.user.findUniqueOrThrow({where:{id:userId}}),actor={...user,companyId,branchAccessScope:"ALL_BRANCHES" as const,branchIds:[]},suffix=randomUUID().slice(0,8);let tokenHash:string|null=null;
+ try{
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Opening fee year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  const account=await createMoneyAccountForActor(actor,{branchId,type:"BANK",name:`Opening fee bank ${suffix}`});
+  await signInSettings(page);
+  for(const mode of ["DEDUCTED","SEPARATE"]){
+   await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);const form=page.locator("form").filter({has:page.getByRole("button",{name:"Create and receive loan",exact:true})});await expect(form).toBeVisible({timeout:30000});
+   await form.getByLabel("Receive into account",{exact:true}).selectOption(account.id);await form.getByLabel("Lender",{exact:true}).fill(`Opening ${mode} ${suffix}`);await form.getByLabel("Loan principal",{exact:true}).fill("100000");await form.getByLabel("Loan start date",{exact:true}).fill("2026-10-22");await form.getByLabel("Opening processing fee",{exact:true}).fill("2000");await form.getByLabel("Opening fee handling",{exact:true}).selectOption(mode);if(mode==="SEPARATE")await form.getByLabel("Opening fee payment account",{exact:true}).selectOption(account.id);
+   expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   await form.getByRole("button",{name:"Create and receive loan",exact:true}).click();await expect(form.getByRole("status")).toContainText("Loan received",{timeout:30000});
+   const loan=await db.loan.findFirstOrThrow({where:{companyId,lender:`Opening ${mode} ${suffix}`}}),operation=await db.loanOperation.findFirstOrThrow({where:{companyId,loanId:loan.id,action:"OPENING_FEE"}});expect(loan.principal.toString()).toBe("100000");expect(operation.metadata).toMatchObject({mode,netReceipt:mode==="DEDUCTED"?"98000.00":"100000.00"});
+  }
+  const principal=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();tokenHash=hashSessionToken(token);await db.mobileSession.create({data:{userId,tokenHash,expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:principal.sessionVersion}});const headers={authorization:`Bearer ${token}`},request={branchId,lender:`Native opening ${suffix}`,loanType:"TERM",principal:"100000",startDate:"2026-10-22",moneyAccountId:account.id,idempotencyKey:randomUUID(),openingFeeAmount:"2000",openingFeeMode:"SEPARATE",openingFeeAccountId:account.id};
+  const first=await page.request.post("/api/v1/mobile/account/money/loans",{headers,data:request});expect(first.status()).toBe(201);const firstData=await first.json(),again=await page.request.post("/api/v1/mobile/account/money/loans",{headers,data:request});expect(again.status()).toBe(201);expect((await again.json()).id).toBe(firstData.id);expect(await db.loanOperation.count({where:{companyId,loanId:firstData.id,action:"OPENING_FEE"}})).toBe(1);
+  expect((await page.request.post("/api/v1/mobile/account/money/loans",{headers,data:{...request,openingFeeAmount:"2001"}})).status()).toBe(409);
+ }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}})}
+});

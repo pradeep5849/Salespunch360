@@ -1,5 +1,8 @@
+import {changeLoanLifecycleForActor} from "./loan-operations";
 import { moneyReadContext } from "./money-context";
 import { randomUUID } from "node:crypto";
+import {Prisma} from "@prisma/client";
+import {runFinancialReportForActor} from "./reports/service";
 import { PrismaClient } from "@prisma/client";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 const url = process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
@@ -225,6 +228,21 @@ describe.skipIf(!url)(
        await expect(topUpLoanForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,amount:"10",operationDate:"2032-01-02",moneyAccountId:loan.moneyAccountId})).rejects.toThrow("LOAN_BALANCE_AMBIGUOUS");
        await expect(changeLoanLifecycleForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,action:"CANCEL",operationDate:"2032-01-02",reason:"Correct record"})).rejects.toThrow("LOAN_BALANCE_AMBIGUOUS");
       }finally{await client.loan.delete({where:{id:duplicate.id}});}
+    });
+    it("posts selectable opening fees atomically with gross liability and replay protection",async()=>{
+      const {loanHistoryForActor}=await import("./loan-history");
+      for(const mode of ["DEDUCTED","SEPARATE"] as const){
+        const request={branchId,lender:`Opening fee ${mode}`,loanType:"TERM",principal:"100000",startDate:"2032-01-01",moneyAccountId:accountId,idempotencyKey:randomUUID(),openingFeeAmount:"2000",openingFeeMode:mode,...(mode==="SEPARATE"?{openingFeeAccountId:accountId}:{})};
+        const results=await Promise.all([createAndReceiveLoanForActor(actor,request),createAndReceiveLoanForActor(actor,request)]);expect(results[0].id).toBe(results[1].id);const loan=results[0];expect(loan.principal.toString()).toBe("100000");
+        const operations=await client.loanOperation.findMany({where:{companyId,loanId:loan.id,action:"OPENING_FEE"}});expect(operations).toHaveLength(1);expect(operations[0].amount?.toString()).toBe("2000");expect(operations[0].metadata).toMatchObject({mode,grossPrincipal:"100000.00",netReceipt:mode==="DEDUCTED"?"98000.00":"100000.00"});
+        const ids=[...new Set([loan.receivedJournalId!,operations[0].journalEntryId!])],lines=await client.journalLine.findMany({where:{companyId,journalEntryId:{in:ids}}});const debit=lines.reduce((v,l)=>v.add(l.debit),new Prisma.Decimal(0)),credit=lines.reduce((v,l)=>v.add(l.credit),new Prisma.Decimal(0));expect(debit.eq(credit)).toBe(true);
+        const bank=lines.filter(l=>l.ledgerAccountId===ledgerId).reduce((v,l)=>v.add(l.debit).sub(l.credit),new Prisma.Decimal(0));expect(bank.toString()).toBe("98000");expect(lines.filter(l=>l.ledgerAccountId===loan.liabilityLedgerId).reduce((v,l)=>v.add(l.credit).sub(l.debit),new Prisma.Decimal(0)).toString()).toBe("100000");expect(ids).toHaveLength(mode==="DEDUCTED"?1:2);
+        await expect(createAndReceiveLoanForActor(actor,{...request,openingFeeAmount:"2001"})).rejects.toThrow("IDEMPOTENCY_CONFLICT");await expect(changeLoanLifecycleForActor(actor,loan.id,{requestKey:randomUUID(),expectedVersion:loan.version,action:"CANCEL",operationDate:"2032-01-02",reason:"Review fee refund"})).rejects.toThrow("LOAN_HAS_FINANCIAL_ACTIVITY");
+        const history=await loanHistoryForActor(actor,loan.id,{branchId});expect(history.outstanding).toBe("100000");expect(history.rows).toHaveLength(mode==="DEDUCTED"?1:2);if(mode==="SEPARATE")expect(history.rows.find(r=>r.sourceType==="LOAN_OPENING_FEE")?.payment).toBe("2000");
+        const statement=await runFinancialReportForActor(actor,"loan-statement",{branchId,loanId:loan.id,from:"2032-01-01",to:"2032-01-01"});expect(statement.summary?.find(row=>row.label==="Balance Due")?.value).toBe("100000.00");expect(statement.summary?.find(row=>row.label==="Total Principal Paid")?.value).toBe("0.00");
+      }
+      const counts=await Promise.all([client.loan.count({where:{companyId}}),client.journalEntry.count({where:{companyId}})]);
+      await expect(createAndReceiveLoanForActor(actor,{branchId,lender:"Invalid fee source",loanType:"TERM",principal:"100",startDate:"2032-01-01",moneyAccountId:accountId,idempotencyKey:randomUUID(),openingFeeAmount:"2",openingFeeMode:"SEPARATE",openingFeeAccountId:randomUUID()})).rejects.toThrow("INVALID_MONEY_ACCOUNT");expect(await Promise.all([client.loan.count({where:{companyId}}),client.journalEntry.count({where:{companyId}})])).toEqual(counts);
     });
     it("persists independent loan identity and rejects changed metadata on retry",async()=>{
       const source=await client.loan.findFirstOrThrow({where:{companyId,lender:"Statement lender"}});

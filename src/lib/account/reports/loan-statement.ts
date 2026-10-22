@@ -22,13 +22,14 @@ export async function loanStatementReport(c:FinancialReportContext):Promise<Repo
   const base=Prisma.sql`SELECT j.id,j."entryDate",j."createdAt",j."journalNumber",j."sourceType",j.narration,
    COALESCE(SUM(l.debit) FILTER(WHERE l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid),0) AS debit,
    COALESCE(SUM(l.credit) FILTER(WHERE l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid),0) AS credit,
-   MAX((p.principal+p.interest+p.charges)*CASE WHEN j."reversalOfId" IS NULL THEN 1 ELSE -1 END) AS payment,
+   COALESCE(MAX((p.principal+p.interest+p.charges)*CASE WHEN j."reversalOfId" IS NULL THEN 1 ELSE -1 END),CASE WHEN NOT BOOL_OR(l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid) THEN MAX(o.amount*CASE WHEN j."reversalOfId" IS NULL THEN 1 ELSE -1 END) END) AS payment,
    MAX(p.principal*CASE WHEN j."reversalOfId" IS NULL THEN 1 ELSE -1 END) AS principal,
    MAX(p.interest*CASE WHEN j."reversalOfId" IS NULL THEN 1 ELSE -1 END) AS interest
    FROM journal_entries j JOIN journal_lines l ON l."journalEntryId"=j.id AND l."companyId"=j."companyId"
    LEFT JOIN loan_payments p ON p."companyId"=j."companyId" AND p."loanId"=${loan.id}::uuid AND(p."journalEntryId"=j.id OR p."journalEntryId"=j."reversalOfId")
+   LEFT JOIN loan_operations o ON o."companyId"=j."companyId" AND o."loanId"=${loan.id}::uuid AND o.action='OPENING_FEE' AND(o."journalEntryId"=j.id OR o."journalEntryId"=j."reversalOfId")
    WHERE j."companyId"=${c.actor.companyId}::uuid AND j."branchId"=${loan.branchId}::uuid AND j.status IN('POSTED','REVERSED') AND j."entryDate"<=${to}
-   GROUP BY j.id HAVING BOOL_OR(l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid) OR COUNT(p.id)>0`;
+   GROUP BY j.id HAVING BOOL_OR(l."ledgerAccountId"=${loan.liabilityLedgerId}::uuid) OR COUNT(p.id)>0 OR COUNT(o.id)>0`;
   const [stats]=await tx.$queryRaw<Array<{opening:Prisma.Decimal;balance:Prisma.Decimal;postings:bigint}>>(Prisma.sql`WITH postings AS(${base}) SELECT COALESCE(SUM(credit-debit) FILTER(WHERE "entryDate"<${from}),0) AS opening,COALESCE(SUM(credit-debit),0) AS balance,COUNT(*) FILTER(WHERE debit<>0 OR credit<>0) AS postings FROM postings`);
   if(!stats.postings)return{title,columns,rows:[],note:"No posted liability history exists for this loan through the selected cutoff. An unposted starting amount is not a confirmed balance."};
   const rows:ReportResult["rows"]=[];let offset=0,principal=new D(0),interest=new D(0);
@@ -37,6 +38,6 @@ export async function loanStatementReport(c:FinancialReportContext):Promise<Repo
    for(const row of page){principal=principal.add(row.principal??0);interest=interest.add(row.interest??0);rows.push([row.entryDate.toISOString().slice(0,10),row.sourceType.replaceAll("_"," "),row.narration||row.journalNumber,(row.payment??new D(row.credit).sub(row.debit)).toFixed(2),row.balance.toFixed(2)])}
    if(page.length<1000)break;offset+=page.length;
   }
-  return{title,columns,rows,summary:[{label:"Opening Balance",value:stats.opening.toFixed(2),money:true},{label:"Balance Due",value:stats.balance.toFixed(2),money:true},{label:"Total Principal Paid",value:principal.toFixed(2),money:true},{label:"Total Interest Paid",value:interest.toFixed(2),money:true}],note:`Loan: ${loan.displayName||loan.lender}. Opening is the posted liability balance before the selected period; balance due includes all posted history through its end. Payment amounts include recorded principal, interest and charges; correcting reversals subtract them. Other journals show signed liability movement, not a presumed cash payment. Principal/interest paid summarize only recorded loan payments in this period. Archived loans remain available. No opening-fee policy is inferred.`};
+  return{title,columns,rows,summary:[{label:"Opening Balance",value:stats.opening.toFixed(2),money:true},{label:"Balance Due",value:stats.balance.toFixed(2),money:true},{label:"Total Principal Paid",value:principal.toFixed(2),money:true},{label:"Total Interest Paid",value:interest.toFixed(2),money:true}],note:`Loan: ${loan.displayName||loan.lender}. Opening is the posted liability balance before the selected period; balance due includes all posted history through its end. Payment amounts include recorded principal, interest and charges; correcting reversals subtract them. Other journals show signed liability movement, not a presumed cash payment. Principal/interest paid summarize only recorded loan payments in this period. Archived loans remain available. Opening processing fees follow the recorded deducted/separately-paid choice;deducted fees are included in the receipt narration and do not reduce gross principal.`};
  },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:30000});
 }

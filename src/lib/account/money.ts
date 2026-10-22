@@ -1,3 +1,4 @@
+import {openingFeeInputShape,loanOpeningFeePlan} from "./loan-opening-fee";
 import {fundingReturnsSchema,fundingReturnReplayMatches,validateFundingReturnsInTx} from "./owner-asset-funding";
 import {loanCreationFingerprint} from "./loan-fingerprint";
 import {moneyBankMetadata,bankIfsc,hasBankMetadata} from "./money-bank-metadata";
@@ -773,7 +774,7 @@ async function createLedger(
   a: Actor,
   branchId: string,
   name: string,
-  accountClass: "EQUITY" | "LIABILITY",
+  accountClass: "EQUITY" | "LIABILITY" | "EXPENSE",
   normalBalance: "DEBIT" | "CREDIT",
 ) {
   const series = await tx.numberingSeries.findFirst({
@@ -1173,6 +1174,7 @@ export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
   );
 }
 export const loanInput = z.object({
+  ...openingFeeInputShape,
   displayName: z.string().trim().max(240).transform(v=>v||undefined).optional(),
   loanAccountNumber: z.string().trim().max(160).transform(v=>v||undefined).optional(),
   description: z.string().trim().max(2000).transform(v=>v||undefined).optional(),
@@ -1197,6 +1199,8 @@ export const loanInput = z.object({
 export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
   if(!canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_LOAN_ADMIN"))throw new AuthorizationError();
   const d = loanInput.parse(raw);
+  const {openingFeeAmount,openingFeeMode,openingFeeAccountId,...loanData}=d;
+  const feePlan=loanOpeningFeePlan({principal:d.principal,openingFeeAmount,openingFeeMode,openingFeeAccountId});
   const fingerprint=loanCreationFingerprint(d);
   branchOk(a, d.branchId);
   if (!new D(d.principal).gt(0)) throw new Error("INVALID_AMOUNT");
@@ -1211,6 +1215,7 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
           if (existing) {
             branchOk(a, existing.branchId);
             if(existing.creationRequestHash){if(existing.creationRequestHash!==fingerprint)throw new Error("IDEMPOTENCY_CONFLICT");return existing;}
+            if(feePlan)throw new Error("IDEMPOTENCY_CONFLICT");
             if (
               existing.branchId !== d.branchId ||
               existing.moneyAccountId !== d.moneyAccountId ||
@@ -1240,6 +1245,9 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
               },
             });
           if (!moneyAccount) throw new Error("INVALID_MONEY_ACCOUNT");
+          const feeAccount=feePlan?.mode==="SEPARATE"?await tx.moneyAccount.findFirst({where:{id:feePlan.moneyAccountId!,companyId:a.companyId,isActive:true,...compatibleMoneyAccount(d.branchId)}}):null;
+          if(feePlan?.mode==="SEPARATE"&&!feeAccount)throw new Error("INVALID_MONEY_ACCOUNT");
+          const feeExpense=feePlan?await createLedger(tx,a,d.branchId,"Loan Processing Fees","EXPENSE","DEBIT"):null;
           const liability = await createLedger(
               tx,
               a,
@@ -1255,13 +1263,15 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
               branchId: d.branchId,
               entryDate: d.startDate,
               reference: d.reference,
+              ...(feePlan?{narration:`Gross principal ${feePlan.grossPrincipal}; opening fee ${feePlan.amount} ${feePlan.mode=== "DEDUCTED"?"deducted; net receipt":"paid separately; gross receipt"} ${feePlan.netReceipt}`} :{}),
               sourceType: "LOAN_RECEIPT",
               sourceId: id,
               postingPurpose: "PRIMARY",
               lines: [
+                ...(feePlan?.mode==="DEDUCTED"?[{ledgerAccountId:feeExpense!.id,debit:feePlan.amount,credit:"0"}]:[]),
                 {
                   ledgerAccountId: moneyAccount.ledgerAccountId,
-                  debit: principal.toFixed(2),
+                  debit: feePlan?.netReceipt??principal.toFixed(2),
                   credit: "0",
                 },
                 {
@@ -1269,13 +1279,13 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
                   debit: "0",
                   credit: principal.toFixed(2),
                 },
-              ],
+              ].filter(line=>new D(line.debit).gt(0)||new D(line.credit).gt(0)),
             }),
             row = await tx.loan.create({
               data: {
                 id,
                 companyId: a.companyId,
-                ...d,
+                ...loanData,
                 principal,
                 creationRequestHash:fingerprint,
                 interestRate: d.interestRate ? new D(d.interestRate) : null,
@@ -1284,6 +1294,12 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
                 createdById: a.id,
               },
             });
+          if(feePlan){
+            const feeId=crypto.randomUUID();
+            const feeJournal=feePlan.mode==="SEPARATE"?await postJournalInTx(tx,a,{financialYearId:fy.id,branchId:d.branchId,entryDate:d.startDate,reference:d.reference,narration:`Opening processing fee paid separately for ${d.lender}`,sourceType:"LOAN_OPENING_FEE",sourceId:feeId,postingPurpose:"PRIMARY",lines:[{ledgerAccountId:feeExpense!.id,debit:feePlan.amount,credit:"0"},{ledgerAccountId:feeAccount!.ledgerAccountId,debit:"0",credit:feePlan.amount}]}):journal;
+            await tx.loanOperation.create({data:{id:feeId,companyId:a.companyId!,loanId:id,action:"OPENING_FEE",requestKey:crypto.randomUUID(),requestHash:fingerprint,expectedVersion:0,resultingVersion:0,amount:feePlan.amount,operationDate:d.startDate,moneyAccountId:feeAccount?.id??moneyAccount.id,journalEntryId:feeJournal.id,createdById:a.id,metadata:feePlan}});
+            await audit(tx,a,"LOAN_OPENING_FEE_POSTED","LOAN",id,{...feePlan,journalEntryId:feeJournal.id});
+          }
           await audit(tx, a, "LOAN_RECEIVED", "LOAN", id, {
             journalEntryId: journal.id,
           });
