@@ -60095,6 +60095,30 @@
             "final_199_validation": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL: other supplied report destinations,reference-specific layouts/filter scope and final checkpoint/device runtime are still pending. Precision-unrepresentable order preparation and manually closed-order correction remain safely blocked as recorded. No A104,merge,deploy or production changes."
+        },
+        "classification_sales_reports_2026_10_22": {
+          "implementation_commit": "149ca81debfb803d3c5d83d384d30997532a8fe9",
+          "work": "Added shared Sale Summary by HSN and explicitly labelled SAC Sales Report destinations to Web/native catalogue and private report/export routes. Posted sales invoice lines net of credit notes use immutable classification/name/unit/tax snapshots, repeatable-read paginated queries and48-digit decimals. Item identities, snapshots and units stay separate; no quantity sum across units or inferred classifications/taxes. Company/branch/role/account-edition guards retained; catalogue and service share Sales/GST capability requirements. Existing core accounting module policy preserved. No DB/ledger writes or migration.",
+          "files": [
+            "src/lib/account/reports/classification-sales.ts",
+            "src/lib/account/reports/classification-sales.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused": "31PASS/3files,0fail/skip;8new classification cases included.",
+            "grouped_reports": "201PASS/26files,0fail/skip,11.99s. Includes exact amounts,return signs,unit separation,paging,scope,edition/role rejection,presentation and exports.",
+            "browser_database": "Final2PASS48.9s desktop/mobile Chromium with real isolated PostgreSQL:posted sale and credit net100,final DATE inclusive,saved SAC remains998311 after master999999/name change,native formatted cells,HSN empty,CSV/XLSX/PDF,foreign branch403,Project Manager403,AxeAA/no overflow and unchanged journal count. Initial2FAIL expected raw currency;second2FAIL incorrectly expected coreGST capability disabled by optional stored array. Both fixture expectations corrected;approved core-module policy unchanged.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "android": "No Android source changed;new destinations use existing API-driven catalogue/table/export. Last native compile48quotation tests/lint passed at ef06d093;no new native UI/device/runtime verification claimed.",
+            "ci": "Prior exact96baf819 CI39714969799 allSUCCESS;this report commit awaits its own targeted CI.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL. Other report destinations/reference controls remain;SAC purchase-side report/filter is not implemented or implied by this explicitly sales-only destination. Full HSN reference UI/gross-value presentation and populated goods browser matrix,device runtime and final checkpoint verification remain. No A104,merge,deploy or production changes."
         }
       }
     },
@@ -64749,6 +64773,30 @@
             "final_199_validation": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL: other supplied report destinations,reference-specific layouts/filter scope and final checkpoint/device runtime are still pending. Precision-unrepresentable order preparation and manually closed-order correction remain safely blocked as recorded. No A104,merge,deploy or production changes."
+        },
+        "classification_sales_reports_2026_10_22": {
+          "implementation_commit": "149ca81debfb803d3c5d83d384d30997532a8fe9",
+          "work": "Added shared Sale Summary by HSN and explicitly labelled SAC Sales Report destinations to Web/native catalogue and private report/export routes. Posted sales invoice lines net of credit notes use immutable classification/name/unit/tax snapshots, repeatable-read paginated queries and48-digit decimals. Item identities, snapshots and units stay separate; no quantity sum across units or inferred classifications/taxes. Company/branch/role/account-edition guards retained; catalogue and service share Sales/GST capability requirements. Existing core accounting module policy preserved. No DB/ledger writes or migration.",
+          "files": [
+            "src/lib/account/reports/classification-sales.ts",
+            "src/lib/account/reports/classification-sales.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/service.ts",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused": "31PASS/3files,0fail/skip;8new classification cases included.",
+            "grouped_reports": "201PASS/26files,0fail/skip,11.99s. Includes exact amounts,return signs,unit separation,paging,scope,edition/role rejection,presentation and exports.",
+            "browser_database": "Final2PASS48.9s desktop/mobile Chromium with real isolated PostgreSQL:posted sale and credit net100,final DATE inclusive,saved SAC remains998311 after master999999/name change,native formatted cells,HSN empty,CSV/XLSX/PDF,foreign branch403,Project Manager403,AxeAA/no overflow and unchanged journal count. Initial2FAIL expected raw currency;second2FAIL incorrectly expected coreGST capability disabled by optional stored array. Both fixture expectations corrected;approved core-module policy unchanged.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "android": "No Android source changed;new destinations use existing API-driven catalogue/table/export. Last native compile48quotation tests/lint passed at ef06d093;no new native UI/device/runtime verification claimed.",
+            "ci": "Prior exact96baf819 CI39714969799 allSUCCESS;this report commit awaits its own targeted CI.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL. Other report destinations/reference controls remain;SAC purchase-side report/filter is not implemented or implied by this explicitly sales-only destination. Full HSN reference UI/gross-value presentation and populated goods browser matrix,device runtime and final checkpoint verification remain. No A104,merge,deploy or production changes."
         }
       }
     },

@@ -10460,3 +10460,9 @@ A080-F01 implementation `279333248d56d92298fe9f0a219232751fa77457`: latest15 ref
 A080-F01: `ef06d093249a9857ccdd66152096448326e4af6c` replaces the selection dialog with a full-screen theme/colour/PDF picker for all 15 supplied themes. Temporary previews cancel stale requests; Cancel discards selection, Apply uses existing scoped settings. Existing multipage print/share remains available. No document values, status, ledger or schema change.
 
 Final native compilation, 48 quotation JVM tests and lintDebug passed in 4m37s: zero test failures/errors/skips; lint zero errors, four warnings and six informational notices. No emulator/device, TalkBack or full reference visual verification performed. A080 remains PARTIAL for those checks and final checkpoint validation. Register totals remain 186 implemented-but-not-verified, 12 partial and 1 not started; all 199 original IDs retained.
+
+## HSN/SAC sales report destinations — 22 October 2026
+
+A084-F03/A085-F02: `149ca81debfb803d3c5d83d384d30997532a8fe9` adds Sale Summary by HSN and SAC Sales Report to shared Web/native report/export destinations. Immutable posted-line classifications and tax components are net of returns; item identities and units remain separate. SAC purchase-side controls and other original report scope remain pending; both findings retain PARTIAL. No migration/ledger write.
+
+Grouped report regressions:201PASS/26files,0fail/skip. Final desktop/mobile Chromium with real local PostgreSQL:2PASS48.9s,covering saved classification after master edit,return totals,CSV/XLSX/PDF,AxeAA/no overflow,branch/role rejection and unchanged journals. Initial currency and core-module fixture expectations failed and were corrected;those runs are not passed evidence. Final TypeScript and focused ESLint passed. Native device runtime and final199-finding complete-head validation remain pending. Prior96baf819 targetedCI39714969799 Web/Android/migration allSUCCESS;does not certify later code.
